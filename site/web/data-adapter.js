@@ -1788,26 +1788,65 @@ const remote = {
     }
     
     const { data, error } = await query;
-    if (error) throw error;
-    
-    // Transform to flattened structure with defensive null checks
-    return (data || []).map(row => ({
-      id: row.id,
-      date: row.date,
-      value: row.value,
-      source: row.source,
-      collected_by: row.collected_by,
-      created_at: row.created_at,
-      goal_id: row.goal_id,
-      goal_code: row.goals?.code || '',
-      goal_desc: row.goals?.desc || '',
-      goal_area: row.goals?.goal_area || 'Uncategorized',
-      student_id: row.student_id,
-      student_code: row.students?.code || '',
-      student_name: row.students?.name || row.students?.code || '',
-      class_id: row.class_id,
-      class_code: row.classes?.name || null
-    }));
+    if (!error) {
+      // Transform to flattened structure with defensive null checks
+      return (data || []).map(row => ({
+        id: row.id,
+        date: row.date,
+        value: row.value,
+        source: row.source,
+        collected_by: row.collected_by,
+        created_at: row.created_at,
+        goal_id: row.goal_id,
+        goal_code: row.goals?.code || '',
+        goal_desc: row.goals?.desc || '',
+        goal_area: row.goals?.goal_area || 'Uncategorized',
+        student_id: row.student_id,
+        student_code: row.students?.code || '',
+        student_name: row.students?.name || row.students?.code || '',
+        class_id: row.class_id,
+        class_code: row.classes?.name || null
+      }));
+    }
+
+    // Join failed (e.g. PostgREST 406 on goals!inner or students!inner relationship).
+    // Try a flat query and enrich with goal/student data fetched separately.
+    console.warn('[goal-progress] listGoalProgress join query failed (possible PostgREST relationship config issue), trying flat fallback:', error);
+    const { data: flatData, error: flatError } = await supabase
+      .from('goal_progress')
+      .select('id, date, value, source, collected_by, created_at, goal_id, student_id, class_id')
+      .order('date', { ascending: true });
+    if (flatError) throw flatError;
+
+    // Fetch goals and students to enrich the flat rows; if either lookup fails, proceed with empty maps.
+    const [goalsResult, studentsResult] = await Promise.all([
+      supabase.from('goals').select('id, code, desc, goal_area'),
+      supabase.from('students').select('id, code, name'),
+    ]);
+    const goalById = new Map((!goalsResult.error && goalsResult.data ? goalsResult.data : []).map(g => [g.id, g]));
+    const studentById = new Map((!studentsResult.error && studentsResult.data ? studentsResult.data : []).map(s => [s.id, s]));
+
+    return (flatData || []).map(row => {
+      const goal = goalById.get(row.goal_id);
+      const student = studentById.get(row.student_id);
+      return {
+        id: row.id,
+        date: row.date,
+        value: row.value,
+        source: row.source,
+        collected_by: row.collected_by,
+        created_at: row.created_at,
+        goal_id: row.goal_id,
+        goal_code: goal?.code || '',
+        goal_desc: goal?.desc || '',
+        goal_area: goal?.goal_area || 'Uncategorized',
+        student_id: row.student_id,
+        student_code: student?.code || '',
+        student_name: student?.name || student?.code || '',
+        class_id: row.class_id,
+        class_code: null
+      };
+    });
   },
 
   async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
