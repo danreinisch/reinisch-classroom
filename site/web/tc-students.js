@@ -801,7 +801,7 @@
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
     } else if (selectedDetailTab === 'compliance') {
-      tabContent = await renderComplianceTab(student, studentGoals);
+      tabContent = renderComplianceTab(student, studentGoals);
     } else if (selectedDetailTab === 'settings') {
       tabContent = renderStudentSettingsTab(student);
     }
@@ -1233,6 +1233,7 @@
             <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
             <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
           </div>
+          <span class="st-goal-quarter-status">${statusEmoji} ${quarterProgress.length}/${dataStatus.expected}</span>
           <span class="st-goal-chevron">▶</span>
         </div>
         <div class="st-goal-body">
@@ -3682,8 +3683,10 @@
   /**
    * Render the Compliance tab content
    */
-  async function renderComplianceTab(student, studentGoals) {
-    const progressData = await db.listGoalProgress({ studentCodes: [student.code] });
+  function renderComplianceTab(student, studentGoals) {
+    // Use the already-loaded allProgressEntries (populated by loadProgressEntries at startup)
+    // instead of making a separate db.listGoalProgress() call that can fail on the join.
+    const progressData = allProgressEntries.filter(p => p.student_code === student.code);
     
     // Get quarter dates
     const quarterDates = getQuarterDates();
@@ -3717,7 +3720,7 @@
     }
     
     const charts = studentGoals.map(goal => {
-      const goalProgress = progressData.filter(p => p.goal_code === goal.code);
+      const goalProgress = progressData.filter(p => p.goal_code === goal.code || p.goal_id === goal.id);
       return renderTimelineChart(goal, goalProgress);
     }).join('');
     
@@ -3856,7 +3859,7 @@
       const cells = quarters.map(q => {
         const qRange = getQuarterDateRange(q);
         const hasData = progressData.some(p => 
-          p.goal_code === goal.code && 
+          (p.goal_code === goal.code || p.goal_id === goal.id) && 
           new Date(p.date) >= qRange.start && 
           new Date(p.date) <= qRange.end
         );
@@ -3877,7 +3880,7 @@
     const currentQRange = getQuarterDateRange(currentQ);
     const goalsWithData = studentGoals.filter(goal => {
       return progressData.some(p => 
-        p.goal_code === goal.code && 
+        (p.goal_code === goal.code || p.goal_id === goal.id) && 
         new Date(p.date) >= currentQRange.start && 
         new Date(p.date) <= currentQRange.end
       );
@@ -3968,7 +3971,7 @@
     }
     
     const predictions = studentGoals.map(goal => {
-      const goalProgress = progressData.filter(p => p.goal_code === goal.code);
+      const goalProgress = progressData.filter(p => p.goal_code === goal.code || p.goal_id === goal.id);
       if (goalProgress.length < 3) {
         return `
           <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 12px;">
