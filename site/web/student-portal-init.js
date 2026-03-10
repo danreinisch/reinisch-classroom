@@ -448,7 +448,7 @@
     if (value == null) return '—';
     const num = parseFloat(value);
     if (isNaN(num)) return String(value);
-    if (measurementType === 'percent') return `${Math.round(num * 10) / 10}%`;
+    if (measurementType === 'percent' || measurementType === 'Percent') return `${Math.round(num * 10) / 10}%`;
     if (measurementType === 'x_of_y') return String(num);
     return String(num);
   }
