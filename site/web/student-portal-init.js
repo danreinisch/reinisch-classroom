@@ -548,8 +548,8 @@
         <!-- Latest value label -->
         <text class="st-chart-latest-label" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestLabel)}</text>
         <!-- X-axis labels -->
-        <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="middle">${escapeHtml(firstLabel)}</text>
-        <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="middle">${escapeHtml(lastLabel)}</text>
+        <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="start">${escapeHtml(firstLabel)}</text>
+        <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
         <!-- Y-axis labels -->
         <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${(PAD.top + chartH).toFixed(1)}" font-size="9" text-anchor="end" dy="4">${escapeHtml(yMinLabel)}</text>
         <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${PAD.top}" font-size="9" text-anchor="end" dy="4">${escapeHtml(yMaxLabel)}</text>
@@ -630,11 +630,11 @@
       : '';
     
     // Baseline and target display with friendly empty states
-    const baselineHtml = goal.baseline
-      ? escapeHtml(goal.baseline)
+    const baselineHtml = (goal.baseline != null && goal.baseline !== '')
+      ? escapeHtml(formatProgressValue(goal.baseline, goal.measurement_type))
       : '<span class="st-metric-empty">Not yet set</span>';
-    const targetHtml = goal.target
-      ? escapeHtml(goal.target)
+    const targetHtml = (goal.target != null && goal.target !== '')
+      ? escapeHtml(formatProgressValue(goal.target, goal.measurement_type))
       : '<span class="st-metric-empty">Not yet set</span>';
     
     // Build progress detail section (if there are entries to show)
