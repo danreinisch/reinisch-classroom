@@ -632,6 +632,59 @@
         color: var(--ink, #f1f5f9);
       }
 
+      /* Progress-toward-target bar (Item 3) */
+      .st-progress-toward-target {
+        margin: 12px 0 8px;
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+        border: 1px solid var(--rc-glass-border, rgba(255,255,255,0.10));
+      }
+      .st-progress-toward-text {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .st-progress-bar-track {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.10);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 5px;
+      }
+      .st-progress-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.4s ease;
+      }
+      .st-progress-bar-pct {
+        font-size: 11px;
+        color: var(--muted, rgba(255,255,255,0.5));
+        text-align: right;
+      }
+      .st-progress-trend {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin-left: auto;
+      }
+      .st-progress-trend--up {
+        background: rgba(34, 197, 94, 0.15);
+        color: #86efac;
+      }
+      .st-progress-trend--down {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+      }
+      .st-progress-trend--steady {
+        background: rgba(148, 163, 184, 0.15);
+        color: #94a3b8;
+      }
+
       .st-assignment-status {
         display: inline-block;
         padding: 4px 10px;

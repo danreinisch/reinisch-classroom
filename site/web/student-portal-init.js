@@ -640,10 +640,45 @@
     // Build progress detail section (if there are entries to show)
     const progressDetailId = `st-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
     let progressDetailHtml = '';
+    let progressTowardTargetHtml = '';
     if (progressEntries.length > 0) {
       const sortedForDisplay = [...progressEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
       const latestEntry = sortedForDisplay[0];
       const latestVal = formatProgressValue(latestEntry.value, goal.measurement_type);
+      const latestNumeric = parseFloat(latestEntry.value);
+
+      // Build friendly "progress toward target" visual (Item 3)
+      const targetNumeric = goal.target ? parseFloat(goal.target) : NaN;
+      if (!isNaN(targetNumeric) && targetNumeric > 0 && !isNaN(latestNumeric)) {
+        const pct = Math.min(100, Math.max(0, Math.round((latestNumeric / targetNumeric) * 100)));
+        // Trend indicator: compare newest vs oldest of last 3 entries (non-overlapping)
+        // Threshold of 2 points avoids noise from minor measurement variation
+        const TREND_THRESHOLD = 2;
+        let trendHtml = '';
+        if (sortedForDisplay.length >= 3) {
+          const newestVal = parseFloat(sortedForDisplay[0].value);
+          const oldestOfRecent = parseFloat(sortedForDisplay[2].value);
+          if (newestVal > oldestOfRecent + TREND_THRESHOLD) {
+            trendHtml = `<span class="st-progress-trend st-progress-trend--up">↑ Improving</span>`;
+          } else if (newestVal < oldestOfRecent - TREND_THRESHOLD) {
+            trendHtml = `<span class="st-progress-trend st-progress-trend--down">↓ Needs work</span>`;
+          } else {
+            trendHtml = `<span class="st-progress-trend st-progress-trend--steady">→ Steady</span>`;
+          }
+        }
+        const barColor = pct >= 100 ? '#22c55e' : pct >= 75 ? '#86efac' : pct >= 50 ? '#fbbf24' : '#f87171';
+        progressTowardTargetHtml = `
+          <div class="st-progress-toward-target">
+            <div class="st-progress-toward-text">
+              <span>You're at <strong>${escapeHtml(latestVal)}</strong> → Target: <strong>${escapeHtml(goal.target)}</strong></span>
+              ${trendHtml}
+            </div>
+            <div class="st-progress-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct}% toward goal">
+              <div class="st-progress-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+            </div>
+            <div class="st-progress-bar-pct">${pct}% toward goal</div>
+          </div>`;
+      }
 
       const allRows = sortedForDisplay.map(e => {
         const val = formatProgressValue(e.value, goal.measurement_type);
@@ -665,8 +700,9 @@
           </div>`
         : '';
 
+      // Progress detail panel — expanded by default (Item 2)
       progressDetailHtml = `
-        <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true">
+        <div class="st-goal-progress-detail" id="${progressDetailId}">
           <div class="st-goal-latest-value" aria-label="Latest progress value: ${escapeHtml(latestVal)}">
             <span class="st-goal-latest-label">Latest:</span>
             <span class="st-goal-latest-num">${escapeHtml(latestVal)}</span>
@@ -682,8 +718,9 @@
         </div>`;
     }
 
+    // Toggle button starts as "Hide Progress" since the panel is expanded by default (Item 2)
     const toggleBtn = progressEntries.length > 0
-      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="false" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label" style="pointer-events:none">View Progress</span></button>`
+      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="true" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;transform:rotate(180deg)"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label" style="pointer-events:none">Hide Progress</span></button>`
       : '';
 
     return `
@@ -718,6 +755,7 @@
           </div>
           ${toggleBtn ? `<div class="st-data-status-item st-data-status-item--toggle">${toggleBtn}</div>` : ''}
         </div>
+        ${progressTowardTargetHtml}
         ${progressDetailHtml}
       </div>
     `;
