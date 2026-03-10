@@ -36,6 +36,11 @@
     dashboardHandlersAttached: false,
   };
 
+  // Cached quarter-utils module (loaded lazily in loadStudentGoals).
+  // Used by renderGoalCard for school-year quarter date ranges.
+  // Remains null if the module cannot be loaded; calendar quarters are used as fallback.
+  let quarterUtils = null;
+
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
   // ============================================================================
@@ -576,14 +581,32 @@
     // Get progress data for this goal
     const progressEntries = progressMap.get(goal.id) || [];
     
-    // Calculate this quarter's data points
-    // Quarters: Q1=Jan-Mar (0-2), Q2=Apr-Jun (3-5), Q3=Jul-Sep (6-8), Q4=Oct-Dec (9-11)
-    const now = new Date();
-    const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
-    const thisQuarterEntries = progressEntries.filter(entry => {
-      const entryDate = new Date(entry.date);
-      return entryDate >= quarterStart;
-    });
+    // Calculate this quarter's data points using school-year quarters from quarter-utils.
+    // Falls back to calendar quarters (Jan/Apr/Jul/Oct) if quarter-utils is unavailable.
+    let thisQuarterEntries = [];
+    if (quarterUtils) {
+      try {
+        const currentQ = quarterUtils.getCurrentQuarter();
+        const range = quarterUtils.getQuarterDateRange(currentQ);
+        if (range) {
+          thisQuarterEntries = progressEntries.filter(entry => {
+            const entryDate = new Date(entry.date);
+            return entryDate >= range.start && entryDate <= range.end;
+          });
+        }
+      } catch (e) {
+        console.warn(LOG_PREFIX, 'quarter-utils error, falling back to calendar quarters:', e);
+      }
+    }
+    // Fallback: use calendar quarters only if quarter-utils could not be loaded
+    if (!quarterUtils) {
+      const now = new Date();
+      const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
+      thisQuarterEntries = progressEntries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= quarterStart;
+      });
+    }
     
     // Get last data collection date
     let lastDate = 'Never';
@@ -2805,6 +2828,15 @@
       } catch (err) {
         console.warn(LOG_PREFIX, 'Failed to load progress data:', err);
         // Continue without progress data
+      }
+
+      // Load quarter-utils for school-year quarter date ranges (lazy, once)
+      if (!quarterUtils) {
+        try {
+          quarterUtils = await import('/web/quarter-utils.js');
+        } catch (e) {
+          console.warn(LOG_PREFIX, 'Could not load quarter-utils, using calendar quarters as fallback');
+        }
       }
       
       // Update dashboard goals count
