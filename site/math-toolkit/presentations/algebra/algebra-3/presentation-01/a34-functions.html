@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Function Notation, Domain &amp; Range &mdash; Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;--border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;--accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;--text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;--formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+.breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}.breadcrumb span{color:var(--text-dim);margin:0 6px}.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}.breadcrumb a:hover{color:var(--accent)}.breadcrumb .current{color:var(--text);font-weight:500}
+.tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-orange);font-weight:500;margin:20px 24px 0}
+.container{max-width:860px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}.subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+.process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}.proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}.proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}.proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}.proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}.proc-step.active .p-icon{filter:none}.proc-step.active .p-label{color:rgba(255,255,255,.9)}.proc-step.done{background:var(--surface2)}.proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}.proc-step.done .p-label{color:var(--success)}.proc-step.done::after{content:'\2713';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}.btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}.btn-primary:hover{background:#0fa396;transform:translateY(-1px)}.btn-sm{padding:10px 22px;font-size:.85rem}.btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}.btn-check:hover{background:#0fa396}
+.btn-copy{background:var(--surface3);color:var(--accent-blue);padding:12px 24px;font-size:.88rem;border:2px solid var(--accent-blue);display:inline-flex;align-items:center;gap:8px}.btn-copy:hover{background:rgba(56,189,248,.1);transform:translateY(-1px)}.btn-copy.copied{border-color:var(--success);color:var(--success);background:rgba(34,197,94,.1)}
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}.input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+.mode-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap}.mode-tab{padding:9px 14px;border-radius:10px;font-size:.78rem;font-weight:600;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}.mode-tab:hover{border-color:var(--accent);color:var(--accent)}.mode-tab.selected{background:rgba(20,184,166,.1);border-color:var(--accent);color:var(--accent)}
+.mode-panel{display:none}.mode-panel.active{display:block;animation:fadeSlideIn .3s ease}
+.field-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 16px}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}.field input,.field select{font-family:var(--font-mono);font-size:1rem;padding:10px 14px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;transition:border-color .3s}.field input:focus,.field select:focus{border-color:var(--accent)}.field input::placeholder{color:var(--text-dim);font-size:.82rem}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9bbf' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;padding-right:32px}
+.points-grid{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}.point-row{display:flex;align-items:center;gap:8px}.point-row .pt-label{font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--text-dim);min-width:20px}.point-row input{font-family:var(--font-mono);font-size:1rem;padding:8px 6px;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;text-align:center;width:62px;transition:border-color .3s}.point-row input:focus{border-color:var(--accent)}.point-row .comma{color:var(--text-dim);font-size:.9rem}
+/* Table display */
+.fn-table{border-collapse:collapse;margin:12px auto}.fn-table th,.fn-table td{font-family:var(--font-mono);font-size:.95rem;padding:10px 18px;border:1px solid var(--border);text-align:center}.fn-table th{background:var(--surface3);color:var(--accent);font-weight:700}.fn-table td{background:var(--formula-bg);color:var(--text)}.fn-table td.hl{background:rgba(20,184,166,.12);color:var(--accent);font-weight:700}
+.strategy-box{background:var(--surface3);border:1px solid var(--accent);border-radius:10px;padding:16px 20px;margin:14px 0;font-size:.88rem;line-height:1.7}.strategy-box .strat-title{font-weight:700;color:var(--accent);margin-bottom:6px;font-size:.9rem}
+.callout{background:rgba(20,184,166,.06);border:1px solid rgba(20,184,166,.2);border-radius:10px;padding:14px 18px;margin:10px 0;font-size:.88rem;line-height:1.7;color:var(--text)}
+.start-row{display:flex;justify-content:center;margin-top:12px}
+.error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}.error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+.examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}.examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}.examples-toggle:hover{color:var(--text);background:var(--surface3)}.toggle-arrow{font-size:.7rem;transition:transform .3s ease}.toggle-arrow.open{transform:rotate(180deg)}.examples-body{max-height:0;overflow:hidden;transition:max-height .5s ease}.examples-body.open{max-height:3000px}.example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}.category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}.examples{display:flex;flex-wrap:wrap;gap:8px}.example-chip{font-family:var(--font-mono);font-size:.72rem;padding:6px 12px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}.example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+.workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.problem-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:1rem;font-weight:600;color:var(--text)}
+.step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}.step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}.step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}.step-num.done{background:var(--success)}.step-title{font-weight:600;font-size:.95rem}.step-body{padding-left:40px}
+.step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+.step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7;text-align:center}
+.answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}.answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:160px;outline:none;transition:border-color .3s;text-align:center}.answer-input:focus{border-color:var(--accent)}.answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}.answer-input.incorrect{border-color:var(--error)}.answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.choice-btn{padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}.choice-btn:hover{border-color:var(--accent);color:var(--accent)}.choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}.choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}.choice-btn.disabled{opacity:.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}.step-feedback.show{display:block;animation:fadeSlideIn .25s ease}.step-feedback.correct{color:var(--success)}.step-feedback.incorrect{color:var(--error)}.step-feedback.hint-text{color:var(--accent-orange)}
+.step-card.completed{opacity:.6}.step-card.completed .answer-input{pointer-events:none}.step-card.completed .btn-check{display:none}.step-card.completed .choice-btn{pointer-events:none}
+.result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(167,139,250,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}.result-section.visible{display:block;animation:fadeSlideIn .5s ease}.result-icon{font-size:2.5rem;margin-bottom:10px}.result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}.result-expression{font-family:var(--font-mono);font-size:1rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0;line-height:1.8}.result-detail{color:var(--text-muted);font-size:.88rem;margin-top:8px}.actions{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+@media(max-width:600px){.container{padding:16px}.input-section,.workspace{padding:20px}h1{font-size:1.4rem}.step-body{padding-left:0}.mode-tabs{gap:4px}.mode-tab{padding:7px 8px;font-size:.68rem}.field-row{gap:8px}.field input{padding:8px 10px;font-size:.9rem}.fn-table th,.fn-table td{padding:6px 10px;font-size:.82rem}}
+</style>
+</head>
+<body>
+<nav class="breadcrumb"><a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span><a href="#">Math Toolkit</a><span>&rsaquo;</span><a href="#">Algebra</a><span>&rsaquo;</span><a href="#">Algebra 3</a><span>&rsaquo;</span><span class="current">Function Notation, Domain &amp; Range</span></nav>
+<div class="container">
+  <div class="tier-badge">&#128213; Algebra 3 &middot; A34</div>
+  <h1>Function Notation, Domain &amp; Range</h1>
+  <p class="subtitle">Enter a function, table, or set of points &mdash; this tool walks you through notation, evaluation, domain, range, and function tests step by step.</p>
+  <div class="process-banner" id="procBanner">
+    <div class="proc-step" id="proc-identify"><span class="p-icon">&#128269;</span><span class="p-label">Identify</span></div>
+    <div class="proc-step" id="proc-setup"><span class="p-icon">&#128208;</span><span class="p-label">Set Up</span></div>
+    <div class="proc-step" id="proc-compute"><span class="p-icon">&#128290;</span><span class="p-label">Compute</span></div>
+    <div class="proc-step" id="proc-answer"><span class="p-icon">&#10024;</span><span class="p-label">Answer</span></div>
+  </div>
+  <div class="input-section" id="inputSection">
+    <h2>&#9998; What Type of Problem?</h2>
+    <p class="hint">Select the type, then enter your function or data.</p>
+    <div class="mode-tabs">
+      <div class="mode-tab" onclick="setMode('basics')" id="tab-basics">Notation Basics</div>
+      <div class="mode-tab" onclick="setMode('eval')" id="tab-eval">Evaluate f(x)</div>
+      <div class="mode-tab" onclick="setMode('table')" id="tab-table">Table Lookup</div>
+      <div class="mode-tab" onclick="setMode('domain')" id="tab-domain">Find Domain</div>
+      <div class="mode-tab" onclick="setMode('range')" id="tab-range">Find Range</div>
+      <div class="mode-tab" onclick="setMode('isFunc')" id="tab-isFunc">Function Test</div>
+      <div class="mode-tab" onclick="setMode('piecewise')" id="tab-piecewise">Piecewise</div>
+    </div>
+    <!-- 1. Notation Basics -->
+    <div class="mode-panel" id="panel-basics">
+      <p class="hint">Practice reading function notation. Given f(x) = expression and a value, identify input/output.</p>
+      <div class="field-row">
+        <div class="field"><label>Coefficients (ax+b or ax&sup2;+bx+c)</label><input id="nb-coeff" placeholder="e.g. 2, 5" style="width:220px"></div>
+        <div class="field"><label>x-value</label><input id="nb-x" placeholder="3" style="width:80px"></div>
+      </div>
+    </div>
+    <!-- 2. Evaluate -->
+    <div class="mode-panel" id="panel-eval">
+      <p class="hint">Enter a function and x-value to compute f(x).</p>
+      <div class="field-row"><div class="field"><label>Function Type</label>
+        <select id="ev-type" onchange="evTypeChange()"><option value="poly">Polynomial</option><option value="rational">Rational p(x)/q(x)</option><option value="radical">Square Root &radic;(ax+b)</option><option value="absval">Absolute Value |ax+b|</option></select>
+      </div></div>
+      <div id="evPolyF"><div class="field-row"><div class="field"><label>Coefficients (high&rarr;low)</label><input id="ev-coeff" placeholder="2, -3, 1" style="width:220px"></div><div class="field"><label>x =</label><input id="ev-x" placeholder="x" style="width:80px"></div></div></div>
+      <div id="evRatF" style="display:none"><div class="field-row"><div class="field"><label>Numer coeffs</label><input id="ev-num" placeholder="1, 0" style="width:160px"></div><div class="field"><label>Denom coeffs</label><input id="ev-den" placeholder="1, -2" style="width:160px"></div><div class="field"><label>x =</label><input id="ev-rx" placeholder="x" style="width:70px"></div></div></div>
+      <div id="evRadF" style="display:none"><div class="field-row"><div class="field"><label>a</label><input id="ev-ra" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="ev-rb" placeholder="b" style="width:70px"></div><div class="field"><label>x =</label><input id="ev-radx" placeholder="x" style="width:70px"></div></div><p class="hint">f(x) = &radic;(ax + b)</p></div>
+      <div id="evAbsF" style="display:none"><div class="field-row"><div class="field"><label>a</label><input id="ev-aa" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="ev-ab" placeholder="b" style="width:70px"></div><div class="field"><label>x =</label><input id="ev-ax" placeholder="x" style="width:70px"></div></div><p class="hint">f(x) = |ax + b|</p></div>
+    </div>
+    <!-- 3. Table Lookup -->
+    <div class="mode-panel" id="panel-table">
+      <p class="hint">Enter a table of (x, f(x)) pairs. Then find f(c) or solve f(x) = k.</p>
+      <div class="points-grid">
+        <div class="point-row"><span class="pt-label">1</span>x:<input id="tl-x1" placeholder="x"> f(x):<input id="tl-y1" placeholder="y"></div>
+        <div class="point-row"><span class="pt-label">2</span>x:<input id="tl-x2" placeholder="x"> f(x):<input id="tl-y2" placeholder="y"></div>
+        <div class="point-row"><span class="pt-label">3</span>x:<input id="tl-x3" placeholder="x"> f(x):<input id="tl-y3" placeholder="y"></div>
+        <div class="point-row"><span class="pt-label">4</span>x:<input id="tl-x4" placeholder="x"> f(x):<input id="tl-y4" placeholder="y"></div>
+        <div class="point-row"><span class="pt-label">5</span>x:<input id="tl-x5" placeholder="x"> f(x):<input id="tl-y5" placeholder="y"></div>
+      </div>
+      <div class="field-row"><div class="field"><label>Question Type</label>
+        <select id="tl-qtype"><option value="findY">Find f(c) for x = c</option><option value="findX">Find x when f(x) = k</option></select>
+      </div><div class="field"><label>Value</label><input id="tl-val" placeholder="c or k" style="width:80px"></div></div>
+    </div>
+    <!-- 4. Domain -->
+    <div class="mode-panel" id="panel-domain">
+      <p class="hint">Select function type to find its domain.</p>
+      <div class="field-row"><div class="field"><label>Type</label>
+        <select id="dom-type" onchange="domTypeChange()"><option value="poly">Polynomial</option><option value="rational">Rational</option><option value="radical">Square Root</option></select>
+      </div></div>
+      <div id="domPolyF"><div class="field-row"><div class="field"><label>Coefficients</label><input id="dom-pc" placeholder="1, 0, -4" style="width:220px"></div></div></div>
+      <div id="domRatF" style="display:none"><div class="field-row"><div class="field"><label>Denom coeffs</label><input id="dom-den" placeholder="1, -3" style="width:220px"></div></div></div>
+      <div id="domRadF" style="display:none"><div class="field-row"><div class="field"><label>a</label><input id="dom-ra" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="dom-rb" placeholder="b" style="width:70px"></div></div></div>
+    </div>
+    <!-- 5. Range -->
+    <div class="mode-panel" id="panel-range">
+      <p class="hint">Find the range from points or a function rule.</p>
+      <div class="field-row"><div class="field"><label>Method</label>
+        <select id="rng-type" onchange="rngTypeChange()"><option value="points">From Points</option><option value="quadratic">Quadratic ax&sup2;+bx+c</option><option value="sqrt">Square Root &radic;(ax+b)+c</option></select>
+      </div></div>
+      <div id="rngPtsF">
+        <div class="points-grid">
+          <div class="point-row"><span class="pt-label">1</span>(<input id="rp-x1" placeholder="x"><span class="comma">,</span><input id="rp-y1" placeholder="y">)</div>
+          <div class="point-row"><span class="pt-label">2</span>(<input id="rp-x2" placeholder="x"><span class="comma">,</span><input id="rp-y2" placeholder="y">)</div>
+          <div class="point-row"><span class="pt-label">3</span>(<input id="rp-x3" placeholder="x"><span class="comma">,</span><input id="rp-y3" placeholder="y">)</div>
+          <div class="point-row"><span class="pt-label">4</span>(<input id="rp-x4" placeholder="x"><span class="comma">,</span><input id="rp-y4" placeholder="y">)</div>
+          <div class="point-row"><span class="pt-label">5</span>(<input id="rp-x5" placeholder="x"><span class="comma">,</span><input id="rp-y5" placeholder="y">)</div>
+        </div>
+      </div>
+      <div id="rngQuadF" style="display:none"><div class="field-row"><div class="field"><label>a</label><input id="rq-a" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="rq-b" placeholder="b" style="width:70px"></div><div class="field"><label>c</label><input id="rq-c" placeholder="c" style="width:70px"></div></div></div>
+      <div id="rngSqrtF" style="display:none"><div class="field-row"><div class="field"><label>a (inside)</label><input id="rs-a" placeholder="a" style="width:70px"></div><div class="field"><label>b (inside)</label><input id="rs-b" placeholder="b" style="width:70px"></div><div class="field"><label>+ c (outside)</label><input id="rs-c" placeholder="c" style="width:70px"></div></div><p class="hint">f(x) = &radic;(ax+b) + c</p></div>
+    </div>
+    <!-- 6. Is It a Function? -->
+    <div class="mode-panel" id="panel-isFunc">
+      <p class="hint">Enter points. We check if any x maps to multiple y-values.</p>
+      <div class="points-grid">
+        <div class="point-row"><span class="pt-label">1</span>(<input id="fp-x1" placeholder="x"><span class="comma">,</span><input id="fp-y1" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">2</span>(<input id="fp-x2" placeholder="x"><span class="comma">,</span><input id="fp-y2" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">3</span>(<input id="fp-x3" placeholder="x"><span class="comma">,</span><input id="fp-y3" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">4</span>(<input id="fp-x4" placeholder="x"><span class="comma">,</span><input id="fp-y4" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">5</span>(<input id="fp-x5" placeholder="x"><span class="comma">,</span><input id="fp-y5" placeholder="y">)</div>
+      </div>
+    </div>
+    <!-- 7. Piecewise -->
+    <div class="mode-panel" id="panel-piecewise">
+      <p class="hint">Evaluate a 2-piece piecewise function.</p>
+      <div class="field-row"><div class="field"><label>Piece 1: a</label><input id="pw-a1" placeholder="a" style="width:60px"></div><div class="field"><label>b</label><input id="pw-b1" placeholder="b" style="width:60px"></div><div class="field"><label>if x &lt;</label><input id="pw-cut" placeholder="c" style="width:60px"></div></div>
+      <div class="field-row"><div class="field"><label>Piece 2: a</label><input id="pw-a2" placeholder="a" style="width:60px"></div><div class="field"><label>b</label><input id="pw-b2" placeholder="b" style="width:60px"></div><div class="field"><label>if x &ge; c</label></div></div>
+      <div class="field-row"><div class="field"><label>x =</label><input id="pw-x" placeholder="x" style="width:80px"></div></div>
+    </div>
+    <div class="start-row" id="startRow" style="display:none"><button class="btn-primary" onclick="startSolving()">Let's Solve It &rarr;</button></div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()"><span>&#128203; Try a Practice Problem</span><span class="toggle-arrow" id="toggleArrow">&#9660;</span></div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category"><div class="category-label">&#x1F4D6; Notation Basics</div><div class="examples">
+          <span class="example-chip" onclick="loadNB('2,5',3)">f(x)=2x+5, x=3</span>
+          <span class="example-chip" onclick="loadNB('1,-2,4',2)">f(x)=x&sup2;-2x+4, x=2</span>
+          <span class="example-chip" onclick="loadNB('3,-1',-4)">f(x)=3x-1, x=-4</span>
+          <span class="example-chip" onclick="loadNB('-1,0,7',5)">f(x)=-x&sup2;+7, x=5</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E2; Evaluate f(x)</div><div class="examples">
+          <span class="example-chip" onclick="loadEV('poly','2,-3,1',4)">2x&sup2;-3x+1, x=4</span>
+          <span class="example-chip" onclick="loadEV('poly','1,0,-9',3)">x&sup2;-9, x=3</span>
+          <span class="example-chip" onclick="loadEV('absval',null,null,null,null,null,null,3,-7,2)">|3x-7|, x=2</span>
+          <span class="example-chip" onclick="loadEV('absval',null,null,null,null,null,null,-2,5,-1)">|-2x+5|, x=-1</span>
+          <span class="example-chip" onclick="loadEV('radical',null,null,null,3,1,8)">&radic;(3x+1), x=8</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F4CB; Table Lookup</div><div class="examples">
+          <span class="example-chip" onclick="loadTL([[1,3],[2,7],[3,11],[4,15],[5,19]],'findY',3)">Find f(3)</span>
+          <span class="example-chip" onclick="loadTL([[1,3],[2,7],[3,11],[4,15],[5,19]],'findX',15)">f(x)=15</span>
+          <span class="example-chip" onclick="loadTL([[-2,4],[-1,1],[0,0],[1,1],[2,4]],'findY',-2)">f(-2) squares</span>
+          <span class="example-chip" onclick="loadTL([[-2,4],[-1,1],[0,0],[1,1],[2,4]],'findX',4)">f(x)=4 multi</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F535; Find Domain</div><div class="examples">
+          <span class="example-chip" onclick="loadDOM('poly','1,0,-4')">x&sup2;-4</span>
+          <span class="example-chip" onclick="loadDOM('rational',null,'1,-3')">1/(x-3)</span>
+          <span class="example-chip" onclick="loadDOM('rational',null,'1,0,-9')">1/(x&sup2;-9)</span>
+          <span class="example-chip" onclick="loadDOM('radical',null,null,2,6)">&radic;(2x+6)</span>
+          <span class="example-chip" onclick="loadDOM('radical',null,null,1,-4)">&radic;(x-4)</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E0; Find Range</div><div class="examples">
+          <span class="example-chip" onclick="loadRange('points',[[1,3],[2,5],[3,7],[4,9]])">From points</span>
+          <span class="example-chip" onclick="loadRange('quadratic',null,1,0,-4)">x&sup2;-4 range</span>
+          <span class="example-chip" onclick="loadRange('quadratic',null,-1,2,3)">-x&sup2;+2x+3</span>
+          <span class="example-chip" onclick="loadRange('sqrt',null,null,null,null,1,0,0)">&radic;x range</span>
+          <span class="example-chip" onclick="loadRange('sqrt',null,null,null,null,2,4,-1)">&radic;(2x+4)-1</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E3; Function Test</div><div class="examples">
+          <span class="example-chip" onclick="loadFunc([[1,2],[2,4],[3,6],[4,8]])">Yes: linear</span>
+          <span class="example-chip" onclick="loadFunc([[1,2],[1,5],[2,3],[3,7]])">No: x=1 dup</span>
+          <span class="example-chip" onclick="loadFunc([[2,3],[4,5],[2,7],[6,1]])">No: x=2 dup</span>
+          <span class="example-chip" onclick="loadFunc([[-1,1],[0,0],[1,1],[2,4]])">Yes: squares</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F534; Piecewise</div><div class="examples">
+          <span class="example-chip" onclick="loadPW(2,1,-1,5,3,2)">f(2): 2x+1</span>
+          <span class="example-chip" onclick="loadPW(2,1,-1,5,3,4)">f(4): -x+5</span>
+          <span class="example-chip" onclick="loadPW(1,0,0,3,0,5)">f(5): const 3</span>
+          <span class="example-chip" onclick="loadPW(-1,4,2,-3,2,-1)">f(-1): -x+4</span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <div class="workspace" id="workspace">
+    <div class="problem-display" id="problemDisplay"></div>
+    <div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection">
+      <div class="result-icon">&#127881;</div>
+      <div class="result-title">Problem Solved!</div>
+      <div class="result-expression" id="resultExpr"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <div class="actions">
+        <button class="btn-copy" id="copyBtn" onclick="copyWork()">&#128203; Copy My Work</button>
+        <button class="btn-primary" onclick="resetAll()">Solve Another &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var fN=function(n){if(n==null)return"?";if(Number.isInteger(n))return""+n;return parseFloat(n.toFixed(4)).toString()};
+var rnd=function(n,d){return parseFloat(n.toFixed(d))};
+var escH=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")};
+var pf=function(id){return parseFloat(document.getElementById(id).value)||0};
+var parseC=function(s){return s.split(",").map(function(v){return parseFloat(v.trim())||0})};
+var evalP=function(c,x){var n=c.length-1;return c.reduce(function(s,co,i){return s+co*Math.pow(x,n-i)},0)};
+var sup=function(n){return String(n).split("").map(function(c){return"\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079"[parseInt(c)]||c}).join("")};
+var polyS=function(c){var n=c.length-1,p=[];c.forEach(function(co,i){var e=n-i;if(co===0)return;var sg=p.length===0?(co<0?"\u2212":""):(co<0?" \u2212 ":" + ");var ac=Math.abs(co),cs;if(e===0)cs=fN(ac);else if(e===1)cs=(ac===1?"":fN(ac))+"x";else cs=(ac===1?"":fN(ac))+"x"+sup(e);p.push(sg+cs)});return p.length?p.join(""):"0"};
+var linS=function(a,b){if(a===0)return fN(b);var s=Math.abs(a)===1?"":fN(Math.abs(a));s+="x";if(b>0)s+=" + "+fN(b);else if(b<0)s+=" \u2212 "+fN(Math.abs(b));if(a<0)s="\u2212"+s;return s};
+
+// Dynamic field toggles
+function evTypeChange(){var v=document.getElementById("ev-type").value;["evPolyF","evRatF","evRadF","evAbsF"].forEach(function(id){document.getElementById(id).style.display="none"});document.getElementById({poly:"evPolyF",rational:"evRatF",radical:"evRadF",absval:"evAbsF"}[v]).style.display="block"}
+function domTypeChange(){var v=document.getElementById("dom-type").value;["domPolyF","domRatF","domRadF"].forEach(function(id){document.getElementById(id).style.display="none"});document.getElementById({poly:"domPolyF",rational:"domRatF",radical:"domRadF"}[v]).style.display="block"}
+function rngTypeChange(){var v=document.getElementById("rng-type").value;["rngPtsF","rngQuadF","rngSqrtF"].forEach(function(id){document.getElementById(id).style.display="none"});document.getElementById({points:"rngPtsF",quadratic:"rngQuadF",sqrt:"rngSqrtF"}[v]).style.display="block"}
+
+var mode=null,ST={},stepsData=[],currentStep=0;
+function setMode(m){mode=m;document.querySelectorAll(".mode-tab").forEach(function(t){t.classList.remove("selected")});document.getElementById("tab-"+m).classList.add("selected");document.querySelectorAll(".mode-panel").forEach(function(p){p.classList.remove("active")});document.getElementById("panel-"+m).classList.add("active");document.getElementById("startRow").style.display="flex"}
+
+// Example loaders
+function loadNB(c,x){setMode("basics");document.getElementById("nb-coeff").value=c;document.getElementById("nb-x").value=x}
+function loadEV(type,coeffs,x,numC,denC,a,b,radx,aa,ab,ax){
+  setMode("eval");document.getElementById("ev-type").value=type;evTypeChange();
+  if(type==="poly"){document.getElementById("ev-coeff").value=coeffs;document.getElementById("ev-x").value=x}
+  else if(type==="rational"){document.getElementById("ev-num").value=coeffs;document.getElementById("ev-den").value=numC;document.getElementById("ev-rx").value=x}
+  else if(type==="radical"){document.getElementById("ev-ra").value=a;document.getElementById("ev-rb").value=b;document.getElementById("ev-radx").value=radx}
+  else if(type==="absval"){document.getElementById("ev-aa").value=aa;document.getElementById("ev-ab").value=ab;document.getElementById("ev-ax").value=ax}
+}
+function loadTL(pts,qt,val){setMode("table");pts.forEach(function(p,i){var n=i+1;document.getElementById("tl-x"+n).value=p[0];document.getElementById("tl-y"+n).value=p[1]});document.getElementById("tl-qtype").value=qt;document.getElementById("tl-val").value=val}
+function loadDOM(type,coeffs,denC,a,b){setMode("domain");document.getElementById("dom-type").value=type;domTypeChange();if(type==="poly")document.getElementById("dom-pc").value=coeffs;else if(type==="rational")document.getElementById("dom-den").value=denC;else{document.getElementById("dom-ra").value=a;document.getElementById("dom-rb").value=b}}
+function loadRange(type,pts,a,b,c,sa,sb,sc){setMode("range");document.getElementById("rng-type").value=type;rngTypeChange();if(type==="points"&&pts)pts.forEach(function(p,i){document.getElementById("rp-x"+(i+1)).value=p[0];document.getElementById("rp-y"+(i+1)).value=p[1]});else if(type==="quadratic"){document.getElementById("rq-a").value=a;document.getElementById("rq-b").value=b;document.getElementById("rq-c").value=c}else if(type==="sqrt"){document.getElementById("rs-a").value=sa;document.getElementById("rs-b").value=sb;document.getElementById("rs-c").value=sc}}
+function loadFunc(pts){setMode("isFunc");pts.forEach(function(p,i){document.getElementById("fp-x"+(i+1)).value=p[0];document.getElementById("fp-y"+(i+1)).value=p[1]})}
+function loadPW(a1,b1,a2,b2,cut,x){setMode("piecewise");document.getElementById("pw-a1").value=a1;document.getElementById("pw-b1").value=b1;document.getElementById("pw-a2").value=a2;document.getElementById("pw-b2").value=b2;document.getElementById("pw-cut").value=cut;document.getElementById("pw-x").value=x}
+
+function toggleExamples(){document.getElementById("examplesBody").classList.toggle("open");document.getElementById("toggleArrow").classList.toggle("open")}
+function showError(msg){var el=document.getElementById("errorMsg");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show")},4000)}
+function startSolving(){if(!mode){showError("Select a mode first.");return}stepsData=[];currentStep=0;ST={mode:mode};({basics:startBasics,eval:startEval,table:startTable,domain:startDomain,range:startRange,isFunc:startIsFunc,piecewise:startPiecewise})[mode]()}
+function launchWorkspace(){document.getElementById("inputSection").style.display="none";document.getElementById("workspace").classList.add("visible");document.getElementById("resultSection").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});var cb=document.getElementById("copyBtn");cb.classList.remove("copied");cb.innerHTML="&#128203; Copy My Work";showStep(0)}
+
+// ==================== 1. NOTATION BASICS ====================
+function startBasics(){
+  var c=parseC(document.getElementById("nb-coeff").value),x=pf("nb-x");
+  if(!c.length){showError("Enter coefficients.");return}
+  var fs=polyS(c),result=rnd(evalP(c,x),4);
+  Object.assign(ST,{c:c,x:x,fs:fs,result:result});
+  document.getElementById("problemDisplay").innerHTML='Understanding f('+fN(x)+')';
+
+  stepsData.push({title:"What Does f(x) Mean?",proc:"identify",type:"info",
+    instruction:'<div class="callout"><strong>f(x)</strong> is just a name for a rule.<br><br>\u2022 <strong style="color:var(--accent-blue)">f</strong> = the name of the function<br>\u2022 <strong style="color:var(--accent-orange)">x</strong> = the <strong>input</strong> (what you plug in)<br>\u2022 <strong style="color:var(--accent-purple)">f(x)</strong> = the <strong>output</strong> (what you get back)<br><br>\u26A0\uFE0F f(x) does <strong>NOT</strong> mean f times x!</div>',
+    work:"f(x) means: f is the name, x is input, f(x) is output"});
+
+  stepsData.push({title:"Our Function",proc:"identify",type:"info",
+    instruction:'<div class="step-rule-box">f(x) = '+fs+'</div>This is the <strong>rule</strong>. Whatever number goes in for x, this formula tells you what comes out.',
+    work:"f(x) = "+fs});
+
+  stepsData.push({title:"Identify the Input",proc:"setup",type:"choice",
+    instruction:'In <strong>f('+fN(x)+')</strong>, what is the input?',
+    question:"The input is:",options:[fN(x),"f","f(x)"],answer:fN(x),
+    work:"Input = "+fN(x)});
+
+  stepsData.push({title:"Substitute the Input",proc:"compute",type:"info",
+    instruction:'Replace every <strong>x</strong> in the rule with <strong style="color:var(--accent-blue)">'+fN(x)+'</strong>:<br><div class="step-rule-box">f(<span style="color:var(--accent-blue)">'+fN(x)+'</span>) = '+fs.replace(/x/g,'<span style="color:var(--accent-blue)">'+fN(x)+'</span>')+'</div>',
+    work:"Substitute x = "+fN(x)+" into "+fs});
+
+  stepsData.push({title:"Compute the Output",proc:"compute",type:"numeric",
+    instruction:'Now simplify to find the output.',
+    question:"f("+fN(x)+") =",answer:result,
+    work:"f("+fN(x)+") = "+fN(result)});
+
+  stepsData.push({title:"Read the Result",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">f('+fN(x)+') = '+fN(result)+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:8px"><strong style="color:var(--accent-blue)">Input:</strong> '+fN(x)+' &nbsp; <strong style="color:var(--accent-purple)">Output:</strong> '+fN(result)+'<br>This means the point <strong>('+fN(x)+', '+fN(result)+')</strong> is on the graph of f.</div></div>',
+    work:"ANSWER: f("+fN(x)+") = "+fN(result)+", point ("+fN(x)+", "+fN(result)+")"});
+  launchWorkspace();
+}
+
+// ==================== 2. EVALUATE f(x) ====================
+function startEval(){
+  var type=document.getElementById("ev-type").value;
+  if(type==="poly"){
+    var c=parseC(document.getElementById("ev-coeff").value),x=pf("ev-x");
+    if(!c.length){showError("Enter coefficients.");return}
+    var result=rnd(evalP(c,x),4);
+    Object.assign(ST,{type:type,x:x,result:result});
+    document.getElementById("problemDisplay").innerHTML='f('+fN(x)+') = '+polyS(c);
+    stepsData.push({title:"Substitute x = "+fN(x),proc:"identify",type:"info",instruction:'<div class="step-rule-box">f(x) = '+polyS(c)+'</div>Replace x with <strong style="color:var(--accent-blue)">'+fN(x)+'</strong> and compute.',work:"f(x)="+polyS(c)+", x="+fN(x)});
+    var terms=[];c.forEach(function(co,i){var exp=c.length-1-i;if(co===0)return;terms.push({co:co,exp:exp,val:rnd(co*Math.pow(x,exp),4)})});
+    stepsData.push({title:"Term by Term",proc:"setup",type:"info",instruction:terms.map(function(t){return fN(t.co)+(t.exp>0?"("+fN(x)+")"+((t.exp>1)?sup(t.exp):""):"")+" = <strong>"+fN(t.val)+"</strong>"}).join("<br>"),work:"Terms: "+terms.map(function(t){return fN(t.val)}).join(", ")});
+    stepsData.push({title:"Sum",proc:"compute",type:"numeric",instruction:terms.map(function(t){return fN(t.val)}).join(" + ")+" = ?",question:"f("+fN(x)+") =",answer:result,work:"f("+fN(x)+") = "+fN(result)});
+  }else if(type==="rational"){
+    var num=parseC(document.getElementById("ev-num").value),den=parseC(document.getElementById("ev-den").value),x=pf("ev-rx");
+    var nv=rnd(evalP(num,x),4),dv=rnd(evalP(den,x),4);
+    if(Math.abs(dv)<0.0001){showError("Denominator = 0 (undefined).");return}
+    var result=rnd(nv/dv,4);
+    Object.assign(ST,{type:type,x:x,result:result});
+    document.getElementById("problemDisplay").innerHTML='f('+fN(x)+')';
+    stepsData.push({title:"Rational Function",proc:"identify",type:"info",instruction:'Evaluate numerator and denominator at x='+fN(x)+'.',work:"Rational at x="+fN(x)});
+    stepsData.push({title:"Numerator",proc:"setup",type:"numeric",instruction:"p("+fN(x)+") = ?",question:"Numer =",answer:nv,work:"p="+fN(nv)});
+    stepsData.push({title:"Denominator",proc:"setup",type:"numeric",instruction:"q("+fN(x)+") = ?",question:"Denom =",answer:dv,work:"q="+fN(dv)});
+    stepsData.push({title:"Divide",proc:"compute",type:"numeric",instruction:fN(nv)+" / "+fN(dv),question:"f("+fN(x)+") =",answer:result,work:"f="+fN(result)});
+  }else if(type==="radical"){
+    var a=pf("ev-ra"),b=pf("ev-rb"),x=pf("ev-radx"),inside=rnd(a*x+b,4);
+    if(inside<0){showError("Inside radical is negative.");return}
+    var result=rnd(Math.sqrt(inside),4);
+    Object.assign(ST,{type:type,x:x,result:result});
+    document.getElementById("problemDisplay").innerHTML='f('+fN(x)+') = \u221A('+fN(a)+'x+'+fN(b)+')';
+    stepsData.push({title:"Compute Inside",proc:"setup",type:"numeric",instruction:fN(a)+"("+fN(x)+") + "+fN(b)+" = ?",question:"Inside =",answer:inside,work:"inside="+fN(inside)});
+    stepsData.push({title:"Square Root",proc:"compute",type:"numeric",instruction:"\u221A("+fN(inside)+") = ?",question:"f("+fN(x)+") =",answer:result,work:"f="+fN(result)});
+  }else{
+    // Absolute value |ax+b|
+    var a=pf("ev-aa"),b=pf("ev-ab"),x=pf("ev-ax");
+    var inside=rnd(a*x+b,4),result=rnd(Math.abs(inside),4);
+    Object.assign(ST,{type:type,x:x,result:result});
+    document.getElementById("problemDisplay").innerHTML='f('+fN(x)+') = |'+fN(a)+'x + '+fN(b)+'|';
+    stepsData.push({title:"Absolute Value Function",proc:"identify",type:"info",
+      instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Absolute Value</div>1. Compute the expression <strong>inside</strong> the bars<br>2. If negative, make it positive. If positive, keep it.</div>',work:"|"+fN(a)+"x+"+fN(b)+"| at x="+fN(x)});
+    stepsData.push({title:"Inside the Bars",proc:"setup",type:"numeric",instruction:fN(a)+"("+fN(x)+") + "+fN(b)+" = ?",question:"Inside =",answer:inside,work:"inside = "+fN(inside)});
+    stepsData.push({title:"Apply Absolute Value",proc:"compute",type:"numeric",
+      instruction:'|'+fN(inside)+'| = ?'+(inside<0?'<br><span style="color:var(--accent-orange)">Negative \u2192 flip to positive!</span>':'<br><span style="color:var(--text-dim)">Already non-negative, stays the same.</span>'),
+      question:"f("+fN(x)+") =",answer:result,work:"|"+fN(inside)+"| = "+fN(result)});
+  }
+  stepsData.push({title:"Answer",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">f('+fN(ST.x)+') = '+fN(ST.result)+'</div></div>',work:"ANSWER: f("+fN(ST.x)+")="+fN(ST.result)});
+  launchWorkspace();
+}
+
+// ==================== 3. TABLE LOOKUP ====================
+function startTable(){
+  var pts=[];for(var i=1;i<=5;i++){var xv=document.getElementById("tl-x"+i).value,yv=document.getElementById("tl-y"+i).value;if(xv!==""&&yv!=="")pts.push([parseFloat(xv),parseFloat(yv)])}
+  if(pts.length<2){showError("Enter at least 2 table entries.");return}
+  var qt=document.getElementById("tl-qtype").value,val=pf("tl-val");
+  Object.assign(ST,{pts:pts,qt:qt,val:val});
+
+  // Build table HTML
+  var tH='<table class="fn-table"><tr><th>x</th>'+pts.map(function(p){return'<td>'+fN(p[0])+'</td>'}).join("")+'</tr><tr><th>f(x)</th>'+pts.map(function(p){return'<td>'+fN(p[1])+'</td>'}).join("")+'</tr></table>';
+
+  document.getElementById("problemDisplay").innerHTML=qt==="findY"?"Find f("+fN(val)+")":"Solve f(x) = "+fN(val);
+
+  stepsData.push({title:"The Table",proc:"identify",type:"info",
+    instruction:tH+'<div class="strategy-box"><div class="strat-title">&#127919; '+(qt==="findY"?"Find f(c): Look up x = c, read the f(x) value":"Solve f(x) = k: Find which x-value(s) give output k")+'</div></div>',
+    work:"Table with "+pts.length+" entries"});
+
+  if(qt==="findY"){
+    var match=pts.filter(function(p){return Math.abs(p[0]-val)<0.001});
+    if(match.length===0){
+      stepsData.push({title:"x = "+fN(val)+" Not in Table",proc:"answer",type:"info",
+        instruction:'<div style="text-align:center;padding:16px;color:var(--accent-orange)">x = '+fN(val)+' is not in the table. f('+fN(val)+') cannot be determined from this data.</div>',
+        work:"x="+fN(val)+" not found"});
+      ST.result="not found";
+    }else{
+      var ans=match[0][1];
+      stepsData.push({title:"Find x = "+fN(val)+" in the Table",proc:"setup",type:"info",
+        instruction:'Look across the <strong>x-row</strong> for <strong style="color:var(--accent-blue)">'+fN(val)+'</strong>. Read down to get f(x).',
+        work:"Locate x="+fN(val)});
+      stepsData.push({title:"Read the Output",proc:"compute",type:"numeric",
+        instruction:"When x = "+fN(val)+", f(x) = ?",question:"f("+fN(val)+") =",answer:rnd(ans,4),
+        work:"f("+fN(val)+") = "+fN(rnd(ans,4))});
+      stepsData.push({title:"Answer",proc:"answer",type:"info",
+        instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">f('+fN(val)+') = '+fN(rnd(ans,4))+'</div></div>',
+        work:"ANSWER: f("+fN(val)+")="+fN(rnd(ans,4))});
+      ST.result=rnd(ans,4);
+    }
+  }else{
+    // findX: f(x) = val
+    var matches=pts.filter(function(p){return Math.abs(p[1]-val)<0.001});
+    stepsData.push({title:"Find f(x) = "+fN(val)+" in the Table",proc:"setup",type:"info",
+      instruction:'Look across the <strong>f(x) row</strong> for <strong style="color:var(--accent-orange)">'+fN(val)+'</strong>. Read up to get x.',
+      work:"Locate f(x)="+fN(val)});
+    if(matches.length===0){
+      stepsData.push({title:"No Match",proc:"answer",type:"info",
+        instruction:'<div style="text-align:center;padding:16px;color:var(--accent-orange)">No x-value in the table produces f(x) = '+fN(val)+'.</div>',
+        work:"No match found"});
+      ST.result="none";
+    }else if(matches.length===1){
+      stepsData.push({title:"Found It",proc:"compute",type:"numeric",instruction:"Which x gives f(x)="+fN(val)+"?",question:"x =",answer:rnd(matches[0][0],4),work:"x="+fN(rnd(matches[0][0],4))});
+      stepsData.push({title:"Answer",proc:"answer",type:"info",
+        instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">x = '+fN(rnd(matches[0][0],4))+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:6px">f('+fN(rnd(matches[0][0],4))+') = '+fN(val)+'</div></div>',
+        work:"ANSWER: x="+fN(rnd(matches[0][0],4))});
+      ST.result=rnd(matches[0][0],4);
+    }else{
+      var xs=matches.map(function(m){return rnd(m[0],4)});
+      stepsData.push({title:"Multiple Matches!",proc:"compute",type:"info",
+        instruction:'<span style="color:var(--accent-purple);font-weight:700">'+matches.length+' x-values</span> give f(x) = '+fN(val)+': <strong>x = '+xs.map(fN).join(", ")+'</strong>',
+        work:"x = "+xs.map(fN).join(", ")});
+      stepsData.push({title:"Answer",proc:"answer",type:"info",
+        instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">x = '+xs.map(fN).join(" or x = ")+'</div></div>',
+        work:"ANSWER: x="+xs.map(fN).join(" or ")});
+      ST.result=xs.map(fN).join(", ");
+    }
+  }
+  launchWorkspace();
+}
+
+// ==================== 4. FIND DOMAIN ====================
+function startDomain(){
+  var type=document.getElementById("dom-type").value;
+  if(type==="poly"){
+    var c=parseC(document.getElementById("dom-pc").value);
+    Object.assign(ST,{type:"poly"});
+    document.getElementById("problemDisplay").innerHTML="Domain of "+polyS(c);
+    stepsData.push({title:"Polynomial Domain",proc:"identify",type:"info",
+      instruction:'<div class="step-rule-box">f(x) = '+polyS(c)+'</div><div class="strategy-box"><div class="strat-title">&#127919; Rule</div>Polynomials have <strong>no restrictions</strong>. No division, no radicals. Domain = all real numbers.</div>',work:"Polynomial"});
+    stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">Domain: (\u2212\u221E, \u221E)</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:6px">All real numbers</div></div>',work:"ANSWER: (-inf, inf)"});
+    ST.domain="(\u2212\u221E, \u221E)";
+  }else if(type==="rational"){
+    var den=parseC(document.getElementById("dom-den").value);
+    Object.assign(ST,{type:"rational",den:den});
+    document.getElementById("problemDisplay").innerHTML="Domain (denom = "+polyS(den)+")";
+    stepsData.push({title:"Rational Domain",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Rule</div>Exclude x-values where <strong>denominator = 0</strong>.</div>Denom: '+polyS(den),work:"Denom = "+polyS(den)});
+    if(den.length===2){
+      var exc=rnd(-den[1]/den[0],4);
+      stepsData.push({title:"Solve Denom = 0",proc:"setup",type:"numeric",instruction:polyS(den)+" = 0",question:"x =",answer:exc,work:"x="+fN(exc)});
+      ST.domain="x \u2260 "+fN(exc);
+      stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">All reals except x = '+fN(exc)+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:6px">(\u2212\u221E, '+fN(exc)+') \u222A ('+fN(exc)+', \u221E)</div></div>',work:"ANSWER: x!="+fN(exc)});
+    }else if(den.length===3){
+      var a=den[0],b=den[1],c=den[2],disc=b*b-4*a*c;
+      stepsData.push({title:"Quadratic Denominator",proc:"setup",type:"info",instruction:polyS(den)+' = 0, disc = '+fN(rnd(disc,4)),work:"disc="+fN(rnd(disc,4))});
+      if(disc<0){ST.domain="(\u2212\u221E, \u221E)";stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">All reals</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:6px">Disc &lt; 0, denom never = 0</div></div>',work:"All reals"})}
+      else{var r1=rnd((-b+Math.sqrt(disc))/(2*a),4),r2=rnd((-b-Math.sqrt(disc))/(2*a),4),lo=Math.min(r1,r2),hi=Math.max(r1,r2);
+        if(Math.abs(r1-r2)<0.001){stepsData.push({title:"Root",proc:"compute",type:"numeric",instruction:"x = ?",question:"x =",answer:r1,work:"x="+fN(r1)});ST.domain="x \u2260 "+fN(r1);stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">All reals except x = '+fN(r1)+'</div></div>',work:"x!="+fN(r1)})}
+        else{stepsData.push({title:"Roots",proc:"compute",type:"numeric",instruction:"Smaller root?",question:"x =",answer:lo,work:"x="+fN(lo)});stepsData.push({title:"Larger Root",proc:"compute",type:"numeric",instruction:"Larger root?",question:"x =",answer:hi,work:"x="+fN(hi)});ST.domain="x \u2260 "+fN(lo)+", "+fN(hi);stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">All reals except x = '+fN(lo)+' and x = '+fN(hi)+'</div></div>',work:"x!="+fN(lo)+","+fN(hi)})}}
+    }else{stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'Set denom=0 and solve.',work:"Manual solve needed"});ST.domain="solve denom=0"}
+  }else{
+    var a=pf("dom-ra"),b=pf("dom-rb");if(a===0){showError("a cannot be 0.");return}
+    var boundary=rnd(-b/a,4);Object.assign(ST,{type:"radical",boundary:boundary});
+    document.getElementById("problemDisplay").innerHTML="Domain of \u221A("+fN(a)+"x+"+fN(b)+")";
+    stepsData.push({title:"Radical Rule",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Rule</div>Inside the radical must be <strong>\u2265 0</strong>.</div><div class="step-rule-box">'+fN(a)+'x + '+fN(b)+' \u2265 0</div>',work:"Need "+fN(a)+"x+"+fN(b)+">=0"});
+    stepsData.push({title:"Solve",proc:"setup",type:"numeric",instruction:fN(a)+"x \u2265 "+fN(-b),question:"x "+(a>0?"\u2265":"\u2264"),answer:boundary,work:"x"+(a>0?">=":"<=")+""+fN(boundary)});
+    var ds=a>0?"["+fN(boundary)+", \u221E)":"(\u2212\u221E, "+fN(boundary)+"]";ST.domain=ds;
+    stepsData.push({title:"Domain",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">'+ds+'</div></div>',work:"ANSWER: "+ds});
+  }
+  launchWorkspace();
+}
+
+// ==================== 5. FIND RANGE ====================
+function startRange(){
+  var type=document.getElementById("rng-type").value;
+  if(type==="points"){
+    var pts=[];for(var i=1;i<=5;i++){var xv=document.getElementById("rp-x"+i).value,yv=document.getElementById("rp-y"+i).value;if(xv!==""&&yv!=="")pts.push([parseFloat(xv),parseFloat(yv)])}
+    if(pts.length<2){showError("Enter at least 2 points.");return}
+    var ys=pts.map(function(p){return p[1]}),unique=[],seen={};
+    ys.forEach(function(y){var k=fN(y);if(!seen[k]){seen[k]=true;unique.push(y)}});unique.sort(function(a,b){return a-b});
+    Object.assign(ST,{rangeStr:"{"+unique.map(fN).join(", ")+"}"});
+    document.getElementById("problemDisplay").innerHTML="Range from "+pts.length+" points";
+    stepsData.push({title:"The Relation",proc:"identify",type:"info",instruction:'<div class="step-rule-box">'+pts.map(function(p){return"("+fN(p[0])+", "+fN(p[1])+")"}).join(" &nbsp; ")+'</div><div class="strategy-box"><div class="strat-title">&#127919; Range = all y-values</div>List every y-value, remove duplicates, sort.</div>',work:"Points given"});
+    stepsData.push({title:"All y-values",proc:"setup",type:"info",instruction:ys.map(function(y){return '<span style="color:var(--accent-orange);font-weight:700">'+fN(y)+"</span>"}).join(", "),work:"y: "+ys.map(fN).join(", ")});
+    stepsData.push({title:"Range",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">Range = { '+unique.map(fN).join(", ")+' }</div></div>',work:"ANSWER: {"+unique.map(fN).join(",")+"}'"});
+  }else if(type==="quadratic"){
+    var a=pf("rq-a"),b=pf("rq-b"),c=pf("rq-c");if(a===0){showError("a cannot be 0 for quadratic.");return}
+    var vx=rnd(-b/(2*a),4),vy=rnd(evalP([a,b,c],vx),4);
+    Object.assign(ST,{a:a,b:b,c:c,vx:vx,vy:vy});
+    document.getElementById("problemDisplay").innerHTML="Range of "+polyS([a,b,c]);
+    stepsData.push({title:"Quadratic Range Strategy",proc:"identify",type:"info",
+      instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Vertex Determines Range</div>1. Find the <strong>vertex</strong> at x = \u2212b/(2a)<br>2. If a > 0 (opens up): range = [vertex y, \u221E)<br>3. If a < 0 (opens down): range = (\u2212\u221E, vertex y]</div><div class="step-rule-box">f(x) = '+polyS([a,b,c])+'<br>a = '+fN(a)+' \u2192 opens <strong>'+(a>0?"UP":"DOWN")+'</strong></div>',
+      work:"Quadratic, a="+fN(a)+" opens "+(a>0?"up":"down")});
+    stepsData.push({title:"Vertex x-coordinate",proc:"setup",type:"numeric",instruction:"x = \u2212"+fN(b)+" / (2 \u00D7 "+fN(a)+") = ?",question:"x =",answer:vx,work:"vertex x="+fN(vx)});
+    stepsData.push({title:"Vertex y-coordinate",proc:"compute",type:"numeric",instruction:"f("+fN(vx)+") = ?",question:"f("+fN(vx)+") =",answer:vy,work:"vertex y="+fN(vy)});
+    var rs=a>0?"["+fN(vy)+", \u221E)":"(\u2212\u221E, "+fN(vy)+"]";
+    ST.rangeStr=rs;
+    stepsData.push({title:"Range",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">Range: '+rs+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:6px">Vertex at ('+fN(vx)+', '+fN(vy)+'), parabola opens '+(a>0?"up":"down")+'</div></div>',work:"ANSWER: "+rs});
+  }else{
+    // sqrt: f(x) = sqrt(ax+b) + c
+    var a=pf("rs-a"),b=pf("rs-b"),c=pf("rs-c");
+    if(a===0){showError("a cannot be 0.");return}
+    Object.assign(ST,{sa:a,sb:b,sc:c});
+    document.getElementById("problemDisplay").innerHTML="Range of \u221A("+fN(a)+"x+"+fN(b)+")"+((c>=0)?" + ":" \u2212 ")+fN(Math.abs(c));
+    stepsData.push({title:"Square Root Range",proc:"identify",type:"info",
+      instruction:'<div class="strategy-box"><div class="strat-title">&#127919; \u221A always \u2265 0</div>The square root part is always \u2265 0.<br>So f(x) = \u221A(...) + c is always \u2265 <strong style="color:var(--accent-orange)">'+fN(c)+'</strong>.<br>The minimum output is <strong>'+fN(c)+'</strong> (when the radical = 0).</div>',
+      work:"sqrt >= 0, so f(x) >= "+fN(c)});
+    var rs="["+fN(c)+", \u221E)";ST.rangeStr=rs;
+    stepsData.push({title:"Range",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">Range: '+rs+'</div></div>',work:"ANSWER: "+rs});
+  }
+  launchWorkspace();
+}
+
+// ==================== 6. IS IT A FUNCTION? ====================
+function startIsFunc(){
+  var pts=[];for(var i=1;i<=5;i++){var xv=document.getElementById("fp-x"+i).value,yv=document.getElementById("fp-y"+i).value;if(xv!==""&&yv!=="")pts.push([parseFloat(xv),parseFloat(yv)])}
+  if(pts.length<2){showError("Enter at least 2 points.");return}
+  var xMap={},violations=[];
+  pts.forEach(function(p){var k=fN(p[0]);if(xMap[k]!==undefined&&Math.abs(xMap[k]-p[1])>0.001)violations.push({x:p[0],y1:xMap[k],y2:p[1]});if(xMap[k]===undefined)xMap[k]=p[1]});
+  var isF=violations.length===0;Object.assign(ST,{isF:isF,violations:violations});
+  document.getElementById("problemDisplay").innerHTML="Function test";
+  stepsData.push({title:"The Relation",proc:"identify",type:"info",
+    instruction:'<div class="step-rule-box">'+pts.map(function(p){return"("+fN(p[0])+", "+fN(p[1])+")"}).join(" &nbsp; ")+'</div><div class="strategy-box"><div class="strat-title">&#127919; One Input \u2192 One Output</div>A function means each x has <strong>exactly one</strong> y. If any x appears twice with <em>different</em> y-values, it is <strong>NOT</strong> a function.</div>',work:"Check x uniqueness"});
+  stepsData.push({title:"Check x-values",proc:"compute",type:"choice",instruction:"Do any x-values map to multiple different y-values?",question:"Repeated x, different y?",options:["Yes","No"],answer:isF?"No":"Yes",work:isF?"All unique":"Violation found"});
+  if(!isF){stepsData.push({title:"Violation",proc:"compute",type:"info",instruction:violations.map(function(v){return'<span style="color:var(--error)">x = '+fN(v.x)+' \u2192 y = '+fN(v.y1)+' AND y = '+fN(v.y2)+'</span>'}).join("<br>"),work:"x="+violations[0].x+" maps to multiple y"})}
+  stepsData.push({title:"Verdict",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:'+(isF?"var(--success)":"var(--error)")+'">'+(isF?"\u2713 YES \u2014 It is a function":"\u2717 NO \u2014 Not a function")+'</div></div>',work:"ANSWER: "+(isF?"YES":"NO")});
+  launchWorkspace();
+}
+
+// ==================== 7. PIECEWISE ====================
+function startPiecewise(){
+  var a1=pf("pw-a1"),b1=pf("pw-b1"),a2=pf("pw-a2"),b2=pf("pw-b2"),cut=pf("pw-cut"),x=pf("pw-x");
+  var use1=x<cut,a=use1?a1:a2,b=use1?b1:b2,result=rnd(a*x+b,4);
+  Object.assign(ST,{x:x,result:result,use1:use1,cut:cut});
+  document.getElementById("problemDisplay").innerHTML="f("+fN(x)+") piecewise";
+  stepsData.push({title:"Piecewise Function",proc:"identify",type:"info",
+    instruction:'<div class="step-rule-box"><strong style="color:var(--accent-blue)">'+linS(a1,b1)+'</strong> &nbsp; if x &lt; '+fN(cut)+'<br><strong style="color:var(--accent-orange)">'+linS(a2,b2)+'</strong> &nbsp; if x \u2265 '+fN(cut)+'</div>x = <strong>'+fN(x)+'</strong>',
+    work:"Piecewise at x="+fN(x)});
+  stepsData.push({title:"Which Piece?",proc:"setup",type:"choice",
+    instruction:fN(x)+(use1?" < ":" \u2265 ")+fN(cut),question:"Use which?",
+    options:["Piece 1 (x < "+fN(cut)+")","Piece 2 (x \u2265 "+fN(cut)+")"],
+    answer:use1?"Piece 1 (x < "+fN(cut)+")":"Piece 2 (x \u2265 "+fN(cut)+")",
+    work:"Piece "+(use1?"1":"2")});
+  stepsData.push({title:"Evaluate",proc:"compute",type:"numeric",instruction:fN(a)+"("+fN(x)+") + "+fN(b)+" = ?",question:"f("+fN(x)+") =",answer:result,work:"f="+fN(result)});
+  stepsData.push({title:"Answer",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">f('+fN(x)+') = '+fN(result)+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:6px">Used Piece '+(use1?"1":"2")+'</div></div>',work:"ANSWER: "+fN(result)});
+  launchWorkspace();
+}
+
+// ==================== COPY WORK ====================
+function copyWork(){var lines=["=== Function Notation, Domain & Range \u2014 A34 ===",""];stepsData.forEach(function(s,i){lines.push("Step "+(i+1)+": "+s.title);if(s.work)lines.push("  "+s.work);lines.push("")});var text=lines.join("\n");navigator.clipboard.writeText(text).then(function(){var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)}).catch(function(){var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)})}
+
+// ==================== RENDER ENGINE ====================
+function showStep(idx){if(idx>=stepsData.length){finishProblem();return}var step=stepsData[idx],ct=document.getElementById("stepsContainer"),card=document.createElement("div");card.className="step-card";card.id="step-"+idx;if(step.proc){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});document.getElementById("proc-"+step.proc).classList.add("active")}var bh="";if(step.type==="info"){bh='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It \u2192</button>'}else if(step.type==="numeric"){bh='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||"")+" </span>"+'<input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')"><button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>'}else if(step.type==="choice"){bh='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||"")+"</div>"+'<div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return'<div class="choice-btn" onclick="checkChoice('+idx+",this,'"+escH(o)+"')\">"+escH(o)+"</div>"}).join("")+"</div>"+'<div class="step-feedback" id="fb-'+idx+'"></div>'}card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bh+"</div>";ct.appendChild(card);card.scrollIntoView({behavior:"smooth",block:"nearest"});setTimeout(function(){var inp=card.querySelector(".answer-input");if(inp)inp.focus()},150)}
+function completeStep(i){markDone(i);currentStep=i+1;showStep(i+1)}
+function markDone(i){var c=document.getElementById("step-"+i);if(c){c.classList.add("completed");c.querySelector(".step-num").classList.add("done")}if(stepsData[i].proc)document.getElementById("proc-"+stepsData[i].proc).classList.add("done")}
+function checkNum(idx){var step=stepsData[idx],inp=document.getElementById("ans-"+idx),fb=document.getElementById("fb-"+idx);var val=parseFloat(inp.value.trim());if(isNaN(val)){fb.textContent="Enter a number.";fb.className="step-feedback show incorrect";return}var tol=Math.abs(step.answer)<0.01?0.006:Math.abs(step.answer)<1?0.02:Math.max(0.02,Math.abs(step.answer)*0.01);if(Math.abs(val-step.answer)<=tol){inp.classList.add("correct");inp.disabled=true;inp.value=fN(step.answer);fb.textContent="Correct! \u2713";fb.className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{inp.classList.add("incorrect");setTimeout(function(){inp.classList.remove("incorrect")},600);var tries=parseInt(inp.dataset.tries||"0")+1;inp.dataset.tries=tries;if(tries>=3){fb.innerHTML="The answer is <strong>"+fN(step.answer)+"</strong>";fb.className="step-feedback show hint-text"}else{fb.textContent="Not quite \u2014 try again!";fb.className="step-feedback show incorrect"}inp.value="";inp.focus()}}
+function checkChoice(idx,btn,chosen){var step=stepsData[idx];if(chosen===step.answer){btn.classList.add("correct");document.querySelectorAll("#choices-"+idx+" .choice-btn").forEach(function(b){if(!b.classList.contains("correct"))b.classList.add("disabled")});document.getElementById("fb-"+idx).textContent="Correct! \u2713";document.getElementById("fb-"+idx).className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{btn.classList.add("incorrect");setTimeout(function(){btn.classList.remove("incorrect")},500);document.getElementById("fb-"+idx).textContent="Not quite!";document.getElementById("fb-"+idx).className="step-feedback show incorrect"}}
+function finishProblem(){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});var expr="",detail="";if(ST.mode==="basics"){expr="f("+fN(ST.x)+") = "+fN(ST.result);detail="Notation basics"}else if(ST.mode==="eval"){expr="f("+fN(ST.x)+") = "+fN(ST.result);detail="Function evaluation"}else if(ST.mode==="table"){expr=ST.qt==="findY"?"f("+fN(ST.val)+") = "+fN(ST.result):"x = "+ST.result;detail="Table lookup"}else if(ST.mode==="domain"){expr="Domain: "+(ST.domain||"");detail="Domain analysis"}else if(ST.mode==="range"){expr="Range: "+(ST.rangeStr||"");detail="Range analysis"}else if(ST.mode==="isFunc"){expr=ST.isF?"IS a function":"NOT a function";detail="Vertical line test"}else if(ST.mode==="piecewise"){expr="f("+fN(ST.x)+") = "+fN(ST.result);detail="Piecewise"}document.getElementById("resultExpr").textContent=expr;document.getElementById("resultDetail").textContent=detail;document.getElementById("resultSection").classList.add("visible");document.getElementById("resultSection").scrollIntoView({behavior:"smooth",block:"nearest"})}
+function resetAll(){document.getElementById("inputSection").style.display="";document.getElementById("workspace").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.getElementById("resultSection").classList.remove("visible");document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});document.querySelectorAll(".input-section input:not([readonly])").forEach(function(i){i.value=""});document.querySelectorAll(".input-section select").forEach(function(s){s.selectedIndex=0;s.dispatchEvent(new Event("change"))})}
+</script>
+</body>
+</html>

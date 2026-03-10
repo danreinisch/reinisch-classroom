@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-10T14:09:04.778Z",
+  "updated": "2026-03-10T14:20:36.023Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -576,7 +576,7 @@
     "math_alg_3": {
       "slots": 50,
       "titles": [
-        "",
+        "Functions",
         "",
         "",
         "",
@@ -628,7 +628,7 @@
         ""
       ],
       "links": [
-        "",
+        "/math-toolkit/presentations/algebra/algebra-3/presentation-01/",
         "",
         "",
         "",
