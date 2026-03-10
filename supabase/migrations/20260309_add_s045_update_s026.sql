@@ -11,7 +11,7 @@ INSERT INTO public.students (code, iep_due, eval_due, primary_case_manager, acti
 VALUES ('S045', '2026-08-21', '2029-01-15', 'Jessica Bruno', true);
 
 -- 3. Insert goals for S045 (reference student by code subquery since goals uses student_id UUID FK)
-INSERT INTO public.goals (student_id, code, "desc", measurement_type, class_context, data_collector, data_collector_email, status, active)
+INSERT INTO public.goals (student_id, code, "desc", measurement_type, class_context, data_collector, data_collector_email, status, active, goal_area, case_manager)
 VALUES (
     (SELECT id FROM public.students WHERE code = 'S045'),
     'S045.11.1',
@@ -21,10 +21,12 @@ VALUES (
     'Dan Reinisch',
     'danielreinisch@winfieldriv.us',
     'active',
-    true
+    true,
+    'Reading Comprehension',
+    'Jessica Bruno'
 );
 
-INSERT INTO public.goals (student_id, code, "desc", measurement_type, class_context, data_collector, data_collector_email, status, active)
+INSERT INTO public.goals (student_id, code, "desc", measurement_type, class_context, data_collector, data_collector_email, status, active, goal_area, case_manager)
 VALUES (
     (SELECT id FROM public.students WHERE code = 'S045'),
     'S045.11.2',
@@ -34,7 +36,9 @@ VALUES (
     'Dan Reinisch',
     'danielreinisch@winfieldriv.us',
     'active',
-    true
+    true,
+    'Written Expression',
+    'Jessica Bruno'
 );
 
 -- 4. Insert class enrollment for S045 in Language Arts 3 SC
