@@ -502,7 +502,7 @@
 
     const spans = ['Q1', 'Q2', 'Q3', 'Q4'].map(q => {
       const range = getQuarterDateRange(q);
-      if (!range) return `<span style="opacity:0.5;">${q}: —</span>`;
+      if (!range) return `<span class="st-qa-badge st-qa-badge--none">${q}: —</span>`;
 
       const qEntries = entries.filter(p => {
         const d = new Date(p.date);
@@ -513,15 +513,16 @@
       const countStr = `(${count}/${expected})`;
 
       if (count === 0) {
-        return `<span style="opacity:0.5;">${q}: — ${escapeHtml(countStr)}</span>`;
+        return `<span class="st-qa-badge st-qa-badge--none">${q}: — ${escapeHtml(countStr)}</span>`;
       }
 
       const avg = qEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / (count || 1);
       const avgStr = formatProgressValue(avg, measurementType);
-      return `<span>${q}: ${escapeHtml(avgStr)} ${escapeHtml(countStr)}</span>`;
+      const statusClass = count >= expected ? 'st-qa-badge--green' : 'st-qa-badge--yellow';
+      return `<span class="st-qa-badge ${statusClass}">${q}: ${escapeHtml(avgStr)} ${escapeHtml(countStr)}</span>`;
     });
 
-    return `<div class="st-quarterly-averages" style="flex-basis:100%;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:2px;opacity:0.85;">${spans.join('')}</div>`;
+    return `<div class="st-quarterly-averages">${spans.join('')}</div>`;
   }
 
   // Load data
@@ -1236,6 +1237,7 @@
           <span class="st-goal-quarter-status">${statusEmoji} ${quarterProgress.length}/${dataStatus.expected}</span>
           <span class="st-goal-chevron">▶</span>
         </div>
+        ${renderQuarterlyAverages(goal.student_code, goal.code)}
         <div class="st-goal-body">
           ${descHtml}
           <div class="st-goal-metrics">
@@ -1258,7 +1260,6 @@
               <span>${lastText}</span>
             </div>
             ${progressToggleBtn ? `<div class="st-data-status-item" style="margin-left:auto;">${progressToggleBtn}</div>` : ''}
-            ${renderQuarterlyAverages(goal.student_code, goal.code)}
           </div>
           ${progressDetailHtml}
         </div>

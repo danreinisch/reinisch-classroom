@@ -331,6 +331,11 @@
       .st-goal-card.collapsed .st-goal-version {
         display: none;
       }
+      /* Tighter spacing when collapsed (Item 5) */
+      .st-goal-card.collapsed {
+        padding: 8px 16px;
+        margin-bottom: 4px;
+      }
       .st-goal-chevron {
         transition: transform 0.2s;
         font-size: 14px;
@@ -374,6 +379,36 @@
         margin-top: 12px;
         margin-bottom: 12px;
         line-height: 1.5;
+      }
+      /* Quarterly averages strip — always visible, between header and body (Item 4) */
+      .st-quarterly-averages {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        padding: 5px 0 3px;
+      }
+      .st-qa-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .st-qa-badge--green {
+        background: rgba(34, 197, 94, 0.15);
+        color: #86efac;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      .st-qa-badge--yellow {
+        background: rgba(234, 179, 8, 0.15);
+        color: #fde047;
+        border: 1px solid rgba(234, 179, 8, 0.3);
+      }
+      .st-qa-badge--none {
+        background: rgba(148, 163, 184, 0.10);
+        color: rgba(148, 163, 184, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.2);
       }
       .st-goal-actions {
         display: flex;
