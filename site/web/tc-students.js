@@ -108,7 +108,7 @@
     if (value == null) return '—';
     const num = parseFloat(value);
     if (isNaN(num)) return String(value);
-    if (measurementType === 'Accuracy') return `${Math.round(num * 10) / 10}%`;
+    if (measurementType === 'Accuracy' || measurementType === 'Percent') return `${Math.round(num * 10) / 10}%`;
     if (measurementType === 'Duration') {
       const mins = Math.floor(num);
       const secs = Math.round((num - mins) * 60);
