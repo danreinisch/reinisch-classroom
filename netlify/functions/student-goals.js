@@ -94,7 +94,7 @@ exports.handler = async (event) => {
     const studentId = studentData[0].id;
 
     // Now fetch goals for this student
-    const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=id,code,desc,goal_text,baseline,target,measurement_type,goal_area,status&student_id=eq.${studentId}&order=code`;
+    const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=*&student_id=eq.${studentId}&order=code`;
     
     console.log(`[student-goals] [${requestId}] Fetching goals for student ID:`, studentId);
     
@@ -108,7 +108,9 @@ exports.handler = async (event) => {
     });
 
     if (!goalsResponse.ok) {
-      throw new Error(`Goals query failed: ${goalsResponse.status}`);
+      const errorBody = await goalsResponse.text();
+      console.error(`[student-goals] [${requestId}] Goals query failed: ${goalsResponse.status}`, errorBody);
+      throw new Error(`Goals query failed: ${goalsResponse.status} - ${errorBody}`);
     }
 
     const goals = await goalsResponse.json();
