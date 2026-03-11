@@ -1345,7 +1345,7 @@
     const submitQuestionsBtn = container.querySelector('#submitQuestionsBtn');
     if (submitQuestionsBtn) {
       submitQuestionsBtn.addEventListener('click', async function() {
-        if (!confirm('Are you sure? You won\'t be able to change your answers.')) {
+        if (!await rcConfirm('Submit Assignment', "Are you sure? You won't be able to change your answers.", 'Submit', { danger: true })) {
           return;
         }
         
@@ -2136,8 +2136,8 @@
     }
   }
   
-  function clearBuilder() {
-    if (!confirm('Are you sure you want to clear all builder content?')) return;
+  async function clearBuilder() {
+    if (!await rcConfirm('Clear Builder', 'Are you sure you want to clear all builder content?', 'Clear', { danger: true })) return;
     
     const fields = ['builderTopicSentence', 'builderDetail1', 'builderDetail2', 'builderDetail3', 'builderConclusion'];
     fields.forEach(id => {

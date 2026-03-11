@@ -541,7 +541,7 @@
 
     const data = await loadStudentArchiveData(studentCode);
     if (!data) {
-      alert('Error loading student data. Please try again.');
+      await rcAlert('Error', 'Error loading student data. Please try again.');
       return;
     }
 
@@ -678,8 +678,10 @@
    * Handle reactivate student
    */
   async function handleReactivate(studentCode) {
-    const confirmed = confirm(
-      `Reactivate this student?\n\nThey will appear in the active student list and can log into the portal.`
+    const confirmed = await rcConfirm(
+      'Reactivate Student',
+      `Reactivate this student?\n\nThey will appear in the active student list and can log into the portal.`,
+      'Reactivate'
     );
 
     if (!confirmed) return;
@@ -695,11 +697,11 @@
       delete studentArchiveData[studentCode];
 
       render();
-      alert('Student reactivated successfully!');
+      await rcAlert('Success', 'Student reactivated successfully!');
 
     } catch (err) {
       console.error('[tc-archive] Error reactivating student:', err);
-      alert('Error reactivating student. Please try again.');
+      await rcAlert('Error', 'Error reactivating student. Please try again.');
     }
   }
 

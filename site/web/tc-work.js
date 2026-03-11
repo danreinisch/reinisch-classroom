@@ -631,8 +631,8 @@
     download(`tc-draft_${safeName}_${d.id}.json`, JSON.stringify(d, null, 2));
   }
 
-  function deleteOne(id) {
-    if (!confirm("Delete this draft? This cannot be undone.")) return;
+  async function deleteOne(id) {
+    if (!await rcConfirm('Delete Draft', 'Delete this draft? This cannot be undone.', 'Delete', { danger: true })) return;
     const drafts = readDrafts();
     const next = drafts.filter((x) => x.id !== id);
     writeDrafts(next);
@@ -670,8 +670,8 @@
     );
   }
 
-  function clearAll() {
-    if (!confirm("Clear ALL drafts stored in this browser?")) return;
+  async function clearAll() {
+    if (!await rcConfirm('Clear All Drafts', 'Clear ALL drafts stored in this browser?', 'Clear All', { danger: true })) return;
     const old = readDrafts(); // get IDs before clearing
     writeDrafts([]);
     renderTable([]);
@@ -710,8 +710,8 @@
       ? `\n\n  • ${counts.assignments ?? '?'} assignment(s)\n  • ${counts.assignment_instances ?? '?'} issued instance(s)\n  • ${counts.submissions ?? '?'} submission(s)`
       : '';
     const warningMsg = `WARNING: This will permanently delete ALL assignments, issued instances, and submissions. This cannot be undone.${countSummary}\n\nAre you sure you want to proceed?`;
-    if (!confirm(warningMsg)) return;
-    if (!confirm("Are you absolutely sure? This action cannot be reversed.")) return;
+    if (!await rcConfirm('Delete Assignments', warningMsg, 'Confirm', { danger: true })) return;
+    if (!await rcConfirm('Final Confirmation', 'Are you absolutely sure? This action cannot be reversed.', 'Yes, Delete', { danger: true })) return;
 
     if (btn) btn.disabled = true;
 
@@ -2215,7 +2215,7 @@ function normalizeTaggedAssignmentText(input) {
     const mFile = mIn && mIn.files && mIn.files[0] ? mIn.files[0] : null;
 
     if (!aFile) {
-      alert("Choose a mega TXT assignment file first.");
+      await rcAlert('No File Selected', 'Choose a mega TXT assignment file first.');
       return;
     }
 
@@ -2223,7 +2223,7 @@ function normalizeTaggedAssignmentText(input) {
     const sections = parseMegaSections(raw);
 
     if (sections.length < 2) {
-      alert(
+      await rcAlert('Error',
         "That file doesn’t look like a multi-class mega TXT (need 2+ recognizable class headers)."
       );
       return;
@@ -2256,7 +2256,7 @@ function normalizeTaggedAssignmentText(input) {
     );
 
     if (checkedClasses.size === 0) {
-      alert("Please select at least one class to create drafts for.");
+      await rcAlert('Validation', 'Please select at least one class to create drafts for.');
       return;
     }
 
@@ -2309,7 +2309,7 @@ function normalizeTaggedAssignmentText(input) {
       classSel.disabled = true;
     }
 
-    alert(`Created ${checkedClasses.size} drafts (one per selected class).`);
+    await rcAlert('Drafts Created', `Created ${checkedClasses.size} drafts (one per selected class).`);
     location.reload();
   }
 

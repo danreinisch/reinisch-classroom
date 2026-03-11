@@ -171,7 +171,7 @@
     }
   }
 
-  function promptQueueRestore() {
+  async function promptQueueRestore() {
     try {
       const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
       if (!stored) return;
@@ -182,7 +182,7 @@
       const totalSize = queueData.reduce((sum, item) => sum + (item.size || 0), 0);
       const msg = `Found ${queueData.length} file(s) (${fmtBytes(totalSize)}) from previous session.\n\nRestore this queue?`;
       
-      if (confirm(msg)) {
+      if (await rcConfirm('Confirm Action', msg)) {
         log('ℹ Previous upload queue found. File selection cannot be restored (browser limitation).');
         log('ℹ Please re-select the same files to continue your upload.');
         log('');
@@ -391,7 +391,7 @@
         const errorMsg = `Upload failed with status ${res.status}:\n\n${(text||'').slice(0, MAX_ERROR_MESSAGE_LENGTH)}`;
         console.error('[Incremental Deploy] Upload error:', { status: res.status, body: text });
         log(`ERROR: ${errorMsg}`);
-        alert(errorMsg);
+        await rcAlert('Error', errorMsg);
         return { success: false };
       }
 
@@ -400,7 +400,7 @@
       const errorMsg = `Upload error: ${e?.message || String(e)}`;
       console.error('[Incremental Deploy] Upload exception:', e);
       log(`ERROR: ${errorMsg}`);
-      alert(errorMsg);
+      await rcAlert('Error', errorMsg);
       return { success: false };
     }
   }
@@ -409,13 +409,13 @@
     try{
       const category = catEl.value;
       const unit = units.find(u => u.id === category);
-      if (!unit) { alert('Choose a category'); return; }
+      if (!unit) { await rcAlert('Validation', 'Choose a category'); return; }
       const slot = Number(slotSel.value);
       const title = (titleEl.value||'').trim();
       const total = Number(unit.slots||0);
-      if (!category || !slot || slot<1 || slot>total) { alert('Please choose a valid category and slot'); return; }
-      if (!title) { alert('Please enter a title'); return; }
-      if (!queue.length) { alert('Please add at least one file'); return; }
+      if (!category || !slot || slot<1 || slot>total) { await rcAlert('Validation', 'Please choose a valid category and slot'); return; }
+      if (!title) { await rcAlert('Validation', 'Please enter a title'); return; }
+      if (!queue.length) { await rcAlert('Validation', 'Please add at least one file'); return; }
 
       // SSO-only: skip legacy admin session preflight/refresh.
 
@@ -549,14 +549,14 @@
       
       // Final result
       if (verifySuccess) {
-        alert('✓ Upload and verification complete!\nYour content is live. See log for details.');
+        await rcAlert('Upload Complete', '✓ Upload and verification complete!\nYour content is live. See log for details.');
       } else {
         log('');
         log('⚠ Verification did not confirm deployment after retries.');
         log(`  Last error: ${lastError || 'unknown'}`);
         log('  Your upload succeeded, but the deployment may still be in progress.');
         log('  Check the hub page in 1-2 minutes, or check Netlify deploy status.');
-        alert('Upload completed successfully.\n\nVerification could not confirm deployment yet - this is normal if Netlify is still processing.\n\nCheck the hub page in 1-2 minutes to confirm your content is live.');
+        await rcAlert('Upload Complete', 'Upload completed successfully.\n\nVerification could not confirm deployment yet - this is normal if Netlify is still processing.\n\nCheck the hub page in 1-2 minutes to confirm your content is live.');
       }
 
       // Update local titles to reflect the change
@@ -571,11 +571,11 @@
         links[slot-1] = `/${unit.baseOut}/presentation-${num(slot)}/`;
       }
       renderSlots();
-      alert('Upload complete - see verification log below');
+      await rcAlert('Upload Complete', 'Upload complete - see verification log below');
     }catch(e){
       console.error(e);
       log('Error:', e && e.message ? e.message : String(e));
-      alert('Error: ' + (e && e.message ? e.message : String(e)));
+      await rcAlert('Error', 'Error: ' + (e && e.message ? e.message : String(e)));
     }
   });
 
@@ -583,7 +583,7 @@
     const category = catEl.value;
     const slot = Number(slotSel.value);
     if (!category || !slot) return;
-    if (!confirm(`Delete all files and the title for slot ${num(slot)}? This cannot be undone.`)) return;
+    if (!await rcConfirm('Delete Slot', `Delete all files and the title for slot ${num(slot)}? This cannot be undone.`, 'Delete', { danger: true })) return;
 
     try{
       log('Deleting…');
@@ -623,7 +623,7 @@
         const errorMsg = `Delete failed with status ${res.status}:\n\n${(text||'').slice(0, MAX_ERROR_MESSAGE_LENGTH)}`;
         console.error('[Incremental Deploy] Delete error:', { status: res.status, body: text });
         log(`ERROR: ${errorMsg}`);
-        alert(errorMsg);
+        await rcAlert('Error', errorMsg);
         return;
       }
 
@@ -633,12 +633,12 @@
         titles[slot-1] = ''; links[slot-1] = '';
       }
       renderSlots();
-      alert('Slot deleted');
+      await rcAlert('Slot Deleted', 'Slot deleted');
     }catch(e){
       const errorMsg = `Delete error: ${e && e.message ? e.message : String(e)}`;
       console.error('[Incremental Deploy] Delete exception:', e);
       log(`ERROR: ${errorMsg}`);
-      alert(errorMsg);
+      await rcAlert('Error', errorMsg);
     }
   });
 
@@ -652,7 +652,7 @@
       const lifeUnit = units.find(u => u.id === 'life');
       if (!lifeUnit) {
         log('ERROR: Life Skills unit not found in units.json');
-        alert('Life Skills unit not found');
+        await rcAlert('Error', 'Life Skills unit not found');
         return;
       }
 
@@ -717,15 +717,15 @@
       log('');
       if (issuesFound === 0) {
         log('=== Audit Complete: No issues found ✓ ===');
-        alert('Audit complete! No issues found. Check log for details.');
+        await rcAlert('Audit Complete', 'Audit complete! No issues found. Check log for details.');
       } else {
         log(`=== Audit Complete: ${issuesFound} issue(s) found ===`);
-        alert(`Audit found ${issuesFound} issue(s). Check log for details.`);
+        await rcAlert('Audit Complete', `Audit found ${issuesFound} issue(s). Check log for details.`);
       }
     } catch (e) {
       console.error(e);
       log('Audit error:', e?.message || String(e));
-      alert('Audit error: ' + (e?.message || String(e)));
+      await rcAlert('Audit Error', 'Audit error: ' + (e?.message || String(e)));
     }
   });
 
@@ -880,13 +880,12 @@
 
  */
 
-function showPRResult(pr){
+async function showPRResult(pr){
   if(!pr || !pr.url) return;
   const msg = (pr.existing ? "Draft updated. PR already open:" : "Draft saved. PR created:")
     + "\n" + pr.url + "\n\nOpen PR now?";
   try { navigator.clipboard && navigator.clipboard.writeText(pr.url); } catch (e) { /* ignore */ }
-  // eslint-disable-next-line no-alert
-  if (confirm(msg)) window.open(pr.url, "_blank", "noopener");
+  if (await rcConfirm('Confirm Action', msg)) window.open(pr.url, "_blank", "noopener");
 }
 
 
@@ -943,7 +942,7 @@ function showPRResult(pr){
     renderPreview(p);
 
     const err = validateClient(p);
-    if (err) { alert(err); return; }
+    if (err) { await rcAlert('Error', err); return; }
 
     try {
       if (btn) btn.disabled = true;
@@ -965,7 +964,7 @@ function showPRResult(pr){
       try { data = JSON.parse(bodyText); } catch { data = { ok: false, error: bodyText }; }
       if (!res.ok || !data.ok) {
         console.error('[Category Manager] error:', { status: res.status, body: bodyText, parsed: data });
-        alert(`Create/Update failed: ${data.error || bodyText || res.status}`);
+        await rcAlert('Error', `Create/Update failed: ${data.error || bodyText || res.status}`);
         setStatus('Error');
         return;
       }
@@ -973,21 +972,21 @@ function showPRResult(pr){
       try { showPRResult((data && data.pr) ? data.pr : null); } catch (e) { /* ignore */ }
 
       setStatus('Saved ✓');
-      alert(`Saved! Commit: ${data.commit}\nIndex created: ${data.createdIndex ? 'YES' : 'NO'}`);
+      await rcAlert('Upload Complete', `Saved! Commit: ${data.commit}\nIndex created: ${data.createdIndex ? 'YES' : 'NO'}`);
 
       location.reload();
     } catch (e) {
       console.error(e);
-      alert('Create/Update failed: ' + (e?.message || String(e)));
+      await rcAlert('Error', 'Create/Update failed: ' + (e?.message || String(e)));
       setStatus('Error');
     } finally {
       if (btn) btn.disabled = false;
     }
   }
 
-  function autofill() {
+  async function autofill() {
     const title = (qs('unitMgrTitle')?.value || '').trim();
-    if (!title) { alert('Enter a Title first'); return; }
+    if (!title) { await rcAlert('Validation', 'Enter a Title first'); return; }
 
     const slug = slugify(title);
     const section = (qs('unitMgrSection')?.value || 'language-arts').trim();

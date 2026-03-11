@@ -165,7 +165,7 @@
       renderCurrentTab();
     } catch (err) {
       console.error("[tc-reporting] Error loading data:", err);
-      alert("Error loading data. Please check console for details.");
+      await rcAlert('Error', 'Error loading data. Please check console for details.');
     }
   }
 
@@ -786,9 +786,9 @@ Status: ${status}`;
         ).join('\n\n---\n\n');
         navigator.clipboard.writeText(allText).then(() => {
           showToast('✅ Copied all goals to clipboard!');
-        }).catch(err => {
+        }).catch(async err => {
           console.error('Failed to copy:', err);
-          alert('Failed to copy to clipboard');
+          await rcAlert('Error', 'Failed to copy to clipboard');
         });
       });
     }
@@ -801,9 +801,9 @@ Status: ${status}`;
         const text = generateSpedTrackText(goalCode, studentCode, quarterRange);
         navigator.clipboard.writeText(text).then(() => {
           showToast('✅ Copied to clipboard!');
-        }).catch(err => {
+        }).catch(async err => {
           console.error('Failed to copy:', err);
-          alert('Failed to copy to clipboard');
+          await rcAlert('Error', 'Failed to copy to clipboard');
         });
       });
     });
@@ -979,7 +979,7 @@ Status: ${status}`;
   /**
    * Export report as PDF (using browser print)
    */
-  function exportReportAsPDF() {
+  async function exportReportAsPDF() {
     // Create a print-friendly version
     const reportCard = $("iepReportCard");
     if (!reportCard) return;
@@ -987,7 +987,7 @@ Status: ${status}`;
     // Create new window with print-friendly content
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      alert("Please allow popups to export PDF");
+      await rcAlert('Popups Blocked', 'Please allow popups to export PDF');
       return;
     }
 
@@ -2267,7 +2267,7 @@ Status: ${status}`;
   /**
    * Generate batch quarterly progress reports for all students
    */
-  function generateBatchReports() {
+  async function generateBatchReports() {
     const quarter = tab5State.quarter;
     const quarterRange = getQuarterDateRange(quarter);
     const quarterLabel = getQuarterLabel(quarter);
@@ -2282,7 +2282,7 @@ Status: ${status}`;
     const activeStudents = studentsData.filter((s) => s.active !== false);
 
     if (activeStudents.length === 0) {
-      alert("No active students found.");
+      await rcAlert('No Data', 'No active students found.');
       return;
     }
 
@@ -2381,7 +2381,7 @@ Status: ${status}`;
     // Open print window
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      alert("Please allow popups to generate reports");
+      await rcAlert('Popups Blocked', 'Please allow popups to generate reports');
       return;
     }
 

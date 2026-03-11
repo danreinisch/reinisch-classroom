@@ -181,19 +181,19 @@
       await loadPlans();
     } catch (err) {
       console.error("[tc-substitute] Toggle failed:", err);
-      alert("Error toggling publish status: " + err.message);
+      await rcAlert('Error', 'Error toggling publish status: ' + err.message);
     }
   };
 
   window.tcSubDelete = async function(planDate) {
-    if (!confirm("Delete plan for " + planDate + "? This cannot be undone.")) return;
+    if (!await rcConfirm('Delete Plan', 'Delete plan for ' + planDate + '? This cannot be undone.', 'Delete', { danger: true })) return;
     try {
       await deleteSubPlan(planDate);
       if (editingDate === planDate) clearForm();
       await loadPlans();
     } catch (err) {
       console.error("[tc-substitute] Delete failed:", err);
-      alert("Error deleting plan: " + err.message);
+      await rcAlert('Error', 'Error deleting plan: ' + err.message);
     }
   };
 

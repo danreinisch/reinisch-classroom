@@ -124,14 +124,14 @@
       
       const studentCode = document.getElementById('shareStudent').value;
       if (!studentCode) {
-        alert('Please select a student');
+        await rcAlert('Validation Error', 'Please select a student');
         return;
       }
 
       // Get selected goals
       const checkedBoxes = document.querySelectorAll('input[name="share_goals"]:checked');
       if (checkedBoxes.length === 0) {
-        alert('Please select at least one goal to share');
+        await rcAlert('Validation Error', 'Please select at least one goal to share');
         return;
       }
 
@@ -141,7 +141,7 @@
       // Find student name
       const student = students.find(s => s.code === studentCode);
       if (!student) {
-        alert('Student not found');
+        await rcAlert('Error', 'Student not found');
         return;
       }
 
@@ -193,13 +193,13 @@
     });
 
     // Handle copy link button
-    document.getElementById('shareCopyBtn').addEventListener('click', () => {
+    document.getElementById('shareCopyBtn').addEventListener('click', async () => {
       const linkUrl = document.getElementById('shareLinkUrl').textContent;
       navigator.clipboard.writeText(linkUrl).then(() => {
         showToast('📋 Link copied to clipboard!');
-      }).catch(err => {
+      }).catch(async err => {
         console.error('Failed to copy:', err);
-        alert('Failed to copy link to clipboard');
+        await rcAlert('Error', 'Failed to copy link to clipboard');
       });
     });
 
@@ -297,22 +297,22 @@
     
     // Add event listeners to buttons
     tbody.querySelectorAll('button[data-token]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const token = btn.dataset.token;
         const shareUrl = `${window.location.origin}/share/?token=${token}`;
         navigator.clipboard.writeText(shareUrl).then(() => {
           showToast('📋 Link copied to clipboard!');
-        }).catch(err => {
+        }).catch(async err => {
           console.error('Failed to copy:', err);
-          alert('Failed to copy link to clipboard');
+          await rcAlert('Error', 'Failed to copy link to clipboard');
         });
       });
     });
     
     tbody.querySelectorAll('button[data-token-id]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const tokenId = btn.dataset.tokenId;
-        if (!confirm('Are you sure you want to revoke this share link? It will no longer accept data entries.')) {
+        if (!await rcConfirm('Revoke Share Link', 'Are you sure you want to revoke this share link? It will no longer accept data entries.', 'Revoke', { danger: true })) {
           return;
         }
         

@@ -8,6 +8,10 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
+  "globals": {
+    "rcAlert": "readonly",
+    "rcConfirm": "readonly"
+  },
   "rules": {
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
     "no-console": "off",
@@ -15,5 +19,16 @@
       { "name": "alert", "message": "Use a styled modal component instead of window.alert()" },
       { "name": "confirm", "message": "Use a styled confirmation dialog instead of window.confirm()" }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["site/web/*.js", "site/admin/*.js", "site/teacher/admin/*.js"],
+      "rules": {
+        "no-restricted-globals": ["error",
+          { "name": "alert", "message": "Use rcAlert() from rc-modal.js instead of window.alert()" },
+          { "name": "confirm", "message": "Use rcConfirm() from rc-modal.js instead of window.confirm()" }
+        ]
+      }
+    }
+  ]
 }

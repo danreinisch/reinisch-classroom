@@ -37,13 +37,13 @@
   /**
    * Save teacher name to localStorage
    */
-  function saveTeacherName() {
+  async function saveTeacherName() {
     const input = $("teacherNameInput");
     if (!input) return;
 
     const name = input.value.trim();
     if (!name) {
-      alert("Please enter a teacher name.");
+      await rcAlert('Validation', 'Please enter a teacher name.');
       return;
     }
 
@@ -142,8 +142,8 @@
   /**
    * Reset quarter dates to defaults
    */
-  function resetQuarterDates() {
-    if (!confirm("Reset quarter dates to defaults? This will overwrite any custom dates.")) {
+  async function resetQuarterDates() {
+    if (!await rcConfirm('Reset Quarter Dates', 'Reset quarter dates to defaults? This will overwrite any custom dates.', 'Reset')) {
       return;
     }
 
@@ -498,14 +498,14 @@
       console.log("[tc-settings] Data exported successfully");
     } catch (error) {
       console.error("[tc-settings] Error exporting data:", error);
-      alert("Error exporting data. Check console for details.");
+      await rcAlert('Export Error', 'Error exporting data. Check console for details.');
     }
   }
 
   /**
    * Clear all localStorage data with rc_ prefix
    */
-  function clearData() {
+  async function clearData() {
     const confirmMsg =
       "Are you sure you want to clear all local data?\n\n" +
       "This will delete:\n" +
@@ -514,7 +514,7 @@
       "- All cached data\n\n" +
       "This action cannot be undone.";
 
-    if (!confirm(confirmMsg)) {
+    if (!await rcConfirm('Clear Local Data', confirmMsg, 'Clear', { danger: true })) {
       return;
     }
 
@@ -531,7 +531,7 @@
     keysToDelete.forEach((key) => localStorage.removeItem(key));
 
     console.log("[tc-settings] Cleared", keysToDelete.length, "localStorage keys");
-    alert(`Cleared ${keysToDelete.length} items from local storage.`);
+    showToast(`Cleared ${keysToDelete.length} items from local storage.`, 'rgba(100, 116, 139, 0.95)', '#fff');
 
     // Reload the page to reflect changes
     setTimeout(() => location.reload(), 500);
@@ -685,7 +685,7 @@
     if (!studentCode) return;
     const defaultPw = studentCode + "!";
 
-    if (!confirm(`Reset password for ${studentCode} to default ("${defaultPw}")?`)) return;
+    if (!await rcConfirm('Reset Password', `Reset password for ${studentCode} to default ("${defaultPw}")?`, 'Reset')) return;
 
     try {
       await db.setStudentPassword(studentCode, defaultPw);
@@ -705,7 +705,7 @@
    * Reset ALL student passwords to the default ({code}!) format via server
    */
   async function resetAllStudentPasswords() {
-    if (!confirm("This will reset ALL student passwords to their default ({code}!). Students with custom passwords will lose them. Are you sure?")) return;
+    if (!await rcConfirm('Reset All Passwords', 'This will reset ALL student passwords to their default ({code}!). Students with custom passwords will lose them. Are you sure?', 'Reset All', { danger: true })) return;
 
     const btn = $("resetAllPasswordsBtn");
     if (btn) btn.disabled = true;
