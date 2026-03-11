@@ -38,6 +38,7 @@
   const state = {
     bootWatchdogTimer: null,
     dashboardHandlersAttached: false,
+    goalClickHandlersAttached: false,
   };
 
   // Cached quarter-utils module (loaded lazily in loadStudentGoals).
@@ -767,59 +768,67 @@
   
   /**
    * Attach event listeners to "Show more" and progress toggle buttons.
-   * Uses event delegation on the container elements so that dynamically
-   * re-rendered goal cards (async load) are always covered without
-   * needing to rebind on every render.
+   * Uses event delegation on stable tab-panel containers (#tabGoals and
+   * #tabDashboard) so that listeners survive any innerHTML replacements
+   * inside those panels (e.g. after goals are re-rendered).
    *
-   * Stores the handler reference on the container element (_goalClickHandler)
-   * so it can be removed before re-attaching, preventing duplicate listeners
-   * when the function is called after each goals render.
+   * A module-level flag (state.goalClickHandlersAttached) ensures the
+   * handler is attached only once per page load, preventing duplicate
+   * listeners across multiple loadStudentGoals() calls.
    */
   function attachShowMoreListeners() {
-    const containers = [
-      document.getElementById('goalsContent'),
-      document.getElementById('dashGoalsSnapshot'),
+    if (state.goalClickHandlersAttached) return;
+
+    const stableContainers = [
+      document.getElementById('tabGoals'),
+      document.getElementById('tabDashboard'),
     ];
 
-    containers.forEach(container => {
-      if (!container) return;
-
-      function handleGoalClick(e) {
-        // Handle "Show more / Show less" description toggle
-        const showMoreBtn = e.target.closest('.st-goal-show-more');
-        if (showMoreBtn) {
-          const descContainer = showMoreBtn.parentElement;
-          descContainer.classList.toggle('expanded');
-          showMoreBtn.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
-          return;
-        }
-
-        // Handle "View Progress / Hide Progress" panel toggle
-        const toggleBtn = e.target.closest('.st-goal-progress-toggle')
-          || e.target.closest('button[data-progress-id]');
-        if (toggleBtn) {
-          const targetId = toggleBtn.dataset.progressId;
-          const panel = document.getElementById(targetId);
-          if (!panel) {
-            console.warn('[student-portal] Progress panel not found for id:', targetId);
-            return;
-          }
-          const isExpanded = !panel.hidden;
-          panel.hidden = isExpanded;
-          panel.style.display = isExpanded ? 'none' : '';
-          panel.setAttribute('aria-hidden', String(isExpanded));
-          toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
-          const svgEl = toggleBtn.querySelector('svg');
-          if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
-          const labelEl = toggleBtn.querySelector('.st-goal-progress-toggle-label');
-          if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
-        }
+    // Shared handler for both containers — defined once and reused
+    function handleGoalClick(e) {
+      // Handle "Show more / Show less" description toggle
+      const showMoreBtn = e.target.closest('.st-goal-show-more');
+      if (showMoreBtn) {
+        const descContainer = showMoreBtn.parentElement;
+        descContainer.classList.toggle('expanded');
+        showMoreBtn.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
+        return;
       }
 
-      container.removeEventListener('click', container._goalClickHandler);
-      container._goalClickHandler = handleGoalClick;
+      // Handle "View Progress / Hide Progress" panel toggle
+      const toggleBtn = e.target.closest('.st-goal-progress-toggle')
+        || e.target.closest('button[data-progress-id]');
+      if (toggleBtn) {
+        const targetId = toggleBtn.dataset.progressId;
+        const panel = document.getElementById(targetId);
+        if (!panel) {
+          console.warn('[student-portal] Progress panel not found for id:', targetId);
+          return;
+        }
+        const isExpanded = !panel.hidden;
+        panel.hidden = isExpanded;
+        panel.style.display = isExpanded ? 'none' : '';
+        panel.setAttribute('aria-hidden', String(isExpanded));
+        toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+        const svgEl = toggleBtn.querySelector('svg');
+        if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
+        const labelEl = toggleBtn.querySelector('.st-goal-progress-toggle-label');
+        if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
+      }
+    }
+
+    let attached = false;
+    stableContainers.forEach(container => {
+      if (!container) return;
       container.addEventListener('click', handleGoalClick);
+      attached = true;
     });
+
+    // Mark as attached only if at least one container was found so that
+    // a retry is possible if the DOM is not yet ready on first call.
+    if (attached) {
+      state.goalClickHandlersAttached = true;
+    }
   }
 
   // ============================================================================
