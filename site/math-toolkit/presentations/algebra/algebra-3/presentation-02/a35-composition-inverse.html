@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Composition &amp; Inverse Functions &mdash; Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;--border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;--accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;--text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;--formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+.breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}.breadcrumb span{color:var(--text-dim);margin:0 6px}.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}.breadcrumb a:hover{color:var(--accent)}.breadcrumb .current{color:var(--text);font-weight:500}
+.tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-orange);font-weight:500;margin:20px 24px 0}
+.container{max-width:860px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}.subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+.process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}.proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}.proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}.proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}.proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}.proc-step.active .p-icon{filter:none}.proc-step.active .p-label{color:rgba(255,255,255,.9)}.proc-step.done{background:var(--surface2)}.proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}.proc-step.done .p-label{color:var(--success)}.proc-step.done::after{content:'\2713';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}.btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}.btn-primary:hover{background:#0fa396;transform:translateY(-1px)}.btn-sm{padding:10px 22px;font-size:.85rem}.btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}.btn-check:hover{background:#0fa396}
+.btn-copy{background:var(--surface3);color:var(--accent-blue);padding:12px 24px;font-size:.88rem;border:2px solid var(--accent-blue);display:inline-flex;align-items:center;gap:8px}.btn-copy:hover{background:rgba(56,189,248,.1);transform:translateY(-1px)}.btn-copy.copied{border-color:var(--success);color:var(--success);background:rgba(34,197,94,.1)}
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}.input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+.mode-tabs{display:flex;gap:5px;margin-bottom:22px;flex-wrap:wrap}.mode-tab{padding:8px 12px;border-radius:10px;font-size:.75rem;font-weight:600;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}.mode-tab:hover{border-color:var(--accent);color:var(--accent)}.mode-tab.selected{background:rgba(20,184,166,.1);border-color:var(--accent);color:var(--accent)}
+.mode-panel{display:none}.mode-panel.active{display:block;animation:fadeSlideIn .3s ease}
+.field-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 16px}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}.field input,.field select{font-family:var(--font-mono);font-size:1rem;padding:10px 14px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;transition:border-color .3s}.field input:focus,.field select:focus{border-color:var(--accent)}.field input::placeholder{color:var(--text-dim);font-size:.82rem}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9bbf' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;padding-right:32px}
+.points-grid{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}.point-row{display:flex;align-items:center;gap:8px}.point-row .pt-label{font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--text-dim);min-width:20px}.point-row input{font-family:var(--font-mono);font-size:1rem;padding:8px 6px;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;text-align:center;width:62px;transition:border-color .3s}.point-row input:focus{border-color:var(--accent)}.point-row .comma{color:var(--text-dim);font-size:.9rem}
+.fn-table{border-collapse:collapse;margin:12px auto}.fn-table th,.fn-table td{font-family:var(--font-mono);font-size:.95rem;padding:10px 18px;border:1px solid var(--border);text-align:center}.fn-table th{background:var(--surface3);color:var(--accent);font-weight:700}.fn-table td{background:var(--formula-bg);color:var(--text)}
+.fn-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:12px 18px;margin:8px 4px;display:inline-block}.fn-box .fn-name{font-weight:700;font-size:.9rem}.fn-box .fn-name.blue{color:var(--accent-blue)}.fn-box .fn-name.orange{color:var(--accent-orange)}.fn-box .fn-rule{font-family:var(--font-mono);font-size:1rem;font-weight:600;margin-top:2px}
+.callout{background:rgba(20,184,166,.06);border:1px solid rgba(20,184,166,.2);border-radius:10px;padding:14px 18px;margin:10px 0;font-size:.88rem;line-height:1.7;color:var(--text)}
+.strategy-box{background:var(--surface3);border:1px solid var(--accent);border-radius:10px;padding:16px 20px;margin:14px 0;font-size:.88rem;line-height:1.7}.strategy-box .strat-title{font-weight:700;color:var(--accent);margin-bottom:6px;font-size:.9rem}
+.dir-toggle{display:flex;gap:6px;margin:10px 0;justify-content:center}.dir-btn{padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;border:2px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;font-family:var(--font-mono);transition:all .2s}.dir-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.1)}
+.start-row{display:flex;justify-content:center;margin-top:12px}
+.error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}.error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+.examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}.examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}.examples-toggle:hover{color:var(--text);background:var(--surface3)}.toggle-arrow{font-size:.7rem;transition:transform .3s ease}.toggle-arrow.open{transform:rotate(180deg)}.examples-body{max-height:0;overflow:hidden;transition:max-height .5s ease}.examples-body.open{max-height:3000px}.example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}.category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}.examples{display:flex;flex-wrap:wrap;gap:8px}.example-chip{font-family:var(--font-mono);font-size:.7rem;padding:6px 11px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}.example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+.workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.problem-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:1rem;font-weight:600;color:var(--text)}
+.step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}.step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}.step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}.step-num.done{background:var(--success)}.step-title{font-weight:600;font-size:.95rem}.step-body{padding-left:40px}
+.step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+.step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7;text-align:center}
+.answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}.answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:160px;outline:none;transition:border-color .3s;text-align:center}.answer-input:focus{border-color:var(--accent)}.answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}.answer-input.incorrect{border-color:var(--error)}.answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.choice-btn{padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}.choice-btn:hover{border-color:var(--accent);color:var(--accent)}.choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}.choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}.choice-btn.disabled{opacity:.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}.step-feedback.show{display:block;animation:fadeSlideIn .25s ease}.step-feedback.correct{color:var(--success)}.step-feedback.incorrect{color:var(--error)}.step-feedback.hint-text{color:var(--accent-orange)}
+.step-card.completed{opacity:.6}.step-card.completed .answer-input{pointer-events:none}.step-card.completed .btn-check{display:none}.step-card.completed .choice-btn{pointer-events:none}
+.result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(167,139,250,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}.result-section.visible{display:block;animation:fadeSlideIn .5s ease}.result-icon{font-size:2.5rem;margin-bottom:10px}.result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}.result-expression{font-family:var(--font-mono);font-size:1rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0;line-height:1.8}.result-detail{color:var(--text-muted);font-size:.88rem;margin-top:8px}.actions{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+@media(max-width:600px){.container{padding:16px}.input-section,.workspace{padding:20px}h1{font-size:1.4rem}.step-body{padding-left:0}.mode-tabs{gap:4px}.mode-tab{padding:6px 8px;font-size:.66rem}.field-row{gap:8px}.field input{padding:8px 10px;font-size:.9rem}.fn-table th,.fn-table td{padding:6px 10px;font-size:.82rem}}
+</style>
+</head>
+<body>
+<nav class="breadcrumb"><a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span><a href="#">Math Toolkit</a><span>&rsaquo;</span><a href="#">Algebra</a><span>&rsaquo;</span><a href="#">Algebra 3</a><span>&rsaquo;</span><span class="current">Composition &amp; Inverse Functions</span></nav>
+<div class="container">
+  <div class="tier-badge">&#128213; Algebra 3 &middot; A35</div>
+  <h1>Composition &amp; Inverse Functions</h1>
+  <p class="subtitle">Enter linear functions &mdash; walk through composition, inverses, tables, and verification step by step.</p>
+  <div class="process-banner" id="procBanner">
+    <div class="proc-step" id="proc-identify"><span class="p-icon">&#128269;</span><span class="p-label">Identify</span></div>
+    <div class="proc-step" id="proc-setup"><span class="p-icon">&#128208;</span><span class="p-label">Set Up</span></div>
+    <div class="proc-step" id="proc-compute"><span class="p-icon">&#128290;</span><span class="p-label">Compute</span></div>
+    <div class="proc-step" id="proc-answer"><span class="p-icon">&#10024;</span><span class="p-label">Answer</span></div>
+  </div>
+  <div class="input-section" id="inputSection">
+    <h2>&#9998; What Type of Problem?</h2>
+    <p class="hint">Functions are linear (ax + b). Enter a and b for each.</p>
+    <div class="mode-tabs">
+      <div class="mode-tab" onclick="setMode('basics')" id="tab-basics">Comp. Basics</div>
+      <div class="mode-tab" onclick="setMode('evalComp')" id="tab-evalComp">Evaluate Comp.</div>
+      <div class="mode-tab" onclick="setMode('compRule')" id="tab-compRule">Comp. Rule</div>
+      <div class="mode-tab" onclick="setMode('inverse')" id="tab-inverse">Find Inverse</div>
+      <div class="mode-tab" onclick="setMode('invTable')" id="tab-invTable">Inverse Table</div>
+      <div class="mode-tab" onclick="setMode('verify')" id="tab-verify">Verify Inverses</div>
+      <div class="mode-tab" onclick="setMode('evalInv')" id="tab-evalInv">Eval f\u207B\u00B9(k)</div>
+    </div>
+    <!-- 1. Basics -->
+    <div class="mode-panel" id="panel-basics">
+      <p class="hint">Learn what composition means before computing.</p>
+      <div class="field-row"><div class="field"><label>f(x): a</label><input id="cb-fa" placeholder="2" style="width:70px"></div><div class="field"><label>b</label><input id="cb-fb" placeholder="3" style="width:70px"></div></div>
+      <div class="field-row"><div class="field"><label>g(x): a</label><input id="cb-ga" placeholder="1" style="width:70px"></div><div class="field"><label>b</label><input id="cb-gb" placeholder="-1" style="width:70px"></div></div>
+      <div class="field-row"><div class="field"><label>x =</label><input id="cb-x" placeholder="4" style="width:80px"></div></div>
+    </div>
+    <!-- 2. Evaluate Composition -->
+    <div class="mode-panel" id="panel-evalComp">
+      <p class="hint">Evaluate a composition at a specific x. Choose direction.</p>
+      <div class="field-row"><div class="field"><label>f(x): a</label><input id="ec-fa" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="ec-fb" placeholder="b" style="width:70px"></div></div>
+      <div class="field-row"><div class="field"><label>g(x): a</label><input id="ec-ga" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="ec-gb" placeholder="b" style="width:70px"></div></div>
+      <div class="field-row"><div class="field"><label>x =</label><input id="ec-x" placeholder="x" style="width:80px"></div></div>
+      <div class="dir-toggle"><div class="dir-btn active" id="dir-fg" onclick="setDir('fg')">f(g(x))</div><div class="dir-btn" id="dir-gf" onclick="setDir('gf')">g(f(x))</div></div>
+    </div>
+    <!-- 3. Composition Rule -->
+    <div class="mode-panel" id="panel-compRule">
+      <p class="hint">Find both f(g(x)) and g(f(x)) as new rules.</p>
+      <div class="field-row"><div class="field"><label>f(x): a</label><input id="cr-fa" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="cr-fb" placeholder="b" style="width:70px"></div></div>
+      <div class="field-row"><div class="field"><label>g(x): a</label><input id="cr-ga" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="cr-gb" placeholder="b" style="width:70px"></div></div>
+    </div>
+    <!-- 4. Find Inverse -->
+    <div class="mode-panel" id="panel-inverse">
+      <p class="hint">Find f\u207B\u00B9(x) for f(x) = ax + b.</p>
+      <div class="field-row"><div class="field"><label>a</label><input id="inv-a" placeholder="a" style="width:80px"></div><div class="field"><label>b</label><input id="inv-b" placeholder="b" style="width:80px"></div></div>
+    </div>
+    <!-- 5. Inverse from Table -->
+    <div class="mode-panel" id="panel-invTable">
+      <p class="hint">Enter points for f. The inverse f\u207B\u00B9 swaps every (x, y) to (y, x).</p>
+      <div class="points-grid">
+        <div class="point-row"><span class="pt-label">1</span>(<input id="it-x1" placeholder="x"><span class="comma">,</span><input id="it-y1" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">2</span>(<input id="it-x2" placeholder="x"><span class="comma">,</span><input id="it-y2" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">3</span>(<input id="it-x3" placeholder="x"><span class="comma">,</span><input id="it-y3" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">4</span>(<input id="it-x4" placeholder="x"><span class="comma">,</span><input id="it-y4" placeholder="y">)</div>
+        <div class="point-row"><span class="pt-label">5</span>(<input id="it-x5" placeholder="x"><span class="comma">,</span><input id="it-y5" placeholder="y">)</div>
+      </div>
+    </div>
+    <!-- 6. Verify -->
+    <div class="mode-panel" id="panel-verify">
+      <p class="hint">Test if f and g are inverses: f(g(x)) = x AND g(f(x)) = x?</p>
+      <div class="field-row"><div class="field"><label>f(x): a</label><input id="vr-fa" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="vr-fb" placeholder="b" style="width:70px"></div></div>
+      <div class="field-row"><div class="field"><label>g(x): a</label><input id="vr-ga" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="vr-gb" placeholder="b" style="width:70px"></div></div>
+    </div>
+    <!-- 7. Evaluate Inverse -->
+    <div class="mode-panel" id="panel-evalInv">
+      <p class="hint">Given f(x) = ax + b, find f\u207B\u00B9(k).</p>
+      <div class="field-row"><div class="field"><label>a</label><input id="ei-a" placeholder="a" style="width:70px"></div><div class="field"><label>b</label><input id="ei-b" placeholder="b" style="width:70px"></div><div class="field"><label>k =</label><input id="ei-k" placeholder="k" style="width:80px"></div></div>
+    </div>
+    <div class="start-row" id="startRow" style="display:none"><button class="btn-primary" onclick="startSolving()">Let's Solve It &rarr;</button></div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()"><span>&#128203; Try a Practice Problem</span><span class="toggle-arrow" id="toggleArrow">&#9660;</span></div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category"><div class="category-label">&#x1F4D6; Composition Basics</div><div class="examples">
+          <span class="example-chip" onclick="loadCB(2,3,1,-1,4)">f=2x+3 g=x-1 x=4</span>
+          <span class="example-chip" onclick="loadCB(3,0,2,1,5)">f=3x g=2x+1 x=5</span>
+          <span class="example-chip" onclick="loadCB(-1,10,1,2,3)">f=-x+10 g=x+2 x=3</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E2; Evaluate Composition</div><div class="examples">
+          <span class="example-chip" onclick="loadEC(2,3,1,-1,4,'fg')">f(g(4))</span>
+          <span class="example-chip" onclick="loadEC(2,3,1,-1,4,'gf')">g(f(4))</span>
+          <span class="example-chip" onclick="loadEC(3,1,-2,5,2,'fg')">f(g(2))</span>
+          <span class="example-chip" onclick="loadEC(-1,7,4,2,0,'gf')">g(f(0))</span>
+          <span class="example-chip" onclick="loadEC(5,0,1,3,-2,'fg')">f(g(-2))</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F535; Composition Rule</div><div class="examples">
+          <span class="example-chip" onclick="loadCR(2,3,1,-1)">f=2x+3 g=x-1</span>
+          <span class="example-chip" onclick="loadCR(3,-2,4,1)">f=3x-2 g=4x+1</span>
+          <span class="example-chip" onclick="loadCR(-1,5,2,0)">f=-x+5 g=2x</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E0; Find Inverse</div><div class="examples">
+          <span class="example-chip" onclick="loadINV(2,3)">f=2x+3</span>
+          <span class="example-chip" onclick="loadINV(3,-6)">f=3x-6</span>
+          <span class="example-chip" onclick="loadINV(-1,5)">f=-x+5</span>
+          <span class="example-chip" onclick="loadINV(4,0)">f=4x</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F4CB; Inverse from Table</div><div class="examples">
+          <span class="example-chip" onclick="loadIT([[1,5],[2,7],[3,9],[4,11]])">Linear</span>
+          <span class="example-chip" onclick="loadIT([[0,3],[1,5],[2,7],[3,9],[4,11]])">5 points</span>
+          <span class="example-chip" onclick="loadIT([[-1,4],[0,2],[1,0],[2,-2]])">Decreasing</span>
+          <span class="example-chip" onclick="loadIT([[2,10],[4,20],[6,30],[8,40]])">Multiples</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E3; Verify Inverses</div><div class="examples">
+          <span class="example-chip" onclick="loadVR(2,3,0.5,-1.5)">YES: 2x+3 &amp; .5x-1.5</span>
+          <span class="example-chip" onclick="loadVR(3,-6,1/3,2)">YES: 3x-6 &amp; x/3+2</span>
+          <span class="example-chip" onclick="loadVR(2,1,3,-1)">NO: 2x+1 &amp; 3x-1</span>
+          <span class="example-chip" onclick="loadVR(-1,5,-1,5)">YES: self-inverse</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F534; Evaluate f\u207B\u00B9(k)</div><div class="examples">
+          <span class="example-chip" onclick="loadEI(2,3,11)">f\u207B\u00B9(11) f=2x+3</span>
+          <span class="example-chip" onclick="loadEI(3,-6,9)">f\u207B\u00B9(9) f=3x-6</span>
+          <span class="example-chip" onclick="loadEI(5,0,20)">f\u207B\u00B9(20) f=5x</span>
+          <span class="example-chip" onclick="loadEI(-1,5,8)">f\u207B\u00B9(8) f=-x+5</span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <div class="workspace" id="workspace">
+    <div class="problem-display" id="problemDisplay"></div>
+    <div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection">
+      <div class="result-icon">&#127881;</div>
+      <div class="result-title">Problem Solved!</div>
+      <div class="result-expression" id="resultExpr"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <div class="actions">
+        <button class="btn-copy" id="copyBtn" onclick="copyWork()">&#128203; Copy My Work</button>
+        <button class="btn-primary" onclick="resetAll()">Solve Another &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var fN=function(n){if(n==null)return"?";if(Number.isInteger(n))return""+n;return parseFloat(n.toFixed(4)).toString()};
+var rnd=function(n,d){return parseFloat(n.toFixed(d))};
+var escH=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")};
+var pf=function(id){return parseFloat(document.getElementById(id).value)||0};
+var linH=function(a,b){if(a===0)return fN(b);var s=(Math.abs(a)===1?"":fN(Math.abs(a)))+"x";if(a<0)s="\u2212"+s;if(b>0)s+=" + "+fN(b);else if(b<0)s+=" \u2212 "+fN(Math.abs(b));return s};
+var linP=function(a,b){if(a===0)return fN(b);var s=(Math.abs(a)===1?"":""+Math.abs(a))+"x";if(a<0)s="-"+s;if(b>0)s+=" + "+fN(b);else if(b<0)s+=" - "+fN(Math.abs(b));return s};
+var evL=function(a,b,x){return rnd(a*x+b,4)};
+
+var mode=null,ST={compDir:"fg"},stepsData=[],currentStep=0;
+function setMode(m){mode=m;document.querySelectorAll(".mode-tab").forEach(function(t){t.classList.remove("selected")});document.getElementById("tab-"+m).classList.add("selected");document.querySelectorAll(".mode-panel").forEach(function(p){p.classList.remove("active")});document.getElementById("panel-"+m).classList.add("active");document.getElementById("startRow").style.display="flex"}
+function setDir(d){ST.compDir=d;document.getElementById("dir-fg").classList.toggle("active",d==="fg");document.getElementById("dir-gf").classList.toggle("active",d==="gf")}
+
+function loadCB(fa,fb,ga,gb,x){setMode("basics");document.getElementById("cb-fa").value=fa;document.getElementById("cb-fb").value=fb;document.getElementById("cb-ga").value=ga;document.getElementById("cb-gb").value=gb;document.getElementById("cb-x").value=x}
+function loadEC(fa,fb,ga,gb,x,dir){setMode("evalComp");document.getElementById("ec-fa").value=fa;document.getElementById("ec-fb").value=fb;document.getElementById("ec-ga").value=ga;document.getElementById("ec-gb").value=gb;document.getElementById("ec-x").value=x;setDir(dir||"fg")}
+function loadCR(fa,fb,ga,gb){setMode("compRule");document.getElementById("cr-fa").value=fa;document.getElementById("cr-fb").value=fb;document.getElementById("cr-ga").value=ga;document.getElementById("cr-gb").value=gb}
+function loadINV(a,b){setMode("inverse");document.getElementById("inv-a").value=a;document.getElementById("inv-b").value=b}
+function loadIT(pts){setMode("invTable");pts.forEach(function(p,i){document.getElementById("it-x"+(i+1)).value=p[0];document.getElementById("it-y"+(i+1)).value=p[1]})}
+function loadVR(fa,fb,ga,gb){setMode("verify");document.getElementById("vr-fa").value=fa;document.getElementById("vr-fb").value=fb;document.getElementById("vr-ga").value=ga;document.getElementById("vr-gb").value=gb}
+function loadEI(a,b,k){setMode("evalInv");document.getElementById("ei-a").value=a;document.getElementById("ei-b").value=b;document.getElementById("ei-k").value=k}
+
+function toggleExamples(){document.getElementById("examplesBody").classList.toggle("open");document.getElementById("toggleArrow").classList.toggle("open")}
+function showError(msg){var el=document.getElementById("errorMsg");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show")},4000)}
+function startSolving(){if(!mode){showError("Select a mode.");return}stepsData=[];currentStep=0;ST.mode=mode;({basics:startBasics,evalComp:startEvalComp,compRule:startCompRule,inverse:startInverse,invTable:startInvTable,verify:startVerify,evalInv:startEvalInv})[mode]()}
+function launchWorkspace(){document.getElementById("inputSection").style.display="none";document.getElementById("workspace").classList.add("visible");document.getElementById("resultSection").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});var cb=document.getElementById("copyBtn");cb.classList.remove("copied");cb.innerHTML="&#128203; Copy My Work";showStep(0)}
+
+// ==================== 1. COMPOSITION BASICS ====================
+function startBasics(){
+  var fa=pf("cb-fa"),fb=pf("cb-fb"),ga=pf("cb-ga"),gb=pf("cb-gb"),x=pf("cb-x");
+  var gx=evL(ga,gb,x),fgx=evL(fa,fb,gx);
+  var fx=evL(fa,fb,x),gfx=evL(ga,gb,fx);
+  Object.assign(ST,{fa:fa,fb:fb,ga:ga,gb:gb,x:x,gx:gx,fgx:fgx,fx:fx,gfx:gfx});
+  document.getElementById("problemDisplay").innerHTML="Understanding Composition";
+
+  stepsData.push({title:"What is Composition?",proc:"identify",type:"info",
+    instruction:'<div class="callout"><strong>Composition</strong> means plugging one function\'s output into another function.<br><br>Think of it like getting dressed:<br>\u2022 <strong style="color:var(--accent-orange)">g = put on socks</strong><br>\u2022 <strong style="color:var(--accent-blue)">f = put on shoes</strong><br>\u2022 <strong>f(g(x))</strong> = socks THEN shoes \u2713<br>\u2022 <strong>g(f(x))</strong> = shoes THEN socks \u2717 weird!<br><br><strong>Order matters!</strong></div>',
+    work:"Composition = output of one function becomes input of another"});
+
+  stepsData.push({title:"The Notation",proc:"identify",type:"info",
+    instruction:'<div class="callout">\u26A0\uFE0F <strong>f(g(x))</strong> does NOT mean f \u00D7 g \u00D7 x!<br><br>It means: <strong>first</strong> do <span style="color:var(--accent-orange)">g</span>, <strong>then</strong> do <span style="color:var(--accent-blue)">f</span> to the result.<br><br>Read it <strong>inside out</strong>: start from the innermost function.</div>',
+    work:"f(g(x)) means: first g, then f. Inside out."});
+
+  stepsData.push({title:"Our Functions",proc:"setup",type:"info",
+    instruction:'<div style="text-align:center"><span class="fn-box"><span class="fn-name blue">f(x)</span> = <span class="fn-rule">'+linH(fa,fb)+'</span></span> &nbsp; <span class="fn-box"><span class="fn-name orange">g(x)</span> = <span class="fn-rule">'+linH(ga,gb)+'</span></span></div>Let\'s compute <strong>both directions</strong> at x = '+fN(x)+' to see that order matters.',
+    work:"f(x)="+linP(fa,fb)+", g(x)="+linP(ga,gb)});
+
+  // f(g(x))
+  stepsData.push({title:"f(g("+fN(x)+")): Step 1 \u2014 Inner first",proc:"compute",type:"numeric",
+    instruction:'<strong style="color:var(--accent-orange)">g('+fN(x)+')</strong> = '+fN(ga)+'('+fN(x)+') + '+fN(gb)+' = ?',
+    question:"g("+fN(x)+") =",answer:gx,work:"g("+fN(x)+") = "+fN(gx)});
+
+  stepsData.push({title:"f(g("+fN(x)+")): Step 2 \u2014 Outer",proc:"compute",type:"numeric",
+    instruction:'<strong style="color:var(--accent-blue)">f(</strong><strong style="color:var(--accent-orange)">'+fN(gx)+'</strong><strong style="color:var(--accent-blue)">)</strong> = '+fN(fa)+'('+fN(gx)+') + '+fN(fb)+' = ?',
+    question:"f(g("+fN(x)+")) =",answer:fgx,work:"f(g("+fN(x)+")) = "+fN(fgx)});
+
+  // g(f(x))
+  stepsData.push({title:"g(f("+fN(x)+")): Step 1 \u2014 Inner first",proc:"compute",type:"numeric",
+    instruction:'Now the OTHER direction. <strong style="color:var(--accent-blue)">f('+fN(x)+')</strong> = '+fN(fa)+'('+fN(x)+') + '+fN(fb)+' = ?',
+    question:"f("+fN(x)+") =",answer:fx,work:"f("+fN(x)+") = "+fN(fx)});
+
+  stepsData.push({title:"g(f("+fN(x)+")): Step 2 \u2014 Outer",proc:"compute",type:"numeric",
+    instruction:'<strong style="color:var(--accent-orange)">g(</strong><strong style="color:var(--accent-blue)">'+fN(fx)+'</strong><strong style="color:var(--accent-orange)">)</strong> = '+fN(ga)+'('+fN(fx)+') + '+fN(gb)+' = ?',
+    question:"g(f("+fN(x)+")) =",answer:gfx,work:"g(f("+fN(x)+")) = "+fN(gfx)});
+
+  var same=Math.abs(fgx-gfx)<0.001;
+  stepsData.push({title:"Compare!",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.1rem;font-weight:700;color:var(--accent-blue)">f(g('+fN(x)+')) = '+fN(fgx)+'</div><div style="font-size:1.1rem;font-weight:700;color:var(--accent-orange);margin-top:8px">g(f('+fN(x)+')) = '+fN(gfx)+'</div><div style="margin-top:12px;font-size:1rem;font-weight:700;color:'+(same?"var(--accent-purple)":"var(--error)")+'">'+(same?"They happen to be equal here!":"They are DIFFERENT! Order matters!")+'</div></div>',
+    work:"f(g(x))="+fN(fgx)+", g(f(x))="+fN(gfx)+(same?" EQUAL":" DIFFERENT")});
+  launchWorkspace();
+}
+
+// ==================== 2. EVALUATE COMPOSITION ====================
+function startEvalComp(){
+  var fa=pf("ec-fa"),fb=pf("ec-fb"),ga=pf("ec-ga"),gb=pf("ec-gb"),x=pf("ec-x"),dir=ST.compDir||"fg";
+  var isFG=dir==="fg";
+  var outerA=isFG?fa:ga,outerB=isFG?fb:gb,innerA=isFG?ga:fa,innerB=isFG?gb:fb;
+  var outerN=isFG?"f":"g",innerN=isFG?"g":"f";
+  var outerC=isFG?"blue":"orange",innerC=isFG?"orange":"blue";
+  var innerVal=evL(innerA,innerB,x),result=evL(outerA,outerB,innerVal);
+  Object.assign(ST,{fa:fa,fb:fb,ga:ga,gb:gb,x:x,dir:dir,result:result,innerVal:innerVal});
+  document.getElementById("problemDisplay").innerHTML=outerN+"("+innerN+"("+fN(x)+"))";
+
+  stepsData.push({title:"The Functions",proc:"identify",type:"info",
+    instruction:'<div style="text-align:center"><span class="fn-box"><span class="fn-name blue">f(x)</span> = <span class="fn-rule">'+linH(fa,fb)+'</span></span> &nbsp; <span class="fn-box"><span class="fn-name orange">g(x)</span> = <span class="fn-rule">'+linH(ga,gb)+'</span></span></div><div class="strategy-box"><div class="strat-title">&#127919; Inside Out</div><strong>'+outerN+'('+innerN+'(x))</strong>: First compute <span style="color:var(--'+innerC+')">'+innerN+'('+fN(x)+')</span>, then plug into <span style="color:var(--'+outerC+')">'+outerN+'</span>.</div>',
+    work:outerN+"("+innerN+"("+fN(x)+"))"});
+
+  stepsData.push({title:"Inner: "+innerN+"("+fN(x)+")",proc:"setup",type:"numeric",
+    instruction:'<span style="color:var(--'+innerC+')">'+innerN+'('+fN(x)+')</span> = '+fN(innerA)+'('+fN(x)+') + '+fN(innerB),
+    question:innerN+"("+fN(x)+") =",answer:innerVal,work:innerN+"("+fN(x)+") = "+fN(innerVal)});
+
+  stepsData.push({title:"Outer: "+outerN+"("+fN(innerVal)+")",proc:"compute",type:"numeric",
+    instruction:'<span style="color:var(--'+outerC+')">'+outerN+'('+fN(innerVal)+')</span> = '+fN(outerA)+'('+fN(innerVal)+') + '+fN(outerB),
+    question:outerN+"("+innerN+"("+fN(x)+")) =",answer:result,work:outerN+"("+fN(innerVal)+") = "+fN(result)});
+
+  stepsData.push({title:"Answer",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">'+outerN+'('+innerN+'('+fN(x)+')) = '+fN(result)+'</div></div>',
+    work:"ANSWER: "+fN(result)});
+  launchWorkspace();
+}
+
+// ==================== 3. COMPOSITION RULE ====================
+function startCompRule(){
+  var fa=pf("cr-fa"),fb=pf("cr-fb"),ga=pf("cr-ga"),gb=pf("cr-gb");
+  var fga=rnd(fa*ga,4),fgb=rnd(fa*gb+fb,4),gfa=rnd(ga*fa,4),gfb=rnd(ga*fb+gb,4);
+  Object.assign(ST,{fa:fa,fb:fb,ga:ga,gb:gb,fga:fga,fgb:fgb,gfa:gfa,gfb:gfb});
+  document.getElementById("problemDisplay").innerHTML="f\u2218g(x) and g\u2218f(x)";
+
+  stepsData.push({title:"The Functions",proc:"identify",type:"info",
+    instruction:'<div style="text-align:center"><span class="fn-box"><span class="fn-name blue">f(x)</span> = <span class="fn-rule">'+linH(fa,fb)+'</span></span> &nbsp; <span class="fn-box"><span class="fn-name orange">g(x)</span> = <span class="fn-rule">'+linH(ga,gb)+'</span></span></div><div class="strategy-box"><div class="strat-title">&#127919; Replace x with the inner function</div>For f(g(x)): everywhere you see x in f, plug in the entire g(x) expression.</div>',work:"f="+linP(fa,fb)+", g="+linP(ga,gb)});
+
+  stepsData.push({title:"Build f(g(x))",proc:"setup",type:"info",
+    instruction:'f(<span style="color:var(--accent-orange)">g(x)</span>) = '+fN(fa)+' \u00B7 <span style="color:var(--accent-orange)">('+linH(ga,gb)+')</span> + '+fN(fb)+'<br>= '+fN(fga)+'x + '+fN(rnd(fa*gb,4))+' + '+fN(fb),work:"f(g(x)) expand"});
+
+  stepsData.push({title:"Simplify f(g(x))",proc:"compute",type:"numeric",instruction:"Constant: "+fN(rnd(fa*gb,4))+" + "+fN(fb)+" = ?",question:"Constant =",answer:fgb,work:"const = "+fN(fgb)});
+
+  stepsData.push({title:"f(g(x)) = "+linH(fga,fgb),proc:"compute",type:"info",
+    instruction:'<div class="step-rule-box"><strong style="color:var(--accent)">f(g(x)) = '+linH(fga,fgb)+'</strong></div>',work:"f(g(x)) = "+linP(fga,fgb)});
+
+  stepsData.push({title:"Build g(f(x))",proc:"compute",type:"info",
+    instruction:'g(<span style="color:var(--accent-blue)">f(x)</span>) = '+fN(ga)+' \u00B7 <span style="color:var(--accent-blue)">('+linH(fa,fb)+')</span> + '+fN(gb)+'<br>= '+fN(gfa)+'x + '+fN(rnd(ga*fb,4))+' + '+fN(gb),work:"g(f(x)) expand"});
+
+  stepsData.push({title:"Simplify g(f(x))",proc:"compute",type:"numeric",instruction:"Constant: "+fN(rnd(ga*fb,4))+" + "+fN(gb)+" = ?",question:"Constant =",answer:gfb,work:"const = "+fN(gfb)});
+
+  var same=Math.abs(fga-gfa)<0.001&&Math.abs(fgb-gfb)<0.001;
+  stepsData.push({title:"Results",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.1rem;font-weight:700;color:var(--accent-blue)">f(g(x)) = '+linH(fga,fgb)+'</div><div style="font-size:1.1rem;font-weight:700;color:var(--accent-orange);margin-top:8px">g(f(x)) = '+linH(gfa,gfb)+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:10px">'+(same?"These are equal!":"These are <strong>different</strong> \u2014 order matters!")+'</div></div>',
+    work:"f(g(x))="+linP(fga,fgb)+", g(f(x))="+linP(gfa,gfb)});
+  launchWorkspace();
+}
+
+// ==================== 4. FIND INVERSE ====================
+function startInverse(){
+  var a=pf("inv-a"),b=pf("inv-b");if(a===0){showError("a cannot be 0.");return}
+  var invA=rnd(1/a,4),invB=rnd(-b/a,4);
+  Object.assign(ST,{a:a,b:b,invA:invA,invB:invB});
+  document.getElementById("problemDisplay").innerHTML="Find f\u207B\u00B9(x)";
+
+  stepsData.push({title:"The Function",proc:"identify",type:"info",
+    instruction:'<div class="step-rule-box">f(x) = '+linH(a,b)+'</div><div class="strategy-box"><div class="strat-title">&#127919; 3-Step Inverse Process</div>1. Replace f(x) with <strong>y</strong><br>2. <strong>Swap</strong> x and y<br>3. <strong>Solve</strong> for y</div>',work:"f(x) = "+linP(a,b)});
+
+  stepsData.push({title:"Step 1: y = "+linH(a,b),proc:"setup",type:"info",instruction:'y = '+linH(a,b),work:"y = "+linP(a,b)});
+
+  stepsData.push({title:"Step 2: Swap x and y",proc:"setup",type:"info",
+    instruction:'<span style="color:var(--accent-orange)">x</span> = '+fN(a)+'<span style="color:var(--accent-blue)">y</span>'+(b>=0?" + ":" \u2212 ")+fN(Math.abs(b)),work:"x = "+fN(a)+"y"+(b>=0?"+":"")+fN(b)});
+
+  stepsData.push({title:"Step 3: Solve for y",proc:"compute",type:"numeric",
+    instruction:'Divide by '+fN(a)+':<br>y = (x \u2212 '+fN(b)+') / '+fN(a)+'<br>New slope?',question:"slope =",answer:invA,work:"slope = 1/"+fN(a)+" = "+fN(invA)});
+
+  stepsData.push({title:"Constant Term",proc:"compute",type:"numeric",instruction:fN(-b)+" / "+fN(a)+" = ?",question:"constant =",answer:invB,work:"const = "+fN(invB)});
+
+  stepsData.push({title:"Answer",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.3rem;font-weight:700;color:var(--success)">f\u207B\u00B9(x) = '+linH(invA,invB)+'</div><div style="color:var(--text-dim);font-size:.85rem;margin-top:8px">f(x) = '+linH(a,b)+' &harr; f\u207B\u00B9(x) = '+linH(invA,invB)+'</div></div>',
+    work:"ANSWER: f^-1(x) = "+linP(invA,invB)});
+  launchWorkspace();
+}
+
+// ==================== 5. INVERSE FROM TABLE ====================
+function startInvTable(){
+  var pts=[];for(var i=1;i<=5;i++){var xv=document.getElementById("it-x"+i).value,yv=document.getElementById("it-y"+i).value;if(xv!==""&&yv!=="")pts.push([parseFloat(xv),parseFloat(yv)])}
+  if(pts.length<2){showError("Enter at least 2 points.");return}
+  var inv=pts.map(function(p){return[p[1],p[0]]});
+  Object.assign(ST,{pts:pts,inv:inv});
+  document.getElementById("problemDisplay").innerHTML="Inverse from Table";
+
+  var origH='<table class="fn-table"><tr><th>x</th>'+pts.map(function(p){return'<td>'+fN(p[0])+'</td>'}).join("")+'</tr><tr><th>f(x)</th>'+pts.map(function(p){return'<td>'+fN(p[1])+'</td>'}).join("")+'</tr></table>';
+
+  stepsData.push({title:"The Original Table",proc:"identify",type:"info",
+    instruction:origH+'<div class="strategy-box"><div class="strat-title">&#127919; Inverse = Swap x and y</div>To find f\u207B\u00B9, <strong>swap every (x, y) to (y, x)</strong>.<br>The old outputs become the new inputs, and vice versa.</div>',
+    work:"Original: "+pts.map(function(p){return"("+fN(p[0])+","+fN(p[1])+")"}).join(", ")});
+
+  stepsData.push({title:"Swap Each Point",proc:"setup",type:"info",
+    instruction:pts.map(function(p,i){return'('+fN(p[0])+', '+fN(p[1])+') \u2192 <strong style="color:var(--accent)">('+fN(p[1])+', '+fN(p[0])+')</strong>'}).join("<br>"),
+    work:"Swapped: "+inv.map(function(p){return"("+fN(p[0])+","+fN(p[1])+")"}).join(", ")});
+
+  // Quiz: what is f^-1(first y)?
+  var qy=pts[0][1],qx=pts[0][0];
+  stepsData.push({title:"Check: f\u207B\u00B9("+fN(qy)+") = ?",proc:"compute",type:"numeric",
+    instruction:'In the original, f('+fN(qx)+') = '+fN(qy)+'.<br>So f\u207B\u00B9('+fN(qy)+') must equal...',
+    question:"f\u207B\u00B9("+fN(qy)+") =",answer:rnd(qx,4),
+    work:"f^-1("+fN(qy)+") = "+fN(qx)});
+
+  var invH='<table class="fn-table"><tr><th>x</th>'+inv.map(function(p){return'<td>'+fN(p[0])+'</td>'}).join("")+'</tr><tr><th>f\u207B\u00B9(x)</th>'+inv.map(function(p){return'<td>'+fN(p[1])+'</td>'}).join("")+'</tr></table>';
+  stepsData.push({title:"Inverse Table",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1rem;font-weight:700;color:var(--success);margin-bottom:12px">f\u207B\u00B9 Table:</div>'+invH+'</div>',
+    work:"ANSWER: f^-1 = "+inv.map(function(p){return"("+fN(p[0])+","+fN(p[1])+")"}).join(", ")});
+  launchWorkspace();
+}
+
+// ==================== 6. VERIFY INVERSES ====================
+function startVerify(){
+  var fa=pf("vr-fa"),fb=pf("vr-fb"),ga=pf("vr-ga"),gb=pf("vr-gb");
+  var fga=rnd(fa*ga,4),fgb=rnd(fa*gb+fb,4),gfa=rnd(ga*fa,4),gfb=rnd(ga*fb+gb,4);
+  var t1=Math.abs(fga-1)<0.001&&Math.abs(fgb)<0.001;
+  var t2=Math.abs(gfa-1)<0.001&&Math.abs(gfb)<0.001;
+  var areInv=t1&&t2;
+  Object.assign(ST,{fa:fa,fb:fb,ga:ga,gb:gb,areInv:areInv,fga:fga,fgb:fgb,gfa:gfa,gfb:gfb});
+  document.getElementById("problemDisplay").innerHTML="Inverse test";
+
+  stepsData.push({title:"The Functions",proc:"identify",type:"info",
+    instruction:'<div style="text-align:center"><span class="fn-box"><span class="fn-name blue">f(x)</span> = <span class="fn-rule">'+linH(fa,fb)+'</span></span> &nbsp; <span class="fn-box"><span class="fn-name orange">g(x)</span> = <span class="fn-rule">'+linH(ga,gb)+'</span></span></div><div class="strategy-box"><div class="strat-title">&#127919; Both Tests Must Pass</div>f(g(x)) = x? <strong>AND</strong> g(f(x)) = x?</div>',work:"Verify inverses"});
+
+  stepsData.push({title:"f(g(x))",proc:"setup",type:"info",
+    instruction:'f(g(x)) = '+fN(fa)+'('+linH(ga,gb)+') + '+fN(fb)+' = <strong>'+linH(fga,fgb)+'</strong>',work:"f(g(x)) = "+linP(fga,fgb)});
+
+  stepsData.push({title:"f(g(x)) = x?",proc:"compute",type:"choice",
+    instruction:linH(fga,fgb)+(t1?' = x <strong style="color:var(--success)">\u2713</strong>':' \u2260 x <strong style="color:var(--error)">\u2717</strong>'),
+    question:"f(g(x)) = x?",options:["Yes","No"],answer:t1?"Yes":"No",work:"f(g(x))"+(t1?"=x":"!=x")});
+
+  stepsData.push({title:"g(f(x))",proc:"compute",type:"info",
+    instruction:'g(f(x)) = '+fN(ga)+'('+linH(fa,fb)+') + '+fN(gb)+' = <strong>'+linH(gfa,gfb)+'</strong>',work:"g(f(x)) = "+linP(gfa,gfb)});
+
+  stepsData.push({title:"g(f(x)) = x?",proc:"compute",type:"choice",
+    instruction:linH(gfa,gfb)+(t2?' = x <strong style="color:var(--success)">\u2713</strong>':' \u2260 x <strong style="color:var(--error)">\u2717</strong>'),
+    question:"g(f(x)) = x?",options:["Yes","No"],answer:t2?"Yes":"No",work:"g(f(x))"+(t2?"=x":"!=x")});
+
+  stepsData.push({title:"Verdict",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:'+(areInv?"var(--success)":"var(--error)")+'">'+(areInv?"\u2713 YES \u2014 Inverses!":"\u2717 NO \u2014 Not inverses")+'</div></div>',
+    work:"ANSWER: "+(areInv?"YES":"NO")});
+  launchWorkspace();
+}
+
+// ==================== 7. EVALUATE INVERSE ====================
+function startEvalInv(){
+  var a=pf("ei-a"),b=pf("ei-b"),k=pf("ei-k");if(a===0){showError("a cannot be 0.");return}
+  var result=rnd((k-b)/a,4);
+  Object.assign(ST,{a:a,b:b,k:k,result:result});
+  document.getElementById("problemDisplay").innerHTML="f\u207B\u00B9("+fN(k)+")";
+
+  stepsData.push({title:"What Does f\u207B\u00B9(k) Mean?",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Reverse the Function</div>f\u207B\u00B9('+fN(k)+') asks: "What input gives output '+fN(k)+'?"<br>Solve: '+fN(a)+'x + '+fN(b)+' = '+fN(k)+'</div>',work:"Solve f(x) = "+fN(k)});
+
+  stepsData.push({title:"Subtract "+fN(b),proc:"setup",type:"numeric",instruction:fN(a)+"x = "+fN(k)+" \u2212 "+fN(b),question:fN(a)+"x =",answer:rnd(k-b,4),work:fN(a)+"x = "+fN(rnd(k-b,4))});
+
+  stepsData.push({title:"Divide by "+fN(a),proc:"compute",type:"numeric",instruction:"x = "+fN(rnd(k-b,4))+" / "+fN(a),question:"f\u207B\u00B9("+fN(k)+") =",answer:result,work:"x = "+fN(result)});
+
+  stepsData.push({title:"Verify",proc:"compute",type:"info",
+    instruction:'f('+fN(result)+') = '+fN(a)+'('+fN(result)+') + '+fN(b)+' = <strong>'+fN(evL(a,b,result))+'</strong> \u2713',work:"Check: f("+fN(result)+") = "+fN(evL(a,b,result))});
+
+  stepsData.push({title:"Answer",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">f\u207B\u00B9('+fN(k)+') = '+fN(result)+'</div></div>',
+    work:"ANSWER: "+fN(result)});
+  launchWorkspace();
+}
+
+// ==================== COPY / RENDER ====================
+function copyWork(){var lines=["=== Composition & Inverse Functions \u2014 A35 ===",""];stepsData.forEach(function(s,i){lines.push("Step "+(i+1)+": "+s.title);if(s.work)lines.push("  "+s.work);lines.push("")});var text=lines.join("\n");navigator.clipboard.writeText(text).then(function(){var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)}).catch(function(){var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)})}
+function showStep(idx){if(idx>=stepsData.length){finishProblem();return}var step=stepsData[idx],ct=document.getElementById("stepsContainer"),card=document.createElement("div");card.className="step-card";card.id="step-"+idx;if(step.proc){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});document.getElementById("proc-"+step.proc).classList.add("active")}var bh="";if(step.type==="info"){bh='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It \u2192</button>'}else if(step.type==="numeric"){bh='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||"")+" </span>"+'<input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')"><button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>'}else if(step.type==="choice"){bh='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||"")+"</div>"+'<div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return'<div class="choice-btn" onclick="checkChoice('+idx+",this,'"+escH(o)+"')\">"+escH(o)+"</div>"}).join("")+"</div>"+'<div class="step-feedback" id="fb-'+idx+'"></div>'}card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bh+"</div>";ct.appendChild(card);card.scrollIntoView({behavior:"smooth",block:"nearest"});setTimeout(function(){var inp=card.querySelector(".answer-input");if(inp)inp.focus()},150)}
+function completeStep(i){markDone(i);currentStep=i+1;showStep(i+1)}
+function markDone(i){var c=document.getElementById("step-"+i);if(c){c.classList.add("completed");c.querySelector(".step-num").classList.add("done")}if(stepsData[i].proc)document.getElementById("proc-"+stepsData[i].proc).classList.add("done")}
+function checkNum(idx){var step=stepsData[idx],inp=document.getElementById("ans-"+idx),fb=document.getElementById("fb-"+idx);var val=parseFloat(inp.value.trim());if(isNaN(val)){fb.textContent="Enter a number.";fb.className="step-feedback show incorrect";return}var tol=Math.abs(step.answer)<0.01?0.006:Math.abs(step.answer)<1?0.02:Math.max(0.02,Math.abs(step.answer)*0.01);if(Math.abs(val-step.answer)<=tol){inp.classList.add("correct");inp.disabled=true;inp.value=fN(step.answer);fb.textContent="Correct! \u2713";fb.className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{inp.classList.add("incorrect");setTimeout(function(){inp.classList.remove("incorrect")},600);var tries=parseInt(inp.dataset.tries||"0")+1;inp.dataset.tries=tries;if(tries>=3){fb.innerHTML="The answer is <strong>"+fN(step.answer)+"</strong>";fb.className="step-feedback show hint-text"}else{fb.textContent="Not quite \u2014 try again!";fb.className="step-feedback show incorrect"}inp.value="";inp.focus()}}
+function checkChoice(idx,btn,chosen){var step=stepsData[idx];if(chosen===step.answer){btn.classList.add("correct");document.querySelectorAll("#choices-"+idx+" .choice-btn").forEach(function(b){if(!b.classList.contains("correct"))b.classList.add("disabled")});document.getElementById("fb-"+idx).textContent="Correct! \u2713";document.getElementById("fb-"+idx).className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{btn.classList.add("incorrect");setTimeout(function(){btn.classList.remove("incorrect")},500);document.getElementById("fb-"+idx).textContent="Not quite!";document.getElementById("fb-"+idx).className="step-feedback show incorrect"}}
+function finishProblem(){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});var expr="",detail="";if(ST.mode==="basics"){expr="f(g)="+fN(ST.fgx)+", g(f)="+fN(ST.gfx);detail="Composition basics"}else if(ST.mode==="evalComp"){expr=fN(ST.result);detail="Composition evaluation"}else if(ST.mode==="compRule"){expr="f\u2218g="+linP(ST.fga,ST.fgb);detail="Composition rules"}else if(ST.mode==="inverse"){expr="f\u207B\u00B9="+linP(ST.invA,ST.invB);detail="Inverse function"}else if(ST.mode==="invTable"){expr="Table swapped";detail="Inverse from table"}else if(ST.mode==="verify"){expr=ST.areInv?"YES":"NO";detail="Inverse verification"}else if(ST.mode==="evalInv"){expr="f\u207B\u00B9("+fN(ST.k)+")="+fN(ST.result);detail="Inverse evaluation"}document.getElementById("resultExpr").textContent=expr;document.getElementById("resultDetail").textContent=detail;document.getElementById("resultSection").classList.add("visible");document.getElementById("resultSection").scrollIntoView({behavior:"smooth",block:"nearest"})}
+function resetAll(){document.getElementById("inputSection").style.display="";document.getElementById("workspace").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.getElementById("resultSection").classList.remove("visible");document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});document.querySelectorAll(".input-section input").forEach(function(i){i.value=""});setDir("fg")}
+</script>
+</body>
+</html>

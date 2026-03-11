@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-10T14:20:36.023Z",
+  "updated": "2026-03-11T13:09:50.418Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -577,7 +577,7 @@
       "slots": 50,
       "titles": [
         "Functions",
-        "",
+        "Composition Inverse",
         "",
         "",
         "",
@@ -629,7 +629,7 @@
       ],
       "links": [
         "/math-toolkit/presentations/algebra/algebra-3/presentation-01/",
-        "",
+        "/math-toolkit/presentations/algebra/algebra-3/presentation-02/",
         "",
         "",
         "",
