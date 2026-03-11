@@ -1353,7 +1353,7 @@
         this.textContent = 'Submitting...';
         
         try {
-          await saveAnswersToServer(instance);
+          await saveAnswersToServer(instance, true);
           
           // Feature 1: Clear saved answers after successful submit
           clearSavedAnswers(instance.id);
@@ -1848,7 +1848,7 @@
   /**
    * Save answers to server
    */
-  async function saveAnswersToServer(instance) {
+  async function saveAnswersToServer(instance, submit = false) {
     const studentCode = sessionStorage.getItem('rc_user_code');
     if (!studentCode) {
       console.warn(LOG_PREFIX, 'No student code in session, cannot save answers');
@@ -1869,7 +1869,8 @@
         body: JSON.stringify({
           instance_id: instance.id,
           student_code: studentCode,
-          answers: answersObj
+          answers: answersObj,
+          submit: submit
         })
       });
       
@@ -1907,7 +1908,8 @@
         instance_id: instance.id,
         student_code: studentCode,
         writing_response: writingResponse,
-        answers: answersObj
+        answers: answersObj,
+        submit: true
       })
     });
     
