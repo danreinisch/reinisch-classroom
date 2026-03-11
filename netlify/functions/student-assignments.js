@@ -95,7 +95,7 @@ exports.handler = async (event) => {
     const studentId = student.id;
 
     // Fetch assignment instances for this student with joined assignment data
-    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,resubmission_count,assignments!inner(id,title,type,series,page,hero,meta)&student_id=eq.${studentId}`;
+    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,resubmission_count,assignments!inner(id,title,type,series,page,hero,meta)&student_id=eq.${studentId}&order=assigned_at.desc`;
     
     console.log(`[student-assignments] [${requestId}] Fetching assignment instances for student ID:`, studentId);
     
