@@ -257,8 +257,8 @@
       // "date" — sort by due/created date ascending
       sorted.sort((a, b) => {
         const da = a.dueAt || a.due_at || a.createdAt || a.created_at || "";
-        const db2 = b.dueAt || b.due_at || b.createdAt || b.created_at || "";
-        return da.localeCompare(db2);
+        const db = b.dueAt || b.due_at || b.createdAt || b.created_at || "";
+        return da.localeCompare(db);
       });
     }
     return sorted;
@@ -1825,10 +1825,15 @@
     const tableWrapEl = $("gbTableWrap");
     if (!tableWrapEl) return;
 
-    let card = document.createElement("div");
-    card.className = "gb-stats-card";
-    card.style.display = "none";
-    document.body.appendChild(card);
+    // Reuse existing card element if already created (avoids duplicates on re-init)
+    let card = document.getElementById("gbStatsCard");
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "gbStatsCard";
+      card.className = "gb-stats-card";
+      card.style.display = "none";
+      document.body.appendChild(card);
+    }
 
     let hideTimer = null;
 
