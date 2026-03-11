@@ -86,6 +86,11 @@
     document.head.appendChild(style);
   }
 
+  /**
+   * Escape a string for safe insertion into HTML content.
+   * @param {string} str - Raw string to escape
+   * @returns {string} HTML-safe string
+   */
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = String(str);

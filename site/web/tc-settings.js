@@ -531,7 +531,7 @@
     keysToDelete.forEach((key) => localStorage.removeItem(key));
 
     console.log("[tc-settings] Cleared", keysToDelete.length, "localStorage keys");
-    showToast(`Cleared ${keysToDelete.length} items from local storage.`, 'rgba(34, 197, 94, 0.95)', '#fff');
+    showToast(`Cleared ${keysToDelete.length} items from local storage.`, 'rgba(100, 116, 139, 0.95)', '#fff');
 
     // Reload the page to reflect changes
     setTimeout(() => location.reload(), 500);
