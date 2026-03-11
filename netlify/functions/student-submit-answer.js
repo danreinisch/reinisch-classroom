@@ -64,7 +64,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { instance_id, answers, writing_response, student_code } = parseResult.data;
+  const { instance_id, answers, writing_response, student_code, submit } = parseResult.data;
 
   // Validate instance_id
   if (!instance_id || typeof instance_id !== 'string') {
@@ -145,17 +145,18 @@ exports.handler = async (event) => {
     const updatedSettings = {
       ...currentSettings,
       answers: (answers && Object.keys(answers).length > 0) ? answers : (currentSettings.answers || {}),
-      writing_response: writing_response || currentSettings.writing_response || '',
-      submitted_at: new Date().toISOString()
+      writing_response: writing_response || currentSettings.writing_response || ''
     };
+    // Only record submitted_at when this is an intentional submission (submit === true)
+    if (submit === true) {
+      updatedSettings.submitted_at = new Date().toISOString();
+    }
 
     // Step 4: Determine new status
-    // If writing_response is provided or answers are complete, mark as "Submitted"
-    // Otherwise mark as "In Progress"
-    let newStatus = 'In Progress';
-    if (writing_response || (answers && Object.keys(answers).length > 0)) {
-      newStatus = 'Submitted';
-    }
+    // Only mark as "Submitted" when the client explicitly sends submit: true.
+    // Auto-saves (submit !== true) always keep the assignment "In Progress",
+    // but never downgrade an already-submitted assignment.
+    const newStatus = (submit === true || instance.status === 'Submitted') ? 'Submitted' : 'In Progress';
 
     // Step 5: Update assignment instance
     const updateUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=eq.${encodeURIComponent(instance_id)}`;
@@ -352,9 +353,10 @@ exports.handler = async (event) => {
                 console.log(`[student-submit-answer] [${requestId}] Upserted ${subAnswers.length} submission_answers`);
 
                 // Compute score_auto from auto-scored answers and update the parent submission
-                const scoreAuto = subAnswers
-                  .filter(a => a.earned_points != null)
-                  .reduce((sum, a) => sum + (a.earned_points || 0), 0);
+                const autoScoredAnswers = subAnswers.filter(a => a.earned_points != null);
+                const scoreAuto = autoScoredAnswers.reduce((sum, a) => sum + (a.earned_points || 0), 0);
+                const maxPointsTotal = autoScoredAnswers.reduce((sum, a) => sum + (a.max_points || 0), 0);
+                const scoreTotal = maxPointsTotal > 0 ? Math.round((scoreAuto / maxPointsTotal) * 100) : null;
                 const submissionsUpdateUrl = `${SUPABASE_URL}/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`;
                 const scoreAutoResponse = await fetch(submissionsUpdateUrl, {
                   method: 'PATCH',
@@ -364,13 +366,13 @@ exports.handler = async (event) => {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                   },
-                  body: JSON.stringify({ score_auto: scoreAuto })
+                  body: JSON.stringify({ score_auto: scoreAuto, score_total: scoreTotal })
                 });
                 if (!scoreAutoResponse.ok) {
                   const errText = await scoreAutoResponse.text();
                   console.error(`[student-submit-answer] [${requestId}] score_auto update failed: ${scoreAutoResponse.status} - ${errText}`);
                 } else {
-                  console.log(`[student-submit-answer] [${requestId}] Updated score_auto=${scoreAuto} for submission ${submissionId}`);
+                  console.log(`[student-submit-answer] [${requestId}] Updated score_auto=${scoreAuto} score_total=${scoreTotal} for submission ${submissionId}`);
                 }
               }
             }
