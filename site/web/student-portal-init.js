@@ -806,6 +806,7 @@
           }
           const isExpanded = !panel.hidden;
           panel.hidden = isExpanded;
+          panel.style.display = isExpanded ? 'none' : '';
           panel.setAttribute('aria-hidden', String(isExpanded));
           toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
           const svgEl = toggleBtn.querySelector('svg');
