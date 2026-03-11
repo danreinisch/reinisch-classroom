@@ -633,7 +633,7 @@
         titles[slot-1] = ''; links[slot-1] = '';
       }
       renderSlots();
-      await rcAlert('Upload Complete', 'Slot deleted');
+      await rcAlert('Slot Deleted', 'Slot deleted');
     }catch(e){
       const errorMsg = `Delete error: ${e && e.message ? e.message : String(e)}`;
       console.error('[Incremental Deploy] Delete exception:', e);
