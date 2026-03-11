@@ -7,6 +7,10 @@
  * - Enhanced error messages for common failure scenarios
  * - No teacher/admin/substitute endpoints called from student pages
  * 
+ * Note: "Cannot read properties of null (reading 'includes')" errors visible in
+ * DevTools (from bootstrap-autofill-overlay.js) are injected by browser password
+ * manager extensions and are harmless — they are not application errors.
+ * 
  * PR student-portal-reliability: Added boot hardening and guardrails
  * - bfcache restore detection
  * - Boot watchdog to detect stuck UI
@@ -767,9 +771,9 @@
    * re-rendered goal cards (async load) are always covered without
    * needing to rebind on every render.
    *
-   * Tracks attachment via a data attribute on the DOM element so that the
-   * guard remains valid even if the function is called multiple times and
-   * survives across innerHTML replacements of child content.
+   * Stores the handler reference on the container element (_goalClickHandler)
+   * so it can be removed before re-attaching, preventing duplicate listeners
+   * when the function is called after each goals render.
    */
   function attachShowMoreListeners() {
     const containers = [
@@ -778,10 +782,9 @@
     ];
 
     containers.forEach(container => {
-      if (!container || container.dataset.listenersAttached) return;
-      container.dataset.listenersAttached = '1';
+      if (!container) return;
 
-      container.addEventListener('click', function(e) {
+      function handleGoalClick(e) {
         // Handle "Show more / Show less" description toggle
         const showMoreBtn = e.target.closest('.st-goal-show-more');
         if (showMoreBtn) {
@@ -810,7 +813,11 @@
           const labelEl = toggleBtn.querySelector('.st-goal-progress-toggle-label');
           if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
         }
-      });
+      }
+
+      container.removeEventListener('click', container._goalClickHandler);
+      container._goalClickHandler = handleGoalClick;
+      container.addEventListener('click', handleGoalClick);
     });
   }
 
@@ -2560,9 +2567,9 @@
       // Populate dashboard summary cards
       populateDashboardSummary(instances);
       
-      // Populate dashboard recent assignments (max 5)
+      // Populate dashboard recent assignments (4 most recent by assigned_at)
       if (dashRecentContainer) {
-        const recent = instances.slice(0, 5);
+        const recent = [...instances].sort((a, b) => new Date(b.assigned_at ?? 0) - new Date(a.assigned_at ?? 0)).slice(0, 4);
         if (recent.length === 0) {
           dashRecentContainer.innerHTML = '<p style="opacity:0.7;">No assignments yet</p>';
         } else {
