@@ -324,6 +324,107 @@
       .gb-trend-flat {
         color: rgba(156,163,175,.7);
       }
+
+      /* Two-line score cell */
+      .gb-score-pct {
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 1.2;
+      }
+      .gb-score-pts-line {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 2px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Compact mode */
+      .gb-tablewrap.gb-compact table.gb-table th,
+      .gb-tablewrap.gb-compact table.gb-table td {
+        padding: 5px 6px;
+        font-size: 12px;
+      }
+      .gb-tablewrap.gb-compact .gb-score-pct {
+        font-size: 12px;
+      }
+      .gb-tablewrap.gb-compact .gb-score-pts-line {
+        font-size: 10px;
+      }
+
+      /* Color legend */
+      .gb-legend {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .gb-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .gb-legend-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        flex-shrink: 0;
+      }
+      .gb-legend-swatch.green { background: rgba(34,197,94,0.55); }
+      .gb-legend-swatch.amber { background: rgba(234,179,8,0.55); }
+      .gb-legend-swatch.red   { background: rgba(239,68,68,0.55); }
+
+      /* Quick-stats hover card */
+      .gb-stats-card {
+        position: absolute;
+        z-index: 9999;
+        min-width: 180px;
+        background: rgba(18, 18, 24, 0.97);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 12px;
+        padding: 12px 14px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.5);
+        pointer-events: auto;
+        font-size: 13px;
+      }
+      .gb-stats-card-name {
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+      .gb-stats-card-code {
+        font-size: 11px;
+        opacity: 0.55;
+        margin-bottom: 8px;
+      }
+      .gb-stats-card-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 3px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .gb-stats-card-row:last-child { border-bottom: none; }
+      .gb-stats-card-label { opacity: 0.65; }
+      .gb-stats-card-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+      /* Student cell hover cursor */
+      td.gb-student-cell.gb-has-stats {
+        cursor: help;
+      }
+
+      /* Sort select styling to match other gb-btn controls */
+      .gb-sort-select {
+        padding: 9px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(255,255,255,0.06);
+        color: inherit;
+        cursor: pointer;
+        font-size: 13px;
+      }
     </style>
   </head>
   <body>
@@ -505,6 +606,13 @@
                   <option value="Q3">Q3 (Dec 20–Mar 6)</option>
                   <option value="Q4">Q4 (Mar 7–May 20)</option>
                 </select>
+                <select id="gbSortSelect" class="gb-sort-select" aria-label="Sort assignments">
+                  <option value="date">Sort: By Date</option>
+                  <option value="title">Sort: By Title</option>
+                  <option value="series">Sort: By Series</option>
+                </select>
+                <button class="gb-btn" type="button" id="btnToggleCompact">⊞ Comfortable</button>
+                <button class="gb-btn" type="button" id="btnToggleMoreCols">⋯ Show More</button>
                 <button class="gb-btn" type="button" id="btnToggleAnalytics">📊 Analytics</button>
                 <button class="gb-btn" type="button" id="btnToggleMissing">🚨 Missing Work</button>
                 <button class="gb-btn" type="button" id="btnWeightsSettings">⚙️ Weights</button>
@@ -515,6 +623,23 @@
 
             <div class="gb-filter-bar" id="classFilterBar">
               <!-- Filter buttons populated by JS -->
+            </div>
+
+            <!-- Color legend -->
+            <div class="gb-legend" aria-label="Score color legend">
+              <span style="opacity: 0.7; font-weight: 600;">Key:</span>
+              <span class="gb-legend-item">
+                <span class="gb-legend-swatch green" aria-hidden="true"></span>
+                80%+ Proficient
+              </span>
+              <span class="gb-legend-item">
+                <span class="gb-legend-swatch amber" aria-hidden="true"></span>
+                60–79% Developing
+              </span>
+              <span class="gb-legend-item">
+                <span class="gb-legend-swatch red" aria-hidden="true"></span>
+                &lt;60% Needs Support
+              </span>
             </div>
           </section>
 
