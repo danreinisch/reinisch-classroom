@@ -638,7 +638,7 @@
       : '<span class="st-metric-empty">Not yet set</span>';
     
     // Build progress detail section (if there are entries to show)
-    const progressDetailId = `st-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
+    const progressDetailId = `st-goal-progress-${(goal.code ?? goal.id).replace(/[^a-z0-9]/gi, '_')}`;
     let progressDetailHtml = '';
     let progressTowardTargetHtml = '';
     if (progressEntries.length > 0) {
@@ -797,7 +797,10 @@
         if (toggleBtn) {
           const targetId = toggleBtn.dataset.progressId;
           const panel = document.getElementById(targetId);
-          if (!panel) return;
+          if (!panel) {
+            console.warn('[student-portal] Progress panel not found for id:', targetId);
+            return;
+          }
           const isExpanded = !panel.hidden;
           panel.hidden = isExpanded;
           panel.setAttribute('aria-hidden', String(isExpanded));
