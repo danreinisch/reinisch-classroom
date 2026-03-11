@@ -83,6 +83,14 @@
     return "gb-score-red";
   }
 
+  // UI preference state (persisted in localStorage)
+  const PREF_COMPACT = "rc_gb_compact";
+  const PREF_SHOW_MORE = "rc_gb_show_more";
+  const PREF_SORT = "rc_gb_sort";
+  let isCompact = localStorage.getItem(PREF_COMPACT) === "true";
+  let showMoreColumns = localStorage.getItem(PREF_SHOW_MORE) === "true";
+  let currentSort = localStorage.getItem(PREF_SORT) || "date";
+
   // State
   let currentClassFilter = "All Classes";
   let currentQuarterFilter = "";
@@ -238,6 +246,24 @@
     return byEnrollment;
   }
 
+  // Sort drafts array based on currentSort preference
+  function sortDrafts(drafts) {
+    const sorted = [...drafts];
+    if (currentSort === "title") {
+      sorted.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+    } else if (currentSort === "series") {
+      sorted.sort((a, b) => (a.series || "").localeCompare(b.series || "") || (a.title || "").localeCompare(b.title || ""));
+    } else {
+      // "date" — sort by due/created date ascending
+      sorted.sort((a, b) => {
+        const da = a.dueAt || a.due_at || a.createdAt || a.created_at || "";
+        const db2 = b.dueAt || b.due_at || b.createdAt || b.created_at || "";
+        return da.localeCompare(db2);
+      });
+    }
+    return sorted;
+  }
+
   // Build gradebook data structure
   function buildGradebookData() {
     const students = getFilteredStudents();
@@ -252,6 +278,9 @@
         return getQuarterForDate(dateStr) === currentQuarterFilter;
       });
     }
+
+    // Sort drafts
+    drafts = sortDrafts(drafts);
 
     // Return null only if there are no students
     // Allow showing students even with no drafts/assignments
@@ -599,6 +628,23 @@
     const tableHead = $("gbTableHead");
     const tableBody = $("gbTableBody");
 
+    // Sync compact/show-more UI buttons state
+    const btnCompact = $("btnToggleCompact");
+    if (btnCompact) {
+      btnCompact.textContent = isCompact ? "☑ Compact" : "⊞ Comfortable";
+      btnCompact.classList.toggle("primary", isCompact);
+    }
+    const btnShowMore = $("btnToggleMoreCols");
+    if (btnShowMore) {
+      btnShowMore.textContent = showMoreColumns ? "⋯ Show Less" : "⋯ Show More";
+      btnShowMore.classList.toggle("primary", showMoreColumns);
+    }
+
+    // Apply/remove compact class on table wrapper
+    if (tableWrapEl) {
+      tableWrapEl.classList.toggle("gb-compact", isCompact);
+    }
+
     if (!data) {
       // Show empty state
       emptyEl.style.display = "block";
@@ -624,11 +670,13 @@
     // Assignment columns
     for (const draft of drafts) {
       const th = document.createElement("th");
-      th.style.minWidth = "120px";
+      th.style.minWidth = isCompact ? "68px" : "80px";
 
+      const fullTitle = draft.title || "(untitled)";
       const titleEl = document.createElement("div");
       titleEl.className = "gb-col-title";
-      titleEl.textContent = draft.title || "(untitled)";
+      titleEl.textContent = fullTitle.length > 15 ? fullTitle.substring(0, 15) + "…" : fullTitle;
+      titleEl.title = fullTitle;
       th.appendChild(titleEl);
 
       const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
@@ -650,22 +698,26 @@
       headerRow.appendChild(th);
     }
 
-    // Average column
+    // Average / Weighted / Trend columns (shown only when showMoreColumns is true)
     const thAvg = document.createElement("th");
     thAvg.textContent = "Average";
-    thAvg.style.minWidth = "80px";
+    thAvg.style.minWidth = "72px";
+    thAvg.dataset.extraCol = "1";
+    if (!showMoreColumns) thAvg.style.display = "none";
     headerRow.appendChild(thAvg);
 
-    // Weighted Average column
     const thWeighted = document.createElement("th");
     thWeighted.textContent = "Weighted";
-    thWeighted.style.minWidth = "80px";
+    thWeighted.style.minWidth = "72px";
+    thWeighted.dataset.extraCol = "1";
+    if (!showMoreColumns) thWeighted.style.display = "none";
     headerRow.appendChild(thWeighted);
 
-    // Trend column
     const thTrend = document.createElement("th");
     thTrend.textContent = "Trend";
-    thTrend.style.minWidth = "60px";
+    thTrend.style.minWidth = "56px";
+    thTrend.dataset.extraCol = "1";
+    if (!showMoreColumns) thTrend.style.display = "none";
     headerRow.appendChild(thTrend);
 
     tableHead.appendChild(headerRow);
@@ -683,10 +735,28 @@
         isFirstRow = false;
       }
 
-      // Student name cell (sticky)
+      // Student name cell (sticky) with quick-stats hover card
       const tdStudent = document.createElement("td");
       tdStudent.className = "gb-student-cell";
       tdStudent.textContent = student.name || student.code;
+
+      // Build quick stats for hover card
+      const studentScoreMap = scoreMap.get(student.code);
+      const completedCount = studentScoreMap ? [...studentScoreMap.values()].filter(v => typeof v === "number").length : 0;
+      const totalAssigned = drafts.length;
+      const rowAvgForCard = calculateRowAverage(student.code, scoreMap, drafts);
+      const trendForCard = calculateTrend(student.code, scoreMap, drafts);
+      const trendLabel = trendForCard === "up" ? "↗ Improving" : trendForCard === "down" ? "↘ Declining" : "→ Steady";
+      tdStudent.dataset.tooltip = JSON.stringify({
+        name: student.name || student.code,
+        code: student.code,
+        completed: completedCount,
+        total: totalAssigned,
+        avg: rowAvgForCard,
+        trend: trendLabel
+      });
+      tdStudent.classList.add("gb-has-stats");
+
       tr.appendChild(tdStudent);
 
       // Score cells
@@ -701,12 +771,20 @@
           if (typeof score === "number") {
             currentScore = score;
             const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+
+            // Two-line display: percentage primary, points secondary
+            const pctLine = document.createElement("div");
+            pctLine.className = "gb-score-pct";
+            pctLine.textContent = `${score}%`;
+            td.appendChild(pctLine);
+
             if (totalPossible) {
-              td.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
-              td.title = `${score}%`;
-            } else {
-              td.textContent = `${score}%`;
+              const ptsLine = document.createElement("div");
+              ptsLine.className = "gb-score-pts-line";
+              ptsLine.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
+              td.appendChild(ptsLine);
             }
+
             // Apply color class
             const colorClass = scoreColorClass(score);
             if (colorClass) {
@@ -728,42 +806,40 @@
         tr.appendChild(td);
       }
 
-      // Average cell
+      // Average / Weighted / Trend cells
       const tdAvg = document.createElement("td");
       tdAvg.className = "gb-score-cell";
+      tdAvg.dataset.extraCol = "1";
+      if (!showMoreColumns) tdAvg.style.display = "none";
       const avg = calculateRowAverage(student.code, scoreMap, drafts);
       if (avg !== null) {
         tdAvg.textContent = `${avg}%`;
-        // Apply color class to average
         const colorClass = scoreColorClass(avg);
-        if (colorClass) {
-          tdAvg.classList.add(colorClass);
-        }
+        if (colorClass) tdAvg.classList.add(colorClass);
       } else {
         tdAvg.textContent = "—";
       }
       tr.appendChild(tdAvg);
 
-      // Weighted Average cell
       const tdWeighted = document.createElement("td");
       tdWeighted.className = "gb-score-cell";
+      tdWeighted.dataset.extraCol = "1";
+      if (!showMoreColumns) tdWeighted.style.display = "none";
       const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
       if (weighted !== null) {
         tdWeighted.textContent = `${weighted}%`;
-        // Apply color class to weighted average
         const colorClass = scoreColorClass(weighted);
-        if (colorClass) {
-          tdWeighted.classList.add(colorClass);
-        }
+        if (colorClass) tdWeighted.classList.add(colorClass);
       } else {
         tdWeighted.textContent = "—";
       }
       tr.appendChild(tdWeighted);
 
-      // Trend cell
       const tdTrend = document.createElement("td");
       tdTrend.className = "gb-score-cell";
+      tdTrend.dataset.extraCol = "1";
       tdTrend.style.textAlign = "center";
+      if (!showMoreColumns) tdTrend.style.display = "none";
       const trend = calculateTrend(student.code, scoreMap, drafts);
       let trendHTML = '';
       if (trend === 'up') {
@@ -795,11 +871,8 @@
       const avg = calculateColumnAverage(draft.id, scoreMap, students);
       if (avg !== null) {
         td.textContent = `${avg}%`;
-        // Apply color class to column average
         const colorClass = scoreColorClass(avg);
-        if (colorClass) {
-          td.classList.add(colorClass);
-        }
+        if (colorClass) td.classList.add(colorClass);
       } else {
         td.textContent = "—";
       }
@@ -809,14 +882,13 @@
     // Overall average
     const tdOverallAvg = document.createElement("td");
     tdOverallAvg.className = "gb-score-cell";
+    tdOverallAvg.dataset.extraCol = "1";
+    if (!showMoreColumns) tdOverallAvg.style.display = "none";
 
-    // Calculate overall class average
     const allScores = [];
     for (const student of students) {
       const avg = calculateRowAverage(student.code, scoreMap, drafts);
-      if (avg !== null) {
-        allScores.push(avg);
-      }
+      if (avg !== null) allScores.push(avg);
     }
     const overallAvg =
       allScores.length > 0
@@ -824,11 +896,8 @@
         : null;
     if (overallAvg !== null) {
       tdOverallAvg.textContent = `${overallAvg}%`;
-      // Apply color class to overall average
       const colorClass = scoreColorClass(overallAvg);
-      if (colorClass) {
-        tdOverallAvg.classList.add(colorClass);
-      }
+      if (colorClass) tdOverallAvg.classList.add(colorClass);
     } else {
       tdOverallAvg.textContent = "—";
     }
@@ -837,12 +906,12 @@
     // Overall weighted average
     const tdOverallWeighted = document.createElement("td");
     tdOverallWeighted.className = "gb-score-cell";
+    tdOverallWeighted.dataset.extraCol = "1";
+    if (!showMoreColumns) tdOverallWeighted.style.display = "none";
     const allWeightedScores = [];
     for (const student of students) {
       const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-      if (weighted !== null) {
-        allWeightedScores.push(weighted);
-      }
+      if (weighted !== null) allWeightedScores.push(weighted);
     }
     const overallWeighted =
       allWeightedScores.length > 0
@@ -851,9 +920,7 @@
     if (overallWeighted !== null) {
       tdOverallWeighted.textContent = `${overallWeighted}%`;
       const colorClass = scoreColorClass(overallWeighted);
-      if (colorClass) {
-        tdOverallWeighted.classList.add(colorClass);
-      }
+      if (colorClass) tdOverallWeighted.classList.add(colorClass);
     } else {
       tdOverallWeighted.textContent = "—";
     }
@@ -862,6 +929,8 @@
     // Empty trend cell for summary row
     const tdTrendEmpty = document.createElement("td");
     tdTrendEmpty.className = "gb-score-cell";
+    tdTrendEmpty.dataset.extraCol = "1";
+    if (!showMoreColumns) tdTrendEmpty.style.display = "none";
     tdTrendEmpty.textContent = "—";
     summaryRow.appendChild(tdTrendEmpty);
 
@@ -1720,12 +1789,110 @@
     }
   }
 
+  /**
+   * Toggle compact/comfortable view
+   */
+  function toggleCompact() {
+    isCompact = !isCompact;
+    localStorage.setItem(PREF_COMPACT, isCompact ? "true" : "false");
+    renderGradebook();
+  }
+
+  /**
+   * Toggle display of Average / Weighted / Trend columns
+   */
+  function toggleMoreColumns() {
+    showMoreColumns = !showMoreColumns;
+    localStorage.setItem(PREF_SHOW_MORE, showMoreColumns ? "true" : "false");
+    renderGradebook();
+  }
+
+  /**
+   * Set column sort order and re-render
+   */
+  function setSort(value) {
+    currentSort = value;
+    localStorage.setItem(PREF_SORT, value);
+    const sortSelect = $("gbSortSelect");
+    if (sortSelect) sortSelect.value = value;
+    renderGradebook();
+  }
+
+  /**
+   * Set up quick-stats hover card on student cells (event delegation)
+   */
+  function setupStudentHoverCard() {
+    const tableWrapEl = $("gbTableWrap");
+    if (!tableWrapEl) return;
+
+    let card = document.createElement("div");
+    card.className = "gb-stats-card";
+    card.style.display = "none";
+    document.body.appendChild(card);
+
+    let hideTimer = null;
+
+    tableWrapEl.addEventListener("mouseover", (e) => {
+      const cell = e.target.closest(".gb-has-stats");
+      if (!cell) return;
+      clearTimeout(hideTimer);
+
+      let info;
+      try {
+        info = JSON.parse(cell.dataset.tooltip || "{}");
+      } catch {
+        return;
+      }
+
+      const avgText = info.avg !== null && info.avg !== undefined ? `${info.avg}%` : "—";
+      card.innerHTML = `
+        <div class="gb-stats-card-name">${info.name || info.code}</div>
+        ${info.code && info.name ? `<div class="gb-stats-card-code">${info.code}</div>` : ""}
+        <div class="gb-stats-card-row">
+          <span class="gb-stats-card-label">Completed</span>
+          <span class="gb-stats-card-val">${info.completed}/${info.total}</span>
+        </div>
+        <div class="gb-stats-card-row">
+          <span class="gb-stats-card-label">Average</span>
+          <span class="gb-stats-card-val">${avgText}</span>
+        </div>
+        <div class="gb-stats-card-row">
+          <span class="gb-stats-card-label">Trend</span>
+          <span class="gb-stats-card-val">${info.trend || "—"}</span>
+        </div>`;
+
+      const rect = cell.getBoundingClientRect();
+      card.style.display = "block";
+      // Position below the cell, or above if near the bottom
+      const top = rect.bottom + window.scrollY + 6;
+      const left = rect.left + window.scrollX;
+      card.style.top = `${top}px`;
+      card.style.left = `${left}px`;
+    });
+
+    tableWrapEl.addEventListener("mouseout", (e) => {
+      if (!e.target.closest(".gb-has-stats")) return;
+      hideTimer = setTimeout(() => {
+        card.style.display = "none";
+      }, 150);
+    });
+
+    // Keep card visible when hovering the card itself
+    card.addEventListener("mouseover", () => clearTimeout(hideTimer));
+    card.addEventListener("mouseout", () => {
+      hideTimer = setTimeout(() => {
+        card.style.display = "none";
+      }, 150);
+    });
+  }
+
   // Initialize
   async function init() {
     await loadData();
     updateQuarterFilterLabels();
     renderClassFilter();
     renderGradebook();
+    setupStudentHoverCard();
 
     // Wire export button
     const btnExport = $("btnExportCSV");
@@ -1785,6 +1952,25 @@
           hideWeightsModal();
         }
       });
+    }
+
+    // Wire compact toggle button
+    const btnCompact = $("btnToggleCompact");
+    if (btnCompact) {
+      btnCompact.addEventListener("click", toggleCompact);
+    }
+
+    // Wire show-more columns button
+    const btnShowMore = $("btnToggleMoreCols");
+    if (btnShowMore) {
+      btnShowMore.addEventListener("click", toggleMoreColumns);
+    }
+
+    // Wire sort select
+    const sortSelect = $("gbSortSelect");
+    if (sortSelect) {
+      sortSelect.value = currentSort;
+      sortSelect.addEventListener("change", () => setSort(sortSelect.value));
     }
     
     // Setup realtime subscription if using Supabase
