@@ -703,13 +703,13 @@
    */
   async function saveInlineDataPoint(goalCode, studentCode, date, value, form) {
     if (!date) {
-      alert('Please enter a date');
+      await rcAlert('Validation', 'Please enter a date');
       return;
     }
     
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) {
-      alert('Please enter a valid number between 0 and 100');
+      await rcAlert('Validation', 'Please enter a valid number between 0 and 100');
       return;
     }
     
@@ -729,7 +729,7 @@
       hideInlineForm(form);
     } catch (err) {
       console.error('[data] Error adding data point:', err);
-      alert('Error adding data point: ' + err.message);
+      await rcAlert('Error', 'Error adding data point: ' + err.message);
     }
   }
   
@@ -775,7 +775,7 @@
       const newValue = parseFloat(input.value);
       
       if (isNaN(newValue) || newValue < 0 || newValue > 100) {
-        alert('Please enter a valid number between 0 and 100');
+        await rcAlert('Validation', 'Please enter a valid number between 0 and 100');
         input.focus();
         return;
       }
@@ -808,7 +808,7 @@
         render();
       } catch (err) {
         console.error('[data] Error updating data point:', err);
-        alert('Error updating data point: ' + err.message);
+        await rcAlert('Error', 'Error updating data point: ' + err.message);
         cell.classList.remove('saving');
         input.disabled = false;
         input.focus();
@@ -858,7 +858,7 @@
     const student = studentsData.find(s => s.code === studentCode);
     
     if (!goal || !student) {
-      alert('Goal or student not found');
+      await rcAlert('Error', 'Goal or student not found');
       return;
     }
     
@@ -1145,8 +1145,8 @@
   }
 
   // Bulk add progress (placeholder)
-  function bulkAddProgress() {
-    alert('Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple students/goals at once.');
+  async function bulkAddProgress() {
+    await rcAlert('Coming Soon', 'Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple students/goals at once.');
   }
 
   // ===== SPEDTRACK IMPORT FUNCTIONALITY =====
@@ -1262,28 +1262,28 @@
     }
     
     if (parseBtn) {
-      parseBtn.addEventListener('click', () => {
+      parseBtn.addEventListener('click', async () => {
         const text = $('dtImportTextarea').value;
         if (!text.trim()) {
-          alert('Please paste CSV data first');
+          await rcAlert('Validation', 'Please paste CSV data first');
           return;
         }
-        processImportCSV(text);
+        await processImportCSV(text);
       });
     }
     
     if (uploadBtn) {
-      uploadBtn.addEventListener('click', () => {
+      uploadBtn.addEventListener('click', async () => {
         const fileInput = $('dtImportFile');
         const file = fileInput.files[0];
         if (!file) {
-          alert('Please select a file first');
+          await rcAlert('Validation', 'Please select a file first');
           return;
         }
         
         const reader = new FileReader();
-        reader.onload = (e) => {
-          processImportCSV(e.target.result);
+        reader.onload = async (e) => {
+          await processImportCSV(e.target.result);
         };
         reader.readAsText(file);
       });
@@ -1294,7 +1294,7 @@
         const validEntries = importPreviewData.filter(row => row.valid);
         
         if (validEntries.length === 0) {
-          alert('No valid entries to import');
+          await rcAlert('Validation', 'No valid entries to import');
           return;
         }
         
@@ -1340,10 +1340,10 @@
           if ($('dtImportFile')) $('dtImportFile').value = '';
           renderImportHistory();
           
-          alert(`✓ Successfully imported ${validEntries.length} records!`);
+          await rcAlert('Import Complete', `✓ Successfully imported ${validEntries.length} records!`);
         } catch (err) {
           console.error('Import error:', err);
-          alert('Error importing data: ' + err.message);
+          await rcAlert('Import Error', 'Error importing data: ' + err.message);
         }
       });
     }
@@ -1358,12 +1358,12 @@
     renderImportHistory();
   }
   
-  function processImportCSV(text) {
+  async function processImportCSV(text) {
     try {
       const { rows } = parseCSV(text);
       
       if (rows.length === 0) {
-        alert('No data found in CSV');
+        await rcAlert('Validation', 'No data found in CSV');
         return;
       }
       
@@ -1396,7 +1396,7 @@
       
     } catch (err) {
       console.error('CSV parse error:', err);
-      alert('Error parsing CSV: ' + err.message);
+      await rcAlert('Error', 'Error parsing CSV: ' + err.message);
     }
   }
   
@@ -1834,8 +1834,8 @@
   function setupScheduleHandlers() {
     const settingsBtn = $('dtScheduleSettings');
     if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        alert('Schedule Settings\n\nYou can set collection frequency for each goal in the table below.');
+      settingsBtn.addEventListener('click', async () => {
+        await rcAlert('Schedule Settings', 'You can set collection frequency for each goal in the table below.');
       });
     }
     

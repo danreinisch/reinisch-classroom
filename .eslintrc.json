@@ -8,10 +8,14 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
+  "globals": {
+    "rcAlert": "readonly",
+    "rcConfirm": "readonly"
+  },
   "rules": {
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
     "no-console": "off",
-    "no-restricted-globals": ["warn",
+    "no-restricted-globals": ["error",
       { "name": "alert", "message": "Use a styled modal component instead of window.alert()" },
       { "name": "confirm", "message": "Use a styled confirmation dialog instead of window.confirm()" }
     ]

@@ -493,7 +493,7 @@
       renderGradebook();
     } catch (err) {
       console.error('[gradebook] Error saving score:', err);
-      alert('Error saving score: ' + err.message);
+      await rcAlert('Error', 'Error saving score: ' + err.message);
     }
   }
 
@@ -547,7 +547,7 @@
 
       const score = parseInt(newValue, 10);
       if (isNaN(score) || score < 0 || score > maxScore) {
-        alert(`Please enter a score between 0 and ${maxScore}.`);
+        await rcAlert('Invalid Score', `Please enter a score between 0 and ${maxScore}.`);
         input.focus();
         return;
       }
@@ -566,7 +566,7 @@
         btnSave.disabled = false;
         btnCancel.disabled = false;
         input.focus();
-        alert('Failed to save score: ' + err.message);
+        await rcAlert('Error', 'Failed to save score: ' + err.message);
       }
     };
 
@@ -978,10 +978,10 @@
   }
 
   // Export gradebook to CSV
-  function exportToCSV() {
+  async function exportToCSV() {
     const data = buildGradebookData();
     if (!data) {
-      alert("No data to export.");
+      await rcAlert('No Data', 'No data to export.');
       return;
     }
 
@@ -1088,7 +1088,7 @@
     
     const data = buildGradebookData();
     if (!data) {
-      alert("No data to export.");
+      await rcAlert('No Data', 'No data to export.');
       return;
     }
 
@@ -1230,10 +1230,10 @@
       console.error('[gradebook] PDF export error:', err);
       
       // Fallback: Use browser print dialog
-      if (confirm('jsPDF library not available. Would you like to use the browser Print dialog instead? (You can save as PDF from there)')) {
+      if (await rcConfirm('PDF Library Not Available', 'jsPDF library not available. Would you like to use the browser Print dialog instead? (You can save as PDF from there)', 'Use Print Dialog')) {
         window.print();
       } else {
-        alert('PDF export requires the jsPDF library. Please use the Export CSV button or try printing the page.');
+        await rcAlert('PDF Not Available', 'PDF export requires the jsPDF library. Please use the Export CSV button or try printing the page.');
       }
     }
   }
@@ -1739,7 +1739,7 @@
   /**
    * Save weights and re-render gradebook
    */
-  function saveWeights() {
+  async function saveWeights() {
     const assignmentInput = $("weightAssignment");
     const quizInput = $("weightQuiz");
     const testInput = $("weightTest");
@@ -1765,7 +1765,7 @@
 
     // Check if any weight is invalid
     if (Object.values(weights).some(w => w === null)) {
-      alert(`Please enter valid weights between ${MIN_WEIGHT} and ${MAX_WEIGHT}`);
+      await rcAlert('Invalid Weights', `Please enter valid weights between ${MIN_WEIGHT} and ${MAX_WEIGHT}`);
       return;
     }
 

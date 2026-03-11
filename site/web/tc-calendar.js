@@ -490,7 +490,7 @@
     const notes = $("qaNotes").value.trim();
 
     if (!title || !className || !dueDate) {
-      alert("Please fill in all required fields.");
+      await rcAlert('Required Fields', 'Please fill in all required fields.');
       return;
     }
 
@@ -530,7 +530,7 @@
     closeQuickAddModal();
 
     // Show success message
-    alert(`Assignment "${title}" added to drafts!`);
+    await rcAlert('Draft Added', `Assignment "${title}" added to drafts!`);
   }
 
   /**

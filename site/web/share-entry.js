@@ -186,7 +186,7 @@
         const enteredBy = document.getElementById('enteredBy').value.trim();
         
         if (!enteredBy) {
-          alert('Please enter your name');
+          await rcAlert('Required', 'Please enter your name');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Progress Data';
           return;
@@ -274,7 +274,7 @@
         
       } catch (err) {
         console.error('Error submitting data:', err);
-        alert('Error submitting data: ' + err.message);
+        await rcAlert('Error', 'Error submitting data: ' + err.message);
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Progress Data';
       }

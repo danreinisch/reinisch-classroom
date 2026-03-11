@@ -129,8 +129,8 @@
   /**
    * Clear the table
    */
-  function clearTable() {
-    if (!confirm("Clear all periods from the table? Unsaved changes will be lost.")) return;
+  async function clearTable() {
+    if (!await rcConfirm('Clear Schedule', 'Clear all periods from the table? Unsaved changes will be lost.', 'Clear', { danger: true })) return;
     const tbody = $("schedTbody");
     if (tbody) tbody.innerHTML = "";
     showMsg("", "");

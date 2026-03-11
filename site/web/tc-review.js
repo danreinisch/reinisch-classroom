@@ -1443,7 +1443,7 @@
 
     if (finalizable.length === 0) return;
 
-    if (!confirm(`Finalize ${finalizable.length} submission${finalizable.length !== 1 ? 's' : ''}? This will trigger goal progress updates for each.`)) return;
+    if (!await rcConfirm('Finalize Submissions', `Finalize ${finalizable.length} submission${finalizable.length !== 1 ? 's' : ''}? This will trigger goal progress updates for each.`, 'Finalize')) return;
 
     let processed = 0;
     finalizingInProgress = true;
@@ -1541,7 +1541,7 @@
       return;
     }
 
-    if (!confirm(`Mark ${toProcess.length} submission${toProcess.length !== 1 ? 's' : ''} as reviewed?`)) return;
+    if (!await rcConfirm('Mark Reviewed', `Mark ${toProcess.length} submission${toProcess.length !== 1 ? 's' : ''} as reviewed?`, 'Mark Reviewed')) return;
 
     let processed = 0;
     finalizingInProgress = true;
@@ -1722,7 +1722,7 @@
   async function handleFinalizeSubmission(button) {
     const submissionId = button.dataset.submissionId;
     
-    if (!confirm('Finalize this submission? This will trigger IEP goal progress updates and mark it as reviewed.')) {
+    if (!await rcConfirm('Finalize Submission', 'Finalize this submission? This will trigger IEP goal progress updates and mark it as reviewed.', 'Finalize')) {
       return;
     }
 
@@ -1731,7 +1731,7 @@
     const instance = assignmentInstancesData.find(i => i.id === submission?.instance_id);
     const assignmentId = instance?.assignment_id;
     if (!assignmentId) {
-      alert('Cannot determine assignment for this submission. Please refresh and try again.');
+      await rcAlert('Error', 'Cannot determine assignment for this submission. Please refresh and try again.');
       return;
     }
 
@@ -1741,7 +1741,7 @@
         await ensureRealItems(assignmentId);
       } catch (err) {
         console.error('[tc-review] Backfill required before finalize:', err);
-        alert('Could not backfill assignment items. Please try again before finalizing.');
+        await rcAlert('Error', 'Could not backfill assignment items. Please try again before finalizing.');
         return;
       }
     }
@@ -1815,7 +1815,7 @@
       expandedSubmissions.delete(submissionId);
       
       // Show success
-      alert('Submission finalized successfully! Goal progress updated.');
+      showToast('Submission finalized successfully! Goal progress updated.', 'rgba(34, 197, 94, 0.95)', '#fff');
       
       // Advance to next unreviewed submission
       await advanceToNextSubmission(submissionId);
@@ -1825,7 +1825,7 @@
       
     } catch (err) {
       console.error('[tc-review] Error finalizing submission:', err);
-      alert('Error finalizing submission. Please try again.');
+      await rcAlert('Error', 'Error finalizing submission. Please try again.');
     } finally {
       finalizingInProgress = false;
     }
@@ -2199,7 +2199,7 @@
     const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
     const feedback = feedbackInput ? feedbackInput.value.trim() : '';
 
-    if (!confirm('Return this submission for revision? The student will need to resubmit.')) return;
+    if (!await rcConfirm('Return for Revision', 'Return this submission for revision? The student will need to resubmit.', 'Return')) return;
 
     const submission = submissionsData.find(s => s.id === submissionId);
     if (!submission) return;

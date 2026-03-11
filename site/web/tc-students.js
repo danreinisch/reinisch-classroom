@@ -950,13 +950,13 @@
   async function handleCopyDataEntryLink(goalId) {
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) {
-      alert('Goal not found');
+      await rcAlert('Error', 'Goal not found');
       return;
     }
 
     const student = allStudents.find(s => s.code === goal.student_code);
     if (!student) {
-      alert('Student not found');
+      await rcAlert('Error', 'Student not found');
       return;
     }
 
@@ -985,7 +985,7 @@
 
     } catch (err) {
       console.error('[tc-students] Error creating token:', err);
-      alert('Error creating data entry link. Please try again.');
+      await rcAlert('Error', 'Error creating data entry link. Please try again.');
     }
   }
 
@@ -995,7 +995,7 @@
   async function handleRevokeDataEntryLink(goalId) {
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) {
-      alert('Goal not found');
+      await rcAlert('Error', 'Goal not found');
       return;
     }
 
@@ -1014,7 +1014,7 @@
       const token = tokens.find(t => t.goal_code === goal.code);
 
       if (!token) {
-        alert('No active token found for this goal');
+        await rcAlert('Error', 'No active token found for this goal');
         return;
       }
 
@@ -1030,7 +1030,7 @@
 
     } catch (err) {
       console.error('[tc-students] Error revoking token:', err);
-      alert('Error revoking link. Please try again.');
+      await rcAlert('Error', 'Error revoking link. Please try again.');
     }
   }
 
@@ -1975,7 +1975,7 @@
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
-      alert('Failed to update goal');
+      await rcAlert('Error', 'Failed to update goal');
     }
   }
 
@@ -2008,7 +2008,7 @@
       renderStudentList();
     } catch (error) {
       console.error('[tc-students] Error archiving student:', error);
-      alert('Failed to archive student');
+      await rcAlert('Error', 'Failed to archive student');
     }
   }
 
@@ -2029,7 +2029,7 @@
       await renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error reactivating student:', error);
-      alert('Failed to reactivate student');
+      await rcAlert('Error', 'Failed to reactivate student');
     }
   }
 
@@ -2053,7 +2053,7 @@
       await renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error saving student info:', error);
-      alert('Failed to save student information');
+      await rcAlert('Error', 'Failed to save student information');
     }
   }
 
@@ -2079,7 +2079,7 @@
       }
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
-      alert('Failed to archive goal');
+      await rcAlert('Error', 'Failed to archive goal');
     }
   }
 
@@ -2103,7 +2103,7 @@
         const correct = parseFloat(card.querySelector('[name="correct"]').value);
         const total = parseFloat(card.querySelector('[name="total"]').value);
         if (isNaN(correct) || isNaN(total) || total === 0) {
-          alert('Please enter valid correct and total values');
+          await rcAlert('Validation', 'Please enter valid correct and total values');
           return;
         }
         calculatedValue = (correct / total) * 100;
@@ -2112,7 +2112,7 @@
         const count = parseFloat(card.querySelector('[name="count"]').value);
         const timePeriod = card.querySelector('[name="time_period"]').value;
         if (isNaN(count)) {
-          alert('Please enter a valid count');
+          await rcAlert('Validation', 'Please enter a valid count');
           return;
         }
         calculatedValue = count;
@@ -2126,7 +2126,7 @@
         const count = parseFloat(card.querySelector('[name="count"]').value);
         const minutes = parseFloat(card.querySelector('[name="minutes"]').value);
         if (isNaN(count) || isNaN(minutes) || minutes === 0) {
-          alert('Please enter valid count and minutes values');
+          await rcAlert('Validation', 'Please enter valid count and minutes values');
           return;
         }
         calculatedValue = count / minutes;
@@ -2134,7 +2134,7 @@
       } else {
         const value = parseFloat(card.querySelector('[name="value"]').value);
         if (isNaN(value)) {
-          alert('Please enter a valid value');
+          await rcAlert('Validation', 'Please enter a valid value');
           return;
         }
         calculatedValue = value;
@@ -2211,7 +2211,7 @@
       }
     } catch (error) {
       console.error('[tc-students] Error saving progress data:', error);
-      alert('Failed to save progress data');
+      await rcAlert('Error', 'Failed to save progress data');
     }
   }
 
@@ -2304,7 +2304,7 @@
       }
     } catch (error) {
       console.error('[tc-students] Error saving enrollments:', error);
-      alert('Failed to save enrollments');
+      await rcAlert('Error', 'Failed to save enrollments');
     }
   }
 
@@ -2415,7 +2415,7 @@
       }
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
-      alert('Failed to add goal');
+      await rcAlert('Error', 'Failed to add goal');
     }
   }
 
@@ -2486,7 +2486,7 @@
       }
     } catch (error) {
       console.error('[tc-students] Error adding communication entry:', error);
-      alert('Failed to add communication entry');
+      await rcAlert('Error', 'Failed to add communication entry');
     }
   }
 
@@ -2530,11 +2530,11 @@
       showToast('Password reset successfully');
     } catch (error) {
       console.error('[tc-students] Error resetting password:', error);
-      alert('Failed to reset password');
+      await rcAlert('Error', 'Failed to reset password');
     }
   }
 
-  function showAddStudentWizard() {
+  async function showAddStudentWizard() {
     try {
       let step = 1;
       let studentData = {};
@@ -2652,7 +2652,7 @@
       renderStep();
     } catch (error) {
       console.error('[tc-students] Error in showAddStudentWizard:', error);
-      alert('Failed to open Add Student wizard. Please check the console for details.');
+      await rcAlert('Error', 'Failed to open Add Student wizard. Please check the console for details.');
     }
   }
 
@@ -2678,7 +2678,7 @@
       selectStudent(data.code);
     } catch (error) {
       console.error('[tc-students] Error creating student:', error);
-      alert('Failed to create student');
+      await rcAlert('Error', 'Failed to create student');
     }
   }
 
@@ -3063,7 +3063,7 @@
       iepWizardData = null;
     } catch (error) {
       console.error('[tc-students] Error creating new IEP:', error);
-      alert('Failed to create new IEP');
+      await rcAlert('Error', 'Failed to create new IEP');
     }
   }
 
@@ -3167,7 +3167,7 @@
     const lines = splitCsvIntoRows(text);
     
     if (lines.length < 2) {
-      alert('CSV file must have at least a header row and one data row');
+      await rcAlert('Validation', 'CSV file must have at least a header row and one data row');
       return;
     }
 
@@ -3611,7 +3611,7 @@
       document.querySelector('.st-modal-backdrop')?.remove();
     } catch (error) {
       console.error('[tc-students] Error importing CSV:', error);
-      alert('Failed to import CSV: ' + error.message);
+      await rcAlert('Import Error', 'Failed to import CSV: ' + error.message);
     }
   }
 
