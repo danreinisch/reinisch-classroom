@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conic Sections &mdash; Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;--border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;--accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;--text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;--formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+.breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}.breadcrumb span{color:var(--text-dim);margin:0 6px}.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}.breadcrumb a:hover{color:var(--accent)}.breadcrumb .current{color:var(--text);font-weight:500}
+.tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-orange);font-weight:500;margin:20px 24px 0}
+.container{max-width:860px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}.subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+.process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}.proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}.proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}.proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}.proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}.proc-step.active .p-icon{filter:none}.proc-step.active .p-label{color:rgba(255,255,255,.9)}.proc-step.done{background:var(--surface2)}.proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}.proc-step.done .p-label{color:var(--success)}.proc-step.done::after{content:'\2713';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}.btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}.btn-primary:hover{background:#0fa396;transform:translateY(-1px)}.btn-sm{padding:10px 22px;font-size:.85rem}.btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}.btn-check:hover{background:#0fa396}
+.btn-copy{background:var(--surface3);color:var(--accent-blue);padding:12px 24px;font-size:.88rem;border:2px solid var(--accent-blue);display:inline-flex;align-items:center;gap:8px}.btn-copy:hover{background:rgba(56,189,248,.1);transform:translateY(-1px)}.btn-copy.copied{border-color:var(--success);color:var(--success);background:rgba(34,197,94,.1)}
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}.input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+.mode-tabs{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap}.mode-tab{padding:7px 11px;border-radius:10px;font-size:.72rem;font-weight:600;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}.mode-tab:hover{border-color:var(--accent);color:var(--accent)}.mode-tab.selected{background:rgba(20,184,166,.1);border-color:var(--accent);color:var(--accent)}
+.mode-panel{display:none}.mode-panel.active{display:block;animation:fadeSlideIn .3s ease}
+.field-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 16px}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}.field input,.field select{font-family:var(--font-mono);font-size:1rem;padding:10px 14px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;transition:border-color .3s}.field input:focus,.field select:focus{border-color:var(--accent)}.field input::placeholder{color:var(--text-dim);font-size:.82rem}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9bbf' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;padding-right:32px}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.feat-card{background:var(--formula-bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;text-align:center}.feat-card .feat-label{font-size:.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}.feat-card .feat-value{font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--accent)}
+.callout{background:rgba(20,184,166,.06);border:1px solid rgba(20,184,166,.2);border-radius:10px;padding:14px 18px;margin:10px 0;font-size:.88rem;line-height:1.7}
+.strategy-box{background:var(--surface3);border:1px solid var(--accent);border-radius:10px;padding:16px 20px;margin:14px 0;font-size:.88rem;line-height:1.7}.strategy-box .strat-title{font-weight:700;color:var(--accent);margin-bottom:6px;font-size:.9rem}
+.conic-badge{display:inline-block;padding:8px 20px;border-radius:10px;font-family:var(--font-mono);font-size:1rem;font-weight:700;margin:8px 0}
+.conic-badge.circle{background:rgba(56,189,248,.12);border:2px solid var(--accent-blue);color:var(--accent-blue)}
+.conic-badge.parabola{background:rgba(20,184,166,.12);border:2px solid var(--accent);color:var(--accent)}
+.conic-badge.ellipse{background:rgba(251,146,60,.12);border:2px solid var(--accent-orange);color:var(--accent-orange)}
+.conic-badge.hyperbola{background:rgba(167,139,250,.12);border:2px solid var(--accent-purple);color:var(--accent-purple)}
+.eq-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin:10px 0;text-align:center;font-family:var(--font-mono);font-size:1.05rem;font-weight:600;color:var(--text)}
+.start-row{display:flex;justify-content:center;margin-top:12px}
+.error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}.error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+.examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}.examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}.examples-toggle:hover{color:var(--text);background:var(--surface3)}.toggle-arrow{font-size:.7rem;transition:transform .3s ease}.toggle-arrow.open{transform:rotate(180deg)}.examples-body{max-height:0;overflow:hidden;transition:max-height .5s ease}.examples-body.open{max-height:3500px}.example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}.category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}.examples{display:flex;flex-wrap:wrap;gap:8px}.example-chip{font-family:var(--font-mono);font-size:.68rem;padding:5px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}.example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+.workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.problem-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:1rem;font-weight:600;color:var(--text)}
+.step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}.step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}.step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}.step-num.done{background:var(--success)}.step-title{font-weight:600;font-size:.95rem}.step-body{padding-left:40px}
+.step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+.step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7;text-align:center}
+.answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}.answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:140px;outline:none;transition:border-color .3s;text-align:center}.answer-input:focus{border-color:var(--accent)}.answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}.answer-input.incorrect{border-color:var(--error)}.answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.choice-btn{padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}.choice-btn:hover{border-color:var(--accent);color:var(--accent)}.choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}.choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}.choice-btn.disabled{opacity:.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}.step-feedback.show{display:block;animation:fadeSlideIn .25s ease}.step-feedback.correct{color:var(--success)}.step-feedback.incorrect{color:var(--error)}.step-feedback.hint-text{color:var(--accent-orange)}
+.step-card.completed{opacity:.6}.step-card.completed .answer-input{pointer-events:none}.step-card.completed .btn-check{display:none}.step-card.completed .choice-btn{pointer-events:none}
+.result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(167,139,250,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}.result-section.visible{display:block;animation:fadeSlideIn .5s ease}.result-icon{font-size:2.5rem;margin-bottom:10px}.result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}.result-expression{font-family:var(--font-mono);font-size:1rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0;line-height:1.8}.result-detail{color:var(--text-muted);font-size:.88rem;margin-top:8px}.actions{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+@media(max-width:600px){.container{padding:16px}.input-section,.workspace{padding:20px}h1{font-size:1.4rem}.step-body{padding-left:0}.mode-tabs{gap:3px}.mode-tab{padding:5px 7px;font-size:.64rem}.field-row{gap:8px}.field input{padding:8px 10px;font-size:.9rem}.feat-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="breadcrumb"><a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span><a href="#">Math Toolkit</a><span>&rsaquo;</span><a href="#">Algebra</a><span>&rsaquo;</span><a href="#">Algebra 3</a><span>&rsaquo;</span><span class="current">Conic Sections</span></nav>
+<div class="container">
+  <div class="tier-badge">&#128213; Algebra 3 &middot; A37</div>
+  <h1>Conic Sections</h1>
+  <p class="subtitle">Identify conic types, convert general to standard form, and find key features step by step.</p>
+  <div class="process-banner" id="procBanner"><div class="proc-step" id="proc-identify"><span class="p-icon">&#128269;</span><span class="p-label">Identify</span></div><div class="proc-step" id="proc-setup"><span class="p-icon">&#128208;</span><span class="p-label">Set Up</span></div><div class="proc-step" id="proc-compute"><span class="p-icon">&#128290;</span><span class="p-label">Compute</span></div><div class="proc-step" id="proc-answer"><span class="p-icon">&#10024;</span><span class="p-label">Answer</span></div></div>
+  <div class="input-section" id="inputSection">
+    <h2>&#9998; What Type of Problem?</h2>
+    <p class="hint">Select the conic type or use Classify / Convert to work from general form.</p>
+    <div class="mode-tabs">
+      <div class="mode-tab" onclick="setMode('basics')" id="tab-basics">Conic Basics</div>
+      <div class="mode-tab" onclick="setMode('classify')" id="tab-classify">Classify</div>
+      <div class="mode-tab" onclick="setMode('convert')" id="tab-convert">Gen\u2192Standard</div>
+      <div class="mode-tab" onclick="setMode('circle')" id="tab-circle">Circle</div>
+      <div class="mode-tab" onclick="setMode('parabola')" id="tab-parabola">Parabola</div>
+      <div class="mode-tab" onclick="setMode('ellipse')" id="tab-ellipse">Ellipse</div>
+      <div class="mode-tab" onclick="setMode('hyperbola')" id="tab-hyperbola">Hyperbola</div>
+    </div>
+    <!-- Basics -->
+    <div class="mode-panel" id="panel-basics"><p class="hint">Learn what conic sections are and how to recognize each type.</p></div>
+    <!-- Classify -->
+    <div class="mode-panel" id="panel-classify">
+      <p class="hint">Ax&sup2; + Cy&sup2; + Dx + Ey + F = 0. Enter A, C, D, E, F.</p>
+      <div class="field-row"><div class="field"><label>A (x&sup2;)</label><input id="cl-A" placeholder="1" style="width:65px"></div><div class="field"><label>C (y&sup2;)</label><input id="cl-C" placeholder="1" style="width:65px"></div><div class="field"><label>D (x)</label><input id="cl-D" placeholder="0" style="width:65px"></div><div class="field"><label>E (y)</label><input id="cl-E" placeholder="0" style="width:65px"></div><div class="field"><label>F</label><input id="cl-F" placeholder="-25" style="width:65px"></div></div>
+    </div>
+    <!-- Convert General to Standard -->
+    <div class="mode-panel" id="panel-convert">
+      <p class="hint">Complete the square to convert general form to standard form. Works for circles and ellipses.</p>
+      <div class="field-row"><div class="field"><label>A (x&sup2;)</label><input id="cv-A" placeholder="1" style="width:65px"></div><div class="field"><label>C (y&sup2;)</label><input id="cv-C" placeholder="1" style="width:65px"></div><div class="field"><label>D (x)</label><input id="cv-D" placeholder="-6" style="width:65px"></div><div class="field"><label>E (y)</label><input id="cv-E" placeholder="4" style="width:65px"></div><div class="field"><label>F</label><input id="cv-F" placeholder="-12" style="width:65px"></div></div>
+    </div>
+    <!-- Circle -->
+    <div class="mode-panel" id="panel-circle">
+      <p class="hint">(x&minus;h)&sup2; + (y&minus;k)&sup2; = r&sup2;</p>
+      <div class="field-row"><div class="field"><label>h</label><input id="ci-h" placeholder="0" style="width:75px"></div><div class="field"><label>k</label><input id="ci-k" placeholder="0" style="width:75px"></div><div class="field"><label>r</label><input id="ci-r" placeholder="5" style="width:75px"></div></div>
+    </div>
+    <!-- Parabola -->
+    <div class="mode-panel" id="panel-parabola">
+      <p class="hint">Vertex form. Choose orientation.</p>
+      <div class="field-row"><div class="field"><label>Opens</label><select id="pa-dir"><option value="vert">Up/Down: y=a(x&minus;h)&sup2;+k</option><option value="horiz">Left/Right: x=a(y&minus;k)&sup2;+h</option></select></div></div>
+      <div class="field-row"><div class="field"><label>a</label><input id="pa-a" placeholder="1" style="width:75px"></div><div class="field"><label>h</label><input id="pa-h" placeholder="0" style="width:75px"></div><div class="field"><label>k</label><input id="pa-k" placeholder="0" style="width:75px"></div></div>
+    </div>
+    <!-- Ellipse -->
+    <div class="mode-panel" id="panel-ellipse">
+      <p class="hint">(x&minus;h)&sup2;/a&sup2; + (y&minus;k)&sup2;/b&sup2; = 1</p>
+      <div class="field-row"><div class="field"><label>h</label><input id="el-h" placeholder="0" style="width:65px"></div><div class="field"><label>k</label><input id="el-k" placeholder="0" style="width:65px"></div><div class="field"><label>a</label><input id="el-a" placeholder="5" style="width:65px"></div><div class="field"><label>b</label><input id="el-b" placeholder="3" style="width:65px"></div></div>
+    </div>
+    <!-- Hyperbola -->
+    <div class="mode-panel" id="panel-hyperbola">
+      <p class="hint">Choose transverse axis direction.</p>
+      <div class="field-row"><div class="field"><label>Opens</label><select id="hy-dir"><option value="horiz">Horiz: (x&minus;h)&sup2;/a&sup2; &minus; (y&minus;k)&sup2;/b&sup2;=1</option><option value="vert">Vert: (y&minus;k)&sup2;/a&sup2; &minus; (x&minus;h)&sup2;/b&sup2;=1</option></select></div></div>
+      <div class="field-row"><div class="field"><label>h</label><input id="hy-h" placeholder="0" style="width:65px"></div><div class="field"><label>k</label><input id="hy-k" placeholder="0" style="width:65px"></div><div class="field"><label>a</label><input id="hy-a" placeholder="4" style="width:65px"></div><div class="field"><label>b</label><input id="hy-b" placeholder="3" style="width:65px"></div></div>
+    </div>
+    <div class="start-row" id="startRow" style="display:none"><button class="btn-primary" onclick="startSolving()">Let's Solve It &rarr;</button></div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()"><span>&#128203; Try a Practice Problem</span><span class="toggle-arrow" id="toggleArrow">&#9660;</span></div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category"><div class="category-label">&#x1F4D6; Conic Basics</div><div class="examples"><span class="example-chip" onclick="setMode('basics');startSolving()">Learn the 4 types</span></div></div>
+        <div class="example-category"><div class="category-label">&#x1F50E; Classify</div><div class="examples">
+          <span class="example-chip" onclick="loadCL(1,1,0,0,-25)">circle</span>
+          <span class="example-chip" onclick="loadCL(1,0,0,-4,0)">parabola</span>
+          <span class="example-chip" onclick="loadCL(4,9,0,0,-36)">ellipse</span>
+          <span class="example-chip" onclick="loadCL(1,-1,0,0,-1)">hyperbola</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F504; General \u2192 Standard</div><div class="examples">
+          <span class="example-chip" onclick="loadCV(1,1,-6,4,-12)">circle: x\u00B2+y\u00B2-6x+4y=12</span>
+          <span class="example-chip" onclick="loadCV(1,1,2,-8,-8)">circle: +2x-8y=8</span>
+          <span class="example-chip" onclick="loadCV(4,1,0,0,-16)">ellipse: 4x\u00B2+y\u00B2=16</span>
+          <span class="example-chip" onclick="loadCV(9,4,-18,16,-11)">ellipse: complete sq</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F535; Circle</div><div class="examples">
+          <span class="example-chip" onclick="loadCI(0,0,5)">r=5 origin</span>
+          <span class="example-chip" onclick="loadCI(3,-2,4)">shifted</span>
+          <span class="example-chip" onclick="loadCI(0,0,1)">unit</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E2; Parabola</div><div class="examples">
+          <span class="example-chip" onclick="loadPA('vert',1,0,0)">y=x\u00B2</span>
+          <span class="example-chip" onclick="loadPA('vert',-1,2,3)">down</span>
+          <span class="example-chip" onclick="loadPA('horiz',1,0,0)">x=y\u00B2</span>
+          <span class="example-chip" onclick="loadPA('horiz',-2,1,3)">left</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E0; Ellipse</div><div class="examples">
+          <span class="example-chip" onclick="loadEL(0,0,5,3)">a=5 b=3</span>
+          <span class="example-chip" onclick="loadEL(0,0,3,5)">b>a vert</span>
+          <span class="example-chip" onclick="loadEL(2,-1,4,2)">shifted</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E3; Hyperbola</div><div class="examples">
+          <span class="example-chip" onclick="loadHY('horiz',0,0,4,3)">horiz</span>
+          <span class="example-chip" onclick="loadHY('vert',0,0,3,4)">vert</span>
+          <span class="example-chip" onclick="loadHY('horiz',2,-1,5,2)">shifted</span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <div class="workspace" id="workspace"><div class="problem-display" id="problemDisplay"></div><div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection"><div class="result-icon">&#127881;</div><div class="result-title">Problem Solved!</div><div class="result-expression" id="resultExpr"></div><div class="result-detail" id="resultDetail"></div><div class="actions"><button class="btn-copy" id="copyBtn" onclick="copyWork()">&#128203; Copy My Work</button><button class="btn-primary" onclick="resetAll()">Solve Another &rarr;</button></div></div>
+  </div>
+</div>
+<script>
+var fN=function(n){if(n==null)return"?";if(Number.isInteger(n))return""+n;return parseFloat(n.toFixed(4)).toString()};
+var rnd=function(n,d){return parseFloat(n.toFixed(d))};
+var escH=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")};
+var pf=function(id){return parseFloat(document.getElementById(id).value)||0};
+var shH=function(v,vr){if(v===0)return vr;return"("+vr+(v>0?" \u2212 "+fN(v):" + "+fN(Math.abs(v)))+")"};
+function featH(p){var h='<div class="feat-grid">';p.forEach(function(f){h+='<div class="feat-card"><div class="feat-label">'+f[0]+'</div><div class="feat-value">'+f[1]+'</div></div>'});return h+'</div>'}
+var mode=null,ST={},stepsData=[],currentStep=0;
+function setMode(m){mode=m;document.querySelectorAll(".mode-tab").forEach(function(t){t.classList.remove("selected")});document.getElementById("tab-"+m).classList.add("selected");document.querySelectorAll(".mode-panel").forEach(function(p){p.classList.remove("active")});document.getElementById("panel-"+m).classList.add("active");document.getElementById("startRow").style.display="flex"}
+function loadCL(A,C,D,E,F){setMode("classify");document.getElementById("cl-A").value=A;document.getElementById("cl-C").value=C;document.getElementById("cl-D").value=D;document.getElementById("cl-E").value=E;document.getElementById("cl-F").value=F}
+function loadCV(A,C,D,E,F){setMode("convert");document.getElementById("cv-A").value=A;document.getElementById("cv-C").value=C;document.getElementById("cv-D").value=D;document.getElementById("cv-E").value=E;document.getElementById("cv-F").value=F}
+function loadCI(h,k,r){setMode("circle");document.getElementById("ci-h").value=h;document.getElementById("ci-k").value=k;document.getElementById("ci-r").value=r}
+function loadPA(d,a,h,k){setMode("parabola");document.getElementById("pa-dir").value=d;document.getElementById("pa-a").value=a;document.getElementById("pa-h").value=h;document.getElementById("pa-k").value=k}
+function loadEL(h,k,a,b){setMode("ellipse");document.getElementById("el-h").value=h;document.getElementById("el-k").value=k;document.getElementById("el-a").value=a;document.getElementById("el-b").value=b}
+function loadHY(d,h,k,a,b){setMode("hyperbola");document.getElementById("hy-dir").value=d;document.getElementById("hy-h").value=h;document.getElementById("hy-k").value=k;document.getElementById("hy-a").value=a;document.getElementById("hy-b").value=b}
+function toggleExamples(){document.getElementById("examplesBody").classList.toggle("open");document.getElementById("toggleArrow").classList.toggle("open")}
+function showError(msg){var el=document.getElementById("errorMsg");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show")},4000)}
+function startSolving(){if(!mode){showError("Select a mode.");return}stepsData=[];currentStep=0;ST={mode:mode};({basics:startBasics,classify:startClassify,convert:startConvert,circle:startCircle,parabola:startParabola,ellipse:startEllipse,hyperbola:startHyperbola})[mode]()}
+function launchWorkspace(){document.getElementById("inputSection").style.display="none";document.getElementById("workspace").classList.add("visible");document.getElementById("resultSection").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});var cb=document.getElementById("copyBtn");cb.classList.remove("copied");cb.innerHTML="&#128203; Copy My Work";showStep(0)}
+
+// ==================== 1. CONIC BASICS ====================
+function startBasics(){
+  document.getElementById("problemDisplay").innerHTML="What Are Conic Sections?";
+  stepsData.push({title:"Slicing a Cone",proc:"identify",type:"info",
+    instruction:'<div class="callout">A <strong>conic section</strong> is the curve you get when you slice a cone with a flat plane. The angle of the cut determines the shape:<br><br>\u2022 Cut <strong>straight across</strong> \u2192 <span class="conic-badge circle" style="font-size:.75rem;padding:3px 10px">Circle</span><br>\u2022 Cut <strong>parallel to the side</strong> \u2192 <span class="conic-badge parabola" style="font-size:.75rem;padding:3px 10px">Parabola</span><br>\u2022 Cut at an <strong>angle</strong> (not through base) \u2192 <span class="conic-badge ellipse" style="font-size:.75rem;padding:3px 10px">Ellipse</span><br>\u2022 Cut <strong>steep enough to hit both halves</strong> \u2192 <span class="conic-badge hyperbola" style="font-size:.75rem;padding:3px 10px">Hyperbola</span></div>',
+    work:"Conics come from slicing a cone at different angles"});
+
+  stepsData.push({title:"Real-World Examples",proc:"identify",type:"info",
+    instruction:'<div class="callout"><span style="color:var(--accent-blue);font-weight:700">Circles:</span> wheels, clocks, pizza, orbits of some satellites<br><br><span style="color:var(--accent);font-weight:700">Parabolas:</span> satellite dishes, headlight reflectors, the path of a thrown ball, suspension bridge cables<br><br><span style="color:var(--accent-orange);font-weight:700">Ellipses:</span> planets orbiting the sun, oval racetracks, the shape of most eggs<br><br><span style="color:var(--accent-purple);font-weight:700">Hyperbolas:</span> cooling tower shapes, some comet paths, sound wave focusing</div>',
+    work:"Real-world: circles=wheels, parabolas=dishes, ellipses=orbits, hyperbolas=towers"});
+
+  stepsData.push({title:"How to Tell Them Apart (Quick Rules)",proc:"setup",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Look at x\u00B2 and y\u00B2 coefficients (A and C)</div><table style="width:100%;font-size:.85rem;border-collapse:collapse"><tr><td style="padding:6px;border-bottom:1px solid var(--border);color:var(--accent-blue);font-weight:700">Circle</td><td style="padding:6px;border-bottom:1px solid var(--border)">A = C (equal, same sign)</td></tr><tr><td style="padding:6px;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700">Parabola</td><td style="padding:6px;border-bottom:1px solid var(--border)">A=0 or C=0 (only ONE squared)</td></tr><tr><td style="padding:6px;border-bottom:1px solid var(--border);color:var(--accent-orange);font-weight:700">Ellipse</td><td style="padding:6px;border-bottom:1px solid var(--border)">A \u2260 C, but same sign</td></tr><tr><td style="padding:6px;color:var(--accent-purple);font-weight:700">Hyperbola</td><td style="padding:6px">A and C have opposite signs</td></tr></table></div>',
+    work:"Classification rules: equal=circle, one zero=parabola, same sign diff=ellipse, opposite=hyperbola"});
+
+  stepsData.push({title:"Key Vocabulary",proc:"answer",type:"info",
+    instruction:'<div class="callout"><strong>Center:</strong> The middle point (circles, ellipses, hyperbolas)<br><strong>Vertex:</strong> The turning point (parabolas) or endpoint of an axis (ellipses, hyperbolas)<br><strong>Focus/Foci:</strong> Special point(s) that define the curve<br><strong>Radius:</strong> Distance from center to edge (circles)<br><strong>Asymptotes:</strong> Lines the hyperbola approaches but never touches<br><strong>Eccentricity (e):</strong> How "stretched" the shape is (circle e=0, ellipse 0&lt;e&lt;1, parabola e=1, hyperbola e&gt;1)</div>',
+    work:"Vocab: center, vertex, focus, radius, asymptotes, eccentricity"});
+  launchWorkspace();
+}
+
+// ==================== 2. CLASSIFY ====================
+function startClassify(){
+  var A=pf("cl-A"),C=pf("cl-C"),D=pf("cl-D"),E=pf("cl-E"),F=pf("cl-F");
+  Object.assign(ST,{A:A,C:C,D:D,E:E,F:F});
+  document.getElementById("problemDisplay").innerHTML="Classify the Conic";
+  stepsData.push({title:"The Equation",proc:"identify",type:"info",
+    instruction:'<div class="eq-display">'+fN(A)+'x\u00B2 + '+fN(C)+'y\u00B2 + '+fN(D)+'x + '+fN(E)+'y + '+fN(F)+' = 0</div><div class="strategy-box"><div class="strat-title">&#127919; Check A and C</div>A = '+fN(A)+' (x\u00B2 coefficient)<br>C = '+fN(C)+' (y\u00B2 coefficient)</div>',work:"A="+fN(A)+", C="+fN(C)});
+  var type;
+  if(A===0&&C===0)type="line";else if(A===0||C===0)type="Parabola";
+  else if(Math.abs(A-C)<0.001)type="Circle";
+  else if((A>0&&C>0)||(A<0&&C<0))type="Ellipse";
+  else type="Hyperbola";
+  ST.type=type;
+  var reason=type==="Circle"?"A = C = "+fN(A):type==="Parabola"?(A===0?"A=0":"C=0"):type==="Ellipse"?"A="+fN(A)+", C="+fN(C)+" (same sign, different)":"A="+fN(A)+", C="+fN(C)+" (opposite signs)";
+  stepsData.push({title:"Apply the Rule",proc:"compute",type:"choice",instruction:reason,question:"Type:",options:["Circle","Parabola","Ellipse","Hyperbola"],answer:type,work:type+": "+reason});
+  var bc=type==="Circle"?"circle":type==="Parabola"?"parabola":type==="Ellipse"?"ellipse":"hyperbola";
+  stepsData.push({title:"Classification",proc:"answer",type:"info",instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge '+bc+'">'+type+'</span><div style="color:var(--text-dim);font-size:.85rem;margin-top:8px">'+reason+'</div></div>',work:"ANSWER: "+type});
+  launchWorkspace();
+}
+
+// ==================== 3. GENERAL → STANDARD (COMPLETING THE SQUARE) ====================
+function startConvert(){
+  var A=pf("cv-A"),C=pf("cv-C"),D=pf("cv-D"),E=pf("cv-E"),F=pf("cv-F");
+  if(A===0||C===0){showError("Use this mode for circles/ellipses (both A and C non-zero).");return}
+  if((A>0&&C<0)||(A<0&&C>0)){showError("Opposite signs = hyperbola. This mode handles circles/ellipses.");return}
+  Object.assign(ST,{A:A,C:C,D:D,E:E,F:F});
+  var isCircle=Math.abs(A-C)<0.001;
+  document.getElementById("problemDisplay").innerHTML="Convert to Standard Form";
+
+  stepsData.push({title:"General Form",proc:"identify",type:"info",
+    instruction:'<div class="eq-display">'+fN(A)+'x\u00B2 + '+fN(C)+'y\u00B2 + '+fN(D)+'x + '+fN(E)+'y + '+fN(F)+' = 0</div><div class="strategy-box"><div class="strat-title">&#127919; Complete the Square</div>1. Group x-terms and y-terms<br>2. Factor out leading coefficients<br>3. Complete the square for each variable<br>4. Write in standard form</div>',
+    work:"Convert "+fN(A)+"x^2+"+fN(C)+"y^2+"+fN(D)+"x+"+fN(E)+"y+"+fN(F)+"=0"});
+
+  // Step: Move F
+  stepsData.push({title:"Move Constant",proc:"setup",type:"info",
+    instruction:fN(A)+'x\u00B2 + '+fN(D)+'x + '+fN(C)+'y\u00B2 + '+fN(E)+'y = '+fN(-F),
+    work:"Move F: RHS = "+fN(-F)});
+
+  // Factor out A from x-group, C from y-group
+  var Dx=D/A,Ex=E/C;// coefficients after factoring
+  stepsData.push({title:"Factor Leading Coefficients",proc:"setup",type:"info",
+    instruction:fN(A)+'(x\u00B2 + '+fN(rnd(Dx,4))+'x) + '+fN(C)+'(y\u00B2 + '+fN(rnd(Ex,4))+'y) = '+fN(-F),
+    work:"Factor: "+fN(A)+"(x^2+"+fN(rnd(Dx,4))+"x) + "+fN(C)+"(y^2+"+fN(rnd(Ex,4))+"y) = "+fN(-F)});
+
+  // Complete square for x: (D/(2A))^2
+  var halfDx=rnd(Dx/2,4),sqDx=rnd(halfDx*halfDx,4);
+  stepsData.push({title:"Complete Square: x",proc:"compute",type:"numeric",
+    instruction:'Half of '+fN(rnd(Dx,4))+' = '+fN(halfDx)+'<br>Square it: '+fN(halfDx)+'\u00B2 = ?',
+    question:"=",answer:sqDx,work:"("+fN(halfDx)+")^2 = "+fN(sqDx)});
+
+  var halfEx=rnd(Ex/2,4),sqEx=rnd(halfEx*halfEx,4);
+  stepsData.push({title:"Complete Square: y",proc:"compute",type:"numeric",
+    instruction:'Half of '+fN(rnd(Ex,4))+' = '+fN(halfEx)+'<br>Square it: '+fN(halfEx)+'\u00B2 = ?',
+    question:"=",answer:sqEx,work:"("+fN(halfEx)+")^2 = "+fN(sqEx)});
+
+  // Add to both sides (multiplied by A and C)
+  var addedX=rnd(A*sqDx,4),addedY=rnd(C*sqEx,4);
+  var RHS=rnd(-F+addedX+addedY,4);
+  stepsData.push({title:"Balance Both Sides",proc:"compute",type:"numeric",
+    instruction:'Added '+fN(A)+'\u00B7'+fN(sqDx)+' = '+fN(addedX)+' for x-group<br>Added '+fN(C)+'\u00B7'+fN(sqEx)+' = '+fN(addedY)+' for y-group<br>Right side: '+fN(-F)+' + '+fN(addedX)+' + '+fN(addedY)+' = ?',
+    question:"RHS =",answer:RHS,work:"RHS = "+fN(RHS)});
+
+  // Write completed form
+  var h=rnd(-halfDx,4),k=rnd(-halfEx,4);
+  stepsData.push({title:"Write as Perfect Squares",proc:"compute",type:"info",
+    instruction:'<div class="eq-display">'+fN(A)+shH(-h,"x")+'\u00B2 + '+fN(C)+shH(-k,"y")+'\u00B2 = '+fN(RHS)+'</div>',
+    work:fN(A)+"(x-"+fN(h)+")^2 + "+fN(C)+"(y-"+fN(k)+")^2 = "+fN(RHS)});
+
+  // Final standard form
+  if(isCircle){
+    var r2=rnd(RHS/A,4),r=rnd(Math.sqrt(Math.abs(r2)),4);
+    ST.h=h;ST.k=k;ST.r=r;ST.r2=r2;ST.conicType="Circle";
+    stepsData.push({title:"Standard Form",proc:"answer",type:"info",
+      instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge circle">Circle</span><div class="eq-display" style="margin-top:12px">'+shH(h,"x")+'\u00B2 + '+shH(k,"y")+'\u00B2 = '+fN(r2)+'</div>'+featH([["Center","("+fN(h)+", "+fN(k)+")"],["Radius",fN(r)],["r\u00B2",fN(r2)]])+'</div>',
+      work:"ANSWER: Circle, center ("+fN(h)+","+fN(k)+"), r="+fN(r)});
+  }else{
+    // Ellipse: divide by RHS
+    var ea2=rnd(RHS/A,4),eb2=rnd(RHS/C,4);
+    var ea=rnd(Math.sqrt(Math.abs(ea2)),4),eb=rnd(Math.sqrt(Math.abs(eb2)),4);
+    var major=ea>=eb?"horizontal":"vertical";
+    var bigR=Math.max(ea,eb),smR=Math.min(ea,eb);
+    var ec=rnd(Math.sqrt(Math.abs(bigR*bigR-smR*smR)),4);
+    var ecc=rnd(ec/bigR,4);
+    ST.h=h;ST.k=k;ST.ea=ea;ST.eb=eb;ST.ec=ec;ST.ecc=ecc;ST.conicType="Ellipse";
+    stepsData.push({title:"Divide by "+fN(RHS),proc:"compute",type:"info",
+      instruction:'<div class="eq-display"><span style="display:inline-block;text-align:center;vertical-align:middle"><span style="display:block;border-bottom:2px solid var(--text-muted)">'+shH(h,"x")+'\u00B2</span><span style="display:block">'+fN(ea2)+'</span></span> + <span style="display:inline-block;text-align:center;vertical-align:middle"><span style="display:block;border-bottom:2px solid var(--text-muted)">'+shH(k,"y")+'\u00B2</span><span style="display:block">'+fN(eb2)+'</span></span> = 1</div>',
+      work:"Divide by "+fN(RHS)+" to get =1"});
+    stepsData.push({title:"Standard Form",proc:"answer",type:"info",
+      instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge ellipse">Ellipse</span>'+featH([["Center","("+fN(h)+", "+fN(k)+")"],["a",fN(ea)],["b",fN(eb)],["c",fN(ec)],["Major Axis",major],["Eccentricity",fN(ecc)]])+'</div>',
+      work:"ANSWER: Ellipse, center ("+fN(h)+","+fN(k)+"), a="+fN(ea)+", b="+fN(eb)+", e="+fN(ecc)});
+  }
+  launchWorkspace();
+}
+
+// ==================== 4. CIRCLE ====================
+function startCircle(){
+  var h=pf("ci-h"),k=pf("ci-k"),r=pf("ci-r");if(r<=0){showError("r must be positive.");return}
+  var r2=rnd(r*r,4);Object.assign(ST,{h:h,k:k,r:r,r2:r2,conicType:"Circle"});
+  document.getElementById("problemDisplay").innerHTML='<span class="conic-badge circle" style="font-size:.8rem;padding:4px 10px">Circle</span>';
+  stepsData.push({title:"Standard Form",proc:"identify",type:"info",
+    instruction:'<div class="eq-display">'+shH(h,"x")+'\u00B2 + '+shH(k,"y")+'\u00B2 = '+fN(r2)+'</div><div class="strategy-box"><div class="strat-title">&#127919; Read center and radius directly</div></div>',work:"Circle, (h,k,r)=("+fN(h)+","+fN(k)+","+fN(r)+")"});
+  stepsData.push({title:"Center",proc:"setup",type:"numeric",instruction:"h = ?",question:"h =",answer:h,work:"h="+fN(h)});
+  stepsData.push({title:"Center k",proc:"setup",type:"numeric",instruction:"k = ?",question:"k =",answer:k,work:"k="+fN(k)});
+  stepsData.push({title:"Radius",proc:"compute",type:"numeric",instruction:"r\u00B2 = "+fN(r2)+", r = ?",question:"r =",answer:r,work:"r="+fN(r)});
+  stepsData.push({title:"Features",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge circle">Circle</span>'+featH([["Center","("+fN(h)+", "+fN(k)+")"],["Radius",fN(r)],["r\u00B2",fN(r2)],["Diameter",fN(rnd(2*r,4))]])+'</div>',
+    work:"ANSWER: C("+fN(h)+","+fN(k)+") r="+fN(r)});
+  launchWorkspace();
+}
+
+// ==================== 5. PARABOLA ====================
+function startParabola(){
+  var dir=document.getElementById("pa-dir").value,a=pf("pa-a"),h=pf("pa-h"),k=pf("pa-k");
+  if(a===0){showError("a\u22600.");return}
+  var isV=dir==="vert",p=rnd(1/(4*a),4);
+  Object.assign(ST,{dir:dir,a:a,h:h,k:k,p:p,isV:isV,conicType:"Parabola"});
+  document.getElementById("problemDisplay").innerHTML='<span class="conic-badge parabola" style="font-size:.8rem;padding:4px 10px">Parabola</span>';
+  var opens=isV?(a>0?"Up":"Down"):(a>0?"Right":"Left");
+  var focus=isV?"("+fN(h)+", "+fN(rnd(k+p,4))+")":"("+fN(rnd(h+p,4))+", "+fN(k)+")";
+  var dirx=isV?"y = "+fN(rnd(k-p,4)):"x = "+fN(rnd(h-p,4));
+  var aos=isV?"x = "+fN(h):"y = "+fN(k);
+  stepsData.push({title:"Vertex Form",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Parabola Features</div>Vertex (h,k), opens determined by a, focus at 1/(4a) from vertex</div>',work:"Parabola a="+fN(a)});
+  stepsData.push({title:"Direction",proc:"setup",type:"choice",instruction:"a = "+fN(a),question:"Opens:",options:["Up","Down","Left","Right"],answer:opens,work:"Opens "+opens});
+  stepsData.push({title:"Features",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge parabola">Parabola</span>'+featH([["Vertex","("+fN(h)+", "+fN(k)+")"],["Opens",opens],["Axis",aos],["Focus",focus],["Directrix",dirx],["a",fN(a)]])+'</div>',
+    work:"ANSWER: V("+fN(h)+","+fN(k)+") opens "+opens});
+  launchWorkspace();
+}
+
+// ==================== 6. ELLIPSE (with eccentricity) ====================
+function startEllipse(){
+  var h=pf("el-h"),k=pf("el-k"),a=pf("el-a"),b=pf("el-b");
+  if(a<=0||b<=0){showError("a,b>0.");return}
+  var a2=rnd(a*a,4),b2=rnd(b*b,4);
+  var major=a>=b?"horizontal":"vertical";
+  var bigR=Math.max(a,b),smR=Math.min(a,b);
+  var c=rnd(Math.sqrt(bigR*bigR-smR*smR),4);
+  var ecc=rnd(c/bigR,4);
+  Object.assign(ST,{h:h,k:k,a:a,b:b,c:c,ecc:ecc,major:major,conicType:"Ellipse"});
+  document.getElementById("problemDisplay").innerHTML='<span class="conic-badge ellipse" style="font-size:.8rem;padding:4px 10px">Ellipse</span>';
+  stepsData.push({title:"Standard Form",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Ellipse: c\u00B2 = (bigger)\u00B2 \u2212 (smaller)\u00B2</div>Major axis = direction of larger denominator<br>Eccentricity e = c \u00F7 (semi-major axis), 0 &lt; e &lt; 1<br>Closer to 0 = more circular, closer to 1 = more elongated</div>',work:"Ellipse"});
+  stepsData.push({title:"Major Axis",proc:"setup",type:"choice",instruction:"a="+fN(a)+", b="+fN(b),question:"Major axis:",options:["Horizontal","Vertical"],answer:major.charAt(0).toUpperCase()+major.slice(1),work:"Major: "+major});
+  stepsData.push({title:"Foci Distance c",proc:"compute",type:"numeric",
+    instruction:"c\u00B2 = "+fN(rnd(bigR*bigR,4))+" \u2212 "+fN(rnd(smR*smR,4))+" = "+fN(rnd(bigR*bigR-smR*smR,4)),
+    question:"c =",answer:c,work:"c="+fN(c)});
+  stepsData.push({title:"Eccentricity",proc:"compute",type:"numeric",
+    instruction:'e = c/a = '+fN(c)+'/'+fN(bigR)+' = ?<br><span style="font-size:.82rem;color:var(--text-dim)">Closer to 0 = rounder, closer to 1 = flatter</span>',
+    question:"e =",answer:ecc,work:"e="+fN(ecc)});
+
+  var v1,v2,f1,f2;
+  if(major==="horizontal"){v1="("+fN(rnd(h-a,4))+","+fN(k)+")";v2="("+fN(rnd(h+a,4))+","+fN(k)+")";f1="("+fN(rnd(h-c,4))+","+fN(k)+")";f2="("+fN(rnd(h+c,4))+","+fN(k)+")"}
+  else{v1="("+fN(h)+","+fN(rnd(k-b,4))+")";v2="("+fN(h)+","+fN(rnd(k+b,4))+")";f1="("+fN(h)+","+fN(rnd(k-c,4))+")";f2="("+fN(h)+","+fN(rnd(k+c,4))+")"}
+  stepsData.push({title:"Features",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge ellipse">Ellipse</span>'+featH([["Center","("+fN(h)+", "+fN(k)+")"],["Major Axis",major],["a",fN(a)],["b",fN(b)],["c",fN(c)],["Eccentricity",fN(ecc)],["Vertices",v1+" &amp; "+v2],["Foci",f1+" &amp; "+f2]])+'</div>',
+    work:"ANSWER: C("+fN(h)+","+fN(k)+") a="+fN(a)+" b="+fN(b)+" c="+fN(c)+" e="+fN(ecc)});
+  launchWorkspace();
+}
+
+// ==================== 7. HYPERBOLA (with eccentricity) ====================
+function startHyperbola(){
+  var dir=document.getElementById("hy-dir").value,h=pf("hy-h"),k=pf("hy-k"),a=pf("hy-a"),b=pf("hy-b");
+  if(a<=0||b<=0){showError("a,b>0.");return}
+  var isH=dir==="horiz",c=rnd(Math.sqrt(a*a+b*b),4);
+  var ecc=rnd(c/a,4);
+  var slope=isH?rnd(b/a,4):rnd(a/b,4);
+  Object.assign(ST,{dir:dir,h:h,k:k,a:a,b:b,c:c,ecc:ecc,isH:isH,conicType:"Hyperbola"});
+  document.getElementById("problemDisplay").innerHTML='<span class="conic-badge hyperbola" style="font-size:.8rem;padding:4px 10px">Hyperbola</span>';
+
+  stepsData.push({title:"Standard Form",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Hyperbola: c\u00B2 = a\u00B2 + b\u00B2</div>Note: <strong>addition</strong>, not subtraction (unlike ellipse!)<br>Eccentricity e = c/a, always e > 1<br>Asymptotes: lines the curve approaches</div>',work:"Hyperbola "+dir});
+
+  stepsData.push({title:"c\u00B2 = a\u00B2 + b\u00B2",proc:"compute",type:"numeric",
+    instruction:fN(rnd(a*a,4))+" + "+fN(rnd(b*b,4))+" = "+fN(rnd(a*a+b*b,4))+" \u2192 c = ?",
+    question:"c =",answer:c,work:"c="+fN(c)});
+
+  stepsData.push({title:"Eccentricity",proc:"compute",type:"numeric",
+    instruction:'e = c/a = '+fN(c)+'/'+fN(a)+'<br><span style="font-size:.82rem;color:var(--text-dim)">Hyperbola always has e > 1</span>',
+    question:"e =",answer:ecc,work:"e="+fN(ecc)});
+
+  stepsData.push({title:"Asymptote Slope",proc:"compute",type:"numeric",
+    instruction:"Slope = "+(isH?"b/a":"a/b")+" = "+(isH?fN(b)+"/"+fN(a):fN(a)+"/"+fN(b)),
+    question:"slope =",answer:slope,work:"slope="+fN(slope)});
+
+  var v1,v2,f1,f2;
+  if(isH){v1="("+fN(rnd(h-a,4))+","+fN(k)+")";v2="("+fN(rnd(h+a,4))+","+fN(k)+")";f1="("+fN(rnd(h-c,4))+","+fN(k)+")";f2="("+fN(rnd(h+c,4))+","+fN(k)+")"}
+  else{v1="("+fN(h)+","+fN(rnd(k-a,4))+")";v2="("+fN(h)+","+fN(rnd(k+a,4))+")";f1="("+fN(h)+","+fN(rnd(k-c,4))+")";f2="("+fN(h)+","+fN(rnd(k+c,4))+")"}
+  var asymp="y"+(k?((k>0?" \u2212 "+fN(k):" + "+fN(-k))):"")+" = \u00B1"+fN(slope)+"(x"+(h?((h>0?" \u2212 "+fN(h):" + "+fN(-h))):"")+")";;
+  stepsData.push({title:"Features",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><span class="conic-badge hyperbola">Hyperbola</span>'+featH([["Center","("+fN(h)+", "+fN(k)+")"],["Opens",isH?"Left &amp; Right":"Up &amp; Down"],["a",fN(a)],["b",fN(b)],["c",fN(c)],["Eccentricity",fN(ecc)],["Vertices",v1+" &amp; "+v2],["Foci",f1+" &amp; "+f2],["Asymptotes",asymp]])+'</div>',
+    work:"ANSWER: C("+fN(h)+","+fN(k)+") c="+fN(c)+" e="+fN(ecc)+" slope=\u00B1"+fN(slope)});
+  launchWorkspace();
+}
+
+// ==================== COPY / RENDER ====================
+function copyWork(){var lines=["=== Conic Sections \u2014 A37 ===",""];stepsData.forEach(function(s,i){lines.push("Step "+(i+1)+": "+s.title);if(s.work)lines.push("  "+s.work);lines.push("")});var text=lines.join("\n");navigator.clipboard.writeText(text).then(function(){var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)}).catch(function(){var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)})}
+function showStep(idx){if(idx>=stepsData.length){finishProblem();return}var step=stepsData[idx],ct=document.getElementById("stepsContainer"),card=document.createElement("div");card.className="step-card";card.id="step-"+idx;if(step.proc){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});document.getElementById("proc-"+step.proc).classList.add("active")}var bh="";if(step.type==="info"){bh='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It \u2192</button>'}else if(step.type==="numeric"){bh='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||"")+" </span>"+'<input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')"><button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>'}else if(step.type==="choice"){bh='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||"")+"</div>"+'<div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return'<div class="choice-btn" onclick="checkChoice('+idx+",this,'"+escH(o)+"')\">"+escH(o)+"</div>"}).join("")+"</div>"+'<div class="step-feedback" id="fb-'+idx+'"></div>'}card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bh+"</div>";ct.appendChild(card);card.scrollIntoView({behavior:"smooth",block:"nearest"});setTimeout(function(){var inp=card.querySelector(".answer-input");if(inp)inp.focus()},150)}
+function completeStep(i){markDone(i);currentStep=i+1;showStep(i+1)}
+function markDone(i){var c=document.getElementById("step-"+i);if(c){c.classList.add("completed");c.querySelector(".step-num").classList.add("done")}if(stepsData[i].proc)document.getElementById("proc-"+stepsData[i].proc).classList.add("done")}
+function checkNum(idx){var step=stepsData[idx],inp=document.getElementById("ans-"+idx),fb=document.getElementById("fb-"+idx);var val=parseFloat(inp.value.trim());if(isNaN(val)){fb.textContent="Enter a number.";fb.className="step-feedback show incorrect";return}var tol=Math.abs(step.answer)<0.01?0.006:Math.abs(step.answer)<1?0.02:Math.max(0.02,Math.abs(step.answer)*0.01);if(Math.abs(val-step.answer)<=tol){inp.classList.add("correct");inp.disabled=true;inp.value=fN(step.answer);fb.textContent="Correct! \u2713";fb.className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{inp.classList.add("incorrect");setTimeout(function(){inp.classList.remove("incorrect")},600);var tries=parseInt(inp.dataset.tries||"0")+1;inp.dataset.tries=tries;if(tries>=3){fb.innerHTML="The answer is <strong>"+fN(step.answer)+"</strong>";fb.className="step-feedback show hint-text"}else{fb.textContent="Not quite \u2014 try again!";fb.className="step-feedback show incorrect"}inp.value="";inp.focus()}}
+function checkChoice(idx,btn,chosen){var step=stepsData[idx];if(chosen===step.answer){btn.classList.add("correct");document.querySelectorAll("#choices-"+idx+" .choice-btn").forEach(function(b){if(!b.classList.contains("correct"))b.classList.add("disabled")});document.getElementById("fb-"+idx).textContent="Correct! \u2713";document.getElementById("fb-"+idx).className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{btn.classList.add("incorrect");setTimeout(function(){btn.classList.remove("incorrect")},500);document.getElementById("fb-"+idx).textContent="Not quite!";document.getElementById("fb-"+idx).className="step-feedback show incorrect"}}
+function finishProblem(){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});var expr="",detail="";if(ST.mode==="basics"){expr="4 conic types";detail="Conceptual intro"}else if(ST.mode==="classify"){expr=ST.type;detail="Classification"}else if(ST.mode==="convert"){expr=ST.conicType+": C("+fN(ST.h)+","+fN(ST.k)+")";detail="Completing the square"}else if(ST.mode==="circle"){expr="C("+fN(ST.h)+","+fN(ST.k)+") r="+fN(ST.r);detail="Circle"}else if(ST.mode==="parabola"){expr="V("+fN(ST.h)+","+fN(ST.k)+")";detail="Parabola"}else if(ST.mode==="ellipse"){expr="e="+fN(ST.ecc);detail="Ellipse"}else if(ST.mode==="hyperbola"){expr="e="+fN(ST.ecc);detail="Hyperbola"}document.getElementById("resultExpr").textContent=expr;document.getElementById("resultDetail").textContent=detail;document.getElementById("resultSection").classList.add("visible");document.getElementById("resultSection").scrollIntoView({behavior:"smooth",block:"nearest"})}
+function resetAll(){document.getElementById("inputSection").style.display="";document.getElementById("workspace").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.getElementById("resultSection").classList.remove("visible");document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});document.querySelectorAll(".input-section input").forEach(function(i){i.value=""});document.querySelectorAll(".input-section select").forEach(function(s){s.selectedIndex=0})}
+</script>
+</body>
+</html>
