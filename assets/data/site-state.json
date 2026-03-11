@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-11T13:09:50.418Z",
+  "updated": "2026-03-11T13:11:22.440Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -578,7 +578,7 @@
       "titles": [
         "Functions",
         "Composition Inverse",
-        "",
+        "Poly Division",
         "",
         "",
         "",
@@ -630,7 +630,7 @@
       "links": [
         "/math-toolkit/presentations/algebra/algebra-3/presentation-01/",
         "/math-toolkit/presentations/algebra/algebra-3/presentation-02/",
-        "",
+        "/math-toolkit/presentations/algebra/algebra-3/presentation-03/",
         "",
         "",
         "",

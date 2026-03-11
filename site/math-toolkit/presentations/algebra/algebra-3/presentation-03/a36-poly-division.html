@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polynomial Division &mdash; Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;--border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;--accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;--text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;--formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+.breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}.breadcrumb span{color:var(--text-dim);margin:0 6px}.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}.breadcrumb a:hover{color:var(--accent)}.breadcrumb .current{color:var(--text);font-weight:500}
+.tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-orange);font-weight:500;margin:20px 24px 0}
+.container{max-width:860px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}.subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+.process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}.proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}.proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}.proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}.proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}.proc-step.active .p-icon{filter:none}.proc-step.active .p-label{color:rgba(255,255,255,.9)}.proc-step.done{background:var(--surface2)}.proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}.proc-step.done .p-label{color:var(--success)}.proc-step.done::after{content:'\2713';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}.btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}.btn-primary:hover{background:#0fa396;transform:translateY(-1px)}.btn-sm{padding:10px 22px;font-size:.85rem}.btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}.btn-check:hover{background:#0fa396}
+.btn-copy{background:var(--surface3);color:var(--accent-blue);padding:12px 24px;font-size:.88rem;border:2px solid var(--accent-blue);display:inline-flex;align-items:center;gap:8px}.btn-copy:hover{background:rgba(56,189,248,.1);transform:translateY(-1px)}.btn-copy.copied{border-color:var(--success);color:var(--success);background:rgba(34,197,94,.1)}
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}.input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+.mode-tabs{display:flex;gap:5px;margin-bottom:22px;flex-wrap:wrap}.mode-tab{padding:8px 12px;border-radius:10px;font-size:.75rem;font-weight:600;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}.mode-tab:hover{border-color:var(--accent);color:var(--accent)}.mode-tab.selected{background:rgba(20,184,166,.1);border-color:var(--accent);color:var(--accent)}
+.mode-panel{display:none}.mode-panel.active{display:block;animation:fadeSlideIn .3s ease}
+.field-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 16px}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}.field input{font-family:var(--font-mono);font-size:1rem;padding:10px 14px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;transition:border-color .3s}.field input:focus{border-color:var(--accent)}.field input::placeholder{color:var(--text-dim);font-size:.82rem}
+.synth-table{border-collapse:collapse;margin:12px auto;font-family:var(--font-mono)}.synth-table td{padding:8px 14px;text-align:center;font-size:.95rem;font-weight:600;min-width:44px}.synth-table .st-div{color:var(--accent-orange);border-right:3px solid var(--accent-orange)}.synth-table .st-top{color:var(--text)}.synth-table .st-carry{color:var(--accent-blue);font-size:.85rem}.synth-table .st-mid{border-bottom:2px solid var(--text-muted)}.synth-table .st-result{color:var(--success);font-weight:700}.synth-table .st-rem{color:var(--accent-purple);font-weight:700}
+.callout{background:rgba(20,184,166,.06);border:1px solid rgba(20,184,166,.2);border-radius:10px;padding:14px 18px;margin:10px 0;font-size:.88rem;line-height:1.7;color:var(--text)}
+.full-answer{background:var(--formula-bg);border:2px solid var(--accent);border-radius:10px;padding:16px 20px;margin:12px 0;text-align:center;font-family:var(--font-mono);font-size:1rem;font-weight:600;line-height:2}
+.strategy-box{background:var(--surface3);border:1px solid var(--accent);border-radius:10px;padding:16px 20px;margin:14px 0;font-size:.88rem;line-height:1.7}.strategy-box .strat-title{font-weight:700;color:var(--accent);margin-bottom:6px;font-size:.9rem}
+.start-row{display:flex;justify-content:center;margin-top:12px}
+.error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}.error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+.examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}.examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}.examples-toggle:hover{color:var(--text);background:var(--surface3)}.toggle-arrow{font-size:.7rem;transition:transform .3s ease}.toggle-arrow.open{transform:rotate(180deg)}.examples-body{max-height:0;overflow:hidden;transition:max-height .5s ease}.examples-body.open{max-height:3000px}.example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}.category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}.examples{display:flex;flex-wrap:wrap;gap:8px}.example-chip{font-family:var(--font-mono);font-size:.7rem;padding:6px 11px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}.example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+.workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}.workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.problem-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:1rem;font-weight:600;color:var(--text)}
+.step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}.step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}.step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}.step-num.done{background:var(--success)}.step-title{font-weight:600;font-size:.95rem}.step-body{padding-left:40px}
+.step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+.step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7;text-align:center}
+.answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}.answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:160px;outline:none;transition:border-color .3s;text-align:center}.answer-input:focus{border-color:var(--accent)}.answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}.answer-input.incorrect{border-color:var(--error)}.answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.choice-btn{padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}.choice-btn:hover{border-color:var(--accent);color:var(--accent)}.choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}.choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}.choice-btn.disabled{opacity:.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}.step-feedback.show{display:block;animation:fadeSlideIn .25s ease}.step-feedback.correct{color:var(--success)}.step-feedback.incorrect{color:var(--error)}.step-feedback.hint-text{color:var(--accent-orange)}
+.step-card.completed{opacity:.6}.step-card.completed .answer-input{pointer-events:none}.step-card.completed .btn-check{display:none}.step-card.completed .choice-btn{pointer-events:none}
+.result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(167,139,250,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}.result-section.visible{display:block;animation:fadeSlideIn .5s ease}.result-icon{font-size:2.5rem;margin-bottom:10px}.result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}.result-expression{font-family:var(--font-mono);font-size:1rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0;line-height:1.8}.result-detail{color:var(--text-muted);font-size:.88rem;margin-top:8px}.actions{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+@media(max-width:600px){.container{padding:16px}.input-section,.workspace{padding:20px}h1{font-size:1.4rem}.step-body{padding-left:0}.mode-tabs{gap:4px}.mode-tab{padding:6px 8px;font-size:.66rem}.field-row{gap:8px}.field input{padding:8px 10px;font-size:.9rem}.synth-table td{padding:6px 8px;font-size:.82rem;min-width:34px}}
+</style>
+</head>
+<body>
+<nav class="breadcrumb"><a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span><a href="#">Math Toolkit</a><span>&rsaquo;</span><a href="#">Algebra</a><span>&rsaquo;</span><a href="#">Algebra 3</a><span>&rsaquo;</span><span class="current">Polynomial Division</span></nav>
+<div class="container">
+  <div class="tier-badge">&#128213; Algebra 3 &middot; A36</div>
+  <h1>Polynomial Division</h1>
+  <p class="subtitle">Enter your polynomial and divisor &mdash; walk through synthetic division, long division, and related theorems step by step.</p>
+  <div class="process-banner" id="procBanner">
+    <div class="proc-step" id="proc-identify"><span class="p-icon">&#128269;</span><span class="p-label">Identify</span></div>
+    <div class="proc-step" id="proc-setup"><span class="p-icon">&#128208;</span><span class="p-label">Set Up</span></div>
+    <div class="proc-step" id="proc-compute"><span class="p-icon">&#128290;</span><span class="p-label">Compute</span></div>
+    <div class="proc-step" id="proc-answer"><span class="p-icon">&#10024;</span><span class="p-label">Answer</span></div>
+  </div>
+  <div class="input-section" id="inputSection">
+    <h2>&#9998; What Type of Problem?</h2>
+    <p class="hint">Enter coefficients highest-to-lowest degree. Include 0 for missing terms.</p>
+    <div class="mode-tabs">
+      <div class="mode-tab" onclick="setMode('basics')" id="tab-basics">Div. Basics</div>
+      <div class="mode-tab" onclick="setMode('synth')" id="tab-synth">Synthetic Div.</div>
+      <div class="mode-tab" onclick="setMode('long')" id="tab-long">Long Division</div>
+      <div class="mode-tab" onclick="setMode('verify')" id="tab-verify">Verify</div>
+      <div class="mode-tab" onclick="setMode('remainder')" id="tab-remainder">Remainder Thm</div>
+      <div class="mode-tab" onclick="setMode('factor')" id="tab-factor">Factor Thm</div>
+    </div>
+    <!-- Basics -->
+    <div class="mode-panel" id="panel-basics">
+      <p class="hint">Understand polynomial division by connecting it to numeric long division.</p>
+      <div class="field-row"><div class="field"><label>Dividend coeffs</label><input id="ba-div" placeholder="1, -3, 0, 2" style="width:260px"></div><div class="field"><label>Divisor coeffs</label><input id="ba-dsr" placeholder="1, -2" style="width:180px"></div></div>
+    </div>
+    <!-- Synthetic -->
+    <div class="mode-panel" id="panel-synth">
+      <p class="hint">Divide by (x &minus; c). Enter dividend coefficients and c.</p>
+      <div class="field-row"><div class="field"><label>Dividend coeffs</label><input id="sy-div" placeholder="1, -3, 0, 2" style="width:260px"></div><div class="field"><label>c (x&minus;c)</label><input id="sy-c" placeholder="2" style="width:80px"></div></div>
+    </div>
+    <!-- Long Division -->
+    <div class="mode-panel" id="panel-long">
+      <p class="hint">Divide by any polynomial. Works with linear, quadratic, or higher divisors.</p>
+      <div class="field-row"><div class="field"><label>Dividend coeffs</label><input id="ld-div" placeholder="1, 0, 0, -8" style="width:260px"></div></div>
+      <div class="field-row"><div class="field"><label>Divisor coeffs</label><input id="ld-dsr" placeholder="1, -2" style="width:220px"></div></div>
+    </div>
+    <!-- Verify -->
+    <div class="mode-panel" id="panel-verify">
+      <p class="hint">Check: Q &times; D + R = P?</p>
+      <div class="field-row"><div class="field"><label>Quotient coeffs</label><input id="vr-q" placeholder="1, 1, 2" style="width:220px"></div></div>
+      <div class="field-row"><div class="field"><label>Divisor coeffs</label><input id="vr-d" placeholder="1, -2" style="width:180px"></div><div class="field"><label>Remainder</label><input id="vr-r" placeholder="9" style="width:80px"></div></div>
+      <div class="field-row"><div class="field"><label>Original dividend</label><input id="vr-orig" placeholder="1, -1, 0, 5" style="width:260px"></div></div>
+    </div>
+    <!-- Remainder -->
+    <div class="mode-panel" id="panel-remainder">
+      <p class="hint">P(c) = remainder when dividing by (x &minus; c).</p>
+      <div class="field-row"><div class="field"><label>P(x) coeffs</label><input id="rt-div" placeholder="1, -3, 0, 2" style="width:260px"></div><div class="field"><label>c</label><input id="rt-c" placeholder="2" style="width:80px"></div></div>
+    </div>
+    <!-- Factor -->
+    <div class="mode-panel" id="panel-factor">
+      <p class="hint">Is (x &minus; c) a factor? Factor means remainder = 0.</p>
+      <div class="field-row"><div class="field"><label>P(x) coeffs</label><input id="ft-div" placeholder="1, -6, 11, -6" style="width:260px"></div><div class="field"><label>c</label><input id="ft-c" placeholder="1" style="width:80px"></div></div>
+    </div>
+    <div class="start-row" id="startRow" style="display:none"><button class="btn-primary" onclick="startSolving()">Let's Solve It &rarr;</button></div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()"><span>&#128203; Try a Practice Problem</span><span class="toggle-arrow" id="toggleArrow">&#9660;</span></div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category"><div class="category-label">&#x1F4D6; Division Basics</div><div class="examples">
+          <span class="example-chip" onclick="loadBA('1,-3,0,2','1,-2')">cubic \u00F7 linear</span>
+          <span class="example-chip" onclick="loadBA('1,0,-4','1,2')">x\u00B2-4 \u00F7 x+2</span>
+          <span class="example-chip" onclick="loadBA('2,1,-3,5','1,-3')">2x\u00B3+x\u00B2-3x+5</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E2; Synthetic Division</div><div class="examples">
+          <span class="example-chip" onclick="loadSY('1,-3,0,2',2)">c=2, cubic</span>
+          <span class="example-chip" onclick="loadSY('1,0,-4,0,1',-1)">c=-1, quartic</span>
+          <span class="example-chip" onclick="loadSY('2,1,-3,5',3)">c=3</span>
+          <span class="example-chip" onclick="loadSY('1,-6,11,-6',1)">c=1 (factor)</span>
+          <span class="example-chip" onclick="loadSY('1,-6,11,-6',2)">c=2 (factor)</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F535; Long Division</div><div class="examples">
+          <span class="example-chip" onclick="loadLD('2,3,-1,5','1,-2')">linear divisor</span>
+          <span class="example-chip" onclick="loadLD('1,0,0,-8','1,-2')">x\u00B3-8 by x-2</span>
+          <span class="example-chip" onclick="loadLD('1,0,0,0,-1','1,0,1')">x\u2074-1 by x\u00B2+1</span>
+          <span class="example-chip" onclick="loadLD('2,1,-5,3','1,0,-1')">by x\u00B2-1</span>
+          <span class="example-chip" onclick="loadLD('3,0,-12,8','1,2')">by x+2</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E0; Verify Division</div><div class="examples">
+          <span class="example-chip" onclick="loadVR('1,1,2','1,-2',9,'1,-1,0,5')">Q(x-2)+9=?</span>
+          <span class="example-chip" onclick="loadVR('1,-4,3','1,-1',0,'1,-5,7,-3')">Q(x-1)+0=?</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E3; Remainder Theorem</div><div class="examples">
+          <span class="example-chip" onclick="loadRT('1,-3,0,2',2)">P(2)</span>
+          <span class="example-chip" onclick="loadRT('2,0,-1,4',-1)">P(-1)</span>
+          <span class="example-chip" onclick="loadRT('1,1,1,1',1)">P(1)</span>
+          <span class="example-chip" onclick="loadRT('1,-6,11,-6',3)">P(3)</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F534; Factor Theorem</div><div class="examples">
+          <span class="example-chip" onclick="loadFT('1,-6,11,-6',1)">(x-1)?</span>
+          <span class="example-chip" onclick="loadFT('1,-6,11,-6',2)">(x-2)?</span>
+          <span class="example-chip" onclick="loadFT('1,-6,11,-6',4)">(x-4)?</span>
+          <span class="example-chip" onclick="loadFT('1,2,-5,-6',2)">(x-2) of cubic</span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <div class="workspace" id="workspace">
+    <div class="problem-display" id="problemDisplay"></div>
+    <div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection">
+      <div class="result-icon">&#127881;</div>
+      <div class="result-title">Problem Solved!</div>
+      <div class="result-expression" id="resultExpr"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <div class="actions">
+        <button class="btn-copy" id="copyBtn" onclick="copyWork()">&#128203; Copy My Work</button>
+        <button class="btn-primary" onclick="resetAll()">Solve Another &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var fN=function(n){if(n==null)return"?";if(Number.isInteger(n))return""+n;return parseFloat(n.toFixed(4)).toString()};
+var rnd=function(n,d){return parseFloat(n.toFixed(d))};
+var escH=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")};
+var pf=function(id){return parseFloat(document.getElementById(id).value)||0};
+var parseC=function(s){return s.split(",").map(function(v){return parseFloat(v.trim())||0})};
+var sup=function(n){return String(n).split("").map(function(c){return"\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079"[parseInt(c)]||c}).join("")};
+var polyS=function(c){var n=c.length-1,p=[];c.forEach(function(co,i){var e=n-i;if(co===0)return;var sg=p.length===0?(co<0?"\u2212":""):(co<0?" \u2212 ":" + ");var ac=Math.abs(co),cs;if(e===0)cs=fN(ac);else if(e===1)cs=(ac===1?"":fN(ac))+"x";else cs=(ac===1?"":fN(ac))+"x"+sup(e);p.push(sg+cs)});return p.length?p.join(""):"0"};
+var polyP=function(c){var n=c.length-1,p=[];c.forEach(function(co,i){var e=n-i;if(co===0)return;var sg=p.length===0?(co<0?"-":""):(co<0?" - ":" + ");var ac=Math.abs(co),cs;if(e===0)cs=""+ac;else if(e===1)cs=(ac===1?"":""+ac)+"x";else cs=(ac===1?"":""+ac)+"x^"+e;p.push(sg+cs)});return p.length?p.join(""):"0"};
+// Full answer: P/D = Q + R/D
+function fullAnswerH(qCoeffs,remCoeffs,divCoeffs){
+  var qs=polyS(qCoeffs);
+  var allZero=remCoeffs.every(function(v){return Math.abs(v)<0.001});
+  if(allZero)return qs;
+  var rs=remCoeffs.length===1?fN(remCoeffs[0]):polyS(remCoeffs);
+  var ds=polyS(divCoeffs);
+  return qs+' + <span style="display:inline-block;text-align:center;vertical-align:middle"><span style="display:block;border-bottom:2px solid var(--text-muted);padding:0 4px;color:var(--accent-purple)">'+rs+'</span><span style="display:block;padding:0 4px">'+ds+'</span></span>';
+}
+function fullAnswerP(qCoeffs,remCoeffs,divCoeffs){
+  var qs=polyP(qCoeffs);
+  var allZero=remCoeffs.every(function(v){return Math.abs(v)<0.001});
+  if(allZero)return qs;
+  var rs=remCoeffs.length===1?fN(remCoeffs[0]):polyP(remCoeffs);
+  return qs+" + ("+rs+")/("+polyP(divCoeffs)+")";
+}
+
+function synthDiv(coeffs,c){
+  var q=[],carries=[0],running=0;
+  for(var i=0;i<coeffs.length;i++){var val=coeffs[i]+running;q.push(val);running=val*c;if(i<coeffs.length-1)carries.push(running)}
+  var rem=q.pop();return{quotient:q,remainder:rem,carries:carries,bottom:q.concat([rem])};
+}
+// General long division
+function longDiv(dividend,divisor){
+  if(dividend.length<divisor.length)return{quotient:[0],remainder:dividend};
+  var rem=dividend.map(function(v){return v}),quotient=[],steps=dividend.length-divisor.length+1,work=[];
+  for(var s=0;s<steps;s++){
+    var qc=rnd(rem[s]/divisor[0],4);quotient.push(qc);
+    var sub=divisor.map(function(v){return rnd(v*qc,4)});
+    for(var j=0;j<sub.length;j++)rem[s+j]=rnd(rem[s+j]-sub[j],4);
+    work.push({qc:qc,sub:sub,rem:rem.slice()});
+  }
+  var remOut=rem.slice(steps);
+  return{quotient:quotient,remainder:remOut,work:work};
+}
+function polyMul(a,b){var r=new Array(a.length+b.length-1).fill(0);for(var i=0;i<a.length;i++)for(var j=0;j<b.length;j++)r[i+j]+=a[i]*b[j];return r.map(function(v){return rnd(v,4)})}
+function polyAdd(a,b){var ml=Math.max(a.length,b.length),r=[];for(var i=0;i<ml;i++){var ai=i<a.length-ml+a.length?a[a.length-ml+i]:0;if(a.length>=ml)ai=a[i];else ai=i<ml-a.length?0:a[i-(ml-a.length)];var bi;if(b.length>=ml)bi=b[i];else bi=i<ml-b.length?0:b[i-(ml-b.length)];r.push(rnd(ai+bi,4))}return r}
+function buildSynthHTML(coeffs,c,res){
+  var h='<table class="synth-table"><tr><td class="st-div" rowspan="3">'+fN(c)+'</td>';
+  coeffs.forEach(function(co){h+='<td class="st-top">'+fN(co)+'</td>'});
+  h+='</tr><tr>';res.carries.forEach(function(ca,i){h+='<td class="st-carry'+(i===0?'':' st-mid')+'">'+(!i?"":fN(ca))+'</td>'});
+  h+='</tr><tr>';res.bottom.forEach(function(v,i){h+='<td class="'+(i===res.bottom.length-1?"st-rem":"st-result")+'">'+fN(v)+'</td>'});
+  h+='</tr></table>';return h;
+}
+
+var mode=null,ST={},stepsData=[],currentStep=0;
+function setMode(m){mode=m;document.querySelectorAll(".mode-tab").forEach(function(t){t.classList.remove("selected")});document.getElementById("tab-"+m).classList.add("selected");document.querySelectorAll(".mode-panel").forEach(function(p){p.classList.remove("active")});document.getElementById("panel-"+m).classList.add("active");document.getElementById("startRow").style.display="flex"}
+function loadBA(d,s){setMode("basics");document.getElementById("ba-div").value=d;document.getElementById("ba-dsr").value=s}
+function loadSY(c,v){setMode("synth");document.getElementById("sy-div").value=c;document.getElementById("sy-c").value=v}
+function loadLD(d,s){setMode("long");document.getElementById("ld-div").value=d;document.getElementById("ld-dsr").value=s}
+function loadVR(q,d,r,o){setMode("verify");document.getElementById("vr-q").value=q;document.getElementById("vr-d").value=d;document.getElementById("vr-r").value=r;document.getElementById("vr-orig").value=o}
+function loadRT(c,v){setMode("remainder");document.getElementById("rt-div").value=c;document.getElementById("rt-c").value=v}
+function loadFT(c,v){setMode("factor");document.getElementById("ft-div").value=c;document.getElementById("ft-c").value=v}
+function toggleExamples(){document.getElementById("examplesBody").classList.toggle("open");document.getElementById("toggleArrow").classList.toggle("open")}
+function showError(msg){var el=document.getElementById("errorMsg");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show")},4000)}
+function startSolving(){if(!mode){showError("Select a mode.");return}stepsData=[];currentStep=0;ST={mode:mode};({basics:startBasics,synth:startSynth,long:startLong,verify:startVerify,remainder:startRemainder,factor:startFactor})[mode]()}
+function launchWorkspace(){document.getElementById("inputSection").style.display="none";document.getElementById("workspace").classList.add("visible");document.getElementById("resultSection").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});var cb=document.getElementById("copyBtn");cb.classList.remove("copied");cb.innerHTML="&#128203; Copy My Work";showStep(0)}
+
+// ==================== 1. DIVISION BASICS ====================
+function startBasics(){
+  var dividend=parseC(document.getElementById("ba-div").value),divisor=parseC(document.getElementById("ba-dsr").value);
+  if(dividend.length<2||divisor.length<2){showError("Need coefficients.");return}
+  var res=longDiv(dividend,divisor);
+  Object.assign(ST,{dividend:dividend,divisor:divisor,res:res});
+  document.getElementById("problemDisplay").innerHTML="Division Basics";
+
+  stepsData.push({title:"Division Is the Same Idea!",proc:"identify",type:"info",
+    instruction:'<div class="callout"><strong>Numeric example:</strong><br>17 \u00F7 5 = <strong>3</strong> remainder <strong>2</strong><br>Check: 5 \u00D7 3 + 2 = 17 \u2713<br><br>This means: <strong>Dividend = Divisor \u00D7 Quotient + Remainder</strong><br><br>Polynomial division works <em>exactly</em> the same way!</div>',
+    work:"Division algorithm: Dividend = Divisor x Quotient + Remainder"});
+
+  stepsData.push({title:"The Division Algorithm",proc:"identify",type:"info",
+    instruction:'<div class="step-rule-box"><strong style="color:var(--accent-blue)">P(x)</strong> = <strong style="color:var(--accent-orange)">D(x)</strong> \u00D7 <strong style="color:var(--success)">Q(x)</strong> + <strong style="color:var(--accent-purple)">R</strong></div><div style="text-align:center;font-size:.85rem;color:var(--text-muted)"><span style="color:var(--accent-blue)">Dividend</span> = <span style="color:var(--accent-orange)">Divisor</span> \u00D7 <span style="color:var(--success)">Quotient</span> + <span style="color:var(--accent-purple)">Remainder</span></div>',
+    work:"P(x) = D(x) * Q(x) + R"});
+
+  stepsData.push({title:"Our Problem",proc:"setup",type:"info",
+    instruction:'<span style="color:var(--accent-blue)">P(x) = '+polyS(dividend)+'</span><br><span style="color:var(--accent-orange)">D(x) = '+polyS(divisor)+'</span><br><br>Degree of P = <strong>'+fN(dividend.length-1)+'</strong>, Degree of D = <strong>'+fN(divisor.length-1)+'</strong><br>Quotient will have degree <strong>'+fN(dividend.length-divisor.length)+'</strong>',
+    work:"P="+polyP(dividend)+", D="+polyP(divisor)});
+
+  stepsData.push({title:"How It Works",proc:"setup",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Repeat: Divide \u2192 Multiply \u2192 Subtract</div>1. <strong>Divide</strong> the leading term of the dividend by the leading term of the divisor<br>2. <strong>Multiply</strong> the entire divisor by that result<br>3. <strong>Subtract</strong> to get a new, smaller polynomial<br>4. <strong>Repeat</strong> until the remainder has lower degree than the divisor</div>',
+    work:"Divide, multiply, subtract, repeat"});
+
+  // Show result
+  var allZero=res.remainder.every(function(v){return Math.abs(v)<0.001});
+  stepsData.push({title:"The Full Answer Format",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:.85rem;color:var(--text-muted);margin-bottom:8px">The answer is always written as:</div><div class="full-answer"><span style="color:var(--accent-blue)">'+polyS(dividend)+'</span><br>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 = '+fullAnswerH(res.quotient,res.remainder,divisor)+'<br><span style="color:var(--accent-orange)">'+polyS(divisor)+'</span></div>'+(allZero?'<div style="color:var(--success);font-size:.85rem;margin-top:8px">Remainder = 0, so it divides evenly!</div>':'<div style="color:var(--text-dim);font-size:.85rem;margin-top:8px">The remainder goes over the divisor as a fraction.</div>')+'</div>',
+    work:"ANSWER: "+fullAnswerP(res.quotient,res.remainder,divisor)});
+  launchWorkspace();
+}
+
+// ==================== 2. SYNTHETIC DIVISION ====================
+function startSynth(){
+  var coeffs=parseC(document.getElementById("sy-div").value),c=pf("sy-c");
+  if(coeffs.length<2){showError("Need at least degree 1.");return}
+  var res=synthDiv(coeffs,c),divCoeffs=[1,-c];
+  Object.assign(ST,{coeffs:coeffs,c:c,res:res,divCoeffs:divCoeffs});
+  document.getElementById("problemDisplay").innerHTML=polyS(coeffs)+' \u00F7 (x '+(c>=0?"\u2212 "+fN(c):"+ "+fN(Math.abs(c)))+')';
+
+  stepsData.push({title:"Set Up",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Synthetic Division</div>Use <strong style="color:var(--accent-orange)">c = '+fN(c)+'</strong>. Write coefficients. Bring down first, then multiply-add across.</div><div class="step-rule-box">Coefficients: '+coeffs.map(fN).join(", ")+'</div>',
+    work:"Synth div ["+coeffs.map(fN).join(",")+"] c="+fN(c)});
+
+  stepsData.push({title:"Bring Down "+fN(coeffs[0]),proc:"setup",type:"info",
+    instruction:'Bring <strong style="color:var(--success)">'+fN(coeffs[0])+'</strong> straight down.',work:"Bring down "+fN(coeffs[0])});
+
+  for(var i=1;i<coeffs.length;i++){
+    var carry=res.carries[i],actual=rnd(coeffs[i]+carry,4);
+    stepsData.push({title:"Column "+(i+1),proc:"compute",type:"numeric",
+      instruction:'<span style="color:var(--success)">'+fN(res.bottom[i-1])+'</span> \u00D7 <span style="color:var(--accent-orange)">'+fN(c)+'</span> = <span style="color:var(--accent-blue)">'+fN(carry)+'</span><br>'+fN(coeffs[i])+' + <span style="color:var(--accent-blue)">'+fN(carry)+'</span> = ?',
+      question:"=",answer:actual,work:"col"+(i+1)+": "+fN(actual)});
+  }
+
+  stepsData.push({title:"Complete Table",proc:"compute",type:"info",instruction:buildSynthHTML(coeffs,c,res),work:"Table done"});
+
+  var isFactor=Math.abs(res.remainder)<0.001;
+  stepsData.push({title:"Full Answer",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div class="full-answer">'+fullAnswerH(res.quotient,[res.remainder],divCoeffs)+'</div><div style="margin-top:10px"><span style="color:var(--success);font-weight:700">Q(x) = '+polyS(res.quotient)+'</span> &nbsp; <span style="color:var(--accent-purple);font-weight:700">R = '+fN(res.remainder)+'</span></div>'+(isFactor?'<div style="color:var(--accent);font-size:.85rem;margin-top:8px">\u2713 R=0 \u2192 (x '+(c>=0?"\u2212 "+fN(c):"+ "+fN(Math.abs(c)))+') is a factor!</div>':'')+'</div>',
+    work:"ANSWER: "+fullAnswerP(res.quotient,[res.remainder],divCoeffs)});
+  launchWorkspace();
+}
+
+// ==================== 3. LONG DIVISION (GENERAL) ====================
+function startLong(){
+  var dividend=parseC(document.getElementById("ld-div").value),divisor=parseC(document.getElementById("ld-dsr").value);
+  if(dividend.length<2||divisor.length<1){showError("Need valid polynomials.");return}
+  if(dividend.length<divisor.length){showError("Dividend degree must \u2265 divisor degree.");return}
+  var res=longDiv(dividend,divisor);
+  Object.assign(ST,{dividend:dividend,divisor:divisor,res:res});
+  document.getElementById("problemDisplay").innerHTML=polyS(dividend)+' \u00F7 ('+polyS(divisor)+')';
+
+  var divDeg=divisor.length-1;
+  stepsData.push({title:"Long Division Setup",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Divide \u2192 Multiply \u2192 Subtract \u2192 Repeat</div><strong>Dividend:</strong> '+polyS(dividend)+' (degree '+fN(dividend.length-1)+')<br><strong>Divisor:</strong> '+polyS(divisor)+' (degree '+fN(divDeg)+')'+(divDeg>1?'<br><span style="color:var(--accent-orange)">This is a degree-'+fN(divDeg)+' divisor \u2014 long division handles any degree!</span>':'')+'</div>',
+    work:"Long div: "+polyP(dividend)+" by "+polyP(divisor)});
+
+  for(var s=0;s<res.work.length;s++){
+    var w=res.work[s],exp=dividend.length-1-s;
+    var leadingRem=s===0?dividend[0]:res.work[s-1].rem[s];
+    stepsData.push({title:"Cycle "+(s+1)+": Divide",proc:"compute",type:"numeric",
+      instruction:'Leading term: '+fN(leadingRem)+' \u00F7 '+fN(divisor[0])+(exp>0?' &nbsp; (x'+((exp>1)?sup(exp):"")+" coefficient)":""),
+      question:"q =",answer:w.qc,work:"q"+s+"="+fN(w.qc)});
+
+    stepsData.push({title:"Cycle "+(s+1)+": Multiply & Subtract",proc:"compute",type:"info",
+      instruction:fN(w.qc)+' \u00D7 ('+polyS(divisor)+') = ['+w.sub.map(fN).join(", ")+']<br>Subtract from current row.',
+      work:"Multiply "+fN(w.qc)+" * divisor, subtract"});
+  }
+
+  var allZero=res.remainder.every(function(v){return Math.abs(v)<0.001});
+  stepsData.push({title:"Full Answer",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div class="full-answer">'+fullAnswerH(res.quotient,res.remainder,divisor)+'</div><div style="margin-top:10px"><span style="color:var(--success);font-weight:700">Q(x) = '+polyS(res.quotient)+'</span> &nbsp; <span style="color:var(--accent-purple);font-weight:700">R'+(res.remainder.length>1?"(x)":"")+" = "+(allZero?"0":res.remainder.length===1?fN(res.remainder[0]):polyS(res.remainder))+'</span></div>'+(allZero?'<div style="color:var(--accent);font-size:.85rem;margin-top:8px">\u2713 Divides evenly!</div>':'')+'</div>',
+    work:"ANSWER: "+fullAnswerP(res.quotient,res.remainder,divisor)});
+  launchWorkspace();
+}
+
+// ==================== 4. VERIFY ====================
+function startVerify(){
+  var q=parseC(document.getElementById("vr-q").value),d=parseC(document.getElementById("vr-d").value),r=pf("vr-r"),orig=parseC(document.getElementById("vr-orig").value);
+  var product=polyMul(q,d);var withRem=product.slice();withRem[withRem.length-1]=rnd(withRem[withRem.length-1]+r,4);
+  var match=withRem.length===orig.length&&withRem.every(function(v,i){return Math.abs(v-orig[i])<0.01});
+  Object.assign(ST,{q:q,d:d,r:r,orig:orig,product:product,withRem:withRem,match:match});
+  document.getElementById("problemDisplay").innerHTML="Verify Q \u00D7 D + R = P";
+
+  stepsData.push({title:"Division Algorithm",proc:"identify",type:"info",
+    instruction:'<div class="step-rule-box">P(x) = D(x) \u00D7 Q(x) + R</div><strong>Q:</strong> '+polyS(q)+'<br><strong>D:</strong> '+polyS(d)+'<br><strong>R:</strong> '+fN(r)+'<br><strong>P (claimed):</strong> '+polyS(orig),work:"Verify Q*D+R = P"});
+
+  stepsData.push({title:"Q \u00D7 D",proc:"setup",type:"info",
+    instruction:'('+polyS(q)+')('+polyS(d)+') = <strong>'+polyS(product)+'</strong>',work:"Q*D = "+polyP(product)});
+
+  stepsData.push({title:"Add R",proc:"compute",type:"info",
+    instruction:polyS(product)+' + '+fN(r)+' = <strong>'+polyS(withRem)+'</strong>',work:"Q*D+R = "+polyP(withRem)});
+
+  stepsData.push({title:"Compare",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div>Q\u00D7D+R = '+polyS(withRem)+'</div><div>Original = '+polyS(orig)+'</div><div style="font-size:1.3rem;font-weight:700;margin-top:12px;color:'+(match?"var(--success)":"var(--error)")+'">'+(match?"\u2713 Match! Verified!":"\u2717 Mismatch!")+'</div></div>',
+    work:"ANSWER: "+(match?"MATCH":"MISMATCH")});
+  launchWorkspace();
+}
+
+// ==================== 5. REMAINDER THEOREM ====================
+function startRemainder(){
+  var coeffs=parseC(document.getElementById("rt-div").value),c=pf("rt-c");
+  if(coeffs.length<2){showError("Need at least degree 1.");return}
+  var res=synthDiv(coeffs,c);
+  Object.assign(ST,{coeffs:coeffs,c:c,res:res});
+  document.getElementById("problemDisplay").innerHTML="P("+fN(c)+") via Remainder Theorem";
+
+  stepsData.push({title:"The Remainder Theorem",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Shortcut to P(c)</div>When you divide P(x) by (x \u2212 c), the <strong>remainder = P(c)</strong>.<br>No need to substitute and simplify \u2014 just run synthetic division!</div><div class="step-rule-box">P(x) = '+polyS(coeffs)+'<br>c = '+fN(c)+'</div>',work:"Remainder theorem P("+fN(c)+")"});
+
+  for(var i=1;i<coeffs.length;i++){
+    var carry=res.carries[i],actual=rnd(coeffs[i]+carry,4);
+    stepsData.push({title:"Column "+(i+1),proc:"compute",type:"numeric",
+      instruction:fN(res.bottom[i-1])+' \u00D7 '+fN(c)+' = '+fN(carry)+', add '+fN(coeffs[i]),
+      question:"=",answer:actual,work:"col: "+fN(actual)});
+  }
+
+  stepsData.push({title:"P("+fN(c)+") = Remainder",proc:"answer",type:"info",
+    instruction:buildSynthHTML(coeffs,c,res)+'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:var(--success)">P('+fN(c)+') = '+fN(res.remainder)+'</div></div>',
+    work:"ANSWER: P("+fN(c)+")="+fN(res.remainder)});
+  launchWorkspace();
+}
+
+// ==================== 6. FACTOR THEOREM ====================
+function startFactor(){
+  var coeffs=parseC(document.getElementById("ft-div").value),c=pf("ft-c");
+  if(coeffs.length<2){showError("Need at least degree 1.");return}
+  var res=synthDiv(coeffs,c),isFac=Math.abs(res.remainder)<0.001;
+  Object.assign(ST,{coeffs:coeffs,c:c,res:res,isFac:isFac});
+  document.getElementById("problemDisplay").innerHTML="Is (x "+(c>=0?"\u2212 "+fN(c):"+ "+fN(Math.abs(c)))+") a factor?";
+
+  stepsData.push({title:"Factor Theorem",proc:"identify",type:"info",
+    instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Factor Test</div>(x \u2212 c) is a factor of P(x) <strong>\u21D4 P(c) = 0</strong><br>Use synthetic division. If remainder = 0, it\'s a factor!</div><div class="step-rule-box">P(x) = '+polyS(coeffs)+'<br>Test c = '+fN(c)+'</div>',work:"Factor test c="+fN(c)});
+
+  for(var i=1;i<coeffs.length;i++){
+    var carry=res.carries[i],actual=rnd(coeffs[i]+carry,4);
+    stepsData.push({title:"Column "+(i+1),proc:"compute",type:"numeric",
+      instruction:fN(res.bottom[i-1])+' \u00D7 '+fN(c)+' = '+fN(carry)+', add '+fN(coeffs[i]),
+      question:"=",answer:actual,work:"col: "+fN(actual)});
+  }
+
+  stepsData.push({title:"Remainder Check",proc:"compute",type:"choice",
+    instruction:buildSynthHTML(coeffs,c,res)+'R = <strong style="color:var(--accent-purple)">'+fN(res.remainder)+'</strong>. Is this zero?',
+    question:"R = 0?",options:["Yes","No"],answer:isFac?"Yes":"No",work:"R="+fN(res.remainder)+(isFac?" YES":" NO")});
+
+  stepsData.push({title:"Verdict",proc:"answer",type:"info",
+    instruction:'<div style="text-align:center;padding:16px"><div style="font-size:1.4rem;font-weight:700;color:'+(isFac?"var(--success)":"var(--error)")+'">'+(isFac?"\u2713 YES \u2014 It IS a factor!":"\u2717 NO \u2014 Not a factor (R="+fN(res.remainder)+")")+'</div>'+(isFac?'<div style="margin-top:10px"><div class="full-answer">'+polyS(coeffs)+' = (x '+(c>=0?"\u2212 "+fN(c):"+ "+fN(Math.abs(c)))+')('+polyS(res.quotient)+')</div></div>':'')+'</div>',
+    work:"ANSWER: "+(isFac?"YES, P(x)=(x-"+fN(c)+")("+polyP(res.quotient)+")":"NO, R="+fN(res.remainder))});
+  launchWorkspace();
+}
+
+// ==================== COPY ====================
+function copyWork(){var lines=["=== Polynomial Division \u2014 A36 ===",""];stepsData.forEach(function(s,i){lines.push("Step "+(i+1)+": "+s.title);if(s.work)lines.push("  "+s.work);lines.push("")});var text=lines.join("\n");navigator.clipboard.writeText(text).then(function(){var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)}).catch(function(){var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);var b=document.getElementById("copyBtn");b.classList.add("copied");b.innerHTML="\u2713 Copied!";setTimeout(function(){b.classList.remove("copied");b.innerHTML="&#128203; Copy My Work"},2500)})}
+
+// ==================== RENDER ====================
+function showStep(idx){if(idx>=stepsData.length){finishProblem();return}var step=stepsData[idx],ct=document.getElementById("stepsContainer"),card=document.createElement("div");card.className="step-card";card.id="step-"+idx;if(step.proc){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});document.getElementById("proc-"+step.proc).classList.add("active")}var bh="";if(step.type==="info"){bh='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It \u2192</button>'}else if(step.type==="numeric"){bh='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||"")+" </span>"+'<input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')"><button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>'}else if(step.type==="choice"){bh='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||"")+"</div>"+'<div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return'<div class="choice-btn" onclick="checkChoice('+idx+",this,'"+escH(o)+"')\">"+escH(o)+"</div>"}).join("")+"</div>"+'<div class="step-feedback" id="fb-'+idx+'"></div>'}card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bh+"</div>";ct.appendChild(card);card.scrollIntoView({behavior:"smooth",block:"nearest"});setTimeout(function(){var inp=card.querySelector(".answer-input");if(inp)inp.focus()},150)}
+function completeStep(i){markDone(i);currentStep=i+1;showStep(i+1)}
+function markDone(i){var c=document.getElementById("step-"+i);if(c){c.classList.add("completed");c.querySelector(".step-num").classList.add("done")}if(stepsData[i].proc)document.getElementById("proc-"+stepsData[i].proc).classList.add("done")}
+function checkNum(idx){var step=stepsData[idx],inp=document.getElementById("ans-"+idx),fb=document.getElementById("fb-"+idx);var val=parseFloat(inp.value.trim());if(isNaN(val)){fb.textContent="Enter a number.";fb.className="step-feedback show incorrect";return}var tol=Math.abs(step.answer)<0.01?0.006:Math.abs(step.answer)<1?0.02:Math.max(0.02,Math.abs(step.answer)*0.01);if(Math.abs(val-step.answer)<=tol){inp.classList.add("correct");inp.disabled=true;inp.value=fN(step.answer);fb.textContent="Correct! \u2713";fb.className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{inp.classList.add("incorrect");setTimeout(function(){inp.classList.remove("incorrect")},600);var tries=parseInt(inp.dataset.tries||"0")+1;inp.dataset.tries=tries;if(tries>=3){fb.innerHTML="The answer is <strong>"+fN(step.answer)+"</strong>";fb.className="step-feedback show hint-text"}else{fb.textContent="Not quite \u2014 try again!";fb.className="step-feedback show incorrect"}inp.value="";inp.focus()}}
+function checkChoice(idx,btn,chosen){var step=stepsData[idx];if(chosen===step.answer){btn.classList.add("correct");document.querySelectorAll("#choices-"+idx+" .choice-btn").forEach(function(b){if(!b.classList.contains("correct"))b.classList.add("disabled")});document.getElementById("fb-"+idx).textContent="Correct! \u2713";document.getElementById("fb-"+idx).className="step-feedback show correct";setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700)}else{btn.classList.add("incorrect");setTimeout(function(){btn.classList.remove("incorrect")},500);document.getElementById("fb-"+idx).textContent="Not quite!";document.getElementById("fb-"+idx).className="step-feedback show incorrect"}}
+function finishProblem(){document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});var expr="",detail="";if(ST.mode==="basics"){expr=fullAnswerP(ST.res.quotient,ST.res.remainder,ST.divisor);detail="Division basics"}else if(ST.mode==="synth"){expr=fullAnswerP(ST.res.quotient,[ST.res.remainder],ST.divCoeffs);detail="Synthetic division"}else if(ST.mode==="long"){expr=fullAnswerP(ST.res.quotient,ST.res.remainder,ST.divisor);detail="Long division"}else if(ST.mode==="verify"){expr=ST.match?"Verified!":"Mismatch";detail="Division check"}else if(ST.mode==="remainder"){expr="P("+fN(ST.c)+")="+fN(ST.res.remainder);detail="Remainder theorem"}else if(ST.mode==="factor"){expr=ST.isFac?"YES factor":"NOT factor";detail="Factor theorem"}document.getElementById("resultExpr").textContent=expr;document.getElementById("resultDetail").textContent=detail;document.getElementById("resultSection").classList.add("visible");document.getElementById("resultSection").scrollIntoView({behavior:"smooth",block:"nearest"})}
+function resetAll(){document.getElementById("inputSection").style.display="";document.getElementById("workspace").classList.remove("visible");document.getElementById("stepsContainer").innerHTML="";document.getElementById("resultSection").classList.remove("visible");document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});document.querySelectorAll(".input-section input").forEach(function(i){i.value=""})}
+</script>
+</body>
+</html>
