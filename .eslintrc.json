@@ -10,6 +10,10 @@
   },
   "rules": {
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "no-console": "off"
+    "no-console": "off",
+    "no-restricted-globals": ["warn",
+      { "name": "alert", "message": "Use a styled modal component instead of window.alert()" },
+      { "name": "confirm", "message": "Use a styled confirmation dialog instead of window.confirm()" }
+    ]
   }
 }
