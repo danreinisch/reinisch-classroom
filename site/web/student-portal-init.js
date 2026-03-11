@@ -1237,10 +1237,24 @@
     // Feature 11: Vocabulary section
     const vocabHtml = renderVocabularySection(dayData);
     
-    const submitQuestionsHtml = !isReadOnly ? `
+    const assignment = instance.assignment || {};
+    const meta = assignment.meta || {};
+    const days = meta.days || [];
+    const isLastDay = assignmentViewerState.currentDay === days.length - 1;
+
+    const submitQuestionsHtml = (!isReadOnly && isLastDay) ? `
       <button class="st-submit-btn" id="submitQuestionsBtn">Submit Assignment</button>
     ` : '';
-    
+
+    const bottomDayTabsHtml = (!isLastDay && days.length > 1) ? `
+      <div class="st-day-tabs st-day-tabs-bottom" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rc-glass-border, rgba(255,255,255,0.1));">
+        ${days.map((day, idx) => {
+          const active = idx === assignmentViewerState.currentDay ? 'active' : '';
+          return `<button class="st-day-tab bottom-day-tab ${active}" data-day-index="${idx}">Day ${day.day_number}</button>`;
+        }).join('')}
+      </div>
+    ` : '';
+
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
@@ -1250,6 +1264,7 @@
       ${vocabHtml}
       ${questionsHtml}
       ${submitQuestionsHtml}
+      ${bottomDayTabsHtml}
     `;
     
     // Attach choice handlers (only if not read-only)
@@ -1258,7 +1273,8 @@
         const input = choiceEl.querySelector('input[type="radio"]');
         
         choiceEl.addEventListener('click', function(e) {
-          if (e.target.tagName === 'INPUT') return; // Let radio handle its own click
+          // Handle all clicks uniformly — don't bail out for INPUT clicks
+          // The label's for= attribute causes synthetic clicks that need handling too
           
           const questionId = this.getAttribute('data-question-id');
           const letter = this.getAttribute('data-letter');
@@ -1353,11 +1369,23 @@
         }
       });
     }
+
+    // Attach bottom day tab handlers
+    container.querySelectorAll('.bottom-day-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const idx = parseInt(tab.getAttribute('data-day-index'), 10);
+        assignmentViewerState.currentDay = idx;
+        // Update top tabs too
+        const panel = container.closest('.st-assignment-panel');
+        if (panel) {
+          panel.querySelectorAll('.st-day-tab:not(.bottom-day-tab)').forEach(t => t.classList.remove('active'));
+          const topTab = panel.querySelector(`.st-day-tab[data-day-index="${idx}"]:not(.bottom-day-tab)`);
+          if (topTab) topTab.classList.add('active');
+          renderCurrentDay(panel, instance);
+        }
+      });
+    });
   }
-  
-  /**
-   * Render writing prompt day
-   */
   function renderWritingPromptDay(container, dayData, instance) {
     // Graceful fallback if writing prompt data is missing or empty
     if (!dayData.prompt && (!dayData.structure || dayData.structure.length === 0)) {
@@ -1433,12 +1461,26 @@
 
     // Feature 11: Vocabulary section
     const vocabHtml = renderVocabularySection(dayData);
-    
+
+    const assignment = instance.assignment || {};
+    const meta = assignment.meta || {};
+    const days = meta.days || [];
+    const isLastDay = assignmentViewerState.currentDay === days.length - 1;
+
     const submitButtonHtml = isReadOnly ? `
       <div class="st-submitted-message">${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}</div>
-    ` : `
+    ` : (isLastDay ? `
       <button class="st-submit-btn" id="submitWritingBtn">Submit Response</button>
-    `;
+    ` : '');
+
+    const bottomDayTabsHtml = (!isLastDay && days.length > 1) ? `
+      <div class="st-day-tabs st-day-tabs-bottom" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rc-glass-border, rgba(255,255,255,0.1));">
+        ${days.map((day, idx) => {
+          const active = idx === assignmentViewerState.currentDay ? 'active' : '';
+          return `<button class="st-day-tab bottom-day-tab ${active}" data-day-index="${idx}">Day ${day.day_number}</button>`;
+        }).join('')}
+      </div>
+    ` : '';
     
     // Builder toggle button (only show if not read-only)
     const builderToggleHtml = !isReadOnly ? `
@@ -1586,6 +1628,7 @@
         ${hintsHtml}
         ${submitButtonHtml}
       </div>
+      ${bottomDayTabsHtml}
     `;
     
     // Attach builder toggle handler
@@ -1773,6 +1816,21 @@
         const text = this.getAttribute('data-text');
         if (text) {
           speakText(text);
+        }
+      });
+    });
+    // Attach bottom day tab handlers
+    container.querySelectorAll('.bottom-day-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const idx = parseInt(tab.getAttribute('data-day-index'), 10);
+        assignmentViewerState.currentDay = idx;
+        // Update top tabs too
+        const panel = container.closest('.st-assignment-panel');
+        if (panel) {
+          panel.querySelectorAll('.st-day-tab:not(.bottom-day-tab)').forEach(t => t.classList.remove('active'));
+          const topTab = panel.querySelector(`.st-day-tab[data-day-index="${idx}"]:not(.bottom-day-tab)`);
+          if (topTab) topTab.classList.add('active');
+          renderCurrentDay(panel, instance);
         }
       });
     });
