@@ -19,6 +19,17 @@ const { SESSION_SECRET } = process.env;
 // Max upload size: 20 MB base64-encoded (~15 MB raw file)
 const MAX_BODY_BYTES = 20 * 1024 * 1024;
 
+// Allowed MIME types for paper/archive uploads
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/heif',
+  'image/gif',
+  'image/webp',
+]);
+
 async function supaFetch(path, init = {}) {
   const res = await fetch(`${SUPABASE_URL}${path}`, {
     ...init,
@@ -82,9 +93,6 @@ exports.handler = async function (event) {
   if (!title || typeof title !== 'string' || !title.trim()) {
     return jsonResponse(event, 400, { error: 'title is required' }, {}, requestId);
   }
-  if (!student_code || typeof student_code !== 'string' || !student_code.trim()) {
-    return jsonResponse(event, 400, { error: 'student_code is required' }, {}, requestId);
-  }
   if (!file_data || typeof file_data !== 'string' || !file_data.trim()) {
     return jsonResponse(event, 400, { error: 'file_data (base64) is required' }, {}, requestId);
   }
@@ -95,15 +103,34 @@ exports.handler = async function (event) {
     return jsonResponse(event, 400, { error: 'file_type is required' }, {}, requestId);
   }
 
+  // Validate MIME type (server-side allowlist — do not trust client-supplied value alone)
+  const normalizedMime = file_type.trim().toLowerCase().split(';')[0].trim();
+  if (!ALLOWED_MIME_TYPES.has(normalizedMime)) {
+    return jsonResponse(event, 400, { error: `Unsupported file type: ${normalizedMime}. Allowed: PDF, JPEG, PNG, HEIC, GIF, WEBP` }, {}, requestId);
+  }
+
+  // Validate score relationship if both provided
+  const scoreNum = score != null && score !== '' ? Number(score) : null;
+  const scoreTotalNum = score_total != null && score_total !== '' ? Number(score_total) : null;
+  if (scoreNum !== null && scoreTotalNum !== null && scoreNum > scoreTotalNum) {
+    return jsonResponse(event, 400, { error: 'score cannot exceed score_total' }, {}, requestId);
+  }
+
   try {
-    // 1. Look up the student by code
-    const stuRes = await supaFetch(
-      `/rest/v1/students?code=eq.${encodeURIComponent(student_code.trim())}&select=id,code`
-    );
-    if (!stuRes.ok || !Array.isArray(stuRes.data) || stuRes.data.length === 0) {
-      return jsonResponse(event, 404, { error: 'Student not found' }, {}, requestId);
+    // 1. Optionally look up the student by code (student_code is optional)
+    let student = null;
+    const trimmedStudentCode = student_code && typeof student_code === 'string' ? student_code.trim() : '';
+    if (trimmedStudentCode) {
+      const stuRes = await supaFetch(
+        `/rest/v1/students?code=eq.${encodeURIComponent(trimmedStudentCode)}&select=id,code`
+      );
+      if (!stuRes.ok || !Array.isArray(stuRes.data) || stuRes.data.length === 0) {
+        // Warn but do not fail — student code may be unknown; continue without linking to a student
+        console.warn(`[teacher-upload-archive] [${requestId}] Student not found for code "${trimmedStudentCode}" — uploading without student link`);
+      } else {
+        student = stuRes.data[0];
+      }
     }
-    const student = stuRes.data[0];
 
     // 2. Create an assignments row
     const now = new Date().toISOString();
@@ -116,6 +143,7 @@ exports.handler = async function (event) {
         assignment_type: assignment_type || 'Paper Assignment',
         original_filename: file_name.trim(),
         uploaded_at: now,
+        student_code: trimmedStudentCode || null,
         notes: notes || null,
       }),
     };
@@ -148,6 +176,8 @@ exports.handler = async function (event) {
     try {
       fileBuffer = Buffer.from(file_data, 'base64');
     } catch (bufErr) {
+      // Clean up assignment record on decode failure
+      await supaFetch(`/rest/v1/assignments?id=eq.${encodeURIComponent(assignment.id)}`, { method: 'DELETE' }).catch(() => {});
       return jsonResponse(event, 400, { error: 'Invalid base64 file_data' }, {}, requestId);
     }
 
@@ -158,7 +188,7 @@ exports.handler = async function (event) {
         headers: {
           apikey: SUPABASE_SERVICE_ROLE_KEY,
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': file_type.trim(),
+          'Content-Type': normalizedMime,
           'x-upsert': 'true',
         },
         body: fileBuffer,
@@ -173,6 +203,8 @@ exports.handler = async function (event) {
 
     if (!storageRes.ok) {
       console.error(`[teacher-upload-archive] [${requestId}] Storage upload failed:`, storageRes.status, storageData);
+      // Clean up assignment record to avoid orphaned rows
+      await supaFetch(`/rest/v1/assignments?id=eq.${encodeURIComponent(assignment.id)}`, { method: 'DELETE' }).catch(() => {});
       return jsonResponse(event, 500, { error: 'Failed to upload file to storage', detail: storageData, status: storageRes.status }, {}, requestId);
     }
 
@@ -196,34 +228,35 @@ exports.handler = async function (event) {
       ? asgUpdateRes.data[0]
       : { ...assignment, page: publicUrl };
 
-    // 5. Create an assignment_instances row linking this assignment to the student
-    const instanceRecord = {
-      assignment_id: assignment.id,
-      student_id: student.id,
-      status: 'Submitted',
-    };
+    // 5. Optionally create an assignment_instances row linking this assignment to the student
+    let instance = null;
+    if (student) {
+      const instanceRecord = {
+        assignment_id: assignment.id,
+        student_id: student.id,
+        status: 'Submitted',
+      };
 
-    const instInsertRes = await supaFetch(
-      `/rest/v1/assignment_instances`,
-      {
-        method: 'POST',
-        headers: { Prefer: 'return=representation' },
-        body: JSON.stringify(instanceRecord),
+      const instInsertRes = await supaFetch(
+        `/rest/v1/assignment_instances`,
+        {
+          method: 'POST',
+          headers: { Prefer: 'return=representation' },
+          body: JSON.stringify(instanceRecord),
+        }
+      );
+
+      if (!instInsertRes.ok) {
+        const errDetail = typeof instInsertRes.data === 'object' ? instInsertRes.data : { raw: String(instInsertRes.data) };
+        console.error(`[teacher-upload-archive] [${requestId}] Instance insert failed:`, instInsertRes.status, errDetail);
+        return jsonResponse(event, 500, { error: 'Failed to create assignment instance', detail: errDetail }, {}, requestId);
       }
-    );
 
-    if (!instInsertRes.ok) {
-      const errDetail = typeof instInsertRes.data === 'object' ? instInsertRes.data : { raw: String(instInsertRes.data) };
-      console.error(`[teacher-upload-archive] [${requestId}] Instance insert failed:`, instInsertRes.status, errDetail);
-      return jsonResponse(event, 500, { error: 'Failed to create assignment instance', detail: errDetail }, {}, requestId);
+      instance = Array.isArray(instInsertRes.data) ? instInsertRes.data[0] : instInsertRes.data;
     }
 
-    const instance = Array.isArray(instInsertRes.data) ? instInsertRes.data[0] : instInsertRes.data;
-
-    // 6. If score is provided, create a submissions row
+    // 6. If score is provided and we have an instance, create a submissions row
     let submission = null;
-    const scoreNum = score != null && score !== '' ? Number(score) : null;
-    const scoreTotalNum = score_total != null && score_total !== '' ? Number(score_total) : null;
 
     if (scoreNum != null && instance && instance.id) {
       const scoreTotal = (scoreTotalNum != null && scoreTotalNum > 0) ? scoreTotalNum : null;
@@ -254,7 +287,7 @@ exports.handler = async function (event) {
       }
     }
 
-    console.log(`[teacher-upload-archive] [${requestId}] Uploaded archive for student ${student_code} -> assignment ${assignment.id}`);
+    console.log(`[teacher-upload-archive] [${requestId}] Uploaded archive for student ${trimmedStudentCode || '(none)'} -> assignment ${assignment.id}`);
     return jsonResponse(event, 200, { ok: true, assignment: updatedAssignment, instance, submission }, {}, requestId);
 
   } catch (err) {

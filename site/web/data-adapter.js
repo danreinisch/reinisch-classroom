@@ -182,9 +182,35 @@ const local = {
   async createAssignment(a) {
     const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
     const arr = store.get('assignments', []);
-    arr.push({ id, ...a });
+    arr.push({ id, ...a, created_at: new Date().toISOString() });
     store.set('assignments', arr);
-    return { id, ...a };
+    return { id, ...a, created_at: new Date().toISOString() };
+  },
+
+  // Upload paper file — not available in local mode
+  // eslint-disable-next-line no-unused-vars
+  async uploadPaperFile(_file, _storagePath) {
+    console.warn('[data-adapter] uploadPaperFile: file storage not available in local mode');
+    return null;
+  },
+
+  // Delete a paper file — no-op in local mode
+  // eslint-disable-next-line no-unused-vars
+  async deletePaperFile(_storagePath) {
+    return null;
+  },
+
+  // Create a submission archive record — stored in localStorage in local mode
+  async createSubmissionArchive(record) {
+    const archives = store.get('submissionArchives', []);
+    const entry = {
+      id: 'SA' + Math.random().toString(36).slice(2, 9).toUpperCase(),
+      ...record,
+      archived_at: record.archived_at || new Date().toISOString(),
+    };
+    archives.push(entry);
+    store.set('submissionArchives', archives);
+    return entry;
   },
   async listAssignments() { return store.get('assignments', []); },
   async listAssignmentInstances() {
@@ -1223,7 +1249,54 @@ const remote = {
     if (error) throw error;
     return data;
   },
-  
+
+  // Upload a paper assignment file to Supabase Storage (bucket: assignments)
+  // Returns the public URL on success, throws on failure
+  async uploadPaperFile(file, storagePath) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const { error } = await supabase.storage
+      .from('assignments')
+      .upload(storagePath, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('assignments').getPublicUrl(storagePath);
+    return urlData.publicUrl;
+  },
+
+  // Delete a paper file from Supabase Storage — used for cleanup on partial failure
+  async deletePaperFile(storagePath) {
+    const supabase = await getSupabase();
+    if (!supabase) return null;
+    const { error } = await supabase.storage.from('assignments').remove([storagePath]);
+    if (error) console.warn('[data-adapter] deletePaperFile failed (non-critical):', error.message);
+    return null;
+  },
+
+  // Create a submission archive record for a paper upload
+  // Note: submission_id is optional for paper uploads; student_id will be looked up if student_code is available
+  async createSubmissionArchive(record) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const payload = {
+      student_code: record.student_code,
+      assignment_id: record.assignment_id,
+      title: record.title,
+      class_name: record.class_name || null,
+      feedback: record.feedback || null,
+      submitted_at: record.submitted_at || new Date().toISOString(),
+      archived_at: record.archived_at || new Date().toISOString(),
+      // paper_upload_url stored in the related assignment.meta field
+      answers: record.answers || null,
+      score_total: record.score_total || null,
+    };
+    // submission_id and student_id are nullable after the 20260312 migration (paper uploads)
+    if (record.submission_id) payload.submission_id = record.submission_id;
+    if (record.student_id) payload.student_id = record.student_id;
+    const { data, error } = await supabase.from('submission_archives').insert(payload).select().single();
+    if (error) throw error;
+    return data;
+  },
+
   async listAssignments() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');

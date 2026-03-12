@@ -67,8 +67,9 @@
           <span>📖</span> Lessons
         </button>
         <div style="flex: 1;"></div>
-        <button id="uploadArchiveBtn" class="tc-btn" style="margin-left: auto;">
-          📤 Upload Archive
+        <button id="uploadPaperBtn" class="tc-btn" style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Upload Paper Assignment
         </button>
         <button id="exportLibraryBtn" class="tc-btn" style="margin-left: 8px;">
           Export Library JSON
@@ -613,10 +614,10 @@
       exportBtn.addEventListener('click', exportLibraryJSON);
     }
 
-    // Upload Archive button
-    const uploadBtn = $('uploadArchiveBtn');
+    // Upload Paper Assignment button
+    const uploadBtn = $('uploadPaperBtn');
     if (uploadBtn) {
-      uploadBtn.addEventListener('click', openUploadArchiveModal);
+      uploadBtn.addEventListener('click', openUploadPaperModal);
     }
   }
 
@@ -716,15 +717,24 @@
     });
   }
 
-  // Open the Upload Archive modal
-  async function openUploadArchiveModal() {
-    // Build class options from CANON_CLASSES
-    const classOptions = CANON_CLASSES.map(cls =>
-      `<option value="${escapeHtml(cls)}">${escapeHtml(cls)}</option>`
-    ).join('');
+  // Open the Upload Paper Assignment modal
+  async function openUploadPaperModal() {
+    // Build class options from CANON_CLASSES using safe DOM approach
+    const classOptsFrag = CANON_CLASSES.map(cls => {
+      const opt = document.createElement('option');
+      opt.value = cls;
+      opt.textContent = cls;
+      return opt.outerHTML;
+    }).join('');
+
+    // Build today's date string (YYYY-MM-DD) for default value
+    const todayStr = new Date().toISOString().split('T')[0];
 
     const overlay = document.createElement('div');
-    overlay.id = 'uploadArchiveOverlay';
+    overlay.id = 'uploadPaperOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'uploadPaperTitle');
     overlay.style.cssText = `
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -737,224 +747,412 @@
       padding: 24px;
     `;
 
-    overlay.innerHTML = `
-      <div class="tc-card" style="max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-          <h2 style="margin: 0; font-size: 22px;">📤 Upload Archive</h2>
-          <button id="closeUploadBtn" class="tc-btn" style="padding: 8px 16px;">✕ Close</button>
-        </div>
+    // Build the modal card
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;';
 
-        <form id="uploadArchiveForm" style="display: flex; flex-direction: column; gap: 16px;">
+    // Header row
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;';
 
-          <div>
-            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">
-              Title <span style="color:#f87171;">*</span>
-            </label>
-            <input type="text" id="ua_title" required
-              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;"
-              placeholder="Assignment title" />
-          </div>
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'uploadPaperTitle';
+    titleEl.style.cssText = 'margin: 0; font-size: 22px;';
+    titleEl.textContent = 'Upload Paper Assignment';
 
-          <div>
-            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Class</label>
-            <select id="ua_class"
-              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;">
-              <option value="">— Select class —</option>
-              ${classOptions}
-            </select>
-          </div>
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'closePaperUploadBtn';
+    closeBtn.className = 'tc-btn';
+    closeBtn.style.cssText = 'padding: 8px 16px;';
+    closeBtn.setAttribute('aria-label', 'Close dialog');
+    closeBtn.textContent = '✕ Close';
 
-          <div>
-            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">
-              Student <span style="color:#f87171;">*</span>
-            </label>
-            <select id="ua_student"
-              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;">
-              <option value="">— Loading students… —</option>
-            </select>
-          </div>
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+    card.appendChild(header);
 
-          <div>
-            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Assignment Type</label>
-            <select id="ua_type"
-              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;">
-              <option value="Paper Assignment">Paper Assignment</option>
-              <option value="Worksheet">Worksheet</option>
-              <option value="Test/Quiz">Test/Quiz</option>
-              <option value="Project">Project</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+    // Form
+    const form = document.createElement('form');
+    form.id = 'uploadPaperForm';
+    form.style.cssText = 'display: flex; flex-direction: column; gap: 16px;';
 
-          <div>
-            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">
-              File <span style="color:#f87171;">*</span>
-              <span style="font-size:12px; color:rgba(255,255,255,.40);">(PDF, JPG, PNG, HEIC, WEBP)</span>
-            </label>
-            <input type="file" id="ua_file" required
-              accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
-              style="width:100%; padding:8px 0; color:white; font-size:14px;" />
-          </div>
+    const fieldStyle = 'width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px; box-sizing:border-box;';
+    const labelStyle = 'display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;';
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div>
-              <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Score (optional)</label>
-              <input type="number" id="ua_score" min="0" step="any"
-                style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;"
-                placeholder="e.g. 18" />
-            </div>
-            <div>
-              <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Total Possible (optional)</label>
-              <input type="number" id="ua_score_total" min="1" step="any"
-                style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;"
-                placeholder="e.g. 20" />
-            </div>
-          </div>
-
-          <div>
-            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Notes (optional)</label>
-            <textarea id="ua_notes" rows="3"
-              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px; resize:vertical;"
-              placeholder="Teacher notes / comments"></textarea>
-          </div>
-
-          <div id="ua_error" style="display:none; padding:10px 14px; background:rgba(248,113,113,.15); border:1px solid rgba(248,113,113,.4); border-radius:8px; color:#fca5a5; font-size:14px;"></div>
-
-          <button type="submit" id="ua_submit" class="tc-btn"
-            style="width:100%; padding:12px; font-size:16px; background:rgba(34,197,94,.20); border-color:rgba(34,197,94,.35);">
-            Upload &amp; Archive
-          </button>
-        </form>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    // Populate student dropdown
-    try {
-      const students = await db.listStudents();
-      const studentSelect = overlay.querySelector('#ua_student');
-      if (students && students.length > 0) {
-        studentSelect.innerHTML = '<option value="">— Select student —</option>' +
-          students.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.code)}${s.name ? ' — ' + escapeHtml(s.name) : ''}</option>`).join('');
-      } else {
-        studentSelect.innerHTML = '<option value="">— No students found —</option>';
+    // Helper to build a labeled field wrapper
+    function makeField(labelText, required, node) {
+      const wrap = document.createElement('div');
+      const lbl = document.createElement('label');
+      lbl.style.cssText = labelStyle;
+      lbl.textContent = labelText + ' ';
+      if (required) {
+        const req = document.createElement('span');
+        req.style.color = '#f87171';
+        req.setAttribute('aria-hidden', 'true');
+        req.textContent = '*';
+        lbl.appendChild(req);
       }
-    } catch (err) {
-      console.warn('[tc-library] Could not load students:', err);
-      const studentSelect = overlay.querySelector('#ua_student');
-      studentSelect.innerHTML = '<option value="">— Error loading students —</option>';
+      if (node.id) lbl.setAttribute('for', node.id);
+      wrap.appendChild(lbl);
+      wrap.appendChild(node);
+      return wrap;
     }
 
+    // Title field
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.id = 'up_title';
+    titleInput.required = true;
+    titleInput.style.cssText = fieldStyle;
+    titleInput.placeholder = 'Assignment title';
+    form.appendChild(makeField('Title', true, titleInput));
+
+    // Class field
+    const classSelect = document.createElement('select');
+    classSelect.id = 'up_class';
+    classSelect.style.cssText = fieldStyle;
+    classSelect.innerHTML = `<option value="">— Select class (optional) —</option>${classOptsFrag}`;
+    form.appendChild(makeField('Class', false, classSelect));
+
+    // Student Code field (optional free text)
+    const studentInput = document.createElement('input');
+    studentInput.type = 'text';
+    studentInput.id = 'up_student_code';
+    studentInput.style.cssText = fieldStyle;
+    studentInput.placeholder = 'e.g. S001 (optional)';
+    const studentHint = document.createElement('div');
+    studentHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
+    studentHint.textContent = 'If provided, links this upload to the student\'s history. Code is uppercased automatically.';
+    const studentWrap = makeField('Student Code', false, studentInput);
+    studentWrap.appendChild(studentHint);
+    form.appendChild(studentWrap);
+
+    // Date Completed field
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.id = 'up_date';
+    dateInput.style.cssText = fieldStyle;
+    dateInput.value = todayStr;
+    form.appendChild(makeField('Date Completed', false, dateInput));
+
+    // Notes field
+    const notesArea = document.createElement('textarea');
+    notesArea.id = 'up_notes';
+    notesArea.rows = 3;
+    notesArea.style.cssText = fieldStyle + ' resize:vertical;';
+    notesArea.placeholder = 'Teacher notes / comments (optional)';
+    form.appendChild(makeField('Notes', false, notesArea));
+
+    // File upload field
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'up_file';
+    fileInput.required = true;
+    fileInput.accept = '.pdf,.jpg,.jpeg,.png,.heic,.heif,.gif,.webp';
+    fileInput.style.cssText = 'width:100%; color:white; font-size:14px; cursor:pointer;';
+
+    const fileHint = document.createElement('div');
+    fileHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
+    fileHint.textContent = 'PDF, JPG, PNG, HEIC/HEIF, GIF, WEBP — max 10 MB';
+
+    const fileInfo = document.createElement('div');
+    fileInfo.id = 'up_file_info';
+    fileInfo.style.cssText = 'display:none; margin-top:8px; padding:8px 12px; background:rgba(34,197,94,.10); border:1px solid rgba(34,197,94,.25); border-radius:8px; font-size:13px; color:rgba(255,255,255,.80);';
+
+    const fileWrap = makeField('File', true, fileInput);
+    fileWrap.appendChild(fileHint);
+    fileWrap.appendChild(fileInfo);
+    form.appendChild(fileWrap);
+
+    // Error display
+    const errorEl = document.createElement('div');
+    errorEl.id = 'up_error';
+    errorEl.style.cssText = 'display:none; padding:10px 14px; background:rgba(248,113,113,.15); border:1px solid rgba(248,113,113,.4); border-radius:8px; color:#fca5a5; font-size:14px;';
+    form.appendChild(errorEl);
+
+    // Submit button
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.id = 'up_submit';
+    submitBtn.className = 'tc-btn';
+    submitBtn.style.cssText = 'width:100%; padding:12px; font-size:16px; background:rgba(34,197,94,.20); border-color:rgba(34,197,94,.35); display:flex; align-items:center; justify-content:center; gap:8px;';
+    submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Upload &amp; Save';
+    form.appendChild(submitBtn);
+
+    card.appendChild(form);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // File selection → show info
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        const f = fileInput.files[0];
+        const sizeMB = (f.size / (1024 * 1024)).toFixed(2);
+        fileInfo.style.display = 'block';
+        fileInfo.textContent = '';
+        const nameSpan = document.createElement('strong');
+        nameSpan.textContent = f.name;
+        fileInfo.appendChild(nameSpan);
+        fileInfo.appendChild(document.createTextNode(` — ${sizeMB} MB`));
+        // Warn if over 10MB
+        if (f.size > 10 * 1024 * 1024) {
+          const warn = document.createElement('span');
+          warn.style.color = '#f87171';
+          warn.textContent = ' (exceeds 10 MB limit)';
+          fileInfo.appendChild(warn);
+        }
+      } else {
+        fileInfo.style.display = 'none';
+      }
+    });
+
     // Close button
-    overlay.querySelector('#closeUploadBtn').addEventListener('click', () => overlay.remove());
+    closeBtn.addEventListener('click', () => overlay.remove());
 
     // Click outside to close
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
-    // Form submit
-    overlay.querySelector('#uploadArchiveForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await submitUploadArchive(overlay);
+    // Keyboard: Escape to close, focus trap
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        overlay.remove();
+        document.removeEventListener('keydown', onKeyDown);
+      } else if (e.key === 'Tab') {
+        const focusable = card.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    // Remove keydown listener when overlay is removed
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(overlay)) {
+        document.removeEventListener('keydown', onKeyDown);
+        observer.disconnect();
+      }
     });
+    observer.observe(document.body, { childList: true, subtree: false });
+
+    // Form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await uploadPaperAssignment(overlay);
+    });
+
+    // Focus first field
+    titleInput.focus();
   }
 
-  // Submit the upload archive form
-  async function submitUploadArchive(overlay) {
-    const errorEl = overlay.querySelector('#ua_error');
-    const submitBtn = overlay.querySelector('#ua_submit');
+  // Upload a paper assignment via data-adapter
+  async function uploadPaperAssignment(overlay) {
+    const errorEl = overlay.querySelector('#up_error');
+    const submitBtn = overlay.querySelector('#up_submit');
 
-    function showError(msg) {
+    function showInlineError(msg) {
       errorEl.textContent = msg;
       errorEl.style.display = 'block';
+      errorEl.scrollIntoView({ block: 'nearest' });
     }
-    function clearError() {
+
+    function clearInlineError() {
       errorEl.style.display = 'none';
       errorEl.textContent = '';
     }
 
-    clearError();
+    clearInlineError();
 
-    const title = overlay.querySelector('#ua_title').value.trim();
-    const className = overlay.querySelector('#ua_class').value;
-    const studentCode = overlay.querySelector('#ua_student').value.trim();
-    const assignmentType = overlay.querySelector('#ua_type').value;
-    const fileInput = overlay.querySelector('#ua_file');
-    const score = overlay.querySelector('#ua_score').value;
-    const scoreTotal = overlay.querySelector('#ua_score_total').value;
-    const notes = overlay.querySelector('#ua_notes').value.trim();
+    const title = overlay.querySelector('#up_title').value.trim();
+    const className = overlay.querySelector('#up_class').value;
+    const studentCode = overlay.querySelector('#up_student_code').value.trim().toUpperCase();
+    const dateCompleted = overlay.querySelector('#up_date').value || new Date().toISOString().split('T')[0];
+    const notes = overlay.querySelector('#up_notes').value.trim();
+    const fileInput = overlay.querySelector('#up_file');
 
-    if (!title) { showError('Title is required.'); return; }
-    if (!studentCode) { showError('Please select a student.'); return; }
-    if (!fileInput.files || fileInput.files.length === 0) { showError('Please select a file to upload.'); return; }
+    // Validation
+    if (!title) {
+      showInlineError('Title is required.');
+      overlay.querySelector('#up_title').focus();
+      return;
+    }
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+      showInlineError('Please select a file to upload.');
+      fileInput.focus();
+      return;
+    }
 
     const file = fileInput.files[0];
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp'];
-    const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.webp'];
-    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-    if (!allowedTypes.includes(file.type) && !allowedExts.includes(fileExt)) {
-      showError('Unsupported file type. Please upload a PDF, JPG, PNG, HEIC, or WEBP file.');
+
+    // File type validation
+    const allowedTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/gif', 'image/webp']);
+    const allowedExts = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif', '.gif', '.webp']);
+    const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
+    if (!allowedTypes.has(file.type) && !allowedExts.has(fileExt)) {
+      showInlineError('Unsupported file type. Please upload a PDF, JPG, PNG, HEIC, HEIF, GIF, or WEBP file.');
+      return;
+    }
+
+    // File size validation (max 10MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      showInlineError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
       return;
     }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Uploading…';
+    const originalBtnHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Uploading…';
+
+    // Add spin animation if not already present
+    if (!document.getElementById('rcSpinStyle')) {
+      const style = document.createElement('style');
+      style.id = 'rcSpinStyle';
+      style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
 
     try {
-      // Convert file to base64
-      const fileData = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          // result is "data:<type>;base64,<data>" — strip the prefix
-          const base64 = reader.result.split(',')[1];
-          resolve(base64);
+      let paperUploadUrl = null;
+
+      if (isRemote) {
+        // ── Supabase mode: upload file, then create assignment record ──
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePath = `paper-uploads/${Date.now()}_${safeFileName}`;
+
+        console.log('[tc-library] Uploading paper file to storage:', storagePath);
+        paperUploadUrl = await db.uploadPaperFile(file, storagePath);
+
+        if (!paperUploadUrl) {
+          showInlineError('File upload failed. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+          return;
+        }
+        console.log('[tc-library] Paper file uploaded:', paperUploadUrl);
+
+        // Create the assignment record
+        const assignmentMeta = {
+          paper: true,
+          paper_upload_url: paperUploadUrl,
+          original_filename: file.name,
+          date_completed: dateCompleted,
+          notes: notes || null,
+          student_code: studentCode || null,
         };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      });
 
-      const body = {
-        title,
-        student_code: studentCode,
-        class_name: className || null,
-        assignment_type: assignmentType,
-        file_data: fileData,
-        file_name: file.name,
-        file_type: file.type || 'application/octet-stream',
-        score: score !== '' ? Number(score) : null,
-        score_total: scoreTotal !== '' ? Number(scoreTotal) : null,
-        notes: notes || null,
-      };
+        let newAssignment;
+        try {
+          newAssignment = await db.createAssignment({
+            title,
+            type: 'paper',
+            series: className || null,
+            page: paperUploadUrl,
+            meta: assignmentMeta,
+          });
+        } catch (createErr) {
+          console.error('[tc-library] Assignment create failed, cleaning up uploaded file:', createErr);
+          // Attempt cleanup of uploaded file (non-critical)
+          try { await db.deletePaperFile(storagePath); } catch (_) { /* ignore */ }
+          showInlineError('Failed to save assignment record. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+          return;
+        }
 
-      const res = await fetch('/.netlify/functions/teacher-upload-archive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: 'include',
-      });
+        console.log('[tc-library] Paper assignment created:', newAssignment.id);
 
-      const json = await res.json().catch(() => ({}));
+        // Optionally create a submission_archives record if student code is provided
+        if (studentCode && newAssignment) {
+          try {
+            await db.createSubmissionArchive({
+              student_code: studentCode,
+              assignment_id: newAssignment.id,
+              title,
+              class_name: className || null,
+              feedback: notes || null,
+              submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString(),
+              archived_at: new Date().toISOString(),
+              paper_upload_url: paperUploadUrl,
+            });
+            console.log('[tc-library] Submission archive record created for student:', studentCode);
+          } catch (archiveErr) {
+            // Non-critical — warn but don't fail
+            console.warn('[tc-library] Could not create submission archive record (non-critical):', archiveErr.message);
+          }
+        }
 
-      if (!res.ok || !json.ok) {
-        const msg = json.error || `Upload failed (HTTP ${res.status})`;
-        showError(msg);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Upload & Archive';
-        return;
+      } else {
+        // ── Local mode: metadata-only (no file storage) ──
+        console.log('[tc-library] Local mode — storing paper assignment metadata only (file not stored)');
+
+        const assignmentMeta = {
+          paper: true,
+          paper_upload_url: null,
+          original_filename: file.name,
+          date_completed: dateCompleted,
+          notes: notes || null,
+          student_code: studentCode || null,
+          local_note: 'File not stored in local mode',
+        };
+
+        await db.createAssignment({
+          title,
+          type: 'paper',
+          series: className || null,
+          page: null,
+          meta: assignmentMeta,
+        });
+
+        // Store archive metadata in localStorage if student code provided
+        if (studentCode) {
+          try {
+            await db.createSubmissionArchive({
+              student_code: studentCode,
+              assignment_id: null,
+              title,
+              class_name: className || null,
+              feedback: notes || null,
+              submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString(),
+              archived_at: new Date().toISOString(),
+            });
+          } catch (archiveErr) {
+            console.warn('[tc-library] Could not create local archive record (non-critical):', archiveErr.message);
+          }
+        }
       }
 
-      // Success — close modal and reload assignments
+      // Success — close modal, refresh list, show toast
       overlay.remove();
-      console.log('[tc-library] Archive uploaded successfully:', json.assignment?.id);
+      console.log('[tc-library] Paper assignment uploaded successfully');
+      showToast(`📄 "${title}" saved to Library${!isRemote ? ' (metadata only — local mode)' : ''}`);
       await loadAssignments();
       switchTab('assignments');
 
     } catch (err) {
-      console.error('[tc-library] Upload error:', err);
-      showError('An unexpected error occurred. Please try again.');
+      console.error('[tc-library] Paper upload error:', err);
+      showInlineError('An unexpected error occurred. Please try again.');
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Upload & Archive';
+      submitBtn.innerHTML = originalBtnHtml;
     }
+  }
+
+  // Show a brief toast notification
+  function showToast(text, bg = '#22c55e', color = '#0b1220') {
+    const msg = document.createElement('div');
+    msg.textContent = text;
+    msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3500);
   }
 
   // Export library as JSON
