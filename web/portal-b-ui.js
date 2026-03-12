@@ -365,7 +365,7 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
         streakLabel.textContent = 'Streak:';
         const streakVal = document.createElement('span');
         streakVal.className = 'grade-trend-value grade-trend-streak';
-        streakVal.textContent = `\uD83D\uDD25 ${streakData.streak}-assignment streak above ${streakData.threshold}%`;
+        streakVal.textContent = `🔥 ${streakData.streak}-assignment streak above ${streakData.threshold}%`;
         streakRow.appendChild(streakLabel);
         streakRow.appendChild(streakVal);
         trendSection.appendChild(streakRow);

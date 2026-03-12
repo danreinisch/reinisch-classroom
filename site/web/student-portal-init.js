@@ -2792,6 +2792,7 @@
     loadingDiv.setAttribute('aria-live', 'polite');
     const loadingIcon = document.createElement('div');
     loadingIcon.setAttribute('aria-hidden', 'true');
+    // Static SVG markup — no user data interpolated, safe to use innerHTML
     loadingIcon.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
     const loadingText = document.createElement('div');
     loadingText.textContent = 'Loading your grades…';
@@ -2853,6 +2854,7 @@
         const iconDiv = document.createElement('div');
         iconDiv.className = 'st-grades-empty-icon';
         iconDiv.setAttribute('aria-hidden', 'true');
+        // Static SVG markup — no user data interpolated, safe to use innerHTML
         iconDiv.innerHTML = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
         
         const msgDiv = document.createElement('div');
@@ -3049,6 +3051,7 @@
       errDiv.className = 'st-grades-loading';
       const errIcon = document.createElement('div');
       errIcon.setAttribute('aria-hidden', 'true');
+      // Static SVG markup — no user data interpolated, safe to use innerHTML
       errIcon.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
       const errTitle = document.createElement('div');
       errTitle.style.color = 'var(--ink)';
