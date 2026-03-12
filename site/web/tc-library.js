@@ -67,7 +67,10 @@
           <span>📖</span> Lessons
         </button>
         <div style="flex: 1;"></div>
-        <button id="exportLibraryBtn" class="tc-btn" style="margin-left: auto;">
+        <button id="uploadArchiveBtn" class="tc-btn" style="margin-left: auto;">
+          📤 Upload Archive
+        </button>
+        <button id="exportLibraryBtn" class="tc-btn" style="margin-left: 8px;">
           Export Library JSON
         </button>
       </div>
@@ -609,6 +612,12 @@
     if (exportBtn) {
       exportBtn.addEventListener('click', exportLibraryJSON);
     }
+
+    // Upload Archive button
+    const uploadBtn = $('uploadArchiveBtn');
+    if (uploadBtn) {
+      uploadBtn.addEventListener('click', openUploadArchiveModal);
+    }
   }
 
   // Show assignment detail modal
@@ -705,6 +714,247 @@
         overlay.remove();
       }
     });
+  }
+
+  // Open the Upload Archive modal
+  async function openUploadArchiveModal() {
+    // Build class options from CANON_CLASSES
+    const classOptions = CANON_CLASSES.map(cls =>
+      `<option value="${escapeHtml(cls)}">${escapeHtml(cls)}</option>`
+    ).join('');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'uploadArchiveOverlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.80);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 24px;
+    `;
+
+    overlay.innerHTML = `
+      <div class="tc-card" style="max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="margin: 0; font-size: 22px;">📤 Upload Archive</h2>
+          <button id="closeUploadBtn" class="tc-btn" style="padding: 8px 16px;">✕ Close</button>
+        </div>
+
+        <form id="uploadArchiveForm" style="display: flex; flex-direction: column; gap: 16px;">
+
+          <div>
+            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">
+              Title <span style="color:#f87171;">*</span>
+            </label>
+            <input type="text" id="ua_title" required
+              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;"
+              placeholder="Assignment title" />
+          </div>
+
+          <div>
+            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Class</label>
+            <select id="ua_class"
+              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;">
+              <option value="">— Select class —</option>
+              ${classOptions}
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">
+              Student <span style="color:#f87171;">*</span>
+            </label>
+            <select id="ua_student"
+              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;">
+              <option value="">— Loading students… —</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Assignment Type</label>
+            <select id="ua_type"
+              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;">
+              <option value="Paper Assignment">Paper Assignment</option>
+              <option value="Worksheet">Worksheet</option>
+              <option value="Test/Quiz">Test/Quiz</option>
+              <option value="Project">Project</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">
+              File <span style="color:#f87171;">*</span>
+              <span style="font-size:12px; color:rgba(255,255,255,.40);">(PDF, JPG, PNG, HEIC, WEBP)</span>
+            </label>
+            <input type="file" id="ua_file" required
+              accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
+              style="width:100%; padding:8px 0; color:white; font-size:14px;" />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Score (optional)</label>
+              <input type="number" id="ua_score" min="0" step="any"
+                style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;"
+                placeholder="e.g. 18" />
+            </div>
+            <div>
+              <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Total Possible (optional)</label>
+              <input type="number" id="ua_score_total" min="1" step="any"
+                style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px;"
+                placeholder="e.g. 20" />
+            </div>
+          </div>
+
+          <div>
+            <label style="display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;">Notes (optional)</label>
+            <textarea id="ua_notes" rows="3"
+              style="width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px; resize:vertical;"
+              placeholder="Teacher notes / comments"></textarea>
+          </div>
+
+          <div id="ua_error" style="display:none; padding:10px 14px; background:rgba(248,113,113,.15); border:1px solid rgba(248,113,113,.4); border-radius:8px; color:#fca5a5; font-size:14px;"></div>
+
+          <button type="submit" id="ua_submit" class="tc-btn"
+            style="width:100%; padding:12px; font-size:16px; background:rgba(34,197,94,.20); border-color:rgba(34,197,94,.35);">
+            Upload &amp; Archive
+          </button>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Populate student dropdown
+    try {
+      const students = await db.listStudents();
+      const studentSelect = overlay.querySelector('#ua_student');
+      if (students && students.length > 0) {
+        studentSelect.innerHTML = '<option value="">— Select student —</option>' +
+          students.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.code)}${s.name ? ' — ' + escapeHtml(s.name) : ''}</option>`).join('');
+      } else {
+        studentSelect.innerHTML = '<option value="">— No students found —</option>';
+      }
+    } catch (err) {
+      console.warn('[tc-library] Could not load students:', err);
+      const studentSelect = overlay.querySelector('#ua_student');
+      studentSelect.innerHTML = '<option value="">— Error loading students —</option>';
+    }
+
+    // Close button
+    overlay.querySelector('#closeUploadBtn').addEventListener('click', () => overlay.remove());
+
+    // Click outside to close
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    // Form submit
+    overlay.querySelector('#uploadArchiveForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await submitUploadArchive(overlay);
+    });
+  }
+
+  // Submit the upload archive form
+  async function submitUploadArchive(overlay) {
+    const errorEl = overlay.querySelector('#ua_error');
+    const submitBtn = overlay.querySelector('#ua_submit');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+    function clearError() {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+    }
+
+    clearError();
+
+    const title = overlay.querySelector('#ua_title').value.trim();
+    const className = overlay.querySelector('#ua_class').value;
+    const studentCode = overlay.querySelector('#ua_student').value.trim();
+    const assignmentType = overlay.querySelector('#ua_type').value;
+    const fileInput = overlay.querySelector('#ua_file');
+    const score = overlay.querySelector('#ua_score').value;
+    const scoreTotal = overlay.querySelector('#ua_score_total').value;
+    const notes = overlay.querySelector('#ua_notes').value.trim();
+
+    if (!title) { showError('Title is required.'); return; }
+    if (!studentCode) { showError('Please select a student.'); return; }
+    if (!fileInput.files || fileInput.files.length === 0) { showError('Please select a file to upload.'); return; }
+
+    const file = fileInput.files[0];
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp'];
+    const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.webp'];
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(fileExt)) {
+      showError('Unsupported file type. Please upload a PDF, JPG, PNG, HEIC, or WEBP file.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading…';
+
+    try {
+      // Convert file to base64
+      const fileData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // result is "data:<type>;base64,<data>" — strip the prefix
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+
+      const body = {
+        title,
+        student_code: studentCode,
+        class_name: className || null,
+        assignment_type: assignmentType,
+        file_data: fileData,
+        file_name: file.name,
+        file_type: file.type || 'application/octet-stream',
+        score: score !== '' ? Number(score) : null,
+        score_total: scoreTotal !== '' ? Number(scoreTotal) : null,
+        notes: notes || null,
+      };
+
+      const res = await fetch('/.netlify/functions/teacher-upload-archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'include',
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json.ok) {
+        const msg = json.error || `Upload failed (HTTP ${res.status})`;
+        showError(msg);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Upload & Archive';
+        return;
+      }
+
+      // Success — close modal and reload assignments
+      overlay.remove();
+      console.log('[tc-library] Archive uploaded successfully:', json.assignment?.id);
+      await loadAssignments();
+      switchTab('assignments');
+
+    } catch (err) {
+      console.error('[tc-library] Upload error:', err);
+      showError('An unexpected error occurred. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Upload & Archive';
+    }
   }
 
   // Export library as JSON
