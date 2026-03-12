@@ -83,16 +83,19 @@ function renderSection(sectionId, assignments, assignmentMap, qs, helpers, featu
   if (!container) return;
   
   if (!assignments || assignments.length === 0) {
-    container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments in this category</div>';
+    container.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'subtle';
+    empty.style.cssText = 'text-align:center; padding:20px';
+    empty.textContent = 'No assignments in this category';
+    container.appendChild(empty);
     return;
   }
   
-  let html = '';
+  container.innerHTML = '';
   for (const item of assignments) {
-    html += renderAssignmentCard(item, assignmentMap, helpers, feature);
+    container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
   }
-  
-  container.innerHTML = html;
 }
 
 /**
@@ -103,20 +106,23 @@ function renderAllSection(assignments, assignmentMap, qs, helpers, feature) {
   if (!container) return;
   
   if (!assignments || assignments.length === 0) {
-    container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments</div>';
+    container.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'subtle';
+    empty.style.cssText = 'text-align:center; padding:20px';
+    empty.textContent = 'No assignments';
+    container.appendChild(empty);
     return;
   }
   
-  let html = '';
+  container.innerHTML = '';
   for (const item of assignments) {
-    html += renderAssignmentCard(item, assignmentMap, helpers, feature);
+    container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
   }
-  
-  container.innerHTML = html;
 }
 
 /**
- * Render an assignment card
+ * Render an assignment card (safe DOM construction — no innerHTML with user data)
  */
 function renderAssignmentCard(item, assignmentMap, helpers, feature) {
   const { instance, latestSubmission, status } = item;
@@ -126,53 +132,99 @@ function renderAssignmentCard(item, assignmentMap, helpers, feature) {
   const className = assignment.meta?.class_name || assignment.class_id || 'N/A';
   const dueDate = instance.due_at ? helpers.formatDateTime(instance.due_at, 'date') : '—';
   
+  const card = document.createElement('div');
+  card.className = 'assignment-card';
+  card.dataset.instanceId = instance.id;
+  
+  // Header row
+  const header = document.createElement('div');
+  header.className = 'assignment-card-header';
+  
+  const titleGroup = document.createElement('div');
+  
+  const titleEl = document.createElement('div');
+  titleEl.className = 'assignment-card-title';
+  titleEl.textContent = title;
+  
+  const metaEl = document.createElement('div');
+  metaEl.className = 'assignment-card-meta';
+  
+  const classSpan = document.createElement('span');
+  const classStrong = document.createElement('strong');
+  classStrong.textContent = 'Class:';
+  classSpan.appendChild(classStrong);
+  classSpan.appendChild(document.createTextNode(' ' + className));
+  
+  const dueSpan = document.createElement('span');
+  const dueStrong = document.createElement('strong');
+  dueStrong.textContent = 'Due:';
+  dueSpan.appendChild(dueStrong);
+  dueSpan.appendChild(document.createTextNode(' ' + dueDate));
+  
+  metaEl.appendChild(classSpan);
+  metaEl.appendChild(dueSpan);
+  titleGroup.appendChild(titleEl);
+  titleGroup.appendChild(metaEl);
+  
   // Status pill
   const statusClass = status.toLowerCase().replace(' ', '-');
-  const statusPill = `<span class="status-pill ${statusClass}">${status}</span>`;
+  const statusPill = document.createElement('span');
+  statusPill.className = `status-pill ${statusClass}`;
+  statusPill.textContent = status;
+  
+  header.appendChild(titleGroup);
+  header.appendChild(statusPill);
+  card.appendChild(header);
   
   // Score for graded assignments
-  let scoreHtml = '';
   if (status === helpers.AssignmentStatus.GRADED && latestSubmission && latestSubmission.score_total != null) {
-    scoreHtml = `<div class="assignment-card-meta"><strong>Score:</strong> ${latestSubmission.score_total}%</div>`;
+    const scoreDiv = document.createElement('div');
+    scoreDiv.className = 'assignment-card-meta';
+    const scoreStrong = document.createElement('strong');
+    scoreStrong.textContent = 'Score:';
+    scoreDiv.appendChild(scoreStrong);
+    scoreDiv.appendChild(document.createTextNode(' ' + latestSubmission.score_total + '%'));
+    card.appendChild(scoreDiv);
   }
   
   // Submitted date
-  let submittedHtml = '';
   if (latestSubmission && latestSubmission.submitted_at) {
-    submittedHtml = `<div class="assignment-card-meta"><strong>Submitted:</strong> ${helpers.formatDateTime(latestSubmission.submitted_at, 'date')}</div>`;
+    const subDiv = document.createElement('div');
+    subDiv.className = 'assignment-card-meta';
+    const subStrong = document.createElement('strong');
+    subStrong.textContent = 'Submitted:';
+    subDiv.appendChild(subStrong);
+    subDiv.appendChild(document.createTextNode(' ' + helpers.formatDateTime(latestSubmission.submitted_at, 'date')));
+    card.appendChild(subDiv);
   }
   
-  // Resubmission button (if graded and resubmission allowed)
-  let resubmitHtml = '';
+  // Footer with optional resubmit button
+  const footer = document.createElement('div');
+  footer.className = 'assignment-card-footer';
+  footer.appendChild(document.createElement('div'));
+  
+  const footerRight = document.createElement('div');
   if (feature.portalResubmission && status === helpers.AssignmentStatus.GRADED) {
     const resubmissionCount = instance.resubmission_count || 0;
     if (resubmissionCount < 1) {
-      resubmitHtml = `<button class="btn small primary" data-action="resubmit" data-instance-id="${instance.id}" data-submission-id="${latestSubmission?.id}">Resubmit</button>`;
+      const resubBtn = document.createElement('button');
+      resubBtn.className = 'btn small primary';
+      resubBtn.dataset.action = 'resubmit';
+      resubBtn.dataset.instanceId = instance.id;
+      resubBtn.dataset.submissionId = latestSubmission?.id || '';
+      resubBtn.textContent = 'Resubmit';
+      footerRight.appendChild(resubBtn);
     } else {
-      resubmitHtml = `<span class="subtle">Revision used</span>`;
+      const usedSpan = document.createElement('span');
+      usedSpan.className = 'subtle';
+      usedSpan.textContent = 'Revision used';
+      footerRight.appendChild(usedSpan);
     }
   }
+  footer.appendChild(footerRight);
+  card.appendChild(footer);
   
-  return `
-    <div class="assignment-card" data-instance-id="${instance.id}">
-      <div class="assignment-card-header">
-        <div>
-          <div class="assignment-card-title">${title}</div>
-          <div class="assignment-card-meta">
-            <span><strong>Class:</strong> ${className}</span>
-            <span><strong>Due:</strong> ${dueDate}</span>
-          </div>
-        </div>
-        ${statusPill}
-      </div>
-      ${scoreHtml}
-      ${submittedHtml}
-      <div class="assignment-card-footer">
-        <div></div>
-        <div>${resubmitHtml}</div>
-      </div>
-    </div>
-  `;
+  return card;
 }
 
 /**
@@ -182,6 +234,24 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
   try {
     const container = qs('#gradesCardContainer');
     if (!container) return;
+    
+    // Lazily load quarter-utils for dynamic quarter labels
+    let quarterUtils = null;
+    try {
+      quarterUtils = await import('/web/quarter-utils.js');
+    } catch (_e) {
+      // quarter-utils unavailable — fall back to generic labels
+    }
+    
+    // Helper to get a quarter label, falling back to generic "Q1" etc.
+    function getQLabel(key) {
+      try {
+        if (quarterUtils && quarterUtils.getQuarterLabel) {
+          return quarterUtils.getQuarterLabel(key);
+        }
+      } catch (_e) { /* ignore */ }
+      return key; // generic fallback: "Q1", "Q2", etc.
+    }
     
     // Fetch data
     const [submissions, instances, assignments] = await Promise.all([
@@ -251,16 +321,10 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
     
     // Quarterly Averages (if feature enabled)
     let quarterAverages = {};
+    let qContainer = null;
     if (feature.portalQuarterAverages !== false) {
       quarterAverages = helpers.calculateQuarterAverages(submissions);
-      // School-year quarter labels (Q1=Aug 16–Oct 17, Q2=Oct 18–Dec 19, Q3=Dec 20–Mar 6, Q4=Mar 7–May 20)
-      const qLabels = {
-        Q1: 'Q1 (Aug 16\u2013Oct 17)',
-        Q2: 'Q2 (Oct 18\u2013Dec 19)',
-        Q3: 'Q3 (Dec 20\u2013Mar 6)',
-        Q4: 'Q4 (Mar 7\u2013May 20)',
-      };
-      const qContainer = document.createElement('div');
+      qContainer = document.createElement('div');
       qContainer.className = 'grade-stat';
       const qLabel = document.createElement('div');
       qLabel.className = 'grade-stat-label';
@@ -276,7 +340,7 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
         field.className = 'assignment-detail-field';
         const fieldLabel = document.createElement('span');
         fieldLabel.className = 'assignment-detail-label';
-        fieldLabel.textContent = qLabels[key] || key;
+        fieldLabel.textContent = getQLabel(key);
         const fieldValue = document.createElement('span');
         fieldValue.className = 'assignment-detail-value';
         fieldValue.textContent = avgDisplay;
@@ -372,9 +436,14 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       }
       
       // Insert after quarterly averages (or class averages if quarterly disabled)
-      const insertAfter = qs('[class*="grade-stat"]:last-of-type') || qs('#classAverages');
-      if (insertAfter && insertAfter.parentNode) {
-        insertAfter.parentNode.insertBefore(trendSection, insertAfter.nextSibling);
+      let insertAfterEl = null;
+      if (qContainer) {
+        insertAfterEl = qContainer;
+      } else {
+        insertAfterEl = qs('#classAverages');
+      }
+      if (insertAfterEl && insertAfterEl.parentNode) {
+        insertAfterEl.parentNode.insertBefore(trendSection, insertAfterEl.nextSibling);
       }
     }
     
@@ -405,10 +474,10 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       
       const quarterOptions = [
         { value: '', text: 'All Quarters' },
-        { value: '1', text: 'Q1 (Aug 16\u2013Oct 17)' },
-        { value: '2', text: 'Q2 (Oct 18\u2013Dec 19)' },
-        { value: '3', text: 'Q3 (Dec 20\u2013Mar 6)' },
-        { value: '4', text: 'Q4 (Mar 7\u2013May 20)' },
+        { value: '1', text: getQLabel('Q1') },
+        { value: '2', text: getQLabel('Q2') },
+        { value: '3', text: getQLabel('Q3') },
+        { value: '4', text: getQLabel('Q4') },
       ];
       for (const opt of quarterOptions) {
         const option = document.createElement('option');
@@ -576,6 +645,7 @@ function renderQuarterSparkline(selector, data) {
     points += `${x},${y} `;
   });
   
+  // Static SVG markup with computed numeric coordinates only — no user data interpolated, safe to use innerHTML
   svg.innerHTML = `
     <polyline 
       points="${points.trim()}" 
@@ -587,10 +657,6 @@ function renderQuarterSparkline(selector, data) {
     />
   `;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-}
-
-/**
- * Export grades to CSV with quarterly summary
  */
 function exportGradesCSV(submissions, instanceMap, assignmentMap, helpers, quarterAverages) {
   const rows = [];
@@ -782,6 +848,7 @@ function renderSparkline(selector, data) {
     points += `${x},${y} `;
   });
   
+  // Static SVG markup with computed numeric coordinates only — no user data interpolated, safe to use innerHTML
   svg.innerHTML = `
     <polyline 
       points="${points.trim()}" 
@@ -796,7 +863,7 @@ function renderSparkline(selector, data) {
 }
 
 /**
- * Show toast notification
+ * Show toast notification (safe DOM construction — no innerHTML with user data)
  */
 export function showToast({ title, message, type = 'info', link = null, duration = 8000 }) {
   const container = document.querySelector('#toastContainer');
@@ -804,32 +871,44 @@ export function showToast({ title, message, type = 'info', link = null, duration
   
   const toastId = 'toast-' + Date.now();
   
-  const linkHtml = link ? 
-    `<a class="toast-link" data-toast-link="${toastId}">${link.text}</a>` : '';
-  
   const toast = document.createElement('div');
   toast.id = toastId;
   toast.className = `toast ${type}`;
-  toast.innerHTML = `
-    <div class="toast-header">
-      <div class="toast-title">${title}</div>
-      <button class="toast-close" data-toast-close="${toastId}">×</button>
-    </div>
-    <div class="toast-body">
-      ${message}
-      ${linkHtml}
-    </div>
-  `;
+  
+  // Header row
+  const header = document.createElement('div');
+  header.className = 'toast-header';
+  const titleEl = document.createElement('div');
+  titleEl.className = 'toast-title';
+  titleEl.textContent = title;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.dataset.toastClose = toastId;
+  closeBtn.textContent = '×';
+  header.appendChild(titleEl);
+  header.appendChild(closeBtn);
+  toast.appendChild(header);
+  
+  // Body
+  const body = document.createElement('div');
+  body.className = 'toast-body';
+  body.textContent = message;
+  
+  if (link) {
+    const linkEl = document.createElement('a');
+    linkEl.className = 'toast-link';
+    linkEl.dataset.toastLink = toastId;
+    linkEl.textContent = link.text;
+    body.appendChild(linkEl);
+  }
+  toast.appendChild(body);
   
   container.appendChild(toast);
   
   // Event handlers
-  const closeBtn = toast.querySelector(`[data-toast-close="${toastId}"]`);
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      toast.remove();
-    });
-  }
+  closeBtn.addEventListener('click', () => {
+    toast.remove();
+  });
   
   if (link) {
     const linkEl = toast.querySelector(`[data-toast-link="${toastId}"]`);
@@ -1032,85 +1111,117 @@ export function setupFilters(qs, helpers, allAssignments, assignmentMap, renderA
 }
 
 /**
- * Render assignment detail modal content
+ * Render assignment detail modal content (safe DOM construction — no innerHTML with user data)
  * @param {Object} instance - Assignment instance
  * @param {Object} assignment - Assignment data
  * @param {Object} latestSubmission - Latest submission (or null)
  * @param {Object} feature - Feature flags
  * @param {Object} helpers - Helper functions
- * @returns {Object} HTML strings for title, meta, body, actions
+ * @returns {{ title: string, metaEl: DocumentFragment, bodyEl: DocumentFragment, actionsEl: DocumentFragment }}
  */
 export function renderAssignmentDetail(instance, assignment, latestSubmission, feature, helpers) {
   const title = assignment?.title || 'Assignment';
   const className = assignment?.meta?.class_name || assignment?.class_id || 'N/A';
   const dueDate = instance.due_at ? helpers.formatDateTime(instance.due_at, 'full') : 'No due date';
   
-  const meta = `
-    <span><strong>Class:</strong> ${className}</span>
-    <span><strong>Due:</strong> ${dueDate}</span>
-  `;
+  // Meta fragment: class and due date
+  const metaEl = document.createDocumentFragment();
+  const classSpan = document.createElement('span');
+  const classStrong = document.createElement('strong');
+  classStrong.textContent = 'Class:';
+  classSpan.appendChild(classStrong);
+  classSpan.appendChild(document.createTextNode(' ' + className));
+  const dueSpan = document.createElement('span');
+  const dueStrong = document.createElement('strong');
+  dueStrong.textContent = 'Due:';
+  dueSpan.appendChild(dueStrong);
+  dueSpan.appendChild(document.createTextNode(' ' + dueDate));
+  metaEl.appendChild(classSpan);
+  metaEl.appendChild(dueSpan);
+  
+  // Body fragment: description + submission details
+  const bodyEl = document.createDocumentFragment();
   
   // Description section
-  const description = assignment?.description || assignment?.meta?.description || 'No description available.';
+  const descSection = document.createElement('div');
+  descSection.className = 'assignment-detail-section';
+  const descTitle = document.createElement('div');
+  descTitle.className = 'assignment-detail-section-title';
+  descTitle.textContent = 'Description';
+  const descText = document.createElement('div');
+  descText.className = 'assignment-detail-description';
+  descText.textContent = assignment?.description || assignment?.meta?.description || 'No description available.';
+  descSection.appendChild(descTitle);
+  descSection.appendChild(descText);
+  bodyEl.appendChild(descSection);
   
-  // Submission details
-  let submissionHtml = '';
+  // Submission details section
+  const subSection = document.createElement('div');
+  subSection.className = 'assignment-detail-section';
   if (latestSubmission) {
-    const submittedAt = latestSubmission.submitted_at ? 
+    const submittedAt = latestSubmission.submitted_at ?
       helpers.formatDateTime(latestSubmission.submitted_at, 'full') : 'Unknown';
-    const score = latestSubmission.score_total != null ? 
+    const score = latestSubmission.score_total != null ?
       `${latestSubmission.score_total}%` : 'Not graded';
     const notes = latestSubmission.notes || 'No notes';
     
-    submissionHtml = `
-      <div class="assignment-detail-section">
-        <div class="assignment-detail-section-title">Latest Submission</div>
-        <div class="assignment-detail-field">
-          <span class="assignment-detail-label">Submitted</span>
-          <span class="assignment-detail-value">${submittedAt}</span>
-        </div>
-        <div class="assignment-detail-field">
-          <span class="assignment-detail-label">Score</span>
-          <span class="assignment-detail-value">${score}</span>
-        </div>
-        <div class="assignment-detail-field">
-          <span class="assignment-detail-label">Notes</span>
-          <span class="assignment-detail-value" style="max-width:300px; text-align:right;">${notes}</span>
-        </div>
-      </div>
-    `;
+    const subSectionTitle = document.createElement('div');
+    subSectionTitle.className = 'assignment-detail-section-title';
+    subSectionTitle.textContent = 'Latest Submission';
+    subSection.appendChild(subSectionTitle);
+    
+    function makeField(label, value, valueStyle) {
+      const field = document.createElement('div');
+      field.className = 'assignment-detail-field';
+      const lEl = document.createElement('span');
+      lEl.className = 'assignment-detail-label';
+      lEl.textContent = label;
+      const vEl = document.createElement('span');
+      vEl.className = 'assignment-detail-value';
+      if (valueStyle) vEl.style.cssText = valueStyle;
+      vEl.textContent = value;
+      field.appendChild(lEl);
+      field.appendChild(vEl);
+      return field;
+    }
+    subSection.appendChild(makeField('Submitted', submittedAt));
+    subSection.appendChild(makeField('Score', score));
+    subSection.appendChild(makeField('Notes', notes, 'max-width:300px; text-align:right;'));
   } else {
-    submissionHtml = `
-      <div class="assignment-detail-section">
-        <div class="assignment-detail-section-title">Submission Status</div>
-        <div style="color:var(--muted); font-style:italic;">Not yet submitted</div>
-      </div>
-    `;
+    const subSectionTitle = document.createElement('div');
+    subSectionTitle.className = 'assignment-detail-section-title';
+    subSectionTitle.textContent = 'Submission Status';
+    const notYet = document.createElement('div');
+    notYet.style.cssText = 'color:var(--muted); font-style:italic;';
+    notYet.textContent = 'Not yet submitted';
+    subSection.appendChild(subSectionTitle);
+    subSection.appendChild(notYet);
   }
+  bodyEl.appendChild(subSection);
   
-  // Goal linkage removed - students should not see IEP goal codes
-  
-  const body = `
-    <div class="assignment-detail-section">
-      <div class="assignment-detail-section-title">Description</div>
-      <div class="assignment-detail-description">${description}</div>
-    </div>
-    ${submissionHtml}
-  `;
-  
-  // Actions (resubmit button if applicable)
-  let actionsHtml = '<button id="assignmentDetailClose2" class="btn">Close</button>';
+  // Actions fragment
+  const actionsEl = document.createDocumentFragment();
   
   if (feature.portalResubmission && latestSubmission && latestSubmission.score_total != null) {
     const resubmissionCount = instance.resubmission_count || 0;
     if (resubmissionCount < 1) {
-      actionsHtml = `
-        <button data-action="resubmit" data-instance-id="${instance.id}" data-submission-id="${latestSubmission.id}" class="btn primary">Resubmit</button>
-      ` + actionsHtml;
+      const resubBtn = document.createElement('button');
+      resubBtn.className = 'btn primary';
+      resubBtn.dataset.action = 'resubmit';
+      resubBtn.dataset.instanceId = instance.id;
+      resubBtn.dataset.submissionId = latestSubmission.id;
+      resubBtn.textContent = 'Resubmit';
+      actionsEl.appendChild(resubBtn);
     }
   }
   
-  return { title, meta, body, actions: actionsHtml };
+  const closeBtn2 = document.createElement('button');
+  closeBtn2.id = 'assignmentDetailClose2';
+  closeBtn2.className = 'btn';
+  closeBtn2.textContent = 'Close';
+  actionsEl.appendChild(closeBtn2);
+  
+  return { title, metaEl, bodyEl, actionsEl };
 }
 
 /**
@@ -1133,16 +1244,31 @@ export function openAssignmentDetail(instanceId, context) {
   const { instance, latestSubmission } = item;
   const assignment = assignmentMap.get(instance.assignment_id) || {};
   
-  // Render modal content
+  // Render modal content (returns DOM nodes — no innerHTML with user data)
   const content = renderAssignmentDetail(instance, assignment, latestSubmission, feature, helpers);
   
   const modal = document.querySelector('#assignmentDetailModal');
   if (!modal) return;
   
   document.querySelector('#assignmentDetailTitle').textContent = content.title;
-  document.querySelector('#assignmentDetailMeta').innerHTML = content.meta;
-  document.querySelector('#assignmentDetailBody').innerHTML = content.body;
-  document.querySelector('#assignmentDetailActions').innerHTML = content.actions;
+  
+  const metaContainer = document.querySelector('#assignmentDetailMeta');
+  if (metaContainer) {
+    metaContainer.innerHTML = '';
+    metaContainer.appendChild(content.metaEl);
+  }
+  
+  const bodyContainer = document.querySelector('#assignmentDetailBody');
+  if (bodyContainer) {
+    bodyContainer.innerHTML = '';
+    bodyContainer.appendChild(content.bodyEl);
+  }
+  
+  const actionsContainer = document.querySelector('#assignmentDetailActions');
+  if (actionsContainer) {
+    actionsContainer.innerHTML = '';
+    actionsContainer.appendChild(content.actionsEl);
+  }
   
   // Show modal
   modal.classList.remove('hidden');
@@ -1343,6 +1469,7 @@ export function setupAssignmentDetailHandlers(context) {
 // Helper functions for rendering states
 
 function renderEmptyState(qs) {
+  // Static-only message — no user data interpolated, safe to use innerHTML
   const sections = ['upcoming', 'in-progress', 'late', 'missing', 'submitted', 'graded', 'all'];
   sections.forEach(section => {
     const container = qs(`#${section}Content`);
@@ -1353,6 +1480,7 @@ function renderEmptyState(qs) {
 }
 
 function renderErrorState(qs) {
+  // Static-only message — no user data interpolated, safe to use innerHTML
   const sections = ['upcoming', 'in-progress', 'late', 'missing', 'submitted', 'graded', 'all'];
   sections.forEach(section => {
     const container = qs(`#${section}Content`);
@@ -1370,14 +1498,30 @@ async function loadStudentAssignmentsSimple(db, currentUser, qs) {
   qs('#assignmentsCount').textContent = myInstances.length;
   
   if (myInstances.length === 0) {
-    qs('#upcomingContent').innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments yet</div>';
+    const upcomingContent = qs('#upcomingContent');
+    if (upcomingContent) {
+      // Static-only message — no user data interpolated, safe to use innerHTML
+      upcomingContent.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments yet</div>';
+    }
     return { groups: {}, submissionsMap: {} };
   }
   
   const assignmentList = await db.listAssignments();
   const assignmentMap = new Map(assignmentList.map(a => [a.id, a]));
   
-  let html = '<table class="table"><thead><tr><th>Assignment</th><th>Status</th><th>Due</th></tr></thead><tbody>';
+  // Safe DOM construction — user data (title, status) set via textContent
+  const table = document.createElement('table');
+  table.className = 'table';
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  for (const col of ['Assignment', 'Status', 'Due']) {
+    const th = document.createElement('th');
+    th.textContent = col;
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
   
   for (const inst of myInstances.slice(0, 10)) {
     const assignment = assignmentMap.get(inst.assignment_id);
@@ -1385,15 +1529,28 @@ async function loadStudentAssignmentsSimple(db, currentUser, qs) {
     const status = inst.status || 'Assigned';
     const dueDate = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
     
-    html += `<tr>
-      <td>${title}</td>
-      <td><span class="badge info">${status}</span></td>
-      <td>${dueDate}</td>
-    </tr>`;
+    const tr = document.createElement('tr');
+    const tdTitle = document.createElement('td');
+    tdTitle.textContent = title;
+    const tdStatus = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'badge info';
+    badge.textContent = status;
+    tdStatus.appendChild(badge);
+    const tdDue = document.createElement('td');
+    tdDue.textContent = dueDate;
+    tr.appendChild(tdTitle);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdDue);
+    tbody.appendChild(tr);
   }
   
-  html += '</tbody></table>';
-  qs('#upcomingContent').innerHTML = html;
+  table.appendChild(tbody);
+  const upcomingContent = qs('#upcomingContent');
+  if (upcomingContent) {
+    upcomingContent.innerHTML = '';
+    upcomingContent.appendChild(table);
+  }
   
   return { groups: {}, submissionsMap: {} };
 }
