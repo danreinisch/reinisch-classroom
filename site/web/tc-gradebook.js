@@ -531,8 +531,6 @@
   // Make a score cell editable
   function makeScoreEditable(td, studentCode, draftId, currentScore, totalPossible) {
     const maxScore = totalPossible || 100;
-    // Store original cell HTML so cancel can restore the two-line markup
-    const originalHTML = td.innerHTML;
     td.classList.add("editing");
 
     // Create inline editor container
@@ -550,11 +548,13 @@
     const btnSave = document.createElement("button");
     btnSave.textContent = "✓";
     btnSave.title = "Save (Enter)";
+    btnSave.setAttribute("aria-label", "Save score");
 
     // Create cancel button (✗)
     const btnCancel = document.createElement("button");
     btnCancel.textContent = "✗";
     btnCancel.title = "Cancel (Escape)";
+    btnCancel.setAttribute("aria-label", "Cancel editing");
 
     // Assemble editor
     editorDiv.appendChild(input);
@@ -604,15 +604,28 @@
     // Cancel handler
     const cancel = () => {
       td.classList.remove("editing");
-      // Safe to restore innerHTML here: the original cell content was built by
-      // renderGradebook() using createElement+textContent, not user-supplied markup.
-      td.innerHTML = originalHTML;
-      // Reapply color class if there was a score
+      // Rebuild cell content safely using DOM methods (matches renderGradebook() pattern)
+      td.textContent = "";
       if (currentScore !== null) {
+        const pctLine = document.createElement("div");
+        pctLine.className = "gb-score-pct";
+        pctLine.textContent = `${currentScore}%`;
+        td.appendChild(pctLine);
+
+        if (totalPossible) {
+          const ptsLine = document.createElement("div");
+          ptsLine.className = "gb-score-pts-line";
+          ptsLine.textContent = `${calculateEarnedPoints(currentScore, totalPossible)}/${totalPossible}`;
+          td.appendChild(ptsLine);
+        }
+
+        // Reapply color class
         const colorClass = scoreColorClass(currentScore);
         if (colorClass) {
           td.classList.add(colorClass);
         }
+      } else {
+        td.textContent = "—";
       }
     };
 
@@ -621,11 +634,13 @@
     btnCancel.addEventListener("click", cancel);
     
     input.addEventListener("blur", (e) => {
-      // Don't blur if clicking on save/cancel buttons
+      // Don't cancel if clicking on save/cancel buttons
       if (e.relatedTarget === btnSave || e.relatedTarget === btnCancel) {
         return;
       }
-      save();
+      // Cancel on blur — require explicit save via Enter or ✓ button
+      // This prevents accidental saves when clicking outside the cell
+      cancel();
     });
     
     input.addEventListener("keydown", (e) => {
@@ -1865,6 +1880,8 @@
       card = document.createElement("div");
       card.id = "gbStatsCard";
       card.className = "gb-stats-card";
+      card.setAttribute("role", "status");
+      card.setAttribute("aria-live", "polite");
       card.style.display = "none";
       document.body.appendChild(card);
     }
