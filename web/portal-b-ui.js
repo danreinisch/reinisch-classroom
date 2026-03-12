@@ -193,6 +193,10 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
     const myInstances = instances.filter(i => i.student_code === currentUser.code);
     const gradedSubmissions = submissions.filter(s => s.score_total != null);
     
+    // Build lookup maps (available to all sections below)
+    const assignmentMap = new Map(assignments.map(a => [a.id, a]));
+    const instanceMap = new Map(myInstances.map(i => [i.id, i]));
+    
     // Calculate overall average
     const overallAvg = helpers.calculateOverallAverage(submissions);
     
@@ -206,11 +210,18 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
     // Calculate trend
     const trend = helpers.calculateTrend(submissions);
     const trendIcons = { up: '↗', down: '↘', flat: '→' };
-    const trendHtml = trend.direction ? 
-      `<span class="grade-stat-trend ${trend.direction}">${trendIcons[trend.direction]}</span>` : '';
     
-    qs('#overallAverage').textContent = overallAvg;
-    qs('#overallTrend').innerHTML = trendHtml;
+    const overallAvgEl = qs('#overallAverage');
+    if (overallAvgEl) overallAvgEl.textContent = overallAvg;
+    
+    const overallTrendEl = qs('#overallTrend');
+    if (overallTrendEl && trend.direction) {
+      const trendSpan = document.createElement('span');
+      trendSpan.className = `grade-stat-trend ${trend.direction}`;
+      trendSpan.textContent = trendIcons[trend.direction] || '';
+      overallTrendEl.innerHTML = '';
+      overallTrendEl.appendChild(trendSpan);
+    }
     
     // Sparkline
     const sparklineData = helpers.getSparklineData(submissions);
@@ -218,120 +229,235 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       renderSparkline('#overallSparkline', sparklineData);
     }
     
-    // Per-class averages
+    // Per-class averages (safe DOM construction)
     const classAverages = helpers.calculateClassAverages(submissions, myInstances, assignments);
-    let classHtml = '';
-    
-    for (const [classId, avg] of Object.entries(classAverages)) {
-      classHtml += `
-        <div class="grade-stat">
-          <div class="grade-stat-label">${classId}</div>
-          <div class="grade-stat-value">${avg}%</div>
-        </div>
-      `;
-    }
-    
-    if (classHtml) {
-      qs('#classAverages').innerHTML = classHtml;
+    const classAveragesEl = qs('#classAverages');
+    if (classAveragesEl && Object.keys(classAverages).length > 0) {
+      classAveragesEl.innerHTML = '';
+      for (const [classId, avg] of Object.entries(classAverages)) {
+        const statDiv = document.createElement('div');
+        statDiv.className = 'grade-stat';
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'grade-stat-label';
+        labelDiv.textContent = classId;
+        const valueDiv = document.createElement('div');
+        valueDiv.className = 'grade-stat-value';
+        valueDiv.textContent = `${avg}%`;
+        statDiv.appendChild(labelDiv);
+        statDiv.appendChild(valueDiv);
+        classAveragesEl.appendChild(statDiv);
+      }
     }
     
     // Quarterly Averages (if feature enabled)
+    let quarterAverages = {};
     if (feature.portalQuarterAverages !== false) {
-      const quarterAverages = helpers.calculateQuarterAverages(submissions);
-      let quarterHtml = '<div class="grade-stat"><div class="grade-stat-label">Quarterly Averages</div>';
+      quarterAverages = helpers.calculateQuarterAverages(submissions);
+      // School-year quarter labels (Q1=Aug 16–Oct 17, Q2=Oct 18–Dec 19, Q3=Dec 20–Mar 6, Q4=Mar 7–May 20)
+      const qLabels = {
+        Q1: 'Q1 (Aug 16\u2013Oct 17)',
+        Q2: 'Q2 (Oct 18\u2013Dec 19)',
+        Q3: 'Q3 (Dec 20\u2013Mar 6)',
+        Q4: 'Q4 (Mar 7\u2013May 20)',
+      };
+      const qContainer = document.createElement('div');
+      qContainer.className = 'grade-stat';
+      const qLabel = document.createElement('div');
+      qLabel.className = 'grade-stat-label';
+      qLabel.textContent = 'Quarterly Averages';
+      qContainer.appendChild(qLabel);
       
       for (let q = 1; q <= 4; q++) {
-        const avg = quarterAverages[`Q${q}`];
+        const key = `Q${q}`;
+        const avg = quarterAverages[key];
         const avgDisplay = avg !== null ? `${avg}%` : '—';
         
-        // Get sparkline for quarter
-        let sparklineHtml = '';
+        const field = document.createElement('div');
+        field.className = 'assignment-detail-field';
+        const fieldLabel = document.createElement('span');
+        fieldLabel.className = 'assignment-detail-label';
+        fieldLabel.textContent = qLabels[key] || key;
+        const fieldValue = document.createElement('span');
+        fieldValue.className = 'assignment-detail-value';
+        fieldValue.textContent = avgDisplay;
+        
+        // Inline sparkline for the quarter
         if (avg !== null && helpers.getQuarterSparklineData) {
           const qData = helpers.getQuarterSparklineData(submissions, q);
           if (qData.length > 0) {
             const sparklineId = `quarter${q}Sparkline`;
-            sparklineHtml = `<svg id="${sparklineId}" class="quarter-sparkline"></svg>`;
-            // Render sparkline after DOM update
+            const svg = document.createElement('svg');
+            svg.id = sparklineId;
+            svg.className = 'quarter-sparkline';
+            fieldValue.appendChild(svg);
             setTimeout(() => renderQuarterSparkline(`#${sparklineId}`, qData), 10);
           }
         }
         
-        quarterHtml += `
-          <div class="assignment-detail-field">
-            <span class="assignment-detail-label">Q${q}</span>
-            <span class="assignment-detail-value">${avgDisplay}${sparklineHtml}</span>
-          </div>
-        `;
+        field.appendChild(fieldLabel);
+        field.appendChild(fieldValue);
+        qContainer.appendChild(field);
       }
       
-      quarterHtml += '</div>';
+      const classAveragesParent = qs('#classAverages');
+      if (classAveragesParent) {
+        classAveragesParent.insertAdjacentElement('afterend', qContainer);
+      }
+    }
+    
+    // Trend Insights section (week-over-week, score trend, streak)
+    if (helpers.calculateWeekOverWeekTrend && helpers.calculateAverageScoreTrend) {
+      const weekTrend = helpers.calculateWeekOverWeekTrend(submissions);
+      const scoreTrend = helpers.calculateAverageScoreTrend(gradedSubmissions);
+      const streakData = helpers.calculateStreakAbove ? helpers.calculateStreakAbove(gradedSubmissions, 80) : { streak: 0, threshold: 80 };
       
-      const classAveragesEl = qs('#classAverages');
-      if (classAveragesEl) {
-        classAveragesEl.insertAdjacentHTML('afterend', quarterHtml);
+      const trendArrows = { up: '↗', down: '↘', flat: '→' };
+      
+      const trendSection = document.createElement('div');
+      trendSection.className = 'grade-stat grade-trend-insights';
+      
+      const trendHeading = document.createElement('div');
+      trendHeading.className = 'grade-stat-label';
+      trendHeading.textContent = 'Trend Insights';
+      trendSection.appendChild(trendHeading);
+      
+      // Week-over-week
+      const weekRow = document.createElement('div');
+      weekRow.className = 'grade-trend-row';
+      const weekLabel = document.createElement('span');
+      weekLabel.className = 'grade-trend-label';
+      weekLabel.textContent = 'This week:';
+      const weekVal = document.createElement('span');
+      weekVal.className = `grade-trend-value grade-trend-${weekTrend.direction}`;
+      weekVal.textContent = `${weekTrend.lastWeekCount} submission${weekTrend.lastWeekCount !== 1 ? 's' : ''} ${trendArrows[weekTrend.direction] || ''}`;
+      if (weekTrend.prevWeekCount > 0 || weekTrend.lastWeekCount > 0) {
+        const delta = document.createElement('span');
+        delta.className = 'grade-trend-delta';
+        delta.textContent = ` (${weekTrend.delta >= 0 ? '+' : ''}${weekTrend.delta} vs last week)`;
+        weekVal.appendChild(delta);
+      }
+      weekRow.appendChild(weekLabel);
+      weekRow.appendChild(weekVal);
+      trendSection.appendChild(weekRow);
+      
+      // Score trend (only if enough data)
+      if (gradedSubmissions.length >= 2) {
+        const scoreRow = document.createElement('div');
+        scoreRow.className = 'grade-trend-row';
+        const scoreLabel = document.createElement('span');
+        scoreLabel.className = 'grade-trend-label';
+        scoreLabel.textContent = 'Score trend:';
+        const scoreText = { up: '↗ Improving', down: '↘ Declining', flat: '→ Steady' };
+        const scoreVal = document.createElement('span');
+        scoreVal.className = `grade-trend-value grade-trend-${scoreTrend.direction}`;
+        scoreVal.textContent = scoreText[scoreTrend.direction] || '→ Steady';
+        scoreRow.appendChild(scoreLabel);
+        scoreRow.appendChild(scoreVal);
+        trendSection.appendChild(scoreRow);
+      }
+      
+      // Streak (only if ≥ 2)
+      if (streakData.streak >= 2) {
+        const streakRow = document.createElement('div');
+        streakRow.className = 'grade-trend-row';
+        const streakLabel = document.createElement('span');
+        streakLabel.className = 'grade-trend-label';
+        streakLabel.textContent = 'Streak:';
+        const streakVal = document.createElement('span');
+        streakVal.className = 'grade-trend-value grade-trend-streak';
+        streakVal.textContent = `🔥 ${streakData.streak}-assignment streak above ${streakData.threshold}%`;
+        streakRow.appendChild(streakLabel);
+        streakRow.appendChild(streakVal);
+        trendSection.appendChild(streakRow);
+      }
+      
+      // Insert after quarterly averages (or class averages if quarterly disabled)
+      const insertAfter = qs('[class*="grade-stat"]:last-of-type') || qs('#classAverages');
+      if (insertAfter && insertAfter.parentNode) {
+        insertAfter.parentNode.insertBefore(trendSection, insertAfter.nextSibling);
       }
     }
     
     // Graded Assignments List
     if (gradedSubmissions.length > 0) {
-      const assignmentMap = new Map(assignments.map(a => [a.id, a]));
-      const instanceMap = new Map(myInstances.map(i => [i.id, i]));
+      // Build table section using safe DOM construction
+      const tableSection = document.createElement('div');
+      tableSection.className = 'grade-stat';
+      tableSection.style.borderBottom = 'none';
+      tableSection.style.paddingTop = '20px';
       
-      let tableHtml = `
-        <div class="grade-stat" style="border-bottom:none; padding-top:20px;">
-          <div class="grade-stat-label" style="margin-bottom:12px;">Graded Assignments</div>
-          
-          <!-- Quarter Filter -->
-          <div class="quarter-filter">
-            <label for="gradeQuarterFilter">Filter by Quarter</label>
-            <select id="gradeQuarterFilter" class="btn small" style="width:auto; padding:6px 10px;">
-              <option value="">All Quarters</option>
-              <option value="1">Q1 (Jan-Mar)</option>
-              <option value="2">Q2 (Apr-Jun)</option>
-              <option value="3">Q3 (Jul-Sep)</option>
-              <option value="4">Q4 (Oct-Dec)</option>
-            </select>
-          </div>
-          
-          <table class="graded-assignments-table" id="gradedAssignmentsTable">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Class</th>
-                <th>Assignment</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody id="gradedAssignmentsBody">
-            </tbody>
-          </table>
-        </div>
-      `;
+      const sectionLabel = document.createElement('div');
+      sectionLabel.className = 'grade-stat-label';
+      sectionLabel.style.marginBottom = '12px';
+      sectionLabel.textContent = 'Graded Assignments';
+      tableSection.appendChild(sectionLabel);
       
-      const classAveragesEl = qs('#classAverages');
-      if (classAveragesEl && classAveragesEl.parentNode) {
-        classAveragesEl.parentNode.insertAdjacentHTML('beforeend', tableHtml);
+      // Quarter Filter (school-year labels)
+      const filterDiv = document.createElement('div');
+      filterDiv.className = 'quarter-filter';
+      const filterLabel = document.createElement('label');
+      filterLabel.htmlFor = 'gradeQuarterFilter';
+      filterLabel.textContent = 'Filter by Quarter';
+      const filterSelect = document.createElement('select');
+      filterSelect.id = 'gradeQuarterFilter';
+      filterSelect.className = 'btn small';
+      filterSelect.style.cssText = 'width:auto; padding:6px 10px;';
+      
+      const quarterOptions = [
+        { value: '', text: 'All Quarters' },
+        { value: '1', text: 'Q1 (Aug 16\u2013Oct 17)' },
+        { value: '2', text: 'Q2 (Oct 18\u2013Dec 19)' },
+        { value: '3', text: 'Q3 (Dec 20\u2013Mar 6)' },
+        { value: '4', text: 'Q4 (Mar 7\u2013May 20)' },
+      ];
+      for (const opt of quarterOptions) {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        filterSelect.appendChild(option);
+      }
+      filterDiv.appendChild(filterLabel);
+      filterDiv.appendChild(filterSelect);
+      tableSection.appendChild(filterDiv);
+      
+      // Table
+      const table = document.createElement('table');
+      table.className = 'graded-assignments-table';
+      table.id = 'gradedAssignmentsTable';
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      for (const col of ['Date', 'Quarter', 'Class', 'Assignment', 'Score']) {
+        const th = document.createElement('th');
+        th.textContent = col;
+        headerRow.appendChild(th);
+      }
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      tbody.id = 'gradedAssignmentsBody';
+      table.appendChild(tbody);
+      tableSection.appendChild(table);
+      
+      const parentEl = qs('#classAverages');
+      if (parentEl && parentEl.parentNode) {
+        parentEl.parentNode.appendChild(tableSection);
         
         // Render table rows
         renderGradedAssignmentsTable(gradedSubmissions, instanceMap, assignmentMap, helpers);
         
         // Setup quarter filter
-        const filterSelect = qs('#gradeQuarterFilter');
-        if (filterSelect) {
-          filterSelect.addEventListener('change', () => {
-            const quarter = filterSelect.value ? parseInt(filterSelect.value) : null;
-            const filtered = quarter ? 
-              helpers.filterSubmissionsByQuarter(gradedSubmissions, quarter) : 
-              gradedSubmissions;
-            renderGradedAssignmentsTable(filtered, instanceMap, assignmentMap, helpers);
-          });
-        }
+        filterSelect.addEventListener('change', () => {
+          const quarter = filterSelect.value ? parseInt(filterSelect.value, 10) : null;
+          const filtered = quarter
+            ? helpers.filterSubmissionsByQuarter(gradedSubmissions, quarter)
+            : gradedSubmissions;
+          renderGradedAssignmentsTable(filtered, instanceMap, assignmentMap, helpers);
+        });
       }
     }
     
     // Export buttons (if feature enabled)
     if (feature.portalQuarterlyExport !== false) {
-      // Show export buttons
       const btnExportCSV = qs('#btnExportGradesCSV');
       const btnExportPDF = qs('#btnExportGradesPDF');
       
@@ -356,7 +482,7 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
 }
 
 /**
- * Render graded assignments table
+ * Render graded assignments table using safe DOM construction (no innerHTML with user data)
  */
 function renderGradedAssignmentsTable(submissions, instanceMap, assignmentMap, helpers) {
   const tbody = document.querySelector('#gradedAssignmentsBody');
@@ -367,29 +493,63 @@ function renderGradedAssignmentsTable(submissions, instanceMap, assignmentMap, h
     new Date(b.submitted_at) - new Date(a.submitted_at)
   );
   
-  let html = '';
+  tbody.innerHTML = '';
+  
+  if (sorted.length === 0) {
+    const emptyRow = document.createElement('tr');
+    const emptyCell = document.createElement('td');
+    emptyCell.colSpan = 5;
+    emptyCell.style.cssText = 'text-align:center; color:var(--muted);';
+    emptyCell.textContent = 'No graded assignments';
+    emptyRow.appendChild(emptyCell);
+    tbody.appendChild(emptyRow);
+    return;
+  }
+  
   for (const submission of sorted) {
     const instance = instanceMap.get(submission.instance_id);
     if (!instance) continue;
     
     const assignment = assignmentMap.get(instance.assignment_id);
-    const date = submission.submitted_at ? 
-      helpers.formatDateTime(submission.submitted_at, 'date') : '—';
+    const dateStr = submission.submitted_at
+      ? helpers.formatDateTime(submission.submitted_at, 'date')
+      : '—';
     const className = assignment?.meta?.class_name || assignment?.class_id || 'N/A';
     const title = assignment?.title || 'Unknown';
-    const score = submission.score_total != null ? `${submission.score_total}%` : '—';
+    const scoreNum = submission.score_total != null ? Math.round(submission.score_total) : null;
+    const quarterNum = helpers.getQuarter ? helpers.getQuarter(submission.submitted_at) : null;
+    const quarterStr = quarterNum ? `Q${quarterNum}` : '—';
     
-    html += `
-      <tr data-instance-id="${instance.id}" style="cursor:pointer;">
-        <td>${date}</td>
-        <td>${className}</td>
-        <td><a href="#assignment/${instance.id}" class="assignment-link">${title}</a></td>
-        <td>${score}</td>
-      </tr>
-    `;
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-instance-id', instance.id);
+    tr.style.cursor = 'pointer';
+    
+    const tdDate = document.createElement('td');
+    tdDate.textContent = dateStr;
+    
+    const tdQuarter = document.createElement('td');
+    tdQuarter.textContent = quarterStr;
+    
+    const tdClass = document.createElement('td');
+    tdClass.textContent = className;
+    
+    const tdTitle = document.createElement('td');
+    const link = document.createElement('a');
+    link.href = `#assignment/${instance.id}`;
+    link.className = 'assignment-link';
+    link.textContent = title;
+    tdTitle.appendChild(link);
+    
+    const tdScore = document.createElement('td');
+    tdScore.textContent = scoreNum !== null ? `${scoreNum}%` : '—';
+    
+    tr.appendChild(tdDate);
+    tr.appendChild(tdQuarter);
+    tr.appendChild(tdClass);
+    tr.appendChild(tdTitle);
+    tr.appendChild(tdScore);
+    tbody.appendChild(tr);
   }
-  
-  tbody.innerHTML = html || '<tr><td colspan="4" style="text-align:center; color:var(--muted);">No graded assignments</td></tr>';
 }
 
 /**
