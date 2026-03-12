@@ -165,25 +165,16 @@ test('returns 400 for invalid JSON body', async () => {
 
 test('returns 400 when title is missing', async () => {
   const res = await handler(makeEvent({
-    body: JSON.stringify({ student_code: 'S001', file_data: TINY_PNG_BASE64, file_name: 'f.png', file_type: 'image/png' }),
+    body: JSON.stringify({ file_data: TINY_PNG_BASE64, file_name: 'f.png', file_type: 'image/png' }),
   }));
   assert.strictEqual(res.statusCode, 400);
   const body = JSON.parse(res.body);
   assert.ok(body.error.includes('title'));
 });
 
-test('returns 400 when student_code is missing', async () => {
-  const res = await handler(makeEvent({
-    body: JSON.stringify({ title: 'T', file_data: TINY_PNG_BASE64, file_name: 'f.png', file_type: 'image/png' }),
-  }));
-  assert.strictEqual(res.statusCode, 400);
-  const body = JSON.parse(res.body);
-  assert.ok(body.error.includes('student_code'));
-});
-
 test('returns 400 when file_data is missing', async () => {
   const res = await handler(makeEvent({
-    body: JSON.stringify({ title: 'T', student_code: 'S001', file_name: 'f.png', file_type: 'image/png' }),
+    body: JSON.stringify({ title: 'T', file_name: 'f.png', file_type: 'image/png' }),
   }));
   assert.strictEqual(res.statusCode, 400);
   const body = JSON.parse(res.body);
@@ -192,7 +183,7 @@ test('returns 400 when file_data is missing', async () => {
 
 test('returns 400 when file_name is missing', async () => {
   const res = await handler(makeEvent({
-    body: JSON.stringify({ title: 'T', student_code: 'S001', file_data: TINY_PNG_BASE64, file_type: 'image/png' }),
+    body: JSON.stringify({ title: 'T', file_data: TINY_PNG_BASE64, file_type: 'image/png' }),
   }));
   assert.strictEqual(res.statusCode, 400);
   const body = JSON.parse(res.body);
@@ -201,19 +192,73 @@ test('returns 400 when file_name is missing', async () => {
 
 test('returns 400 when file_type is missing', async () => {
   const res = await handler(makeEvent({
-    body: JSON.stringify({ title: 'T', student_code: 'S001', file_data: TINY_PNG_BASE64, file_name: 'f.png' }),
+    body: JSON.stringify({ title: 'T', file_data: TINY_PNG_BASE64, file_name: 'f.png' }),
   }));
   assert.strictEqual(res.statusCode, 400);
   const body = JSON.parse(res.body);
   assert.ok(body.error.includes('file_type'));
 });
 
-test('returns 404 when student is not found', async () => {
-  fetchResponses = [makeJsonFetch(200, [])];
-  const res = await handler(makeEvent());
-  assert.strictEqual(res.statusCode, 404);
+test('returns 400 for disallowed MIME type (text/html)', async () => {
+  const res = await handler(makeEvent({
+    body: JSON.stringify({ title: 'T', file_data: TINY_PNG_BASE64, file_name: 'f.html', file_type: 'text/html' }),
+  }));
+  assert.strictEqual(res.statusCode, 400);
   const body = JSON.parse(res.body);
-  assert.ok(body.error.includes('Student not found'));
+  assert.ok(body.error.includes('Unsupported file type'));
+});
+
+test('returns 400 for disallowed MIME type (application/javascript)', async () => {
+  const res = await handler(makeEvent({
+    body: JSON.stringify({ title: 'T', file_data: TINY_PNG_BASE64, file_name: 'f.js', file_type: 'application/javascript' }),
+  }));
+  assert.strictEqual(res.statusCode, 400);
+  const body = JSON.parse(res.body);
+  assert.ok(body.error.includes('Unsupported file type'));
+});
+
+test('returns 400 when score exceeds score_total', async () => {
+  const res = await handler(makeEvent({
+    body: JSON.stringify({ title: 'T', file_data: TINY_PNG_BASE64, file_name: 'f.png', file_type: 'image/png', score: 25, score_total: 20 }),
+  }));
+  assert.strictEqual(res.statusCode, 400);
+  const body = JSON.parse(res.body);
+  assert.ok(body.error.includes('score cannot exceed score_total'));
+});
+
+test('succeeds without student_code (no instance created)', async () => {
+  const assignmentId = 'asg-no-student';
+  const publicUrl = `https://test.supabase.co/storage/v1/object/public/assignment-archives/archives/${assignmentId}/test.png`;
+  fetchResponses = [
+    // No student lookup since student_code is omitted
+    makeJsonFetch(200, [{ id: assignmentId, title: 'No Student Paper' }]),
+    async (_url) => ({ ok: true, status: 200, text: async () => JSON.stringify({ Key: 'ok' }) }),
+    makeJsonFetch(200, [{ id: assignmentId, title: 'No Student Paper', page: publicUrl }]),
+  ];
+  const res = await handler(makeEvent({
+    body: JSON.stringify({ title: 'No Student Paper', file_data: TINY_PNG_BASE64, file_name: 'test.png', file_type: 'image/png' }),
+  }));
+  assert.strictEqual(res.statusCode, 200);
+  const body = JSON.parse(res.body);
+  assert.strictEqual(body.ok, true);
+  assert.ok(body.assignment);
+  assert.strictEqual(body.instance, null);
+});
+
+test('proceeds without student link when student code is not found', async () => {
+  const assignmentId = 'asg-unknown-stu';
+  const publicUrl = `https://test.supabase.co/storage/v1/object/public/assignment-archives/archives/${assignmentId}/test.png`;
+  fetchResponses = [
+    makeJsonFetch(200, []),  // Student not found — empty array
+    makeJsonFetch(200, [{ id: assignmentId, title: 'Test Paper' }]),
+    async (_url) => ({ ok: true, status: 200, text: async () => JSON.stringify({ Key: 'ok' }) }),
+    makeJsonFetch(200, [{ id: assignmentId, title: 'Test Paper', page: publicUrl }]),
+  ];
+  const res = await handler(makeEvent());
+  assert.strictEqual(res.statusCode, 200);
+  const body = JSON.parse(res.body);
+  assert.strictEqual(body.ok, true);
+  assert.strictEqual(body.instance, null);
 });
 
 test('returns 500 when assignment insert fails', async () => {
@@ -233,6 +278,8 @@ test('returns 500 when storage upload fails', async () => {
     makeJsonFetch(200, [{ id: 'asg-1', title: 'Test Paper' }]),
     // storage POST (raw fetch — must return object with ok, status, text)
     async (_url) => ({ ok: false, status: 400, text: async () => JSON.stringify({ error: 'bucket not found' }) }),
+    // cleanup DELETE for the assignment record
+    makeJsonFetch(200, []),
   ];
   const res = await handler(makeEvent());
   assert.strictEqual(res.statusCode, 500);
