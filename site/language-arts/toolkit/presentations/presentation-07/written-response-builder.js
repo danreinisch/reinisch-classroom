@@ -267,23 +267,29 @@ async function fallbackCopy(text) {
   textArea.style.left = '-999999px';
   textArea.style.top = '-999999px';
   document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
   
   try {
-    document.execCommand('copy');
-    const btn = document.querySelector('.btn-success');
-    const originalText = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    announceStatus('Response copied to clipboard');
-    setTimeout(() => {
-      btn.textContent = originalText;
-    }, 2000);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand('copy');
+    if (successful) {
+      const btn = document.querySelector('.btn-success');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        announceStatus('Response copied to clipboard');
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+    } else {
+      await rcAlert('Copy Failed', 'Failed to copy. Please select and copy the text manually.');
+    }
   } catch (err) {
     await rcAlert('Copy Failed', 'Failed to copy. Please select and copy the text manually.');
+  } finally {
+    document.body.removeChild(textArea);
   }
-  
-  document.body.removeChild(textArea);
 }
 
 // Initialize when DOM is loaded
