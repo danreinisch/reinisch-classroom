@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Essay Builder</title>
+</head>
+<body>
+    <div class="save-ind" id="saveInd">Saved</div>
+    <div class="toast-el" id="toastEl"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Essay Builder</h1>
+            <p>Build a well-structured essay with guided feedback on every sentence</p>
+        </div>
+
+        <div class="setup-panel" id="setupPanel">
+            <h2>Configure Your Essay</h2>
+            <div class="setup-row">
+                <div class="setup-group">
+                    <label for="essayType">Essay Type</label>
+                    <select id="essayType">
+                        <option value="argumentative">Argumentative / Persuasive</option>
+                        <option value="informational">Informational / Expository</option>
+                        <option value="narrative">Narrative</option>
+                        <option value="compare">Compare &amp; Contrast</option>
+                        <option value="literary">Literary Analysis</option>
+                    </select>
+                </div>
+                <div class="setup-group">
+                    <label for="paraCount">Essay Length</label>
+                    <select id="paraCount">
+                        <option value="3">Short Response (3 paragraphs)</option>
+                        <option value="4">Standard (4 paragraphs)</option>
+                        <option value="5" selected>Standard Essay (5 paragraphs)</option>
+                        <option value="6">Extended Essay (6 paragraphs)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="counter-toggle" id="counterToggle">
+                <input type="checkbox" id="includeCounter">
+                <label for="includeCounter">Include a counterargument paragraph</label>
+            </div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-label">Essay Progress</span>
+                <div class="progress-stats">
+                    <span class="progress-stat" id="totalWords">0 words</span>
+                    <span class="progress-stat" id="totalSentences">0 sentences</span>
+                    <span class="progress-stat" id="sectionsDone">0 / 5 paragraphs</span>
+                </div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="prompt-section">
+            <span class="prompt-optional-badge">OPTIONAL</span>
+            <h2>Essay Prompt / Topic</h2>
+            <textarea class="prompt-input" id="promptInput" placeholder="Paste your essay prompt or topic here (optional)..."></textarea>
+        </div>
+
+        <div id="essaySections"></div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" id="btnClear">Clear All</button>
+            <button class="btn btn-primary" id="btnPreview">Preview Essay</button>
+            <button class="btn btn-success" id="btnCopy">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-content">
+            <h2>Your Complete Essay</h2>
+            <div class="preview-text" id="previewText"></div>
+            <div class="preview-meta" id="previewMeta"></div>
+            <div style="text-align:center;margin-top:24px;">
+                <button class="btn btn-secondary" id="btnClosePreview">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        "use strict";
+
+        /* ---- inject all CSS via JS ---- */
+        var css = [
+            "* { margin:0; padding:0; box-sizing:border-box; }",
+            "html, body { background:transparent !important; border:none !important; outline:none !important; }",
+            "body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif; min-height:100vh; padding:24px; color:#e6edf3; background:#131a21 !important; }",
+            ".container { max-width:1100px; margin:0 auto; }",
+
+            ".header { text-align:center; margin-bottom:22px; padding:28px 24px; background:linear-gradient(135deg,rgba(20,184,166,0.08) 0%,rgba(20,184,166,0.02) 100%); border:1px solid rgba(20,184,166,0.18); border-radius:14px; }",
+            ".header h1 { font-size:1.9rem; font-weight:700; color:#14b8a6; margin-bottom:6px; }",
+            ".header p { font-size:0.95rem; color:#8b9bae; }",
+
+            ".setup-panel { background:#1a2332; border:1px solid rgba(20,184,166,0.12); border-radius:10px; padding:22px; margin-bottom:22px; }",
+            ".setup-panel h2 { color:#e6edf3; font-size:1.05rem; font-weight:600; margin-bottom:14px; }",
+            ".setup-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; }",
+            ".setup-group { flex:1; min-width:200px; }",
+            ".setup-group label { display:block; font-size:0.82rem; font-weight:500; color:#8b9bae; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em; }",
+            ".setup-group select { width:100%; padding:10px 12px; border:1px solid rgba(20,184,166,0.15); border-radius:7px; font-size:0.9rem; font-family:inherit; background:#0f1820; color:#e6edf3; cursor:pointer; }",
+            ".setup-group select:focus { outline:none; border-color:#14b8a6; box-shadow:0 0 0 2px rgba(20,184,166,0.15); }",
+
+            ".counter-toggle { display:none; margin-top:10px; padding:10px 14px; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.2); border-radius:7px; }",
+            ".counter-toggle.visible { display:flex; align-items:center; gap:8px; }",
+            ".counter-toggle label { color:#a855f7; font-size:0.88rem; font-weight:500; cursor:pointer; text-transform:none; letter-spacing:0; margin-bottom:0; }",
+            ".counter-toggle input[type='checkbox'] { width:16px; height:16px; accent-color:#a855f7; cursor:pointer; }",
+
+            ".type-badge { display:inline-block; padding:3px 10px; border-radius:5px; font-size:0.7rem; font-weight:700; font-family:monospace; letter-spacing:0.05em; text-transform:uppercase; margin-left:6px; vertical-align:middle; }",
+            ".type-badge.argumentative { background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.2); }",
+            ".type-badge.informational { background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.2); }",
+            ".type-badge.narrative { background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.2); }",
+            ".type-badge.compare { background:rgba(249,115,22,0.12); color:#f97316; border:1px solid rgba(249,115,22,0.2); }",
+            ".type-badge.literary { background:rgba(168,85,247,0.12); color:#a855f7; border:1px solid rgba(168,85,247,0.2); }",
+
+            ".progress-container { margin:0 0 22px; padding:14px 18px; background:#1a2332; border:1px solid rgba(20,184,166,0.15); border-radius:10px; }",
+            ".progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px; }",
+            ".progress-label { font-size:0.82em; font-weight:600; color:#8b9bae; text-transform:uppercase; letter-spacing:0.05em; }",
+            ".progress-stats { display:flex; gap:10px; flex-wrap:wrap; }",
+            ".progress-stat { font-size:0.78em; color:#14b8a6; font-family:monospace; background:rgba(20,184,166,0.1); padding:3px 10px; border-radius:5px; border:1px solid rgba(20,184,166,0.2); }",
+            ".progress-track { width:100%; height:6px; background:#0f1820; border-radius:3px; overflow:hidden; }",
+            ".progress-fill { height:100%; background:linear-gradient(90deg,#14b8a6,#2dd4bf); border-radius:3px; width:0%; transition:width 0.5s ease; }",
+
+            ".prompt-section { background:linear-gradient(135deg,rgba(251,191,36,0.06) 0%,rgba(245,158,11,0.02) 100%); border:2px dashed rgba(251,191,36,0.3); padding:22px; border-radius:10px; margin-bottom:22px; position:relative; }",
+            ".prompt-optional-badge { position:absolute; top:-10px; right:18px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#0d1117; padding:3px 12px; border-radius:5px; font-size:0.68rem; font-weight:700; letter-spacing:0.5px; }",
+            ".prompt-section h2 { color:#fbbf24; margin-bottom:12px; font-size:1.05rem; font-weight:600; }",
+            ".prompt-input { width:100%; padding:12px 14px; border:1px solid rgba(251,191,36,0.25); border-radius:7px; font-size:0.9rem; font-family:inherit; resize:vertical; min-height:60px; background:#0f1820; color:#e6edf3; }",
+            ".prompt-input:focus { outline:none; border-color:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,0.12); }",
+            ".prompt-input::placeholder { color:rgba(251,191,36,0.4); }",
+
+            ".paragraph-section { background:#1a2332; border:1px solid rgba(20,184,166,0.12); padding:22px; border-radius:10px; margin-bottom:16px; transition:border-color 0.2s; }",
+            ".paragraph-section:hover { border-color:rgba(20,184,166,0.35); }",
+
+            ".section-header { display:flex; align-items:center; margin-bottom:16px; gap:10px; flex-wrap:wrap; }",
+            ".section-status { width:20px; height:20px; border-radius:50%; border:2px solid #2a3a4a; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.3s; flex-shrink:0; }",
+            ".section-status.complete { background:#22c55e; border-color:#22c55e; color:#fff; }",
+            ".section-title { color:#0d1117; padding:8px 16px; border-radius:7px; font-weight:600; font-size:0.82rem; text-transform:uppercase; letter-spacing:0.5px; }",
+            ".section-title.intro-title { background:linear-gradient(135deg,#14b8a6,#0d9488); }",
+            ".section-title.body-title { background:linear-gradient(135deg,#3b82f6,#2563eb); }",
+            ".section-title.body2-title { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }",
+            ".section-title.body3-title { background:linear-gradient(135deg,#f97316,#ea580c); }",
+            ".section-title.body4-title { background:linear-gradient(135deg,#ec4899,#db2777); }",
+            ".section-title.counter-title { background:linear-gradient(135deg,#a855f7,#9333ea); }",
+            ".section-title.concl-title { background:linear-gradient(135deg,#ef4444,#dc2626); }",
+
+            ".word-count { background:#0f1820; padding:6px 12px; border-radius:5px; font-size:0.78rem; font-family:monospace; color:#14b8a6; border:1px solid rgba(20,184,166,0.12); margin-left:auto; }",
+
+            ".subsection { margin-bottom:16px; }",
+            ".subsection:last-of-type { margin-bottom:12px; }",
+            ".subsection-label { color:#e6edf3; font-weight:500; margin-bottom:6px; font-size:0.88rem; }",
+
+            ".content-textarea { width:100%; padding:12px 14px; border:1px solid rgba(20,184,166,0.15); border-radius:7px; min-height:70px; font-size:0.9rem; font-family:inherit; resize:vertical; line-height:1.6; background:#0f1820; color:#e6edf3; }",
+            ".content-textarea:focus { outline:none; border-color:#14b8a6; box-shadow:0 0 0 2px rgba(20,184,166,0.15); }",
+            ".content-textarea::placeholder { color:#4a5568; }",
+            ".content-textarea.short { min-height:55px; }",
+
+            ".transition-dropdown { margin-bottom:8px; }",
+            ".transition-dropdown select { width:100%; max-width:280px; padding:9px 12px; border:1px solid rgba(20,184,166,0.15); border-radius:7px; font-size:0.88rem; font-family:inherit; background:#0f1820; color:#e6edf3; cursor:pointer; }",
+            ".transition-dropdown select:focus { outline:none; border-color:#14b8a6; box-shadow:0 0 0 2px rgba(20,184,166,0.15); }",
+            ".transition-selected { margin-top:4px; font-size:0.78em; color:#14b8a6; font-style:italic; min-height:1.1em; }",
+
+            ".tips { margin-top:14px; padding:10px 14px; background:rgba(20,184,166,0.06); border-radius:7px; border-left:3px solid rgba(20,184,166,0.25); font-size:0.83rem; color:#8b9bae; line-height:1.5; }",
+            ".tips strong { color:#14b8a6; }",
+
+            ".feedback { margin-top:6px; }",
+            ".fb-item { display:flex; align-items:flex-start; gap:8px; padding:7px 11px; border-radius:5px; font-size:0.82em; line-height:1.4; margin-bottom:3px; }",
+            ".fb-item.s { background:rgba(34,197,94,0.1); border-left:3px solid #22c55e; color:#4ade80; }",
+            ".fb-item.w { background:rgba(250,204,21,0.1); border-left:3px solid #facc15; color:#fde047; }",
+            ".fb-item.e { background:rgba(239,68,68,0.1); border-left:3px solid #ef4444; color:#fca5a5; }",
+            ".fb-icon { flex-shrink:0; }",
+
+            ".actions { display:flex; gap:10px; justify-content:center; margin-top:8px; padding:20px; background:#1a2332; border-radius:10px; border:1px solid rgba(20,184,166,0.12); flex-wrap:wrap; }",
+            ".btn { padding:10px 24px; border:none; border-radius:7px; font-size:0.88rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }",
+            ".btn:hover { transform:translateY(-1px); }",
+            ".btn:active { transform:translateY(0); }",
+            ".btn-primary { background:#14b8a6; color:#0d1117; }",
+            ".btn-primary:hover { background:#2dd4bf; box-shadow:0 4px 12px rgba(20,184,166,0.25); }",
+            ".btn-secondary { background:rgba(139,155,174,0.1); color:#e6edf3; border:1px solid rgba(20,184,166,0.15); }",
+            ".btn-secondary:hover { background:rgba(139,155,174,0.2); }",
+            ".btn-success { background:#238636; color:#fff; }",
+            ".btn-success:hover { background:#2ea043; box-shadow:0 4px 12px rgba(35,134,54,0.25); }",
+
+            ".toast-el { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(70px); background:linear-gradient(135deg,#14b8a6,#0d9488); color:#fff; padding:12px 24px; border-radius:8px; font-family:inherit; font-weight:600; font-size:0.9em; box-shadow:0 6px 24px rgba(20,184,166,0.3); z-index:2000; opacity:0; transition:all 0.35s ease; pointer-events:none; }",
+            ".toast-el.vis { opacity:1; transform:translateX(-50%) translateY(0); }",
+            ".toast-el.err { background:linear-gradient(135deg,#ef4444,#dc2626); box-shadow:0 6px 24px rgba(239,68,68,0.3); }",
+
+            ".save-ind { position:fixed; top:12px; right:12px; font-size:0.75em; color:#4a5568; font-family:monospace; padding:5px 10px; background:#1a2332; border:1px solid rgba(20,184,166,0.12); border-radius:5px; opacity:0; transition:opacity 0.3s; z-index:100; }",
+            ".save-ind.vis { opacity:1; }",
+
+            ".preview-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:1000; }",
+            ".preview-content { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a2332; padding:28px; border-radius:14px; max-width:800px; width:90%; max-height:85%; overflow-y:auto; border:1px solid rgba(20,184,166,0.2); box-shadow:0 20px 50px rgba(0,0,0,0.5); }",
+            ".preview-content h2 { color:#14b8a6; margin-bottom:20px; font-size:1.3rem; font-weight:600; }",
+            ".preview-text { line-height:1.9; font-size:0.95rem; color:#c9d1d9; }",
+            ".preview-text p { margin-bottom:16px; text-indent:2em; }",
+            ".preview-text p.pl { text-indent:0; font-weight:600; color:#14b8a6; font-style:italic; margin-bottom:18px; }",
+            ".preview-meta { margin-top:18px; padding-top:14px; border-top:1px solid rgba(20,184,166,0.15); display:flex; gap:10px; flex-wrap:wrap; }",
+            ".preview-meta span { font-family:monospace; font-size:0.75em; color:#8b9bae; background:rgba(20,184,166,0.06); padding:5px 10px; border-radius:5px; border:1px solid rgba(20,184,166,0.12); }",
+
+            "@media (max-width:640px) { body { padding:12px; } .header { padding:20px 14px; } .header h1 { font-size:1.4rem; } .paragraph-section { padding:16px; } .prompt-section { padding:16px; } .setup-row { flex-direction:column; } .setup-group { min-width:100%; } }"
+        ].join("\n");
+
+        var styleEl=document.createElement("style");
+        styleEl.type="text/css";
+        if(styleEl.styleSheet){styleEl.styleSheet.cssText=css;}
+        else{styleEl.appendChild(document.createTextNode(css));}
+        document.head.appendChild(styleEl);
+
+        /* ---- utilities ---- */
+        function cw(t){t=(t||"").replace(/^\s+|\s+$/g,"");return t===""?0:t.split(/\s+/).length;}
+        function csen(t){t=(t||"").replace(/^\s+|\s+$/g,"");if(!t)return 0;var m=t.match(/[.!?]+/g);return m?m.length:0;}
+        function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML;}
+        function $(id){return document.getElementById(id);}
+        var _dt={};
+        function debounce(key,fn,ms){return function(){var a=arguments,c=this;clearTimeout(_dt[key]);_dt[key]=setTimeout(function(){fn.apply(c,a);},ms);};}
+        function toast(m,e){var el=$("toastEl");el.textContent=m;el.className="toast-el vis"+(e?" err":"");setTimeout(function(){el.className="toast-el";},2800);}
+        function fbi(cls,icon,msg){return '<div class="fb-item '+cls+'"><span class="fb-icon">'+icon+"</span><span>"+msg+"</span></div>";}
+
+        /* ---- type defs ---- */
+        var TYPES={
+            argumentative:{label:"Argumentative",bodyLabel:function(n){return "Argument "+n;},hookTip:"Start with a bold claim, provocative question, or surprising statistic.",hookRe:/(imagine|what if|did you know|have you ever|should|must|why do|how can|is it|consider)/i,thesisTip:"State your clear position and preview your main arguments.",thesisGood:/(should|must|because|demonstrates|proves|needs to|it is essential|clearly)/i,thesisWarn:"Take a clear stance.",topicGood:/(should|must|because|since|therefore|demonstrates|proves|shows|reveals|important|significant|essential)/i,eviGood:/(for example|for instance|according to|research shows|studies indicate|evidence suggests|specifically|such as)/i,eviWarn:"Use evidence markers.",concTip:"Restate your position and include a call to action.",concGood:/(must|should|it is essential|we need to|action|change|future|responsibility)/i,trans:{first:["First, ","To begin with, ","One reason is that ","The first argument is that "],middle:["Additionally, ","Furthermore, ","Moreover, ","Another reason is that ","In addition, "],last:["Most importantly, ","Finally, ","The strongest argument is that ","Above all, "],conclusion:["In conclusion, ","Therefore, ","Ultimately, ","As demonstrated, ","For these reasons, "]},warnRe:null,warnMsg:"",counterOk:true},
+            informational:{label:"Informational",bodyLabel:function(n){return "Key Point "+n;},hookTip:"Start with an interesting fact or definition.",hookRe:/(did you know|according to|studies show|defined as|in recent years|throughout history|what is|how does)/i,thesisTip:"State your topic clearly without opinion.",thesisGood:/(explains|explores|examines|discusses|covers|focuses on|describes|outlines|addresses)/i,thesisWarn:"Use neutral language.",topicGood:/(explains|shows|describes|indicates|demonstrates|illustrates|reveals|highlights)/i,eviGood:/(for example|for instance|according to|research shows|data indicates|studies show|statistics|in fact|specifically)/i,eviWarn:"Include factual evidence.",concTip:"Summarize key facts without personal opinion.",concGood:/(overall|in summary|these facts|the evidence shows|as discussed|understanding)/i,trans:{first:["First, ","To begin, ","One key point is ","The first aspect is "],middle:["Additionally, ","Furthermore, ","Another important point is ","In addition, ","Also, "],last:["Finally, ","Lastly, ","The last key point is ","Most notably, "],conclusion:["In summary, ","To summarize, ","Overall, ","In conclusion, ","As shown, "]},warnRe:/\b(i think|i believe|i feel|in my opinion|personally)\b/i,warnMsg:"Informational essays should be neutral \u2014 remove personal opinions.",counterOk:false},
+            narrative:{label:"Narrative",bodyLabel:function(n){var l=["Beginning","Middle","Climax","Resolution"];return l[n-1]||"Event "+n;},hookTip:"Set the scene with vivid description or action.",hookRe:/(suddenly|i remember|it was|the moment|one day|there was|i could|looking back|when i|as the)/i,thesisTip:"Hint at the theme or lesson.",thesisGood:/(learned|realized|understood|changed|discovered|never forget|that day|moment|experience)/i,thesisWarn:"Hint at the significance.",topicGood:/(felt|saw|heard|remember|noticed|heart|eyes|voice|sound|smell|touch|cold|warm|bright)/i,eviGood:/(i felt|i saw|i heard|i could|looking|suddenly|the sound|the smell|my heart|i remember|said|whispered|shouted)/i,eviWarn:"Use sensory details and dialogue.",concTip:"Reflect on what you learned.",concGood:/(learned|realized|understood|changed|grew|never forget|looking back|from that day|this experience)/i,trans:{first:["It all began when ","I remember when ","The story starts with ","On that day, "],middle:["Then, ","Next, ","After that, ","Meanwhile, ","Suddenly, ","Before long, "],last:["In the end, ","At last, ","Finally, ","Eventually, "],conclusion:["Looking back, ","Reflecting on this, ","From that moment, ","That experience taught me ","Now I understand that "]},warnRe:null,warnMsg:"",counterOk:false},
+            compare:{label:"Compare & Contrast",bodyLabel:function(n){var l=["Similarity","Difference","Key Distinction","Final Comparison"];return l[n-1]||"Point "+n;},hookTip:"Start with a surprising similarity or difference.",hookRe:/(while|although|both|unlike|similar|different|on one hand|at first glance|compared to|seem)/i,thesisTip:"Name both subjects and state your comparison.",thesisGood:/(while|although|both|however|similar|different|compared|in contrast|share|differ)/i,thesisWarn:"Mention both subjects with comparison language.",topicGood:/(similarly|in contrast|on the other hand|both|unlike|however|whereas|while|compared to|differ|share)/i,eviGood:/(for example|for instance|such as|specifically|one difference|one similarity|this shows|compared to)/i,eviWarn:"Discuss both subjects.",concTip:"Make a final judgment or synthesize.",concGood:/(ultimately|overall|both|the key difference|the main similarity|in the end|when comparing)/i,trans:{first:["First, ","One similarity is ","To begin with, ","Both share "],middle:["In contrast, ","On the other hand, ","Similarly, ","However, ","Unlike ","Whereas "],last:["Most importantly, ","The biggest difference is ","Finally, ","Above all, "],conclusion:["Ultimately, ","When comparing, ","In the end, ","Overall, ","All things considered, "]},warnRe:null,warnMsg:"",counterOk:false},
+            literary:{label:"Literary Analysis",bodyLabel:function(n){return "Analysis Point "+n;},hookTip:"Start with a quote from the text or a universal theme.",hookRe:/(in the|the author|the novel|the poem|the story|the text|literature|writes|readers|published|theme of)/i,thesisTip:"Make a claim about the text.",thesisGood:/(the author|suggests|symbolizes|reveals|demonstrates|through|uses|conveys|illustrates|theme|literary|metaphor|imagery)/i,thesisWarn:"Make a claim about the text.",topicGood:/(the author|suggests|symbolizes|reveals|demonstrates|uses|conveys|represents|illustrates)/i,eviGood:/(the text states|the author writes|on page|in chapter|the quote|this passage|the line|as stated|the narrator)/i,eviWarn:"Include direct quotes or text references.",concTip:"Discuss the broader significance.",concGood:/(significance|broader|readers|literary|universal|timeless|the author achieves|ultimately the text)/i,trans:{first:["First, the author ","To begin, the text ","One way this is shown is ","The first example is "],middle:["Additionally, ","Furthermore, the author ","Moreover, the text ","Another example is ","This is also evident when "],last:["Most significantly, ","The strongest evidence is ","Finally, ","Perhaps most importantly, "],conclusion:["Ultimately, ","Through this analysis, ","In conclusion, the text ","As demonstrated, ","The significance of this is "]},warnRe:null,warnMsg:"",counterOk:false}
+        };
+
+        var curType="argumentative",curParas=5,useCounter=false,sections=[],SK="eb_v5";
+
+        /* ---- build ---- */
+        function transOpts(arr){var h='<option value="">Choose transition...</option>';for(var i=0;i<arr.length;i++)h+='<option value="'+esc(arr[i])+'">'+esc(arr[i].replace(/\s+$/,""))+"</option>";return h;}
+
+        function build(){
+            var T=TYPES[curType],c=$("essaySections");c.innerHTML="";sections=[];var bc=curParas-2;
+            c.innerHTML+='<div class="paragraph-section" id="p-intro"><div class="section-header"><div class="section-status" id="si"></div><div class="section-title intro-title">Introduction</div><span class="type-badge '+curType+'">'+T.label+'</span><div class="word-count" id="wci">0 words</div></div><div class="subsection"><div class="subsection-label">Hook Sentence</div><textarea class="content-textarea short" id="hook" placeholder="'+esc(T.hookTip)+'"></textarea><div class="feedback" id="hookFB"></div></div><div class="subsection"><div class="subsection-label">Background / Context (2\u20133 sentences)</div><textarea class="content-textarea" id="bg" placeholder="Provide background information and context..."></textarea><div class="feedback" id="bgFB"></div></div><div class="subsection"><div class="subsection-label">Thesis Statement</div><textarea class="content-textarea short" id="thesis" placeholder="'+esc(T.thesisTip)+'"></textarea><div class="feedback" id="thesisFB"></div></div><div class="tips"><strong>Tip:</strong> Your introduction should funnel from general to specific, ending with a strong thesis.</div></div>';
+            sections.push({k:"intro",f:["hook","bg","thesis"],wc:"wci",st:"si"});
+            for(var i=1;i<=bc;i++){var tc=i===1?"body-title":i===2?"body2-title":i===3?"body3-title":"body4-title";var tk=i===1?"first":i===bc?"last":"middle";var pn=i+1;var lbl=T.bodyLabel(i);
+                c.innerHTML+='<div class="paragraph-section" id="p-b'+i+'"><div class="section-header"><div class="section-status" id="sb'+i+'"></div><div class="section-title '+tc+'">Paragraph '+pn+": "+esc(lbl)+'</div><div class="word-count" id="wcb'+i+'">0 words</div></div><div class="subsection"><div class="transition-dropdown"><select id="tr'+i+'">'+transOpts(T.trans[tk])+'</select><div class="transition-selected" id="tr'+i+'L"></div></div><div class="subsection-label">Topic Sentence</div><textarea class="content-textarea short" id="b'+i+'t" placeholder="State your main point for this paragraph..."></textarea><div class="feedback" id="b'+i+'tFB"></div></div><div class="subsection"><div class="subsection-label">Evidence &amp; Explanation</div><textarea class="content-textarea" id="b'+i+'e" placeholder="Provide specific evidence and explain..."></textarea><div class="feedback" id="b'+i+'eFB"></div></div><div class="subsection"><div class="subsection-label">Concluding Sentence</div><textarea class="content-textarea short" id="b'+i+'c" placeholder="Wrap up this point..."></textarea><div class="feedback" id="b'+i+'cFB"></div></div><div class="tips"><strong>Tip:</strong> '+(i===bc?"This is often your strongest point.":"Follow: Topic \u2192 Evidence \u2192 Explanation \u2192 Concluding.")+"</div></div>";
+                sections.push({k:"b"+i,f:["b"+i+"t","b"+i+"e","b"+i+"c"],wc:"wcb"+i,st:"sb"+i});}
+            if(useCounter&&T.counterOk){
+                c.innerHTML+='<div class="paragraph-section" id="p-ctr"><div class="section-header"><div class="section-status" id="sctr"></div><div class="section-title counter-title">Counterargument &amp; Rebuttal</div><div class="word-count" id="wcctr">0 words</div></div><div class="subsection"><div class="transition-dropdown"><select id="trCtr"><option value="">Choose transition...</option><option value="Some may argue that ">Some may argue that</option><option value="Critics might say ">Critics might say</option><option value="On the other hand, ">On the other hand,</option><option value="Opponents believe that ">Opponents believe that</option></select><div class="transition-selected" id="trCtrL"></div></div><div class="subsection-label">Opposing View</div><textarea class="content-textarea" id="ctrV" placeholder="State the opposing argument fairly..."></textarea><div class="feedback" id="ctrVFB"></div></div><div class="subsection"><div class="subsection-label">Rebuttal</div><textarea class="content-textarea" id="ctrR" placeholder="Explain why your argument is stronger..."></textarea><div class="feedback" id="ctrRFB"></div></div><div class="tips"><strong>Tip:</strong> Acknowledge the opposing side, then explain why your position is stronger.</div></div>';
+                sections.push({k:"ctr",f:["ctrV","ctrR"],wc:"wcctr",st:"sctr"});}
+            c.innerHTML+='<div class="paragraph-section" id="p-concl"><div class="section-header"><div class="section-status" id="scon"></div><div class="section-title concl-title">Conclusion</div><div class="word-count" id="wccon">0 words</div></div><div class="subsection"><div class="transition-dropdown"><select id="trCon">'+transOpts(T.trans.conclusion)+'</select><div class="transition-selected" id="trConL"></div></div><div class="subsection-label">Restated Thesis</div><textarea class="content-textarea short" id="rThesis" placeholder="Restate your thesis in different words..."></textarea><div class="feedback" id="rThesisFB"></div></div><div class="subsection"><div class="subsection-label">Summary of Main Points</div><textarea class="content-textarea" id="summ" placeholder="Briefly summarize your main points..."></textarea><div class="feedback" id="summFB"></div></div><div class="subsection"><div class="subsection-label">Closing Thought</div><textarea class="content-textarea short" id="closing" placeholder="'+esc(T.concTip)+'"></textarea><div class="feedback" id="closingFB"></div></div><div class="tips"><strong>Tip:</strong> '+esc(T.concTip)+"</div></div>";
+            sections.push({k:"concl",f:["rThesis","summ","closing"],wc:"wccon",st:"scon"});
+            wireAll();updGlobal();
+        }
+
+        /* ---- feedback ---- */
+        function chkB(text){var msgs=[],tr=text.replace(/^\s+|\s+$/g,"");if(!tr)return msgs;var fl=tr.replace(/^["'\u201C\u201D\u2018\u2019\s]+/,"").charAt(0);if(fl&&/[a-z]/.test(fl))msgs.push(fbi("e","\u26D4","Start with a capital letter."));if(!/[.!?]["'\u201D\u2019]?$/.test(tr))msgs.push(fbi("e","\u26D4","End with proper punctuation."));var w=cw(tr);if(w<5)msgs.push(fbi("e","\u26D4","Too short."));else if(w>=8&&w<=35)msgs.push(fbi("s","\u2705","Good sentence length."));else if(w>35)msgs.push(fbi("w","\u26A0","Consider splitting into two sentences."));if(/\b\w+(n't|'re|'ve|'ll|'d)\b/i.test(text))msgs.push(fbi("w","\u26A0","Avoid contractions in formal writing."));if(/\b(thing|things|stuff|a lot|very|really)\b/i.test(text))msgs.push(fbi("w","\u26A0","Replace vague words."));var T=TYPES[curType];if(T.warnRe&&T.warnRe.test(text))msgs.push(fbi("e","\u26D4",T.warnMsg));return msgs;}
+
+        function analyze(fid,text){var T=TYPES[curType],msgs=chkB(text),tr=text.replace(/^\s+|\s+$/g,"");if(!tr)return msgs;var w=cw(tr);
+            if(fid==="hook"){if(T.hookRe&&T.hookRe.test(text))msgs.push(fbi("s","\u2705","Great engaging hook!"));else msgs.push(fbi("w","\u26A0",T.hookTip));if(/^(this essay|this paper|in this essay|i will|i am going to)/i.test(tr))msgs.push(fbi("e","\u26D4","Do not announce what you are doing."));}
+            if(fid==="bg"){if(w<15)msgs.push(fbi("w","\u26A0","Add more context."));else if(w<=60)msgs.push(fbi("s","\u2705","Good amount of background."));else msgs.push(fbi("w","\u26A0","Background may be too long."));}
+            if(fid==="thesis"){if(/^(i think|i believe|i feel|in my opinion)/i.test(tr)&&curType!=="narrative")msgs.push(fbi("e","\u26D4","State your thesis directly."));if(w<12)msgs.push(fbi("w","\u26A0","Your thesis seems brief."));if(T.thesisGood.test(text))msgs.push(fbi("s","\u2705","Strong thesis!"));else msgs.push(fbi("w","\u26A0",T.thesisWarn));if(tr.charAt(tr.length-1)==="?"&&curType!=="narrative")msgs.push(fbi("e","\u26D4","Thesis should be a statement."));}
+            if(/^b\d+t$/.test(fid)){if(/^(i think|i believe|this paragraph)/i.test(tr))msgs.push(fbi("e","\u26D4","State your point directly."));if(T.topicGood.test(text))msgs.push(fbi("s","\u2705","Clear topic sentence!"));else msgs.push(fbi("w","\u26A0","Add stronger language."));}
+            if(/^b\d+e$/.test(fid)){if(w<20)msgs.push(fbi("w","\u26A0","Add more detail."));else if(w<=80)msgs.push(fbi("s","\u2705","Good amount of evidence."));if(T.eviGood.test(text))msgs.push(fbi("s","\u2705","Good use of evidence!"));else msgs.push(fbi("w","\u26A0",T.eviWarn));if(/(this means|this shows|this demonstrates|this proves|therefore|as a result|because of this)/i.test(text))msgs.push(fbi("s","\u2705","Good explanation!"));else msgs.push(fbi("w","\u26A0","Explain how evidence supports your point."));}
+            if(/^b\d+c$/.test(fid)){if(/(therefore|thus|clearly|as shown|this demonstrates|this proves|in short|overall|ultimately)/i.test(text))msgs.push(fbi("s","\u2705","Good concluding language!"));else msgs.push(fbi("w","\u26A0","Use concluding words."));if(/^(for example|for instance|according to)/i.test(tr))msgs.push(fbi("e","\u26D4","No new evidence in concluding sentence."));}
+            if(fid==="ctrV"){if(/(some|others|opponents|critics|many people|it could be argued)/i.test(text))msgs.push(fbi("s","\u2705","Good acknowledgment!"));else msgs.push(fbi("w","\u26A0","Fairly present the opposing argument."));}
+            if(fid==="ctrR"){if(/(however|despite this|while this may be true|nevertheless|on the contrary|but|yet|the flaw|this ignores)/i.test(text))msgs.push(fbi("s","\u2705","Strong rebuttal!"));else msgs.push(fbi("w","\u26A0","Use rebuttal language."));}
+            if(fid==="rThesis"){var th=$("thesis");if(th){var tv=th.value.replace(/^\s+|\s+$/g,"");if(tv&&tr.toLowerCase()===tv.toLowerCase())msgs.push(fbi("e","\u26D4","Do not copy thesis exactly."));else if(tv&&w>=6)msgs.push(fbi("s","\u2705","Good restating!"));}if(/^(a new|another|also|additionally)/i.test(tr))msgs.push(fbi("e","\u26D4","No new information in conclusion."));}
+            if(fid==="summ"){if(w<15)msgs.push(fbi("w","\u26A0","Summarize more."));else if(w<=50)msgs.push(fbi("s","\u2705","Good summary length."));if(/(first|second|third|these|all|together|each|points|arguments)/i.test(text))msgs.push(fbi("s","\u2705","Good reference to main points!"));else msgs.push(fbi("w","\u26A0","Reference your main points."));}
+            if(fid==="closing"){if(T.concGood.test(text))msgs.push(fbi("s","\u2705","Strong closing!"));else msgs.push(fbi("w","\u26A0",T.concTip));if(/^(in conclusion|to summarize|that is why)/i.test(tr))msgs.push(fbi("w","\u26A0","Go beyond summarizing."));}
+            return msgs;}
+
+        /* ---- wire ---- */
+        function wireAll(){
+            var allF=[];for(var s=0;s<sections.length;s++){var sec=sections[s];for(var f=0;f<sec.f.length;f++)allF.push({id:sec.f[f],sec:sec});}
+            for(var i=0;i<allF.length;i++){(function(field){var el=$(field.id),fbEl=$(field.id+"FB");if(!el||!fbEl)return;
+                var dfb=debounce("fb_"+field.id,function(){fbEl.innerHTML=analyze(field.id,el.value).join("");},300);
+                el.addEventListener("input",function(){updParaWC();updGlobal();dfb();dSave();});
+            })(allF[i]);}
+            var sels=document.querySelectorAll("select[id^='tr']");
+            for(var t=0;t<sels.length;t++){(function(sel){var lbl=$(sel.id+"L");if(!lbl)return;
+                sel.addEventListener("change",function(){lbl.textContent=sel.value?"Using: \""+sel.value.replace(/\s+$/,"").replace(/^\s+/,"")+"\"":"";dSave();});
+            })(sels[t]);}
+        }
+
+        function updParaWC(){for(var s=0;s<sections.length;s++){var sec=sections[s],tot=0;for(var f=0;f<sec.f.length;f++){var el=$(sec.f[f]);if(el)tot+=cw(el.value);}var wce=$(sec.wc);if(wce)wce.textContent=tot+" words";var ste=$(sec.st);if(ste){if(tot>=10){ste.className="section-status complete";ste.textContent="\u2713";}else{ste.className="section-status";ste.textContent="";}}}}
+
+        function updGlobal(){var tw=0,ts=0,dn=0,total=sections.length;for(var s=0;s<sections.length;s++){var sec=sections[s],sw=0;for(var f=0;f<sec.f.length;f++){var el=$(sec.f[f]);if(el){sw+=cw(el.value);ts+=csen(el.value);}}tw+=sw;if(sw>=10)dn++;}
+            var we=$("totalWords");if(we)we.textContent=tw+" words";var se=$("totalSentences");if(se)se.textContent=ts+" sentences";var de=$("sectionsDone");if(de)de.textContent=dn+" / "+total+" paragraphs";var pe=$("progressFill");if(pe)pe.style.width=(total>0?((dn/total)*100):0)+"%";}
+
+        /* ---- save/load ---- */
+        function save(){var state={type:curType,paras:curParas,counter:useCounter,prompt:"",fields:{},trans:{}};var pi=$("promptInput");if(pi)state.prompt=pi.value;for(var s=0;s<sections.length;s++){var sec=sections[s];for(var f=0;f<sec.f.length;f++){var el=$(sec.f[f]);if(el)state.fields[sec.f[f]]=el.value;}}var sels=document.querySelectorAll("select[id^='tr']");for(var t=0;t<sels.length;t++)state.trans[sels[t].id]=sels[t].value;try{localStorage.setItem(SK,JSON.stringify(state));var ind=$("saveInd");if(ind){ind.className="save-ind vis";setTimeout(function(){ind.className="save-ind";},1500);}}catch(x){}}
+        var dSave=debounce("save",save,800);
+
+        function load(){try{var raw=localStorage.getItem(SK);if(!raw)return;var s=JSON.parse(raw);if(s.type){curType=s.type;$("essayType").value=s.type;}if(s.paras){curParas=parseInt(s.paras,10);$("paraCount").value=String(s.paras);}if(s.counter){useCounter=true;$("includeCounter").checked=true;}updCtrVis();build();var pi=$("promptInput");if(pi&&s.prompt)pi.value=s.prompt;if(s.fields){var keys=Object.keys(s.fields);for(var i=0;i<keys.length;i++){var el=$(keys[i]);if(el)el.value=s.fields[keys[i]];}}if(s.trans){var tkeys=Object.keys(s.trans);for(var j=0;j<tkeys.length;j++){var tel=$(tkeys[j]);if(tel){tel.value=s.trans[tkeys[j]];var lbl=$(tkeys[j]+"L");if(lbl&&tel.value)lbl.textContent="Using: \""+tel.value.replace(/\s+$/,"").replace(/^\s+/,"")+"\"";;}}}
+            for(var x=0;x<sections.length;x++){var sec=sections[x];for(var f=0;f<sec.f.length;f++){var fel=$(sec.f[f]),fbEl=$(sec.f[f]+"FB");if(fel&&fbEl&&fel.value.replace(/^\s+|\s+$/g,""))fbEl.innerHTML=analyze(sec.f[f],fel.value).join("");}}updParaWC();updGlobal();}catch(x){}}
+
+        /* ---- setup handlers ---- */
+        function updCtrVis(){var el=$("counterToggle");if(curType==="argumentative"){el.className="counter-toggle visible";}else{el.className="counter-toggle";useCounter=false;$("includeCounter").checked=false;}}
+        $("essayType").addEventListener("change",function(){curType=this.value;updCtrVis();build();dSave();});
+        $("paraCount").addEventListener("change",function(){curParas=parseInt(this.value,10);build();dSave();});
+        $("includeCounter").addEventListener("change",function(){useCounter=this.checked;build();dSave();});
+        $("promptInput").addEventListener("input",dSave);
+
+        /* ---- generate ---- */
+        function gv(id){var el=$(id);return el?(el.value.replace(/^\s+|\s+$/g,"")):""}
+        function gvs(id){var el=$(id);return el?el.value:"";}
+        function genEssay(){var pr=gv("promptInput"),essay="";if(pr)essay+="Essay Topic: "+pr+"\n\n";var h=gv("hook"),b=gv("bg"),th=gv("thesis"),ip=[];if(h)ip.push(h);if(b)ip.push(b);if(th)ip.push(th);if(ip.length)essay+=ip.join(" ")+"\n\n";var bc=curParas-2;for(var n=1;n<=bc;n++){var t=gvs("tr"+n),parts=[gv("b"+n+"t"),gv("b"+n+"e"),gv("b"+n+"c")],pp=[];for(var j=0;j<parts.length;j++)if(parts[j])pp.push(parts[j]);if(pp.length)essay+=(t||"")+pp.join(" ")+"\n\n";}if(useCounter&&TYPES[curType].counterOk){var tc=gvs("trCtr"),cp=[gv("ctrV"),gv("ctrR")],cc=[];for(var k=0;k<cp.length;k++)if(cp[k])cc.push(cp[k]);if(cc.length)essay+=(tc||"")+cc.join(" ")+"\n\n";}var tcc=gvs("trCon"),fp=[gv("rThesis"),gv("summ"),gv("closing")],ff=[];for(var m=0;m<fp.length;m++)if(fp[m])ff.push(fp[m]);if(ff.length)essay+=(tcc||"")+ff.join(" ");return essay.replace(/^\s+|\s+$/g,"");}
+
+        /* ---- actions ---- */
+        $("btnClear").addEventListener("click",function(){if(!confirm("Clear all content?"))return;var pi=$("promptInput");if(pi)pi.value="";var tas=document.querySelectorAll(".content-textarea");for(var i=0;i<tas.length;i++)tas[i].value="";var sels=document.querySelectorAll("select[id^='tr']");for(var j=0;j<sels.length;j++){sels[j].value="";var l=$(sels[j].id+"L");if(l)l.textContent="";}var fbs=document.querySelectorAll(".feedback");for(var k=0;k<fbs.length;k++)fbs[k].innerHTML="";updParaWC();updGlobal();try{localStorage.removeItem(SK);}catch(x){}toast("All fields cleared");});
+
+        $("btnPreview").addEventListener("click",function(){var essay=genEssay();if(!essay||(essay.indexOf("Essay Topic:")===0&&essay.length<30)){toast("Write some content first!",true);return;}var paras=essay.split("\n\n"),html="";for(var i=0;i<paras.length;i++){if(paras[i].indexOf("Essay Topic:")===0)html+='<p class="pl">'+esc(paras[i])+"</p>";else html+="<p>"+esc(paras[i])+"</p>";}$("previewText").innerHTML=html;var body=[];for(var j=0;j<paras.length;j++)if(paras[j].indexOf("Essay Topic:")!==0)body.push(paras[j]);var bt=body.join(" ");$("previewMeta").innerHTML="<span>"+cw(bt)+" words</span><span>"+csen(bt)+" sentences</span><span>"+body.length+" paragraphs</span>";$("previewModal").style.display="block";});
+
+        $("btnClosePreview").addEventListener("click",function(){$("previewModal").style.display="none";});
+        $("previewModal").addEventListener("click",function(e){if(e.target===this)this.style.display="none";});
+
+        $("btnCopy").addEventListener("click",function(){var essay=genEssay();if(!essay||(essay.indexOf("Essay Topic:")===0&&essay.length<30)){toast("Write some content first!",true);return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(essay).then(function(){toast("Copied to clipboard!");},function(){fc(essay);});}else fc(essay);});
+
+        function fc(text){var ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.left="-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copied to clipboard!");}catch(x){toast("Copy failed",true);}document.body.removeChild(ta);}
+
+        document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="p"){e.preventDefault();$("btnPreview").click();}if(e.ctrlKey&&e.shiftKey&&(e.key==="C"||e.key==="c")){e.preventDefault();$("btnCopy").click();}if(e.key==="Escape"){$("previewModal").style.display="none";}});
+
+        /* ---- init ---- */
+        updCtrVis();build();load();
+    })();
+    </script>
+</body>
+</html>
