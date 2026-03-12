@@ -41,8 +41,8 @@
     goalClickHandlersAttached: false,
   };
 
-  // Cached quarter-utils module (loaded lazily in loadStudentGoals).
-  // Used by renderGoalCard for school-year quarter date ranges.
+  // Cached quarter-utils module (loaded lazily in loadStudentGoals/loadStudentGrades).
+  // Used by renderGoalCard and the grades quarterly-averages section.
   // Remains null if the module cannot be loaded; calendar quarters are used as fallback.
   let quarterUtils = null;
 
@@ -2786,12 +2786,27 @@
     }
     
     // Show loading state
-    gradesContainer.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
-        <div>Loading your grades...</div>
-      </div>
-    `;
+    gradesContainer.innerHTML = '';
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'st-grades-loading';
+    loadingDiv.setAttribute('aria-live', 'polite');
+    const loadingIcon = document.createElement('div');
+    loadingIcon.setAttribute('aria-hidden', 'true');
+    loadingIcon.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+    const loadingText = document.createElement('div');
+    loadingText.textContent = 'Loading your grades…';
+    loadingDiv.appendChild(loadingIcon);
+    loadingDiv.appendChild(loadingText);
+    gradesContainer.appendChild(loadingDiv);
+    
+    // Ensure quarter-utils is available for school-year quarter logic
+    if (!quarterUtils) {
+      try {
+        quarterUtils = await import('/web/quarter-utils.js');
+      } catch (e) {
+        console.warn(LOG_PREFIX, 'Could not load quarter-utils, using calendar quarters as fallback');
+      }
+    }
     
     try {
       // Fetch submissions with scores
@@ -2826,37 +2841,225 @@
         dashAvgGrade.textContent = avgGrade;
       }
       
+      // Clear loading state
+      gradesContainer.innerHTML = '';
+      
       // Render grades
       if (graded.length === 0) {
-        gradesContainer.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
-            <div>No grades yet — keep working on your assignments!</div>
-          </div>
-        `;
-      } else {
-        // Show average at top
-        let html = `
-          <div class="st-average-display">
-            <h3>Your Overall Average</h3>
-            <div class="st-average-value">${avgGrade}</div>
-          </div>
-        `;
+        // Enhanced empty state
+        const empty = document.createElement('div');
+        empty.className = 'st-grades-empty';
         
-        // Show graded assignments
-        html += graded.map(sub => renderGradeRow(sub)).join('');
-        gradesContainer.innerHTML = html;
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'st-grades-empty-icon';
+        iconDiv.setAttribute('aria-hidden', 'true');
+        iconDiv.innerHTML = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'st-grades-empty-msg';
+        msgDiv.textContent = 'No grades yet — keep working on your assignments!';
+        
+        const linkDiv = document.createElement('div');
+        linkDiv.className = 'st-grades-empty-link';
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'st-btn';
+        link.setAttribute('data-tab', 'assignments');
+        link.textContent = 'View My Assignments';
+        linkDiv.appendChild(link);
+        
+        empty.appendChild(iconDiv);
+        empty.appendChild(msgDiv);
+        empty.appendChild(linkDiv);
+        gradesContainer.appendChild(empty);
+        
+        // Attach tab-switch handler
+        link.addEventListener('click', () => switchToTab('assignments'));
+        return;
       }
+      
+      // ── Overall Average Card ──────────────────────────────────────────────
+      const avgCard = document.createElement('div');
+      avgCard.className = 'st-average-display';
+      
+      const avgHeading = document.createElement('h3');
+      avgHeading.textContent = 'Your Overall Average';
+      
+      const avgValue = document.createElement('div');
+      avgValue.className = 'st-average-value';
+      avgValue.textContent = avgGrade;
+      
+      avgCard.appendChild(avgHeading);
+      avgCard.appendChild(avgValue);
+      gradesContainer.appendChild(avgCard);
+      
+      // ── Quarterly Averages ────────────────────────────────────────────────
+      const quarterAverages = calculateGradeQuarterAverages(graded);
+      const hasAnyQuarter = Object.values(quarterAverages).some(q => q.avg !== null);
+      
+      if (hasAnyQuarter) {
+        const qSection = document.createElement('div');
+        qSection.className = 'st-quarter-section';
+        
+        const qHeading = document.createElement('h4');
+        qHeading.className = 'st-quarter-section-title';
+        qHeading.textContent = 'Quarterly Averages';
+        qSection.appendChild(qHeading);
+        
+        const qGrid = document.createElement('div');
+        qGrid.className = 'st-quarter-grid';
+        
+        for (let q = 1; q <= 4; q++) {
+          const key = `Q${q}`;
+          const { avg, count } = quarterAverages[key];
+          
+          let label = key;
+          if (quarterUtils && quarterUtils.getQuarterLabel) {
+            label = quarterUtils.getQuarterLabel(key);
+          }
+          
+          const pill = document.createElement('div');
+          pill.className = 'st-quarter-pill';
+          if (avg !== null) {
+            pill.classList.add(avg >= 70 ? 'st-quarter-green' : avg >= 50 ? 'st-quarter-yellow' : 'st-quarter-red');
+          } else {
+            pill.classList.add('st-quarter-muted');
+          }
+          
+          const pillLabel = document.createElement('div');
+          pillLabel.className = 'st-quarter-label';
+          pillLabel.textContent = label;
+          
+          const pillAvg = document.createElement('div');
+          pillAvg.className = 'st-quarter-avg';
+          pillAvg.textContent = avg !== null ? `${avg}%` : '—';
+          
+          const pillCount = document.createElement('div');
+          pillCount.className = 'st-quarter-count';
+          pillCount.textContent = avg !== null ? `${count} graded` : 'No data';
+          
+          pill.appendChild(pillLabel);
+          pill.appendChild(pillAvg);
+          pill.appendChild(pillCount);
+          qGrid.appendChild(pill);
+        }
+        
+        qSection.appendChild(qGrid);
+        gradesContainer.appendChild(qSection);
+      }
+      
+      // ── Trend Insights ────────────────────────────────────────────────────
+      const weekTrend = calculateGradeWeekTrend(submissions);
+      const scoreTrend = calculateGradeTrend(graded);
+      const { streak, threshold: streakThreshold } = calculateGradeStreak(graded, 80);
+      
+      const trendSection = document.createElement('div');
+      trendSection.className = 'st-trend-section';
+      
+      const trendHeading = document.createElement('h4');
+      trendHeading.className = 'st-trend-section-title';
+      trendHeading.textContent = 'Trend Insights';
+      trendSection.appendChild(trendHeading);
+      
+      const trendItems = document.createElement('div');
+      trendItems.className = 'st-trend-items';
+      
+      // Week-over-week
+      const weekItem = document.createElement('div');
+      weekItem.className = 'st-trend-item';
+      const weekLabel = document.createElement('span');
+      weekLabel.className = 'st-trend-label';
+      weekLabel.textContent = 'This week:';
+      const weekArrows = { up: '↗', down: '↘', flat: '→' };
+      const weekValue = document.createElement('span');
+      weekValue.className = `st-trend-value st-trend-${weekTrend.direction}`;
+      weekValue.textContent = `${weekTrend.lastWeekCount} submission${weekTrend.lastWeekCount !== 1 ? 's' : ''} ${weekArrows[weekTrend.direction]}`;
+      if (weekTrend.prevWeekCount > 0 || weekTrend.lastWeekCount > 0) {
+        const weekDelta = document.createElement('span');
+        weekDelta.className = 'st-trend-delta';
+        weekDelta.textContent = ` (${weekTrend.delta >= 0 ? '+' : ''}${weekTrend.delta} vs last week)`;
+        weekValue.appendChild(weekDelta);
+      }
+      weekItem.appendChild(weekLabel);
+      weekItem.appendChild(weekValue);
+      trendItems.appendChild(weekItem);
+      
+      // Score trend (only meaningful with ≥ 2 graded)
+      if (graded.length >= 2) {
+        const scoreItem = document.createElement('div');
+        scoreItem.className = 'st-trend-item';
+        const scoreLabel = document.createElement('span');
+        scoreLabel.className = 'st-trend-label';
+        scoreLabel.textContent = 'Score trend:';
+        const scoreArrows = { up: '↗ Improving', down: '↘ Declining', flat: '→ Steady' };
+        const scoreValue = document.createElement('span');
+        scoreValue.className = `st-trend-value st-trend-${scoreTrend.direction}`;
+        scoreValue.textContent = scoreArrows[scoreTrend.direction] || '→ Steady';
+        scoreItem.appendChild(scoreLabel);
+        scoreItem.appendChild(scoreValue);
+        trendItems.appendChild(scoreItem);
+      }
+      
+      // Streak indicator (only show if ≥ 2 streak)
+      if (streak >= 2) {
+        const streakItem = document.createElement('div');
+        streakItem.className = 'st-trend-item';
+        const streakLabel = document.createElement('span');
+        streakLabel.className = 'st-trend-label';
+        streakLabel.textContent = 'Streak:';
+        const streakValue = document.createElement('span');
+        streakValue.className = 'st-trend-value st-trend-streak';
+        streakValue.textContent = `🔥 ${streak}-assignment streak above ${streakThreshold}%`;
+        streakItem.appendChild(streakLabel);
+        streakItem.appendChild(streakValue);
+        trendItems.appendChild(streakItem);
+      }
+      
+      trendSection.appendChild(trendItems);
+      gradesContainer.appendChild(trendSection);
+      
+      // ── Grade Rows ────────────────────────────────────────────────────────
+      const rowsHeading = document.createElement('h4');
+      rowsHeading.className = 'st-grades-list-title';
+      rowsHeading.textContent = 'All Graded Assignments';
+      gradesContainer.appendChild(rowsHeading);
+      
+      for (const sub of graded) {
+        gradesContainer.appendChild(renderGradeRow(sub));
+      }
+      
+      // Attach "View Details" button handlers
+      gradesContainer.querySelectorAll('.st-grade-view-details').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const instanceId = btn.getAttribute('data-instance-id');
+          const instance = (tabState.assignmentsData || []).find(i => i.id === instanceId);
+          if (instance) {
+            openAssignmentViewer(instance);
+          } else {
+            // Fallback: switch to assignments tab so the student can find it
+            switchToTab('assignments');
+          }
+        });
+      });
       
     } catch (err) {
       console.error(LOG_PREFIX, 'Error loading grades:', err);
-      gradesContainer.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
-          <div style="color: var(--ink);">Grades temporarily unavailable</div>
-          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
-        </div>
-      `;
+      gradesContainer.innerHTML = '';
+      const errDiv = document.createElement('div');
+      errDiv.className = 'st-grades-loading';
+      const errIcon = document.createElement('div');
+      errIcon.setAttribute('aria-hidden', 'true');
+      errIcon.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+      const errTitle = document.createElement('div');
+      errTitle.style.color = 'var(--ink)';
+      errTitle.textContent = 'Grades temporarily unavailable';
+      const errMsg = document.createElement('div');
+      errMsg.style.cssText = 'margin-top: 8px; font-size: 14px;';
+      errMsg.textContent = 'Please try refreshing the page or contact your teacher if this persists.';
+      errDiv.appendChild(errIcon);
+      errDiv.appendChild(errTitle);
+      errDiv.appendChild(errMsg);
+      gradesContainer.appendChild(errDiv);
       if (dashAvgGrade) {
         dashAvgGrade.textContent = '—';
       }
@@ -2864,24 +3067,176 @@
   }
 
   /**
-   * Render a grade row
+   * Calculate per-quarter averages and counts for graded submissions.
+   * Uses school-year quarters via quarterUtils (Q1=Aug-Oct, Q2=Oct-Dec, Q3=Dec-Mar, Q4=Mar-May).
+   * Falls back to calendar quarters when quarterUtils is not available.
+   * @param {Array} graded - Graded submissions (score_total != null)
+   * @returns {{ Q1, Q2, Q3, Q4 }} Each key: { avg: number|null, count: number }
+   */
+  function calculateGradeQuarterAverages(graded) {
+    const buckets = { Q1: { sum: 0, count: 0 }, Q2: { sum: 0, count: 0 }, Q3: { sum: 0, count: 0 }, Q4: { sum: 0, count: 0 } };
+    
+    for (const sub of graded) {
+      if (!sub.submitted_at) continue;
+      let qKey = null;
+      if (quarterUtils && quarterUtils.getQuarterForDate) {
+        qKey = quarterUtils.getQuarterForDate(sub.submitted_at);
+      } else {
+        // Calendar quarter fallback
+        const month = new Date(sub.submitted_at).getMonth() + 1; // 1-12
+        if (month >= 1 && month <= 3) qKey = 'Q1';
+        else if (month >= 4 && month <= 6) qKey = 'Q2';
+        else if (month >= 7 && month <= 9) qKey = 'Q3';
+        else qKey = 'Q4';
+      }
+      if (qKey && buckets[qKey]) {
+        buckets[qKey].sum += sub.score_total;
+        buckets[qKey].count++;
+      }
+    }
+    
+    const result = {};
+    for (const key of ['Q1', 'Q2', 'Q3', 'Q4']) {
+      const b = buckets[key];
+      result[key] = b.count > 0 ? { avg: Math.round(b.sum / b.count), count: b.count } : { avg: null, count: 0 };
+    }
+    return result;
+  }
+
+  /**
+   * Calculate week-over-week submission count trend.
+   * @param {Array} submissions - All submissions (graded or not)
+   * @param {Date} now - Current date (default: new Date())
+   * @returns {{ lastWeekCount, prevWeekCount, delta, direction }}
+   */
+  function calculateGradeWeekTrend(submissions, now = new Date()) {
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const twoWeeksAgo = new Date(now);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    const lastWeek = submissions.filter(s => {
+      if (!s.submitted_at) return false;
+      const d = new Date(s.submitted_at);
+      return d >= oneWeekAgo && d < now;
+    });
+    const prevWeek = submissions.filter(s => {
+      if (!s.submitted_at) return false;
+      const d = new Date(s.submitted_at);
+      return d >= twoWeeksAgo && d < oneWeekAgo;
+    });
+    const delta = lastWeek.length - prevWeek.length;
+    return {
+      lastWeekCount: lastWeek.length,
+      prevWeekCount: prevWeek.length,
+      delta,
+      direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+    };
+  }
+
+  /**
+   * Calculate score trend: last 5 graded vs previous 5 graded (±3% threshold).
+   * @param {Array} graded - Graded submissions (score_total != null)
+   * @returns {{ direction: 'up'|'down'|'flat', delta: number }}
+   */
+  function calculateGradeTrend(graded) {
+    const sorted = [...graded]
+      .filter(s => s.submitted_at)
+      .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    if (sorted.length < 2) return { direction: 'flat', delta: 0 };
+    const last5 = sorted.slice(0, 5);
+    const prev5 = sorted.slice(5, 10);
+    const lastAvg = last5.reduce((s, x) => s + x.score_total, 0) / last5.length;
+    const prevAvg = prev5.length > 0
+      ? prev5.reduce((s, x) => s + x.score_total, 0) / prev5.length
+      : lastAvg;
+    const delta = lastAvg - prevAvg;
+    const direction = delta > 3 ? 'up' : delta < -3 ? 'down' : 'flat';
+    return { direction, delta };
+  }
+
+  /**
+   * Calculate the streak of consecutive recent graded submissions at or above threshold.
+   * @param {Array} graded - Graded submissions (score_total != null)
+   * @param {number} threshold - Score threshold (default 80)
+   * @returns {{ streak: number, threshold: number }}
+   */
+  function calculateGradeStreak(graded, threshold = 80) {
+    const sorted = [...graded]
+      .filter(s => s.submitted_at)
+      .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    let streak = 0;
+    for (const sub of sorted) {
+      if (sub.score_total >= threshold) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return { streak, threshold };
+  }
+
+  /**
+   * Render a grade row as a DOM element (safe — no innerHTML with user data)
+   * @param {Object} submission - Submission object from student-submissions API
+   * @returns {HTMLElement}
    */
   function renderGradeRow(submission) {
-    const title = escapeHtml(submission.assignment_title || 'Untitled Assignment');
-    const score = submission.score_total !== null ? submission.score_total : 0;
-    const scoreClass = score >= 70 ? 'good' : 'poor';
-    const submittedDate = submission.submitted_at ? formatDate(submission.submitted_at) : 'N/A';
-    const className = escapeHtml(submission.class_name || 'General');
+    const score = submission.score_total != null ? Math.round(submission.score_total) : null;
+    const scoreNum = score !== null ? score : 0;
     
-    return `
-      <div class="st-grade-row">
-        <div class="st-grade-info">
-          <h4>${title}</h4>
-          <div class="st-grade-meta">${className} • Submitted: ${submittedDate}</div>
-        </div>
-        <div class="st-grade-score ${scoreClass}">${Math.round(score)}%</div>
-      </div>
-    `;
+    // Border and score color: green ≥70%, yellow 50–69%, red <50%
+    const borderColor = scoreNum >= 70 ? '#22c55e' : scoreNum >= 50 ? '#eab308' : '#ef4444';
+    const scoreClass = scoreNum >= 70 ? 'good' : scoreNum >= 50 ? 'mid' : 'poor';
+    
+    const row = document.createElement('div');
+    row.className = 'st-grade-row';
+    row.style.borderLeftColor = borderColor;
+    
+    // Left: info
+    const info = document.createElement('div');
+    info.className = 'st-grade-info';
+    
+    const title = document.createElement('h4');
+    title.textContent = submission.assignment_title || 'Untitled Assignment';
+    info.appendChild(title);
+    
+    const meta = document.createElement('div');
+    meta.className = 'st-grade-meta';
+    
+    if (submission.class_name) {
+      const badge = document.createElement('span');
+      badge.className = 'st-class-badge';
+      badge.textContent = submission.class_name;
+      meta.appendChild(badge);
+    }
+    
+    const submittedSpan = document.createElement('span');
+    submittedSpan.textContent = 'Submitted: ' + (submission.submitted_at ? formatDate(submission.submitted_at) : 'N/A');
+    meta.appendChild(submittedSpan);
+    info.appendChild(meta);
+    row.appendChild(info);
+    
+    // Right: score + actions
+    const actions = document.createElement('div');
+    actions.className = 'st-grade-actions';
+    
+    const scoreEl = document.createElement('div');
+    scoreEl.className = `st-grade-score ${scoreClass}`;
+    scoreEl.textContent = score !== null ? `${score}%` : '—';
+    actions.appendChild(scoreEl);
+    
+    if (submission.instance_id) {
+      const viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.className = 'st-btn st-grade-view-details';
+      viewBtn.setAttribute('data-instance-id', submission.instance_id);
+      viewBtn.textContent = 'View Details';
+      actions.appendChild(viewBtn);
+    }
+    
+    row.appendChild(actions);
+    return row;
   }
 
   /**

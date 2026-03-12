@@ -396,3 +396,91 @@ export function filterSubmissionsByQuarter(submissions, quarter) {
     return getQuarter(s.submitted_at) === quarter;
   });
 }
+
+/**
+ * Calculate week-over-week submission count trend
+ * @param {Array} submissions - All submissions (graded or otherwise)
+ * @param {Date} now - Current date/time (default: new Date())
+ * @returns {{ lastWeekCount: number, prevWeekCount: number, delta: number, direction: 'up'|'down'|'flat' }}
+ */
+export function calculateWeekOverWeekTrend(submissions, now = new Date()) {
+  const oneWeekAgo = new Date(now);
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const twoWeeksAgo = new Date(now);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+  const lastWeek = submissions.filter(s => {
+    if (!s.submitted_at) return false;
+    const date = new Date(s.submitted_at);
+    return date >= oneWeekAgo && date < now;
+  });
+
+  const prevWeek = submissions.filter(s => {
+    if (!s.submitted_at) return false;
+    const date = new Date(s.submitted_at);
+    return date >= twoWeeksAgo && date < oneWeekAgo;
+  });
+
+  const delta = lastWeek.length - prevWeek.length;
+  return {
+    lastWeekCount: lastWeek.length,
+    prevWeekCount: prevWeek.length,
+    delta,
+    direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+  };
+}
+
+/**
+ * Calculate average score trend: compare last 5 graded vs previous 5 graded submissions
+ * Uses a ±3% threshold to distinguish improving/declining from steady
+ * @param {Array} submissions - All submissions (scored and unscored may be mixed)
+ * @returns {{ direction: 'up'|'down'|'flat', currentAvg: number, prevAvg: number, delta: number }}
+ */
+export function calculateAverageScoreTrend(submissions) {
+  const graded = [...submissions]
+    .filter(s => s.score_total != null && s.submitted_at)
+    .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+  if (graded.length < 2) {
+    return { direction: 'flat', currentAvg: 0, prevAvg: 0, delta: 0 };
+  }
+
+  const last5 = graded.slice(0, 5);
+  const prev5 = graded.slice(5, 10);
+
+  const currentAvg = last5.reduce((s, x) => s + x.score_total, 0) / last5.length;
+  const prevAvg = prev5.length > 0
+    ? prev5.reduce((s, x) => s + x.score_total, 0) / prev5.length
+    : currentAvg;
+
+  const delta = currentAvg - prevAvg;
+  const THRESHOLD = 3;
+  const direction = delta > THRESHOLD ? 'up' : delta < -THRESHOLD ? 'down' : 'flat';
+
+  return { direction, currentAvg, prevAvg, delta };
+}
+
+/**
+ * Calculate the current streak of consecutive graded submissions at or above a score threshold.
+ * Streak is counted from the most recent submission backwards.
+ * @param {Array} submissions - All submissions (scored and unscored may be mixed)
+ * @param {number} threshold - Score threshold (default: 80)
+ * @returns {{ streak: number, threshold: number }} streak count and threshold used
+ */
+export function calculateStreakAbove(submissions, threshold = 80) {
+  const graded = [...submissions]
+    .filter(s => s.score_total != null && s.submitted_at)
+    .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+  let streak = 0;
+  for (const sub of graded) {
+    if (sub.score_total >= threshold) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return { streak, threshold };
+}
