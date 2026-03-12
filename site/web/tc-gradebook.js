@@ -1843,7 +1843,11 @@
    */
   function toggleCompact() {
     isCompact = !isCompact;
-    localStorage.setItem(PREF_COMPACT, isCompact ? "true" : "false");
+    try {
+      localStorage.setItem(PREF_COMPACT, isCompact ? "true" : "false");
+    } catch {
+      // Storage unavailable — preference won't persist but UI still works
+    }
     renderGradebook();
   }
 
@@ -1852,7 +1856,11 @@
    */
   function toggleMoreColumns() {
     showMoreColumns = !showMoreColumns;
-    localStorage.setItem(PREF_SHOW_MORE, showMoreColumns ? "true" : "false");
+    try {
+      localStorage.setItem(PREF_SHOW_MORE, showMoreColumns ? "true" : "false");
+    } catch {
+      // Storage unavailable — preference won't persist but UI still works
+    }
     renderGradebook();
   }
 
@@ -1861,7 +1869,11 @@
    */
   function setSort(value) {
     currentSort = value;
-    localStorage.setItem(PREF_SORT, value);
+    try {
+      localStorage.setItem(PREF_SORT, value);
+    } catch {
+      // Storage unavailable — preference won't persist but UI still works
+    }
     const sortSelect = $("gbSortSelect");
     if (sortSelect) sortSelect.value = value;
     renderGradebook();
