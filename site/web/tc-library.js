@@ -823,7 +823,7 @@
     studentInput.placeholder = 'e.g. S001 (optional)';
     const studentHint = document.createElement('div');
     studentHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
-    studentHint.textContent = 'If provided, links this upload to the student\'s history.';
+    studentHint.textContent = 'If provided, links this upload to the student\'s history. Code is uppercased automatically.';
     const studentWrap = makeField('Student Code', false, studentInput);
     studentWrap.appendChild(studentHint);
     form.appendChild(studentWrap);
@@ -849,12 +849,12 @@
     fileInput.type = 'file';
     fileInput.id = 'up_file';
     fileInput.required = true;
-    fileInput.accept = '.pdf,.jpg,.jpeg,.png,.heic,.gif,.webp';
+    fileInput.accept = '.pdf,.jpg,.jpeg,.png,.heic,.heif,.gif,.webp';
     fileInput.style.cssText = 'width:100%; color:white; font-size:14px; cursor:pointer;';
 
     const fileHint = document.createElement('div');
     fileHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
-    fileHint.textContent = 'PDF, JPG, PNG, HEIC, GIF, WEBP — max 10 MB';
+    fileHint.textContent = 'PDF, JPG, PNG, HEIC/HEIF, GIF, WEBP — max 10 MB';
 
     const fileInfo = document.createElement('div');
     fileInfo.id = 'up_file_info';
@@ -994,11 +994,11 @@
     const file = fileInput.files[0];
 
     // File type validation
-    const allowedTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/gif', 'image/webp']);
-    const allowedExts = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.gif', '.webp']);
+    const allowedTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/gif', 'image/webp']);
+    const allowedExts = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif', '.gif', '.webp']);
     const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
     if (!allowedTypes.has(file.type) && !allowedExts.has(fileExt)) {
-      showInlineError('Unsupported file type. Please upload a PDF, JPG, PNG, HEIC, GIF, or WEBP file.');
+      showInlineError('Unsupported file type. Please upload a PDF, JPG, PNG, HEIC, HEIF, GIF, or WEBP file.');
       return;
     }
 

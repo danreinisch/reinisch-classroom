@@ -1289,13 +1289,8 @@ const remote = {
       answers: record.answers || null,
       score_total: record.score_total || null,
     };
-    // submission_id is NOT NULL in the schema — for paper uploads we generate a placeholder
-    // until a schema migration makes it nullable. Skip archive creation if we can't provide it.
-    if (!record.submission_id) {
-      console.warn('[data-adapter] createSubmissionArchive skipped: submission_id is required by DB schema for paper uploads');
-      return null;
-    }
-    payload.submission_id = record.submission_id;
+    // submission_id and student_id are nullable after the 20260312 migration (paper uploads)
+    if (record.submission_id) payload.submission_id = record.submission_id;
     if (record.student_id) payload.student_id = record.student_id;
     const { data, error } = await supabase.from('submission_archives').insert(payload).select().single();
     if (error) throw error;
