@@ -33,4 +33,6 @@ site/admin-logout.js
 site/life-skills/presentations/
 
 # Generated lesson presentation bundles (created in CI; not source)
-site/presentations/**
+# Ignore non-JS files and the a-door-into-time js (not a source file we maintain)
+site/presentations/**/*.html
+site/presentations/a-door-into-time/**

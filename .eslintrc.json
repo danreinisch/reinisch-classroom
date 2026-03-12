@@ -22,7 +22,7 @@
   },
   "overrides": [
     {
-      "files": ["site/web/*.js", "site/admin/*.js", "site/teacher/admin/*.js"],
+      "files": ["site/web/*.js", "site/admin/*.js", "site/teacher/admin/*.js", "site/language-arts/**/*.js", "site/presentations/**/*.js"],
       "rules": {
         "no-restricted-globals": ["error",
           { "name": "alert", "message": "Use rcAlert() from rc-modal.js instead of window.alert()" },
