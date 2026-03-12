@@ -83,13 +83,44 @@
     return "gb-score-red";
   }
 
+  // Helper to append a labeled stats row to a hover card using safe DOM construction
+  function appendStatsRow(parent, label, value) {
+    const row = document.createElement("div");
+    row.className = "gb-stats-card-row";
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "gb-stats-card-label";
+    labelSpan.textContent = label;
+    const valSpan = document.createElement("span");
+    valSpan.className = "gb-stats-card-val";
+    valSpan.textContent = value;
+    row.appendChild(labelSpan);
+    row.appendChild(valSpan);
+    parent.appendChild(row);
+  }
+
   // UI preference state (persisted in localStorage)
   const PREF_COMPACT = "rc_gb_compact";
   const PREF_SHOW_MORE = "rc_gb_show_more";
   const PREF_SORT = "rc_gb_sort";
-  let isCompact = localStorage.getItem(PREF_COMPACT) === "true";
-  let showMoreColumns = localStorage.getItem(PREF_SHOW_MORE) === "true";
-  let currentSort = localStorage.getItem(PREF_SORT) || "date";
+  let isCompact = false;
+  let showMoreColumns = false;
+  let currentSort = "date";
+  try {
+    const compactRaw = localStorage.getItem(PREF_COMPACT);
+    if (compactRaw !== null) {
+      isCompact = compactRaw === "true";
+    }
+    const showMoreRaw = localStorage.getItem(PREF_SHOW_MORE);
+    if (showMoreRaw !== null) {
+      showMoreColumns = showMoreRaw === "true";
+    }
+    const sortRaw = localStorage.getItem(PREF_SORT);
+    if (sortRaw) {
+      currentSort = sortRaw;
+    }
+  } catch {
+    // If localStorage is unavailable (e.g., privacy mode), fall back to defaults.
+  }
 
   // State
   let currentClassFilter = "All Classes";
@@ -500,8 +531,8 @@
   // Make a score cell editable
   function makeScoreEditable(td, studentCode, draftId, currentScore, totalPossible) {
     const maxScore = totalPossible || 100;
-    // Store original content
-    const originalText = td.textContent;
+    // Store original cell HTML so cancel can restore the two-line markup
+    const originalHTML = td.innerHTML;
     td.classList.add("editing");
 
     // Create inline editor container
@@ -573,7 +604,9 @@
     // Cancel handler
     const cancel = () => {
       td.classList.remove("editing");
-      td.textContent = originalText;
+      // Safe to restore innerHTML here: the original cell content was built by
+      // renderGradebook() using createElement+textContent, not user-supplied markup.
+      td.innerHTML = originalHTML;
       // Reapply color class if there was a score
       if (currentScore !== null) {
         const colorClass = scoreColorClass(currentScore);
@@ -735,24 +768,27 @@
         isFirstRow = false;
       }
 
+      // Compute per-student metrics once so they can be reused for the
+      // hover-card tooltip and the Average/Trend cells later in this row.
+      const studentScoreMap = scoreMap.get(student.code);
+      const completedCount = studentScoreMap ? [...studentScoreMap.values()].filter(v => typeof v === "number").length : 0;
+      const totalAssigned = drafts.length;
+      const rowAverage = calculateRowAverage(student.code, scoreMap, drafts);
+      const trend = calculateTrend(student.code, scoreMap, drafts);
+
       // Student name cell (sticky) with quick-stats hover card
       const tdStudent = document.createElement("td");
       tdStudent.className = "gb-student-cell";
       tdStudent.textContent = student.name || student.code;
 
       // Build quick stats for hover card
-      const studentScoreMap = scoreMap.get(student.code);
-      const completedCount = studentScoreMap ? [...studentScoreMap.values()].filter(v => typeof v === "number").length : 0;
-      const totalAssigned = drafts.length;
-      const rowAvgForCard = calculateRowAverage(student.code, scoreMap, drafts);
-      const trendForCard = calculateTrend(student.code, scoreMap, drafts);
-      const trendLabel = trendForCard === "up" ? "↗ Improving" : trendForCard === "down" ? "↘ Declining" : "→ Steady";
+      const trendLabel = trend === "up" ? "↗ Improving" : trend === "down" ? "↘ Declining" : "→ Steady";
       tdStudent.dataset.tooltip = JSON.stringify({
         name: student.name || student.code,
         code: student.code,
         completed: completedCount,
         total: totalAssigned,
-        avg: rowAvgForCard,
+        avg: rowAverage,
         trend: trendLabel
       });
       tdStudent.classList.add("gb-has-stats");
@@ -811,10 +847,9 @@
       tdAvg.className = "gb-score-cell";
       tdAvg.dataset.extraCol = "1";
       if (!showMoreColumns) tdAvg.style.display = "none";
-      const avg = calculateRowAverage(student.code, scoreMap, drafts);
-      if (avg !== null) {
-        tdAvg.textContent = `${avg}%`;
-        const colorClass = scoreColorClass(avg);
+      if (rowAverage !== null) {
+        tdAvg.textContent = `${rowAverage}%`;
+        const colorClass = scoreColorClass(rowAverage);
         if (colorClass) tdAvg.classList.add(colorClass);
       } else {
         tdAvg.textContent = "—";
@@ -840,7 +875,6 @@
       tdTrend.dataset.extraCol = "1";
       tdTrend.style.textAlign = "center";
       if (!showMoreColumns) tdTrend.style.display = "none";
-      const trend = calculateTrend(student.code, scoreMap, drafts);
       let trendHTML = '';
       if (trend === 'up') {
         trendHTML = '<span class="gb-trend-arrow gb-trend-up">↗️</span>';
@@ -1850,21 +1884,25 @@
       }
 
       const avgText = info.avg !== null && info.avg !== undefined ? `${info.avg}%` : "—";
-      card.innerHTML = `
-        <div class="gb-stats-card-name">${info.name || info.code}</div>
-        ${info.code && info.name ? `<div class="gb-stats-card-code">${info.code}</div>` : ""}
-        <div class="gb-stats-card-row">
-          <span class="gb-stats-card-label">Completed</span>
-          <span class="gb-stats-card-val">${info.completed}/${info.total}</span>
-        </div>
-        <div class="gb-stats-card-row">
-          <span class="gb-stats-card-label">Average</span>
-          <span class="gb-stats-card-val">${avgText}</span>
-        </div>
-        <div class="gb-stats-card-row">
-          <span class="gb-stats-card-label">Trend</span>
-          <span class="gb-stats-card-val">${info.trend || "—"}</span>
-        </div>`;
+
+      // Build hover card content safely using DOM construction (avoids XSS via innerHTML)
+      while (card.firstChild) card.removeChild(card.firstChild);
+
+      const nameDiv = document.createElement("div");
+      nameDiv.className = "gb-stats-card-name";
+      nameDiv.textContent = info.name || info.code || "";
+      card.appendChild(nameDiv);
+
+      if (info.code && info.name) {
+        const codeDiv = document.createElement("div");
+        codeDiv.className = "gb-stats-card-code";
+        codeDiv.textContent = info.code;
+        card.appendChild(codeDiv);
+      }
+
+      appendStatsRow(card, "Completed", `${info.completed}/${info.total}`);
+      appendStatsRow(card, "Average", avgText);
+      appendStatsRow(card, "Trend", info.trend || "—");
 
       const rect = cell.getBoundingClientRect();
       card.style.display = "block";
