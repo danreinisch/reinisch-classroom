@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#131a21;margin:0;padding:0;border:none;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Written Response Builder</title>
+</head>
+<body style="background:#131a21;margin:0;padding:20px;border:none;">
+    <div class="save-ind" id="saveInd">Saved</div>
+    <div class="toast-el" id="toastEl"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Written Response Builder</h1>
+            <p>Structure your response with clear organization and smooth transitions</p>
+        </div>
+
+        <div class="breadcrumb">
+            <a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span>
+            <a href="https://reinischclassroom.com">Language Arts Toolkit</a><span>&rsaquo;</span>
+            Written Response Builder
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-label">Progress</span>
+                <div class="progress-stats">
+                    <span class="progress-stat" id="totalWords">0 words</span>
+                    <span class="progress-stat" id="totalSentences">0 sentences</span>
+                    <span class="progress-stat" id="sectionsDone">0 / 5 sections</span>
+                </div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="prompt-section">
+            <div class="card prompt-card">
+                <h2>Writing Prompt / Question</h2>
+                <textarea class="prompt-input" id="promptInput" placeholder="Paste your writing prompt or question here..."></textarea>
+            </div>
+        </div>
+
+        <div class="card topic-sentence">
+            <div class="section-header">
+                <div class="section-status" id="s0"></div>
+                <div class="section-tag tag-topic">Topic Sentence</div>
+                <div class="word-count" id="wc0">0 words</div>
+            </div>
+            <div class="writing-content">
+                <div class="content-input">
+                    <textarea class="content-textarea" id="f0" placeholder="Write your main thesis or topic sentence here. This should clearly state your position or main argument..."></textarea>
+                    <div class="feedback" id="fb0"></div>
+                    <div class="tips"><strong>Tip:</strong> Your topic sentence should clearly state your main argument and preview what you will discuss.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card sd1">
+            <div class="section-header">
+                <div class="section-status" id="s1"></div>
+                <div class="section-tag tag-sd1">Supporting Detail 1</div>
+                <div class="word-count" id="wc1">0 words</div>
+            </div>
+            <div class="writing-content">
+                <div class="transition-dropdown">
+                    <select id="t1">
+                        <option value="">Choose transition...</option>
+                        <option value="First, ">First,</option>
+                        <option value="To begin with, ">To begin with,</option>
+                        <option value="Initially, ">Initially,</option>
+                        <option value="One reason is that ">One reason is that</option>
+                        <option value="The first point is ">The first point is</option>
+                        <option value="For instance, ">For instance,</option>
+                        <option value="For example, ">For example,</option>
+                    </select>
+                    <div class="transition-selected" id="t1L"></div>
+                </div>
+                <div class="content-input">
+                    <textarea class="content-textarea" id="f1" placeholder="Provide your first supporting point with evidence and explanation..."></textarea>
+                    <div class="feedback" id="fb1"></div>
+                    <div class="tips"><strong>Tip:</strong> Include specific evidence, examples, or reasoning to support your main argument.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card sd2">
+            <div class="section-header">
+                <div class="section-status" id="s2"></div>
+                <div class="section-tag tag-sd2">Supporting Detail 2</div>
+                <div class="word-count" id="wc2">0 words</div>
+            </div>
+            <div class="writing-content">
+                <div class="transition-dropdown">
+                    <select id="t2">
+                        <option value="">Choose transition...</option>
+                        <option value="Second, ">Second,</option>
+                        <option value="Additionally, ">Additionally,</option>
+                        <option value="Furthermore, ">Furthermore,</option>
+                        <option value="Another reason is ">Another reason is</option>
+                        <option value="In addition, ">In addition,</option>
+                        <option value="Moreover, ">Moreover,</option>
+                        <option value="Also, ">Also,</option>
+                    </select>
+                    <div class="transition-selected" id="t2L"></div>
+                </div>
+                <div class="content-input">
+                    <textarea class="content-textarea" id="f2" placeholder="Provide your second supporting point with evidence and explanation..."></textarea>
+                    <div class="feedback" id="fb2"></div>
+                    <div class="tips"><strong>Tip:</strong> Make sure this point is different from your first detail but still supports your main argument.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card sd3">
+            <div class="section-header">
+                <div class="section-status" id="s3"></div>
+                <div class="section-tag tag-sd3">Supporting Detail 3</div>
+                <div class="word-count" id="wc3">0 words</div>
+            </div>
+            <div class="writing-content">
+                <div class="transition-dropdown">
+                    <select id="t3">
+                        <option value="">Choose transition...</option>
+                        <option value="Third, ">Third,</option>
+                        <option value="Finally, ">Finally,</option>
+                        <option value="Lastly, ">Lastly,</option>
+                        <option value="Most importantly, ">Most importantly,</option>
+                        <option value="The final reason is ">The final reason is</option>
+                        <option value="Above all, ">Above all,</option>
+                    </select>
+                    <div class="transition-selected" id="t3L"></div>
+                </div>
+                <div class="content-input">
+                    <textarea class="content-textarea" id="f3" placeholder="Provide your third supporting point with evidence and explanation..."></textarea>
+                    <div class="feedback" id="fb3"></div>
+                    <div class="tips"><strong>Tip:</strong> Consider making this your strongest point to leave a lasting impression.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card conc">
+            <div class="section-header">
+                <div class="section-status" id="s4"></div>
+                <div class="section-tag tag-conc">Conclusion</div>
+                <div class="word-count" id="wc4">0 words</div>
+            </div>
+            <div class="writing-content">
+                <div class="transition-dropdown">
+                    <select id="t4">
+                        <option value="">Choose transition...</option>
+                        <option value="In conclusion, ">In conclusion,</option>
+                        <option value="To summarize, ">To summarize,</option>
+                        <option value="In summary, ">In summary,</option>
+                        <option value="Therefore, ">Therefore,</option>
+                        <option value="As a result, ">As a result,</option>
+                        <option value="That is why ">That is why</option>
+                        <option value="Ultimately, ">Ultimately,</option>
+                    </select>
+                    <div class="transition-selected" id="t4L"></div>
+                </div>
+                <div class="content-input">
+                    <textarea class="content-textarea" id="f4" placeholder="Restate your main argument and summarize your key points. End with a strong closing thought..."></textarea>
+                    <div class="feedback" id="fb4"></div>
+                    <div class="tips"><strong>Tip:</strong> Restate your thesis in different words and leave the reader with something to think about.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-clear" id="btnClear">Clear All</button>
+            <button class="btn btn-preview" id="btnPreview">Preview</button>
+            <button class="btn btn-copy" id="btnCopy">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-inner">
+            <h2>Your Written Response</h2>
+            <div class="preview-text" id="previewText"></div>
+            <div class="preview-meta" id="previewMeta"></div>
+            <div style="text-align:center;margin-top:24px;">
+                <button class="btn btn-preview" id="btnCloseP">Close Preview</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        "use strict";
+
+        var css = [
+            "*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }",
+            "html { background:#131a21 !important; margin:0 !important; padding:0 !important; border:none !important; outline:none !important; overflow-x:hidden; }",
+            "body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif; min-height:100vh; padding:20px; color:#e6edf3; background:#131a21 !important; margin:0 !important; border:none !important; outline:none !important; }",
+            ".container { max-width:1000px; margin:0 auto; }",
+
+            ".header { text-align:center; padding:28px 20px 20px; }",
+            ".header h1 { font-size:1.9em; font-weight:700; color:#fff; margin-bottom:6px; }",
+            ".header p { font-size:1em; color:#8b9bae; }",
+
+            ".breadcrumb { text-align:center; margin-bottom:20px; font-size:0.85em; color:#8b9bae; }",
+            ".breadcrumb a { color:#14b8a6; text-decoration:none; }",
+            ".breadcrumb a:hover { text-decoration:underline; }",
+            ".breadcrumb span { margin:0 6px; opacity:0.5; }",
+
+            ".progress-container { margin:0 0 20px; padding:14px 18px; background:#1a2332; border:1px solid rgba(20,184,166,0.15); border-radius:10px; }",
+            ".progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px; }",
+            ".progress-label { font-size:0.82em; font-weight:600; color:#8b9bae; text-transform:uppercase; letter-spacing:0.05em; }",
+            ".progress-stats { display:flex; gap:10px; flex-wrap:wrap; }",
+            ".progress-stat { font-size:0.78em; color:#14b8a6; font-family:monospace; background:rgba(20,184,166,0.1); padding:3px 10px; border-radius:5px; border:1px solid rgba(20,184,166,0.2); }",
+            ".progress-track { width:100%; height:6px; background:#0f1820; border-radius:3px; overflow:hidden; }",
+            ".progress-fill { height:100%; background:linear-gradient(90deg,#14b8a6,#2dd4bf); border-radius:3px; width:0%; transition:width 0.5s ease; }",
+
+            ".prompt-section { margin-bottom:20px; }",
+            ".card { background:#1a2332; border:1px solid rgba(20,184,166,0.12); border-radius:10px; padding:22px; margin-bottom:14px; transition:border-color 0.2s; }",
+            ".card:hover { border-color:rgba(20,184,166,0.35); }",
+            ".prompt-card { border-left:3px solid #14b8a6; }",
+            ".prompt-card h2 { font-size:1.1em; font-weight:600; color:#14b8a6; margin-bottom:12px; }",
+
+            ".prompt-input, .content-textarea { width:100%; padding:12px 14px; border:1px solid rgba(20,184,166,0.15); border-radius:8px; font-size:0.95em; font-family:inherit; background:#0f1820; color:#e6edf3; resize:vertical; line-height:1.6; transition:border-color 0.2s, box-shadow 0.2s; }",
+            ".prompt-input { min-height:80px; }",
+            ".content-textarea { min-height:100px; }",
+            ".prompt-input:focus, .content-textarea:focus { outline:none; border-color:#14b8a6; box-shadow:0 0 0 2px rgba(20,184,166,0.15); }",
+            ".prompt-input::placeholder, .content-textarea::placeholder { color:#4a5568; }",
+
+            ".section-header { display:flex; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap; }",
+            ".section-tag { font-size:0.72em; font-weight:700; font-family:monospace; letter-spacing:0.08em; padding:5px 12px; border-radius:5px; text-transform:uppercase; white-space:nowrap; }",
+            ".tag-topic { background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3); }",
+            ".tag-sd1 { background:rgba(59,130,246,0.15); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); }",
+            ".tag-sd2 { background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); }",
+            ".tag-sd3 { background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.3); }",
+            ".tag-conc { background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); }",
+
+            ".section-status { width:18px; height:18px; border-radius:50%; border:2px solid #2a3a4a; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.3s; flex-shrink:0; background:transparent; }",
+            ".section-status.complete { background:#22c55e; border-color:#22c55e; color:#fff; }",
+
+            ".word-count { margin-left:auto; font-family:monospace; font-size:0.75em; color:#8b9bae; background:rgba(20,184,166,0.06); padding:4px 10px; border-radius:5px; border:1px solid rgba(20,184,166,0.12); }",
+
+            ".writing-content { display:flex; gap:14px; align-items:flex-start; }",
+            ".transition-dropdown { min-width:180px; }",
+            ".transition-dropdown select { width:100%; padding:10px 12px; border:1px solid rgba(20,184,166,0.15); border-radius:7px; font-size:0.9em; font-family:inherit; background:#0f1820; color:#e6edf3; cursor:pointer; }",
+            ".transition-dropdown select:focus { outline:none; border-color:#14b8a6; box-shadow:0 0 0 2px rgba(20,184,166,0.15); }",
+            ".transition-selected { margin-top:5px; font-size:0.78em; color:#14b8a6; font-style:italic; min-height:1.1em; }",
+            ".content-input { flex:1; }",
+
+            ".feedback { margin-top:6px; }",
+            ".fb-item { display:flex; align-items:flex-start; gap:8px; padding:7px 11px; border-radius:5px; font-size:0.82em; line-height:1.4; margin-bottom:3px; }",
+            ".fb-item.s { background:rgba(34,197,94,0.1); border-left:3px solid #22c55e; color:#4ade80; }",
+            ".fb-item.w { background:rgba(250,204,21,0.1); border-left:3px solid #facc15; color:#fde047; }",
+            ".fb-item.e { background:rgba(239,68,68,0.1); border-left:3px solid #ef4444; color:#fca5a5; }",
+            ".fb-icon { flex-shrink:0; }",
+
+            ".tips { margin-top:8px; padding:9px 13px; background:rgba(20,184,166,0.06); border-radius:5px; border-left:3px solid rgba(20,184,166,0.3); font-size:0.83em; color:#8b9bae; line-height:1.5; }",
+            ".tips strong { color:#14b8a6; }",
+
+            ".actions { display:flex; gap:10px; justify-content:center; margin-top:20px; margin-bottom:30px; padding:20px; background:#1a2332; border:1px solid rgba(20,184,166,0.12); border-radius:10px; flex-wrap:wrap; }",
+            ".btn { padding:10px 22px; border:none; border-radius:7px; font-size:0.9em; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }",
+            ".btn:hover { transform:translateY(-1px); }",
+            ".btn:active { transform:translateY(0); }",
+            ".btn-clear { background:rgba(139,155,174,0.1); color:#8b9bae; border:1px solid rgba(20,184,166,0.15); }",
+            ".btn-clear:hover { background:rgba(139,155,174,0.2); color:#e6edf3; }",
+            ".btn-preview { background:rgba(20,184,166,0.12); color:#14b8a6; border:1px solid rgba(20,184,166,0.3); }",
+            ".btn-preview:hover { background:rgba(20,184,166,0.22); }",
+            ".btn-copy { background:linear-gradient(135deg,#14b8a6,#0d9488); color:#fff; }",
+            ".btn-copy:hover { box-shadow:0 4px 16px rgba(20,184,166,0.3); }",
+
+            ".preview-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; }",
+            ".preview-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a2332; border:1px solid rgba(20,184,166,0.2); padding:28px; border-radius:14px; max-width:80%; max-height:80%; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.5); width:700px; }",
+            ".preview-inner h2 { color:#14b8a6; font-size:1.2em; margin-bottom:18px; }",
+            ".preview-text { line-height:1.9; font-size:1em; color:#e6edf3; }",
+            ".preview-text p { margin-bottom:12px; }",
+            ".preview-text .pp { font-weight:600; color:#14b8a6; font-style:italic; margin-bottom:14px; }",
+            ".preview-meta { margin-top:18px; padding-top:14px; border-top:1px solid rgba(20,184,166,0.15); display:flex; gap:10px; flex-wrap:wrap; }",
+            ".preview-meta span { font-family:monospace; font-size:0.75em; color:#8b9bae; background:rgba(20,184,166,0.06); padding:5px 10px; border-radius:5px; border:1px solid rgba(20,184,166,0.12); }",
+
+            ".toast-el { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(70px); background:linear-gradient(135deg,#14b8a6,#0d9488); color:#fff; padding:12px 24px; border-radius:8px; font-family:inherit; font-weight:600; font-size:0.9em; box-shadow:0 6px 24px rgba(20,184,166,0.3); z-index:2000; opacity:0; transition:all 0.35s ease; pointer-events:none; }",
+            ".toast-el.vis { opacity:1; transform:translateX(-50%) translateY(0); }",
+            ".toast-el.err { background:linear-gradient(135deg,#ef4444,#dc2626); box-shadow:0 6px 24px rgba(239,68,68,0.3); }",
+
+            ".save-ind { position:fixed; top:12px; right:12px; font-size:0.75em; color:#4a5568; font-family:monospace; padding:5px 10px; background:#1a2332; border:1px solid rgba(20,184,166,0.12); border-radius:5px; opacity:0; transition:opacity 0.3s; z-index:100; }",
+            ".save-ind.vis { opacity:1; }",
+
+            "@media (max-width:700px) { .writing-content { flex-direction:column; } .transition-dropdown { min-width:100%; } .actions { flex-direction:column; align-items:stretch; } .btn { justify-content:center; } .header h1 { font-size:1.5em; } }"
+        ].join("\n");
+
+        var styleEl = document.createElement("style");
+        styleEl.type = "text/css";
+        if (styleEl.styleSheet) { styleEl.styleSheet.cssText = css; }
+        else { styleEl.appendChild(document.createTextNode(css)); }
+        document.head.appendChild(styleEl);
+
+        function cw(t){t=(t||"").replace(/^\s+|\s+$/g,"");return t===""?0:t.split(/\s+/).length;}
+        function csen(t){t=(t||"").replace(/^\s+|\s+$/g,"");if(!t)return 0;var m=t.match(/[.!?]+/g);return m?m.length:0;}
+        function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML;}
+        function $(id){return document.getElementById(id);}
+        var _dt={};
+        function debounce(key,fn,ms){return function(){var a=arguments,c=this;clearTimeout(_dt[key]);_dt[key]=setTimeout(function(){fn.apply(c,a);},ms);};}
+        function toast(m,e){var el=$("toastEl");el.textContent=m;el.className="toast-el vis"+(e?" err":"");setTimeout(function(){el.className="toast-el";},2800);}
+        function fbi(cls,icon,msg){return '<div class="fb-item '+cls+'"><span class="fb-icon">'+icon+"</span><span>"+msg+"</span></div>";}
+
+        var SECS=[
+            {id:"f0",wc:"wc0",fb:"fb0",st:"s0",type:"topic"},
+            {id:"f1",wc:"wc1",fb:"fb1",st:"s1",type:"detail"},
+            {id:"f2",wc:"wc2",fb:"fb2",st:"s2",type:"detail"},
+            {id:"f3",wc:"wc3",fb:"fb3",st:"s3",type:"detail"},
+            {id:"f4",wc:"wc4",fb:"fb4",st:"s4",type:"conclusion"}
+        ];
+        var TRANS=["t1","t2","t3","t4"];
+        var SK="wrb_v4";
+
+        function analyze(text,type){
+            var msgs=[];var tr=text.replace(/^\s+|\s+$/g,"");if(!tr)return msgs;
+            var fl=tr.replace(/^["'\u201C\u201D\u2018\u2019\s]+/,"").charAt(0);
+            if(fl&&/[a-z]/.test(fl))msgs.push(fbi("e","\u26D4","Start with a capital letter."));
+            if(!/[.!?]["'\u201D\u2019]?$/.test(tr))msgs.push(fbi("e","\u26D4","End with proper punctuation (. ! or ?)."));
+            var w=cw(tr);
+            if(w<5)msgs.push(fbi("e","\u26D4","Too short \u2014 add more detail."));
+            else if(w>=8&&w<=40)msgs.push(fbi("s","\u2705","Good sentence length."));
+            else if(w>40)msgs.push(fbi("w","\u26A0","Quite long \u2014 consider breaking into two sentences."));
+            if(/\b\w+(n't|'re|'ve|'ll|'d)\b/i.test(text))msgs.push(fbi("w","\u26A0","Avoid contractions in formal writing."));
+            if(/\b(thing|things|stuff|a lot|very|really)\b/i.test(text))msgs.push(fbi("w","\u26A0","Replace vague words with specific language."));
+            if(type==="topic"){
+                if(/^(i think|i believe|i feel|in my opinion)/i.test(tr))msgs.push(fbi("e","\u26D4","State your argument directly \u2014 remove \"I think.\""));
+                if(/(because|demonstrates|shows|proves|reveals|argues|should|must)/i.test(text))msgs.push(fbi("s","\u2705","Strong, clear position statement!"));
+                if(tr.charAt(tr.length-1)==="?")msgs.push(fbi("e","\u26D4","Your topic sentence should be a statement, not a question."));
+            }
+            if(type==="detail"){
+                if(/(for example|for instance|according to|such as|specifically|one example|evidence|research)/i.test(text))msgs.push(fbi("s","\u2705","Good use of evidence!"));
+                else if(w>=8)msgs.push(fbi("w","\u26A0","Strengthen with evidence \u2014 try \"for example,\" \"according to,\" or \"this shows.\""));
+                if(/(this means|this shows|this demonstrates|this proves|therefore|because of this|as a result)/i.test(text))msgs.push(fbi("s","\u2705","Nice explanation connecting evidence to your point."));
+            }
+            if(type==="conclusion"){
+                var topicVal=$("f0").value.replace(/^\s+|\s+$/g,"");
+                if(topicVal&&tr.toLowerCase()===topicVal.toLowerCase())msgs.push(fbi("e","\u26D4","Do not copy your topic sentence exactly \u2014 restate it."));
+                else if(topicVal&&w>=6)msgs.push(fbi("s","\u2705","Good job restating in your own words."));
+                if(/(therefore|thus|clearly|in short|overall|ultimately|as shown|significance|important)/i.test(text))msgs.push(fbi("s","\u2705","Strong concluding language!"));
+                if(/^(for example|for instance|according to|one study)/i.test(tr))msgs.push(fbi("e","\u26D4","Do not introduce new evidence in your conclusion."));
+            }
+            return msgs;
+        }
+
+        function updMeta(sec){var el=$(sec.id);if(!el)return;var w=cw(el.value);var wce=$(sec.wc);if(wce)wce.textContent=w+" words";var st=$(sec.st);if(st){if(w>=5){st.className="section-status complete";st.textContent="\u2713";}else{st.className="section-status";st.textContent="";}}}
+        function updProgress(){var tw=0,ts=0,dn=0;for(var i=0;i<SECS.length;i++){var el=$(SECS[i].id);if(!el)continue;var v=el.value;var w=cw(v);tw+=w;ts+=csen(v);if(w>=5)dn++;}var we=$("totalWords");if(we)we.textContent=tw+" words";var se=$("totalSentences");if(se)se.textContent=ts+" sentences";var de=$("sectionsDone");if(de)de.textContent=dn+" / 5 sections";var pe=$("progressFill");if(pe)pe.style.width=((dn/5)*100)+"%";}
+
+        function save(){var state={prompt:"",fields:{},trans:{}};var pi=$("promptInput");if(pi)state.prompt=pi.value;for(var i=0;i<SECS.length;i++){var el=$(SECS[i].id);if(el)state.fields[SECS[i].id]=el.value;}for(var j=0;j<TRANS.length;j++){var tel=$(TRANS[j]);if(tel)state.trans[TRANS[j]]=tel.value;}try{localStorage.setItem(SK,JSON.stringify(state));var ind=$("saveInd");if(ind){ind.className="save-ind vis";setTimeout(function(){ind.className="save-ind";},1500);}}catch(x){}}
+        var dSave=debounce("save",save,800);
+
+        function loadState(){try{var raw=localStorage.getItem(SK);if(!raw)return;var s=JSON.parse(raw);var pi=$("promptInput");if(pi&&s.prompt)pi.value=s.prompt;if(s.fields){var keys=Object.keys(s.fields);for(var i=0;i<keys.length;i++){var el=$(keys[i]);if(el)el.value=s.fields[keys[i]];}}if(s.trans){var tkeys=Object.keys(s.trans);for(var j=0;j<tkeys.length;j++){var tel=$(tkeys[j]);if(tel){tel.value=s.trans[tkeys[j]];var lbl=$(tkeys[j]+"L");if(lbl&&tel.value)lbl.textContent="Using: \""+tel.value.replace(/\s+$/,"").replace(/^\s+/,"")+"\"";}}}for(var k=0;k<SECS.length;k++){updMeta(SECS[k]);var el2=$(SECS[k].id);var fbEl=$(SECS[k].fb);if(el2&&fbEl&&el2.value.replace(/^\s+|\s+$/g,""))fbEl.innerHTML=analyze(el2.value,SECS[k].type).join("");}updProgress();}catch(x){}}
+
+        function wireEvents(){
+            for(var i=0;i<SECS.length;i++){(function(sec){var el=$(sec.id);var fbEl=$(sec.fb);if(!el||!fbEl)return;var dfb=debounce("fb_"+sec.id,function(){fbEl.innerHTML=analyze(el.value,sec.type).join("");},300);el.addEventListener("input",function(){updMeta(sec);updProgress();dfb();dSave();});})(SECS[i]);}
+            for(var j=0;j<TRANS.length;j++){(function(tid){var sel=$(tid);var lbl=$(tid+"L");if(!sel||!lbl)return;sel.addEventListener("change",function(){lbl.textContent=sel.value?"Using: \""+sel.value.replace(/\s+$/,"").replace(/^\s+/,"")+"\"":"";save();});})(TRANS[j]);}
+            var pi=$("promptInput");if(pi)pi.addEventListener("input",dSave);
+        }
+
+        function genResponse(){var parts=[];var f0=$("f0");if(f0){var v0=f0.value.replace(/^\s+|\s+$/g,"");if(v0)parts.push(v0);}for(var i=1;i<=3;i++){var fi=$("f"+i);if(!fi)continue;var v=fi.value.replace(/^\s+|\s+$/g,"");if(v){var ti=$("t"+i);parts.push((ti?ti.value:"")+v);}}var f4=$("f4");if(f4){var v4=f4.value.replace(/^\s+|\s+$/g,"");if(v4){var t4e=$("t4");parts.push((t4e?t4e.value:"")+v4);}}return parts.join("\n\n");}
+
+        function wireActions(){
+            var bc=$("btnClear");if(bc)bc.addEventListener("click",function(){if(!confirm("Clear all content? This cannot be undone."))return;var pi=$("promptInput");if(pi)pi.value="";for(var i=0;i<SECS.length;i++){var el=$(SECS[i].id);if(el)el.value="";var fb=$(SECS[i].fb);if(fb)fb.innerHTML="";updMeta(SECS[i]);}for(var j=0;j<TRANS.length;j++){var sel=$(TRANS[j]);if(sel)sel.value="";var lbl=$(TRANS[j]+"L");if(lbl)lbl.textContent="";}updProgress();try{localStorage.removeItem(SK);}catch(x){}toast("All fields cleared");});
+            var bp=$("btnPreview");if(bp)bp.addEventListener("click",function(){var r=genResponse();if(!r.replace(/^\s+|\s+$/g,"")){toast("Write something before previewing!",true);return;}var pi=$("promptInput");var pr=pi?pi.value.replace(/^\s+|\s+$/g,""):"";var html="";if(pr)html+="<p class=\"pp\">Prompt: "+esc(pr)+"</p>";var paras=r.split("\n\n");for(var i=0;i<paras.length;i++)html+="<p>"+esc(paras[i])+"</p>";var pt=$("previewText");if(pt)pt.innerHTML=html;var pm=$("previewMeta");if(pm)pm.innerHTML="<span>"+cw(r)+" words</span><span>"+csen(r)+" sentences</span><span>"+paras.length+" paragraphs</span>";var modal=$("previewModal");if(modal)modal.style.display="block";});
+            var bcp=$("btnCloseP");if(bcp)bcp.addEventListener("click",function(){var m=$("previewModal");if(m)m.style.display="none";});
+            var modal=$("previewModal");if(modal)modal.addEventListener("click",function(e){if(e.target===this)this.style.display="none";});
+            var bco=$("btnCopy");if(bco)bco.addEventListener("click",function(){var r=genResponse();if(!r.replace(/^\s+|\s+$/g,"")){toast("Write something before copying!",true);return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(r).then(function(){toast("Copied to clipboard!");},function(){fcopy(r);});}else fcopy(r);});
+            document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="p"){e.preventDefault();if(bp)bp.click();}if(e.ctrlKey&&e.shiftKey&&(e.key==="C"||e.key==="c")){e.preventDefault();if(bco)bco.click();}if(e.key==="Escape"){var m=$("previewModal");if(m)m.style.display="none";}});
+        }
+        function fcopy(text){var ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.left="-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copied to clipboard!");}catch(x){toast("Copy failed",true);}document.body.removeChild(ta);}
+
+        wireEvents();wireActions();loadState();
+    })();
+    </script>
+</body>
+</html>
