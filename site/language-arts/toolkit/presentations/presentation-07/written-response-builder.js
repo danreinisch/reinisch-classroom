@@ -184,8 +184,8 @@ function generateResponse() {
 }
 
 // Clear all content
-function clearAll() {
-  if (!confirm('Are you sure you want to clear all content?')) return;
+async function clearAll() {
+  if (!await rcConfirm('Clear All', 'Are you sure you want to clear all content?', 'Clear', { danger: true })) return;
   ['topicSentence','supportingDetail1','supportingDetail2','supportingDetail3','conclusion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   ['transition1','transition2','transition3','transitionConclusion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   ['topicFeedback','detail1Feedback','detail2Feedback','detail3Feedback','conclusionFeedback'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
@@ -204,9 +204,9 @@ function escapeHtml(text) {
 }
 
 // Preview response in modal
-function previewResponse() {
+async function previewResponse() {
   const response = generateResponse();
-  if (response.trim() === '') { alert('Please write something before previewing!'); return; }
+  if (response.trim() === '') { await rcAlert('Nothing to Preview', 'Please write something before previewing!'); return; }
   const escapedResponse = escapeHtml(response);
   const formattedResponse = escapedResponse.replace(/\n\n/g, '</p><p>');
   document.getElementById('previewText').innerHTML = `<p>${formattedResponse}</p>`;
@@ -227,10 +227,10 @@ function announceStatus(message) {
 }
 
 // Copy response to clipboard
-function copyResponse() {
+async function copyResponse() {
   const response = generateResponse();
   if (response.trim() === '') { 
-    alert('Please write something before copying!'); 
+    await rcAlert('Nothing to Copy', 'Please write something before copying!'); 
     return; 
   }
   
@@ -260,7 +260,7 @@ function copyResponse() {
 }
 
 // Fallback copy method for older browsers
-function fallbackCopy(text) {
+async function fallbackCopy(text) {
   const textArea = document.createElement('textarea');
   textArea.value = text;
   textArea.style.position = 'fixed';
@@ -280,7 +280,7 @@ function fallbackCopy(text) {
       btn.textContent = originalText;
     }, 2000);
   } catch (err) {
-    alert('Failed to copy. Please select and copy the text manually.');
+    await rcAlert('Copy Failed', 'Failed to copy. Please select and copy the text manually.');
   }
   
   document.body.removeChild(textArea);

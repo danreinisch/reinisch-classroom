@@ -174,36 +174,35 @@ function checkConclusion() {
     feedback.innerHTML += messages.join('');
 }
 
-function clearAll() {
-    if (confirm('Are you sure you want to clear all content?')) {
-        const allInputs = [
-            'promptInput', 'hook', 'background', 'thesis',
-            'body1Topic', 'body1Evidence', 'body1Concluding',
-            'body2Topic', 'body2Evidence', 'body2Concluding',
-            'body3Topic', 'body3Evidence', 'body3Concluding',
-            'restatedThesis', 'summary', 'closingThought'
-        ];
-        
-        allInputs.forEach(id => {
-            const elem = document.getElementById(id);
-            if (elem) elem.value = '';
-        });
+async function clearAll() {
+    if (!await rcConfirm('Clear All', 'Are you sure you want to clear all content?', 'Clear', { danger: true })) return;
+    const allInputs = [
+        'promptInput', 'hook', 'background', 'thesis',
+        'body1Topic', 'body1Evidence', 'body1Concluding',
+        'body2Topic', 'body2Evidence', 'body2Concluding',
+        'body3Topic', 'body3Evidence', 'body3Concluding',
+        'restatedThesis', 'summary', 'closingThought'
+    ];
+    
+    allInputs.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.value = '';
+    });
 
-        const transitions = ['transition1', 'transition2', 'transition3', 'transitionConclusion'];
-        transitions.forEach(id => {
-            const elem = document.getElementById(id);
-            if (elem) elem.value = '';
-        });
+    const transitions = ['transition1', 'transition2', 'transition3', 'transitionConclusion'];
+    transitions.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.value = '';
+    });
 
-        const feedbacks = ['hookFeedback', 'thesisFeedback', 'body1TopicFeedback', 
-                          'body2TopicFeedback', 'body3TopicFeedback', 'conclusionFeedback'];
-        feedbacks.forEach(id => {
-            const elem = document.getElementById(id);
-            if (elem) elem.innerHTML = '';
-        });
+    const feedbacks = ['hookFeedback', 'thesisFeedback', 'body1TopicFeedback', 
+                      'body2TopicFeedback', 'body3TopicFeedback', 'conclusionFeedback'];
+    feedbacks.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.innerHTML = '';
+    });
 
-        sections.forEach(section => updateWordCount(section.ids, section.counter));
-    }
+    sections.forEach(section => updateWordCount(section.ids, section.counter));
 }
 
 function generateEssay() {
@@ -261,10 +260,10 @@ function generateEssay() {
     return essay.trim();
 }
 
-function previewEssay() {
+async function previewEssay() {
     const essay = generateEssay();
     if (!essay || essay.startsWith('Essay Topic:') && essay.length < 20) {
-        alert('Please write some content before previewing!');
+        await rcAlert('Nothing to Preview', 'Please write some content before previewing!');
         return;
     }
 
@@ -292,10 +291,10 @@ function announceStatus(message) {
     }
 }
 
-function copyEssay() {
+async function copyEssay() {
     const essay = generateEssay();
     if (!essay || essay.startsWith('Essay Topic:') && essay.length < 20) {
-        alert('Please write some content before copying!');
+        await rcAlert('Nothing to Copy', 'Please write some content before copying!');
         return;
     }
 
