@@ -16,14 +16,21 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
+      if (!Array.isArray(arr)) return [];
+      // Filter out non-object entries (corrupted data, null, strings, numbers, nested arrays)
+      return arr.filter(item => item !== null && typeof item === 'object' && !Array.isArray(item));
     } catch (_) {
       return [];
     }
   }
 
   function writeDrafts(drafts) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+    } catch (err) {
+      console.error('[tc-work] Failed to write drafts to localStorage:', err);
+      rcAlert('Storage Error', 'Could not save drafts — storage may be full or unavailable.');
+    }
   }
 
   function bytesOf(str) {
@@ -135,8 +142,18 @@
       tr.appendChild(tdClass);
 
       const tdWhen = document.createElement("td");
-      const autoReleaseIcon = d.autoRelease ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px; margin-left:4px; opacity:0.7;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' : '';
-      tdWhen.innerHTML = `<div>Release: ${formatWhen(d.releaseAt)}${autoReleaseIcon}</div><div>Due: ${formatWhen(d.dueAt)}</div>`;
+      const releaseDiv = document.createElement("div");
+      releaseDiv.textContent = "Release: " + formatWhen(d.releaseAt);
+      if (d.autoRelease) {
+        // SAFETY: static SVG icon, no user data
+        const clockIcon = document.createElement("span");
+        clockIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px; margin-left:4px; opacity:0.7;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+        releaseDiv.appendChild(clockIcon);
+      }
+      const dueDiv = document.createElement("div");
+      dueDiv.textContent = "Due: " + formatWhen(d.dueAt);
+      tdWhen.appendChild(releaseDiv);
+      tdWhen.appendChild(dueDiv);
       tr.appendChild(tdWhen);
 
       const tdSrc = document.createElement("td");
@@ -150,6 +167,7 @@
       btnEdit.type = "button";
       btnEdit.className = "work-btn";
       btnEdit.title = "Edit";
+      // SAFETY: static SVG icon + static label text, no user data
       btnEdit.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit';
       btnEdit.addEventListener("click", () => startEdit(d.id));
       tdActions.appendChild(btnEdit);
@@ -159,6 +177,7 @@
       btnDuplicate.className = "work-btn";
       btnDuplicate.style.marginLeft = "8px";
       btnDuplicate.title = "Duplicate";
+      // SAFETY: static SVG icon + static label text, no user data
       btnDuplicate.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Duplicate';
       btnDuplicate.addEventListener("click", () => duplicateOne(d.id));
       tdActions.appendChild(btnDuplicate);
@@ -168,6 +187,7 @@
       btnPreview.className = "work-btn";
       btnPreview.style.marginLeft = "8px";
       btnPreview.title = "Preview";
+      // SAFETY: static SVG icon + static label text, no user data
       btnPreview.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Preview';
       btnPreview.addEventListener("click", () => openPreview(d.id));
       tdActions.appendChild(btnPreview);
@@ -177,6 +197,7 @@
       btnIssue.className = "work-btn primary";
       btnIssue.style.marginLeft = "8px";
       btnIssue.title = "Issue";
+      // SAFETY: static SVG icon + static label text, no user data
       btnIssue.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Issue';
       btnIssue.addEventListener("click", () => handleIssueDraft(d.id));
       tdActions.appendChild(btnIssue);
@@ -186,6 +207,7 @@
       btnExport.className = "work-btn";
       btnExport.style.marginLeft = "8px";
       btnExport.title = "Export";
+      // SAFETY: static SVG icon + static label text, no user data
       btnExport.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export';
       btnExport.addEventListener("click", () => exportOne(d.id));
       tdActions.appendChild(btnExport);
@@ -195,6 +217,7 @@
       btnDel.className = "work-btn danger";
       btnDel.style.marginLeft = "8px";
       btnDel.title = "Delete";
+      // SAFETY: static SVG icon + static label text, no user data
       btnDel.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
       btnDel.addEventListener("click", () => deleteOne(d.id));
       tdActions.appendChild(btnDel);

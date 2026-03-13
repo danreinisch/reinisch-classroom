@@ -243,7 +243,7 @@ const local = {
     if (i >= 0) arr[i] = instance;
     else arr.push(instance);
     store.set('assignmentInstances', arr);
-    return true;
+    return instance;
   },
   async addSubmission(payload) {
     const submissions = store.get('submissions', []);
@@ -1364,12 +1364,14 @@ const remote = {
       settings: x.settings || {}
     };
     
-    // Upsert on unique (assignment_id, student_id)
-    const { error } = await supabase
+    // Upsert on unique (assignment_id, student_id) and return the row id
+    const { data: instanceRow, error } = await supabase
       .from('assignment_instances')
-      .upsert(payload, { onConflict: 'assignment_id,student_id' });
+      .upsert(payload, { onConflict: 'assignment_id,student_id' })
+      .select('id')
+      .single();
     if (error) throw error;
-    return true;
+    return instanceRow;
   },
   
   async addSubmission(payload) {
