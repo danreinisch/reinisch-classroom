@@ -3081,12 +3081,14 @@
     
     for (const sub of graded) {
       if (!sub.submitted_at) continue;
+      const date = new Date(sub.submitted_at);
+      if (isNaN(date.getTime())) continue;
       let qKey = null;
       if (quarterUtils && quarterUtils.getQuarterForDate) {
         qKey = quarterUtils.getQuarterForDate(sub.submitted_at);
       } else {
         // Calendar quarter fallback
-        const month = new Date(sub.submitted_at).getMonth() + 1; // 1-12
+        const month = date.getMonth() + 1; // 1-12
         if (month >= 1 && month <= 3) qKey = 'Q1';
         else if (month >= 4 && month <= 6) qKey = 'Q2';
         else if (month >= 7 && month <= 9) qKey = 'Q3';
@@ -3121,11 +3123,13 @@
     const lastWeek = submissions.filter(s => {
       if (!s.submitted_at) return false;
       const d = new Date(s.submitted_at);
+      if (isNaN(d.getTime())) return false;
       return d >= oneWeekAgo && d < now;
     });
     const prevWeek = submissions.filter(s => {
       if (!s.submitted_at) return false;
       const d = new Date(s.submitted_at);
+      if (isNaN(d.getTime())) return false;
       return d >= twoWeeksAgo && d < oneWeekAgo;
     });
     const delta = lastWeek.length - prevWeek.length;
@@ -3144,7 +3148,7 @@
    */
   function calculateGradeTrend(graded) {
     const sorted = [...graded]
-      .filter(s => s.submitted_at)
+      .filter(s => s.submitted_at && !isNaN(new Date(s.submitted_at).getTime()))
       .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
     if (sorted.length < 2) return { direction: 'flat', delta: 0 };
     const last5 = sorted.slice(0, 5);
@@ -3166,7 +3170,7 @@
    */
   function calculateGradeStreak(graded, threshold = 80) {
     const sorted = [...graded]
-      .filter(s => s.submitted_at)
+      .filter(s => s.submitted_at && !isNaN(new Date(s.submitted_at).getTime()))
       .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
     let streak = 0;
     for (const sub of sorted) {
