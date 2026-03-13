@@ -1225,6 +1225,10 @@
     try {
       let paperUploadUrl = null;
       let gradeRecorded = false;
+      // Pre-compute score percentage once (used in both branches + toast)
+      const scorePercent = scoreEarned !== null ? Math.round((scoreEarned / totalPossible) * 100) : null;
+      // Instance ID helper: combines assignment ID with student code
+      const instanceId = (assignmentId) => assignmentId + '-' + studentCode;
 
       if (isRemote) {
         // ── Supabase mode: upload file, then create assignment record ──
@@ -1302,9 +1306,8 @@
         // Auto-create gradebook entry if score + student code provided
         if (scoreEarned !== null && studentCode && newAssignment) {
           try {
-            const scorePercent = Math.round((scoreEarned / totalPossible) * 100);
             const instance = await db.upsertAssignmentInstance({
-              id: newAssignment.id + '-' + studentCode,
+              id: instanceId(newAssignment.id),
               assignment_id: newAssignment.id,
               student_code: studentCode,
               assigned_at: dateCompleted || new Date().toISOString().split('T')[0],
@@ -1369,17 +1372,16 @@
         // Auto-create gradebook entry in local mode if score + student code provided
         if (scoreEarned !== null && studentCode && newAssignment) {
           try {
-            const scorePercent = Math.round((scoreEarned / totalPossible) * 100);
-            const instanceId = newAssignment.id + '-' + studentCode;
+            const instId = instanceId(newAssignment.id);
             await db.upsertAssignmentInstance({
-              id: instanceId,
+              id: instId,
               assignment_id: newAssignment.id,
               student_code: studentCode,
               assigned_at: dateCompleted || new Date().toISOString().split('T')[0],
               status: 'Graded'
             });
             await db.addSubmission({
-              instance_id: instanceId,
+              instance_id: instId,
               score_total: scorePercent,
               submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString()
             });
@@ -1394,7 +1396,6 @@
       // Success — close modal, refresh list, show toast
       overlay.remove();
       console.log('[tc-library] Paper assignment uploaded successfully');
-      const scorePercent = gradeRecorded ? Math.round((scoreEarned / totalPossible) * 100) : null;
       const toastSuffix = !isRemote ? ' (metadata only — local mode)' : '';
       const gradeNote = gradeRecorded ? ` — ${scorePercent}% recorded in Gradebook` : '';
       showToast(`📄 "${title}" saved to Library${gradeNote}${toastSuffix}`);
