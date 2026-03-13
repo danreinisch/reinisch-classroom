@@ -2133,8 +2133,11 @@
 
       for (const studentCode of studentCodes) {
         try {
-          // Build a stable assignment ID for this manual entry
-          const assignmentId = 'MANUAL_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7).toUpperCase();
+          // Build a stable assignment ID for this manual entry (crypto.randomUUID when available)
+          const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
+            : (Date.now().toString(36) + Math.random().toString(36).slice(2, 9)).toUpperCase();
+          const assignmentId = 'MANUAL_' + uid;
 
           if (usingSupabase) {
             // Supabase path

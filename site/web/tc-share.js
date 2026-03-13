@@ -419,10 +419,11 @@
         const strong = el.querySelector('strong');
         if (strong) {
           const isExpanded = content.classList.contains('show');
-          strong.textContent = strong.textContent.replace(
-            isExpanded ? '▶' : '▼',
-            isExpanded ? '▼' : '▶'
-          );
+          if (isExpanded) {
+            strong.textContent = strong.textContent.replace('▶', '▼');
+          } else {
+            strong.textContent = strong.textContent.replace('▼', '▶');
+          }
         }
       });
     });
