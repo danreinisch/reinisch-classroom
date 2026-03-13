@@ -1844,6 +1844,418 @@
   }
 
   /**
+   * Validate manual assignment form inputs.
+   * Returns { valid: true, data: {...} } or { valid: false, error: string }.
+   */
+  function validateManualAssignmentInputs({ title, studentCodes, total, score, date, category }) {
+    if (!title || !title.trim()) return { valid: false, error: 'Assignment Title is required.' };
+    if (!studentCodes || studentCodes.length === 0) return { valid: false, error: 'At least one Student Code is required.' };
+    const totalNum = Number(total);
+    if (!total && total !== 0) return { valid: false, error: 'Total Possible Points is required.' };
+    if (!Number.isFinite(totalNum) || totalNum < 1) return { valid: false, error: 'Total Possible Points must be a number ≥ 1.' };
+    const scoreNum = Number(score);
+    if (score === '' || score === null || score === undefined) return { valid: false, error: 'Score Earned is required.' };
+    if (!Number.isFinite(scoreNum) || scoreNum < 0) return { valid: false, error: 'Score Earned must be a number ≥ 0.' };
+    if (scoreNum > totalNum) return { valid: false, error: 'Score Earned cannot exceed Total Possible Points.' };
+    if (!date) return { valid: false, error: 'Date is required.' };
+    return {
+      valid: true,
+      data: {
+        title: title.trim(),
+        studentCodes,
+        total: totalNum,
+        score: scoreNum,
+        percent: Math.round((scoreNum / totalNum) * 100),
+        date,
+        category: category || 'assignment'
+      }
+    };
+  }
+
+  /**
+   * Open the "Add Manual Assignment" modal.
+   * Allows teachers to record a grade for a non-digital / paper / verbal assignment
+   * directly into the gradebook without uploading a file.
+   */
+  async function openManualAssignmentModal() {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Remove any existing overlay
+    const existing = document.getElementById('manualAssignmentOverlay');
+    if (existing) existing.remove();
+
+    // Overlay backdrop
+    const overlay = document.createElement('div');
+    overlay.id = 'manualAssignmentOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'manualAssignmentTitle');
+    overlay.style.cssText = [
+      'position: fixed',
+      'top: 0', 'left: 0', 'right: 0', 'bottom: 0',
+      'background: rgba(0,0,0,.82)',
+      'backdrop-filter: blur(4px)',
+      'display: flex',
+      'align-items: center',
+      'justify-content: center',
+      'z-index: 10000',
+      'padding: 24px'
+    ].join(';');
+
+    // Card
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;';
+
+    // Header row
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;';
+
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'manualAssignmentTitle';
+    titleEl.style.margin = '0';
+    titleEl.textContent = '✏️ Add Manual Assignment';
+    header.appendChild(titleEl);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Close dialog');
+    closeBtn.style.cssText = 'background: none; border: none; font-size: 1.4rem; cursor: pointer; color: inherit; padding: 4px 8px;';
+    closeBtn.textContent = '✕';
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    // Helper: create a labeled field wrapper
+    function makeField(labelText, required, inputEl, hintText) {
+      const wrap = document.createElement('div');
+      wrap.style.marginBottom = '14px';
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display: block; font-weight: 600; margin-bottom: 4px;';
+      lbl.textContent = labelText;
+      if (required) {
+        const req = document.createElement('span');
+        req.textContent = ' *';
+        req.style.color = '#e74c3c';
+        lbl.appendChild(req);
+      }
+      inputEl.style.cssText = 'width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); color: inherit; font-size: 0.95rem;';
+      wrap.appendChild(lbl);
+      wrap.appendChild(inputEl);
+      if (hintText) {
+        const hint = document.createElement('small');
+        hint.style.cssText = 'display: block; margin-top: 3px; opacity: 0.65;';
+        hint.textContent = hintText;
+        wrap.appendChild(hint);
+      }
+      return wrap;
+    }
+
+    // Form
+    const form = document.createElement('form');
+    form.id = 'manualAssignmentForm';
+
+    // Assignment Title
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.id = 'ma_title';
+    titleInput.placeholder = 'e.g., Verbal Quiz — Chapter 5';
+    titleInput.required = true;
+    form.appendChild(makeField('Assignment Title', true, titleInput));
+
+    // Class (pre-filled from current filter)
+    const classInput = document.createElement('input');
+    classInput.type = 'text';
+    classInput.id = 'ma_class';
+    classInput.value = currentClassFilter !== 'All Classes' ? currentClassFilter : '';
+    classInput.placeholder = 'e.g., Period 1';
+    form.appendChild(makeField('Class', false, classInput, 'Used to tag the assignment (optional if entering per-student).'));
+
+    // Student Code(s)
+    const studentCodesInput = document.createElement('input');
+    studentCodesInput.type = 'text';
+    studentCodesInput.id = 'ma_student_codes';
+    studentCodesInput.placeholder = 'e.g., ABC123 or ABC123, DEF456';
+    studentCodesInput.required = true;
+    form.appendChild(makeField('Student Code(s)', true, studentCodesInput, 'Comma-separated codes from the class roster.'));
+
+    // Score row (score + total side by side)
+    const scoreRow = document.createElement('div');
+    scoreRow.style.cssText = 'display: flex; gap: 12px;';
+
+    const scoreInput = document.createElement('input');
+    scoreInput.type = 'number';
+    scoreInput.id = 'ma_score';
+    scoreInput.min = '0';
+    scoreInput.step = 'any';
+    scoreInput.placeholder = '0';
+    scoreInput.required = true;
+    const scoreWrap = makeField('Score Earned', true, scoreInput);
+    scoreWrap.style.flex = '1';
+    scoreRow.appendChild(scoreWrap);
+
+    const totalInput = document.createElement('input');
+    totalInput.type = 'number';
+    totalInput.id = 'ma_total';
+    totalInput.min = '1';
+    totalInput.step = 'any';
+    totalInput.placeholder = '100';
+    totalInput.required = true;
+    const totalWrap = makeField('Total Possible', true, totalInput);
+    totalWrap.style.flex = '1';
+    scoreRow.appendChild(totalWrap);
+
+    form.appendChild(scoreRow);
+
+    // Date
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.id = 'ma_date';
+    dateInput.value = todayStr;
+    dateInput.required = true;
+    form.appendChild(makeField('Date', true, dateInput));
+
+    // Category
+    const categorySelect = document.createElement('select');
+    categorySelect.id = 'ma_category';
+    [
+      ['assignment', 'Assignment (×1.0)'],
+      ['homework', 'Homework (×1.0)'],
+      ['classwork', 'Classwork (×1.0)'],
+      ['quiz', 'Quiz (×1.5)'],
+      ['test', 'Test (×2.0)'],
+      ['project', 'Project (×2.0)'],
+      ['participation', 'Participation (×1.0)']
+    ].forEach(([val, label]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      categorySelect.appendChild(opt);
+    });
+    form.appendChild(makeField('Category', false, categorySelect));
+
+    // Notes
+    const notesInput = document.createElement('textarea');
+    notesInput.id = 'ma_notes';
+    notesInput.rows = 3;
+    notesInput.placeholder = 'Optional teacher notes about this assignment…';
+    notesInput.style.resize = 'vertical';
+    form.appendChild(makeField('Notes', false, notesInput));
+
+    // Error display
+    const errorEl = document.createElement('div');
+    errorEl.id = 'ma_error';
+    errorEl.setAttribute('role', 'alert');
+    errorEl.style.cssText = 'display: none; color: #e74c3c; background: rgba(231,76,60,.12); border: 1px solid rgba(231,76,60,.4); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.92rem;';
+    form.appendChild(errorEl);
+
+    // Submit button
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.className = 'gb-btn primary';
+    submitBtn.style.cssText = 'width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;';
+    submitBtn.textContent = '✅ Save Grade';
+    form.appendChild(submitBtn);
+
+    card.appendChild(form);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // Close handlers
+    function closeModal() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKeyDown);
+    }
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+    // Keyboard handling (Escape + Tab trap)
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = Array.from(
+          card.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+        ).filter(el => !el.disabled);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+
+    // Form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Hide previous error
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+
+      const rawCodes = studentCodesInput.value.trim();
+      const studentCodes = rawCodes
+        .split(',')
+        .map(s => s.trim().toUpperCase())
+        .filter(Boolean);
+
+      const validation = validateManualAssignmentInputs({
+        title: titleInput.value,
+        studentCodes,
+        total: totalInput.value,
+        score: scoreInput.value,
+        date: dateInput.value,
+        category: categorySelect.value
+      });
+
+      if (!validation.valid) {
+        errorEl.textContent = validation.error;
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const { title, total, score, percent, date, category } = validation.data;
+      const notes = notesInput.value.trim();
+      const classLabel = classInput.value.trim();
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Saving…';
+
+      let savedCount = 0;
+      const errors = [];
+
+      for (const studentCode of studentCodes) {
+        try {
+          // Build a stable assignment ID for this manual entry
+          const assignmentId = 'MANUAL_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7).toUpperCase();
+
+          if (usingSupabase) {
+            // Supabase path
+            await db.upsertAssignmentInstance({
+              id: assignmentId + '-' + studentCode,
+              assignment_id: assignmentId,
+              student_code: studentCode,
+              assigned_at: date,
+              status: 'Submitted'
+            });
+
+            await db.addSubmission({
+              instance_id: assignmentId + '-' + studentCode,
+              score_manual: score,
+              score_total: total,
+              score_percent: percent,
+              notes: notes || undefined,
+              submitted_at: new Date(date).toISOString()
+            });
+          } else {
+            // localStorage path — create a draft record for the assignment
+            const drafts = storeGet('drafts', []);
+            drafts.push({
+              id: assignmentId,
+              title,
+              type: category,
+              class: classLabel || 'General',
+              meta: { manual: true, total_possible: total, notes: notes || '' },
+              created_at: date
+            });
+            storeSet('drafts', drafts);
+
+            // Create assignment instance
+            let instances = storeGet('assignmentInstances', []);
+            const instanceId = assignmentId + '-' + studentCode;
+            instances.push({
+              id: instanceId,
+              assignment_id: assignmentId,
+              student_code: studentCode,
+              assigned_at: date,
+              status: 'Submitted'
+            });
+            storeSet('assignmentInstances', instances);
+
+            // Create submission
+            let submissions = storeGet('submissions', []);
+            submissions.push({
+              id: generateSubmissionId(),
+              instance_id: instanceId,
+              score: score,
+              score_total: total,
+              score_percent: percent,
+              score_manual: score,
+              notes: notes || '',
+              submitted_at: new Date(date).toISOString()
+            });
+            storeSet('submissions', submissions);
+          }
+          savedCount++;
+        } catch (err) {
+          console.error('[gradebook] Error saving manual grade for', studentCode, err);
+          errors.push(studentCode + ': ' + err.message);
+        }
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = '✅ Save Grade';
+
+      if (errors.length > 0) {
+        errorEl.textContent = 'Some grades could not be saved: ' + errors.join('; ');
+        errorEl.style.display = 'block';
+      }
+
+      if (savedCount > 0) {
+        closeModal();
+        // Reload and re-render
+        await loadData();
+        renderGradebook();
+        // Show toast
+        const toastMsg = `✅ Manual grade recorded — ${title} (${score}/${total} = ${percent}%) for ${savedCount} student${savedCount !== 1 ? 's' : ''}`;
+        _showGradebookToast(toastMsg);
+      }
+    });
+
+    // Focus first field
+    titleInput.focus();
+  }
+
+  /**
+   * Show a brief toast notification at the bottom of the gradebook.
+   */
+  function _showGradebookToast(message) {
+    const existing = document.getElementById('gbToast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'gbToast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.style.cssText = [
+      'position: fixed',
+      'bottom: 24px', 'left: 50%',
+      'transform: translateX(-50%)',
+      'background: rgba(30,40,50,.97)',
+      'color: #f0fff8',
+      'border: 1px solid rgba(255,255,255,.15)',
+      'border-radius: 10px',
+      'padding: 12px 24px',
+      'font-size: 0.97rem',
+      'font-weight: 600',
+      'z-index: 20000',
+      'box-shadow: 0 4px 20px rgba(0,0,0,.4)',
+      'max-width: 90vw',
+      'text-align: center'
+    ].join(';');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4500);
+  }
+
+  /**
    * Show weights settings modal
    */
   function showWeightsModal() {
@@ -2053,6 +2465,12 @@
     renderClassFilter();
     renderGradebook();
     setupStudentHoverCard();
+
+    // Wire manual assignment button
+    const btnManualAssignment = $("btnManualAssignment");
+    if (btnManualAssignment) {
+      btnManualAssignment.addEventListener("click", openManualAssignmentModal);
+    }
 
     // Wire export button
     const btnExport = $("btnExportCSV");
