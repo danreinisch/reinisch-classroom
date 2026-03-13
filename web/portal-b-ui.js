@@ -82,17 +82,19 @@ function renderSection(sectionId, assignments, assignmentMap, qs, helpers, featu
   const container = qs(`#${sectionId}Content`);
   if (!container) return;
   
+  container.innerHTML = ''; // SAFETY: static empty string, no user data
   if (!assignments || assignments.length === 0) {
-    container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments in this category</div>';
+    const empty = document.createElement('div');
+    empty.className = 'subtle';
+    empty.style.cssText = 'text-align:center; padding:20px';
+    empty.textContent = 'No assignments in this category';
+    container.appendChild(empty);
     return;
   }
   
-  let html = '';
   for (const item of assignments) {
-    html += renderAssignmentCard(item, assignmentMap, helpers, feature);
+    container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
   }
-  
-  container.innerHTML = html;
 }
 
 /**
@@ -102,21 +104,23 @@ function renderAllSection(assignments, assignmentMap, qs, helpers, feature) {
   const container = qs('#allContent');
   if (!container) return;
   
+  container.innerHTML = ''; // SAFETY: static empty string, no user data
   if (!assignments || assignments.length === 0) {
-    container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments</div>';
+    const empty = document.createElement('div');
+    empty.className = 'subtle';
+    empty.style.cssText = 'text-align:center; padding:20px';
+    empty.textContent = 'No assignments';
+    container.appendChild(empty);
     return;
   }
   
-  let html = '';
   for (const item of assignments) {
-    html += renderAssignmentCard(item, assignmentMap, helpers, feature);
+    container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
   }
-  
-  container.innerHTML = html;
 }
 
 /**
- * Render an assignment card
+ * Render an assignment card as a DOM element (safe — no innerHTML with user data)
  */
 function renderAssignmentCard(item, assignmentMap, helpers, feature) {
   const { instance, latestSubmission, status } = item;
@@ -126,53 +130,97 @@ function renderAssignmentCard(item, assignmentMap, helpers, feature) {
   const className = assignment.meta?.class_name || assignment.class_id || 'N/A';
   const dueDate = instance.due_at ? helpers.formatDateTime(instance.due_at, 'date') : '—';
   
+  const card = document.createElement('div');
+  card.className = 'assignment-card';
+  card.dataset.instanceId = instance.id;
+  
+  // Header
+  const header = document.createElement('div');
+  header.className = 'assignment-card-header';
+  
+  const headerLeft = document.createElement('div');
+  
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'assignment-card-title';
+  titleDiv.textContent = title;
+  
+  const metaDiv = document.createElement('div');
+  metaDiv.className = 'assignment-card-meta';
+  const classSpan = document.createElement('span');
+  const classStrong = document.createElement('strong');
+  classStrong.textContent = 'Class:';
+  classSpan.appendChild(classStrong);
+  classSpan.appendChild(document.createTextNode(' ' + className));
+  const dueSpan = document.createElement('span');
+  const dueStrong = document.createElement('strong');
+  dueStrong.textContent = 'Due:';
+  dueSpan.appendChild(dueStrong);
+  dueSpan.appendChild(document.createTextNode(' ' + dueDate));
+  metaDiv.appendChild(classSpan);
+  metaDiv.appendChild(dueSpan);
+  
+  headerLeft.appendChild(titleDiv);
+  headerLeft.appendChild(metaDiv);
+  
   // Status pill
   const statusClass = status.toLowerCase().replace(' ', '-');
-  const statusPill = `<span class="status-pill ${statusClass}">${status}</span>`;
+  const statusPill = document.createElement('span');
+  statusPill.className = `status-pill ${statusClass}`;
+  statusPill.textContent = status;
+  
+  header.appendChild(headerLeft);
+  header.appendChild(statusPill);
+  card.appendChild(header);
   
   // Score for graded assignments
-  let scoreHtml = '';
   if (status === helpers.AssignmentStatus.GRADED && latestSubmission && latestSubmission.score_total != null) {
-    scoreHtml = `<div class="assignment-card-meta"><strong>Score:</strong> ${latestSubmission.score_total}%</div>`;
+    const scoreDiv = document.createElement('div');
+    scoreDiv.className = 'assignment-card-meta';
+    const scoreStrong = document.createElement('strong');
+    scoreStrong.textContent = 'Score:';
+    scoreDiv.appendChild(scoreStrong);
+    scoreDiv.appendChild(document.createTextNode(' ' + latestSubmission.score_total + '%'));
+    card.appendChild(scoreDiv);
   }
   
   // Submitted date
-  let submittedHtml = '';
   if (latestSubmission && latestSubmission.submitted_at) {
-    submittedHtml = `<div class="assignment-card-meta"><strong>Submitted:</strong> ${helpers.formatDateTime(latestSubmission.submitted_at, 'date')}</div>`;
+    const submittedDiv = document.createElement('div');
+    submittedDiv.className = 'assignment-card-meta';
+    const submittedStrong = document.createElement('strong');
+    submittedStrong.textContent = 'Submitted:';
+    submittedDiv.appendChild(submittedStrong);
+    submittedDiv.appendChild(document.createTextNode(' ' + helpers.formatDateTime(latestSubmission.submitted_at, 'date')));
+    card.appendChild(submittedDiv);
   }
   
-  // Resubmission button (if graded and resubmission allowed)
-  let resubmitHtml = '';
+  // Footer with resubmit button
+  const footer = document.createElement('div');
+  footer.className = 'assignment-card-footer';
+  footer.appendChild(document.createElement('div'));
+  
+  const footerRight = document.createElement('div');
   if (feature.portalResubmission && status === helpers.AssignmentStatus.GRADED) {
     const resubmissionCount = instance.resubmission_count || 0;
     if (resubmissionCount < 1) {
-      resubmitHtml = `<button class="btn small primary" data-action="resubmit" data-instance-id="${instance.id}" data-submission-id="${latestSubmission?.id}">Resubmit</button>`;
+      const resubmitBtn = document.createElement('button');
+      resubmitBtn.className = 'btn small primary';
+      resubmitBtn.dataset.action = 'resubmit';
+      resubmitBtn.dataset.instanceId = instance.id;
+      resubmitBtn.dataset.submissionId = latestSubmission?.id;
+      resubmitBtn.textContent = 'Resubmit';
+      footerRight.appendChild(resubmitBtn);
     } else {
-      resubmitHtml = `<span class="subtle">Revision used</span>`;
+      const usedSpan = document.createElement('span');
+      usedSpan.className = 'subtle';
+      usedSpan.textContent = 'Revision used';
+      footerRight.appendChild(usedSpan);
     }
   }
+  footer.appendChild(footerRight);
+  card.appendChild(footer);
   
-  return `
-    <div class="assignment-card" data-instance-id="${instance.id}">
-      <div class="assignment-card-header">
-        <div>
-          <div class="assignment-card-title">${title}</div>
-          <div class="assignment-card-meta">
-            <span><strong>Class:</strong> ${className}</span>
-            <span><strong>Due:</strong> ${dueDate}</span>
-          </div>
-        </div>
-        ${statusPill}
-      </div>
-      ${scoreHtml}
-      ${submittedHtml}
-      <div class="assignment-card-footer">
-        <div></div>
-        <div>${resubmitHtml}</div>
-      </div>
-    </div>
-  `;
+  return card;
 }
 
 /**
@@ -251,16 +299,17 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
     
     // Quarterly Averages (if feature enabled)
     let quarterAverages = {};
+    let qContainer = null;
+    // Lazily load quarter-utils to get dynamic labels (no-op on failure)
+    let _quarterUtils = null;
+    try {
+      _quarterUtils = await import('/web/quarter-utils.js');
+    } catch (_e) {
+      // quarter-utils unavailable; fall back to generic labels
+    }
     if (feature.portalQuarterAverages !== false) {
       quarterAverages = helpers.calculateQuarterAverages(submissions);
-      // School-year quarter labels (Q1=Aug 16–Oct 17, Q2=Oct 18–Dec 19, Q3=Dec 20–Mar 6, Q4=Mar 7–May 20)
-      const qLabels = {
-        Q1: 'Q1 (Aug 16\u2013Oct 17)',
-        Q2: 'Q2 (Oct 18\u2013Dec 19)',
-        Q3: 'Q3 (Dec 20\u2013Mar 6)',
-        Q4: 'Q4 (Mar 7\u2013May 20)',
-      };
-      const qContainer = document.createElement('div');
+      qContainer = document.createElement('div');
       qContainer.className = 'grade-stat';
       const qLabel = document.createElement('div');
       qLabel.className = 'grade-stat-label';
@@ -272,11 +321,21 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
         const avg = quarterAverages[key];
         const avgDisplay = avg !== null ? `${avg}%` : '—';
         
+        // Dynamic label from quarter-utils, fall back to generic "Q1"–"Q4"
+        let labelText = key;
+        try {
+          if (_quarterUtils && _quarterUtils.getQuarterLabel) {
+            labelText = _quarterUtils.getQuarterLabel(key);
+          }
+        } catch (_e) {
+          // keep generic label
+        }
+        
         const field = document.createElement('div');
         field.className = 'assignment-detail-field';
         const fieldLabel = document.createElement('span');
         fieldLabel.className = 'assignment-detail-label';
-        fieldLabel.textContent = qLabels[key] || key;
+        fieldLabel.textContent = labelText;
         const fieldValue = document.createElement('span');
         fieldValue.className = 'assignment-detail-value';
         fieldValue.textContent = avgDisplay;
@@ -371,10 +430,10 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
         trendSection.appendChild(streakRow);
       }
       
-      // Insert after quarterly averages (or class averages if quarterly disabled)
-      const insertAfter = qs('[class*="grade-stat"]:last-of-type') || qs('#classAverages');
-      if (insertAfter && insertAfter.parentNode) {
-        insertAfter.parentNode.insertBefore(trendSection, insertAfter.nextSibling);
+      // Insert after quarterly averages container, or after classAverages if quarterly is disabled
+      const insertAfterEl = qContainer || qs('#classAverages');
+      if (insertAfterEl && insertAfterEl.parentNode) {
+        insertAfterEl.parentNode.insertBefore(trendSection, insertAfterEl.nextSibling);
       }
     }
     
@@ -403,12 +462,24 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       filterSelect.className = 'btn small';
       filterSelect.style.cssText = 'width:auto; padding:6px 10px;';
       
+      // Helper to get dynamic quarter label with fallback to generic key
+      function getQLabel(key) {
+        try {
+          if (_quarterUtils && _quarterUtils.getQuarterLabel) {
+            return _quarterUtils.getQuarterLabel(key);
+          }
+        } catch (_e) {
+          // keep generic label
+        }
+        return key;
+      }
+      
       const quarterOptions = [
         { value: '', text: 'All Quarters' },
-        { value: '1', text: 'Q1 (Aug 16\u2013Oct 17)' },
-        { value: '2', text: 'Q2 (Oct 18\u2013Dec 19)' },
-        { value: '3', text: 'Q3 (Dec 20\u2013Mar 6)' },
-        { value: '4', text: 'Q4 (Mar 7\u2013May 20)' },
+        { value: '1', text: getQLabel('Q1') },
+        { value: '2', text: getQLabel('Q2') },
+        { value: '3', text: getQLabel('Q3') },
+        { value: '4', text: getQLabel('Q4') },
       ];
       for (const opt of quarterOptions) {
         const option = document.createElement('option');
@@ -576,6 +647,7 @@ function renderQuarterSparkline(selector, data) {
     points += `${x},${y} `;
   });
   
+  // SAFETY: static SVG markup; `points` contains only computed numeric coordinates, no user data
   svg.innerHTML = `
     <polyline 
       points="${points.trim()}" 
@@ -782,6 +854,7 @@ function renderSparkline(selector, data) {
     points += `${x},${y} `;
   });
   
+  // SAFETY: static SVG markup; `points` contains only computed numeric coordinates, no user data
   svg.innerHTML = `
     <polyline 
       points="${points.trim()}" 
@@ -804,42 +877,49 @@ export function showToast({ title, message, type = 'info', link = null, duration
   
   const toastId = 'toast-' + Date.now();
   
-  const linkHtml = link ? 
-    `<a class="toast-link" data-toast-link="${toastId}">${link.text}</a>` : '';
-  
   const toast = document.createElement('div');
   toast.id = toastId;
   toast.className = `toast ${type}`;
-  toast.innerHTML = `
-    <div class="toast-header">
-      <div class="toast-title">${title}</div>
-      <button class="toast-close" data-toast-close="${toastId}">×</button>
-    </div>
-    <div class="toast-body">
-      ${message}
-      ${linkHtml}
-    </div>
-  `;
   
-  container.appendChild(toast);
+  // Header
+  const toastHeader = document.createElement('div');
+  toastHeader.className = 'toast-header';
+  const toastTitle = document.createElement('div');
+  toastTitle.className = 'toast-title';
+  toastTitle.textContent = title;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.dataset.toastClose = toastId;
+  closeBtn.textContent = '×';
+  toastHeader.appendChild(toastTitle);
+  toastHeader.appendChild(closeBtn);
   
-  // Event handlers
-  const closeBtn = toast.querySelector(`[data-toast-close="${toastId}"]`);
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
+  // Body
+  const toastBody = document.createElement('div');
+  toastBody.className = 'toast-body';
+  toastBody.textContent = message;
+  
+  if (link) {
+    const linkEl = document.createElement('a');
+    linkEl.className = 'toast-link';
+    linkEl.dataset.toastLink = toastId;
+    linkEl.textContent = link.text;
+    toastBody.appendChild(linkEl);
+    linkEl.addEventListener('click', () => {
+      link.action();
       toast.remove();
     });
   }
   
-  if (link) {
-    const linkEl = toast.querySelector(`[data-toast-link="${toastId}"]`);
-    if (linkEl) {
-      linkEl.addEventListener('click', () => {
-        link.action();
-        toast.remove();
-      });
-    }
-  }
+  toast.appendChild(toastHeader);
+  toast.appendChild(toastBody);
+  
+  container.appendChild(toast);
+  
+  // Event handlers
+  closeBtn.addEventListener('click', () => {
+    toast.remove();
+  });
   
   // Auto-remove after duration
   if (duration > 0) {
@@ -1032,85 +1112,119 @@ export function setupFilters(qs, helpers, allAssignments, assignmentMap, renderA
 }
 
 /**
- * Render assignment detail modal content
+ * Render assignment detail modal content using safe DOM construction
  * @param {Object} instance - Assignment instance
  * @param {Object} assignment - Assignment data
  * @param {Object} latestSubmission - Latest submission (or null)
  * @param {Object} feature - Feature flags
  * @param {Object} helpers - Helper functions
- * @returns {Object} HTML strings for title, meta, body, actions
+ * @returns {Object} { title: string, metaFrag: DocumentFragment, bodyFrag: DocumentFragment, actionsFrag: DocumentFragment }
  */
 export function renderAssignmentDetail(instance, assignment, latestSubmission, feature, helpers) {
   const title = assignment?.title || 'Assignment';
   const className = assignment?.meta?.class_name || assignment?.class_id || 'N/A';
   const dueDate = instance.due_at ? helpers.formatDateTime(instance.due_at, 'full') : 'No due date';
   
-  const meta = `
-    <span><strong>Class:</strong> ${className}</span>
-    <span><strong>Due:</strong> ${dueDate}</span>
-  `;
+  // Meta fragment
+  const metaFrag = document.createDocumentFragment();
+  const classSpan = document.createElement('span');
+  const classStrong = document.createElement('strong');
+  classStrong.textContent = 'Class:';
+  classSpan.appendChild(classStrong);
+  classSpan.appendChild(document.createTextNode(' ' + className));
+  const dueSpan = document.createElement('span');
+  const dueStrong = document.createElement('strong');
+  dueStrong.textContent = 'Due:';
+  dueSpan.appendChild(dueStrong);
+  dueSpan.appendChild(document.createTextNode(' ' + dueDate));
+  metaFrag.appendChild(classSpan);
+  metaFrag.appendChild(dueSpan);
+  
+  // Body fragment
+  const bodyFrag = document.createDocumentFragment();
   
   // Description section
-  const description = assignment?.description || assignment?.meta?.description || 'No description available.';
+  const descSection = document.createElement('div');
+  descSection.className = 'assignment-detail-section';
+  const descTitle = document.createElement('div');
+  descTitle.className = 'assignment-detail-section-title';
+  descTitle.textContent = 'Description';
+  const descContent = document.createElement('div');
+  descContent.className = 'assignment-detail-description';
+  descContent.textContent = assignment?.description || assignment?.meta?.description || 'No description available.';
+  descSection.appendChild(descTitle);
+  descSection.appendChild(descContent);
+  bodyFrag.appendChild(descSection);
   
   // Submission details
-  let submissionHtml = '';
+  const submSection = document.createElement('div');
+  submSection.className = 'assignment-detail-section';
   if (latestSubmission) {
-    const submittedAt = latestSubmission.submitted_at ? 
+    const submTitle = document.createElement('div');
+    submTitle.className = 'assignment-detail-section-title';
+    submTitle.textContent = 'Latest Submission';
+    submSection.appendChild(submTitle);
+    
+    const submittedAt = latestSubmission.submitted_at ?
       helpers.formatDateTime(latestSubmission.submitted_at, 'full') : 'Unknown';
-    const score = latestSubmission.score_total != null ? 
+    const score = latestSubmission.score_total != null ?
       `${latestSubmission.score_total}%` : 'Not graded';
     const notes = latestSubmission.notes || 'No notes';
     
-    submissionHtml = `
-      <div class="assignment-detail-section">
-        <div class="assignment-detail-section-title">Latest Submission</div>
-        <div class="assignment-detail-field">
-          <span class="assignment-detail-label">Submitted</span>
-          <span class="assignment-detail-value">${submittedAt}</span>
-        </div>
-        <div class="assignment-detail-field">
-          <span class="assignment-detail-label">Score</span>
-          <span class="assignment-detail-value">${score}</span>
-        </div>
-        <div class="assignment-detail-field">
-          <span class="assignment-detail-label">Notes</span>
-          <span class="assignment-detail-value" style="max-width:300px; text-align:right;">${notes}</span>
-        </div>
-      </div>
-    `;
+    const fields = [
+      { label: 'Submitted', value: submittedAt },
+      { label: 'Score', value: score },
+      { label: 'Notes', value: notes, style: 'max-width:300px; text-align:right;' },
+    ];
+    for (const f of fields) {
+      const field = document.createElement('div');
+      field.className = 'assignment-detail-field';
+      const lbl = document.createElement('span');
+      lbl.className = 'assignment-detail-label';
+      lbl.textContent = f.label;
+      const val = document.createElement('span');
+      val.className = 'assignment-detail-value';
+      if (f.style) val.style.cssText = f.style;
+      val.textContent = f.value;
+      field.appendChild(lbl);
+      field.appendChild(val);
+      submSection.appendChild(field);
+    }
   } else {
-    submissionHtml = `
-      <div class="assignment-detail-section">
-        <div class="assignment-detail-section-title">Submission Status</div>
-        <div style="color:var(--muted); font-style:italic;">Not yet submitted</div>
-      </div>
-    `;
+    const submTitle = document.createElement('div');
+    submTitle.className = 'assignment-detail-section-title';
+    submTitle.textContent = 'Submission Status';
+    const notYet = document.createElement('div');
+    notYet.style.cssText = 'color:var(--muted); font-style:italic;';
+    notYet.textContent = 'Not yet submitted';
+    submSection.appendChild(submTitle);
+    submSection.appendChild(notYet);
   }
+  bodyFrag.appendChild(submSection);
   
-  // Goal linkage removed - students should not see IEP goal codes
-  
-  const body = `
-    <div class="assignment-detail-section">
-      <div class="assignment-detail-section-title">Description</div>
-      <div class="assignment-detail-description">${description}</div>
-    </div>
-    ${submissionHtml}
-  `;
-  
-  // Actions (resubmit button if applicable)
-  let actionsHtml = '<button id="assignmentDetailClose2" class="btn">Close</button>';
+  // Actions fragment
+  const actionsFrag = document.createDocumentFragment();
   
   if (feature.portalResubmission && latestSubmission && latestSubmission.score_total != null) {
     const resubmissionCount = instance.resubmission_count || 0;
     if (resubmissionCount < 1) {
-      actionsHtml = `
-        <button data-action="resubmit" data-instance-id="${instance.id}" data-submission-id="${latestSubmission.id}" class="btn primary">Resubmit</button>
-      ` + actionsHtml;
+      const resubmitBtn = document.createElement('button');
+      resubmitBtn.dataset.action = 'resubmit';
+      resubmitBtn.dataset.instanceId = instance.id;
+      resubmitBtn.dataset.submissionId = latestSubmission.id;
+      resubmitBtn.className = 'btn primary';
+      resubmitBtn.textContent = 'Resubmit';
+      actionsFrag.appendChild(resubmitBtn);
     }
   }
   
-  return { title, meta, body, actions: actionsHtml };
+  const closeBtn2 = document.createElement('button');
+  closeBtn2.id = 'assignmentDetailClose2';
+  closeBtn2.className = 'btn';
+  closeBtn2.textContent = 'Close';
+  actionsFrag.appendChild(closeBtn2);
+  
+  return { title, metaFrag, bodyFrag, actionsFrag };
 }
 
 /**
@@ -1139,10 +1253,26 @@ export function openAssignmentDetail(instanceId, context) {
   const modal = document.querySelector('#assignmentDetailModal');
   if (!modal) return;
   
-  document.querySelector('#assignmentDetailTitle').textContent = content.title;
-  document.querySelector('#assignmentDetailMeta').innerHTML = content.meta;
-  document.querySelector('#assignmentDetailBody').innerHTML = content.body;
-  document.querySelector('#assignmentDetailActions').innerHTML = content.actions;
+  const titleEl = document.querySelector('#assignmentDetailTitle');
+  if (titleEl) titleEl.textContent = content.title;
+  
+  const metaEl = document.querySelector('#assignmentDetailMeta');
+  if (metaEl) {
+    metaEl.innerHTML = ''; // SAFETY: static empty string, no user data
+    metaEl.appendChild(content.metaFrag);
+  }
+  
+  const bodyEl = document.querySelector('#assignmentDetailBody');
+  if (bodyEl) {
+    bodyEl.innerHTML = ''; // SAFETY: static empty string, no user data
+    bodyEl.appendChild(content.bodyFrag);
+  }
+  
+  const actionsEl = document.querySelector('#assignmentDetailActions');
+  if (actionsEl) {
+    actionsEl.innerHTML = ''; // SAFETY: static empty string, no user data
+    actionsEl.appendChild(content.actionsFrag);
+  }
   
   // Show modal
   modal.classList.remove('hidden');
@@ -1347,7 +1477,12 @@ function renderEmptyState(qs) {
   sections.forEach(section => {
     const container = qs(`#${section}Content`);
     if (container) {
-      container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments yet</div>';
+      container.innerHTML = ''; // SAFETY: static empty string, no user data
+      const msg = document.createElement('div');
+      msg.className = 'subtle';
+      msg.style.cssText = 'text-align:center; padding:20px';
+      msg.textContent = 'No assignments yet';
+      container.appendChild(msg);
     }
   });
 }
@@ -1357,7 +1492,12 @@ function renderErrorState(qs) {
   sections.forEach(section => {
     const container = qs(`#${section}Content`);
     if (container) {
-      container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">Assignments temporarily unavailable.</div>';
+      container.innerHTML = ''; // SAFETY: static empty string, no user data
+      const msg = document.createElement('div');
+      msg.className = 'subtle';
+      msg.style.cssText = 'text-align:center; padding:20px';
+      msg.textContent = 'Assignments temporarily unavailable.';
+      container.appendChild(msg);
     }
   });
 }
@@ -1369,31 +1509,61 @@ async function loadStudentAssignmentsSimple(db, currentUser, qs) {
   
   qs('#assignmentsCount').textContent = myInstances.length;
   
+  const upcomingContent = qs('#upcomingContent');
+  if (!upcomingContent) return { groups: {}, submissionsMap: {} };
+  
   if (myInstances.length === 0) {
-    qs('#upcomingContent').innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments yet</div>';
+    upcomingContent.innerHTML = ''; // SAFETY: static empty string, no user data
+    const empty = document.createElement('div');
+    empty.className = 'subtle';
+    empty.style.cssText = 'text-align:center; padding:20px';
+    empty.textContent = 'No assignments yet';
+    upcomingContent.appendChild(empty);
     return { groups: {}, submissionsMap: {} };
   }
   
   const assignmentList = await db.listAssignments();
   const assignmentMap = new Map(assignmentList.map(a => [a.id, a]));
   
-  let html = '<table class="table"><thead><tr><th>Assignment</th><th>Status</th><th>Due</th></tr></thead><tbody>';
+  // Build table using safe DOM construction
+  const table = document.createElement('table');
+  table.className = 'table';
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  for (const col of ['Assignment', 'Status', 'Due']) {
+    const th = document.createElement('th');
+    th.textContent = col;
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
   
+  const tbody = document.createElement('tbody');
   for (const inst of myInstances.slice(0, 10)) {
     const assignment = assignmentMap.get(inst.assignment_id);
     const title = assignment ? assignment.title : 'Unknown';
     const status = inst.status || 'Assigned';
     const dueDate = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
     
-    html += `<tr>
-      <td>${title}</td>
-      <td><span class="badge info">${status}</span></td>
-      <td>${dueDate}</td>
-    </tr>`;
+    const tr = document.createElement('tr');
+    const tdTitle = document.createElement('td');
+    tdTitle.textContent = title;
+    const tdStatus = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'badge info';
+    badge.textContent = status;
+    tdStatus.appendChild(badge);
+    const tdDue = document.createElement('td');
+    tdDue.textContent = dueDate;
+    tr.appendChild(tdTitle);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdDue);
+    tbody.appendChild(tr);
   }
+  table.appendChild(tbody);
   
-  html += '</tbody></table>';
-  qs('#upcomingContent').innerHTML = html;
+  upcomingContent.innerHTML = ''; // SAFETY: static empty string, no user data
+  upcomingContent.appendChild(table);
   
   return { groups: {}, submissionsMap: {} };
 }

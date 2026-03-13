@@ -280,4 +280,96 @@ console.log('\n--- calculateStreakAbove ---');
   console.log('✓ default threshold is 80');
 }
 
+console.log('\n--- Invalid date handling ---');
+
+// Invalid dates for calculateAverageScoreTrend
+
+{
+  // "not-a-date" submitted_at should be ignored — result should be flat
+  const result = calculateAverageScoreTrend([
+    { score_total: 85, submitted_at: 'not-a-date' },
+    { score_total: 90, submitted_at: '' },
+    { score_total: 70, submitted_at: null },
+    { score_total: 80, submitted_at: undefined },
+  ]);
+  assert.strictEqual(result.direction, 'flat', 'invalid/missing dates → not enough valid data → flat');
+  assert.ok(!isNaN(result.currentAvg), 'currentAvg should not be NaN');
+  assert.ok(!isNaN(result.prevAvg), 'prevAvg should not be NaN');
+  assert.ok(!isNaN(result.delta), 'delta should not be NaN');
+  console.log('✓ calculateAverageScoreTrend: invalid submitted_at values → flat, no NaN');
+}
+
+{
+  // Mix of valid and invalid dates — only valid ones counted
+  const now = new Date('2026-03-12T12:00:00Z');
+  const submissions = [
+    { score_total: 90, submitted_at: daysAgo(1, now) },
+    { score_total: 85, submitted_at: 'not-a-date' },   // excluded
+    { score_total: 88, submitted_at: daysAgo(2, now) },
+    { score_total: 80, submitted_at: '' },              // excluded
+    { score_total: 82, submitted_at: daysAgo(3, now) },
+  ];
+  const result = calculateAverageScoreTrend(submissions);
+  assert.ok(!isNaN(result.currentAvg), 'mixed valid/invalid: currentAvg should not be NaN');
+  assert.ok(!isNaN(result.delta), 'mixed valid/invalid: delta should not be NaN');
+  console.log('✓ calculateAverageScoreTrend: mix of valid and invalid dates → no NaN');
+}
+
+// Invalid dates for calculateStreakAbove
+
+{
+  // All invalid dates → streak 0
+  const result = calculateStreakAbove([
+    { score_total: 90, submitted_at: 'not-a-date' },
+    { score_total: 85, submitted_at: '' },
+    { score_total: 80, submitted_at: null },
+    { score_total: 88, submitted_at: undefined },
+  ], 80);
+  assert.strictEqual(result.streak, 0, 'all invalid dates → streak 0');
+  console.log('✓ calculateStreakAbove: all invalid submitted_at values → streak 0');
+}
+
+{
+  // Mix of valid and invalid — only valid ones counted for streak
+  const now = new Date('2026-03-12T12:00:00Z');
+  const submissions = [
+    { score_total: 90, submitted_at: daysAgo(1, now) },  // valid, above
+    { score_total: 85, submitted_at: 'not-a-date' },     // excluded
+    { score_total: 60, submitted_at: daysAgo(2, now) },  // valid, below → breaks streak
+  ];
+  const result = calculateStreakAbove(submissions, 80);
+  assert.strictEqual(result.streak, 1, 'mix valid/invalid: streak counts only valid entries');
+  console.log('✓ calculateStreakAbove: mix of valid and invalid dates → correct streak');
+}
+
+// Invalid dates for calculateWeekOverWeekTrend
+
+{
+  // All invalid submitted_at → counts should be 0
+  const result = calculateWeekOverWeekTrend([
+    { submitted_at: 'not-a-date' },
+    { submitted_at: '' },
+    { submitted_at: null },
+    { submitted_at: undefined },
+  ], NOW);
+  assert.strictEqual(result.lastWeekCount, 0, 'all invalid dates → lastWeekCount 0');
+  assert.strictEqual(result.prevWeekCount, 0, 'all invalid dates → prevWeekCount 0');
+  assert.strictEqual(result.direction, 'flat');
+  console.log('✓ calculateWeekOverWeekTrend: all invalid submitted_at values → zeros, flat');
+}
+
+{
+  // Mix valid and invalid — only valid ones counted
+  const submissions = [
+    { submitted_at: daysAgo(1, NOW) },       // valid, last week
+    { submitted_at: 'not-a-date' },          // excluded
+    { submitted_at: daysAgo(8, NOW) },       // valid, prev week
+    { submitted_at: '' },                    // excluded
+  ];
+  const result = calculateWeekOverWeekTrend(submissions, NOW);
+  assert.strictEqual(result.lastWeekCount, 1, 'mix valid/invalid: only valid dates counted (last week)');
+  assert.strictEqual(result.prevWeekCount, 1, 'mix valid/invalid: only valid dates counted (prev week)');
+  console.log('✓ calculateWeekOverWeekTrend: mix of valid and invalid dates → correct counts');
+}
+
 console.log('\n✓ All portal-b-helpers tests passed!');
