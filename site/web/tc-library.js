@@ -17,7 +17,7 @@
   const $ = (id) => document.getElementById(id);
 
   // State
-  let currentTab = "assignments";
+  let _currentTab = "assignments";
   let assignmentsData = [];
   let lessonsData = null;
   let syncStatus = "loading";
@@ -95,7 +95,7 @@
 
   // Switch tabs
   function switchTab(tabName) {
-    currentTab = tabName;
+    _currentTab = tabName;
 
     // Update tab buttons
     document.querySelectorAll('.tc-lib-tab-btn').forEach(btn => {
@@ -185,79 +185,109 @@
     const container = $("assignmentsTab");
     if (!container) return;
 
+    // Clear previous content
+    container.innerHTML = '';
+
     // Filter assignments
     const filtered = filterAssignments();
 
     // Calculate KPIs
     const kpis = calculateAssignmentKPIs();
 
-    // Build HTML
-    let html = `
-      <!-- Sync Status -->
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; color: rgba(255,255,255,.60);">
-        <span>Status:</span>
-        ${getSyncStatusBadge()}
-      </div>
+    // Sync status row
+    const statusRow = document.createElement('div');
+    statusRow.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; color: rgba(255,255,255,.60);';
+    const statusLabel = document.createElement('span');
+    statusLabel.textContent = 'Status:';
+    statusRow.appendChild(statusLabel);
+    statusRow.appendChild(getSyncStatusBadge());
+    container.appendChild(statusRow);
 
-      <!-- KPI Row -->
-      <div class="tc-lib-kpi-grid">
-        ${renderKPI("Total Assignments", kpis.total)}
-        ${renderKPI("File Assignments", kpis.fileCount)}
-        ${renderKPI("Link Assignments", kpis.linkCount)}
-        ${renderKPI("With Mapping", kpis.withMeta)}
-      </div>
+    // KPI grid
+    const kpiGrid = document.createElement('div');
+    kpiGrid.className = 'tc-lib-kpi-grid';
+    kpiGrid.appendChild(renderKPI('Total Assignments', kpis.total));
+    kpiGrid.appendChild(renderKPI('File Assignments', kpis.fileCount));
+    kpiGrid.appendChild(renderKPI('Link Assignments', kpis.linkCount));
+    kpiGrid.appendChild(renderKPI('With Mapping', kpis.withMeta));
+    container.appendChild(kpiGrid);
 
-      <!-- Filter Bar -->
-      <div style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-        <!-- Class Filter -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="tc-lib-class-filter tc-btn" data-class="All Classes">All Classes</button>
-          ${CANON_CLASSES.map(cls => 
-            `<button class="tc-lib-class-filter tc-btn" data-class="${escapeHtml(cls)}">${escapeHtml(cls)}</button>`
-          ).join('')}
-        </div>
+    // Filter bar
+    const filterBar = document.createElement('div');
+    filterBar.style.cssText = 'margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;';
 
-        <!-- Search -->
-        <input 
-          type="text" 
-          id="assignmentSearch" 
-          class="tc-input" 
-          placeholder="Search assignments..."
-          value="${escapeHtml(filters.assignments.searchQuery)}"
-          style="flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white;">
+    // Class filter buttons
+    const classBtnWrap = document.createElement('div');
+    classBtnWrap.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap;';
+    const allClassBtn = document.createElement('button');
+    allClassBtn.className = 'tc-lib-class-filter tc-btn';
+    allClassBtn.dataset.class = 'All Classes';
+    allClassBtn.textContent = 'All Classes';
+    classBtnWrap.appendChild(allClassBtn);
+    CANON_CLASSES.forEach(cls => {
+      const btn = document.createElement('button');
+      btn.className = 'tc-lib-class-filter tc-btn';
+      btn.dataset.class = cls;
+      btn.textContent = cls;
+      classBtnWrap.appendChild(btn);
+    });
+    filterBar.appendChild(classBtnWrap);
 
-        <!-- Type Filter -->
-        <select id="assignmentTypeFilter" class="tc-input" style="padding: 8px 12px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white;">
-          <option value="All">All Types</option>
-          <option value="file">File</option>
-          <option value="link">Link</option>
-        </select>
-      </div>
-    `;
+    // Search input
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'assignmentSearch';
+    searchInput.className = 'tc-input';
+    searchInput.placeholder = 'Search assignments...';
+    searchInput.value = filters.assignments.searchQuery;
+    searchInput.style.cssText = 'flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white;';
+    filterBar.appendChild(searchInput);
+
+    // Type filter select
+    const typeFilter = document.createElement('select');
+    typeFilter.id = 'assignmentTypeFilter';
+    typeFilter.className = 'tc-input';
+    typeFilter.style.cssText = 'padding: 8px 12px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white;';
+    [['All', 'All Types'], ['file', 'File'], ['link', 'Link']].forEach(([val, label]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      typeFilter.appendChild(opt);
+    });
+    typeFilter.value = filters.assignments.typeFilter;
+    filterBar.appendChild(typeFilter);
+
+    container.appendChild(filterBar);
 
     // Assignment cards or empty state
     if (filtered.length === 0) {
-      html += `
-        <div class="tc-card" style="text-align: center; padding: 48px 24px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-          <h3 style="margin: 0 0 8px 0; font-size: 20px;">No assignments found</h3>
-          <p style="margin: 0; color: rgba(255,255,255,.60);">
-            ${assignmentsData.length === 0 
-              ? 'Create one in <a href="/teacher/work/" style="color: #60a5fa;">Work →</a>'
-              : 'Try adjusting your filters'
-            }
-          </p>
-        </div>
-      `;
+      const emptyCard = document.createElement('div');
+      emptyCard.className = 'tc-card';
+      emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
+      const emptyIcon = document.createElement('div');
+      emptyIcon.style.cssText = 'font-size: 48px; margin-bottom: 16px;';
+      emptyIcon.textContent = '📭';
+      const emptyTitle = document.createElement('h3');
+      emptyTitle.style.cssText = 'margin: 0 0 8px 0; font-size: 20px;';
+      emptyTitle.textContent = 'No assignments found';
+      emptyCard.appendChild(emptyIcon);
+      emptyCard.appendChild(emptyTitle);
+      const emptyMsg = document.createElement('p');
+      emptyMsg.style.cssText = 'margin: 0; color: rgba(255,255,255,.60);';
+      if (assignmentsData.length === 0) {
+        // SAFETY: static text + static link, no user data
+        emptyMsg.innerHTML = 'Create one in <a href="/teacher/work/" style="color: #60a5fa;">Work →</a>';
+      } else {
+        emptyMsg.textContent = 'Try adjusting your filters';
+      }
+      emptyCard.appendChild(emptyMsg);
+      container.appendChild(emptyCard);
     } else {
-      html += `
-        <div class="tc-lib-grid">
-          ${filtered.map(renderAssignmentCard).join('')}
-        </div>
-      `;
+      const grid = document.createElement('div');
+      grid.className = 'tc-lib-grid';
+      filtered.forEach(a => grid.appendChild(renderAssignmentCard(a)));
+      container.appendChild(grid);
     }
-
-    container.innerHTML = html;
 
     // Update active filter button
     updateActiveClassFilter();
@@ -298,61 +328,96 @@
     };
   }
 
-  // Render a KPI card
+  // Render a KPI card — returns a DOM element
   function renderKPI(label, value) {
-    return `
-      <div class="tc-card" style="padding: 20px; text-align: center;">
-        <div style="font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;">${escapeHtml(label)}</div>
-        <div style="font-size: 32px; font-weight: 600;">${value}</div>
-      </div>
-    `;
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding: 20px; text-align: center;';
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;';
+    labelEl.textContent = label;
+    const valueEl = document.createElement('div');
+    valueEl.style.cssText = 'font-size: 32px; font-weight: 600;';
+    valueEl.textContent = String(value);
+    card.appendChild(labelEl);
+    card.appendChild(valueEl);
+    return card;
   }
 
-  // Get sync status badge
+  // Get sync status badge — returns a DOM element
   function getSyncStatusBadge() {
-    if (syncStatus === "synced") {
-      return '<span style="display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;"><span class="rc-status-dot rc-status-dot--ok"></span>Synced</span>';
-    } else if (syncStatus === "local") {
-      return '<span style="display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;"><span class="rc-status-dot rc-status-dot--warn"></span>Local</span>';
-    } else if (syncStatus === "error") {
-      return '<span style="display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;"><span class="rc-status-dot rc-status-dot--error"></span>Error</span>';
+    const span = document.createElement('span');
+    span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;';
+    const dot = document.createElement('span');
+    const text = document.createElement('span');
+    if (syncStatus === 'synced') {
+      dot.className = 'rc-status-dot rc-status-dot--ok';
+      text.textContent = 'Synced';
+    } else if (syncStatus === 'local') {
+      dot.className = 'rc-status-dot rc-status-dot--warn';
+      text.textContent = 'Local';
+    } else if (syncStatus === 'error') {
+      dot.className = 'rc-status-dot rc-status-dot--error';
+      text.textContent = 'Error';
+      span.style.color = '#e8f1ec';
     } else {
-      return '<span style="display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.40);"><span class="rc-status-dot rc-status-dot--loading"></span>Loading...</span>';
+      dot.className = 'rc-status-dot rc-status-dot--loading';
+      text.textContent = 'Loading...';
+      span.style.color = 'rgba(255,255,255,.40)';
     }
+    span.appendChild(dot);
+    span.appendChild(text);
+    return span;
   }
 
-  // Render an assignment card
+  // Render an assignment card — returns a DOM element
   function renderAssignmentCard(assignment) {
-    const createdDate = assignment.created_at 
+    const createdDate = assignment.created_at
       ? new Date(assignment.created_at).toLocaleDateString()
-      : "Unknown";
+      : 'Unknown';
 
-    return `
-      <div class="tc-card assignment-card" data-id="${escapeHtml(assignment.id)}" style="padding: 20px; cursor: pointer; transition: transform 0.2s, border-color 0.2s;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 18px; flex: 1;">${escapeHtml(assignment.title || "Untitled")}</h3>
-          <span class="tc-pill" style="background: rgba(96,165,250,.20); color: #60a5fa; padding: 4px 12px; border-radius: 12px; font-size: 12px; white-space: nowrap;">
-            ${escapeHtml(assignment.type || "file")}
-          </span>
-        </div>
-        
-        ${assignment.series ? `
-          <div style="color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 8px;">
-            📚 ${escapeHtml(assignment.series)}
-          </div>
-        ` : ''}
-        
-        <div style="color: rgba(255,255,255,.40); font-size: 13px; margin-bottom: 16px;">
-          Created: ${escapeHtml(createdDate)}
-        </div>
+    const card = document.createElement('div');
+    card.className = 'tc-card assignment-card';
+    card.dataset.id = assignment.id || '';
+    card.style.cssText = 'padding: 20px; cursor: pointer; transition: transform 0.2s, border-color 0.2s;';
 
-        <div style="display: flex; gap: 8px;">
-          <button class="tc-btn issue-btn" data-id="${escapeHtml(assignment.id)}" style="flex: 1; font-size: 14px;">
-            Issue to Class
-          </button>
-        </div>
-      </div>
-    `;
+    // Header row
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;';
+    const titleEl = document.createElement('h3');
+    titleEl.style.cssText = 'margin: 0; font-size: 18px; flex: 1;';
+    titleEl.textContent = assignment.title || 'Untitled';
+    const typePill = document.createElement('span');
+    typePill.className = 'tc-pill';
+    typePill.style.cssText = 'background: rgba(96,165,250,.20); color: #60a5fa; padding: 4px 12px; border-radius: 12px; font-size: 12px; white-space: nowrap;';
+    typePill.textContent = assignment.type || 'file';
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(typePill);
+    card.appendChild(headerRow);
+
+    if (assignment.series) {
+      const seriesEl = document.createElement('div');
+      seriesEl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 8px;';
+      seriesEl.textContent = '📚 ' + assignment.series;
+      card.appendChild(seriesEl);
+    }
+
+    const dateEl = document.createElement('div');
+    dateEl.style.cssText = 'color: rgba(255,255,255,.40); font-size: 13px; margin-bottom: 16px;';
+    dateEl.textContent = 'Created: ' + createdDate;
+    card.appendChild(dateEl);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display: flex; gap: 8px;';
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'tc-btn issue-btn';
+    issueBtn.dataset.id = assignment.id || '';
+    issueBtn.style.cssText = 'flex: 1; font-size: 14px;';
+    issueBtn.textContent = 'Issue to Class';
+    btnRow.appendChild(issueBtn);
+    card.appendChild(btnRow);
+
+    return card;
   }
 
   // Update active class filter button
@@ -368,52 +433,50 @@
     const container = $("lessonsTab");
     if (!container) return;
 
-    let html = '';
+    // Clear previous content
+    container.innerHTML = '';
 
-    // Search bar
-    html += `
-      <div style="margin-bottom: 24px;">
-        <input 
-          type="text" 
-          id="lessonSearch" 
-          class="tc-input" 
-          placeholder="Search lessons, units, sections..."
-          value="${escapeHtml(filters.lessons.searchQuery)}"
-          style="width: 100%; padding: 12px 16px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white; font-size: 16px;">
-      </div>
-    `;
+    // Search bar — use createElement so .value is set safely
+    const searchWrap = document.createElement('div');
+    searchWrap.style.cssText = 'margin-bottom: 24px;';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'lessonSearch';
+    searchInput.className = 'tc-input';
+    searchInput.placeholder = 'Search lessons, units, sections...';
+    searchInput.value = filters.lessons.searchQuery;
+    searchInput.style.cssText = 'width: 100%; padding: 12px 16px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white; font-size: 16px;';
+    searchWrap.appendChild(searchInput);
+    container.appendChild(searchWrap);
 
     // Empty state or lessons
     if (!lessonsData || !lessonsData.sections) {
-      html += `
-        <div class="tc-card" style="text-align: center; padding: 48px 24px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
-          <h3 style="margin: 0 0 8px 0; font-size: 20px;">Lessons index not available</h3>
-          <p style="margin: 0; color: rgba(255,255,255,.60);">Run the generator script to build the lessons index.</p>
-        </div>
-      `;
+      // SAFETY: static text, no user data
+      const emptyCard = document.createElement('div');
+      emptyCard.className = 'tc-card';
+      emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
+      emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">📚</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">Lessons index not available</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Run the generator script to build the lessons index.</p>';
+      container.appendChild(emptyCard);
     } else {
       // Filter lessons based on search
       const filteredSections = filterLessons();
 
       if (filteredSections.length === 0) {
-        html += `
-          <div class="tc-card" style="text-align: center; padding: 48px 24px;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-            <h3 style="margin: 0 0 8px 0; font-size: 20px;">No lessons found</h3>
-            <p style="margin: 0; color: rgba(255,255,255,.60);">Try a different search term</p>
-          </div>
-        `;
+        // SAFETY: static text, no user data
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'tc-card';
+        emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
+        emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">🔍</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">No lessons found</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Try a different search term</p>';
+        container.appendChild(emptyCard);
       } else {
-        html += '<div style="display: flex; flex-direction: column; gap: 16px;">';
+        const listWrap = document.createElement('div');
+        listWrap.style.cssText = 'display: flex; flex-direction: column; gap: 16px;';
         filteredSections.forEach((section, sIdx) => {
-          html += renderLessonSection(section, sIdx);
+          listWrap.appendChild(renderLessonSection(section, sIdx));
         });
-        html += '</div>';
+        container.appendChild(listWrap);
       }
     }
-
-    container.innerHTML = html;
   }
 
   // Filter lessons based on search query
@@ -461,64 +524,105 @@
       .filter(section => section !== null);
   }
 
-  // Render a lesson section
+  // Render a lesson section — returns a DOM element
   function renderLessonSection(section, sectionIndex) {
     const sectionId = `section-${sectionIndex}`;
-    
-    return `
-      <div class="tc-card lesson-section" style="padding: 0; overflow: hidden;">
-        <button 
-          class="lesson-section-toggle" 
-          data-target="${sectionId}"
-          style="width: 100%; padding: 20px; background: transparent; border: none; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 600;">
-          <span>${escapeHtml(section.name)}</span>
-          <span class="toggle-icon" style="font-size: 20px; transition: transform 0.2s;">▼</span>
-        </button>
-        
-        <div id="${sectionId}" class="lesson-section-content" style="display: none; padding: 0 20px 20px 20px;">
-          ${section.units.map((unit, uIdx) => renderLessonUnit(unit, sectionIndex, uIdx)).join('')}
-        </div>
-      </div>
-    `;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tc-card lesson-section';
+    wrapper.style.cssText = 'padding: 0; overflow: hidden;';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'lesson-section-toggle';
+    toggleBtn.dataset.target = sectionId;
+    toggleBtn.style.cssText = 'width: 100%; padding: 20px; background: transparent; border: none; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 600;';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = section.name;
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toggle-icon';
+    iconSpan.style.cssText = 'font-size: 20px; transition: transform 0.2s;';
+    iconSpan.textContent = '▼';
+
+    toggleBtn.appendChild(nameSpan);
+    toggleBtn.appendChild(iconSpan);
+    wrapper.appendChild(toggleBtn);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.id = sectionId;
+    contentDiv.className = 'lesson-section-content';
+    contentDiv.style.cssText = 'display: none; padding: 0 20px 20px 20px;';
+
+    section.units.forEach((unit, uIdx) => {
+      contentDiv.appendChild(renderLessonUnit(unit, sectionIndex, uIdx));
+    });
+
+    wrapper.appendChild(contentDiv);
+    return wrapper;
   }
 
-  // Render a lesson unit
+  // Render a lesson unit — returns a DOM element
   function renderLessonUnit(unit, sectionIndex, unitIndex) {
     const unitId = `unit-${sectionIndex}-${unitIndex}`;
-    
-    return `
-      <div style="margin-top: 16px; border-left: 2px solid rgba(255,255,255,.10); padding-left: 16px;">
-        <button 
-          class="lesson-unit-toggle" 
-          data-target="${unitId}"
-          style="width: 100%; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 8px; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 500;">
-          <span>${escapeHtml(unit.name)}</span>
-          <span class="toggle-icon" style="font-size: 16px; transition: transform 0.2s;">▶</span>
-        </button>
-        
-        <div id="${unitId}" class="lesson-unit-content" style="display: none; margin-top: 12px;">
-          ${unit.presentations.map(pres => renderPresentation(pres)).join('')}
-        </div>
-      </div>
-    `;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-top: 16px; border-left: 2px solid rgba(255,255,255,.10); padding-left: 16px;';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'lesson-unit-toggle';
+    toggleBtn.dataset.target = unitId;
+    toggleBtn.style.cssText = 'width: 100%; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 8px; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 500;';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = unit.name;
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toggle-icon';
+    iconSpan.style.cssText = 'font-size: 16px; transition: transform 0.2s;';
+    iconSpan.textContent = '▶';
+
+    toggleBtn.appendChild(nameSpan);
+    toggleBtn.appendChild(iconSpan);
+    wrapper.appendChild(toggleBtn);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.id = unitId;
+    contentDiv.className = 'lesson-unit-content';
+    contentDiv.style.cssText = 'display: none; margin-top: 12px;';
+
+    unit.presentations.forEach(pres => {
+      contentDiv.appendChild(renderPresentation(pres));
+    });
+
+    wrapper.appendChild(contentDiv);
+    return wrapper;
   }
 
-  // Render a presentation
+  // Render a presentation — returns a DOM element
   function renderPresentation(presentation) {
-    return `
-      <div class="tc-card" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-        <span style="flex: 1; font-size: 15px;">${escapeHtml(presentation.name)}</span>
-        <div style="display: flex; gap: 8px;">
-          <a 
-            href="${escapeHtml(presentation.url)}" 
-            target="_blank" 
-            class="tc-btn" 
-            style="font-size: 13px; padding: 6px 12px; text-decoration: none;">
-            Open
-          </a>
-        </div>
-      </div>
-    `;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tc-card';
+    wrapper.style.cssText = 'padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'flex: 1; font-size: 15px;';
+    nameSpan.textContent = presentation.name;
+    wrapper.appendChild(nameSpan);
+
+    const btnGroup = document.createElement('div');
+    btnGroup.style.cssText = 'display: flex; gap: 8px;';
+
+    const openLink = document.createElement('a');
+    // Safe href: only use the URL as-is; the browser will handle it
+    openLink.href = presentation.url || '#';
+    openLink.target = '_blank';
+    openLink.rel = 'noopener noreferrer';
+    openLink.className = 'tc-btn';
+    openLink.style.cssText = 'font-size: 13px; padding: 6px 12px; text-decoration: none;';
+    openLink.textContent = 'Open';
+    btnGroup.appendChild(openLink);
+
+    wrapper.appendChild(btnGroup);
+    return wrapper;
   }
 
   // Attach event listeners
@@ -644,69 +748,106 @@
       padding: 24px;
     `;
 
-    const createdDate = assignment.created_at 
+    const createdDate = assignment.created_at
       ? new Date(assignment.created_at).toLocaleString()
-      : "Unknown";
+      : 'Unknown';
 
-    overlay.innerHTML = `
-      <div class="tc-card" style="max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
-          <h2 style="margin: 0; font-size: 24px;">${escapeHtml(assignment.title || "Untitled")}</h2>
-          <button id="closeDetailBtn" class="tc-btn" style="padding: 8px 16px;">✕ Close</button>
-        </div>
+    // Card
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;';
 
-        <div style="display: grid; gap: 16px; margin-bottom: 24px;">
-          <div>
-            <div style="color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;">Type</div>
-            <div>${escapeHtml(assignment.type || "file")}</div>
-          </div>
+    // Header row
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;';
+    const titleEl = document.createElement('h2');
+    titleEl.style.cssText = 'margin: 0; font-size: 24px;';
+    titleEl.textContent = assignment.title || 'Untitled';
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'closeDetailBtn';
+    closeBtn.className = 'tc-btn';
+    closeBtn.style.cssText = 'padding: 8px 16px;';
+    closeBtn.textContent = '✕ Close';
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(closeBtn);
+    card.appendChild(headerRow);
 
-          ${assignment.series ? `
-            <div>
-              <div style="color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;">Class</div>
-              <div>${escapeHtml(assignment.series)}</div>
-            </div>
-          ` : ''}
+    // Detail grid
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display: grid; gap: 16px; margin-bottom: 24px;';
 
-          <div>
-            <div style="color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;">Created</div>
-            <div>${escapeHtml(createdDate)}</div>
-          </div>
+    function makeDetailRow(labelText, valueText) {
+      const row = document.createElement('div');
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+      lbl.textContent = labelText;
+      const val = document.createElement('div');
+      val.textContent = valueText;
+      row.appendChild(lbl);
+      row.appendChild(val);
+      return row;
+    }
 
-          ${assignment.meta ? `
-            <div>
-              <div style="color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;">Mapping / Meta</div>
-              <div style="background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 13px;">${escapeHtml(assignment.meta)}</div>
-            </div>
-          ` : ''}
+    grid.appendChild(makeDetailRow('Type', assignment.type || 'file'));
+    if (assignment.series) {
+      grid.appendChild(makeDetailRow('Class', assignment.series));
+    }
+    grid.appendChild(makeDetailRow('Created', createdDate));
 
-          ${assignment.page ? `
-            <div>
-              <div style="color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;">Assignment Content Preview</div>
-              <div style="background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 14px;">${escapeHtml(assignment.page.substring(0, 1000))}${assignment.page.length > 1000 ? '...' : ''}</div>
-            </div>
-          ` : ''}
-        </div>
+    if (assignment.meta) {
+      const metaRow = document.createElement('div');
+      const metaLbl = document.createElement('div');
+      metaLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+      metaLbl.textContent = 'Mapping / Meta';
+      const metaVal = document.createElement('div');
+      metaVal.style.cssText = 'background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 13px;';
+      metaVal.textContent = typeof assignment.meta === 'string'
+        ? assignment.meta
+        : JSON.stringify(assignment.meta, null, 2);
+      metaRow.appendChild(metaLbl);
+      metaRow.appendChild(metaVal);
+      grid.appendChild(metaRow);
+    }
 
-        <div style="display: flex; gap: 12px;">
-          <button class="tc-btn issue-detail-btn" data-id="${escapeHtml(assignment.id)}" style="flex: 1;">
-            Issue to Class
-          </button>
-        </div>
-      </div>
-    `;
+    if (assignment.page) {
+      const pageRow = document.createElement('div');
+      const pageLbl = document.createElement('div');
+      pageLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+      pageLbl.textContent = 'Assignment Content Preview';
+      const pageVal = document.createElement('div');
+      pageVal.style.cssText = 'background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 14px;';
+      const preview = String(assignment.page).substring(0, 1000);
+      pageVal.textContent = preview + (String(assignment.page).length > 1000 ? '...' : '');
+      pageRow.appendChild(pageLbl);
+      pageRow.appendChild(pageVal);
+      grid.appendChild(pageRow);
+    }
 
+    card.appendChild(grid);
+
+    // Action buttons
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display: flex; gap: 12px;';
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'tc-btn issue-detail-btn';
+    issueBtn.dataset.id = assignment.id || '';
+    issueBtn.style.cssText = 'flex: 1;';
+    issueBtn.textContent = 'Issue to Class';
+    actionRow.appendChild(issueBtn);
+    card.appendChild(actionRow);
+
+    overlay.appendChild(card);
     document.body.appendChild(overlay);
 
     // Close button
-    overlay.querySelector('#closeDetailBtn').addEventListener('click', () => {
+    closeBtn.addEventListener('click', () => {
       overlay.remove();
     });
 
     // Issue button in detail
-    overlay.querySelector('.issue-detail-btn').addEventListener('click', (e) => {
-      const assignmentId = e.target.dataset.id;
-      window.location.href = `/teacher/work/?assignment=${encodeURIComponent(assignmentId)}`;
+    issueBtn.addEventListener('click', (e) => {
+      const id = e.currentTarget.dataset.id;
+      window.location.href = `/teacher/work/?assignment=${encodeURIComponent(id)}`;
     });
 
     // Click outside to close
@@ -719,14 +860,6 @@
 
   // Open the Upload Paper Assignment modal
   async function openUploadPaperModal() {
-    // Build class options from CANON_CLASSES using safe DOM approach
-    const classOptsFrag = CANON_CLASSES.map(cls => {
-      const opt = document.createElement('option');
-      opt.value = cls;
-      opt.textContent = cls;
-      return opt.outerHTML;
-    }).join('');
-
     // Build today's date string (YYYY-MM-DD) for default value
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -812,7 +945,16 @@
     const classSelect = document.createElement('select');
     classSelect.id = 'up_class';
     classSelect.style.cssText = fieldStyle;
-    classSelect.innerHTML = `<option value="">— Select class (optional) —</option>${classOptsFrag}`;
+    const defaultClassOpt = document.createElement('option');
+    defaultClassOpt.value = '';
+    defaultClassOpt.textContent = '— Select class (optional) —';
+    classSelect.appendChild(defaultClassOpt);
+    CANON_CLASSES.forEach(cls => {
+      const opt = document.createElement('option');
+      opt.value = cls;
+      opt.textContent = cls;
+      classSelect.appendChild(opt);
+    });
     form.appendChild(makeField('Class', false, classSelect));
 
     // Student Code field (optional free text)
@@ -835,6 +977,33 @@
     dateInput.style.cssText = fieldStyle;
     dateInput.value = todayStr;
     form.appendChild(makeField('Date Completed', false, dateInput));
+
+    // Score Earned field (optional)
+    const scoreInput = document.createElement('input');
+    scoreInput.type = 'number';
+    scoreInput.id = 'up_score';
+    scoreInput.min = '0';
+    scoreInput.max = '100';
+    scoreInput.step = '1';
+    scoreInput.style.cssText = fieldStyle;
+    scoreInput.placeholder = 'e.g. 85';
+    form.appendChild(makeField('Score Earned', false, scoreInput));
+
+    // Total Possible field (optional)
+    const totalPossibleInput = document.createElement('input');
+    totalPossibleInput.type = 'number';
+    totalPossibleInput.id = 'up_total_possible';
+    totalPossibleInput.min = '1';
+    totalPossibleInput.max = '1000';
+    totalPossibleInput.step = '1';
+    totalPossibleInput.value = '100';
+    totalPossibleInput.style.cssText = fieldStyle;
+    const totalPossibleWrap = makeField('Total Possible', false, totalPossibleInput);
+    const gradeHint = document.createElement('div');
+    gradeHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
+    gradeHint.textContent = 'Leave score blank to upload without grading.';
+    totalPossibleWrap.appendChild(gradeHint);
+    form.appendChild(totalPossibleWrap);
 
     // Notes field
     const notesArea = document.createElement('textarea');
@@ -877,6 +1046,7 @@
     submitBtn.id = 'up_submit';
     submitBtn.className = 'tc-btn';
     submitBtn.style.cssText = 'width:100%; padding:12px; font-size:16px; background:rgba(34,197,94,.20); border-color:rgba(34,197,94,.35); display:flex; align-items:center; justify-content:center; gap:8px;';
+    // SAFETY: static SVG icon + static label text, no user data
     submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Upload &amp; Save';
     form.appendChild(submitBtn);
 
@@ -978,11 +1148,41 @@
     const notes = overlay.querySelector('#up_notes').value.trim();
     const fileInput = overlay.querySelector('#up_file');
 
+    // Score fields
+    const scoreRaw = overlay.querySelector('#up_score').value.trim();
+    const totalPossibleRaw = overlay.querySelector('#up_total_possible').value.trim();
+    const scoreEarned = scoreRaw !== '' ? Number(scoreRaw) : null;
+    const totalPossible = totalPossibleRaw !== '' ? Number(totalPossibleRaw) : 100;
+
     // Validation
     if (!title) {
       showInlineError('Title is required.');
       overlay.querySelector('#up_title').focus();
       return;
+    }
+
+    // Score validation
+    if (scoreEarned !== null) {
+      if (!studentCode) {
+        showInlineError('Student Code is required when entering a grade.');
+        overlay.querySelector('#up_student_code').focus();
+        return;
+      }
+      if (!Number.isFinite(scoreEarned) || scoreEarned < 0) {
+        showInlineError('Score Earned must be a non-negative number.');
+        overlay.querySelector('#up_score').focus();
+        return;
+      }
+      if (!Number.isFinite(totalPossible) || totalPossible < 1) {
+        showInlineError('Total Possible must be at least 1.');
+        overlay.querySelector('#up_total_possible').focus();
+        return;
+      }
+      if (scoreEarned > totalPossible) {
+        showInlineError('Score cannot exceed total possible points.');
+        overlay.querySelector('#up_score').focus();
+        return;
+      }
     }
 
     if (!fileInput.files || fileInput.files.length === 0) {
@@ -1011,6 +1211,7 @@
 
     submitBtn.disabled = true;
     const originalBtnHtml = submitBtn.innerHTML;
+    // SAFETY: static SVG spinner, no user data
     submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Uploading…';
 
     // Add spin animation if not already present
@@ -1023,6 +1224,11 @@
 
     try {
       let paperUploadUrl = null;
+      let gradeRecorded = false;
+      // Pre-compute score percentage once (used in both branches + toast)
+      const scorePercent = scoreEarned !== null ? Math.round((scoreEarned / totalPossible) * 100) : null;
+      // Instance ID helper: combines assignment ID with student code
+      const instanceId = (assignmentId) => assignmentId + '-' + studentCode;
 
       if (isRemote) {
         // ── Supabase mode: upload file, then create assignment record ──
@@ -1035,12 +1241,13 @@
         if (!paperUploadUrl) {
           showInlineError('File upload failed. Please try again.');
           submitBtn.disabled = false;
+          // SAFETY: restoring original static button content, no user data
           submitBtn.innerHTML = originalBtnHtml;
           return;
         }
         console.log('[tc-library] Paper file uploaded:', paperUploadUrl);
 
-        // Create the assignment record
+        // Build assignment meta — include score if provided
         const assignmentMeta = {
           paper: true,
           paper_upload_url: paperUploadUrl,
@@ -1049,6 +1256,10 @@
           notes: notes || null,
           student_code: studentCode || null,
         };
+        if (scoreEarned !== null) {
+          assignmentMeta.score_earned = scoreEarned;
+          assignmentMeta.total_possible = totalPossible;
+        }
 
         let newAssignment;
         try {
@@ -1065,6 +1276,7 @@
           try { await db.deletePaperFile(storagePath); } catch (_) { /* ignore */ }
           showInlineError('Failed to save assignment record. Please try again.');
           submitBtn.disabled = false;
+          // SAFETY: restoring original static button content, no user data
           submitBtn.innerHTML = originalBtnHtml;
           return;
         }
@@ -1091,6 +1303,29 @@
           }
         }
 
+        // Auto-create gradebook entry if score + student code provided
+        if (scoreEarned !== null && studentCode && newAssignment) {
+          try {
+            const instance = await db.upsertAssignmentInstance({
+              id: instanceId(newAssignment.id),
+              assignment_id: newAssignment.id,
+              student_code: studentCode,
+              assigned_at: dateCompleted || new Date().toISOString().split('T')[0],
+              status: 'Graded'
+            });
+            await db.addSubmission({
+              instance_id: instance.id,
+              score_total: scorePercent,
+              submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString()
+            });
+            gradeRecorded = true;
+            console.log('[tc-library] Gradebook entry created:', scorePercent + '%');
+          } catch (gradeErr) {
+            // Non-critical — warn but don't fail the upload
+            console.warn('[tc-library] Could not create gradebook entry (non-critical):', gradeErr.message);
+          }
+        }
+
       } else {
         // ── Local mode: metadata-only (no file storage) ──
         console.log('[tc-library] Local mode — storing paper assignment metadata only (file not stored)');
@@ -1104,8 +1339,12 @@
           student_code: studentCode || null,
           local_note: 'File not stored in local mode',
         };
+        if (scoreEarned !== null) {
+          assignmentMeta.score_earned = scoreEarned;
+          assignmentMeta.total_possible = totalPossible;
+        }
 
-        await db.createAssignment({
+        const newAssignment = await db.createAssignment({
           title,
           type: 'paper',
           series: className || null,
@@ -1118,7 +1357,7 @@
           try {
             await db.createSubmissionArchive({
               student_code: studentCode,
-              assignment_id: null,
+              assignment_id: newAssignment ? newAssignment.id : null,
               title,
               class_name: className || null,
               feedback: notes || null,
@@ -1129,12 +1368,37 @@
             console.warn('[tc-library] Could not create local archive record (non-critical):', archiveErr.message);
           }
         }
+
+        // Auto-create gradebook entry in local mode if score + student code provided
+        if (scoreEarned !== null && studentCode && newAssignment) {
+          try {
+            const instId = instanceId(newAssignment.id);
+            await db.upsertAssignmentInstance({
+              id: instId,
+              assignment_id: newAssignment.id,
+              student_code: studentCode,
+              assigned_at: dateCompleted || new Date().toISOString().split('T')[0],
+              status: 'Graded'
+            });
+            await db.addSubmission({
+              instance_id: instId,
+              score_total: scorePercent,
+              submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString()
+            });
+            gradeRecorded = true;
+            console.log('[tc-library] Local gradebook entry created:', scorePercent + '%');
+          } catch (gradeErr) {
+            console.warn('[tc-library] Could not create local gradebook entry (non-critical):', gradeErr.message);
+          }
+        }
       }
 
       // Success — close modal, refresh list, show toast
       overlay.remove();
       console.log('[tc-library] Paper assignment uploaded successfully');
-      showToast(`📄 "${title}" saved to Library${!isRemote ? ' (metadata only — local mode)' : ''}`);
+      const toastSuffix = !isRemote ? ' (metadata only — local mode)' : '';
+      const gradeNote = gradeRecorded ? ` — ${scorePercent}% recorded in Gradebook` : '';
+      showToast(`📄 "${title}" saved to Library${gradeNote}${toastSuffix}`);
       await loadAssignments();
       switchTab('assignments');
 
@@ -1142,6 +1406,7 @@
       console.error('[tc-library] Paper upload error:', err);
       showInlineError('An unexpected error occurred. Please try again.');
       submitBtn.disabled = false;
+      // SAFETY: restoring original static button content, no user data
       submitBtn.innerHTML = originalBtnHtml;
     }
   }
@@ -1180,14 +1445,6 @@
     URL.revokeObjectURL(url);
 
     console.log("[tc-library] Library exported successfully");
-  }
-
-  // Utility: escape HTML
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(str);
-    return div.innerHTML;
   }
 
   // Start initialization
