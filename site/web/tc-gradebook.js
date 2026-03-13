@@ -64,7 +64,9 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY_DRAFTS);
       const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
+      if (!Array.isArray(arr)) return [];
+      // Filter out non-object entries (corrupted data)
+      return arr.filter(item => typeof item === 'object' && item !== null && !Array.isArray(item));
     } catch {
       return [];
     }
@@ -72,6 +74,9 @@
 
   // Helper to calculate earned points from a percentage score and total possible
   function calculateEarnedPoints(score, totalPossible) {
+    if (typeof score !== 'number' || typeof totalPossible !== 'number') return 0;
+    if (!Number.isFinite(score) || !Number.isFinite(totalPossible)) return 0;
+    if (totalPossible === 0) return 0;
     return Math.round(score * totalPossible / 100);
   }
 
@@ -368,7 +373,7 @@
       if (score != null) score = Number(score);
       if (isNaN(score)) score = null;
       
-      if (score === undefined && submission.answers) {
+      if (score == null && typeof submission.answers === 'object' && submission.answers !== null) {
         // Try to calculate score from answers
         const totalQuestions = Object.keys(submission.answers).length;
         if (totalQuestions > 0) {
@@ -890,15 +895,18 @@
       tdTrend.dataset.extraCol = "1";
       tdTrend.style.textAlign = "center";
       if (!showMoreColumns) tdTrend.style.display = "none";
-      let trendHTML = '';
+      const trendSpan = document.createElement("span");
       if (trend === 'up') {
-        trendHTML = '<span class="gb-trend-arrow gb-trend-up">↗️</span>';
+        trendSpan.className = "gb-trend-arrow gb-trend-up";
+        trendSpan.textContent = "↗️";
       } else if (trend === 'down') {
-        trendHTML = '<span class="gb-trend-arrow gb-trend-down">↘️</span>';
+        trendSpan.className = "gb-trend-arrow gb-trend-down";
+        trendSpan.textContent = "↘️";
       } else {
-        trendHTML = '<span class="gb-trend-arrow gb-trend-flat">→</span>';
+        trendSpan.className = "gb-trend-arrow gb-trend-flat";
+        trendSpan.textContent = "→";
       }
-      tdTrend.innerHTML = trendHTML;
+      tdTrend.appendChild(trendSpan);
       tr.appendChild(tdTrend);
 
       tableBody.appendChild(tr);
@@ -1443,6 +1451,10 @@
       clearTimeout(realtimeRetryTimer);
       realtimeRetryTimer = null;
     }
+    if (realtimeDebounceTimer) {
+      clearTimeout(realtimeDebounceTimer);
+      realtimeDebounceTimer = null;
+    }
     realtimeRetryCount = 0;
     if (realtimeChannel) {
       console.log('[gradebook] Cleaning up realtime subscription');
@@ -1465,7 +1477,15 @@
     try {
       const stored = localStorage.getItem('rc_gradebook_weights');
       if (stored) {
-        return { ...defaults, ...JSON.parse(stored) };
+        const parsed = JSON.parse(stored);
+        // Validate each weight: must be a finite number >= 0; fall back to default if invalid
+        const validated = { ...defaults };
+        for (const [key, val] of Object.entries(parsed)) {
+          if (typeof val === 'number' && Number.isFinite(val) && val >= 0) {
+            validated[key] = val;
+          }
+        }
+        return validated;
       }
     } catch (e) {
       console.warn('[gradebook] Error loading weights:', e);
@@ -1489,7 +1509,10 @@
    * Get assignment category (default to 'assignment')
    */
   function getAssignmentCategory(draft) {
-    return (draft.type || 'assignment').toLowerCase();
+    if (!draft || typeof draft !== 'object') return 'assignment';
+    const type = draft.type;
+    if (typeof type !== 'string' || !type.trim()) return 'assignment';
+    return type.toLowerCase();
   }
 
   /**
@@ -1568,12 +1591,14 @@
 
     const { students, drafts, scoreMap } = data;
 
+    // SAFETY: static markup, no user data
     if (drafts.length === 0) {
       contentEl.innerHTML = '<div style="opacity: 0.7; text-align: center; padding: 20px;">No assignments to analyze</div>';
       return;
     }
 
-    let html = '';
+    // Clear container safely
+    while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
 
     for (const draft of drafts) {
       const scores = [];
@@ -1613,31 +1638,69 @@
 
       const maxBin = Math.max(...bins, 1);
 
-      html += '<div class="gb-analytics-assignment">';
-      html += `<div class="gb-analytics-title">${draft.title || '(untitled)'}</div>`;
-      html += '<div class="gb-analytics-stats">';
-      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Avg:</span><span>${avg}%</span></div>`;
-      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Median:</span><span>${median}%</span></div>`;
-      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Min:</span><span>${min}%</span></div>`;
-      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Max:</span><span>${max}%</span></div>`;
-      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">n:</span><span>${scores.length}</span></div>`;
-      html += '</div>';
+      // Build assignment analytics block using safe DOM construction
+      const assignmentDiv = document.createElement("div");
+      assignmentDiv.className = "gb-analytics-assignment";
 
-      html += '<div class="gb-distribution-chart">';
+      const titleDiv = document.createElement("div");
+      titleDiv.className = "gb-analytics-title";
+      titleDiv.textContent = draft.title || "(untitled)";
+      assignmentDiv.appendChild(titleDiv);
+
+      const statsDiv = document.createElement("div");
+      statsDiv.className = "gb-analytics-stats";
+
+      const statDefs = [
+        { label: "Avg:", value: `${avg}%` },
+        { label: "Median:", value: `${median}%` },
+        { label: "Min:", value: `${min}%` },
+        { label: "Max:", value: `${max}%` },
+        { label: "n:", value: `${scores.length}` }
+      ];
+      for (const def of statDefs) {
+        const statDiv = document.createElement("div");
+        statDiv.className = "gb-analytics-stat";
+        const labelSpan = document.createElement("span");
+        labelSpan.style.opacity = "0.7";
+        labelSpan.textContent = def.label;
+        const valSpan = document.createElement("span");
+        valSpan.textContent = def.value;
+        statDiv.appendChild(labelSpan);
+        statDiv.appendChild(valSpan);
+        statsDiv.appendChild(statDiv);
+      }
+      assignmentDiv.appendChild(statsDiv);
+
+      const chartDiv = document.createElement("div");
+      chartDiv.className = "gb-distribution-chart";
+
       for (let i = 0; i < bins.length; i++) {
         const width = maxBin > 0 ? (bins[i] / maxBin) * 100 : 0;
-        html += '<div class="gb-distribution-bar">';
-        html += `<div class="gb-distribution-label">${labels[i]}</div>`;
-        html += '<div class="gb-distribution-bar-bg">';
-        html += `<div class="gb-distribution-bar-fill" style="width: ${width}%; background-color: ${colors[i]};">${bins[i] > 0 ? bins[i] : ''}</div>`;
-        html += '</div>';
-        html += '</div>';
-      }
-      html += '</div>';
-      html += '</div>';
-    }
+        const barDiv = document.createElement("div");
+        barDiv.className = "gb-distribution-bar";
 
-    contentEl.innerHTML = html;
+        const labelDiv = document.createElement("div");
+        labelDiv.className = "gb-distribution-label";
+        labelDiv.textContent = labels[i]; // static strings defined above (e.g. '0-59%'), no user data
+
+        const bgDiv = document.createElement("div");
+        bgDiv.className = "gb-distribution-bar-bg";
+
+        const fillDiv = document.createElement("div");
+        fillDiv.className = "gb-distribution-bar-fill";
+        fillDiv.style.width = `${width}%`;
+        fillDiv.style.backgroundColor = colors[i]; // static hex strings defined above, no user data
+        fillDiv.textContent = bins[i] > 0 ? String(bins[i]) : "";
+
+        bgDiv.appendChild(fillDiv);
+        barDiv.appendChild(labelDiv);
+        barDiv.appendChild(bgDiv);
+        chartDiv.appendChild(barDiv);
+      }
+
+      assignmentDiv.appendChild(chartDiv);
+      contentEl.appendChild(assignmentDiv);
+    }
   }
 
   /**
@@ -1681,6 +1744,7 @@
     badgeEl.textContent = `${missing.length} missing`;
 
     if (missing.length === 0) {
+      // SAFETY: static markup, no user data
       contentEl.innerHTML = '<div style="opacity: 0.7; text-align: center; padding: 20px;">✅ No missing work!</div>';
       badgeEl.style.background = 'rgba(34,197,94,.15)';
       badgeEl.style.borderColor = 'rgba(34,197,94,.4)';
@@ -1693,28 +1757,52 @@
     // Sort by days overdue (most overdue first)
     missing.sort((a, b) => b.daysOverdue - a.daysOverdue);
 
-    let html = '<table class="gb-missing-table">';
-    html += '<thead><tr>';
-    html += '<th>Student Code</th>';
-    html += '<th>Student Name</th>';
-    html += '<th>Assignment</th>';
-    html += '<th>Due Date</th>';
-    html += '<th>Days Overdue</th>';
-    html += '</tr></thead>';
-    html += '<tbody>';
+    // Build table using safe DOM construction (student names/titles are user data)
+    const table = document.createElement("table");
+    table.className = "gb-missing-table";
 
-    for (const item of missing) {
-      html += '<tr>';
-      html += `<td>${item.studentCode}</td>`;
-      html += `<td>${item.studentName}</td>`;
-      html += `<td>${item.assignmentTitle}</td>`;
-      html += `<td>${item.dueDate.toLocaleDateString()}</td>`;
-      html += `<td class="gb-days-overdue">${item.daysOverdue} day${item.daysOverdue !== 1 ? 's' : ''}</td>`;
-      html += '</tr>';
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    for (const heading of ["Student Code", "Student Name", "Assignment", "Due Date", "Days Overdue"]) {
+      const th = document.createElement("th");
+      th.textContent = heading;
+      headerRow.appendChild(th);
     }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
-    html += '</tbody></table>';
-    contentEl.innerHTML = html;
+    const tbody = document.createElement("tbody");
+    for (const item of missing) {
+      const tr = document.createElement("tr");
+
+      const tdCode = document.createElement("td");
+      tdCode.textContent = item.studentCode;
+      tr.appendChild(tdCode);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = item.studentName;
+      tr.appendChild(tdName);
+
+      const tdTitle = document.createElement("td");
+      tdTitle.textContent = item.assignmentTitle;
+      tr.appendChild(tdTitle);
+
+      const tdDue = document.createElement("td");
+      tdDue.textContent = item.dueDate.toLocaleDateString();
+      tr.appendChild(tdDue);
+
+      const tdOverdue = document.createElement("td");
+      tdOverdue.className = "gb-days-overdue";
+      tdOverdue.textContent = `${item.daysOverdue} day${item.daysOverdue !== 1 ? 's' : ''}`;
+      tr.appendChild(tdOverdue);
+
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    // Replace container contents with the safe table
+    while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+    contentEl.appendChild(table);
   }
 
   /**
