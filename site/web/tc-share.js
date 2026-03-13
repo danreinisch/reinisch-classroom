@@ -10,14 +10,6 @@
   // Storage key for share tokens
   const SHARE_TOKENS_KEY = 'rc_share_tokens';
 
-  // Helper to escape HTML
-  function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
   // Helper to generate secure random token
   function generateToken() {
     const arr = new Uint8Array(24);
@@ -36,11 +28,19 @@
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // Load share tokens from localStorage
+  // Validate a share token object has the expected shape
+  function isValidToken(t) {
+    return typeof t === 'object' && t !== null && !Array.isArray(t) &&
+      typeof t.id === 'string' && typeof t.token === 'string';
+  }
+
+  // Load share tokens from localStorage, filtering out malformed entries
   function loadShareTokens() {
     try {
       const data = localStorage.getItem(SHARE_TOKENS_KEY);
-      return data ? JSON.parse(data) : [];
+      const parsed = data ? JSON.parse(data) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(isValidToken);
     } catch (e) {
       console.error('Error loading share tokens:', e);
       return [];
@@ -83,11 +83,7 @@
     studentSelect.addEventListener('change', async (e) => {
       const studentCode = e.target.value;
       if (!studentCode) {
-        document.getElementById('shareGoalsList').innerHTML = `
-          <p style="text-align: center; color: rgba(240,255,250,.6); margin: 0;">
-            Select a student first
-          </p>
-        `;
+        _renderGoalsPlaceholder(document.getElementById('shareGoalsList'), 'Select a student first');
         return;
       }
 
@@ -96,24 +92,32 @@
       const goalsList = document.getElementById('shareGoalsList');
       
       if (goals.length === 0) {
-        goalsList.innerHTML = `
-          <p style="text-align: center; color: rgba(240,255,250,.6); margin: 0;">
-            No goals found for this student
-          </p>
-        `;
+        _renderGoalsPlaceholder(goalsList, 'No goals found for this student');
         return;
       }
 
-      goalsList.innerHTML = '';
+      goalsList.innerHTML = ''; // SAFETY: clearing container before safe DOM rebuild
       goals.forEach(goal => {
         const item = document.createElement('div');
         item.className = 'share-checkbox-item';
-        item.innerHTML = `
-          <input type="checkbox" id="goal_${escapeHtml(goal.code)}" name="share_goals" value="${escapeHtml(goal.code)}">
-          <label for="goal_${escapeHtml(goal.code)}">
-            <strong>${escapeHtml(goal.code)}</strong> - ${escapeHtml(goal.area || 'No area')} - ${escapeHtml(goal.description || 'No description')}
-          </label>
-        `;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'goal_' + (goal.code || '');
+        checkbox.name = 'share_goals';
+        checkbox.value = goal.code || '';
+
+        const label = document.createElement('label');
+        label.htmlFor = 'goal_' + (goal.code || '');
+        const strong = document.createElement('strong');
+        strong.textContent = goal.code || '';
+        label.appendChild(strong);
+        label.appendChild(document.createTextNode(
+          ' - ' + (goal.area || 'No area') + ' - ' + (goal.description || 'No description')
+        ));
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
         goalsList.appendChild(item);
       });
     });
@@ -185,11 +189,7 @@
       
       // Reset form
       e.target.reset();
-      document.getElementById('shareGoalsList').innerHTML = `
-        <p style="text-align: center; color: rgba(240,255,250,.6); margin: 0;">
-          Select a student first
-        </p>
-      `;
+      _renderGoalsPlaceholder(document.getElementById('shareGoalsList'), 'Select a student first');
     });
 
     // Handle copy link button
@@ -205,6 +205,15 @@
 
     // Render initial table
     renderShareLinksTable();
+  }
+
+  // Helper: render "no selection" / empty-state paragraph in goal list
+  function _renderGoalsPlaceholder(container, message) {
+    container.innerHTML = ''; // SAFETY: clearing container
+    const p = document.createElement('p');
+    p.style.cssText = 'text-align: center; color: rgba(240,255,250,.6); margin: 0;';
+    p.textContent = message;
+    container.appendChild(p);
   }
 
   // Render share links table
@@ -226,14 +235,14 @@
     // Sort by created date (newest first)
     tokens.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    tbody.innerHTML = '';
-    
-    tokens.forEach((token, index) => {
+    tbody.innerHTML = ''; // SAFETY: clearing container before safe DOM rebuild
+
+    tokens.forEach((token, _index) => {
       const now = new Date();
       const expiresDate = token.expires_at ? new Date(token.expires_at) : null;
       const isExpired = expiresDate && expiresDate < now;
       const isRevoked = token.revoked;
-      
+
       let status, statusClass;
       if (isRevoked) {
         status = 'Revoked';
@@ -247,54 +256,129 @@
       }
 
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${escapeHtml(token.student_name)}<br><small style="opacity: 0.7;">${escapeHtml(token.student_code)}</small></td>
-        <td>${escapeHtml(token.goal_codes.join(', '))}</td>
-        <td><small>${formatDate(token.created_at)}</small></td>
-        <td><small>${token.expires_at ? formatDate(token.expires_at) : 'Never'}</small></td>
-        <td><span class="share-status ${statusClass}">${status}</span></td>
-        <td style="text-align: center;">${token.entries.length}</td>
-        <td>
-          <button class="share-btn" data-token="${escapeHtml(token.token)}" ${isRevoked ? 'disabled' : ''}>
-            📋 Copy
-          </button>
-          ${!isRevoked && !isExpired ? `
-            <button class="share-btn" data-token-id="${escapeHtml(token.id)}" style="margin-left: 4px;">
-              🚫 Revoke
-            </button>
-          ` : ''}
-        </td>
-      `;
-      
+
+      // Student cell
+      const tdStudent = document.createElement('td');
+      tdStudent.textContent = token.student_name || '';
+      tdStudent.appendChild(document.createElement('br'));
+      const smallCode = document.createElement('small');
+      smallCode.style.opacity = '0.7';
+      smallCode.textContent = token.student_code || '';
+      tdStudent.appendChild(smallCode);
+      row.appendChild(tdStudent);
+
+      // Goals cell
+      const tdGoals = document.createElement('td');
+      tdGoals.textContent = Array.isArray(token.goal_codes) ? token.goal_codes.join(', ') : '';
+      row.appendChild(tdGoals);
+
+      // Created cell
+      const tdCreated = document.createElement('td');
+      const smallCreated = document.createElement('small');
+      smallCreated.textContent = formatDate(token.created_at);
+      tdCreated.appendChild(smallCreated);
+      row.appendChild(tdCreated);
+
+      // Expires cell
+      const tdExpires = document.createElement('td');
+      const smallExpires = document.createElement('small');
+      smallExpires.textContent = token.expires_at ? formatDate(token.expires_at) : 'Never';
+      tdExpires.appendChild(smallExpires);
+      row.appendChild(tdExpires);
+
+      // Status cell
+      const tdStatus = document.createElement('td');
+      const statusSpan = document.createElement('span');
+      statusSpan.className = 'share-status ' + statusClass;
+      statusSpan.textContent = status;
+      tdStatus.appendChild(statusSpan);
+      row.appendChild(tdStatus);
+
+      // Entries count cell
+      const tdEntries = document.createElement('td');
+      tdEntries.style.textAlign = 'center';
+      const entryCount = Array.isArray(token.entries) ? token.entries.length : 0;
+      tdEntries.textContent = String(entryCount);
+      row.appendChild(tdEntries);
+
+      // Actions cell
+      const tdActions = document.createElement('td');
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'share-btn';
+      copyBtn.dataset.token = token.token;
+      copyBtn.textContent = '📋 Copy';
+      if (isRevoked) copyBtn.disabled = true;
+      tdActions.appendChild(copyBtn);
+
+      if (!isRevoked && !isExpired) {
+        const revokeBtn = document.createElement('button');
+        revokeBtn.className = 'share-btn';
+        revokeBtn.dataset.tokenId = token.id;
+        revokeBtn.style.marginLeft = '4px';
+        revokeBtn.textContent = '🚫 Revoke';
+        tdActions.appendChild(revokeBtn);
+      }
+
+      row.appendChild(tdActions);
       tbody.appendChild(row);
 
-      // Add audit trail if there are entries
-      if (token.entries.length > 0) {
+      // Add audit trail row if there are entries
+      const entries = Array.isArray(token.entries) ? token.entries : [];
+      if (entries.length > 0) {
         const auditRow = document.createElement('tr');
-        auditRow.innerHTML = `
-          <td colspan="7">
-            <div class="share-audit-trail">
-              <div class="share-expandable" data-toggle-audit="true">
-                <strong>▶ View ${token.entries.length} Entry Log(s)</strong>
-              </div>
-              <div class="share-expanded-content">
-                ${token.entries.map(entry => `
-                  <div class="share-audit-entry">
-                    <div><strong>${escapeHtml(entry.entered_by || 'Unknown')}</strong> - ${formatDate(entry.timestamp)}</div>
-                    <div style="margin-top: 4px;">
-                      Goal ${escapeHtml(entry.goal_code)}: <strong>${entry.percent}%</strong>
-                      ${entry.notes ? `<br><em>${escapeHtml(entry.notes)}</em>` : ''}
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          </td>
-        `;
+        const auditTd = document.createElement('td');
+        auditTd.colSpan = 7;
+
+        const auditTrail = document.createElement('div');
+        auditTrail.className = 'share-audit-trail';
+
+        const expandable = document.createElement('div');
+        expandable.className = 'share-expandable';
+        expandable.dataset.toggleAudit = 'true';
+        const expandStrong = document.createElement('strong');
+        expandStrong.textContent = '▶ View ' + entries.length + ' Entry Log(s)';
+        expandable.appendChild(expandStrong);
+
+        const expandedContent = document.createElement('div');
+        expandedContent.className = 'share-expanded-content';
+
+        entries.forEach(entry => {
+          const entryDiv = document.createElement('div');
+          entryDiv.className = 'share-audit-entry';
+
+          const headerDiv = document.createElement('div');
+          const entryStrong = document.createElement('strong');
+          entryStrong.textContent = entry.entered_by || 'Unknown';
+          headerDiv.appendChild(entryStrong);
+          headerDiv.appendChild(document.createTextNode(' - ' + formatDate(entry.timestamp)));
+          entryDiv.appendChild(headerDiv);
+
+          const detailDiv = document.createElement('div');
+          detailDiv.style.marginTop = '4px';
+          detailDiv.appendChild(document.createTextNode(
+            'Goal ' + (entry.goal_code || '') + ': '
+          ));
+          const percentStrong = document.createElement('strong');
+          percentStrong.textContent = (entry.percent != null ? entry.percent : '') + '%';
+          detailDiv.appendChild(percentStrong);
+          if (entry.notes) {
+            detailDiv.appendChild(document.createElement('br'));
+            const em = document.createElement('em');
+            em.textContent = entry.notes;
+            detailDiv.appendChild(em);
+          }
+          entryDiv.appendChild(detailDiv);
+          expandedContent.appendChild(entryDiv);
+        });
+
+        auditTrail.appendChild(expandable);
+        auditTrail.appendChild(expandedContent);
+        auditTd.appendChild(auditTrail);
+        auditRow.appendChild(auditTd);
         tbody.appendChild(auditRow);
       }
     });
-    
+
     // Add event listeners to buttons
     tbody.querySelectorAll('button[data-token]').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -308,33 +392,39 @@
         });
       });
     });
-    
+
     tbody.querySelectorAll('button[data-token-id]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const tokenId = btn.dataset.tokenId;
         if (!await rcConfirm('Revoke Share Link', 'Are you sure you want to revoke this share link? It will no longer accept data entries.', 'Revoke', { danger: true })) {
           return;
         }
-        
-        const tokens = loadShareTokens();
-        const tokenIndex = tokens.findIndex(t => t.id === tokenId);
+
+        const allTokens = loadShareTokens();
+        const tokenIndex = allTokens.findIndex(t => t.id === tokenId);
         if (tokenIndex >= 0) {
-          tokens[tokenIndex].revoked = true;
-          saveShareTokens(tokens);
+          allTokens[tokenIndex].revoked = true;
+          saveShareTokens(allTokens);
           renderShareLinksTable();
           showToast('🚫 Share link revoked');
         }
       });
     });
-    
+
     // Add audit trail toggle listeners
     tbody.querySelectorAll('[data-toggle-audit]').forEach(el => {
       el.addEventListener('click', () => {
         const content = el.nextElementSibling;
         content.classList.toggle('show');
-        el.innerHTML = content.classList.contains('show') 
-          ? el.innerHTML.replace('▶', '▼')
-          : el.innerHTML.replace('▼', '▶');
+        const strong = el.querySelector('strong');
+        if (strong) {
+          const isExpanded = content.classList.contains('show');
+          if (isExpanded) {
+            strong.textContent = strong.textContent.replace('▶', '▼');
+          } else {
+            strong.textContent = strong.textContent.replace('▼', '▶');
+          }
+        }
       });
     });
   }
