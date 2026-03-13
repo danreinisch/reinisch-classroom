@@ -280,4 +280,58 @@ console.log('\n--- calculateStreakAbove ---');
   console.log('✓ default threshold is 80');
 }
 
+// ── Invalid date guard tests ──────────────────────────────────────────────────
+
+console.log('\n--- Invalid date guards ---');
+
+{
+  // calculateAverageScoreTrend: invalid dates are excluded
+  const now = new Date('2026-03-12T12:00:00Z');
+  const submissions = [
+    { score_total: 90, submitted_at: daysAgo(1, now) },
+    { score_total: 85, submitted_at: daysAgo(2, now) },
+    { score_total: 88, submitted_at: 'not-a-date' },     // invalid — excluded
+    { score_total: 75, submitted_at: '' },               // invalid — excluded
+    { score_total: 70, submitted_at: null },             // null — excluded
+    { score_total: 80, submitted_at: undefined },        // undefined — excluded
+  ];
+  const result = calculateAverageScoreTrend(submissions);
+  // Only 2 valid entries → not enough for trend comparison → flat
+  assert.strictEqual(result.direction, 'flat', 'invalid dates should be excluded from trend');
+  console.log('✓ calculateAverageScoreTrend: invalid/null/empty dates are excluded');
+}
+
+{
+  // calculateStreakAbove: invalid dates are excluded
+  const now = new Date('2026-03-12T12:00:00Z');
+  const submissions = [
+    { score_total: 90, submitted_at: daysAgo(1, now) },
+    { score_total: 85, submitted_at: 'not-a-date' },    // invalid — excluded
+    { score_total: 60, submitted_at: '' },              // invalid — excluded
+    { score_total: 55, submitted_at: null },            // null — excluded
+    { score_total: 50, submitted_at: undefined },       // undefined — excluded
+  ];
+  const result = calculateStreakAbove(submissions, 80);
+  // Only 1 valid entry (score=90) → streak of 1
+  assert.strictEqual(result.streak, 1, 'only valid-date entries should count toward streak');
+  console.log('✓ calculateStreakAbove: invalid/null/empty dates are excluded');
+}
+
+{
+  // calculateWeekOverWeekTrend: invalid dates are excluded
+  const now = new Date('2026-03-12T12:00:00Z');
+  const submissions = [
+    { submitted_at: daysAgo(2, now) },       // last week — valid
+    { submitted_at: 'not-a-date' },          // invalid — excluded
+    { submitted_at: '' },                    // invalid — excluded
+    { submitted_at: null },                  // null — excluded
+    { submitted_at: undefined },             // undefined — excluded
+    { submitted_at: daysAgo(9, now) },       // prev week — valid
+  ];
+  const result = calculateWeekOverWeekTrend(submissions, now);
+  assert.strictEqual(result.lastWeekCount, 1, 'invalid dates excluded from last week count');
+  assert.strictEqual(result.prevWeekCount, 1, 'invalid dates excluded from prev week count');
+  console.log('✓ calculateWeekOverWeekTrend: invalid/null/empty dates are excluded');
+}
+
 console.log('\n✓ All portal-b-helpers tests passed!');

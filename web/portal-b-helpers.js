@@ -439,7 +439,7 @@ export function calculateWeekOverWeekTrend(submissions, now = new Date()) {
  */
 export function calculateAverageScoreTrend(submissions) {
   const graded = [...submissions]
-    .filter(s => s.score_total != null && s.submitted_at)
+    .filter(s => s.score_total != null && s.submitted_at && !Number.isNaN(Date.parse(s.submitted_at)))
     .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
   if (graded.length < 2) {
@@ -470,7 +470,11 @@ export function calculateAverageScoreTrend(submissions) {
  */
 export function calculateStreakAbove(submissions, threshold = 80) {
   const graded = [...submissions]
-    .filter(s => s.score_total != null && s.submitted_at)
+    .filter(s => {
+      if (s.score_total == null || !s.submitted_at) return false;
+      const d = new Date(s.submitted_at);
+      return !isNaN(d.getTime());
+    })
     .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
   let streak = 0;
