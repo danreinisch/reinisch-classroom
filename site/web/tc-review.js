@@ -895,7 +895,7 @@
            data-submission-id="${escapeHtml(submission.id)}"
            role="button"
            tabindex="0"
-           aria-expanded="${isExpanded}"
+           aria-expanded="${isExpanded ? 'true' : 'false'}"
            aria-label="Expand submission for ${studentLabel}">
         <div class="rv-submission-info">
           <span class="rv-student">${studentLabel}</span>
@@ -1453,7 +1453,10 @@
           }
         }
         await render();
-        // After expanding, focus the first interactive element inside the body
+        // After expanding, focus the first interactive element inside the body.
+        // `submissionId` here is the DOM-decoded attribute value (browser unescapes
+        // HTML entities from dataset automatically), so CSS.escape() is the right
+        // sanitiser to make it safe for use in a CSS attribute selector.
         if (!wasExpanded) {
           setTimeout(() => {
             const expandedHeader = document.querySelector(`.rv-submission-header[data-submission-id="${CSS.escape(submissionId)}"]`);
