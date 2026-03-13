@@ -1681,7 +1681,7 @@
 
         const labelDiv = document.createElement("div");
         labelDiv.className = "gb-distribution-label";
-        labelDiv.textContent = labels[i]; // static label array, no user data
+        labelDiv.textContent = labels[i]; // static strings defined above (e.g. '0-59%'), no user data
 
         const bgDiv = document.createElement("div");
         bgDiv.className = "gb-distribution-bar-bg";
@@ -1689,7 +1689,7 @@
         const fillDiv = document.createElement("div");
         fillDiv.className = "gb-distribution-bar-fill";
         fillDiv.style.width = `${width}%`;
-        fillDiv.style.backgroundColor = colors[i]; // static color array, no user data
+        fillDiv.style.backgroundColor = colors[i]; // static hex strings defined above, no user data
         fillDiv.textContent = bins[i] > 0 ? String(bins[i]) : "";
 
         bgDiv.appendChild(fillDiv);

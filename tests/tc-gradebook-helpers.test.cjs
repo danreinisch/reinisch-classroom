@@ -151,10 +151,11 @@ console.log('--- calculateEarnedPoints ---');
 }
 
 {
-  // Negative score (unusual but valid — e.g., curved grade)
-  // Should not throw; just compute the (potentially negative) result
+  // Negative score (unusual but handled — e.g., curved grade or score override).
+  // The function does not clamp negative values; callers are responsible for
+  // ensuring scores are within a valid range before calling calculateEarnedPoints.
   assert.strictEqual(calculateEarnedPoints(-10, 50), -5, '-10% of 50 = -5 pts');
-  console.log('✓ negative score computes without error');
+  console.log('✓ negative score computes without error (callers must validate range)');
 }
 
 // ── calculateWeightedAverage ──────────────────────────────────────────────────
