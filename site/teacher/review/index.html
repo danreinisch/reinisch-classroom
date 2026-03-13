@@ -835,7 +835,7 @@
       <main class="tc-main">
         <div class="rv-header">
           <h1>Review</h1>
-          <div id="rvSyncStatus" class="rv-sync-status local">
+          <div id="rvSyncStatus" class="rv-sync-status local" role="status" aria-live="polite">
             <span id="rvSyncIcon"></span>
             <span id="rvSyncText">Local</span>
           </div>
@@ -862,30 +862,31 @@
               id="rvSearch" 
               class="rv-search-input" 
               placeholder="Search by student name or code..."
+              aria-label="Search submissions by student or assignment"
             />
           </div>
         </div>
 
         <!-- Status tabs -->
         <div class="rv-status-tabs">
-          <button id="rvStatusNeedsReview" class="rv-status-tab active">
+          <button id="rvStatusNeedsReview" class="rv-status-tab active" aria-label="Filter: Needs Review">
             Needs Review <span class="rv-badge">0</span>
           </button>
-          <button id="rvStatusReviewed" class="rv-status-tab">
+          <button id="rvStatusReviewed" class="rv-status-tab" aria-label="Filter: Reviewed">
             Reviewed <span class="rv-badge">0</span>
           </button>
-          <button id="rvStatusAll" class="rv-status-tab">
+          <button id="rvStatusAll" class="rv-status-tab" aria-label="Filter: All">
             All <span class="rv-badge">0</span>
           </button>
         </div>
 
         <!-- Batch actions bar -->
         <div class="rv-batch-bar" id="rvBatchBar" style="display:none;">
-          <button class="rv-btn rv-btn-batch" id="rvBtnFinalizeAll" disabled>
+          <button class="rv-btn rv-btn-batch" id="rvBtnFinalizeAll" disabled aria-label="Finalize all scored submissions">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             Finalize All Scored (0)
           </button>
-          <button class="rv-btn rv-btn-batch" id="rvBtnMarkAllReviewed" disabled>
+          <button class="rv-btn rv-btn-batch" id="rvBtnMarkAllReviewed" disabled aria-label="Mark all as reviewed">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
             Mark All Reviewed (0)
           </button>

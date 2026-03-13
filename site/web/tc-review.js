@@ -306,11 +306,13 @@
       });
     }
 
-    // Sort by submitted_at (most recent first)
+    // Sort by submitted_at (most recent first); guard against unparseable dates
     queue.sort((a, b) => {
       const dateA = new Date(a.submitted_at || 0);
       const dateB = new Date(b.submitted_at || 0);
-      return dateB - dateA;
+      const tA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+      const tB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+      return tB - tA;
     });
 
     return queue;
@@ -712,13 +714,17 @@
     // Show bar only if there are unreviewed submissions
     barEl.style.display = markableCount > 0 ? 'flex' : 'none';
 
-    finalizeBtn.textContent = '';
-    finalizeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Finalize All Scored (${finalizableCount})`;
+    // SAFETY: static SVG, no user data
+    finalizeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+    finalizeBtn.append(` Finalize All Scored (${finalizableCount})`);
     finalizeBtn.disabled = finalizableCount === 0;
+    finalizeBtn.setAttribute('aria-label', `Finalize all scored submissions (${finalizableCount})`);
 
-    markBtn.textContent = '';
-    markBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> Mark All Reviewed (${markableCount})`;
+    // SAFETY: static SVG, no user data
+    markBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>';
+    markBtn.append(` Mark All Reviewed (${markableCount})`);
     markBtn.disabled = markableCount === 0;
+    markBtn.setAttribute('aria-label', `Mark all as reviewed (${markableCount})`);
   }
 
   // Render the UI
@@ -733,20 +739,23 @@
     
     const reviewedCount = submissionsData.filter(s => s.review_status === 'reviewed').length;
     
-    // Update badge counts
+    // Update badge counts using safe DOM (no innerHTML with user data)
     const needsReviewBtn = $('rvStatusNeedsReview');
     if (needsReviewBtn) {
-      needsReviewBtn.innerHTML = `Needs Review <span class="rv-badge">${needsReviewCount}</span>`;
+      const badge = needsReviewBtn.querySelector('.rv-badge');
+      if (badge) badge.textContent = needsReviewCount;
     }
     
     const reviewedBtn = $('rvStatusReviewed');
     if (reviewedBtn) {
-      reviewedBtn.innerHTML = `Reviewed <span class="rv-badge">${reviewedCount}</span>`;
+      const badge = reviewedBtn.querySelector('.rv-badge');
+      if (badge) badge.textContent = reviewedCount;
     }
     
     const allBtn = $('rvStatusAll');
     if (allBtn) {
-      allBtn.innerHTML = `All <span class="rv-badge">${submissionsData.length}</span>`;
+      const badge = allBtn.querySelector('.rv-badge');
+      if (badge) badge.textContent = submissionsData.length;
     }
 
     // Render batch bar
@@ -878,13 +887,20 @@
       }
     }
 
-    // Header content
+    // Header content — escape all user-supplied data
+    const studentLabel = escapeHtml(student?.name || submission.student_code || 'Unknown');
+    const assignmentLabel = escapeHtml(assignment?.title || 'Unknown Assignment');
     const headerHtml = `
-      <div class="rv-submission-header" data-submission-id="${submission.id}">
+      <div class="rv-submission-header"
+           data-submission-id="${escapeHtml(submission.id)}"
+           role="button"
+           tabindex="0"
+           aria-expanded="${isExpanded}"
+           aria-label="Expand submission for ${studentLabel}">
         <div class="rv-submission-info">
-          <span class="rv-student">${student?.name || submission.student_code || 'Unknown'}</span>
-          <span class="rv-assignment">${assignment?.title || 'Unknown Assignment'}</span>
-          <span class="rv-date">${formatDate(submission.submitted_at)}</span>
+          <span class="rv-student">${studentLabel}</span>
+          <span class="rv-assignment">${assignmentLabel}</span>
+          <span class="rv-date">${escapeHtml(formatDate(submission.submitted_at))}</span>
           ${scorePreview}
           ${statusBadge}
         </div>
@@ -1001,10 +1017,10 @@
         
         return `
           <tr>
-            <td>${item.item_ref || item.ref}</td>
-            <td><span class="rv-type-badge">${item.answer_type}</span></td>
-            <td>${typeof studentAnswer === 'object' ? JSON.stringify(studentAnswer) : studentAnswer}</td>
-            <td>${typeof correctAnswer === 'object' ? JSON.stringify(correctAnswer) : correctAnswer}</td>
+            <td>${escapeHtml(item.item_ref || item.ref)}</td>
+            <td><span class="rv-type-badge">${escapeHtml(item.answer_type)}</span></td>
+            <td>${escapeHtml(typeof studentAnswer === 'object' ? JSON.stringify(studentAnswer) : studentAnswer)}</td>
+            <td>${escapeHtml(typeof correctAnswer === 'object' ? JSON.stringify(correctAnswer) : correctAnswer)}</td>
             <td>${isCorrect ? CHECK_SVG : X_SVG}</td>
             <td>${Number(answer?.earned_points) || 0}/${item.points || 0}</td>
           </tr>
@@ -1075,23 +1091,23 @@
         const goalCodes = item.goal_codes || [];
         const deseCodes = item.dese_codes || [];
         const codesHtml = `
-          ${goalCodes.length > 0 ? `<div>IEP Goals: ${goalCodes.join(', ')}</div>` : ''}
-          ${deseCodes.length > 0 ? `<div>DESE: ${deseCodes.join(', ')}</div>` : ''}
+          ${goalCodes.length > 0 ? `<div>IEP Goals: ${escapeHtml(goalCodes.join(', '))}</div>` : ''}
+          ${deseCodes.length > 0 ? `<div>DESE: ${escapeHtml(deseCodes.join(', '))}</div>` : ''}
         `;
         
         return `
-          <div class="rv-response-card" data-item-id="${item.id}">
+          <div class="rv-response-card" data-item-id="${escapeHtml(item.id)}">
             <div class="rv-response-header">
-              ${item.item_ref || item.ref} — "${item.meta?.question || 'Written Response'}"
+              ${escapeHtml(item.item_ref || item.ref)} — &ldquo;${escapeHtml(item.meta?.question || 'Written Response')}&rdquo;
             </div>
             
             <div class="rv-student-response">
               <strong>Student Response:</strong>
-              <div class="rv-response-text">${responseText}</div>
+              <div class="rv-response-text">${escapeHtml(responseText)}</div>
             </div>
             
             ${codesHtml}
-            <div>Max Points: ${maxPoints}</div>
+            <div>Max Points: ${escapeHtml(maxPoints)}</div>
             
             <details class="rv-rubric-details">
               <summary>${RULER_SVG} Scoring Guide</summary>
@@ -1106,9 +1122,9 @@
                 <input type="number" 
                        class="rv-score-input" 
                        min="0" 
-                       value="${currentScore}"
-                       data-item-id="${item.id}"
-                       data-submission-id="${submission.id}">
+                       value="${escapeHtml(currentScore)}"
+                       data-item-id="${escapeHtml(item.id)}"
+                       data-submission-id="${escapeHtml(submission.id)}">
                 <span>/ ${maxPoints} ${!isScored ? '<em style="opacity:0.6;font-size:12px;">(unscored)</em>' : ''}</span>
               </div>
               
@@ -1117,16 +1133,17 @@
                 <textarea class="rv-note-input" 
                           rows="2" 
                           placeholder="Optional feedback for student..."
-                          data-item-id="${item.id}"
-                          data-submission-id="${submission.id}">${currentNote}</textarea>
+                          data-item-id="${escapeHtml(item.id)}"
+                          data-submission-id="${escapeHtml(submission.id)}">${escapeHtml(currentNote)}</textarea>
               </div>
               
               <button class="rv-btn rv-btn-save-item" 
-                      data-item-id="${item.id}"
-                      data-submission-id="${submission.id}">
+                      data-item-id="${escapeHtml(item.id)}"
+                      data-submission-id="${escapeHtml(submission.id)}"
+                      aria-label="Save score for item ${escapeHtml(item.item_ref || item.ref)}">
                 ${SAVE_SVG} Save
               </button>
-              <span class="rv-save-status" data-item-id="${item.id}"></span>
+              <span class="rv-save-status" data-item-id="${escapeHtml(item.id)}" role="status" aria-live="polite"></span>
             </div>
           </div>
         `;
@@ -1165,7 +1182,7 @@
       <div class="rv-summary">
         <div class="rv-summary-row rv-summary-total">
           <span>Items:</span>
-          <span>⚠️ No assignment items found for assignment ID ${assignmentId}. Items may need to be backfilled.</span>
+          <span>⚠️ No assignment items found for assignment ID ${escapeHtml(assignmentId)}. Items may need to be backfilled.</span>
         </div>
       </div>
     ` : `
@@ -1202,13 +1219,13 @@
           <label>Feedback:</label>
           <textarea class="rv-grade-feedback-input rv-note-input" rows="3"
                     placeholder="Feedback for student (optional)..."
-                    data-submission-id="${submission.id}">${currentFeedback}</textarea>
+                    data-submission-id="${escapeHtml(submission.id)}">${escapeHtml(currentFeedback)}</textarea>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="rv-btn rv-btn-save-grade"
-                  data-submission-id="${submission.id}">${SAVE_SVG} Save Grade</button>
+                  data-submission-id="${escapeHtml(submission.id)}">${SAVE_SVG} Save Grade</button>
           <button class="rv-btn rv-btn-return"
-                  data-submission-id="${submission.id}">${RETURN_SVG} Return for Revision</button>
+                  data-submission-id="${escapeHtml(submission.id)}">${RETURN_SVG} Return for Revision</button>
         </div>
       </div>
     `;
@@ -1220,12 +1237,12 @@
     const actionsSection = `
       <div class="rv-actions">
         <button class="rv-btn rv-btn-primary rv-btn-finalize" 
-                data-submission-id="${submission.id}"
+                data-submission-id="${escapeHtml(submission.id)}"
                 ${finalizeDisabled ? 'disabled' : ''}>
           ${CHECK_SVG} Finalize Submission
         </button>
         <button class="rv-btn rv-btn-next" 
-                data-submission-id="${submission.id}">
+                data-submission-id="${escapeHtml(submission.id)}">
           ${SKIP_SVG} Next Student
         </button>
         ${finalizeDisabled ? '<span class="rv-hint">Score all written responses to finalize</span>' : ''}
@@ -1365,6 +1382,14 @@
             expandedSubmissions.delete(submissionId);
           } else {
             expandedSubmissions.add(submissionId);
+            // Transition pending → in_progress when a teacher opens a submission
+            const submission = submissionsData.find(s => s.id === submissionId);
+            if (submission && (!submission.review_status || submission.review_status === 'pending')) {
+              submission.review_status = 'in_progress';
+              db.setSubmissionInProgress(submissionId).catch(err => {
+                console.warn('[tc-review] Could not set in_progress on expand:', err);
+              });
+            }
           }
           await render();
           return;
@@ -1403,6 +1428,44 @@
         if (nextBtn) {
           await handleNextStudent(nextBtn);
           return;
+        }
+      });
+
+      // Keyboard navigation: Enter/Space on submission header toggles expand/collapse
+      queueContainer.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const header = e.target.closest('.rv-submission-header');
+        if (!header) return;
+        e.preventDefault();
+        const submissionId = header.dataset.submissionId;
+        const wasExpanded = expandedSubmissions.has(submissionId);
+        if (wasExpanded) {
+          expandedSubmissions.delete(submissionId);
+        } else {
+          expandedSubmissions.add(submissionId);
+          // Transition pending → in_progress
+          const submission = submissionsData.find(s => s.id === submissionId);
+          if (submission && (!submission.review_status || submission.review_status === 'pending')) {
+            submission.review_status = 'in_progress';
+            db.setSubmissionInProgress(submissionId).catch(err => {
+              console.warn('[tc-review] Could not set in_progress on expand:', err);
+            });
+          }
+        }
+        await render();
+        // After expanding, focus the first interactive element inside the body
+        if (!wasExpanded) {
+          setTimeout(() => {
+            const expandedHeader = document.querySelector(`.rv-submission-header[data-submission-id="${CSS.escape(submissionId)}"]`);
+            if (expandedHeader) {
+              const item = expandedHeader.closest('.rv-submission-item');
+              const body = item && item.querySelector('.rv-submission-body');
+              if (body) {
+                const first = body.querySelector('button, input, textarea, select, [tabindex="0"]');
+                if (first) first.focus();
+              }
+            }
+          }, 50);
         }
       });
     }
