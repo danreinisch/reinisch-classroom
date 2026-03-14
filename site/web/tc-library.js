@@ -148,6 +148,12 @@
     x: [
       { tag: 'line', x1: '18', y1: '6', x2: '6', y2: '18' },
       { tag: 'line', x1: '6', y1: '6', x2: '18', y2: '18' }
+    ],
+    calendar: [
+      { tag: 'rect', x: '3', y: '4', width: '18', height: '18', rx: '2', ry: '2' },
+      { tag: 'line', x1: '16', y1: '2', x2: '16', y2: '6' },
+      { tag: 'line', x1: '8', y1: '2', x2: '8', y2: '6' },
+      { tag: 'line', x1: '3', y1: '10', x2: '21', y2: '10' }
     ]
   };
 
@@ -1049,8 +1055,11 @@
 
     if (assignment.series) {
       const seriesEl = document.createElement('div');
-      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
-      seriesEl.textContent = '\uD83D\uDCDA ' + assignment.series;
+      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px; display:inline-flex; align-items:center; gap:4px;';
+      const seriesIcon = createIcon('bookOpen', 13);
+      seriesIcon.style.cssText = 'flex-shrink:0;';
+      seriesEl.appendChild(seriesIcon);
+      seriesEl.appendChild(document.createTextNode(assignment.series));
       card.appendChild(seriesEl);
     }
 
@@ -1133,15 +1142,19 @@
 
     if (assignment.series) {
       const seriesEl = document.createElement('div');
-      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
-      seriesEl.textContent = '\uD83D\uDCDA ' + assignment.series;
+      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px; display:inline-flex; align-items:center; gap:4px;';
+      const seriesIcon = createIcon('bookOpen', 13);
+      seriesIcon.style.cssText = 'flex-shrink:0;';
+      seriesEl.appendChild(seriesIcon);
+      seriesEl.appendChild(document.createTextNode(assignment.series));
       card.appendChild(seriesEl);
     }
 
     if (nearestDue) {
       const dueEl = document.createElement('div');
-      dueEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px;';
-      dueEl.textContent = '\uD83D\uDCC5 Due: ' + nearestDue.toLocaleDateString();
+      dueEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px; display:inline-flex; align-items:center; gap:4px;';
+      dueEl.appendChild(createIcon('calendar', 13));
+      dueEl.appendChild(document.createTextNode('Due: ' + nearestDue.toLocaleDateString()));
       card.appendChild(dueEl);
     }
 
@@ -1242,9 +1255,8 @@
       const syToggle = document.createElement('span');
       syToggle.style.cssText = `font-size:12px; transition:transform .2s; display:inline-block; transform:rotate(${syExpanded ? '0deg' : '-90deg'});`;
       syToggle.textContent = '\u25be';
-      const syIcon = document.createElement('span');
+      const syIcon = createIcon(syExpanded ? 'folderOpen' : 'folder', 16);
       syIcon.setAttribute('aria-hidden', 'true');
-      syIcon.textContent = syExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
       const syTitle = document.createElement('span');
       syTitle.style.cssText = 'font-size:15px; font-weight:600; flex:1;';
       syTitle.textContent = syLabel;
@@ -1287,9 +1299,8 @@
           const monthToggle = document.createElement('span');
           monthToggle.style.cssText = `font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(${monthExpanded ? '0deg' : '-90deg'});`;
           monthToggle.textContent = '\u25be';
-          const monthIcon = document.createElement('span');
+          const monthIcon = createIcon(monthExpanded ? 'folderOpen' : 'folder', 14);
           monthIcon.setAttribute('aria-hidden', 'true');
-          monthIcon.textContent = monthExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
           const monthTitle = document.createElement('span');
           monthTitle.style.cssText = 'font-size:14px; font-weight:500; flex:1;';
           monthTitle.textContent = monthLabel;
@@ -1337,9 +1348,8 @@
               const weekToggle = document.createElement('span');
               weekToggle.style.cssText = `font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(${weekExpanded ? '0deg' : '-90deg'});`;
               weekToggle.textContent = '\u25be';
-              const weekIcon = document.createElement('span');
+              const weekIcon = createIcon(weekExpanded ? 'folderOpen' : 'folder', 13);
               weekIcon.setAttribute('aria-hidden', 'true');
-              weekIcon.textContent = weekExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
               const weekTitle = document.createElement('span');
               weekTitle.style.cssText = 'font-size:13px; flex:1;';
               weekTitle.textContent = weekLabel;
@@ -1393,10 +1403,7 @@
       row.appendChild(renderBulkCheckbox(assignment));
     }
 
-    const icon = document.createElement('span');
-    icon.textContent = '\uD83D\uDCC4';
-    icon.setAttribute('aria-hidden', 'true');
-    row.appendChild(icon);
+    row.appendChild(createIcon('fileText', 16));
 
     const titleSection = document.createElement('div');
     titleSection.style.cssText = 'flex:1; min-width:0;';
@@ -1539,6 +1546,9 @@
     const uncategorized = assignmentsData.filter(a => getAssignmentCategory(a) === 'Uncategorized');
     if (uncategorized.length === 0) return;
 
+    // Store trigger element for focus restore on close
+    const triggerElement = document.activeElement;
+
     // Build suggestion list: [{assignment, suggested}]
     const suggestions = uncategorized.map(a => ({
       assignment: a,
@@ -1548,6 +1558,9 @@
     // ── Overlay backdrop ──────────────────────────────────────────────────────
     const overlay = document.createElement('div');
     overlay.id = 'tcLibSmartSuggestOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'smartSuggestTitle');
     overlay.style.cssText = [
       'position:fixed; inset:0; z-index:9000;',
       'background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center;',
@@ -1567,6 +1580,7 @@
     const modalHeader = document.createElement('div');
     modalHeader.style.cssText = 'padding:20px 24px 16px; border-bottom:1px solid rgba(255,255,255,.08);';
     const modalTitle = document.createElement('div');
+    modalTitle.id = 'smartSuggestTitle';
     modalTitle.style.cssText = 'font-size:17px; font-weight:700; margin-bottom:4px;';
     modalTitle.textContent = '\uD83C\uDFF7\uFE0F Smart Category Suggestions';
     const matchCount = suggestions.filter(s => s.suggested !== null).length;
@@ -1664,7 +1678,7 @@
     cancelBtn.className = 'tc-btn';
     cancelBtn.style.cssText = 'padding:9px 18px; font-size:13px;';
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => overlay.remove());
+    cancelBtn.addEventListener('click', closeSmartModal);
 
     const applyBtn = document.createElement('button');
     applyBtn.className = 'tc-btn';
@@ -1680,7 +1694,7 @@
         .map(([id, s]) => ({ id, category: s.selectedCat }));
 
       if (toApply.length === 0) {
-        overlay.remove();
+        closeSmartModal();
         return;
       }
 
@@ -1700,7 +1714,7 @@
         } catch (_e) { console.warn('[tc-library] Failed to update assignment category:', _e); failCount++; }
       }
 
-      overlay.remove();
+      closeSmartModal();
 
       if (failCount > 0 && successCount === 0) {
         showToast(`\u274c Failed to categorize assignments. Please try again.`, '#ef4444', '#fff');
@@ -1716,12 +1730,46 @@
     footer.appendChild(applyBtn);
     modal.appendChild(footer);
 
+    // Keyboard: Escape to close, Tab to trap focus
+    function handleSmartKeydown(e) {
+      if (e.key === 'Escape') {
+        closeSmartModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = modal.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', handleSmartKeydown);
+
+    function closeSmartModal() {
+      document.removeEventListener('keydown', handleSmartKeydown);
+      overlay.remove();
+      if (triggerElement && typeof triggerElement.focus === 'function') {
+        triggerElement.focus();
+      }
+    }
+
     // Close on backdrop click
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
+      if (e.target === overlay) closeSmartModal();
     });
 
     document.body.appendChild(overlay);
+
+    // Focus first focusable element in modal
+    const firstFocusable = modal.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (firstFocusable) firstFocusable.focus();
   }
 
   // ── Analytics Dashboard ───────────────────────────────────────────────────────
@@ -1858,20 +1906,21 @@
       lanePanel.appendChild(stackedBar);
 
       const laneItems = [
-        ['\uD83D\uDCCB Upcoming',  upCount,  'rgba(255,255,255,.30)'],
-        ['\uD83D\uDD04 Active',    curCount, '#60a5fa'],
-        ['\u2705 Finalized',       finCount, '#4ade80']
+        { iconName: 'clipboard', text: 'Upcoming', count: upCount, color: 'rgba(255,255,255,.30)' },
+        { iconName: 'refreshCw', text: 'Active', count: curCount, color: '#60a5fa' },
+        { iconName: 'checkCircle', text: 'Finalized', count: finCount, color: '#4ade80' }
       ];
       const legend = document.createElement('div');
       legend.style.cssText = 'display:flex; flex-direction:column; gap:5px;';
-      laneItems.forEach(([label, count, color]) => {
+      laneItems.forEach(({ iconName, text, count, color }) => {
         const item = document.createElement('div');
         item.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:12px;';
         const dot = document.createElement('span');
         dot.style.cssText = `width:8px; height:8px; border-radius:50%; background:${color}; flex-shrink:0;`;
         const lbl = document.createElement('span');
-        lbl.style.cssText = 'color:rgba(255,255,255,.65);';
-        lbl.textContent = label;
+        lbl.style.cssText = 'display:inline-flex; align-items:center; gap:4px; color:rgba(255,255,255,.65);';
+        lbl.appendChild(createIcon(iconName, 12));
+        lbl.appendChild(document.createTextNode(text));
         const cnt = document.createElement('span');
         cnt.style.cssText = 'margin-left:auto; font-weight:500;';
         cnt.textContent = `${count}\u00a0(${laneTotal > 0 ? Math.round(count / laneTotal * 100) : 0}%)`;
@@ -1961,7 +2010,16 @@
       tlTitle.textContent = 'Recent Activity';
       timelineCard.appendChild(tlTitle);
 
-      const tlLaneLabels = { upcoming: '\uD83D\uDCCB Upcoming', current: '\uD83D\uDD04 Active', finalized: '\u2705 Finalized' };
+      function createLaneLabel(lane) {
+        const iconMap = { upcoming: 'clipboard', current: 'refreshCw', finalized: 'checkCircle' };
+        const textMap = { upcoming: 'Upcoming', current: 'Active', finalized: 'Finalized' };
+        const span = document.createElement('span');
+        span.style.cssText = 'display:inline-flex; align-items:center; gap:4px; font-size:11px; color:rgba(255,255,255,.45); white-space:nowrap;';
+        span.appendChild(createIcon(iconMap[lane] || 'clipboard', 11));
+        span.appendChild(document.createTextNode(textMap[lane] || lane));
+        return span;
+      }
+
       recentSorted.forEach((a, i) => {
         const item = document.createElement('div');
         item.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 0;' +
@@ -1974,11 +2032,8 @@
 
         item.appendChild(renderCategoryBadge(getAssignmentCategory(a)));
 
-        const laneSpan = document.createElement('span');
-        laneSpan.style.cssText = 'font-size:11px; color:rgba(255,255,255,.45); white-space:nowrap;';
         const itemLane = laneById.get(a.id) || 'upcoming';
-        laneSpan.textContent = tlLaneLabels[itemLane] || itemLane;
-        item.appendChild(laneSpan);
+        item.appendChild(createLaneLabel(itemLane));
 
         const dateSpan = document.createElement('span');
         dateSpan.style.cssText = 'font-size:11px; color:rgba(255,255,255,.35); white-space:nowrap;';
@@ -2564,18 +2619,20 @@
     const assignment = assignmentsData.find(a => a.id === assignmentId);
     if (!assignment) return;
 
+    // Store element that triggered the modal so we can restore focus on close
+    const triggerElement = document.activeElement;
+
     const overlay = document.createElement('div');
     overlay.id = 'assignmentDetailOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'detailModalTitle');
     overlay.style.cssText = `
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,.80); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
       z-index: 10000; padding: 24px;
     `;
-
-    const createdDate = assignment.created_at
-      ? new Date(assignment.created_at).toLocaleString()
-      : 'Unknown';
 
     const card = document.createElement('div');
     card.className = 'tc-card';
@@ -2584,89 +2641,30 @@
     const headerRow = document.createElement('div');
     headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;';
     const titleEl = document.createElement('h2');
+    titleEl.id = 'detailModalTitle';
     titleEl.style.cssText = 'margin: 0; font-size: 24px;';
     titleEl.textContent = assignment.title || 'Untitled';
     const closeBtn = document.createElement('button');
     closeBtn.id = 'closeDetailBtn';
-    closeBtn.className = 'tc-btn';
+    closeBtn.className = 'tc-btn detail-close-btn';
     closeBtn.style.cssText = 'padding: 8px 16px;';
+    closeBtn.setAttribute('aria-label', 'Close dialog');
     closeBtn.textContent = '\u2715 Close';
     headerRow.appendChild(titleEl);
     headerRow.appendChild(closeBtn);
     card.appendChild(headerRow);
 
-    const grid = document.createElement('div');
-    grid.style.cssText = 'display: grid; gap: 16px; margin-bottom: 24px;';
-
-    function makeDetailRow(labelText, valueNode) {
-      const row = document.createElement('div');
-      const lbl = document.createElement('div');
-      lbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
-      lbl.textContent = labelText;
-      row.appendChild(lbl);
-      if (typeof valueNode === 'string') {
-        const val = document.createElement('div');
-        val.textContent = valueNode;
-        row.appendChild(val);
-      } else {
-        row.appendChild(valueNode);
-      }
-      return row;
+    // Shimmer loading state — shown while stats are computed
+    const shimmerGrid = document.createElement('div');
+    shimmerGrid.id = 'detailShimmer';
+    shimmerGrid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;';
+    for (let i = 0; i < 4; i++) {
+      const shimmer = document.createElement('div');
+      shimmer.className = 'tc-lib-shimmer';
+      shimmer.style.cssText = 'height:60px; border-radius:8px;';
+      shimmerGrid.appendChild(shimmer);
     }
-
-    grid.appendChild(makeDetailRow('Type', assignment.type || 'file'));
-
-    const category = getAssignmentCategory(assignment);
-    grid.appendChild(makeDetailRow('Category', renderCategoryBadge(category)));
-
-    if (assignment.series) grid.appendChild(makeDetailRow('Class', assignment.series));
-    grid.appendChild(makeDetailRow('Created', createdDate));
-
-    const lane = computeLane(assignment, instancesData);
-    const laneLabels = { upcoming: '\uD83D\uDCCB Upcoming', current: '\uD83D\uDD04 Active', finalized: '\u2705 Finalized' };
-    grid.appendChild(makeDetailRow('Status', laneLabels[lane] || lane));
-
-    const stats = getAssignmentStats(assignment, instancesData, submissionsData);
-    if (stats.studentCount > 0) {
-      grid.appendChild(makeDetailRow('Students', String(stats.studentCount)));
-      if (stats.avgScore != null) {
-        const scoreSpan = document.createElement('span');
-        scoreSpan.style.cssText = `font-weight:600; color:${scoreColor(stats.avgScore)};`;
-        scoreSpan.textContent = `${stats.avgScore}%`;
-        grid.appendChild(makeDetailRow('Average Score', scoreSpan));
-      }
-    }
-
-    if (assignment.meta) {
-      const metaRow = document.createElement('div');
-      const metaLbl = document.createElement('div');
-      metaLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
-      metaLbl.textContent = 'Mapping / Meta';
-      const metaVal = document.createElement('div');
-      metaVal.style.cssText = 'background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 13px;';
-      metaVal.textContent = typeof assignment.meta === 'string'
-        ? assignment.meta
-        : JSON.stringify(assignment.meta, null, 2);
-      metaRow.appendChild(metaLbl);
-      metaRow.appendChild(metaVal);
-      grid.appendChild(metaRow);
-    }
-
-    if (assignment.page) {
-      const pageRow = document.createElement('div');
-      const pageLbl = document.createElement('div');
-      pageLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
-      pageLbl.textContent = 'Assignment Content Preview';
-      const pageVal = document.createElement('div');
-      pageVal.style.cssText = 'background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 14px;';
-      const preview = String(assignment.page).substring(0, 1000);
-      pageVal.textContent = preview + (String(assignment.page).length > 1000 ? '...' : '');
-      pageRow.appendChild(pageLbl);
-      pageRow.appendChild(pageVal);
-      grid.appendChild(pageRow);
-    }
-
-    card.appendChild(grid);
+    card.appendChild(shimmerGrid);
 
     const actionRow = document.createElement('div');
     actionRow.style.cssText = 'display: flex; gap: 12px;';
@@ -2681,17 +2679,135 @@
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
-    closeBtn.addEventListener('click', () => overlay.remove());
+    // Focus close button on open
+    closeBtn.focus();
+
+    // Keyboard: Escape to close, Tab to trap focus
+    function handleKeydown(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeydown);
+
+    function closeModal() {
+      document.removeEventListener('keydown', handleKeydown);
+      overlay.remove();
+      if (triggerElement && typeof triggerElement.focus === 'function') {
+        triggerElement.focus();
+      }
+    }
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
     issueBtn.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.id;
       window.location.href = `/teacher/work/?assignment=${encodeURIComponent(id)}`;
     });
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    // Compute and render stats after the shimmer paints
+    requestAnimationFrame(() => {
+      const shimmer = document.getElementById('detailShimmer');
+      if (shimmer) shimmer.remove();
+
+      const createdDate = assignment.created_at
+        ? new Date(assignment.created_at).toLocaleString()
+        : 'Unknown';
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display: grid; gap: 16px; margin-bottom: 24px;';
+
+      function makeDetailRow(labelText, valueNode) {
+        const row = document.createElement('div');
+        const lbl = document.createElement('div');
+        lbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+        lbl.textContent = labelText;
+        row.appendChild(lbl);
+        if (typeof valueNode === 'string') {
+          const val = document.createElement('div');
+          val.textContent = valueNode;
+          row.appendChild(val);
+        } else {
+          row.appendChild(valueNode);
+        }
+        return row;
+      }
+
+      grid.appendChild(makeDetailRow('Type', assignment.type || 'file'));
+
+      const category = getAssignmentCategory(assignment);
+      grid.appendChild(makeDetailRow('Category', renderCategoryBadge(category)));
+
+      if (assignment.series) grid.appendChild(makeDetailRow('Class', assignment.series));
+      grid.appendChild(makeDetailRow('Created', createdDate));
+
+      const lane = computeLane(assignment, instancesData);
+      const laneTextMap = { upcoming: 'Upcoming', current: 'Active', finalized: 'Finalized' };
+      grid.appendChild(makeDetailRow('Status', laneTextMap[lane] || lane));
+
+      const stats = getAssignmentStats(assignment, instancesData, submissionsData);
+      if (stats.studentCount > 0) {
+        grid.appendChild(makeDetailRow('Students', String(stats.studentCount)));
+        if (stats.avgScore != null) {
+          const scoreSpan = document.createElement('span');
+          scoreSpan.style.cssText = `font-weight:600; color:${scoreColor(stats.avgScore)};`;
+          scoreSpan.textContent = `${stats.avgScore}%`;
+          grid.appendChild(makeDetailRow('Average Score', scoreSpan));
+        }
+      }
+
+      if (assignment.meta) {
+        const metaRow = document.createElement('div');
+        const metaLbl = document.createElement('div');
+        metaLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+        metaLbl.textContent = 'Mapping / Meta';
+        const metaVal = document.createElement('div');
+        metaVal.style.cssText = 'background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 13px;';
+        metaVal.textContent = typeof assignment.meta === 'string'
+          ? assignment.meta
+          : JSON.stringify(assignment.meta, null, 2);
+        metaRow.appendChild(metaLbl);
+        metaRow.appendChild(metaVal);
+        grid.appendChild(metaRow);
+      }
+
+      if (assignment.page) {
+        const pageRow = document.createElement('div');
+        const pageLbl = document.createElement('div');
+        pageLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+        pageLbl.textContent = 'Assignment Content Preview';
+        const pageVal = document.createElement('div');
+        pageVal.style.cssText = 'background: rgba(0,0,0,.3); padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 14px;';
+        const preview = String(assignment.page).substring(0, 1000);
+        pageVal.textContent = preview + (String(assignment.page).length > 1000 ? '...' : '');
+        pageRow.appendChild(pageLbl);
+        pageRow.appendChild(pageVal);
+        grid.appendChild(pageRow);
+      }
+
+      // Insert grid before the action row
+      card.insertBefore(grid, actionRow);
+    });
   }
 
   // ── Upload Paper Assignment Modal ─────────────────────────────────────────────
 
   async function openUploadPaperModal() {
+    const triggerElement = document.activeElement;
     const todayStr = new Date().toISOString().split('T')[0];
     const overlay = document.createElement('div');
     overlay.id = 'uploadPaperOverlay';
@@ -2906,13 +3022,12 @@
       }
     });
 
-    closeBtn.addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    closeBtn.addEventListener('click', closeUploadModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeUploadModal(); });
 
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
-        overlay.remove();
-        document.removeEventListener('keydown', onKeyDown);
+        closeUploadModal();
       } else if (e.key === 'Tab') {
         const focusable = card.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (!focusable.length) return;
@@ -2929,13 +3044,13 @@
     };
     document.addEventListener('keydown', onKeyDown);
 
-    const observer = new MutationObserver(() => {
-      if (!document.body.contains(overlay)) {
-        document.removeEventListener('keydown', onKeyDown);
-        observer.disconnect();
+    function closeUploadModal() {
+      document.removeEventListener('keydown', onKeyDown);
+      overlay.remove();
+      if (triggerElement && typeof triggerElement.focus === 'function') {
+        triggerElement.focus();
       }
-    });
-    observer.observe(document.body, { childList: true, subtree: false });
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3201,7 +3316,7 @@
       console.log('[tc-library] Paper assignment uploaded successfully');
       const toastSuffix = !isRemote ? ' (metadata only \u2014 local mode)' : '';
       const gradeNote = gradeRecorded ? ` \u2014 ${scorePercent}% recorded in Gradebook` : '';
-      showToast(`\uD83D\uDCC4 "${title}" saved to Library${gradeNote}${toastSuffix}`);
+      showToast(`"${title}" saved to Library${gradeNote}${toastSuffix}`);
       await loadAssignments();
       switchTab('assignments');
 
