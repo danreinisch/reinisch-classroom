@@ -420,6 +420,67 @@ test('malformed JSON string meta returns Uncategorized', () => {
   assert.strictEqual(getAssignmentCategory({ meta: 'not-json' }), 'Uncategorized');
 });
 
+// ── updateAssignment local logic ──────────────────────────────────────────────
+
+/**
+ * Mirror of the local updateAssignment() logic from data-adapter.js.
+ * Takes a mutable array of assignments, an id, and updates object.
+ * Returns the updated assignment or throws if not found.
+ */
+function updateAssignmentLocal(arr, id, updates) {
+  const idx = arr.findIndex(a => a.id === id);
+  if (idx === -1) throw new Error('Assignment not found');
+  const originalMeta = arr[idx].meta;
+  arr[idx] = { ...arr[idx], ...updates };
+  // For meta, merge rather than replace
+  if (updates.meta) {
+    arr[idx].meta = { ...(originalMeta || {}), ...updates.meta };
+  }
+  return arr[idx];
+}
+
+console.log('\n--- updateAssignment local logic ---');
+
+test('updates a scalar field on an existing assignment', () => {
+  const arr = [{ id: 'A1', title: 'Old Title', meta: {} }];
+  const result = updateAssignmentLocal(arr, 'A1', { title: 'New Title' });
+  assert.strictEqual(result.title, 'New Title');
+  assert.strictEqual(arr[0].title, 'New Title');
+});
+
+test('merges meta rather than replacing it', () => {
+  const arr = [{ id: 'A1', title: 'Test', meta: { paper: true, category: 'Writing' } }];
+  const result = updateAssignmentLocal(arr, 'A1', { meta: { category: 'Grammar' } });
+  assert.strictEqual(result.meta.category, 'Grammar');
+  assert.strictEqual(result.meta.paper, true); // existing meta preserved
+});
+
+test('adds category to assignment with empty meta', () => {
+  const arr = [{ id: 'A2', title: 'No Cat', meta: {} }];
+  const result = updateAssignmentLocal(arr, 'A2', { meta: { category: 'Vocabulary' } });
+  assert.strictEqual(result.meta.category, 'Vocabulary');
+});
+
+test('clears category when set to null', () => {
+  const arr = [{ id: 'A3', title: 'Cat Test', meta: { category: 'Writing' } }];
+  const result = updateAssignmentLocal(arr, 'A3', { meta: { category: null } });
+  assert.strictEqual(result.meta.category, null);
+});
+
+test('throws when assignment id is not found', () => {
+  const arr = [{ id: 'A1', title: 'Exists' }];
+  assert.throws(() => updateAssignmentLocal(arr, 'MISSING', { title: 'X' }), /Assignment not found/);
+});
+
+test('preserves all other fields when updating meta', () => {
+  const arr = [{ id: 'A5', title: 'Keep Me', type: 'file', meta: { foo: 'bar' } }];
+  updateAssignmentLocal(arr, 'A5', { meta: { category: 'Assessment' } });
+  assert.strictEqual(arr[0].title, 'Keep Me');
+  assert.strictEqual(arr[0].type, 'file');
+  assert.strictEqual(arr[0].meta.foo, 'bar');
+  assert.strictEqual(arr[0].meta.category, 'Assessment');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {

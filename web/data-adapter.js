@@ -312,6 +312,19 @@ const local = {
     store.set('assignments', arr);
     return { id, ...a };
   },
+  async updateAssignment(id, updates) {
+    const arr = store.get('assignments', []);
+    const idx = arr.findIndex(a => a.id === id);
+    if (idx === -1) throw new Error('Assignment not found');
+    const originalMeta = arr[idx].meta;
+    arr[idx] = { ...arr[idx], ...updates };
+    // For meta, merge rather than replace
+    if (updates.meta) {
+      arr[idx].meta = { ...(originalMeta || {}), ...updates.meta };
+    }
+    store.set('assignments', arr);
+    return arr[idx];
+  },
   async listAssignments() { return store.get('assignments', []); },
   async listAssignmentInstances() {
     const arr = store.get('assignmentInstances', []);
@@ -1646,6 +1659,21 @@ const remote = {
         created_by: a.created_by || null
       };
       const { data, error } = await supabase.from('assignments').insert(payload).select().single();
+      if (error) throw error;
+      return data;
+    });
+  },
+
+  async updateAssignment(id, updates) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('assignments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
       return data;
     });

@@ -62,6 +62,10 @@
   let lessonsData = null;
   let syncStatus = "loading";
 
+  // Bulk edit state
+  let bulkEditMode = false;
+  const selectedAssignmentIds = new Set();
+
   // Filter state
   let filters = {
     assignments: {
@@ -243,6 +247,83 @@
     }
     span.textContent = category;
     return span;
+  }
+
+  /**
+   * Renders a category badge + edit pencil button for an assignment card.
+   * When the pencil is clicked, replaces the badge with an inline <select>.
+   * On selection, calls db.updateAssignment and re-renders the tab.
+   * @param {Object} assignment
+   * @returns {HTMLElement} wrapper div containing badge + edit button
+   */
+  function renderCategoryEditor(assignment) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
+
+    const category = getAssignmentCategory(assignment);
+    const badge = renderCategoryBadge(category);
+    wrapper.appendChild(badge);
+
+    const editBtn = document.createElement('button');
+    editBtn.title = 'Edit category';
+    editBtn.setAttribute('aria-label', 'Edit category');
+    editBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px 4px;color:rgba(255,255,255,.45);font-size:13px;line-height:1;border-radius:4px;transition:color .15s;';
+    editBtn.textContent = '\u270f\ufe0f';
+    wrapper.appendChild(editBtn);
+
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Replace badge + button with an inline select
+      wrapper.replaceChildren();
+      const sel = document.createElement('select');
+      sel.style.cssText = 'padding:3px 8px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); border-radius:8px; color:white; font-size:12px; cursor:pointer;';
+      const uncatOpt = document.createElement('option');
+      uncatOpt.value = '';
+      uncatOpt.textContent = 'Uncategorized';
+      sel.appendChild(uncatOpt);
+      CATEGORIES.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+      });
+      sel.value = category === 'Uncategorized' ? '' : category;
+      wrapper.appendChild(sel);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px 4px;color:rgba(255,255,255,.40);font-size:13px;line-height:1;';
+      cancelBtn.textContent = '\u2715';
+      cancelBtn.setAttribute('aria-label', 'Cancel');
+      wrapper.appendChild(cancelBtn);
+
+      sel.addEventListener('click', (ev) => ev.stopPropagation());
+      cancelBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        renderAssignmentsTab();
+      });
+
+      sel.addEventListener('change', async (ev) => {
+        ev.stopPropagation();
+        const newCat = sel.value || null;
+        const newLabel = newCat || 'Uncategorized';
+        try {
+          const existingMeta = assignment.meta && typeof assignment.meta === 'object' ? assignment.meta : {};
+          const updatedMeta = { ...existingMeta, category: newCat };
+          await db.updateAssignment(assignment.id, { meta: updatedMeta });
+          // Patch local cache so re-render is instant
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) {
+            assignmentsData[idx] = { ...assignmentsData[idx], meta: updatedMeta };
+          }
+          showToast(`Category updated to \u201c${newLabel}\u201d`);
+          renderAssignmentsTab();
+        } catch (err) {
+          showToast(`Failed to update category: ${err.message}`, '#ef4444', '#fff');
+        }
+      });
+    });
+
+    return wrapper;
   }
 
   // ── Lane Computation ──────────────────────────────────────────────────────────
@@ -537,6 +618,32 @@
 
   // ── Upcoming Lane ─────────────────────────────────────────────────────────────
 
+  /**
+   * Creates a bulk-select checkbox for the given assignment.
+   * When clicked, toggles the assignment in selectedAssignmentIds and
+   * updates the bulk action bar count. e.stopPropagation() prevents
+   * triggering the card click handler.
+   */
+  function renderBulkCheckbox(assignment) {
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;';
+    label.addEventListener('click', (e) => e.stopPropagation());
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = selectedAssignmentIds.has(assignment.id);
+    cb.style.cssText = 'width:16px; height:16px; cursor:pointer; accent-color:#60a5fa;';
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
+      if (cb.checked) selectedAssignmentIds.add(assignment.id);
+      else selectedAssignmentIds.delete(assignment.id);
+      // Update bar count without full re-render
+      const barCountEl = document.querySelector('#tcLibBulkBar span');
+      if (barCountEl) barCountEl.textContent = `${selectedAssignmentIds.size} selected`;
+    });
+    label.appendChild(cb);
+    return label;
+  }
+
   function renderUpcomingLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
@@ -551,17 +658,24 @@
   }
 
   function renderUpcomingCard(assignment) {
-    const category = getAssignmentCategory(assignment);
+    const _category = getAssignmentCategory(assignment);
     const createdDate = assignment.created_at
       ? new Date(assignment.created_at).toLocaleDateString()
       : 'Unknown';
     const card = document.createElement('div');
     card.className = 'tc-card assignment-card';
     card.dataset.id = assignment.id || '';
-    card.style.cssText = 'padding:20px; cursor:pointer;';
+    const isSelected = bulkEditMode && selectedAssignmentIds.has(assignment.id);
+    card.style.cssText = 'padding:20px; cursor:pointer;' +
+      (isSelected ? ' border-color:rgba(96,165,250,.60); background:rgba(96,165,250,.08);' : '');
 
     const headerRow = document.createElement('div');
     headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;';
+
+    if (bulkEditMode) {
+      headerRow.insertBefore(renderBulkCheckbox(assignment), headerRow.firstChild);
+    }
+
     const titleEl = document.createElement('h3');
     titleEl.style.cssText = 'margin:0; font-size:16px; flex:1; line-height:1.3;';
     titleEl.textContent = assignment.title || 'Untitled';
@@ -574,7 +688,7 @@
 
     const catRow = document.createElement('div');
     catRow.style.cssText = 'margin-bottom:8px;';
-    catRow.appendChild(renderCategoryBadge(category));
+    catRow.appendChild(renderCategoryEditor(assignment));
     card.appendChild(catRow);
 
     if (assignment.series) {
@@ -617,7 +731,7 @@
   }
 
   function renderCurrentCard(assignment) {
-    const category = getAssignmentCategory(assignment);
+    const _category = getAssignmentCategory(assignment);
     const stats = getAssignmentStats(assignment, instancesData, submissionsData);
     const instances = instancesData.filter(i => i.assignment_id === assignment.id);
     const dueDates = instances.map(i => i.due_at).filter(Boolean);
@@ -628,10 +742,17 @@
     const card = document.createElement('div');
     card.className = 'tc-card assignment-card';
     card.dataset.id = assignment.id || '';
-    card.style.cssText = 'padding:20px; cursor:pointer;';
+    const isSelected = bulkEditMode && selectedAssignmentIds.has(assignment.id);
+    card.style.cssText = 'padding:20px; cursor:pointer;' +
+      (isSelected ? ' border-color:rgba(96,165,250,.60); background:rgba(96,165,250,.08);' : '');
 
     const headerRow = document.createElement('div');
     headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;';
+
+    if (bulkEditMode) {
+      headerRow.insertBefore(renderBulkCheckbox(assignment), headerRow.firstChild);
+    }
+
     const titleEl = document.createElement('h3');
     titleEl.style.cssText = 'margin:0; font-size:16px; flex:1; line-height:1.3;';
     titleEl.textContent = assignment.title || 'Untitled';
@@ -644,7 +765,7 @@
 
     const catRow = document.createElement('div');
     catRow.style.cssText = 'margin-bottom:8px;';
-    catRow.appendChild(renderCategoryBadge(category));
+    catRow.appendChild(renderCategoryEditor(assignment));
     card.appendChild(catRow);
 
     if (assignment.series) {
@@ -886,7 +1007,7 @@
   }
 
   function renderFinalizedEntry(assignment) {
-    const category = getAssignmentCategory(assignment);
+    const _category = getAssignmentCategory(assignment);
     const stats = getAssignmentStats(assignment, instancesData, submissionsData);
     const score = stats.avgScore;
     const sColor = scoreColor(score);
@@ -894,7 +1015,13 @@
     const row = document.createElement('div');
     row.className = 'tc-card assignment-card';
     row.dataset.id = assignment.id || '';
-    row.style.cssText = 'padding:12px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; margin-bottom:4px;';
+    const isSelected = bulkEditMode && selectedAssignmentIds.has(assignment.id);
+    row.style.cssText = 'padding:12px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; margin-bottom:4px;' +
+      (isSelected ? ' border-color:rgba(96,165,250,.60); background:rgba(96,165,250,.08);' : '');
+
+    if (bulkEditMode) {
+      row.appendChild(renderBulkCheckbox(assignment));
+    }
 
     const icon = document.createElement('span');
     icon.textContent = '\uD83D\uDCC4';
@@ -907,7 +1034,7 @@
     titleEl.style.cssText = 'font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;';
     titleEl.textContent = assignment.title || 'Untitled';
     titleSection.appendChild(titleEl);
-    titleSection.appendChild(renderCategoryBadge(category));
+    titleSection.appendChild(renderCategoryEditor(assignment));
     row.appendChild(titleSection);
 
     const statsSection = document.createElement('div');
@@ -924,12 +1051,123 @@
     return row;
   }
 
+  // ── Bulk Action Bar ───────────────────────────────────────────────────────────
+
+  function renderBulkActionBar() {
+    // Remove any existing bar first
+    const existing = document.getElementById('tcLibBulkBar');
+    if (existing) existing.remove();
+
+    const bar = document.createElement('div');
+    bar.id = 'tcLibBulkBar';
+    bar.style.cssText = [
+      'position:fixed; bottom:24px; left:50%; transform:translateX(-50%);',
+      'background:#1e293b; border:1px solid rgba(255,255,255,.20);',
+      'border-radius:14px; padding:12px 20px;',
+      'display:flex; align-items:center; gap:14px; flex-wrap:wrap;',
+      'box-shadow:0 8px 32px rgba(0,0,0,.50); z-index:9998;',
+      'min-width:340px; max-width:90vw;'
+    ].join('');
+
+    const countEl = document.createElement('span');
+    countEl.style.cssText = 'font-size:14px; font-weight:600; color:white; white-space:nowrap;';
+    countEl.textContent = `${selectedAssignmentIds.size} selected`;
+    bar.appendChild(countEl);
+
+    // Select All Uncategorized
+    const selectUncatBtn = document.createElement('button');
+    selectUncatBtn.className = 'tc-btn';
+    selectUncatBtn.style.cssText = 'font-size:12px; padding:5px 10px; white-space:nowrap;';
+    selectUncatBtn.textContent = 'Select All Uncategorized';
+    selectUncatBtn.addEventListener('click', () => {
+      assignmentsData.forEach(a => {
+        if (getAssignmentCategory(a) === 'Uncategorized') selectedAssignmentIds.add(a.id);
+      });
+      renderAssignmentsTab();
+    });
+    bar.appendChild(selectUncatBtn);
+
+    // Category dropdown
+    const catLabel = document.createElement('label');
+    catLabel.style.cssText = 'font-size:13px; color:rgba(255,255,255,.70); white-space:nowrap;';
+    catLabel.textContent = 'Category:';
+    bar.appendChild(catLabel);
+
+    const bulkCatSel = document.createElement('select');
+    bulkCatSel.id = 'bulkCategorySelect';
+    bulkCatSel.style.cssText = 'padding:6px 10px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); border-radius:8px; color:white; font-size:13px;';
+    const bulkUncatOpt = document.createElement('option');
+    bulkUncatOpt.value = '';
+    bulkUncatOpt.textContent = 'Uncategorized';
+    bulkCatSel.appendChild(bulkUncatOpt);
+    CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      bulkCatSel.appendChild(opt);
+    });
+    bar.appendChild(bulkCatSel);
+
+    // Apply button
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'tc-btn';
+    applyBtn.style.cssText = 'padding:6px 16px; font-size:13px; background:rgba(52,211,153,.20); border-color:rgba(52,211,153,.50); color:#34d399; white-space:nowrap;';
+    applyBtn.textContent = 'Apply';
+    applyBtn.addEventListener('click', async () => {
+      const ids = Array.from(selectedAssignmentIds);
+      if (ids.length === 0) {
+        showToast('No assignments selected.', '#f59e0b', '#000');
+        return;
+      }
+      const newCat = bulkCatSel.value || null;
+      const newLabel = newCat || 'Uncategorized';
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Applying\u2026';
+      let successCount = 0;
+      for (const id of ids) {
+        try {
+          const assignment = assignmentsData.find(a => a.id === id);
+          if (!assignment) continue;
+          const existingMeta = assignment.meta && typeof assignment.meta === 'object' ? assignment.meta : {};
+          const updatedMeta = { ...existingMeta, category: newCat };
+          await db.updateAssignment(id, { meta: updatedMeta });
+          const idx = assignmentsData.findIndex(a => a.id === id);
+          if (idx !== -1) assignmentsData[idx] = { ...assignmentsData[idx], meta: updatedMeta };
+          successCount++;
+        } catch (_err) { console.warn('[tc-library] Failed to update assignment category:', id, _err); }
+      }
+      bulkEditMode = false;
+      selectedAssignmentIds.clear();
+      showToast(`Updated category to \u201c${newLabel}\u201d for ${successCount} assignment${successCount !== 1 ? 's' : ''}`);
+      renderAssignmentsTab();
+    });
+    bar.appendChild(applyBtn);
+
+    // Cancel
+    const cancelBulkBtn = document.createElement('button');
+    cancelBulkBtn.className = 'tc-btn';
+    cancelBulkBtn.style.cssText = 'padding:6px 12px; font-size:13px; color:rgba(255,255,255,.60);';
+    cancelBulkBtn.textContent = 'Cancel';
+    cancelBulkBtn.addEventListener('click', () => {
+      bulkEditMode = false;
+      selectedAssignmentIds.clear();
+      renderAssignmentsTab();
+    });
+    bar.appendChild(cancelBulkBtn);
+
+    document.body.appendChild(bar);
+  }
+
   // ── Main Assignments Tab Renderer ─────────────────────────────────────────────
 
   function renderAssignmentsTab() {
     const container = $("assignmentsTab");
     if (!container) return;
     container.innerHTML = '';
+
+    // Clean up any stale floating bulk bar from a previous render
+    const staleBar = document.getElementById('tcLibBulkBar');
+    if (staleBar) staleBar.remove();
 
     // Sync status row
     const statusRow = document.createElement('div');
@@ -951,7 +1189,7 @@
 
     // Filter bar
     const filterBar = document.createElement('div');
-    filterBar.style.cssText = 'margin-bottom:24px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+    filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
     // Class filter buttons
     const classBtnWrap = document.createElement('div');
@@ -1016,7 +1254,47 @@
     catFilter.value = filters.assignments.categoryFilter;
     filterBar.appendChild(catFilter);
 
+    // Bulk Categorize button
+    const bulkBtn = document.createElement('button');
+    bulkBtn.className = 'tc-btn';
+    bulkBtn.id = 'bulkCategorizeBtn';
+    bulkBtn.style.cssText = 'padding:8px 14px; font-size:13px; white-space:nowrap;' +
+      (bulkEditMode ? ' background:rgba(251,191,36,.20); border-color:rgba(251,191,36,.50); color:#fbbf24;' : '');
+    bulkBtn.textContent = bulkEditMode ? '\u2715 Exit Bulk Edit' : '\u270f\ufe0f Bulk Categorize';
+    filterBar.appendChild(bulkBtn);
+
     container.appendChild(filterBar);
+
+    // Uncategorized banner (only when there are uncategorized assignments and not in bulk mode)
+    const uncategorizedCount = assignmentsData.filter(a => getAssignmentCategory(a) === 'Uncategorized').length;
+    if (uncategorizedCount > 0 && !bulkEditMode) {
+      const banner = document.createElement('div');
+      banner.style.cssText = [
+        'display:flex; align-items:center; gap:10px;',
+        'background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.30);',
+        'border-radius:8px; padding:10px 16px; margin-bottom:20px;',
+        'font-size:13px; color:#fbbf24;'
+      ].join('');
+      const bannerText = document.createElement('span');
+      bannerText.style.cssText = 'flex:1;';
+      bannerText.textContent = `\u26a0\ufe0f You have ${uncategorizedCount} assignment${uncategorizedCount !== 1 ? 's' : ''} without a category.`;
+      banner.appendChild(bannerText);
+      const bannerBtn = document.createElement('button');
+      bannerBtn.className = 'tc-btn';
+      bannerBtn.style.cssText = 'font-size:12px; padding:4px 10px; color:#fbbf24; border-color:rgba(251,191,36,.40); background:rgba(251,191,36,.10);';
+      bannerBtn.textContent = '\u270f\ufe0f Bulk Categorize \u2192';
+      bannerBtn.addEventListener('click', () => {
+        bulkEditMode = true;
+        selectedAssignmentIds.clear();
+        // Pre-select uncategorized
+        assignmentsData.forEach(a => {
+          if (getAssignmentCategory(a) === 'Uncategorized') selectedAssignmentIds.add(a.id);
+        });
+        renderAssignmentsTab();
+      });
+      banner.appendChild(bannerBtn);
+      container.appendChild(banner);
+    }
 
     // Empty state if no assignments at all
     if (assignmentsData.length === 0) {
@@ -1064,6 +1342,11 @@
         hint.style.cssText = 'text-align:center; padding:24px; color:rgba(255,255,255,.40); font-size:14px;';
         hint.textContent = 'No assignments match the current filters.';
         container.appendChild(hint);
+      }
+
+      // Floating bulk action bar
+      if (bulkEditMode) {
+        renderBulkActionBar();
       }
     }
 
@@ -1333,16 +1616,44 @@
       }
     });
 
+    // Bulk Categorize button
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#bulkCategorizeBtn')) {
+        e.stopPropagation();
+        bulkEditMode = !bulkEditMode;
+        if (!bulkEditMode) selectedAssignmentIds.clear();
+        renderAssignmentsTab();
+      }
+    });
+
     // Assignment card click — avoid triggering on buttons/headers
     document.addEventListener('click', (e) => {
       const card = e.target.closest('.assignment-card');
       if (
         card &&
         !e.target.closest('button') &&
+        !e.target.closest('select') &&
+        !e.target.closest('label') &&
+        !e.target.closest('input[type="checkbox"]') &&
         !e.target.closest('.tc-lib-lane-header') &&
         !e.target.closest('.tc-hier-node')
       ) {
-        showAssignmentDetail(card.dataset.id);
+        if (bulkEditMode) {
+          // Toggle selection
+          const id = card.dataset.id;
+          if (selectedAssignmentIds.has(id)) selectedAssignmentIds.delete(id);
+          else selectedAssignmentIds.add(id);
+          // Refresh card highlight and bar count
+          const isNowSelected = selectedAssignmentIds.has(id);
+          card.style.borderColor = isNowSelected ? 'rgba(96,165,250,.60)' : '';
+          card.style.background = isNowSelected ? 'rgba(96,165,250,.08)' : '';
+          const cb = card.querySelector('input[type="checkbox"]');
+          if (cb) cb.checked = isNowSelected;
+          const barCountEl = document.querySelector('#tcLibBulkBar span');
+          if (barCountEl) barCountEl.textContent = `${selectedAssignmentIds.size} selected`;
+        } else {
+          showAssignmentDetail(card.dataset.id);
+        }
       }
     });
 
