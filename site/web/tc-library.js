@@ -257,6 +257,8 @@
     const instances = allInstances.filter(i => i.assignment_id === assignment.id);
     if (instances.length === 0) return 'upcoming';
     const allGraded = instances.every(i => i.status === 'Graded');
+    // Check active===false first so explicitly archived assignments are always finalized
+    // even before the anyActive check below (both paths with allGraded lead to 'finalized').
     if (allGraded && assignment.active === false) return 'finalized';
     const anyActive = instances.some(i =>
       ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
@@ -813,10 +815,11 @@
           monthContent.style.cssText = `display:${monthExpanded ? 'block' : 'none'}; padding-left:16px;`;
 
           if (monthExpanded) {
+            const yearInMonth = parseInt(monthLabel.match(/(\d{4})/)?.[1] ?? String(new Date().getFullYear()), 10);
             const sortedWeeks = Array.from(weekMap.keys()).sort((a, b) => {
               const extractDate = (wk) => {
                 const m = wk.match(/Week of (\w+ \d+)/);
-                return m ? new Date(m[1]) : new Date(0);
+                return m ? new Date(`${m[1]} ${yearInMonth}`) : new Date(0);
               };
               return extractDate(b) - extractDate(a);
             });
