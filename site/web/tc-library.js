@@ -79,8 +79,8 @@
     }
   };
 
-  // Collapse state for lane headers
-  const collapsedLanes = new Set(); // lane IDs: 'upcoming', 'current', 'finalized'
+  // Collapse state for lane headers (analytics is collapsed by default)
+  const collapsedLanes = new Set(['analytics']); // lane IDs: 'upcoming', 'current', 'finalized', 'analytics'
 
   // Expand state for hierarchy nodes (nodeId → boolean)
   const hierarchyExpandState = new Map();
@@ -1158,6 +1158,287 @@
     document.body.appendChild(bar);
   }
 
+  // ── Analytics Dashboard ───────────────────────────────────────────────────────
+
+  function renderAnalyticsSection() {
+    const laneId = 'analytics';
+    const expanded = isLaneExpanded(laneId);
+    const filtered = filterAssignments();
+
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom:16px;';
+
+    // Collapsible header
+    const header = document.createElement('div');
+    header.style.cssText = [
+      'display:flex; align-items:center; gap:10px; padding:10px 16px;',
+      'background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);',
+      `border-radius:${expanded ? '10px 10px 0 0' : '10px'}; cursor:pointer; user-select:none;`,
+      'transition:background .15s ease;'
+    ].join('');
+
+    const toggleIcon = document.createElement('span');
+    toggleIcon.style.cssText = `font-size:13px; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'}); transition:transform .2s;`;
+    toggleIcon.textContent = '\u25be';
+    header.appendChild(toggleIcon);
+
+    const titleEl = document.createElement('span');
+    titleEl.style.cssText = 'font-size:14px; font-weight:600;';
+    titleEl.textContent = '\uD83D\uDCCA Analytics';
+    header.appendChild(titleEl);
+
+    header.addEventListener('click', () => toggleLane(laneId));
+    section.appendChild(header);
+
+    if (!expanded) return section;
+
+    // ── Content ───────────────────────────────────────────────────────────────
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = [
+      'padding:16px 20px; border-top:none; border-radius:0 0 10px 10px;',
+      'display:grid; grid-template-columns:1fr 1fr; gap:20px;'
+    ].join('');
+
+    // ── 1. Category Distribution ──────────────────────────────────────────────
+    const catPanel = document.createElement('div');
+    const catPanelTitle = document.createElement('div');
+    catPanelTitle.style.cssText = 'font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:10px;';
+    catPanelTitle.textContent = 'Category Distribution';
+    catPanel.appendChild(catPanelTitle);
+
+    const catCounts = {};
+    let uncatCount = 0;
+    filtered.forEach(a => {
+      const cat = getAssignmentCategory(a);
+      if (cat === 'Uncategorized') {
+        uncatCount++;
+      } else {
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      }
+    });
+    const allCatValues = [...Object.values(catCounts)];
+    if (uncatCount > 0) allCatValues.push(uncatCount);
+    const maxCatVal = allCatValues.length > 0 ? Math.max(...allCatValues) : 0;
+
+    if (maxCatVal === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px;';
+      empty.textContent = 'No assignments';
+      catPanel.appendChild(empty);
+    } else {
+      const renderCatBar = (name, count) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin-bottom:7px;';
+        const topRow = document.createElement('div');
+        topRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:3px;';
+        topRow.appendChild(renderCategoryBadge(name));
+        const countEl = document.createElement('span');
+        countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.55); margin-left:auto;';
+        countEl.textContent = String(count);
+        topRow.appendChild(countEl);
+        row.appendChild(topRow);
+        const barTrack = document.createElement('div');
+        barTrack.style.cssText = 'height:4px; background:rgba(255,255,255,.10); border-radius:2px; overflow:hidden;';
+        const barFill = document.createElement('div');
+        const fillColor = CATEGORY_COLORS[name] ? CATEGORY_COLORS[name].color : 'rgba(255,255,255,.40)';
+        const pct = maxCatVal > 0 ? Math.round(count / maxCatVal * 100) : 0;
+        barFill.style.cssText = `height:100%; width:${pct}%; background:${fillColor}; border-radius:2px;`;
+        barTrack.appendChild(barFill);
+        row.appendChild(barTrack);
+        return row;
+      };
+      Object.entries(catCounts)
+        .sort(([, a], [, b]) => b - a)
+        .forEach(([cat, count]) => catPanel.appendChild(renderCatBar(cat, count)));
+      if (uncatCount > 0) catPanel.appendChild(renderCatBar('Uncategorized', uncatCount));
+    }
+    card.appendChild(catPanel);
+
+    // ── 2. Lane Distribution ──────────────────────────────────────────────────
+    const lanePanel = document.createElement('div');
+    const lanePanelTitle = document.createElement('div');
+    lanePanelTitle.style.cssText = 'font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:10px;';
+    lanePanelTitle.textContent = 'Lane Distribution';
+    lanePanel.appendChild(lanePanelTitle);
+
+    let upCount = 0, curCount = 0, finCount = 0;
+    filtered.forEach(a => {
+      const lane = computeLane(a, instancesData);
+      if (lane === 'upcoming') upCount++;
+      else if (lane === 'current') curCount++;
+      else if (lane === 'finalized') finCount++;
+    });
+    const laneTotal = upCount + curCount + finCount;
+
+    if (laneTotal === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px;';
+      empty.textContent = 'No assignments';
+      lanePanel.appendChild(empty);
+    } else {
+      const upPct  = Math.round(upCount  / laneTotal * 100);
+      const curPct = Math.round(curCount / laneTotal * 100);
+      const finPct = Math.max(0, 100 - upPct - curPct);
+      const laneBarDef = [
+        [upPct,  'rgba(255,255,255,.30)'],
+        [curPct, '#60a5fa'],
+        [finPct, '#4ade80']
+      ];
+      const stackedBar = document.createElement('div');
+      stackedBar.style.cssText = 'display:flex; height:10px; border-radius:5px; overflow:hidden; gap:2px; margin-bottom:10px;';
+      laneBarDef.forEach(([pct, color]) => {
+        if (pct <= 0) return;
+        const seg = document.createElement('div');
+        seg.style.cssText = `flex:${pct}; background:${color}; height:100%; min-width:2px;`;
+        stackedBar.appendChild(seg);
+      });
+      lanePanel.appendChild(stackedBar);
+
+      const laneItems = [
+        ['\uD83D\uDCCB Upcoming',  upCount,  'rgba(255,255,255,.30)'],
+        ['\uD83D\uDD04 Active',    curCount, '#60a5fa'],
+        ['\u2705 Finalized',       finCount, '#4ade80']
+      ];
+      const legend = document.createElement('div');
+      legend.style.cssText = 'display:flex; flex-direction:column; gap:5px;';
+      laneItems.forEach(([label, count, color]) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:12px;';
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:8px; height:8px; border-radius:50%; background:${color}; flex-shrink:0;`;
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'color:rgba(255,255,255,.65);';
+        lbl.textContent = label;
+        const cnt = document.createElement('span');
+        cnt.style.cssText = 'margin-left:auto; font-weight:500;';
+        cnt.textContent = `${count}\u00a0(${laneTotal > 0 ? Math.round(count / laneTotal * 100) : 0}%)`;
+        item.appendChild(dot);
+        item.appendChild(lbl);
+        item.appendChild(cnt);
+        legend.appendChild(item);
+      });
+      lanePanel.appendChild(legend);
+    }
+    card.appendChild(lanePanel);
+
+    // ── 3. Score Distribution (Finalized only) ────────────────────────────────
+    const scorePanel = document.createElement('div');
+    const scorePanelTitle = document.createElement('div');
+    scorePanelTitle.style.cssText = 'font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:10px;';
+    scorePanelTitle.textContent = 'Score Distribution (Finalized)';
+    scorePanel.appendChild(scorePanelTitle);
+
+    const finalizedFiltered = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
+    let greenCount = 0, amberCount = 0, redCount = 0, noScoreCount = 0;
+    finalizedFiltered.forEach(a => {
+      const stats = getAssignmentStats(a, instancesData, submissionsData);
+      if (stats.avgScore == null) noScoreCount++;
+      else if (stats.avgScore >= 80) greenCount++;
+      else if (stats.avgScore >= 60) amberCount++;
+      else redCount++;
+    });
+
+    if (finalizedFiltered.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px;';
+      empty.textContent = 'No finalized assignments';
+      scorePanel.appendChild(empty);
+    } else {
+      const scoreDef = [
+        ['\u2705 \u226580%',     greenCount,   '#4ade80'],
+        ['\u26a0\ufe0f 60\u201379%', amberCount, '#fbbf24'],
+        ['\u274c <60%',          redCount,     '#f87171'],
+        ['\u2014 No score',      noScoreCount, 'rgba(255,255,255,.30)']
+      ];
+      const maxScoreVal = Math.max(0, greenCount, amberCount, redCount, noScoreCount);
+      scoreDef.forEach(([label, count, color]) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin-bottom:7px;';
+        const topRow = document.createElement('div');
+        topRow.style.cssText = 'display:flex; align-items:center; margin-bottom:3px; font-size:12px;';
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'color:rgba(255,255,255,.65);';
+        lbl.textContent = label;
+        const cnt = document.createElement('span');
+        cnt.style.cssText = 'margin-left:auto; font-weight:500;';
+        cnt.textContent = String(count);
+        topRow.appendChild(lbl);
+        topRow.appendChild(cnt);
+        row.appendChild(topRow);
+        const barTrack = document.createElement('div');
+        barTrack.style.cssText = 'height:4px; background:rgba(255,255,255,.10); border-radius:2px; overflow:hidden;';
+        const barFill = document.createElement('div');
+        const pct = maxScoreVal > 0 ? Math.round(count / maxScoreVal * 100) : 0;
+        barFill.style.cssText = `height:100%; width:${pct}%; background:${color}; border-radius:2px;`;
+        barTrack.appendChild(barFill);
+        row.appendChild(barTrack);
+        scorePanel.appendChild(row);
+      });
+    }
+    card.appendChild(scorePanel);
+    section.appendChild(card);
+
+    // ── 4. Recent Activity Timeline ───────────────────────────────────────────
+    const recentSorted = [...filtered]
+      .filter(a => a.created_at)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 5);
+
+    if (recentSorted.length > 0) {
+      const timelineCard = document.createElement('div');
+      timelineCard.className = 'tc-card';
+      timelineCard.style.cssText = 'padding:14px 20px; margin-top:8px;';
+      const tlTitle = document.createElement('div');
+      tlTitle.style.cssText = 'font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:10px;';
+      tlTitle.textContent = 'Recent Activity';
+      timelineCard.appendChild(tlTitle);
+
+      const now = Date.now();
+      const relDate = (iso) => {
+        const diff = now - new Date(iso).getTime();
+        const days = Math.floor(diff / 86400000);
+        if (days === 0) return 'today';
+        if (days === 1) return '1 day ago';
+        if (days < 30) return `${days} days ago`;
+        const weeks = Math.floor(days / 7);
+        if (weeks < 8) return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
+        const months = Math.floor(days / 30);
+        return `${months} month${months !== 1 ? 's' : ''} ago`;
+      };
+
+      const tlLaneLabels = { upcoming: '\uD83D\uDCCB Upcoming', current: '\uD83D\uDD04 Active', finalized: '\u2705 Finalized' };
+      recentSorted.forEach((a, i) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 0;' +
+          (i < recentSorted.length - 1 ? ' border-bottom:1px solid rgba(255,255,255,.07);' : '');
+
+        const titleSpan = document.createElement('span');
+        titleSpan.style.cssText = 'flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+        titleSpan.textContent = a.title || '(Untitled)';
+        item.appendChild(titleSpan);
+
+        item.appendChild(renderCategoryBadge(getAssignmentCategory(a)));
+
+        const laneSpan = document.createElement('span');
+        laneSpan.style.cssText = 'font-size:11px; color:rgba(255,255,255,.45); white-space:nowrap;';
+        const itemLane = computeLane(a, instancesData);
+        laneSpan.textContent = tlLaneLabels[itemLane] || itemLane;
+        item.appendChild(laneSpan);
+
+        const dateSpan = document.createElement('span');
+        dateSpan.style.cssText = 'font-size:11px; color:rgba(255,255,255,.35); white-space:nowrap;';
+        dateSpan.textContent = relDate(a.created_at);
+        item.appendChild(dateSpan);
+
+        timelineCard.appendChild(item);
+      });
+      section.appendChild(timelineCard);
+    }
+
+    return section;
+  }
+
   // ── Main Assignments Tab Renderer ─────────────────────────────────────────────
 
   function renderAssignmentsTab() {
@@ -1186,6 +1467,9 @@
     const avgColor = kpis.avgScore != null ? scoreColor(kpis.avgScore) : 'rgba(255,255,255,.40)';
     kpiGrid.appendChild(renderKPI('\uD83D\uDCCA Avg Score', kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
     container.appendChild(kpiGrid);
+
+    // Analytics section (between KPI row and filter bar)
+    container.appendChild(renderAnalyticsSection());
 
     // Filter bar
     const filterBar = document.createElement('div');
