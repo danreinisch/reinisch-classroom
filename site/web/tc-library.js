@@ -2029,7 +2029,7 @@
         wrap.appendChild(ic);
         wrap.appendChild(document.createTextNode(def.text));
         return wrap;
-      }
+      };
       recentSorted.forEach((a, i) => {
         const item = document.createElement('div');
         item.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 0;' +
@@ -2762,7 +2762,7 @@
         grid.appendChild(pageRow);
       }
 
-      card.insertBefore(grid, card.querySelector('.tc-btn').parentNode.nextSibling || null);
+      card.appendChild(grid);
 
       const actionRow = document.createElement('div');
       actionRow.style.cssText = 'display: flex; gap: 12px;';
