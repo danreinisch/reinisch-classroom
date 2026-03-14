@@ -1302,7 +1302,7 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     const { data, error } = await supabase
       .from('assignments')
-      .select('id, title, type, series, page, hero, meta, created_at')
+      .select('id, title, type, series, active, page, hero, meta, created_at')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
