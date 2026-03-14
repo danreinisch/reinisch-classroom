@@ -45,6 +45,47 @@
     'Other':                 { bg: 'rgba(148,163,184,.18)', color: '#94a3b8' }
   };
 
+  // ── SVG Icon Helper ───────────────────────────────────────────────────────────
+
+  const ICON_PATHS = {
+    pencil:       ['M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7','M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'],
+    book:         ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20','M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
+    clipboard:    ['M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2','M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z'],
+    refresh:      ['M23 4v6h-6','M1 20v-6h6','M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'],
+    checkCircle:  ['M22 11.08V12a10 10 0 1 1-5.93-9.14','M22 4 12 14.01l-3-3'],
+    barChart:     ['M12 20V10','M18 20V4','M6 20v-4'],
+    bookStack:    ['M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z','M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'],
+    calendar:     ['M3 9h18M16 2v4M8 2v4','M3 4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4z'],
+    document:     ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z','M14 2v6h6','M16 13H8M16 17H8M10 9H8'],
+    folderOpen:   ['M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z','M2 12h20'],
+    folderClosed: ['M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'],
+    inbox:        ['M22 12h-6l-2 3h-4l-2-3H2','M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'],
+    search:       ['M11 17.25a6.25 6.25 0 1 1 0-12.5 6.25 6.25 0 0 1 0 12.5z','M16 16l4.5 4.5'],
+    clipboardPlus:['M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2','M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z','M12 11v6M9 14h6']
+  };
+
+  function createIcon(name, size) {
+    const sz = size || 16;
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', String(sz));
+    svg.setAttribute('height', String(sz));
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.5');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    const paths = ICON_PATHS[name] || [];
+    paths.forEach(d => {
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      svg.appendChild(path);
+    });
+    return svg;
+  }
+
   // Assignment type options: [value, label]
   const ASSIGNMENT_TYPE_OPTIONS = [
     ['All', 'All Types'],
@@ -85,12 +126,162 @@
   // Expand state for hierarchy nodes (nodeId → boolean)
   const hierarchyExpandState = new Map();
 
+  const FILTERS_KEY = 'rc_tc_library_filters_v1';
+
+  function saveFilters() {
+    try {
+      const state = {
+        assignments: { ...filters.assignments },
+        lessonsSearchQuery: filters.lessons.searchQuery,
+        collapsedLanes: Array.from(collapsedLanes),
+        hierarchyExpandState: Array.from(hierarchyExpandState.entries())
+      };
+      localStorage.setItem(FILTERS_KEY, JSON.stringify(state));
+    } catch (_e) { /* storage unavailable */ }
+  }
+
+  function loadFilters() {
+    try {
+      const raw = localStorage.getItem(FILTERS_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (state && typeof state === 'object') {
+        const a = state.assignments;
+        if (a && typeof a === 'object') {
+          if (typeof a.classFilter === 'string') filters.assignments.classFilter = a.classFilter;
+          if (typeof a.searchQuery === 'string') filters.assignments.searchQuery = a.searchQuery;
+          if (typeof a.typeFilter === 'string') filters.assignments.typeFilter = a.typeFilter;
+          if (typeof a.categoryFilter === 'string') filters.assignments.categoryFilter = a.categoryFilter;
+        }
+        if (typeof state.lessonsSearchQuery === 'string') {
+          filters.lessons.searchQuery = state.lessonsSearchQuery;
+        }
+        if (Array.isArray(state.collapsedLanes)) {
+          state.collapsedLanes.forEach(id => { if (typeof id === 'string') collapsedLanes.add(id); });
+        }
+        if (Array.isArray(state.hierarchyExpandState)) {
+          state.hierarchyExpandState.forEach(entry => {
+            if (Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' && typeof entry[1] === 'boolean') {
+              hierarchyExpandState.set(entry[0], entry[1]);
+            }
+          });
+        }
+      }
+    } catch (_e) { /* corrupt data — ignore */ }
+  }
+
+  // ── Styles ────────────────────────────────────────────────────────────────────
+
+  function injectStyles() {
+    if (document.getElementById('rc-tc-library-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'rc-tc-library-styles';
+    style.textContent = [
+      '@keyframes rc-shimmer {',
+      '  0% { background-position: -400px 0; }',
+      '  100% { background-position: calc(400px + 100%) 0; }',
+      '}',
+      '.rc-skeleton-card {',
+      '  background: rgba(255,255,255,.04);',
+      '  border: 1px solid rgba(255,255,255,.08);',
+      '  border-radius: 12px;',
+      '  padding: 20px;',
+      '  margin-bottom: 12px;',
+      '}',
+      '.rc-shimmer {',
+      '  background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.06) 75%);',
+      '  background-size: 400px 100%;',
+      '  animation: rc-shimmer 1.4s infinite linear;',
+      '  border-radius: 6px;',
+      '}',
+      '.tc-btn {',
+      '  padding: 8px 16px;',
+      '  border-radius: 8px;',
+      '  font-size: 13px;',
+      '  font-weight: 500;',
+      '  transition: all .15s ease;',
+      '  display: inline-flex;',
+      '  align-items: center;',
+      '  gap: 6px;',
+      '}',
+      '.tc-btn:hover:not(:disabled) {',
+      '  transform: translateY(-1px);',
+      '}',
+      '.tc-btn:active:not(:disabled) {',
+      '  transform: translateY(0);',
+      '}',
+      '.tc-btn:disabled {',
+      '  opacity: 0.5;',
+      '  pointer-events: none;',
+      '}',
+      '.tc-card {',
+      '  padding: 20px;',
+      '  border-radius: 12px;',
+      '  border: 1px solid rgba(255,255,255,.08);',
+      '  background: rgba(255,255,255,.04);',
+      '  transition: border-color .15s ease, transform .15s ease;',
+      '}',
+      '.tc-card.interactive:hover {',
+      '  border-color: rgba(255,255,255,.15);',
+      '  transform: translateY(-2px);',
+      '}'
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
   // ── Initialization ────────────────────────────────────────────────────────────
+
+  function renderLoadingSkeleton() {
+    const container = $("assignmentsTab");
+    if (!container) return;
+    container.innerHTML = '';
+
+    function makeShimmerBar(height, widthPct) {
+      const bar = document.createElement('div');
+      bar.className = 'rc-shimmer';
+      bar.style.cssText = `height:${height}px; width:${widthPct || 70}%; margin-bottom:8px;`;
+      return bar;
+    }
+
+    ['Upcoming', 'Active', 'Finalized'].forEach(laneName => {
+      const lane = document.createElement('div');
+      lane.className = 'rc-skeleton-card';
+      lane.style.marginBottom = '16px';
+
+      const laneHeader = document.createElement('div');
+      laneHeader.style.cssText = 'display:flex; align-items:center; gap:12px; margin-bottom:16px;';
+      laneHeader.appendChild(makeShimmerBar(20, 30));
+      lane.appendChild(laneHeader);
+
+      for (let i = 0; i < 2; i++) {
+        const card = document.createElement('div');
+        card.className = 'rc-skeleton-card';
+        card.style.marginBottom = '8px';
+        card.appendChild(makeShimmerBar(18, 65));
+        card.appendChild(makeShimmerBar(12, 30));
+        card.appendChild(makeShimmerBar(12, 80));
+        card.appendChild(makeShimmerBar(28, 40));
+        card.setAttribute('aria-label', `Loading assignment (${laneName})`);
+        lane.appendChild(card);
+      }
+
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.30); margin-top:8px;';
+      nameEl.textContent = laneName;
+      lane.appendChild(nameEl);
+
+      container.appendChild(lane);
+    });
+  }
 
   async function init() {
     console.log("[tc-library] Initializing...");
+    loadFilters();
+    injectStyles();
     renderTabBar();
     renderTabContent();
+    switchTab("assignments");
+    renderLoadingSkeleton();
     await loadAssignments();
     await loadLessons();
     attachEventListeners();
@@ -102,25 +293,68 @@
   function renderTabBar() {
     const main = $("tcLibraryMain");
     if (!main) return;
-    const tabBarHtml = `
-      <div class="tc-lib-tabs">
-        <button class="tc-btn tc-lib-tab-btn" data-tab="assignments" style="display: flex; align-items: center; gap: 8px;">
-          <span>📝</span> Assignments
-        </button>
-        <button class="tc-btn tc-lib-tab-btn" data-tab="lessons" style="display: flex; align-items: center; gap: 8px;">
-          <span>📖</span> Lessons
-        </button>
-        <div style="flex: 1;"></div>
-        <button id="uploadPaperBtn" class="tc-btn" style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          Upload Paper Assignment
-        </button>
-        <button id="exportLibraryBtn" class="tc-btn" style="margin-left: 8px;">
-          Export Library JSON
-        </button>
-      </div>
-    `;
-    main.insertAdjacentHTML('afterbegin', tabBarHtml);
+
+    const tabBar = document.createElement('div');
+    tabBar.className = 'tc-lib-tabs';
+
+    const assignBtn = document.createElement('button');
+    assignBtn.className = 'tc-btn tc-lib-tab-btn';
+    assignBtn.dataset.tab = 'assignments';
+    assignBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+    assignBtn.appendChild(createIcon('pencil', 16));
+    assignBtn.appendChild(document.createTextNode(' Assignments'));
+    tabBar.appendChild(assignBtn);
+
+    const lessonsBtn = document.createElement('button');
+    lessonsBtn.className = 'tc-btn tc-lib-tab-btn';
+    lessonsBtn.dataset.tab = 'lessons';
+    lessonsBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+    lessonsBtn.appendChild(createIcon('book', 16));
+    lessonsBtn.appendChild(document.createTextNode(' Lessons'));
+    tabBar.appendChild(lessonsBtn);
+
+    const spacer = document.createElement('div');
+    spacer.style.cssText = 'flex: 1;';
+    tabBar.appendChild(spacer);
+
+    const uploadBtn = document.createElement('button');
+    uploadBtn.id = 'uploadPaperBtn';
+    uploadBtn.className = 'tc-btn';
+    uploadBtn.style.cssText = 'margin-left: auto; display: flex; align-items: center; gap: 6px;';
+    const uploadSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    uploadSvg.setAttribute('width', '16');
+    uploadSvg.setAttribute('height', '16');
+    uploadSvg.setAttribute('viewBox', '0 0 24 24');
+    uploadSvg.setAttribute('fill', 'none');
+    uploadSvg.setAttribute('stroke', 'currentColor');
+    uploadSvg.setAttribute('stroke-width', '1.5');
+    uploadSvg.setAttribute('stroke-linecap', 'round');
+    uploadSvg.setAttribute('stroke-linejoin', 'round');
+    uploadSvg.setAttribute('aria-hidden', 'true');
+    const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p1.setAttribute('d', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    poly.setAttribute('points', '17 8 12 3 7 8');
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', '12');
+    line.setAttribute('y1', '3');
+    line.setAttribute('x2', '12');
+    line.setAttribute('y2', '15');
+    uploadSvg.appendChild(p1);
+    uploadSvg.appendChild(poly);
+    uploadSvg.appendChild(line);
+    uploadBtn.appendChild(uploadSvg);
+    uploadBtn.appendChild(document.createTextNode(' Upload Paper Assignment'));
+    tabBar.appendChild(uploadBtn);
+
+    const exportBtn = document.createElement('button');
+    exportBtn.id = 'exportLibraryBtn';
+    exportBtn.className = 'tc-btn';
+    exportBtn.style.cssText = 'margin-left: 8px;';
+    exportBtn.textContent = 'Export Library JSON';
+    tabBar.appendChild(exportBtn);
+
+    main.insertBefore(tabBar, main.firstChild);
   }
 
   function renderTabContent() {
@@ -498,17 +732,21 @@
     return { upcomingCount, currentCount, finalizedCount, avgScore };
   }
 
-  function renderKPI(label, value, highlight) {
+  function renderKPI(label, value, highlight, icon) {
     const card = document.createElement('div');
     card.className = 'tc-card';
     card.style.cssText = 'padding: 20px; text-align: center;';
-    const labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;';
+    const labelRow = document.createElement('div');
+    labelRow.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:8px;';
+    if (icon) labelRow.appendChild(icon);
+    const labelEl = document.createElement('span');
+    labelEl.style.cssText = 'font-size: 14px; color: rgba(255,255,255,.60);';
     labelEl.textContent = label;
+    labelRow.appendChild(labelEl);
+    card.appendChild(labelRow);
     const valueEl = document.createElement('div');
     valueEl.style.cssText = `font-size: 32px; font-weight: 600; color: ${highlight || 'white'};`;
     valueEl.textContent = value != null ? String(value) : '\u2014';
-    card.appendChild(labelEl);
     card.appendChild(valueEl);
     return card;
   }
@@ -550,6 +788,7 @@
   function toggleLane(laneId) {
     if (collapsedLanes.has(laneId)) { collapsedLanes.delete(laneId); }
     else { collapsedLanes.add(laneId); }
+    saveFilters();
     renderAssignmentsTab();
   }
 
@@ -561,12 +800,13 @@
   function toggleHierarchy(nodeId) {
     const current = hierarchyExpandState.has(nodeId) ? hierarchyExpandState.get(nodeId) : true;
     hierarchyExpandState.set(nodeId, !current);
+    saveFilters();
     renderAssignmentsTab();
   }
 
   // ── Lane Section Wrapper ──────────────────────────────────────────────────────
 
-  function renderLaneSection(laneId, emoji, title, count, renderContent) {
+  function renderLaneSection(laneId, icon, title, count, renderContent) {
     const expanded = isLaneExpanded(laneId);
     const wrapper = document.createElement('div');
     wrapper.className = 'tc-lib-lane';
@@ -590,9 +830,14 @@
     toggleIcon.style.cssText = `font-size:14px; transition:transform .2s ease; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'});`;
     toggleIcon.textContent = '\u25be';
 
-    const emojiEl = document.createElement('span');
-    emojiEl.textContent = emoji;
-    emojiEl.setAttribute('aria-hidden', 'true');
+    let emojiEl;
+    if (icon && typeof icon === 'object' && icon.nodeType) {
+      emojiEl = icon;
+    } else {
+      emojiEl = document.createElement('span');
+      emojiEl.textContent = icon || '';
+      emojiEl.setAttribute('aria-hidden', 'true');
+    }
 
     const titleEl = document.createElement('span');
     titleEl.style.cssText = 'font-size:18px; font-weight:600;';
@@ -647,8 +892,25 @@
   function renderUpcomingLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
-      empty.textContent = 'No upcoming assignments match the current filters.';
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.30);';
+      iconWrap.appendChild(createIcon('clipboardPlus', 48));
+      empty.appendChild(iconWrap);
+      const title = document.createElement('h4');
+      title.style.cssText = 'margin:0 0 8px 0; font-size:16px; font-weight:600; color:rgba(255,255,255,.70);';
+      title.textContent = 'No upcoming assignments';
+      empty.appendChild(title);
+      const sub = document.createElement('p');
+      sub.style.cssText = 'margin:0 0 16px 0; font-size:13px; color:rgba(255,255,255,.40); line-height:1.5;';
+      sub.textContent = 'Create an assignment in Work \u2192 to get started, or upload a paper assignment.';
+      empty.appendChild(sub);
+      const ctaBtn = document.createElement('button');
+      ctaBtn.className = 'tc-btn';
+      ctaBtn.style.cssText = 'font-size:13px;';
+      ctaBtn.textContent = 'Upload Paper Assignment';
+      ctaBtn.addEventListener('click', openUploadPaperModal);
+      empty.appendChild(ctaBtn);
       return empty;
     }
     const grid = document.createElement('div');
@@ -693,8 +955,11 @@
 
     if (assignment.series) {
       const seriesEl = document.createElement('div');
-      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
-      seriesEl.textContent = '\uD83D\uDCDA ' + assignment.series;
+      seriesEl.style.cssText = 'display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
+      seriesEl.appendChild(createIcon('bookStack', 14));
+      const seriesText = document.createElement('span');
+      seriesText.textContent = assignment.series;
+      seriesEl.appendChild(seriesText);
       card.appendChild(seriesEl);
     }
 
@@ -720,8 +985,19 @@
   function renderCurrentLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
-      empty.textContent = 'No active assignments match the current filters.';
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.30);';
+      iconWrap.appendChild(createIcon('refresh', 48));
+      empty.appendChild(iconWrap);
+      const title = document.createElement('h4');
+      title.style.cssText = 'margin:0 0 8px 0; font-size:16px; font-weight:600; color:rgba(255,255,255,.70);';
+      title.textContent = 'No active assignments';
+      empty.appendChild(title);
+      const sub = document.createElement('p');
+      sub.style.cssText = 'margin:0; font-size:13px; color:rgba(255,255,255,.40); line-height:1.5;';
+      sub.textContent = 'Issue an upcoming assignment to a class to see it here.';
+      empty.appendChild(sub);
       return empty;
     }
     const grid = document.createElement('div');
@@ -770,15 +1046,21 @@
 
     if (assignment.series) {
       const seriesEl = document.createElement('div');
-      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
-      seriesEl.textContent = '\uD83D\uDCDA ' + assignment.series;
+      seriesEl.style.cssText = 'display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
+      seriesEl.appendChild(createIcon('bookStack', 14));
+      const seriesText = document.createElement('span');
+      seriesText.textContent = assignment.series;
+      seriesEl.appendChild(seriesText);
       card.appendChild(seriesEl);
     }
 
     if (nearestDue) {
       const dueEl = document.createElement('div');
-      dueEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px;';
-      dueEl.textContent = '\uD83D\uDCC5 Due: ' + nearestDue.toLocaleDateString();
+      dueEl.style.cssText = 'display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px;';
+      dueEl.appendChild(createIcon('calendar', 14));
+      const dueText = document.createElement('span');
+      dueText.textContent = 'Due: ' + nearestDue.toLocaleDateString();
+      dueEl.appendChild(dueText);
       card.appendChild(dueEl);
     }
 
@@ -825,8 +1107,19 @@
   function renderFinalizedLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
-      empty.textContent = 'No finalized assignments match the current filters.';
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.30);';
+      iconWrap.appendChild(createIcon('checkCircle', 48));
+      empty.appendChild(iconWrap);
+      const title = document.createElement('h4');
+      title.style.cssText = 'margin:0 0 8px 0; font-size:16px; font-weight:600; color:rgba(255,255,255,.70);';
+      title.textContent = 'No finalized assignments yet';
+      empty.appendChild(title);
+      const sub = document.createElement('p');
+      sub.style.cssText = 'margin:0; font-size:13px; color:rgba(255,255,255,.40); line-height:1.5;';
+      sub.textContent = 'Assignments will appear here once all students have been graded.';
+      empty.appendChild(sub);
       return empty;
     }
     return renderFinalizedTree(assignments);
@@ -872,9 +1165,8 @@
       const syToggle = document.createElement('span');
       syToggle.style.cssText = `font-size:12px; transition:transform .2s; display:inline-block; transform:rotate(${syExpanded ? '0deg' : '-90deg'});`;
       syToggle.textContent = '\u25be';
-      const syIcon = document.createElement('span');
+      const syIcon = createIcon(syExpanded ? 'folderOpen' : 'folderClosed', 14);
       syIcon.setAttribute('aria-hidden', 'true');
-      syIcon.textContent = syExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
       const syTitle = document.createElement('span');
       syTitle.style.cssText = 'font-size:15px; font-weight:600; flex:1;';
       syTitle.textContent = syLabel;
@@ -917,9 +1209,8 @@
           const monthToggle = document.createElement('span');
           monthToggle.style.cssText = `font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(${monthExpanded ? '0deg' : '-90deg'});`;
           monthToggle.textContent = '\u25be';
-          const monthIcon = document.createElement('span');
+          const monthIcon = createIcon(monthExpanded ? 'folderOpen' : 'folderClosed', 14);
           monthIcon.setAttribute('aria-hidden', 'true');
-          monthIcon.textContent = monthExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
           const monthTitle = document.createElement('span');
           monthTitle.style.cssText = 'font-size:14px; font-weight:500; flex:1;';
           monthTitle.textContent = monthLabel;
@@ -967,9 +1258,8 @@
               const weekToggle = document.createElement('span');
               weekToggle.style.cssText = `font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(${weekExpanded ? '0deg' : '-90deg'});`;
               weekToggle.textContent = '\u25be';
-              const weekIcon = document.createElement('span');
+              const weekIcon = createIcon(weekExpanded ? 'folderOpen' : 'folderClosed', 14);
               weekIcon.setAttribute('aria-hidden', 'true');
-              weekIcon.textContent = weekExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
               const weekTitle = document.createElement('span');
               weekTitle.style.cssText = 'font-size:13px; flex:1;';
               weekTitle.textContent = weekLabel;
@@ -1023,8 +1313,7 @@
       row.appendChild(renderBulkCheckbox(assignment));
     }
 
-    const icon = document.createElement('span');
-    icon.textContent = '\uD83D\uDCC4';
+    const icon = createIcon('document', 16);
     icon.setAttribute('aria-hidden', 'true');
     row.appendChild(icon);
 
@@ -1461,11 +1750,11 @@
     const kpis = calculateAssignmentKPIs();
     const kpiGrid = document.createElement('div');
     kpiGrid.className = 'tc-lib-kpi-grid';
-    kpiGrid.appendChild(renderKPI('\uD83D\uDCCB Upcoming', kpis.upcomingCount));
-    kpiGrid.appendChild(renderKPI('\uD83D\uDD04 In Progress', kpis.currentCount, '#60a5fa'));
-    kpiGrid.appendChild(renderKPI('\u2705 Finalized', kpis.finalizedCount, '#4ade80'));
+    kpiGrid.appendChild(renderKPI('Upcoming', kpis.upcomingCount, null, createIcon('clipboard', 16)));
+    kpiGrid.appendChild(renderKPI('In Progress', kpis.currentCount, '#60a5fa', createIcon('refresh', 16)));
+    kpiGrid.appendChild(renderKPI('Finalized', kpis.finalizedCount, '#4ade80', createIcon('checkCircle', 16)));
     const avgColor = kpis.avgScore != null ? scoreColor(kpis.avgScore) : 'rgba(255,255,255,.40)';
-    kpiGrid.appendChild(renderKPI('\uD83D\uDCCA Avg Score', kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
+    kpiGrid.appendChild(renderKPI('Avg Score', kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor, createIcon('barChart', 16)));
     container.appendChild(kpiGrid);
 
     // Analytics section (between KPI row and filter bar)
@@ -1586,18 +1875,23 @@
       emptyCard.className = 'tc-card';
       emptyCard.style.cssText = 'text-align:center; padding:48px 24px;';
       const emptyIcon = document.createElement('div');
-      emptyIcon.style.cssText = 'font-size:48px; margin-bottom:16px;';
-      emptyIcon.textContent = '\uD83D\uDCED';
+      emptyIcon.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.30);';
+      emptyIcon.appendChild(createIcon('inbox', 48));
       const emptyTitle = document.createElement('h3');
       emptyTitle.style.cssText = 'margin:0 0 8px 0; font-size:20px;';
       emptyTitle.textContent = 'No assignments yet';
       emptyCard.appendChild(emptyIcon);
       emptyCard.appendChild(emptyTitle);
       const emptyMsg = document.createElement('p');
-      emptyMsg.style.cssText = 'margin:0; color:rgba(255,255,255,.60);';
-      // SAFETY: static text + static link, no user data
-      emptyMsg.innerHTML = 'Create one in <a href="/teacher/work/" style="color:#60a5fa;">Work \u2192</a>';
+      emptyMsg.style.cssText = 'margin:0 0 16px 0; color:rgba(255,255,255,.60);';
+      emptyMsg.textContent = 'Create one in Work to get started.';
       emptyCard.appendChild(emptyMsg);
+      const emptyLink = document.createElement('a');
+      emptyLink.href = '/teacher/work/';
+      emptyLink.className = 'tc-btn';
+      emptyLink.style.cssText = 'text-decoration: none; display: inline-flex; align-items: center; gap: 6px;';
+      emptyLink.textContent = 'Go to Work \u2192';
+      emptyCard.appendChild(emptyLink);
       container.appendChild(emptyCard);
     } else {
       const filtered = filterAssignments();
@@ -1606,17 +1900,17 @@
       const finalizedList  = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
 
       container.appendChild(
-        renderLaneSection('upcoming', '\uD83D\uDCCB', 'Upcoming', upcomingList.length, (div) => {
+        renderLaneSection('upcoming', createIcon('clipboard', 18), 'Upcoming', upcomingList.length, (div) => {
           div.appendChild(renderUpcomingLane(upcomingList));
         })
       );
       container.appendChild(
-        renderLaneSection('current', '\uD83D\uDD04', 'Active', currentList.length, (div) => {
+        renderLaneSection('current', createIcon('refresh', 18), 'Active', currentList.length, (div) => {
           div.appendChild(renderCurrentLane(currentList));
         })
       );
       container.appendChild(
-        renderLaneSection('finalized', '\u2705', 'Finalized', finalizedList.length, (div) => {
+        renderLaneSection('finalized', createIcon('checkCircle', 18), 'Finalized', finalizedList.length, (div) => {
           div.appendChild(renderFinalizedLane(finalizedList));
         })
       );
@@ -1684,20 +1978,40 @@
     container.appendChild(searchWrap);
 
     if (!lessonsData || !lessonsData.sections) {
-      // SAFETY: static text, no user data
       const emptyCard = document.createElement('div');
       emptyCard.className = 'tc-card';
       emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
-      emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">📚</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">Lessons index not available</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Run the generator script to build the lessons index.</p>';
+      const emptyIconDiv = document.createElement('div');
+      emptyIconDiv.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.30);';
+      emptyIconDiv.appendChild(createIcon('bookStack', 48));
+      emptyCard.appendChild(emptyIconDiv);
+      const emptyH3 = document.createElement('h3');
+      emptyH3.style.cssText = 'margin: 0 0 8px 0; font-size: 20px;';
+      emptyH3.textContent = 'Lessons index not available';
+      emptyCard.appendChild(emptyH3);
+      const emptyP = document.createElement('p');
+      emptyP.style.cssText = 'margin: 0; color: rgba(255,255,255,.60);';
+      emptyP.textContent = 'Run the generator script to build the lessons index.';
+      emptyCard.appendChild(emptyP);
       container.appendChild(emptyCard);
     } else {
       const filteredSections = filterLessons();
       if (filteredSections.length === 0) {
-        // SAFETY: static text, no user data
         const emptyCard = document.createElement('div');
         emptyCard.className = 'tc-card';
         emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
-        emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">🔍</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">No lessons found</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Try a different search term</p>';
+        const emptyIconDiv = document.createElement('div');
+        emptyIconDiv.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.30);';
+        emptyIconDiv.appendChild(createIcon('search', 48));
+        emptyCard.appendChild(emptyIconDiv);
+        const emptyH3 = document.createElement('h3');
+        emptyH3.style.cssText = 'margin: 0 0 8px 0; font-size: 20px;';
+        emptyH3.textContent = 'No lessons found';
+        emptyCard.appendChild(emptyH3);
+        const emptyP = document.createElement('p');
+        emptyP.style.cssText = 'margin: 0; color: rgba(255,255,255,.60);';
+        emptyP.textContent = 'Try a different search term';
+        emptyCard.appendChild(emptyP);
         container.appendChild(emptyCard);
       } else {
         const listWrap = document.createElement('div');
@@ -1825,6 +2139,7 @@
       const filterBtn = e.target.closest('.tc-lib-class-filter');
       if (filterBtn) {
         filters.assignments.classFilter = filterBtn.dataset.class;
+        saveFilters();
         renderAssignmentsTab();
       }
     });
@@ -1851,6 +2166,7 @@
     document.addEventListener('input', (e) => {
       if (e.target.id === 'assignmentSearch') {
         filters.assignments.searchQuery = e.target.value;
+        saveFilters();
         renderAssignmentsTab();
       }
     });
@@ -1859,6 +2175,7 @@
     document.addEventListener('change', (e) => {
       if (e.target.id === 'assignmentTypeFilter') {
         filters.assignments.typeFilter = e.target.value;
+        saveFilters();
         renderAssignmentsTab();
       }
     });
@@ -1867,6 +2184,7 @@
     document.addEventListener('change', (e) => {
       if (e.target.id === 'assignmentCategoryFilter') {
         filters.assignments.categoryFilter = e.target.value;
+        saveFilters();
         renderAssignmentsTab();
       }
     });
@@ -1875,6 +2193,7 @@
     document.addEventListener('input', (e) => {
       if (e.target.id === 'lessonSearch') {
         filters.lessons.searchQuery = e.target.value;
+        saveFilters();
         renderLessonsTab();
       }
     });
