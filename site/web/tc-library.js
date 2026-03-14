@@ -68,6 +68,235 @@
     ['paper', 'Paper']
   ];
 
+  // ── SVG Icon System ───────────────────────────────────────────────────────────
+
+  const ICON_PATHS = {
+    fileText: [
+      { tag: 'path', d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' },
+      { tag: 'polyline', points: '14 2 14 8 20 8' },
+      { tag: 'line', x1: '16', y1: '13', x2: '8', y2: '13' },
+      { tag: 'line', x1: '16', y1: '17', x2: '8', y2: '17' },
+      { tag: 'polyline', points: '10 9 9 9 8 9' }
+    ],
+    bookOpen: [
+      { tag: 'path', d: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z' },
+      { tag: 'path', d: 'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z' }
+    ],
+    clipboard: [
+      { tag: 'rect', x: '9', y: '2', width: '6', height: '4', rx: '1' },
+      { tag: 'path', d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }
+    ],
+    clipboardPlus: [
+      { tag: 'rect', x: '9', y: '2', width: '6', height: '4', rx: '1' },
+      { tag: 'path', d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' },
+      { tag: 'path', d: 'M12 11v6' },
+      { tag: 'path', d: 'M9 14h6' }
+    ],
+    refreshCw: [
+      { tag: 'polyline', points: '23 4 23 10 17 10' },
+      { tag: 'polyline', points: '1 20 1 14 7 14' },
+      { tag: 'path', d: 'M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15' }
+    ],
+    checkCircle: [
+      { tag: 'path', d: 'M22 11.08V12a10 10 0 1 1-5.93-9.14' },
+      { tag: 'polyline', points: '22 4 12 14.01 9 11.01' }
+    ],
+    inbox: [
+      { tag: 'polyline', points: '22 12 16 12 14 15 10 15 8 12 2 12' },
+      { tag: 'path', d: 'M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z' }
+    ],
+    upload: [
+      { tag: 'path', d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' },
+      { tag: 'polyline', points: '17 8 12 3 7 8' },
+      { tag: 'line', x1: '12', y1: '3', x2: '12', y2: '15' }
+    ],
+    download: [
+      { tag: 'path', d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' },
+      { tag: 'polyline', points: '7 10 12 15 17 10' },
+      { tag: 'line', x1: '12', y1: '15', x2: '12', y2: '3' }
+    ],
+    search: [
+      { tag: 'circle', cx: '11', cy: '11', r: '8' },
+      { tag: 'line', x1: '21', y1: '21', x2: '16.65', y2: '16.65' }
+    ],
+    filter: [
+      { tag: 'path', d: 'M22 3H2l8 9.46V19l4 2V12.46L22 3z' }
+    ],
+    chevronDown: [
+      { tag: 'polyline', points: '6 9 12 15 18 9' }
+    ],
+    chevronRight: [
+      { tag: 'polyline', points: '9 18 15 12 9 6' }
+    ],
+    folder: [
+      { tag: 'path', d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z' }
+    ],
+    folderOpen: [
+      { tag: 'path', d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z' },
+      { tag: 'path', d: 'M2 10h20' }
+    ],
+    barChart: [
+      { tag: 'line', x1: '18', y1: '20', x2: '18', y2: '10' },
+      { tag: 'line', x1: '12', y1: '20', x2: '12', y2: '4' },
+      { tag: 'line', x1: '6', y1: '20', x2: '6', y2: '14' },
+      { tag: 'line', x1: '2', y1: '20', x2: '22', y2: '20' }
+    ],
+    arrowRight: [
+      { tag: 'line', x1: '5', y1: '12', x2: '19', y2: '12' },
+      { tag: 'polyline', points: '12 5 19 12 12 19' }
+    ],
+    x: [
+      { tag: 'line', x1: '18', y1: '6', x2: '6', y2: '18' },
+      { tag: 'line', x1: '6', y1: '6', x2: '18', y2: '18' }
+    ]
+  };
+
+  function createIcon(name, size = 16) {
+    const shapes = ICON_PATHS[name];
+    if (!shapes) {
+      console.warn(`[tc-library] createIcon: unknown icon "${name}"`);
+      return document.createTextNode('?');
+    }
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.5');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    shapes.forEach(shape => {
+      const el = document.createElementNS(NS, shape.tag);
+      Object.keys(shape).forEach(attr => {
+        if (attr !== 'tag') el.setAttribute(attr, shape[attr]);
+      });
+      svg.appendChild(el);
+    });
+    return svg;
+  }
+
+  // ── Style Normalization ───────────────────────────────────────────────────────
+
+  function injectStyles() {
+    if (document.getElementById('tc-lib-normalized')) return;
+    const style = document.createElement('style');
+    style.id = 'tc-lib-normalized';
+    style.textContent = `
+      .tc-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:white; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s ease, transform .1s ease; user-select:none; }
+      .tc-btn:hover { background:rgba(255,255,255,.12); transform:translateY(-1px); }
+      .tc-btn:active { transform:translateY(0); }
+      .tc-btn:disabled { opacity:.45; pointer-events:none; }
+      .tc-btn.active { background:rgba(96,165,250,.18); border-color:rgba(96,165,250,.35); }
+      .tc-card { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:10px; transition:border-color .15s ease, transform .15s ease; }
+      .tc-card.interactive:hover { border-color:rgba(255,255,255,.18); transform:translateY(-1px); }
+      @keyframes rc-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      .tc-lib-shimmer { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 75%); background-size: 200% 100%; animation: rc-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ── Loading Skeleton ──────────────────────────────────────────────────────────
+
+  function renderLoadingSkeleton() {
+    const main = $("tcLibraryMain");
+    if (!main) return;
+    const skeleton = document.createElement('div');
+    skeleton.id = 'tcLibSkeleton';
+    for (let i = 0; i < 3; i++) {
+      const section = document.createElement('div');
+      section.style.cssText = 'margin-bottom:16px;';
+      const header = document.createElement('div');
+      header.className = 'tc-lib-shimmer';
+      header.style.cssText = 'height:44px; margin-bottom:12px;';
+      section.appendChild(header);
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;';
+      for (let j = 0; j < 2; j++) {
+        const card = document.createElement('div');
+        card.className = 'tc-lib-shimmer';
+        card.style.cssText = 'height:120px;';
+        grid.appendChild(card);
+      }
+      section.appendChild(grid);
+      skeleton.appendChild(section);
+    }
+    main.appendChild(skeleton);
+  }
+
+  // ── Filter Persistence ────────────────────────────────────────────────────────
+
+  function saveFilters() {
+    try {
+      const data = {
+        assignments: {
+          classFilter: filters.assignments.classFilter,
+          searchQuery: filters.assignments.searchQuery,
+          typeFilter: filters.assignments.typeFilter,
+          categoryFilter: filters.assignments.categoryFilter
+        },
+        lessons: {
+          searchQuery: filters.lessons.searchQuery
+        },
+        collapsedLanes: [...collapsedLanes],
+        hierarchyExpandState: [...hierarchyExpandState.entries()]
+      };
+      localStorage.setItem('rc_tc_library_filters_v1', JSON.stringify(data));
+    } catch (e) {
+      console.warn('[tc-library] Could not save filters:', e.message);
+    }
+  }
+
+  function loadFilters() {
+    try {
+      const raw = localStorage.getItem('rc_tc_library_filters_v1');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return;
+
+      if (data.assignments && typeof data.assignments === 'object') {
+        if (typeof data.assignments.classFilter === 'string') {
+          filters.assignments.classFilter = data.assignments.classFilter;
+        }
+        if (typeof data.assignments.searchQuery === 'string') {
+          filters.assignments.searchQuery = data.assignments.searchQuery;
+        }
+        if (typeof data.assignments.typeFilter === 'string') {
+          filters.assignments.typeFilter = data.assignments.typeFilter;
+        }
+        if (typeof data.assignments.categoryFilter === 'string') {
+          filters.assignments.categoryFilter = data.assignments.categoryFilter;
+        }
+      }
+
+      if (data.lessons && typeof data.lessons === 'object') {
+        if (typeof data.lessons.searchQuery === 'string') {
+          filters.lessons.searchQuery = data.lessons.searchQuery;
+        }
+      }
+
+      if (Array.isArray(data.collapsedLanes)) {
+        collapsedLanes.clear();
+        data.collapsedLanes.forEach(id => {
+          if (typeof id === 'string') collapsedLanes.add(id);
+        });
+      }
+
+      if (Array.isArray(data.hierarchyExpandState)) {
+        hierarchyExpandState.clear();
+        data.hierarchyExpandState.forEach(entry => {
+          if (Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' && typeof entry[1] === 'boolean') {
+            hierarchyExpandState.set(entry[0], entry[1]);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[tc-library] Could not load filters:', e.message);
+    }
+  }
+
   // ── State ─────────────────────────────────────────────────────────────────────
 
   let _currentTab = "assignments";
@@ -104,6 +333,7 @@
 
   async function init() {
     console.log("[tc-library] Initializing...");
+    injectStyles();
     // Inject responsive analytics grid style once
     if (!document.getElementById('tc-lib-analytics-responsive-style')) {
       const style = document.createElement('style');
@@ -117,10 +347,14 @@
       ].join('\n');
       document.head.appendChild(style);
     }
+    loadFilters();
     renderTabBar();
     renderTabContent();
+    renderLoadingSkeleton();
     await loadAssignments();
     await loadLessons();
+    const skeleton = document.getElementById('tcLibSkeleton');
+    if (skeleton) skeleton.remove();
     attachEventListeners();
     switchTab("assignments");
   }
@@ -130,35 +364,62 @@
   function renderTabBar() {
     const main = $("tcLibraryMain");
     if (!main) return;
-    const tabBarHtml = `
-      <div class="tc-lib-tabs">
-        <button class="tc-btn tc-lib-tab-btn" data-tab="assignments" style="display: flex; align-items: center; gap: 8px;">
-          <span>📝</span> Assignments
-        </button>
-        <button class="tc-btn tc-lib-tab-btn" data-tab="lessons" style="display: flex; align-items: center; gap: 8px;">
-          <span>📖</span> Lessons
-        </button>
-        <div style="flex: 1;"></div>
-        <button id="uploadPaperBtn" class="tc-btn" style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          Upload Paper Assignment
-        </button>
-        <button id="exportLibraryBtn" class="tc-btn" style="margin-left: 8px;">
-          Export Library JSON
-        </button>
-      </div>
-    `;
-    main.insertAdjacentHTML('afterbegin', tabBarHtml);
+
+    const tabsContainer = document.createElement('div');
+    tabsContainer.className = 'tc-lib-tabs';
+
+    const assignmentsBtn = document.createElement('button');
+    assignmentsBtn.className = 'tc-btn tc-lib-tab-btn';
+    assignmentsBtn.dataset.tab = 'assignments';
+    assignmentsBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    assignmentsBtn.appendChild(createIcon('fileText'));
+    assignmentsBtn.appendChild(document.createTextNode(' Assignments'));
+    tabsContainer.appendChild(assignmentsBtn);
+
+    const lessonsBtn = document.createElement('button');
+    lessonsBtn.className = 'tc-btn tc-lib-tab-btn';
+    lessonsBtn.dataset.tab = 'lessons';
+    lessonsBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    lessonsBtn.appendChild(createIcon('bookOpen'));
+    lessonsBtn.appendChild(document.createTextNode(' Lessons'));
+    tabsContainer.appendChild(lessonsBtn);
+
+    const spacer = document.createElement('div');
+    spacer.style.cssText = 'flex:1;';
+    tabsContainer.appendChild(spacer);
+
+    const uploadBtn = document.createElement('button');
+    uploadBtn.id = 'uploadPaperBtn';
+    uploadBtn.className = 'tc-btn';
+    uploadBtn.style.cssText = 'margin-left:auto; display:flex; align-items:center; gap:6px;';
+    uploadBtn.appendChild(createIcon('upload'));
+    uploadBtn.appendChild(document.createTextNode(' Upload Paper Assignment'));
+    tabsContainer.appendChild(uploadBtn);
+
+    const exportBtn = document.createElement('button');
+    exportBtn.id = 'exportLibraryBtn';
+    exportBtn.className = 'tc-btn';
+    exportBtn.style.cssText = 'margin-left:8px; display:flex; align-items:center; gap:6px;';
+    exportBtn.appendChild(createIcon('download'));
+    exportBtn.appendChild(document.createTextNode(' Export Library JSON'));
+    tabsContainer.appendChild(exportBtn);
+
+    main.insertBefore(tabsContainer, main.firstChild);
   }
 
   function renderTabContent() {
     const main = $("tcLibraryMain");
     if (!main) return;
-    const contentHtml = `
-      <div id="assignmentsTab" class="tc-lib-tab-content" style="display: none;"></div>
-      <div id="lessonsTab" class="tc-lib-tab-content" style="display: none;"></div>
-    `;
-    main.insertAdjacentHTML('beforeend', contentHtml);
+    const assignmentsTab = document.createElement('div');
+    assignmentsTab.id = 'assignmentsTab';
+    assignmentsTab.className = 'tc-lib-tab-content';
+    assignmentsTab.style.display = 'none';
+    const lessonsTab = document.createElement('div');
+    lessonsTab.id = 'lessonsTab';
+    lessonsTab.className = 'tc-lib-tab-content';
+    lessonsTab.style.display = 'none';
+    main.appendChild(assignmentsTab);
+    main.appendChild(lessonsTab);
   }
 
   function switchTab(tabName) {
@@ -572,8 +833,12 @@
     card.className = 'tc-card';
     card.style.cssText = 'padding: 20px; text-align: center;';
     const labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;';
-    labelEl.textContent = label;
+    labelEl.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;';
+    if (typeof label === 'string') {
+      labelEl.textContent = label;
+    } else {
+      labelEl.appendChild(label);
+    }
     const valueEl = document.createElement('div');
     valueEl.style.cssText = `font-size: 32px; font-weight: 600; color: ${highlight || 'white'};`;
     valueEl.textContent = value != null ? String(value) : '\u2014';
@@ -635,7 +900,7 @@
 
   // ── Lane Section Wrapper ──────────────────────────────────────────────────────
 
-  function renderLaneSection(laneId, emoji, title, count, renderContent) {
+  function renderLaneSection(laneId, iconName, title, count, renderContent) {
     const expanded = isLaneExpanded(laneId);
     const wrapper = document.createElement('div');
     wrapper.className = 'tc-lib-lane';
@@ -659,10 +924,6 @@
     toggleIcon.style.cssText = `font-size:14px; transition:transform .2s ease; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'});`;
     toggleIcon.textContent = '\u25be';
 
-    const emojiEl = document.createElement('span');
-    emojiEl.textContent = emoji;
-    emojiEl.setAttribute('aria-hidden', 'true');
-
     const titleEl = document.createElement('span');
     titleEl.style.cssText = 'font-size:18px; font-weight:600;';
     titleEl.textContent = title;
@@ -672,7 +933,7 @@
     badge.textContent = count;
 
     header.appendChild(toggleIcon);
-    header.appendChild(emojiEl);
+    header.appendChild(createIcon(iconName));
     header.appendChild(titleEl);
     header.appendChild(badge);
     wrapper.appendChild(header);
@@ -716,8 +977,34 @@
   function renderUpcomingLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
-      empty.textContent = 'No upcoming assignments match the current filters.';
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:12px; color:rgba(255,255,255,.40);';
+      iconWrap.appendChild(createIcon('clipboardPlus', 32));
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:16px; font-weight:600; margin-bottom:6px;';
+      title.textContent = 'No upcoming assignments';
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'font-size:13px; color:rgba(255,255,255,.50); margin-bottom:16px;';
+      subtitle.textContent = 'Create one in Work \u2192 or upload a paper assignment';
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex; gap:8px; justify-content:center; flex-wrap:wrap;';
+      const uploadBtn = document.createElement('button');
+      uploadBtn.className = 'tc-btn';
+      uploadBtn.appendChild(createIcon('upload'));
+      uploadBtn.appendChild(document.createTextNode(' Upload Paper'));
+      uploadBtn.addEventListener('click', () => openUploadPaperModal());
+      const workBtn = document.createElement('button');
+      workBtn.className = 'tc-btn';
+      workBtn.appendChild(createIcon('arrowRight'));
+      workBtn.appendChild(document.createTextNode(' Go to Work \u2192'));
+      workBtn.addEventListener('click', () => { window.location.href = '/teacher/work/'; });
+      btnRow.appendChild(uploadBtn);
+      btnRow.appendChild(workBtn);
+      empty.appendChild(iconWrap);
+      empty.appendChild(title);
+      empty.appendChild(subtitle);
+      empty.appendChild(btnRow);
       return empty;
     }
     const grid = document.createElement('div');
@@ -789,8 +1076,15 @@
   function renderCurrentLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
-      empty.textContent = 'No active assignments match the current filters.';
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:12px; color:rgba(255,255,255,.40);';
+      iconWrap.appendChild(createIcon('refreshCw', 32));
+      const msg = document.createElement('div');
+      msg.style.cssText = 'font-size:14px; color:rgba(255,255,255,.40);';
+      msg.textContent = 'No active assignments match the current filters.';
+      empty.appendChild(iconWrap);
+      empty.appendChild(msg);
       return empty;
     }
     const grid = document.createElement('div');
@@ -894,8 +1188,15 @@
   function renderFinalizedLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
-      empty.textContent = 'No finalized assignments match the current filters.';
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:12px; color:rgba(255,255,255,.40);';
+      iconWrap.appendChild(createIcon('checkCircle', 32));
+      const msg = document.createElement('div');
+      msg.style.cssText = 'font-size:14px; color:rgba(255,255,255,.40);';
+      msg.textContent = 'No finalized assignments match the current filters.';
+      empty.appendChild(iconWrap);
+      empty.appendChild(msg);
       return empty;
     }
     return renderFinalizedTree(assignments);
@@ -1447,8 +1748,9 @@
     header.appendChild(toggleIcon);
 
     const titleEl = document.createElement('span');
-    titleEl.style.cssText = 'font-size:14px; font-weight:600;';
-    titleEl.textContent = '\uD83D\uDCCA Analytics';
+    titleEl.style.cssText = 'display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:600;';
+    titleEl.appendChild(createIcon('barChart'));
+    titleEl.appendChild(document.createTextNode(' Analytics'));
     header.appendChild(titleEl);
 
     header.addEventListener('click', () => toggleLane(laneId));
@@ -1713,11 +2015,18 @@
     const kpis = calculateAssignmentKPIs();
     const kpiGrid = document.createElement('div');
     kpiGrid.className = 'tc-lib-kpi-grid';
-    kpiGrid.appendChild(renderKPI('\uD83D\uDCCB Upcoming', kpis.upcomingCount));
-    kpiGrid.appendChild(renderKPI('\uD83D\uDD04 In Progress', kpis.currentCount, '#60a5fa'));
-    kpiGrid.appendChild(renderKPI('\u2705 Finalized', kpis.finalizedCount, '#4ade80'));
+    function makeKpiLabel(iconName, text) {
+      const span = document.createElement('span');
+      span.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
+      span.appendChild(createIcon(iconName, 14));
+      span.appendChild(document.createTextNode(text));
+      return span;
+    }
+    kpiGrid.appendChild(renderKPI(makeKpiLabel('clipboard', 'Upcoming'), kpis.upcomingCount));
+    kpiGrid.appendChild(renderKPI(makeKpiLabel('refreshCw', 'In Progress'), kpis.currentCount, '#60a5fa'));
+    kpiGrid.appendChild(renderKPI(makeKpiLabel('checkCircle', 'Finalized'), kpis.finalizedCount, '#4ade80'));
     const avgColor = kpis.avgScore != null ? scoreColor(kpis.avgScore) : 'rgba(255,255,255,.40)';
-    kpiGrid.appendChild(renderKPI('\uD83D\uDCCA Avg Score', kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
+    kpiGrid.appendChild(renderKPI(makeKpiLabel('barChart', 'Avg Score'), kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
     container.appendChild(kpiGrid);
 
     // Pre-compute filtered + lane lists (shared by analytics section and lane rendering)
@@ -1854,33 +2163,37 @@
       const emptyCard = document.createElement('div');
       emptyCard.className = 'tc-card';
       emptyCard.style.cssText = 'text-align:center; padding:48px 24px;';
-      const emptyIcon = document.createElement('div');
-      emptyIcon.style.cssText = 'font-size:48px; margin-bottom:16px;';
-      emptyIcon.textContent = '\uD83D\uDCED';
+      const emptyIconWrap = document.createElement('div');
+      emptyIconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.40);';
+      emptyIconWrap.appendChild(createIcon('inbox', 48));
       const emptyTitle = document.createElement('h3');
       emptyTitle.style.cssText = 'margin:0 0 8px 0; font-size:20px;';
       emptyTitle.textContent = 'No assignments yet';
-      emptyCard.appendChild(emptyIcon);
-      emptyCard.appendChild(emptyTitle);
       const emptyMsg = document.createElement('p');
       emptyMsg.style.cssText = 'margin:0; color:rgba(255,255,255,.60);';
-      // SAFETY: static text + static link, no user data
-      emptyMsg.innerHTML = 'Create one in <a href="/teacher/work/" style="color:#60a5fa;">Work \u2192</a>';
+      const workLink = document.createElement('a');
+      workLink.href = '/teacher/work/';
+      workLink.style.cssText = 'color:#60a5fa;';
+      workLink.textContent = 'Work \u2192';
+      emptyMsg.appendChild(document.createTextNode('Create one in '));
+      emptyMsg.appendChild(workLink);
+      emptyCard.appendChild(emptyIconWrap);
+      emptyCard.appendChild(emptyTitle);
       emptyCard.appendChild(emptyMsg);
       container.appendChild(emptyCard);
     } else {
       container.appendChild(
-        renderLaneSection('upcoming', '\uD83D\uDCCB', 'Upcoming', upcomingList.length, (div) => {
+        renderLaneSection('upcoming', 'clipboard', 'Upcoming', upcomingList.length, (div) => {
           div.appendChild(renderUpcomingLane(upcomingList));
         })
       );
       container.appendChild(
-        renderLaneSection('current', '\uD83D\uDD04', 'Active', currentList.length, (div) => {
+        renderLaneSection('current', 'refreshCw', 'Active', currentList.length, (div) => {
           div.appendChild(renderCurrentLane(currentList));
         })
       );
       container.appendChild(
-        renderLaneSection('finalized', '\u2705', 'Finalized', finalizedList.length, (div) => {
+        renderLaneSection('finalized', 'checkCircle', 'Finalized', finalizedList.length, (div) => {
           div.appendChild(renderFinalizedLane(finalizedList));
         })
       );
@@ -1948,20 +2261,36 @@
     container.appendChild(searchWrap);
 
     if (!lessonsData || !lessonsData.sections) {
-      // SAFETY: static text, no user data
       const emptyCard = document.createElement('div');
       emptyCard.className = 'tc-card';
       emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
-      emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">📚</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">Lessons index not available</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Run the generator script to build the lessons index.</p>';
+      const iconWrap = document.createElement('div');
+      iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.40);';
+      iconWrap.appendChild(createIcon('bookOpen', 48));
+      const heading = document.createElement('h3');
+      heading.style.cssText = 'margin: 0 0 8px 0; font-size: 20px;';
+      heading.textContent = 'Lessons index not available';
+      const msg = document.createElement('p');
+      msg.style.cssText = 'margin: 0; color: rgba(255,255,255,.60);';
+      msg.textContent = 'Run the generator script to build the lessons index.';
+      emptyCard.appendChild(iconWrap);
+      emptyCard.appendChild(heading);
+      emptyCard.appendChild(msg);
       container.appendChild(emptyCard);
     } else {
       const filteredSections = filterLessons();
       if (filteredSections.length === 0) {
-        // SAFETY: static text, no user data
         const emptyCard = document.createElement('div');
         emptyCard.className = 'tc-card';
         emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
-        emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">🔍</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">No lessons found</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Try a different search term</p>';
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:16px; color:rgba(255,255,255,.40);';
+        iconWrap.appendChild(createIcon('search', 32));
+        const msg = document.createElement('p');
+        msg.style.cssText = 'margin: 0; color: rgba(255,255,255,.60);';
+        msg.textContent = 'No lessons match your search.';
+        emptyCard.appendChild(iconWrap);
+        emptyCard.appendChild(msg);
         container.appendChild(emptyCard);
       } else {
         const listWrap = document.createElement('div');
@@ -2090,6 +2419,7 @@
       if (filterBtn) {
         filters.assignments.classFilter = filterBtn.dataset.class;
         renderAssignmentsTab();
+        saveFilters();
       }
     });
 
@@ -2098,7 +2428,7 @@
       const laneHeader = e.target.closest('.tc-lib-lane-header');
       if (laneHeader) {
         const laneId = laneHeader.dataset.lane;
-        if (laneId) toggleLane(laneId);
+        if (laneId) { toggleLane(laneId); saveFilters(); }
       }
     });
 
@@ -2107,7 +2437,7 @@
       const hierNode = e.target.closest('.tc-hier-node');
       if (hierNode) {
         const nodeId = hierNode.dataset.hierNode;
-        if (nodeId) toggleHierarchy(nodeId);
+        if (nodeId) { toggleHierarchy(nodeId); saveFilters(); }
       }
     });
 
@@ -2116,6 +2446,7 @@
       if (e.target.id === 'assignmentSearch') {
         filters.assignments.searchQuery = e.target.value;
         renderAssignmentsTab();
+        saveFilters();
       }
     });
 
@@ -2124,6 +2455,7 @@
       if (e.target.id === 'assignmentTypeFilter') {
         filters.assignments.typeFilter = e.target.value;
         renderAssignmentsTab();
+        saveFilters();
       }
     });
 
@@ -2132,6 +2464,7 @@
       if (e.target.id === 'assignmentCategoryFilter') {
         filters.assignments.categoryFilter = e.target.value;
         renderAssignmentsTab();
+        saveFilters();
       }
     });
 
@@ -2140,6 +2473,7 @@
       if (e.target.id === 'lessonSearch') {
         filters.lessons.searchQuery = e.target.value;
         renderLessonsTab();
+        saveFilters();
       }
     });
 
