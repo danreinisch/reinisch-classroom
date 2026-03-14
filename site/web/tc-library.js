@@ -1,6 +1,7 @@
 /**
  * tc-library.js
- * Teacher Center Library page - browse, search, and manage assignments and lessons
+ * Teacher Center Library page — 3-lane lifecycle layout (Upcoming / Active / Finalized)
+ * with category badges, hierarchical Finalized cataloging, and updated KPIs.
  */
 
 (async () => {
@@ -9,16 +10,47 @@
   // Page guard - only run on library page
   if (!location.pathname.startsWith("/teacher/library")) return;
 
-  // Import data adapter
+  // Import data adapter and constants
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
 
-  // State
+  // ── Categories ────────────────────────────────────────────────────────────────
+
+  const CATEGORIES = [
+    'Reading Comprehension',
+    'Vocabulary',
+    'Writing',
+    'Grammar',
+    'Social Skills',
+    'Daily Living',
+    'Community',
+    'Self-Advocacy',
+    'Assessment',
+    'Other'
+  ];
+
+  const CATEGORY_COLORS = {
+    'Reading Comprehension': { bg: 'rgba(96,165,250,.22)',  color: '#60a5fa' },
+    'Vocabulary':            { bg: 'rgba(167,139,250,.22)', color: '#a78bfa' },
+    'Writing':               { bg: 'rgba(52,211,153,.22)',  color: '#34d399' },
+    'Grammar':               { bg: 'rgba(45,212,191,.22)',  color: '#2dd4bf' },
+    'Social Skills':         { bg: 'rgba(251,191,36,.22)',  color: '#fbbf24' },
+    'Daily Living':          { bg: 'rgba(251,146,60,.22)',  color: '#fb923c' },
+    'Community':             { bg: 'rgba(248,113,113,.22)', color: '#f87171' },
+    'Self-Advocacy':         { bg: 'rgba(129,140,248,.22)', color: '#818cf8' },
+    'Assessment':            { bg: 'rgba(244,63,94,.22)',   color: '#f43f5e' },
+    'Other':                 { bg: 'rgba(148,163,184,.18)', color: '#94a3b8' }
+  };
+
+  // ── State ─────────────────────────────────────────────────────────────────────
+
   let _currentTab = "assignments";
   let assignmentsData = [];
+  let instancesData = [];
+  let submissionsData = [];
   let lessonsData = null;
   let syncStatus = "loading";
 
@@ -27,37 +59,37 @@
     assignments: {
       classFilter: "All Classes",
       searchQuery: "",
-      typeFilter: "All"
+      typeFilter: "All",
+      categoryFilter: "All"
     },
     lessons: {
       searchQuery: ""
     }
   };
 
-  // Initialize
+  // Collapse state for lane headers
+  const collapsedLanes = new Set(); // lane IDs: 'upcoming', 'current', 'finalized'
+
+  // Expand state for hierarchy nodes (nodeId → boolean)
+  const hierarchyExpandState = new Map();
+
+  // ── Initialization ────────────────────────────────────────────────────────────
+
   async function init() {
     console.log("[tc-library] Initializing...");
-    
-    // Render UI structure
     renderTabBar();
     renderTabContent();
-    
-    // Load data
     await loadAssignments();
     await loadLessons();
-    
-    // Attach event listeners
     attachEventListeners();
-    
-    // Show initial tab
     switchTab("assignments");
   }
 
-  // Render tab bar
+  // ── Tab Bar ───────────────────────────────────────────────────────────────────
+
   function renderTabBar() {
     const main = $("tcLibraryMain");
     if (!main) return;
-
     const tabBarHtml = `
       <div class="tc-lib-tabs">
         <button class="tc-btn tc-lib-tab-btn" data-tab="assignments" style="display: flex; align-items: center; gap: 8px;">
@@ -76,43 +108,30 @@
         </button>
       </div>
     `;
-
     main.insertAdjacentHTML('afterbegin', tabBarHtml);
   }
 
-  // Render tab content containers
   function renderTabContent() {
     const main = $("tcLibraryMain");
     if (!main) return;
-
     const contentHtml = `
       <div id="assignmentsTab" class="tc-lib-tab-content" style="display: none;"></div>
       <div id="lessonsTab" class="tc-lib-tab-content" style="display: none;"></div>
     `;
-
     main.insertAdjacentHTML('beforeend', contentHtml);
   }
 
-  // Switch tabs
   function switchTab(tabName) {
     _currentTab = tabName;
-
-    // Update tab buttons
     document.querySelectorAll('.tc-lib-tab-btn').forEach(btn => {
-      const isActive = btn.dataset.tab === tabName;
-      btn.classList.toggle('active', isActive);
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
     });
-
-    // Show/hide tab content
     const assignmentsTab = $("assignmentsTab");
     const lessonsTab = $("lessonsTab");
-
     if (assignmentsTab && lessonsTab) {
       assignmentsTab.style.display = tabName === "assignments" ? "block" : "none";
       lessonsTab.style.display = tabName === "lessons" ? "block" : "none";
     }
-
-    // Render content
     if (tabName === "assignments") {
       renderAssignmentsTab();
     } else if (tabName === "lessons") {
@@ -120,51 +139,63 @@
     }
   }
 
-  // Load assignments from Supabase/localStorage
+  // ── Data Loading ──────────────────────────────────────────────────────────────
+
   async function loadAssignments() {
-    console.log("[tc-library] Loading assignments...");
-    
+    console.log("[tc-library] Loading assignments, instances, submissions...");
     try {
       const remote = await isRemote();
-      
-      // Try Supabase first
       if (remote) {
         console.log("[tc-library] Fetching from Supabase...");
-        assignmentsData = await db.listAssignments();
+        [assignmentsData, instancesData, submissionsData] = await Promise.all([
+          db.listAssignments(),
+          db.listAssignmentInstances().catch(err => {
+            console.warn("[tc-library] Could not load instances:", err.message);
+            return [];
+          }),
+          db.listSubmissions().catch(err => {
+            console.warn("[tc-library] Could not load submissions:", err.message);
+            return [];
+          })
+        ]);
         syncStatus = "synced";
       } else {
-        // Fall back to localStorage drafts
         console.log("[tc-library] Falling back to localStorage...");
-        const draftsJson = localStorage.getItem("rc_tc_work_drafts_v1");
-        if (draftsJson) {
-          const drafts = JSON.parse(draftsJson);
-          assignmentsData = drafts.map(draft => ({
-            id: draft.id,
-            title: draft.title,
-            type: draft.assignment?.kind || "file",
-            series: draft.className || "",
-            created_at: draft.submittedAt || new Date().toISOString(),
-            meta: draft.mapping?.text || "",
-            page: draft.assignment?.text || ""
-          }));
-        } else {
-          assignmentsData = [];
+        let localAssignments = await db.listAssignments().catch(() => []);
+        if (localAssignments.length === 0) {
+          const draftsJson = localStorage.getItem("rc_tc_work_drafts_v1");
+          if (draftsJson) {
+            const drafts = JSON.parse(draftsJson);
+            localAssignments = drafts.map(draft => ({
+              id: draft.id,
+              title: draft.title,
+              type: draft.assignment?.kind || "file",
+              series: draft.className || "",
+              created_at: draft.submittedAt || new Date().toISOString(),
+              meta: draft.mapping?.text || "",
+              page: draft.assignment?.text || ""
+            }));
+          }
         }
+        assignmentsData = localAssignments;
+        [instancesData, submissionsData] = await Promise.all([
+          db.listAssignmentInstances().catch(() => []),
+          db.listSubmissions().catch(() => [])
+        ]);
         syncStatus = "local";
       }
-
-      console.log(`[tc-library] Loaded ${assignmentsData.length} assignments`);
+      console.log(`[tc-library] Loaded ${assignmentsData.length} assignments, ${instancesData.length} instances, ${submissionsData.length} submissions`);
     } catch (err) {
       console.error("[tc-library] Error loading assignments:", err);
       syncStatus = "error";
       assignmentsData = [];
+      instancesData = [];
+      submissionsData = [];
     }
   }
 
-  // Load lessons from lessons-index.json
   async function loadLessons() {
     console.log("[tc-library] Loading lessons...");
-    
     try {
       const response = await fetch('/assets/content/lessons-index.json');
       if (response.ok) {
@@ -180,45 +211,740 @@
     }
   }
 
-  // Render Assignments tab
+  // ── Category Helpers ──────────────────────────────────────────────────────────
+
+  function getAssignmentCategory(assignment) {
+    const meta = assignment.meta;
+    if (meta && typeof meta === 'object' && meta.category) return meta.category;
+    if (meta && typeof meta === 'string') {
+      try {
+        const parsed = JSON.parse(meta);
+        if (parsed && parsed.category) return parsed.category;
+      } catch (_) {}
+    }
+    return 'Uncategorized';
+  }
+
+  function renderCategoryBadge(category) {
+    const span = document.createElement('span');
+    const colors = CATEGORY_COLORS[category];
+    if (colors) {
+      span.style.cssText = `background:${colors.bg};color:${colors.color};padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;font-weight:500;display:inline-block;`;
+    } else {
+      span.style.cssText = 'background:rgba(148,163,184,.15);color:rgba(148,163,184,.80);padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;font-weight:500;display:inline-block;';
+    }
+    span.textContent = category;
+    return span;
+  }
+
+  // ── Lane Computation ──────────────────────────────────────────────────────────
+
+  /**
+   * Computes which lifecycle lane an assignment belongs to.
+   * @param {Object} assignment
+   * @param {Array}  allInstances
+   * @returns {'upcoming'|'current'|'finalized'}
+   */
+  function computeLane(assignment, allInstances) {
+    const instances = allInstances.filter(i => i.assignment_id === assignment.id);
+    if (instances.length === 0) return 'upcoming';
+    const allGraded = instances.every(i => i.status === 'Graded');
+    if (allGraded && assignment.active === false) return 'finalized';
+    const anyActive = instances.some(i =>
+      ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
+    );
+    if (anyActive) return 'current';
+    if (allGraded) return 'finalized';
+    return 'upcoming';
+  }
+
+  // ── Assignment Stats ──────────────────────────────────────────────────────────
+
+  function getAssignmentStats(assignment, allInstances, allSubmissions) {
+    const instances = allInstances.filter(i => i.assignment_id === assignment.id);
+    const instanceIds = new Set(instances.map(i => i.id));
+    // Handle both remote (nested assignment_instances) and local (flat instance_id)
+    const subs = allSubmissions.filter(s => {
+      if (s.assignment_instances) return instanceIds.has(s.assignment_instances.id);
+      return instanceIds.has(s.instance_id);
+    });
+    const scores = subs
+      .map(s => s.score_total)
+      .filter(s => s != null && !isNaN(Number(s)))
+      .map(Number);
+    const avgScore = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : null;
+    const gradedCount = instances.filter(i => i.status === 'Graded').length;
+    const submittedCount = instances.filter(i => i.status === 'Submitted').length;
+    return { avgScore, studentCount: instances.length, gradedCount, submittedCount, scores };
+  }
+
+  // ── Score Color ───────────────────────────────────────────────────────────────
+
+  function scoreColor(score) {
+    if (score == null) return 'rgba(255,255,255,.40)';
+    if (score >= 80) return '#4ade80';
+    if (score >= 60) return '#fbbf24';
+    return '#f87171';
+  }
+
+  // ── Hierarchical Cataloging Helpers ──────────────────────────────────────────
+
+  /**
+   * Returns the school year label for a date (Aug–Jul boundary).
+   */
+  function getSchoolYear(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-indexed; August = 7
+    if (month >= 7) {
+      return `${year}\u2013${year + 1} School Year`;
+    }
+    return `${year - 1}\u2013${year} School Year`;
+  }
+
+  function getCurrentSchoolYear() {
+    return getSchoolYear(new Date());
+  }
+
+  function getMonthLabel(date) {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  function getCurrentMonthLabel() {
+    return getMonthLabel(new Date());
+  }
+
+  /**
+   * Returns a "Week of Mon D – Fri D" label for the ISO week containing the date.
+   */
+  function getWeekLabel(date) {
+    const d = new Date(date);
+    const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon
+    const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + offsetToMonday);
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monStr = `${MN[monday.getMonth()]} ${monday.getDate()}`;
+    if (monday.getMonth() !== friday.getMonth()) {
+      return `Week of ${monStr} \u2013 ${MN[friday.getMonth()]} ${friday.getDate()}`;
+    }
+    return `Week of ${monStr} \u2013 ${friday.getDate()}`;
+  }
+
+  /**
+   * Returns the date used to catalog a finalized assignment
+   * (latest submitted_at of its submissions, falling back to created_at).
+   */
+  function getFinalizationDate(assignment, allInstances, allSubmissions) {
+    const instances = allInstances.filter(i => i.assignment_id === assignment.id);
+    const instanceIds = new Set(instances.map(i => i.id));
+    const subs = allSubmissions.filter(s => {
+      if (s.assignment_instances) return instanceIds.has(s.assignment_instances.id);
+      return instanceIds.has(s.instance_id);
+    });
+    const dates = subs
+      .filter(s => s.submitted_at)
+      .map(s => new Date(s.submitted_at))
+      .filter(d => !isNaN(d.getTime()));
+    if (dates.length > 0) {
+      return new Date(Math.max(...dates.map(d => d.getTime())));
+    }
+    return new Date(assignment.created_at || Date.now());
+  }
+
+  /**
+   * Groups finalized assignments into a nested Map:
+   * Map<schoolYear, Map<monthLabel, Map<weekLabel, Array<{assignment, date}>>>>
+   */
+  function groupFinalizedAssignments(finalized) {
+    const tree = new Map();
+    finalized.forEach(assignment => {
+      const date = getFinalizationDate(assignment, instancesData, submissionsData);
+      const syLabel = getSchoolYear(date);
+      const monthLabel = getMonthLabel(date);
+      const weekLabel = getWeekLabel(date);
+      if (!tree.has(syLabel)) tree.set(syLabel, new Map());
+      const syMap = tree.get(syLabel);
+      if (!syMap.has(monthLabel)) syMap.set(monthLabel, new Map());
+      const monthMap = syMap.get(monthLabel);
+      if (!monthMap.has(weekLabel)) monthMap.set(weekLabel, []);
+      monthMap.get(weekLabel).push({ assignment, date });
+    });
+    // Sort entries within each week newest first
+    for (const [, monthMap] of tree) {
+      for (const [, weekMap] of monthMap) {
+        for (const [, entries] of weekMap) {
+          entries.sort((a, b) => b.date - a.date);
+        }
+      }
+    }
+    return tree;
+  }
+
+  // ── KPIs ──────────────────────────────────────────────────────────────────────
+
+  function calculateAssignmentKPIs() {
+    let upcomingCount = 0, currentCount = 0, finalizedCount = 0;
+    const finalizedScores = [];
+    assignmentsData.forEach(a => {
+      const lane = computeLane(a, instancesData);
+      if (lane === 'upcoming') {
+        upcomingCount++;
+      } else if (lane === 'current') {
+        currentCount++;
+      } else if (lane === 'finalized') {
+        finalizedCount++;
+        const stats = getAssignmentStats(a, instancesData, submissionsData);
+        if (stats.avgScore != null) finalizedScores.push(stats.avgScore);
+      }
+    });
+    const avgScore = finalizedScores.length > 0
+      ? Math.round(finalizedScores.reduce((a, b) => a + b, 0) / finalizedScores.length)
+      : null;
+    return { upcomingCount, currentCount, finalizedCount, avgScore };
+  }
+
+  function renderKPI(label, value, highlight) {
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding: 20px; text-align: center;';
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;';
+    labelEl.textContent = label;
+    const valueEl = document.createElement('div');
+    valueEl.style.cssText = `font-size: 32px; font-weight: 600; color: ${highlight || 'white'};`;
+    valueEl.textContent = value != null ? String(value) : '\u2014';
+    card.appendChild(labelEl);
+    card.appendChild(valueEl);
+    return card;
+  }
+
+  // ── Filtering ─────────────────────────────────────────────────────────────────
+
+  function filterAssignments() {
+    let filtered = [...assignmentsData];
+    if (filters.assignments.classFilter !== "All Classes") {
+      filtered = filtered.filter(a => a.series === filters.assignments.classFilter);
+    }
+    if (filters.assignments.searchQuery.trim()) {
+      const query = filters.assignments.searchQuery.toLowerCase();
+      filtered = filtered.filter(a => (a.title || "").toLowerCase().includes(query));
+    }
+    if (filters.assignments.typeFilter !== "All") {
+      filtered = filtered.filter(a => a.type === filters.assignments.typeFilter);
+    }
+    if (filters.assignments.categoryFilter !== "All") {
+      if (filters.assignments.categoryFilter === "Uncategorized") {
+        filtered = filtered.filter(a => getAssignmentCategory(a) === 'Uncategorized');
+      } else {
+        filtered = filtered.filter(a => getAssignmentCategory(a) === filters.assignments.categoryFilter);
+      }
+    }
+    return filtered;
+  }
+
+  function updateActiveClassFilter() {
+    document.querySelectorAll('.tc-lib-class-filter').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.class === filters.assignments.classFilter);
+    });
+  }
+
+  // ── Collapse/Expand Helpers ───────────────────────────────────────────────────
+
+  function isLaneExpanded(laneId) { return !collapsedLanes.has(laneId); }
+
+  function toggleLane(laneId) {
+    if (collapsedLanes.has(laneId)) { collapsedLanes.delete(laneId); }
+    else { collapsedLanes.add(laneId); }
+    renderAssignmentsTab();
+  }
+
+  function isHierarchyExpanded(nodeId, defaultExpanded) {
+    if (!hierarchyExpandState.has(nodeId)) hierarchyExpandState.set(nodeId, defaultExpanded);
+    return hierarchyExpandState.get(nodeId);
+  }
+
+  function toggleHierarchy(nodeId) {
+    const current = hierarchyExpandState.has(nodeId) ? hierarchyExpandState.get(nodeId) : true;
+    hierarchyExpandState.set(nodeId, !current);
+    renderAssignmentsTab();
+  }
+
+  // ── Lane Section Wrapper ──────────────────────────────────────────────────────
+
+  function renderLaneSection(laneId, emoji, title, count, renderContent) {
+    const expanded = isLaneExpanded(laneId);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tc-lib-lane';
+    wrapper.style.cssText = 'margin-bottom: 24px;';
+
+    const header = document.createElement('div');
+    header.className = 'tc-lib-lane-header';
+    header.dataset.lane = laneId;
+    header.style.cssText = [
+      'display:flex; align-items:center; gap:12px;',
+      'padding:14px 20px;',
+      'background:rgba(255,255,255,.05);',
+      'border:1px solid rgba(255,255,255,.10);',
+      'border-radius:10px;',
+      'cursor:pointer; user-select:none;',
+      'transition:background .15s ease;',
+      `margin-bottom:${expanded ? '12px' : '0'};`
+    ].join('');
+
+    const toggleIcon = document.createElement('span');
+    toggleIcon.style.cssText = `font-size:14px; transition:transform .2s ease; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'});`;
+    toggleIcon.textContent = '\u25be';
+
+    const emojiEl = document.createElement('span');
+    emojiEl.textContent = emoji;
+    emojiEl.setAttribute('aria-hidden', 'true');
+
+    const titleEl = document.createElement('span');
+    titleEl.style.cssText = 'font-size:18px; font-weight:600;';
+    titleEl.textContent = title;
+
+    const badge = document.createElement('span');
+    badge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 10px; font-size:13px; font-weight:500;';
+    badge.textContent = count;
+
+    header.appendChild(toggleIcon);
+    header.appendChild(emojiEl);
+    header.appendChild(titleEl);
+    header.appendChild(badge);
+    wrapper.appendChild(header);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'tc-lib-lane-content';
+    contentDiv.style.cssText = `display:${expanded ? 'block' : 'none'};`;
+    if (expanded) renderContent(contentDiv);
+    wrapper.appendChild(contentDiv);
+    return wrapper;
+  }
+
+  // ── Upcoming Lane ─────────────────────────────────────────────────────────────
+
+  function renderUpcomingLane(assignments) {
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
+      empty.textContent = 'No upcoming assignments match the current filters.';
+      return empty;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'tc-lib-grid';
+    assignments.forEach(a => grid.appendChild(renderUpcomingCard(a)));
+    return grid;
+  }
+
+  function renderUpcomingCard(assignment) {
+    const category = getAssignmentCategory(assignment);
+    const createdDate = assignment.created_at
+      ? new Date(assignment.created_at).toLocaleDateString()
+      : 'Unknown';
+    const card = document.createElement('div');
+    card.className = 'tc-card assignment-card';
+    card.dataset.id = assignment.id || '';
+    card.style.cssText = 'padding:20px; cursor:pointer;';
+
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;';
+    const titleEl = document.createElement('h3');
+    titleEl.style.cssText = 'margin:0; font-size:16px; flex:1; line-height:1.3;';
+    titleEl.textContent = assignment.title || 'Untitled';
+    const typePill = document.createElement('span');
+    typePill.style.cssText = 'background:rgba(96,165,250,.20);color:#60a5fa;padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;flex-shrink:0;';
+    typePill.textContent = assignment.type || 'file';
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(typePill);
+    card.appendChild(headerRow);
+
+    const catRow = document.createElement('div');
+    catRow.style.cssText = 'margin-bottom:8px;';
+    catRow.appendChild(renderCategoryBadge(category));
+    card.appendChild(catRow);
+
+    if (assignment.series) {
+      const seriesEl = document.createElement('div');
+      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
+      seriesEl.textContent = '\uD83D\uDCDA ' + assignment.series;
+      card.appendChild(seriesEl);
+    }
+
+    const dateEl = document.createElement('div');
+    dateEl.style.cssText = 'color:rgba(255,255,255,.40); font-size:12px; margin-bottom:14px;';
+    dateEl.textContent = 'Created: ' + createdDate;
+    card.appendChild(dateEl);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:8px;';
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'tc-btn issue-btn';
+    issueBtn.dataset.id = assignment.id || '';
+    issueBtn.style.cssText = 'flex:1; font-size:13px;';
+    issueBtn.textContent = 'Issue to Class';
+    btnRow.appendChild(issueBtn);
+    card.appendChild(btnRow);
+    return card;
+  }
+
+  // ── Current / Active Lane ─────────────────────────────────────────────────────
+
+  function renderCurrentLane(assignments) {
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
+      empty.textContent = 'No active assignments match the current filters.';
+      return empty;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'tc-lib-grid';
+    assignments.forEach(a => grid.appendChild(renderCurrentCard(a)));
+    return grid;
+  }
+
+  function renderCurrentCard(assignment) {
+    const category = getAssignmentCategory(assignment);
+    const stats = getAssignmentStats(assignment, instancesData, submissionsData);
+    const instances = instancesData.filter(i => i.assignment_id === assignment.id);
+    const dueDates = instances.map(i => i.due_at).filter(Boolean);
+    const nearestDue = dueDates.length > 0
+      ? new Date(Math.min(...dueDates.map(d => new Date(d).getTime())))
+      : null;
+
+    const card = document.createElement('div');
+    card.className = 'tc-card assignment-card';
+    card.dataset.id = assignment.id || '';
+    card.style.cssText = 'padding:20px; cursor:pointer;';
+
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;';
+    const titleEl = document.createElement('h3');
+    titleEl.style.cssText = 'margin:0; font-size:16px; flex:1; line-height:1.3;';
+    titleEl.textContent = assignment.title || 'Untitled';
+    const typePill = document.createElement('span');
+    typePill.style.cssText = 'background:rgba(96,165,250,.20);color:#60a5fa;padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;flex-shrink:0;';
+    typePill.textContent = assignment.type || 'file';
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(typePill);
+    card.appendChild(headerRow);
+
+    const catRow = document.createElement('div');
+    catRow.style.cssText = 'margin-bottom:8px;';
+    catRow.appendChild(renderCategoryBadge(category));
+    card.appendChild(catRow);
+
+    if (assignment.series) {
+      const seriesEl = document.createElement('div');
+      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px;';
+      seriesEl.textContent = '\uD83D\uDCDA ' + assignment.series;
+      card.appendChild(seriesEl);
+    }
+
+    if (nearestDue) {
+      const dueEl = document.createElement('div');
+      dueEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px;';
+      dueEl.textContent = '\uD83D\uDCC5 Due: ' + nearestDue.toLocaleDateString();
+      card.appendChild(dueEl);
+    }
+
+    const progressRow = document.createElement('div');
+    progressRow.style.cssText = 'margin-bottom:14px;';
+    const progressLabel = document.createElement('div');
+    progressLabel.style.cssText = 'font-size:12px; color:rgba(255,255,255,.50); margin-bottom:5px;';
+    const total = stats.studentCount;
+    const submitted = stats.submittedCount + stats.gradedCount;
+    progressLabel.textContent = `${submitted} / ${total} submitted`;
+    progressRow.appendChild(progressLabel);
+    const barOuter = document.createElement('div');
+    barOuter.style.cssText = 'height:4px; background:rgba(255,255,255,.10); border-radius:2px; overflow:hidden;';
+    const barInner = document.createElement('div');
+    const pct = total > 0 ? Math.round((submitted / total) * 100) : 0;
+    barInner.style.cssText = `height:100%; width:${pct}%; background:rgba(52,211,153,.70); border-radius:2px; transition:width .3s ease;`;
+    barOuter.appendChild(barInner);
+    progressRow.appendChild(barOuter);
+    card.appendChild(progressRow);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:8px;';
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'tc-btn';
+    viewBtn.style.cssText = 'flex:1; font-size:13px;';
+    viewBtn.textContent = 'View Details';
+    viewBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showAssignmentDetail(assignment.id);
+    });
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'tc-btn issue-btn';
+    issueBtn.dataset.id = assignment.id || '';
+    issueBtn.style.cssText = 'font-size:13px; padding:6px 12px;';
+    issueBtn.textContent = '+ Issue';
+    btnRow.appendChild(viewBtn);
+    btnRow.appendChild(issueBtn);
+    card.appendChild(btnRow);
+    return card;
+  }
+
+  // ── Finalized Lane ────────────────────────────────────────────────────────────
+
+  function renderFinalizedLane(assignments) {
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.40); font-size:14px;';
+      empty.textContent = 'No finalized assignments match the current filters.';
+      return empty;
+    }
+    return renderFinalizedTree(assignments);
+  }
+
+  function renderFinalizedTree(assignments) {
+    const tree = groupFinalizedAssignments(assignments);
+    const currentSY = getCurrentSchoolYear();
+    const currentMonth = getCurrentMonthLabel();
+    const container = document.createElement('div');
+    container.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+
+    // Sort school years newest first
+    const sortedYears = Array.from(tree.keys()).sort((a, b) => {
+      const aYear = parseInt(a.split('\u2013')[0], 10) || 0;
+      const bYear = parseInt(b.split('\u2013')[0], 10) || 0;
+      return bYear - aYear;
+    });
+
+    sortedYears.forEach(syLabel => {
+      const syDefaultExpanded = (syLabel === currentSY);
+      const syId = 'sy-' + syLabel.replace(/[^a-zA-Z0-9]/g, '_');
+      const syExpanded = isHierarchyExpanded(syId, syDefaultExpanded);
+      const monthMap = tree.get(syLabel);
+      let syCount = 0;
+      for (const [, weekMap] of monthMap) {
+        for (const [, entries] of weekMap) syCount += entries.length;
+      }
+
+      const syWrapper = document.createElement('div');
+      const syHeader = document.createElement('div');
+      syHeader.className = 'tc-hier-node';
+      syHeader.dataset.hierNode = syId;
+      syHeader.style.cssText = [
+        'display:flex; align-items:center; gap:8px;',
+        'padding:10px 14px;',
+        'background:rgba(255,255,255,.06);',
+        'border:1px solid rgba(255,255,255,.10);',
+        'border-radius:8px; cursor:pointer; user-select:none;',
+        `margin-bottom:${syExpanded ? '6px' : '0'};`
+      ].join('');
+
+      const syToggle = document.createElement('span');
+      syToggle.style.cssText = `font-size:12px; transition:transform .2s; display:inline-block; transform:rotate(${syExpanded ? '0deg' : '-90deg'});`;
+      syToggle.textContent = '\u25be';
+      const syIcon = document.createElement('span');
+      syIcon.setAttribute('aria-hidden', 'true');
+      syIcon.textContent = syExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
+      const syTitle = document.createElement('span');
+      syTitle.style.cssText = 'font-size:15px; font-weight:600; flex:1;';
+      syTitle.textContent = syLabel;
+      const syBadge = document.createElement('span');
+      syBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40);';
+      syBadge.textContent = `${syCount} assignment${syCount !== 1 ? 's' : ''}`;
+      syHeader.appendChild(syToggle);
+      syHeader.appendChild(syIcon);
+      syHeader.appendChild(syTitle);
+      syHeader.appendChild(syBadge);
+      syWrapper.appendChild(syHeader);
+
+      const syContent = document.createElement('div');
+      syContent.style.cssText = `display:${syExpanded ? 'block' : 'none'}; padding-left:16px;`;
+
+      if (syExpanded) {
+        const sortedMonths = Array.from(monthMap.keys()).sort((a, b) => new Date(b) - new Date(a));
+        sortedMonths.forEach(monthLabel => {
+          const monthDefaultExpanded = syDefaultExpanded && (monthLabel === currentMonth);
+          const monthId = syId + '-m-' + monthLabel.replace(/[^a-zA-Z0-9]/g, '_');
+          const monthExpanded = isHierarchyExpanded(monthId, monthDefaultExpanded);
+          const weekMap = monthMap.get(monthLabel);
+          let monthCount = 0;
+          for (const [, entries] of weekMap) monthCount += entries.length;
+
+          const monthWrapper = document.createElement('div');
+          monthWrapper.style.cssText = 'margin-bottom:4px;';
+          const monthHeader = document.createElement('div');
+          monthHeader.className = 'tc-hier-node';
+          monthHeader.dataset.hierNode = monthId;
+          monthHeader.style.cssText = [
+            'display:flex; align-items:center; gap:8px;',
+            'padding:8px 12px;',
+            'background:rgba(255,255,255,.04);',
+            'border:1px solid rgba(255,255,255,.07);',
+            'border-radius:6px; cursor:pointer; user-select:none;',
+            `margin-bottom:${monthExpanded ? '4px' : '0'};`
+          ].join('');
+
+          const monthToggle = document.createElement('span');
+          monthToggle.style.cssText = `font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(${monthExpanded ? '0deg' : '-90deg'});`;
+          monthToggle.textContent = '\u25be';
+          const monthIcon = document.createElement('span');
+          monthIcon.setAttribute('aria-hidden', 'true');
+          monthIcon.textContent = monthExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
+          const monthTitle = document.createElement('span');
+          monthTitle.style.cssText = 'font-size:14px; font-weight:500; flex:1;';
+          monthTitle.textContent = monthLabel;
+          const monthBadge = document.createElement('span');
+          monthBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40);';
+          monthBadge.textContent = String(monthCount);
+          monthHeader.appendChild(monthToggle);
+          monthHeader.appendChild(monthIcon);
+          monthHeader.appendChild(monthTitle);
+          monthHeader.appendChild(monthBadge);
+          monthWrapper.appendChild(monthHeader);
+
+          const monthContent = document.createElement('div');
+          monthContent.style.cssText = `display:${monthExpanded ? 'block' : 'none'}; padding-left:16px;`;
+
+          if (monthExpanded) {
+            const sortedWeeks = Array.from(weekMap.keys()).sort((a, b) => {
+              const extractDate = (wk) => {
+                const m = wk.match(/Week of (\w+ \d+)/);
+                return m ? new Date(m[1]) : new Date(0);
+              };
+              return extractDate(b) - extractDate(a);
+            });
+
+            sortedWeeks.forEach(weekLabel => {
+              const weekId = monthId + '-w-' + weekLabel.replace(/[^a-zA-Z0-9]/g, '_');
+              const weekExpanded = isHierarchyExpanded(weekId, false);
+              const entries = weekMap.get(weekLabel);
+
+              const weekWrapper = document.createElement('div');
+              weekWrapper.style.cssText = 'margin-bottom:4px;';
+              const weekHeader = document.createElement('div');
+              weekHeader.className = 'tc-hier-node';
+              weekHeader.dataset.hierNode = weekId;
+              weekHeader.style.cssText = [
+                'display:flex; align-items:center; gap:8px;',
+                'padding:7px 12px;',
+                'background:rgba(255,255,255,.02);',
+                'border:1px solid rgba(255,255,255,.05);',
+                'border-radius:5px; cursor:pointer; user-select:none;',
+                `margin-bottom:${weekExpanded ? '4px' : '0'};`
+              ].join('');
+
+              const weekToggle = document.createElement('span');
+              weekToggle.style.cssText = `font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(${weekExpanded ? '0deg' : '-90deg'});`;
+              weekToggle.textContent = '\u25be';
+              const weekIcon = document.createElement('span');
+              weekIcon.setAttribute('aria-hidden', 'true');
+              weekIcon.textContent = weekExpanded ? '\uD83D\uDCC2' : '\uD83D\uDCC1';
+              const weekTitle = document.createElement('span');
+              weekTitle.style.cssText = 'font-size:13px; flex:1;';
+              weekTitle.textContent = weekLabel;
+              const weekBadge = document.createElement('span');
+              weekBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40);';
+              weekBadge.textContent = String(entries.length);
+              weekHeader.appendChild(weekToggle);
+              weekHeader.appendChild(weekIcon);
+              weekHeader.appendChild(weekTitle);
+              weekHeader.appendChild(weekBadge);
+              weekWrapper.appendChild(weekHeader);
+
+              const weekContent = document.createElement('div');
+              weekContent.style.cssText = `display:${weekExpanded ? 'block' : 'none'}; padding-left:12px; padding-top:4px;`;
+              if (weekExpanded) {
+                entries.forEach(({ assignment }) => {
+                  weekContent.appendChild(renderFinalizedEntry(assignment));
+                });
+              }
+              weekWrapper.appendChild(weekContent);
+              monthContent.appendChild(weekWrapper);
+            });
+          }
+
+          monthWrapper.appendChild(monthContent);
+          syContent.appendChild(monthWrapper);
+        });
+      }
+
+      syWrapper.appendChild(syContent);
+      container.appendChild(syWrapper);
+    });
+
+    return container;
+  }
+
+  function renderFinalizedEntry(assignment) {
+    const category = getAssignmentCategory(assignment);
+    const stats = getAssignmentStats(assignment, instancesData, submissionsData);
+    const score = stats.avgScore;
+    const sColor = scoreColor(score);
+
+    const row = document.createElement('div');
+    row.className = 'tc-card assignment-card';
+    row.dataset.id = assignment.id || '';
+    row.style.cssText = 'padding:12px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; margin-bottom:4px;';
+
+    const icon = document.createElement('span');
+    icon.textContent = '\uD83D\uDCC4';
+    icon.setAttribute('aria-hidden', 'true');
+    row.appendChild(icon);
+
+    const titleSection = document.createElement('div');
+    titleSection.style.cssText = 'flex:1; min-width:0;';
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;';
+    titleEl.textContent = assignment.title || 'Untitled';
+    titleSection.appendChild(titleEl);
+    titleSection.appendChild(renderCategoryBadge(category));
+    row.appendChild(titleSection);
+
+    const statsSection = document.createElement('div');
+    statsSection.style.cssText = 'display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;';
+    const scoreEl = document.createElement('div');
+    scoreEl.style.cssText = `font-size:15px; font-weight:700; color:${sColor};`;
+    scoreEl.textContent = score != null ? `${score}% avg` : '\u2014';
+    statsSection.appendChild(scoreEl);
+    const countEl = document.createElement('div');
+    countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40);';
+    countEl.textContent = `${stats.studentCount} student${stats.studentCount !== 1 ? 's' : ''}`;
+    statsSection.appendChild(countEl);
+    row.appendChild(statsSection);
+    return row;
+  }
+
+  // ── Main Assignments Tab Renderer ─────────────────────────────────────────────
+
   function renderAssignmentsTab() {
     const container = $("assignmentsTab");
     if (!container) return;
-
-    // Clear previous content
     container.innerHTML = '';
-
-    // Filter assignments
-    const filtered = filterAssignments();
-
-    // Calculate KPIs
-    const kpis = calculateAssignmentKPIs();
 
     // Sync status row
     const statusRow = document.createElement('div');
-    statusRow.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; color: rgba(255,255,255,.60);';
-    const statusLabel = document.createElement('span');
-    statusLabel.textContent = 'Status:';
-    statusRow.appendChild(statusLabel);
+    statusRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:14px; color:rgba(255,255,255,.60);';
+    statusRow.appendChild(document.createTextNode('Status:\u00a0'));
     statusRow.appendChild(getSyncStatusBadge());
     container.appendChild(statusRow);
 
     // KPI grid
+    const kpis = calculateAssignmentKPIs();
     const kpiGrid = document.createElement('div');
     kpiGrid.className = 'tc-lib-kpi-grid';
-    kpiGrid.appendChild(renderKPI('Total Assignments', kpis.total));
-    kpiGrid.appendChild(renderKPI('File Assignments', kpis.fileCount));
-    kpiGrid.appendChild(renderKPI('Link Assignments', kpis.linkCount));
-    kpiGrid.appendChild(renderKPI('With Mapping', kpis.withMeta));
+    kpiGrid.appendChild(renderKPI('\uD83D\uDCCB Upcoming', kpis.upcomingCount));
+    kpiGrid.appendChild(renderKPI('\uD83D\uDD04 In Progress', kpis.currentCount, '#60a5fa'));
+    kpiGrid.appendChild(renderKPI('\u2705 Finalized', kpis.finalizedCount, '#4ade80'));
+    const avgColor = kpis.avgScore != null ? scoreColor(kpis.avgScore) : 'rgba(255,255,255,.40)';
+    kpiGrid.appendChild(renderKPI('\uD83D\uDCCA Avg Score', kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
     container.appendChild(kpiGrid);
 
     // Filter bar
     const filterBar = document.createElement('div');
-    filterBar.style.cssText = 'margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;';
+    filterBar.style.cssText = 'margin-bottom:24px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
     // Class filter buttons
     const classBtnWrap = document.createElement('div');
-    classBtnWrap.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap;';
+    classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
     const allClassBtn = document.createElement('button');
     allClassBtn.className = 'tc-lib-class-filter tc-btn';
     allClassBtn.dataset.class = 'All Classes';
@@ -240,15 +966,15 @@
     searchInput.className = 'tc-input';
     searchInput.placeholder = 'Search assignments...';
     searchInput.value = filters.assignments.searchQuery;
-    searchInput.style.cssText = 'flex: 1; min-width: 200px; padding: 8px 12px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white;';
+    searchInput.style.cssText = 'flex:1; min-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
     filterBar.appendChild(searchInput);
 
-    // Type filter select
+    // Type filter
     const typeFilter = document.createElement('select');
     typeFilter.id = 'assignmentTypeFilter';
     typeFilter.className = 'tc-input';
-    typeFilter.style.cssText = 'padding: 8px 12px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: white;';
-    [['All', 'All Types'], ['file', 'File'], ['link', 'Link']].forEach(([val, label]) => {
+    typeFilter.style.cssText = 'padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+    [['All', 'All Types'], ['file', 'File'], ['link', 'Link'], ['paper', 'Paper']].forEach(([val, label]) => {
       const opt = document.createElement('option');
       opt.value = val;
       opt.textContent = label;
@@ -257,94 +983,84 @@
     typeFilter.value = filters.assignments.typeFilter;
     filterBar.appendChild(typeFilter);
 
+    // Category filter
+    const catFilter = document.createElement('select');
+    catFilter.id = 'assignmentCategoryFilter';
+    catFilter.className = 'tc-input';
+    catFilter.style.cssText = 'padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+    const allCatOpt = document.createElement('option');
+    allCatOpt.value = 'All';
+    allCatOpt.textContent = 'All Categories';
+    catFilter.appendChild(allCatOpt);
+    const uncatOpt = document.createElement('option');
+    uncatOpt.value = 'Uncategorized';
+    uncatOpt.textContent = 'Uncategorized';
+    catFilter.appendChild(uncatOpt);
+    CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      catFilter.appendChild(opt);
+    });
+    catFilter.value = filters.assignments.categoryFilter;
+    filterBar.appendChild(catFilter);
+
     container.appendChild(filterBar);
 
-    // Assignment cards or empty state
-    if (filtered.length === 0) {
+    // Empty state if no assignments at all
+    if (assignmentsData.length === 0) {
       const emptyCard = document.createElement('div');
       emptyCard.className = 'tc-card';
-      emptyCard.style.cssText = 'text-align: center; padding: 48px 24px;';
+      emptyCard.style.cssText = 'text-align:center; padding:48px 24px;';
       const emptyIcon = document.createElement('div');
-      emptyIcon.style.cssText = 'font-size: 48px; margin-bottom: 16px;';
-      emptyIcon.textContent = '📭';
+      emptyIcon.style.cssText = 'font-size:48px; margin-bottom:16px;';
+      emptyIcon.textContent = '\uD83D\uDCED';
       const emptyTitle = document.createElement('h3');
-      emptyTitle.style.cssText = 'margin: 0 0 8px 0; font-size: 20px;';
-      emptyTitle.textContent = 'No assignments found';
+      emptyTitle.style.cssText = 'margin:0 0 8px 0; font-size:20px;';
+      emptyTitle.textContent = 'No assignments yet';
       emptyCard.appendChild(emptyIcon);
       emptyCard.appendChild(emptyTitle);
       const emptyMsg = document.createElement('p');
-      emptyMsg.style.cssText = 'margin: 0; color: rgba(255,255,255,.60);';
-      if (assignmentsData.length === 0) {
-        // SAFETY: static text + static link, no user data
-        emptyMsg.innerHTML = 'Create one in <a href="/teacher/work/" style="color: #60a5fa;">Work →</a>';
-      } else {
-        emptyMsg.textContent = 'Try adjusting your filters';
-      }
+      emptyMsg.style.cssText = 'margin:0; color:rgba(255,255,255,.60);';
+      // SAFETY: static text + static link, no user data
+      emptyMsg.innerHTML = 'Create one in <a href="/teacher/work/" style="color:#60a5fa;">Work \u2192</a>';
       emptyCard.appendChild(emptyMsg);
       container.appendChild(emptyCard);
     } else {
-      const grid = document.createElement('div');
-      grid.className = 'tc-lib-grid';
-      filtered.forEach(a => grid.appendChild(renderAssignmentCard(a)));
-      container.appendChild(grid);
+      const filtered = filterAssignments();
+      const upcomingList   = filtered.filter(a => computeLane(a, instancesData) === 'upcoming');
+      const currentList    = filtered.filter(a => computeLane(a, instancesData) === 'current');
+      const finalizedList  = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
+
+      container.appendChild(
+        renderLaneSection('upcoming', '\uD83D\uDCCB', 'Upcoming', upcomingList.length, (div) => {
+          div.appendChild(renderUpcomingLane(upcomingList));
+        })
+      );
+      container.appendChild(
+        renderLaneSection('current', '\uD83D\uDD04', 'Active', currentList.length, (div) => {
+          div.appendChild(renderCurrentLane(currentList));
+        })
+      );
+      container.appendChild(
+        renderLaneSection('finalized', '\u2705', 'Finalized', finalizedList.length, (div) => {
+          div.appendChild(renderFinalizedLane(finalizedList));
+        })
+      );
+
+      if (filtered.length === 0) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'text-align:center; padding:24px; color:rgba(255,255,255,.40); font-size:14px;';
+        hint.textContent = 'No assignments match the current filters.';
+        container.appendChild(hint);
+      }
     }
 
-    // Update active filter button
     updateActiveClassFilter();
   }
 
-  // Filter assignments based on current filters
-  function filterAssignments() {
-    let filtered = [...assignmentsData];
+  // ── Sync Status Badge ─────────────────────────────────────────────────────────
 
-    // Class filter
-    if (filters.assignments.classFilter !== "All Classes") {
-      filtered = filtered.filter(a => a.series === filters.assignments.classFilter);
-    }
-
-    // Search filter
-    if (filters.assignments.searchQuery.trim()) {
-      const query = filters.assignments.searchQuery.toLowerCase();
-      filtered = filtered.filter(a => 
-        (a.title || "").toLowerCase().includes(query)
-      );
-    }
-
-    // Type filter
-    if (filters.assignments.typeFilter !== "All") {
-      filtered = filtered.filter(a => a.type === filters.assignments.typeFilter);
-    }
-
-    return filtered;
-  }
-
-  // Calculate assignment KPIs
-  function calculateAssignmentKPIs() {
-    return {
-      total: assignmentsData.length,
-      fileCount: assignmentsData.filter(a => a.type === "file").length,
-      linkCount: assignmentsData.filter(a => a.type === "link").length,
-      withMeta: assignmentsData.filter(a => a.meta && (typeof a.meta === 'string' ? a.meta.trim() : true)).length
-    };
-  }
-
-  // Render a KPI card — returns a DOM element
-  function renderKPI(label, value) {
-    const card = document.createElement('div');
-    card.className = 'tc-card';
-    card.style.cssText = 'padding: 20px; text-align: center;';
-    const labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size: 14px; color: rgba(255,255,255,.60); margin-bottom: 8px;';
-    labelEl.textContent = label;
-    const valueEl = document.createElement('div');
-    valueEl.style.cssText = 'font-size: 32px; font-weight: 600;';
-    valueEl.textContent = String(value);
-    card.appendChild(labelEl);
-    card.appendChild(valueEl);
-    return card;
-  }
-
-  // Get sync status badge — returns a DOM element
   function getSyncStatusBadge() {
     const span = document.createElement('span');
     span.style.cssText = 'display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;';
@@ -370,73 +1086,13 @@
     return span;
   }
 
-  // Render an assignment card — returns a DOM element
-  function renderAssignmentCard(assignment) {
-    const createdDate = assignment.created_at
-      ? new Date(assignment.created_at).toLocaleDateString()
-      : 'Unknown';
+  // ── Lessons Tab ───────────────────────────────────────────────────────────────
 
-    const card = document.createElement('div');
-    card.className = 'tc-card assignment-card';
-    card.dataset.id = assignment.id || '';
-    card.style.cssText = 'padding: 20px; cursor: pointer; transition: transform 0.2s, border-color 0.2s;';
-
-    // Header row
-    const headerRow = document.createElement('div');
-    headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;';
-    const titleEl = document.createElement('h3');
-    titleEl.style.cssText = 'margin: 0; font-size: 18px; flex: 1;';
-    titleEl.textContent = assignment.title || 'Untitled';
-    const typePill = document.createElement('span');
-    typePill.className = 'tc-pill';
-    typePill.style.cssText = 'background: rgba(96,165,250,.20); color: #60a5fa; padding: 4px 12px; border-radius: 12px; font-size: 12px; white-space: nowrap;';
-    typePill.textContent = assignment.type || 'file';
-    headerRow.appendChild(titleEl);
-    headerRow.appendChild(typePill);
-    card.appendChild(headerRow);
-
-    if (assignment.series) {
-      const seriesEl = document.createElement('div');
-      seriesEl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 8px;';
-      seriesEl.textContent = '📚 ' + assignment.series;
-      card.appendChild(seriesEl);
-    }
-
-    const dateEl = document.createElement('div');
-    dateEl.style.cssText = 'color: rgba(255,255,255,.40); font-size: 13px; margin-bottom: 16px;';
-    dateEl.textContent = 'Created: ' + createdDate;
-    card.appendChild(dateEl);
-
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display: flex; gap: 8px;';
-    const issueBtn = document.createElement('button');
-    issueBtn.className = 'tc-btn issue-btn';
-    issueBtn.dataset.id = assignment.id || '';
-    issueBtn.style.cssText = 'flex: 1; font-size: 14px;';
-    issueBtn.textContent = 'Issue to Class';
-    btnRow.appendChild(issueBtn);
-    card.appendChild(btnRow);
-
-    return card;
-  }
-
-  // Update active class filter button
-  function updateActiveClassFilter() {
-    document.querySelectorAll('.tc-lib-class-filter').forEach(btn => {
-      const isActive = btn.dataset.class === filters.assignments.classFilter;
-      btn.classList.toggle('active', isActive);
-    });
-  }
-
-  // Render Lessons tab
   function renderLessonsTab() {
     const container = $("lessonsTab");
     if (!container) return;
-
-    // Clear previous content
     container.innerHTML = '';
 
-    // Search bar — use createElement so .value is set safely
     const searchWrap = document.createElement('div');
     searchWrap.style.cssText = 'margin-bottom: 24px;';
     const searchInput = document.createElement('input');
@@ -449,7 +1105,6 @@
     searchWrap.appendChild(searchInput);
     container.appendChild(searchWrap);
 
-    // Empty state or lessons
     if (!lessonsData || !lessonsData.sections) {
       // SAFETY: static text, no user data
       const emptyCard = document.createElement('div');
@@ -458,9 +1113,7 @@
       emptyCard.innerHTML = '<div style="font-size: 48px; margin-bottom: 16px;">📚</div><h3 style="margin: 0 0 8px 0; font-size: 20px;">Lessons index not available</h3><p style="margin: 0; color: rgba(255,255,255,.60);">Run the generator script to build the lessons index.</p>';
       container.appendChild(emptyCard);
     } else {
-      // Filter lessons based on search
       const filteredSections = filterLessons();
-
       if (filteredSections.length === 0) {
         // SAFETY: static text, no user data
         const emptyCard = document.createElement('div');
@@ -479,138 +1132,94 @@
     }
   }
 
-  // Filter lessons based on search query
   function filterLessons() {
     if (!lessonsData || !lessonsData.sections) return [];
-
     const query = filters.lessons.searchQuery.toLowerCase().trim();
     if (!query) return lessonsData.sections;
-
-    // Filter sections, units, and presentations
     return lessonsData.sections
       .map(section => {
-        // Check if section name matches
-        if (section.name.toLowerCase().includes(query)) {
-          return section;
-        }
-
-        // Filter units
+        if (section.name.toLowerCase().includes(query)) return section;
         const filteredUnits = section.units
           .map(unit => {
-            // Check if unit name matches
-            if (unit.name.toLowerCase().includes(query)) {
-              return unit;
-            }
-
-            // Filter presentations
+            if (unit.name.toLowerCase().includes(query)) return unit;
             const filteredPresentations = unit.presentations.filter(pres =>
               pres.name.toLowerCase().includes(query)
             );
-
-            if (filteredPresentations.length > 0) {
-              return { ...unit, presentations: filteredPresentations };
-            }
-
+            if (filteredPresentations.length > 0) return { ...unit, presentations: filteredPresentations };
             return null;
           })
           .filter(unit => unit !== null);
-
-        if (filteredUnits.length > 0) {
-          return { ...section, units: filteredUnits };
-        }
-
+        if (filteredUnits.length > 0) return { ...section, units: filteredUnits };
         return null;
       })
       .filter(section => section !== null);
   }
 
-  // Render a lesson section — returns a DOM element
   function renderLessonSection(section, sectionIndex) {
     const sectionId = `section-${sectionIndex}`;
-
     const wrapper = document.createElement('div');
     wrapper.className = 'tc-card lesson-section';
     wrapper.style.cssText = 'padding: 0; overflow: hidden;';
-
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'lesson-section-toggle';
     toggleBtn.dataset.target = sectionId;
     toggleBtn.style.cssText = 'width: 100%; padding: 20px; background: transparent; border: none; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 600;';
-
     const nameSpan = document.createElement('span');
     nameSpan.textContent = section.name;
     const iconSpan = document.createElement('span');
     iconSpan.className = 'toggle-icon';
     iconSpan.style.cssText = 'font-size: 20px; transition: transform 0.2s;';
-    iconSpan.textContent = '▼';
-
+    iconSpan.textContent = '\u25bc';
     toggleBtn.appendChild(nameSpan);
     toggleBtn.appendChild(iconSpan);
     wrapper.appendChild(toggleBtn);
-
     const contentDiv = document.createElement('div');
     contentDiv.id = sectionId;
     contentDiv.className = 'lesson-section-content';
     contentDiv.style.cssText = 'display: none; padding: 0 20px 20px 20px;';
-
     section.units.forEach((unit, uIdx) => {
       contentDiv.appendChild(renderLessonUnit(unit, sectionIndex, uIdx));
     });
-
     wrapper.appendChild(contentDiv);
     return wrapper;
   }
 
-  // Render a lesson unit — returns a DOM element
   function renderLessonUnit(unit, sectionIndex, unitIndex) {
     const unitId = `unit-${sectionIndex}-${unitIndex}`;
-
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'margin-top: 16px; border-left: 2px solid rgba(255,255,255,.10); padding-left: 16px;';
-
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'lesson-unit-toggle';
     toggleBtn.dataset.target = unitId;
     toggleBtn.style.cssText = 'width: 100%; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 8px; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 500;';
-
     const nameSpan = document.createElement('span');
     nameSpan.textContent = unit.name;
     const iconSpan = document.createElement('span');
     iconSpan.className = 'toggle-icon';
     iconSpan.style.cssText = 'font-size: 16px; transition: transform 0.2s;';
-    iconSpan.textContent = '▶';
-
+    iconSpan.textContent = '\u25b6';
     toggleBtn.appendChild(nameSpan);
     toggleBtn.appendChild(iconSpan);
     wrapper.appendChild(toggleBtn);
-
     const contentDiv = document.createElement('div');
     contentDiv.id = unitId;
     contentDiv.className = 'lesson-unit-content';
     contentDiv.style.cssText = 'display: none; margin-top: 12px;';
-
-    unit.presentations.forEach(pres => {
-      contentDiv.appendChild(renderPresentation(pres));
-    });
-
+    unit.presentations.forEach(pres => contentDiv.appendChild(renderPresentation(pres)));
     wrapper.appendChild(contentDiv);
     return wrapper;
   }
 
-  // Render a presentation — returns a DOM element
   function renderPresentation(presentation) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tc-card';
     wrapper.style.cssText = 'padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
-
     const nameSpan = document.createElement('span');
     nameSpan.style.cssText = 'flex: 1; font-size: 15px;';
     nameSpan.textContent = presentation.name;
     wrapper.appendChild(nameSpan);
-
     const btnGroup = document.createElement('div');
     btnGroup.style.cssText = 'display: flex; gap: 8px;';
-
     const openLink = document.createElement('a');
     // Safe href: only use the URL as-is; the browser will handle it
     openLink.href = presentation.url || '#';
@@ -620,27 +1229,43 @@
     openLink.style.cssText = 'font-size: 13px; padding: 6px 12px; text-decoration: none;';
     openLink.textContent = 'Open';
     btnGroup.appendChild(openLink);
-
     wrapper.appendChild(btnGroup);
     return wrapper;
   }
 
-  // Attach event listeners
+  // ── Event Listeners ───────────────────────────────────────────────────────────
+
   function attachEventListeners() {
     // Tab switching
     document.addEventListener('click', (e) => {
       const tabBtn = e.target.closest('.tc-lib-tab-btn');
-      if (tabBtn) {
-        switchTab(tabBtn.dataset.tab);
-      }
+      if (tabBtn) switchTab(tabBtn.dataset.tab);
     });
 
-    // Class filter
+    // Class filter buttons
     document.addEventListener('click', (e) => {
       const filterBtn = e.target.closest('.tc-lib-class-filter');
       if (filterBtn) {
         filters.assignments.classFilter = filterBtn.dataset.class;
         renderAssignmentsTab();
+      }
+    });
+
+    // Lane header collapse/expand
+    document.addEventListener('click', (e) => {
+      const laneHeader = e.target.closest('.tc-lib-lane-header');
+      if (laneHeader) {
+        const laneId = laneHeader.dataset.lane;
+        if (laneId) toggleLane(laneId);
+      }
+    });
+
+    // Hierarchy node collapse/expand
+    document.addEventListener('click', (e) => {
+      const hierNode = e.target.closest('.tc-hier-node');
+      if (hierNode) {
+        const nodeId = hierNode.dataset.hierNode;
+        if (nodeId) toggleHierarchy(nodeId);
       }
     });
 
@@ -660,6 +1285,14 @@
       }
     });
 
+    // Category filter
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'assignmentCategoryFilter') {
+        filters.assignments.categoryFilter = e.target.value;
+        renderAssignmentsTab();
+      }
+    });
+
     // Lesson search
     document.addEventListener('input', (e) => {
       if (e.target.id === 'lessonSearch') {
@@ -668,18 +1301,16 @@
       }
     });
 
-    // Section/unit toggle
+    // Section/unit toggle (Lessons tab)
     document.addEventListener('click', (e) => {
       const toggle = e.target.closest('.lesson-section-toggle, .lesson-unit-toggle');
       if (toggle) {
         const targetId = toggle.dataset.target;
         const content = $(targetId);
         const icon = toggle.querySelector('.toggle-icon');
-        
         if (content) {
           const isExpanded = content.style.display !== 'none';
           content.style.display = isExpanded ? 'none' : 'block';
-          
           if (icon) {
             if (toggle.classList.contains('lesson-section-toggle')) {
               icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
@@ -691,13 +1322,16 @@
       }
     });
 
-    // Assignment card click (show detail)
+    // Assignment card click — avoid triggering on buttons/headers
     document.addEventListener('click', (e) => {
       const card = e.target.closest('.assignment-card');
-      // Don't trigger if clicking the issue button
-      if (card && !e.target.closest('.issue-btn')) {
-        const assignmentId = card.dataset.id;
-        showAssignmentDetail(assignmentId);
+      if (
+        card &&
+        !e.target.closest('button') &&
+        !e.target.closest('.tc-lib-lane-header') &&
+        !e.target.closest('.tc-hier-node')
+      ) {
+        showAssignmentDetail(card.dataset.id);
       }
     });
 
@@ -707,57 +1341,42 @@
       if (issueBtn) {
         e.stopPropagation();
         const assignmentId = issueBtn.dataset.id;
-        // Link to Work page with assignment pre-selected
         window.location.href = `/teacher/work/?assignment=${encodeURIComponent(assignmentId)}`;
       }
     });
 
     // Export button
     const exportBtn = $('exportLibraryBtn');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', exportLibraryJSON);
-    }
+    if (exportBtn) exportBtn.addEventListener('click', exportLibraryJSON);
 
     // Upload Paper Assignment button
     const uploadBtn = $('uploadPaperBtn');
-    if (uploadBtn) {
-      uploadBtn.addEventListener('click', openUploadPaperModal);
-    }
+    if (uploadBtn) uploadBtn.addEventListener('click', openUploadPaperModal);
   }
 
-  // Show assignment detail modal
+  // ── Assignment Detail Modal ───────────────────────────────────────────────────
+
   function showAssignmentDetail(assignmentId) {
     const assignment = assignmentsData.find(a => a.id === assignmentId);
     if (!assignment) return;
 
-    // Create modal overlay
     const overlay = document.createElement('div');
     overlay.id = 'assignmentDetailOverlay';
     overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,.80);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      padding: 24px;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.80); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000; padding: 24px;
     `;
 
     const createdDate = assignment.created_at
       ? new Date(assignment.created_at).toLocaleString()
       : 'Unknown';
 
-    // Card
     const card = document.createElement('div');
     card.className = 'tc-card';
     card.style.cssText = 'max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;';
 
-    // Header row
     const headerRow = document.createElement('div');
     headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;';
     const titleEl = document.createElement('h2');
@@ -767,32 +1386,52 @@
     closeBtn.id = 'closeDetailBtn';
     closeBtn.className = 'tc-btn';
     closeBtn.style.cssText = 'padding: 8px 16px;';
-    closeBtn.textContent = '✕ Close';
+    closeBtn.textContent = '\u2715 Close';
     headerRow.appendChild(titleEl);
     headerRow.appendChild(closeBtn);
     card.appendChild(headerRow);
 
-    // Detail grid
     const grid = document.createElement('div');
     grid.style.cssText = 'display: grid; gap: 16px; margin-bottom: 24px;';
 
-    function makeDetailRow(labelText, valueText) {
+    function makeDetailRow(labelText, valueNode) {
       const row = document.createElement('div');
       const lbl = document.createElement('div');
       lbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
       lbl.textContent = labelText;
-      const val = document.createElement('div');
-      val.textContent = valueText;
       row.appendChild(lbl);
-      row.appendChild(val);
+      if (typeof valueNode === 'string') {
+        const val = document.createElement('div');
+        val.textContent = valueNode;
+        row.appendChild(val);
+      } else {
+        row.appendChild(valueNode);
+      }
       return row;
     }
 
     grid.appendChild(makeDetailRow('Type', assignment.type || 'file'));
-    if (assignment.series) {
-      grid.appendChild(makeDetailRow('Class', assignment.series));
-    }
+
+    const category = getAssignmentCategory(assignment);
+    grid.appendChild(makeDetailRow('Category', renderCategoryBadge(category)));
+
+    if (assignment.series) grid.appendChild(makeDetailRow('Class', assignment.series));
     grid.appendChild(makeDetailRow('Created', createdDate));
+
+    const lane = computeLane(assignment, instancesData);
+    const laneLabels = { upcoming: '\uD83D\uDCCB Upcoming', current: '\uD83D\uDD04 Active', finalized: '\u2705 Finalized' };
+    grid.appendChild(makeDetailRow('Status', laneLabels[lane] || lane));
+
+    const stats = getAssignmentStats(assignment, instancesData, submissionsData);
+    if (stats.studentCount > 0) {
+      grid.appendChild(makeDetailRow('Students', String(stats.studentCount)));
+      if (stats.avgScore != null) {
+        const scoreSpan = document.createElement('span');
+        scoreSpan.style.cssText = `font-weight:600; color:${scoreColor(stats.avgScore)};`;
+        scoreSpan.textContent = `${stats.avgScore}%`;
+        grid.appendChild(makeDetailRow('Average Score', scoreSpan));
+      }
+    }
 
     if (assignment.meta) {
       const metaRow = document.createElement('div');
@@ -825,7 +1464,6 @@
 
     card.appendChild(grid);
 
-    // Action buttons
     const actionRow = document.createElement('div');
     actionRow.style.cssText = 'display: flex; gap: 12px;';
     const issueBtn = document.createElement('button');
@@ -839,73 +1477,50 @@
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
-    // Close button
-    closeBtn.addEventListener('click', () => {
-      overlay.remove();
-    });
-
-    // Issue button in detail
+    closeBtn.addEventListener('click', () => overlay.remove());
     issueBtn.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.id;
       window.location.href = `/teacher/work/?assignment=${encodeURIComponent(id)}`;
     });
-
-    // Click outside to close
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-      }
-    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   }
 
-  // Open the Upload Paper Assignment modal
-  async function openUploadPaperModal() {
-    // Build today's date string (YYYY-MM-DD) for default value
-    const todayStr = new Date().toISOString().split('T')[0];
+  // ── Upload Paper Assignment Modal ─────────────────────────────────────────────
 
+  async function openUploadPaperModal() {
+    const todayStr = new Date().toISOString().split('T')[0];
     const overlay = document.createElement('div');
     overlay.id = 'uploadPaperOverlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', 'uploadPaperTitle');
     overlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,.80);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      padding: 24px;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.80); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000; padding: 24px;
     `;
 
-    // Build the modal card
     const card = document.createElement('div');
     card.className = 'tc-card';
     card.style.cssText = 'max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;';
 
-    // Header row
     const header = document.createElement('div');
     header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;';
-
     const titleEl = document.createElement('h2');
     titleEl.id = 'uploadPaperTitle';
     titleEl.style.cssText = 'margin: 0; font-size: 22px;';
     titleEl.textContent = 'Upload Paper Assignment';
-
     const closeBtn = document.createElement('button');
     closeBtn.id = 'closePaperUploadBtn';
     closeBtn.className = 'tc-btn';
     closeBtn.style.cssText = 'padding: 8px 16px;';
     closeBtn.setAttribute('aria-label', 'Close dialog');
-    closeBtn.textContent = '✕ Close';
-
+    closeBtn.textContent = '\u2715 Close';
     header.appendChild(titleEl);
     header.appendChild(closeBtn);
     card.appendChild(header);
 
-    // Form
     const form = document.createElement('form');
     form.id = 'uploadPaperForm';
     form.style.cssText = 'display: flex; flex-direction: column; gap: 16px;';
@@ -913,7 +1528,6 @@
     const fieldStyle = 'width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px; box-sizing:border-box;';
     const labelStyle = 'display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:6px;';
 
-    // Helper to build a labeled field wrapper
     function makeField(labelText, required, node) {
       const wrap = document.createElement('div');
       const lbl = document.createElement('label');
@@ -932,7 +1546,7 @@
       return wrap;
     }
 
-    // Title field
+    // Title
     const titleInput = document.createElement('input');
     titleInput.type = 'text';
     titleInput.id = 'up_title';
@@ -941,13 +1555,13 @@
     titleInput.placeholder = 'Assignment title';
     form.appendChild(makeField('Title', true, titleInput));
 
-    // Class field
+    // Class
     const classSelect = document.createElement('select');
     classSelect.id = 'up_class';
     classSelect.style.cssText = fieldStyle;
     const defaultClassOpt = document.createElement('option');
     defaultClassOpt.value = '';
-    defaultClassOpt.textContent = '— Select class (optional) —';
+    defaultClassOpt.textContent = '\u2014 Select class (optional) \u2014';
     classSelect.appendChild(defaultClassOpt);
     CANON_CLASSES.forEach(cls => {
       const opt = document.createElement('option');
@@ -957,7 +1571,23 @@
     });
     form.appendChild(makeField('Class', false, classSelect));
 
-    // Student Code field (optional free text)
+    // Category
+    const categorySelect = document.createElement('select');
+    categorySelect.id = 'up_category';
+    categorySelect.style.cssText = fieldStyle;
+    const defaultCatOpt = document.createElement('option');
+    defaultCatOpt.value = '';
+    defaultCatOpt.textContent = '\u2014 Select category (optional) \u2014';
+    categorySelect.appendChild(defaultCatOpt);
+    CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      categorySelect.appendChild(opt);
+    });
+    form.appendChild(makeField('Category', false, categorySelect));
+
+    // Student Code
     const studentInput = document.createElement('input');
     studentInput.type = 'text';
     studentInput.id = 'up_student_code';
@@ -965,12 +1595,12 @@
     studentInput.placeholder = 'e.g. S001 (optional)';
     const studentHint = document.createElement('div');
     studentHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
-    studentHint.textContent = 'If provided, links this upload to the student\'s history. Code is uppercased automatically.';
+    studentHint.textContent = "If provided, links this upload to the student's history. Code is uppercased automatically.";
     const studentWrap = makeField('Student Code', false, studentInput);
     studentWrap.appendChild(studentHint);
     form.appendChild(studentWrap);
 
-    // Date Completed field
+    // Date Completed
     const dateInput = document.createElement('input');
     dateInput.type = 'date';
     dateInput.id = 'up_date';
@@ -978,7 +1608,7 @@
     dateInput.value = todayStr;
     form.appendChild(makeField('Date Completed', false, dateInput));
 
-    // Score Earned field (optional)
+    // Score Earned
     const scoreInput = document.createElement('input');
     scoreInput.type = 'number';
     scoreInput.id = 'up_score';
@@ -989,7 +1619,7 @@
     scoreInput.placeholder = 'e.g. 85';
     form.appendChild(makeField('Score Earned', false, scoreInput));
 
-    // Total Possible field (optional)
+    // Total Possible
     const totalPossibleInput = document.createElement('input');
     totalPossibleInput.type = 'number';
     totalPossibleInput.id = 'up_total_possible';
@@ -1005,7 +1635,7 @@
     totalPossibleWrap.appendChild(gradeHint);
     form.appendChild(totalPossibleWrap);
 
-    // Notes field
+    // Notes
     const notesArea = document.createElement('textarea');
     notesArea.id = 'up_notes';
     notesArea.rows = 3;
@@ -1013,34 +1643,31 @@
     notesArea.placeholder = 'Teacher notes / comments (optional)';
     form.appendChild(makeField('Notes', false, notesArea));
 
-    // File upload field
+    // File
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.id = 'up_file';
     fileInput.required = true;
     fileInput.accept = '.pdf,.jpg,.jpeg,.png,.heic,.heif,.gif,.webp';
     fileInput.style.cssText = 'width:100%; color:white; font-size:14px; cursor:pointer;';
-
     const fileHint = document.createElement('div');
     fileHint.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-top:4px;';
-    fileHint.textContent = 'PDF, JPG, PNG, HEIC/HEIF, GIF, WEBP — max 10 MB';
-
+    fileHint.textContent = 'PDF, JPG, PNG, HEIC/HEIF, GIF, WEBP \u2014 max 10 MB';
     const fileInfo = document.createElement('div');
     fileInfo.id = 'up_file_info';
     fileInfo.style.cssText = 'display:none; margin-top:8px; padding:8px 12px; background:rgba(34,197,94,.10); border:1px solid rgba(34,197,94,.25); border-radius:8px; font-size:13px; color:rgba(255,255,255,.80);';
-
     const fileWrap = makeField('File', true, fileInput);
     fileWrap.appendChild(fileHint);
     fileWrap.appendChild(fileInfo);
     form.appendChild(fileWrap);
 
-    // Error display
+    // Error
     const errorEl = document.createElement('div');
     errorEl.id = 'up_error';
     errorEl.style.cssText = 'display:none; padding:10px 14px; background:rgba(248,113,113,.15); border:1px solid rgba(248,113,113,.4); border-radius:8px; color:#fca5a5; font-size:14px;';
     form.appendChild(errorEl);
 
-    // Submit button
+    // Submit
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
     submitBtn.id = 'up_submit';
@@ -1054,7 +1681,6 @@
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
-    // File selection → show info
     fileInput.addEventListener('change', () => {
       if (fileInput.files && fileInput.files.length > 0) {
         const f = fileInput.files[0];
@@ -1064,8 +1690,7 @@
         const nameSpan = document.createElement('strong');
         nameSpan.textContent = f.name;
         fileInfo.appendChild(nameSpan);
-        fileInfo.appendChild(document.createTextNode(` — ${sizeMB} MB`));
-        // Warn if over 10MB
+        fileInfo.appendChild(document.createTextNode(` \u2014 ${sizeMB} MB`));
         if (f.size > 10 * 1024 * 1024) {
           const warn = document.createElement('span');
           warn.style.color = '#f87171';
@@ -1077,13 +1702,9 @@
       }
     });
 
-    // Close button
     closeBtn.addEventListener('click', () => overlay.remove());
-
-    // Click outside to close
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
-    // Keyboard: Escape to close, focus trap
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
         overlay.remove();
@@ -1104,7 +1725,6 @@
     };
     document.addEventListener('keydown', onKeyDown);
 
-    // Remove keydown listener when overlay is removed
     const observer = new MutationObserver(() => {
       if (!document.body.contains(overlay)) {
         document.removeEventListener('keydown', onKeyDown);
@@ -1113,17 +1733,16 @@
     });
     observer.observe(document.body, { childList: true, subtree: false });
 
-    // Form submit
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       await uploadPaperAssignment(overlay);
     });
 
-    // Focus first field
     titleInput.focus();
   }
 
-  // Upload a paper assignment via data-adapter
+  // ── Upload Paper Assignment Logic ─────────────────────────────────────────────
+
   async function uploadPaperAssignment(overlay) {
     const errorEl = overlay.querySelector('#up_error');
     const submitBtn = overlay.querySelector('#up_submit');
@@ -1133,7 +1752,6 @@
       errorEl.style.display = 'block';
       errorEl.scrollIntoView({ block: 'nearest' });
     }
-
     function clearInlineError() {
       errorEl.style.display = 'none';
       errorEl.textContent = '';
@@ -1143,25 +1761,23 @@
 
     const title = overlay.querySelector('#up_title').value.trim();
     const className = overlay.querySelector('#up_class').value;
+    const category = overlay.querySelector('#up_category').value;
     const studentCode = overlay.querySelector('#up_student_code').value.trim().toUpperCase();
     const dateCompleted = overlay.querySelector('#up_date').value || new Date().toISOString().split('T')[0];
     const notes = overlay.querySelector('#up_notes').value.trim();
     const fileInput = overlay.querySelector('#up_file');
 
-    // Score fields
     const scoreRaw = overlay.querySelector('#up_score').value.trim();
     const totalPossibleRaw = overlay.querySelector('#up_total_possible').value.trim();
     const scoreEarned = scoreRaw !== '' ? Number(scoreRaw) : null;
     const totalPossible = totalPossibleRaw !== '' ? Number(totalPossibleRaw) : 100;
 
-    // Validation
     if (!title) {
       showInlineError('Title is required.');
       overlay.querySelector('#up_title').focus();
       return;
     }
 
-    // Score validation
     if (scoreEarned !== null) {
       if (!studentCode) {
         showInlineError('Student Code is required when entering a grade.');
@@ -1192,8 +1808,6 @@
     }
 
     const file = fileInput.files[0];
-
-    // File type validation
     const allowedTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/gif', 'image/webp']);
     const allowedExts = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif', '.gif', '.webp']);
     const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
@@ -1201,8 +1815,6 @@
       showInlineError('Unsupported file type. Please upload a PDF, JPG, PNG, HEIC, HEIF, GIF, or WEBP file.');
       return;
     }
-
-    // File size validation (max 10MB)
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
       showInlineError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
@@ -1212,9 +1824,8 @@
     submitBtn.disabled = true;
     const originalBtnHtml = submitBtn.innerHTML;
     // SAFETY: static SVG spinner, no user data
-    submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Uploading…';
+    submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Uploading\u2026';
 
-    // Add spin animation if not already present
     if (!document.getElementById('rcSpinStyle')) {
       const style = document.createElement('style');
       style.id = 'rcSpinStyle';
@@ -1225,19 +1836,15 @@
     try {
       let paperUploadUrl = null;
       let gradeRecorded = false;
-      // Pre-compute score percentage once (used in both branches + toast)
       const scorePercent = scoreEarned !== null ? Math.round((scoreEarned / totalPossible) * 100) : null;
-      // Instance ID helper: combines assignment ID with student code
       const instanceId = (assignmentId) => assignmentId + '-' + studentCode;
 
       if (isRemote) {
-        // ── Supabase mode: upload file, then create assignment record ──
+        // ── Supabase mode ──
         const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const storagePath = `paper-uploads/${Date.now()}_${safeFileName}`;
-
         console.log('[tc-library] Uploading paper file to storage:', storagePath);
         paperUploadUrl = await db.uploadPaperFile(file, storagePath);
-
         if (!paperUploadUrl) {
           showInlineError('File upload failed. Please try again.');
           submitBtn.disabled = false;
@@ -1247,7 +1854,6 @@
         }
         console.log('[tc-library] Paper file uploaded:', paperUploadUrl);
 
-        // Build assignment meta — include score if provided
         const assignmentMeta = {
           paper: true,
           paper_upload_url: paperUploadUrl,
@@ -1256,6 +1862,7 @@
           notes: notes || null,
           student_code: studentCode || null,
         };
+        if (category) assignmentMeta.category = category;
         if (scoreEarned !== null) {
           assignmentMeta.score_earned = scoreEarned;
           assignmentMeta.total_possible = totalPossible;
@@ -1272,7 +1879,6 @@
           });
         } catch (createErr) {
           console.error('[tc-library] Assignment create failed, cleaning up uploaded file:', createErr);
-          // Attempt cleanup of uploaded file (non-critical)
           try { await db.deletePaperFile(storagePath); } catch (_) { /* ignore */ }
           showInlineError('Failed to save assignment record. Please try again.');
           submitBtn.disabled = false;
@@ -1280,10 +1886,8 @@
           submitBtn.innerHTML = originalBtnHtml;
           return;
         }
-
         console.log('[tc-library] Paper assignment created:', newAssignment.id);
 
-        // Optionally create a submission_archives record if student code is provided
         if (studentCode && newAssignment) {
           try {
             await db.createSubmissionArchive({
@@ -1298,12 +1902,10 @@
             });
             console.log('[tc-library] Submission archive record created for student:', studentCode);
           } catch (archiveErr) {
-            // Non-critical — warn but don't fail
             console.warn('[tc-library] Could not create submission archive record (non-critical):', archiveErr.message);
           }
         }
 
-        // Auto-create gradebook entry if score + student code provided
         if (scoreEarned !== null && studentCode && newAssignment) {
           try {
             const instance = await db.upsertAssignmentInstance({
@@ -1321,15 +1923,13 @@
             gradeRecorded = true;
             console.log('[tc-library] Gradebook entry created:', scorePercent + '%');
           } catch (gradeErr) {
-            // Non-critical — warn but don't fail the upload
             console.warn('[tc-library] Could not create gradebook entry (non-critical):', gradeErr.message);
           }
         }
 
       } else {
-        // ── Local mode: metadata-only (no file storage) ──
-        console.log('[tc-library] Local mode — storing paper assignment metadata only (file not stored)');
-
+        // ── Local mode ──
+        console.log('[tc-library] Local mode \u2014 storing paper assignment metadata only');
         const assignmentMeta = {
           paper: true,
           paper_upload_url: null,
@@ -1339,6 +1939,7 @@
           student_code: studentCode || null,
           local_note: 'File not stored in local mode',
         };
+        if (category) assignmentMeta.category = category;
         if (scoreEarned !== null) {
           assignmentMeta.score_earned = scoreEarned;
           assignmentMeta.total_possible = totalPossible;
@@ -1352,7 +1953,6 @@
           meta: assignmentMeta,
         });
 
-        // Store archive metadata in localStorage if student code provided
         if (studentCode) {
           try {
             await db.createSubmissionArchive({
@@ -1369,7 +1969,6 @@
           }
         }
 
-        // Auto-create gradebook entry in local mode if score + student code provided
         if (scoreEarned !== null && studentCode && newAssignment) {
           try {
             const instId = instanceId(newAssignment.id);
@@ -1393,12 +1992,12 @@
         }
       }
 
-      // Success — close modal, refresh list, show toast
+      // Success
       overlay.remove();
       console.log('[tc-library] Paper assignment uploaded successfully');
-      const toastSuffix = !isRemote ? ' (metadata only — local mode)' : '';
-      const gradeNote = gradeRecorded ? ` — ${scorePercent}% recorded in Gradebook` : '';
-      showToast(`📄 "${title}" saved to Library${gradeNote}${toastSuffix}`);
+      const toastSuffix = !isRemote ? ' (metadata only \u2014 local mode)' : '';
+      const gradeNote = gradeRecorded ? ` \u2014 ${scorePercent}% recorded in Gradebook` : '';
+      showToast(`\uD83D\uDCC4 "${title}" saved to Library${gradeNote}${toastSuffix}`);
       await loadAssignments();
       switchTab('assignments');
 
@@ -1411,7 +2010,8 @@
     }
   }
 
-  // Show a brief toast notification
+  // ── Toast ─────────────────────────────────────────────────────────────────────
+
   function showToast(text, bg = '#22c55e', color = '#0b1220') {
     const msg = document.createElement('div');
     msg.textContent = text;
@@ -1420,7 +2020,8 @@
     setTimeout(() => msg.remove(), 3500);
   }
 
-  // Export library as JSON
+  // ── Export ────────────────────────────────────────────────────────────────────
+
   function exportLibraryJSON() {
     const now = new Date();
     const exportData = {
@@ -1433,7 +2034,6 @@
         total_sections: lessonsData?.sections?.length || 0
       }
     };
-
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1443,10 +2043,10 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
     console.log("[tc-library] Library exported successfully");
   }
 
-  // Start initialization
+  // ── Start ─────────────────────────────────────────────────────────────────────
+
   init();
 })();
