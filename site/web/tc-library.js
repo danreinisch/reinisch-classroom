@@ -45,6 +45,21 @@
     'Other':                 { bg: 'rgba(148,163,184,.18)', color: '#94a3b8' }
   };
 
+  // ── Category Keyword Mapping (used by Smart Category Suggest) ────────────────
+
+  const CATEGORY_KEYWORDS = {
+    'Reading Comprehension': ['reading', 'comprehension', 'read', 'passage', 'story', 'novel', 'book', 'chapter', 'literature', 'literary'],
+    'Vocabulary':            ['vocabulary', 'vocab', 'word', 'words', 'spelling', 'definitions', 'glossary'],
+    'Writing':               ['writing', 'write', 'essay', 'paragraph', 'journal', 'narrative', 'prompt', 'composition'],
+    'Grammar':               ['grammar', 'punctuation', 'comma', 'sentence', 'syntax', 'capitalization', 'apostrophe', 'parts of speech'],
+    'Social Skills':         ['social', 'friendship', 'cooperation', 'teamwork', 'conflict', 'communication', 'emotion', 'empathy', 'behavior'],
+    'Daily Living':          ['daily living', 'cooking', 'hygiene', 'money', 'budget', 'time management', 'laundry', 'cleaning', 'safety', 'nutrition'],
+    'Community':             ['community', 'field trip', 'volunteer', 'civic', 'neighborhood', 'public', 'transportation'],
+    'Self-Advocacy':         ['self-advocacy', 'advocacy', 'self-determination', 'rights', 'accommodation', 'iep', 'transition', 'goal setting'],
+    'Assessment':            ['assessment', 'quiz', 'test', 'exam', 'evaluation', 'benchmark', 'diagnostic', 'pre-test', 'post-test', 'final'],
+    'Other':                 []
+  };
+
   // Assignment type options: [value, label]
   const ASSIGNMENT_TYPE_OPTIONS = [
     ['All', 'All Types'],
@@ -89,6 +104,19 @@
 
   async function init() {
     console.log("[tc-library] Initializing...");
+    // Inject responsive analytics grid style once
+    if (!document.getElementById('tc-lib-analytics-responsive-style')) {
+      const style = document.createElement('style');
+      style.id = 'tc-lib-analytics-responsive-style';
+      style.textContent = [
+        '@media (max-width: 768px) {',
+        '  .tc-lib-analytics-grid {',
+        '    grid-template-columns: 1fr !important;',
+        '  }',
+        '}'
+      ].join('\n');
+      document.head.appendChild(style);
+    }
     renderTabBar();
     renderTabContent();
     await loadAssignments();
@@ -423,6 +451,47 @@
       return `Week of ${monStr} \u2013 ${MN[friday.getMonth()]} ${friday.getDate()}`;
     }
     return `Week of ${monStr} \u2013 ${friday.getDate()}`;
+  }
+
+  /**
+   * Returns a human-readable relative date string (e.g. "3 days ago", "2 months ago").
+   * Returns 'Unknown' for null/undefined/invalid input.
+   * @param {string|null|undefined} iso  ISO date string
+   * @returns {string}
+   */
+  function relDate(iso) {
+    if (iso == null) return 'Unknown';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Unknown';
+    const diff = Date.now() - d.getTime();
+    if (diff < 0) return 'just now';
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) { const w = Math.floor(days / 7); return `${w} week${w !== 1 ? 's' : ''} ago`; }
+    if (days < 365) { const m = Math.floor(days / 30); return `${m} month${m !== 1 ? 's' : ''} ago`; }
+    const y = Math.floor(days / 365);
+    return `${y} year${y !== 1 ? 's' : ''} ago`;
+  }
+
+  /**
+   * Suggests a category for an assignment title based on keyword matching.
+   * Returns the first matching category (in CATEGORY_KEYWORDS priority order),
+   * or null if no keyword matches.
+   * @param {string|null|undefined} title
+   * @returns {string|null}
+   */
+  function suggestCategory(title) {
+    if (!title || typeof title !== 'string') return null;
+    const lower = title.toLowerCase();
+    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (cat === 'Other') continue; // 'Other' is a fallback, never matched by keywords
+      for (const kw of keywords) {
+        if (lower.includes(kw)) return cat;
+      }
+    }
+    return null;
   }
 
   /**
@@ -1158,12 +1227,207 @@
     document.body.appendChild(bar);
   }
 
+  // ── Smart Category Suggest Modal ──────────────────────────────────────────────
+
+  /**
+   * Shows a modal with AI-keyword-based category suggestions for all
+   * uncategorized assignments. The teacher can confirm/change each suggestion
+   * then click "Apply Selected" to batch-update.
+   */
+  function showSmartSuggestModal() {
+    const uncategorized = assignmentsData.filter(a => getAssignmentCategory(a) === 'Uncategorized');
+    if (uncategorized.length === 0) return;
+
+    // Build suggestion list: [{assignment, suggested}]
+    const suggestions = uncategorized.map(a => ({
+      assignment: a,
+      suggested: suggestCategory(a.title)
+    }));
+
+    // ── Overlay backdrop ──────────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.id = 'tcLibSmartSuggestOverlay';
+    overlay.style.cssText = [
+      'position:fixed; inset:0; z-index:9000;',
+      'background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center;',
+      'padding:16px;'
+    ].join('');
+
+    // ── Modal box ─────────────────────────────────────────────────────────────
+    const modal = document.createElement('div');
+    modal.style.cssText = [
+      'background:#1a2236; border:1px solid rgba(255,255,255,.15); border-radius:14px;',
+      'width:100%; max-width:640px; max-height:90vh; display:flex; flex-direction:column;',
+      'box-shadow:0 24px 64px rgba(0,0,0,.60);'
+    ].join('');
+    overlay.appendChild(modal);
+
+    // Header
+    const modalHeader = document.createElement('div');
+    modalHeader.style.cssText = 'padding:20px 24px 16px; border-bottom:1px solid rgba(255,255,255,.08);';
+    const modalTitle = document.createElement('div');
+    modalTitle.style.cssText = 'font-size:17px; font-weight:700; margin-bottom:4px;';
+    modalTitle.textContent = '\uD83C\uDFF7\uFE0F Smart Category Suggestions';
+    const matchCount = suggestions.filter(s => s.suggested !== null).length;
+    const modalSubtitle = document.createElement('div');
+    modalSubtitle.style.cssText = 'font-size:13px; color:rgba(255,255,255,.50);';
+    modalSubtitle.textContent = `Found ${matchCount} assignment${matchCount !== 1 ? 's' : ''} that can be auto-categorized (out of ${uncategorized.length} uncategorized).`;
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(modalSubtitle);
+    modal.appendChild(modalHeader);
+
+    // Scrollable list
+    const listWrap = document.createElement('div');
+    listWrap.style.cssText = 'flex:1; overflow-y:auto; padding:16px 24px;';
+
+    // Per-row state: id → {checked, selectedCat}
+    const rowState = new Map(suggestions.map(s => [
+      s.assignment.id,
+      { checked: s.suggested !== null, selectedCat: s.suggested }
+    ]));
+
+    const rows = [];
+    suggestions.forEach(({ assignment, suggested }) => {
+      const row = document.createElement('div');
+      row.style.cssText = [
+        'display:flex; align-items:center; gap:10px; padding:9px 0;',
+        'border-bottom:1px solid rgba(255,255,255,.06);'
+      ].join('');
+
+      // Checkbox
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = suggested !== null;
+      cb.style.cssText = 'width:16px; height:16px; cursor:pointer; flex-shrink:0;';
+      cb.setAttribute('aria-label', `Include ${assignment.title || '(Untitled)'}`);
+      row.appendChild(cb);
+
+      // Title
+      const titleEl = document.createElement('span');
+      titleEl.style.cssText = 'flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+      titleEl.textContent = assignment.title || '(Untitled)';
+      row.appendChild(titleEl);
+
+      // Arrow
+      const arrow = document.createElement('span');
+      arrow.style.cssText = 'font-size:13px; color:rgba(255,255,255,.35); flex-shrink:0;';
+      arrow.textContent = '\u2192';
+      row.appendChild(arrow);
+
+      // Category selector (dropdown)
+      const sel = document.createElement('select');
+      sel.style.cssText = [
+        'padding:4px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.20);',
+        'border-radius:7px; color:white; font-size:12px; cursor:pointer; flex-shrink:0;'
+      ].join('');
+      const noMatchOpt = document.createElement('option');
+      noMatchOpt.value = '';
+      noMatchOpt.textContent = '(no match found)';
+      noMatchOpt.style.cssText = 'color:rgba(255,255,255,.40);';
+      sel.appendChild(noMatchOpt);
+      CATEGORIES.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
+      });
+      sel.value = suggested || '';
+      row.appendChild(sel);
+
+      // Wire up events
+      cb.addEventListener('change', () => {
+        rowState.get(assignment.id).checked = cb.checked;
+      });
+      sel.addEventListener('change', () => {
+        rowState.get(assignment.id).selectedCat = sel.value || null;
+        // Auto-check when the user picks a category
+        if (sel.value) {
+          cb.checked = true;
+          rowState.get(assignment.id).checked = true;
+        }
+      });
+
+      rows.push(row);
+      listWrap.appendChild(row);
+    });
+    modal.appendChild(listWrap);
+
+    // Footer buttons
+    const footer = document.createElement('div');
+    footer.style.cssText = [
+      'padding:16px 24px; border-top:1px solid rgba(255,255,255,.08);',
+      'display:flex; justify-content:flex-end; gap:10px;'
+    ].join('');
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'tc-btn';
+    cancelBtn.style.cssText = 'padding:9px 18px; font-size:13px;';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'tc-btn';
+    applyBtn.style.cssText = 'padding:9px 18px; font-size:13px; background:rgba(96,165,250,.20); border-color:rgba(96,165,250,.50); color:#60a5fa;';
+    applyBtn.textContent = 'Apply Selected';
+
+    applyBtn.addEventListener('click', async () => {
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Applying\u2026';
+
+      const toApply = [...rowState.entries()]
+        .filter(([, s]) => s.checked && s.selectedCat)
+        .map(([id, s]) => ({ id, category: s.selectedCat }));
+
+      if (toApply.length === 0) {
+        overlay.remove();
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      for (const { id, category } of toApply) {
+        try {
+          const a = assignmentsData.find(x => x.id === id);
+          if (!a) continue;
+          const existingMeta = a.meta && typeof a.meta === 'object' ? a.meta : {};
+          const updatedMeta = { ...existingMeta, category };
+          await db.updateAssignment(id, { meta: updatedMeta });
+          // Patch local cache
+          const idx = assignmentsData.findIndex(x => x.id === id);
+          if (idx !== -1) assignmentsData[idx] = { ...assignmentsData[idx], meta: updatedMeta };
+          successCount++;
+        } catch (_e) { console.warn('[tc-library] Failed to update assignment category:', _e); failCount++; }
+      }
+
+      overlay.remove();
+
+      if (failCount > 0 && successCount === 0) {
+        showToast(`\u274c Failed to categorize assignments. Please try again.`, '#ef4444', '#fff');
+      } else if (failCount > 0) {
+        showToast(`\u2705 Categorized ${successCount} assignment${successCount !== 1 ? 's' : ''} (\u26a0\ufe0f ${failCount} failed)`, '#fbbf24', '#000');
+      } else {
+        showToast(`\u2705 Categorized ${successCount} assignment${successCount !== 1 ? 's' : ''}`);
+      }
+      renderAssignmentsTab();
+    });
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(applyBtn);
+    modal.appendChild(footer);
+
+    // Close on backdrop click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    document.body.appendChild(overlay);
+  }
+
   // ── Analytics Dashboard ───────────────────────────────────────────────────────
 
-  function renderAnalyticsSection() {
+  function renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList) {
     const laneId = 'analytics';
     const expanded = isLaneExpanded(laneId);
-    const filtered = filterAssignments();
 
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:16px;';
@@ -1194,7 +1458,7 @@
 
     // ── Content ───────────────────────────────────────────────────────────────
     const card = document.createElement('div');
-    card.className = 'tc-card';
+    card.className = 'tc-card tc-lib-analytics-grid';
     card.style.cssText = [
       'padding:16px 20px; border-top:none; border-radius:0 0 10px 10px;',
       'display:grid; grid-template-columns:1fr 1fr; gap:20px;'
@@ -1262,13 +1526,9 @@
     lanePanelTitle.textContent = 'Lane Distribution';
     lanePanel.appendChild(lanePanelTitle);
 
-    let upCount = 0, curCount = 0, finCount = 0;
-    filtered.forEach(a => {
-      const lane = computeLane(a, instancesData);
-      if (lane === 'upcoming') upCount++;
-      else if (lane === 'current') curCount++;
-      else if (lane === 'finalized') finCount++;
-    });
+    const upCount = upcomingList.length;
+    const curCount = currentList.length;
+    const finCount = finalizedList.length;
     const laneTotal = upCount + curCount + finCount;
 
     if (laneTotal === 0) {
@@ -1329,9 +1589,8 @@
     scorePanelTitle.textContent = 'Score Distribution (Finalized)';
     scorePanel.appendChild(scorePanelTitle);
 
-    const finalizedFiltered = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
     let greenCount = 0, amberCount = 0, redCount = 0, noScoreCount = 0;
-    finalizedFiltered.forEach(a => {
+    finalizedList.forEach(a => {
       const stats = getAssignmentStats(a, instancesData, submissionsData);
       if (stats.avgScore == null) noScoreCount++;
       else if (stats.avgScore >= 80) greenCount++;
@@ -1339,7 +1598,7 @@
       else redCount++;
     });
 
-    if (finalizedFiltered.length === 0) {
+    if (finalizedList.length === 0) {
       const empty = document.createElement('div');
       empty.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px;';
       empty.textContent = 'No finalized assignments';
@@ -1386,6 +1645,12 @@
       .slice(0, 5);
 
     if (recentSorted.length > 0) {
+      // Build a lookup: id → lane (using the pre-computed lists to avoid re-running computeLane)
+      const laneById = new Map();
+      upcomingList.forEach(a => laneById.set(a.id, 'upcoming'));
+      currentList.forEach(a => laneById.set(a.id, 'current'));
+      finalizedList.forEach(a => laneById.set(a.id, 'finalized'));
+
       const timelineCard = document.createElement('div');
       timelineCard.className = 'tc-card';
       timelineCard.style.cssText = 'padding:14px 20px; margin-top:8px;';
@@ -1393,19 +1658,6 @@
       tlTitle.style.cssText = 'font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:10px;';
       tlTitle.textContent = 'Recent Activity';
       timelineCard.appendChild(tlTitle);
-
-      const now = Date.now();
-      const relDate = (iso) => {
-        const diff = now - new Date(iso).getTime();
-        const days = Math.floor(diff / 86400000);
-        if (days === 0) return 'today';
-        if (days === 1) return '1 day ago';
-        if (days < 30) return `${days} days ago`;
-        const weeks = Math.floor(days / 7);
-        if (weeks < 8) return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
-        const months = Math.floor(days / 30);
-        return `${months} month${months !== 1 ? 's' : ''} ago`;
-      };
 
       const tlLaneLabels = { upcoming: '\uD83D\uDCCB Upcoming', current: '\uD83D\uDD04 Active', finalized: '\u2705 Finalized' };
       recentSorted.forEach((a, i) => {
@@ -1422,7 +1674,7 @@
 
         const laneSpan = document.createElement('span');
         laneSpan.style.cssText = 'font-size:11px; color:rgba(255,255,255,.45); white-space:nowrap;';
-        const itemLane = computeLane(a, instancesData);
+        const itemLane = laneById.get(a.id) || 'upcoming';
         laneSpan.textContent = tlLaneLabels[itemLane] || itemLane;
         item.appendChild(laneSpan);
 
@@ -1468,8 +1720,14 @@
     kpiGrid.appendChild(renderKPI('\uD83D\uDCCA Avg Score', kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
     container.appendChild(kpiGrid);
 
+    // Pre-compute filtered + lane lists (shared by analytics section and lane rendering)
+    const filtered = filterAssignments();
+    const upcomingList   = filtered.filter(a => computeLane(a, instancesData) === 'upcoming');
+    const currentList    = filtered.filter(a => computeLane(a, instancesData) === 'current');
+    const finalizedList  = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
+
     // Analytics section (between KPI row and filter bar)
-    container.appendChild(renderAnalyticsSection());
+    container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
 
     // Filter bar
     const filterBar = document.createElement('div');
@@ -1547,10 +1805,21 @@
     bulkBtn.textContent = bulkEditMode ? '\u2715 Exit Bulk Edit' : '\u270f\ufe0f Bulk Categorize';
     filterBar.appendChild(bulkBtn);
 
+    // Auto-Categorize button — only shown when there are uncategorized assignments
+    const uncategorizedCount = assignmentsData.filter(a => getAssignmentCategory(a) === 'Uncategorized').length;
+    if (uncategorizedCount > 0) {
+      const autoBtn = document.createElement('button');
+      autoBtn.className = 'tc-btn';
+      autoBtn.id = 'autoCategorizeBtn';
+      autoBtn.style.cssText = 'padding:8px 14px; font-size:13px; white-space:nowrap;';
+      autoBtn.textContent = `\uD83C\uDFF7\uFE0F Auto-Categorize (${uncategorizedCount})`;
+      autoBtn.addEventListener('click', () => showSmartSuggestModal());
+      filterBar.appendChild(autoBtn);
+    }
+
     container.appendChild(filterBar);
 
     // Uncategorized banner (only when there are uncategorized assignments and not in bulk mode)
-    const uncategorizedCount = assignmentsData.filter(a => getAssignmentCategory(a) === 'Uncategorized').length;
     if (uncategorizedCount > 0 && !bulkEditMode) {
       const banner = document.createElement('div');
       banner.style.cssText = [
@@ -1600,11 +1869,6 @@
       emptyCard.appendChild(emptyMsg);
       container.appendChild(emptyCard);
     } else {
-      const filtered = filterAssignments();
-      const upcomingList   = filtered.filter(a => computeLane(a, instancesData) === 'upcoming');
-      const currentList    = filtered.filter(a => computeLane(a, instancesData) === 'current');
-      const finalizedList  = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
-
       container.appendChild(
         renderLaneSection('upcoming', '\uD83D\uDCCB', 'Upcoming', upcomingList.length, (div) => {
           div.appendChild(renderUpcomingLane(upcomingList));
