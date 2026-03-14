@@ -233,6 +233,193 @@ test('20 MB is rejected', () => {
   assert.ok(!isFileSizeAllowed(20 * 1024 * 1024));
 });
 
+// ── Lane Computation ──────────────────────────────────────────────────────────
+
+/**
+ * Mirrors computeLane() from tc-library.js for unit testing.
+ */
+function computeLane(assignment, allInstances) {
+  const instances = allInstances.filter(i => i.assignment_id === assignment.id);
+  if (instances.length === 0) return 'upcoming';
+  const allGraded = instances.every(i => i.status === 'Graded');
+  if (allGraded && assignment.active === false) return 'finalized';
+  const anyActive = instances.some(i =>
+    ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
+  );
+  if (anyActive) return 'current';
+  if (allGraded) return 'finalized';
+  return 'upcoming';
+}
+
+console.log('\n--- Lane computation ---');
+
+test('no instances → Upcoming', () => {
+  assert.strictEqual(computeLane({ id: 'A1' }, []), 'upcoming');
+});
+
+test('all Graded + active=false → Finalized', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Graded' }];
+  assert.strictEqual(computeLane({ id: 'A1', active: false }, inst), 'finalized');
+});
+
+test('all Graded + active=true → Finalized (work done regardless of flag)', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Graded' }];
+  assert.strictEqual(computeLane({ id: 'A1', active: true }, inst), 'finalized');
+});
+
+test('all Graded + active=null → Finalized', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Graded' }];
+  assert.strictEqual(computeLane({ id: 'A1', active: null }, inst), 'finalized');
+});
+
+test('any Assigned → Current', () => {
+  const inst = [
+    { assignment_id: 'A1', status: 'Assigned' },
+    { assignment_id: 'A1', status: 'Graded' }
+  ];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'current');
+});
+
+test('any In Progress → Current', () => {
+  const inst = [{ assignment_id: 'A1', status: 'In Progress' }];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'current');
+});
+
+test('any Submitted → Current', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Submitted' }];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'current');
+});
+
+test('instances for different assignment are ignored', () => {
+  const inst = [{ assignment_id: 'A2', status: 'Graded' }];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'upcoming');
+});
+
+// ── School Year ───────────────────────────────────────────────────────────────
+
+/**
+ * Mirrors getSchoolYear() from tc-library.js.
+ */
+function getSchoolYearLabel(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0-indexed; August = 7
+  if (month >= 7) {
+    return `${year}\u2013${year + 1} School Year`;
+  }
+  return `${year - 1}\u2013${year} School Year`;
+}
+
+console.log('\n--- School year ---');
+
+test('August is in the new school year (Aug = start)', () => {
+  const d = new Date('2025-08-01');
+  assert.strictEqual(getSchoolYearLabel(d), '2025\u20132026 School Year');
+});
+
+test('September is in same school year as August', () => {
+  const d = new Date('2025-09-15');
+  assert.strictEqual(getSchoolYearLabel(d), '2025\u20132026 School Year');
+});
+
+test('July is in the prior school year', () => {
+  const d = new Date('2025-07-31');
+  assert.strictEqual(getSchoolYearLabel(d), '2024\u20132025 School Year');
+});
+
+test('January belongs to the school year that started the previous August', () => {
+  const d = new Date('2026-01-15');
+  assert.strictEqual(getSchoolYearLabel(d), '2025\u20132026 School Year');
+});
+
+// ── Week Label ────────────────────────────────────────────────────────────────
+
+/**
+ * Mirrors getWeekLabel() from tc-library.js.
+ */
+function getWeekLabel(date) {
+  const d = new Date(date);
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon
+  const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + offsetToMonday);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monStr = `${MN[monday.getMonth()]} ${monday.getDate()}`;
+  if (monday.getMonth() !== friday.getMonth()) {
+    return `Week of ${monStr} \u2013 ${MN[friday.getMonth()]} ${friday.getDate()}`;
+  }
+  return `Week of ${monStr} \u2013 ${friday.getDate()}`;
+}
+
+console.log('\n--- Week label ---');
+
+test('Monday returns the same-week label', () => {
+  const d = new Date('2026-03-09'); // Monday Mar 9
+  assert.strictEqual(getWeekLabel(d), 'Week of Mar 9 \u2013 13');
+});
+
+test('Friday returns the same-week label', () => {
+  const d = new Date('2026-03-13'); // Friday Mar 13
+  assert.strictEqual(getWeekLabel(d), 'Week of Mar 9 \u2013 13');
+});
+
+test('Wednesday mid-week returns same-week label', () => {
+  const d = new Date('2026-03-11'); // Wednesday
+  assert.strictEqual(getWeekLabel(d), 'Week of Mar 9 \u2013 13');
+});
+
+test('Sunday is rolled back to prior Monday', () => {
+  const d = new Date('2026-03-08'); // Sunday → week of Mar 2–6
+  assert.strictEqual(getWeekLabel(d), 'Week of Mar 2 \u2013 6');
+});
+
+test('cross-month week shows both month names', () => {
+  // Mar 30 (Monday) → Apr 3 (Friday)
+  const d = new Date('2026-03-30');
+  assert.strictEqual(getWeekLabel(d), 'Week of Mar 30 \u2013 Apr 3');
+});
+
+// ── Category Helper ───────────────────────────────────────────────────────────
+
+function getAssignmentCategory(assignment) {
+  const meta = assignment.meta;
+  if (meta && typeof meta === 'object' && meta.category) return meta.category;
+  if (meta && typeof meta === 'string') {
+    try {
+      const parsed = JSON.parse(meta);
+      if (parsed && parsed.category) return parsed.category;
+    } catch (_) { /* meta string is not valid JSON */ }
+  }
+  return 'Uncategorized';
+}
+
+console.log('\n--- Category extraction ---');
+
+test('object meta with category returns it', () => {
+  assert.strictEqual(getAssignmentCategory({ meta: { category: 'Writing' } }), 'Writing');
+});
+
+test('JSON string meta with category returns it', () => {
+  assert.strictEqual(getAssignmentCategory({ meta: '{"category":"Grammar"}' }), 'Grammar');
+});
+
+test('missing category returns Uncategorized', () => {
+  assert.strictEqual(getAssignmentCategory({ meta: { paper: true } }), 'Uncategorized');
+});
+
+test('null meta returns Uncategorized', () => {
+  assert.strictEqual(getAssignmentCategory({ meta: null }), 'Uncategorized');
+});
+
+test('no meta field returns Uncategorized', () => {
+  assert.strictEqual(getAssignmentCategory({}), 'Uncategorized');
+});
+
+test('malformed JSON string meta returns Uncategorized', () => {
+  assert.strictEqual(getAssignmentCategory({ meta: 'not-json' }), 'Uncategorized');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
