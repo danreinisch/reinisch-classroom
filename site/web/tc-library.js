@@ -45,6 +45,14 @@
     'Other':                 { bg: 'rgba(148,163,184,.18)', color: '#94a3b8' }
   };
 
+  // Assignment type options: [value, label]
+  const ASSIGNMENT_TYPE_OPTIONS = [
+    ['All', 'All Types'],
+    ['file', 'File'],
+    ['link', 'Link'],
+    ['paper', 'Paper']
+  ];
+
   // ── State ─────────────────────────────────────────────────────────────────────
 
   let _currentTab = "assignments";
@@ -974,7 +982,7 @@
     typeFilter.id = 'assignmentTypeFilter';
     typeFilter.className = 'tc-input';
     typeFilter.style.cssText = 'padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
-    [['All', 'All Types'], ['file', 'File'], ['link', 'Link'], ['paper', 'Paper']].forEach(([val, label]) => {
+    ASSIGNMENT_TYPE_OPTIONS.forEach(([val, label]) => {
       const opt = document.createElement('option');
       opt.value = val;
       opt.textContent = label;

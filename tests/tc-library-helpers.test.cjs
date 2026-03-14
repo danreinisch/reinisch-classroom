@@ -300,19 +300,9 @@ test('instances for different assignment are ignored', () => {
 /**
  * Mirrors getSchoolYear() from tc-library.js.
  */
-function getSchoolYear(date) {
-  const year = date.getFullYear();
-  const month = date.getMonth(); // 0-indexed; August = 7
-  if (month >= 7) {
-    return `${year}\u20132025 School Year`.replace('2025', String(year + 1));
-  }
-  return `${year - 1}\u2013${year} School Year`;
-}
-
-// Re-implement properly:
 function getSchoolYearLabel(date) {
   const year = date.getFullYear();
-  const month = date.getMonth();
+  const month = date.getMonth(); // 0-indexed; August = 7
   if (month >= 7) {
     return `${year}\u2013${year + 1} School Year`;
   }
