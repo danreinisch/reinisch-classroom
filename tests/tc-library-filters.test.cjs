@@ -174,7 +174,6 @@ function injectStyles(doc) {
   if (doc.getElementById('tc-lib-normalized')) return;
   const style = doc.createElement('style');
   style.setAttribute('id', 'tc-lib-normalized');
-  style.id = 'tc-lib-normalized';
   doc.head.appendChild(style);
   // Register in store so getElementById works
   _domStore['tc-lib-normalized'] = style;
@@ -643,8 +642,7 @@ test('icons referenced in codebase exist in ICON_PATHS', () => {
 // ── injectStyles() ────────────────────────────────────────────────────────────
 console.log('\n--- injectStyles() ---');
 
-test('after calling injectStyles(), style element with id "tc-lib-normalized" is added', () => {
-  // Fresh document-like object
+function makeStyleDoc() {
   const store = {};
   const head = { _children: [], appendChild(el) { this._children.push(el); store[el.id] = el; } };
   const doc = {
@@ -656,22 +654,17 @@ test('after calling injectStyles(), style element with id "tc-lib-normalized" is
     getElementById(id) { return store[id] || null; },
     head
   };
+  return { doc, head, store };
+}
+
+test('after calling injectStyles(), style element with id "tc-lib-normalized" is added', () => {
+  const { doc } = makeStyleDoc();
   injectStyles(doc);
   assert.ok(doc.getElementById('tc-lib-normalized') !== null, 'style element should exist');
 });
 
 test('calling injectStyles() twice does not create duplicate style elements', () => {
-  const store = {};
-  const head = { _children: [], appendChild(el) { this._children.push(el); store[el.id] = el; } };
-  const doc = {
-    createElement(tag) {
-      const el = new MockElement(null, tag);
-      el.setAttribute = function(n, v) { this._attrs[n] = String(v); if (n === 'id') this.id = String(v); };
-      return el;
-    },
-    getElementById(id) { return store[id] || null; },
-    head
-  };
+  const { doc, head } = makeStyleDoc();
   injectStyles(doc);
   injectStyles(doc);
   const styleCount = head._children.filter(el => el.id === 'tc-lib-normalized').length;
