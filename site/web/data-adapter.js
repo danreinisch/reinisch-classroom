@@ -1,5 +1,6 @@
 // Adapter selection: use Supabase if available, else localStorage.
 import { getSupabase } from './supabase-client.js';
+import { withRetry } from './supabase-util.js';
 
 const NS = 'rc_unified_';
 const store = {
@@ -1267,14 +1268,16 @@ const remote = {
   async updateAssignment(id, updates) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
-      .from('assignments')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('assignments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    });
   },
 
   // Upload a paper assignment file to Supabase Storage (bucket: assignments)

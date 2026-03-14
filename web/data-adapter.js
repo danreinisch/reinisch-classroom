@@ -307,10 +307,11 @@ const local = {
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
     const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const created_at = new Date().toISOString();
     const arr = store.get('assignments', []);
-    arr.push({ id, ...a });
+    arr.push({ id, ...a, created_at });
     store.set('assignments', arr);
-    return { id, ...a };
+    return { id, ...a, created_at };
   },
   async updateAssignment(id, updates) {
     const arr = store.get('assignments', []);
@@ -1685,7 +1686,7 @@ const remote = {
     return await withRetry(async () => {
       const { data, error } = await supabase
         .from('assignments')
-        .select('id, title, type, series, page, hero, meta, created_at')
+        .select('id, title, type, series, page, hero, meta, created_at, active')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
