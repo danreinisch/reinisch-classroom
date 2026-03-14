@@ -61,7 +61,8 @@
     folderClosed: ['M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'],
     inbox:        ['M22 12h-6l-2 3h-4l-2-3H2','M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'],
     search:       ['M11 17.25a6.25 6.25 0 1 1 0-12.5 6.25 6.25 0 0 1 0 12.5z','M16 16l4.5 4.5'],
-    clipboardPlus:['M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2','M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z','M12 11v6M9 14h6']
+    clipboardPlus:['M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2','M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z','M12 11v6M9 14h6'],
+    upload:       ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4','M17 8l-5-5-5 5','M12 3v12']
   };
 
   function createIcon(name, size) {
@@ -280,11 +281,21 @@
     injectStyles();
     renderTabBar();
     renderTabContent();
-    switchTab("assignments");
+    // Activate the assignments tab visually and mark button active,
+    // then show the loading skeleton BEFORE fetching data (avoids blank page).
+    _currentTab = "assignments";
+    document.querySelectorAll('.tc-lib-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === "assignments");
+    });
+    const assignmentsTabEl = $("assignmentsTab");
+    const lessonsTabEl = $("lessonsTab");
+    if (assignmentsTabEl) assignmentsTabEl.style.display = "block";
+    if (lessonsTabEl) lessonsTabEl.style.display = "none";
     renderLoadingSkeleton();
     await loadAssignments();
     await loadLessons();
     attachEventListeners();
+    // Now render real content, replacing skeleton
     switchTab("assignments");
   }
 
@@ -321,29 +332,7 @@
     uploadBtn.id = 'uploadPaperBtn';
     uploadBtn.className = 'tc-btn';
     uploadBtn.style.cssText = 'margin-left: auto; display: flex; align-items: center; gap: 6px;';
-    const uploadSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    uploadSvg.setAttribute('width', '16');
-    uploadSvg.setAttribute('height', '16');
-    uploadSvg.setAttribute('viewBox', '0 0 24 24');
-    uploadSvg.setAttribute('fill', 'none');
-    uploadSvg.setAttribute('stroke', 'currentColor');
-    uploadSvg.setAttribute('stroke-width', '1.5');
-    uploadSvg.setAttribute('stroke-linecap', 'round');
-    uploadSvg.setAttribute('stroke-linejoin', 'round');
-    uploadSvg.setAttribute('aria-hidden', 'true');
-    const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p1.setAttribute('d', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4');
-    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    poly.setAttribute('points', '17 8 12 3 7 8');
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '12');
-    line.setAttribute('y1', '3');
-    line.setAttribute('x2', '12');
-    line.setAttribute('y2', '15');
-    uploadSvg.appendChild(p1);
-    uploadSvg.appendChild(poly);
-    uploadSvg.appendChild(line);
-    uploadBtn.appendChild(uploadSvg);
+    uploadBtn.appendChild(createIcon('upload', 16));
     uploadBtn.appendChild(document.createTextNode(' Upload Paper Assignment'));
     tabBar.appendChild(uploadBtn);
 
