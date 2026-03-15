@@ -251,7 +251,11 @@
       };
       localStorage.setItem('rc_tc_library_filters_v1', JSON.stringify(data));
     } catch (e) {
-      console.warn('[tc-library] Could not save filters:', e.message);
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        console.warn('[tc-library] localStorage quota exceeded — filter preferences not saved');
+      } else {
+        console.warn('[tc-library] Error saving filters:', e.message);
+      }
     }
   }
 
@@ -373,11 +377,14 @@
 
     const tabsContainer = document.createElement('div');
     tabsContainer.className = 'tc-lib-tabs';
+    tabsContainer.setAttribute('role', 'tablist');
 
     const assignmentsBtn = document.createElement('button');
     assignmentsBtn.className = 'tc-btn tc-lib-tab-btn';
     assignmentsBtn.dataset.tab = 'assignments';
     assignmentsBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    assignmentsBtn.setAttribute('role', 'tab');
+    assignmentsBtn.setAttribute('aria-selected', 'true');
     assignmentsBtn.appendChild(createIcon('fileText'));
     assignmentsBtn.appendChild(document.createTextNode(' Assignments'));
     tabsContainer.appendChild(assignmentsBtn);
@@ -386,6 +393,8 @@
     lessonsBtn.className = 'tc-btn tc-lib-tab-btn';
     lessonsBtn.dataset.tab = 'lessons';
     lessonsBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    lessonsBtn.setAttribute('role', 'tab');
+    lessonsBtn.setAttribute('aria-selected', 'false');
     lessonsBtn.appendChild(createIcon('bookOpen'));
     lessonsBtn.appendChild(document.createTextNode(' Lessons'));
     tabsContainer.appendChild(lessonsBtn);
@@ -419,10 +428,12 @@
     const assignmentsTab = document.createElement('div');
     assignmentsTab.id = 'assignmentsTab';
     assignmentsTab.className = 'tc-lib-tab-content';
+    assignmentsTab.setAttribute('role', 'tabpanel');
     assignmentsTab.style.display = 'none';
     const lessonsTab = document.createElement('div');
     lessonsTab.id = 'lessonsTab';
     lessonsTab.className = 'tc-lib-tab-content';
+    lessonsTab.setAttribute('role', 'tabpanel');
     lessonsTab.style.display = 'none';
     main.appendChild(assignmentsTab);
     main.appendChild(lessonsTab);
@@ -431,7 +442,9 @@
   function switchTab(tabName) {
     _currentTab = tabName;
     document.querySelectorAll('.tc-lib-tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabName);
+      const active = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     const assignmentsTab = $("assignmentsTab");
     const lessonsTab = $("lessonsTab");
@@ -926,8 +939,9 @@
       `margin-bottom:${expanded ? '12px' : '0'};`
     ].join('');
 
+    header.setAttribute('aria-expanded', String(expanded));
+
     const toggleIcon = document.createElement('span');
-    toggleIcon.style.cssText = `font-size:14px; transition:transform .2s ease; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'});`;
     toggleIcon.textContent = '\u25be';
 
     const titleEl = document.createElement('span');
@@ -1780,9 +1794,9 @@
   function renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList) {
     const laneId = 'analytics';
     const expanded = isLaneExpanded(laneId);
-
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:16px;';
+    try {
 
     // Collapsible header
     const header = document.createElement('div');
@@ -1792,6 +1806,7 @@
       `border-radius:${expanded ? '10px 10px 0 0' : '10px'}; cursor:pointer; user-select:none;`,
       'transition:background .15s ease;'
     ].join('');
+    header.setAttribute('aria-expanded', String(expanded));
 
     const toggleIcon = document.createElement('span');
     toggleIcon.style.cssText = `font-size:13px; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'}); transition:transform .2s;`;
@@ -2056,6 +2071,14 @@
     }
 
     return section;
+    } catch (err) {
+      console.error('[tc-library] Error rendering analytics section:', err);
+      const errDiv = document.createElement('div');
+      errDiv.className = 'tc-card';
+      errDiv.style.cssText = 'text-align:center; padding:16px; color:rgba(255,255,255,.5); font-size:13px; margin-bottom:16px;';
+      errDiv.textContent = 'Analytics unavailable';
+      return errDiv;
+    }
   }
 
   // ── Main Assignments Tab Renderer ─────────────────────────────────────────────
@@ -2063,6 +2086,7 @@
   function renderAssignmentsTab() {
     const container = $("assignmentsTab");
     if (!container) return;
+    try {
     container.innerHTML = '';
 
     // Clean up any stale floating bulk bar from a previous render
@@ -2080,13 +2104,13 @@
     const kpis = calculateAssignmentKPIs();
     const kpiGrid = document.createElement('div');
     kpiGrid.className = 'tc-lib-kpi-grid';
-    function makeKpiLabel(iconName, text) {
+    const makeKpiLabel = (iconName, text) => {
       const span = document.createElement('span');
       span.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
       span.appendChild(createIcon(iconName, 14));
       span.appendChild(document.createTextNode(text));
       return span;
-    }
+    };
     kpiGrid.appendChild(renderKPI(makeKpiLabel('clipboard', 'Upcoming'), kpis.upcomingCount));
     kpiGrid.appendChild(renderKPI(makeKpiLabel('refreshCw', 'In Progress'), kpis.currentCount, '#60a5fa'));
     kpiGrid.appendChild(renderKPI(makeKpiLabel('checkCircle', 'Finalized'), kpis.finalizedCount, '#4ade80'));
@@ -2193,6 +2217,19 @@
 
     container.appendChild(filterBar);
 
+    // Filter results live region — screen readers announce filtered count
+    const filterStatus = document.createElement('div');
+    filterStatus.id = 'tcLibFilterStatus';
+    filterStatus.setAttribute('aria-live', 'polite');
+    filterStatus.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:8px;';
+    if (assignmentsData.length > 0) {
+      const filtered0 = filterAssignments();
+      filterStatus.textContent = filtered0.length === assignmentsData.length
+        ? `Showing all ${assignmentsData.length} assignment${assignmentsData.length !== 1 ? 's' : ''}`
+        : `Showing ${filtered0.length} of ${assignmentsData.length} assignment${assignmentsData.length !== 1 ? 's' : ''}`;
+    }
+    container.appendChild(filterStatus);
+
     // Uncategorized banner (only when there are uncategorized assignments and not in bulk mode)
     if (uncategorizedCount > 0 && !bulkEditMode) {
       const banner = document.createElement('div');
@@ -2277,6 +2314,27 @@
     }
 
     updateActiveClassFilter();
+    } catch (err) {
+      console.error('[tc-library] Error rendering assignments tab:', err);
+      container.textContent = '';
+      const errorCard = document.createElement('div');
+      errorCard.className = 'tc-card';
+      errorCard.style.cssText = 'text-align:center; padding:32px 24px; color:rgba(255,255,255,.7);';
+      const msg = document.createElement('p');
+      msg.textContent = 'Something went wrong rendering this section.';
+      errorCard.appendChild(msg);
+      const detail = document.createElement('p');
+      detail.style.cssText = 'font-size:12px; color:rgba(255,255,255,.4); margin-top:8px;';
+      detail.textContent = err.message || 'Unknown error';
+      errorCard.appendChild(detail);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'tc-btn';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.addEventListener('click', () => renderAssignmentsTab());
+      errorCard.appendChild(retryBtn);
+      container.appendChild(errorCard);
+    }
   }
 
   // ── Sync Status Badge ─────────────────────────────────────────────────────────
@@ -2311,6 +2369,7 @@
   function renderLessonsTab() {
     const container = $("lessonsTab");
     if (!container) return;
+    try {
     container.innerHTML = '';
 
     const searchWrap = document.createElement('div');
@@ -2366,6 +2425,27 @@
         container.appendChild(listWrap);
       }
     }
+    } catch (err) {
+      console.error('[tc-library] Error rendering lessons tab:', err);
+      container.textContent = '';
+      const errorCard = document.createElement('div');
+      errorCard.className = 'tc-card';
+      errorCard.style.cssText = 'text-align:center; padding:32px 24px; color:rgba(255,255,255,.7);';
+      const msg = document.createElement('p');
+      msg.textContent = 'Something went wrong rendering this section.';
+      errorCard.appendChild(msg);
+      const detail = document.createElement('p');
+      detail.style.cssText = 'font-size:12px; color:rgba(255,255,255,.4); margin-top:8px;';
+      detail.textContent = err.message || 'Unknown error';
+      errorCard.appendChild(detail);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'tc-btn';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.addEventListener('click', () => renderLessonsTab());
+      errorCard.appendChild(retryBtn);
+      container.appendChild(errorCard);
+    }
   }
 
   function filterLessons() {
@@ -2399,6 +2479,7 @@
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'lesson-section-toggle';
     toggleBtn.dataset.target = sectionId;
+    toggleBtn.setAttribute('aria-expanded', 'false');
     toggleBtn.style.cssText = 'width: 100%; padding: 20px; background: transparent; border: none; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 600;';
     const nameSpan = document.createElement('span');
     nameSpan.textContent = section.name;
@@ -2427,6 +2508,7 @@
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'lesson-unit-toggle';
     toggleBtn.dataset.target = unitId;
+    toggleBtn.setAttribute('aria-expanded', 'false');
     toggleBtn.style.cssText = 'width: 100%; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 8px; color: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 500;';
     const nameSpan = document.createElement('span');
     nameSpan.textContent = unit.name;
@@ -2552,6 +2634,7 @@
         if (content) {
           const isExpanded = content.style.display !== 'none';
           content.style.display = isExpanded ? 'none' : 'block';
+          toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
           if (icon) {
             if (toggle.classList.contains('lesson-section-toggle')) {
               icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';

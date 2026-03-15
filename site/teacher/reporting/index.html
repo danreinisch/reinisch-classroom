@@ -882,57 +882,57 @@
             </div>
 
             <!-- Tab Navigation -->
-            <div class="rp-tabs">
-              <button class="rp-tab active" data-tab="iep-quarterly" type="button">
+            <div class="rp-tabs" role="tablist">
+              <button class="rp-tab active" data-tab="iep-quarterly" type="button" role="tab" aria-selected="true">
                 📋 IEP Quarterly Progress
               </button>
-              <button class="rp-tab" data-tab="student-summary" type="button">
+              <button class="rp-tab" data-tab="student-summary" type="button" role="tab" aria-selected="false">
                 📊 Student Summary
               </button>
-              <button class="rp-tab" data-tab="class-performance" type="button">
+              <button class="rp-tab" data-tab="class-performance" type="button" role="tab" aria-selected="false">
                 📈 Class Performance
               </button>
-              <button class="rp-tab" data-tab="compliance-log" type="button">
+              <button class="rp-tab" data-tab="compliance-log" type="button" role="tab" aria-selected="false">
                 📅 Compliance Log
               </button>
-              <button class="rp-tab" data-tab="batch-reports" type="button">
+              <button class="rp-tab" data-tab="batch-reports" type="button" role="tab" aria-selected="false">
                 📋 Batch Reports
               </button>
-              <button class="rp-tab" data-tab="student-evidence" type="button">
+              <button class="rp-tab" data-tab="student-evidence" type="button" role="tab" aria-selected="false">
                 📑 Student Evidence
               </button>
             </div>
 
             <!-- Tab 1: IEP Quarterly Progress Report -->
-            <div class="rp-tab-content active" data-tab="iep-quarterly">
-              <div id="tab1Content">
+            <div class="rp-tab-content active" data-tab="iep-quarterly" role="tabpanel">
+              <div id="tab1Content" aria-live="polite">
                 <div class="rp-empty">Loading...</div>
               </div>
             </div>
 
             <!-- Tab 2: Student Summary (One-Pager) -->
-            <div class="rp-tab-content" data-tab="student-summary">
-              <div id="tab2Content">
+            <div class="rp-tab-content" data-tab="student-summary" role="tabpanel">
+              <div id="tab2Content" aria-live="polite">
                 <div class="rp-empty">Loading...</div>
               </div>
             </div>
 
             <!-- Tab 3: Class Performance Overview -->
-            <div class="rp-tab-content" data-tab="class-performance">
-              <div id="tab3Content">
+            <div class="rp-tab-content" data-tab="class-performance" role="tabpanel">
+              <div id="tab3Content" aria-live="polite">
                 <div class="rp-empty">Loading...</div>
               </div>
             </div>
 
             <!-- Tab 4: Data Collection Compliance Log -->
-            <div class="rp-tab-content" data-tab="compliance-log">
-              <div id="tab4Content">
+            <div class="rp-tab-content" data-tab="compliance-log" role="tabpanel">
+              <div id="tab4Content" aria-live="polite">
                 <div class="rp-empty">Loading...</div>
               </div>
             </div>
 
             <!-- Tab 5: Batch Reports -->
-            <div class="rp-tab-content" data-tab="batch-reports">
+            <div class="rp-tab-content" data-tab="batch-reports" role="tabpanel">
               <div class="tc-card">
                 <h2 style="margin: 0 0 16px 0">📋 Generate Quarterly Progress Reports</h2>
                 <p style="opacity: 0.8; margin-bottom: 20px">
@@ -952,7 +952,7 @@
                   </div>
 
                   <div style="display: flex; align-items: flex-end;">
-                    <button id="generateBatchReportsBtn" class="tc-btn" type="button">
+                    <button id="generateBatchReportsBtn" class="tc-btn" type="button" aria-label="Generate All Quarterly Reports">
                       🖨️ Generate All Quarterly Reports
                     </button>
                   </div>
@@ -969,8 +969,8 @@
             </div>
 
             <!-- Tab 6: Student Evidence Report -->
-            <div class="rp-tab-content" data-tab="student-evidence">
-              <div id="tab6Content">
+            <div class="rp-tab-content" data-tab="student-evidence" role="tabpanel">
+              <div id="tab6Content" aria-live="polite">
                 <div class="rp-empty">Select a student to generate an evidence report.</div>
               </div>
             </div>

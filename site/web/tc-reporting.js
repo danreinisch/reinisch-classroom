@@ -196,7 +196,9 @@
 
     // Update tab buttons
     document.querySelectorAll(".rp-tab").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tab === tabId);
+      const active = btn.dataset.tab === tabId;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
     });
 
     // Update tab content
@@ -212,6 +214,7 @@
    * Render current active tab
    */
   function renderCurrentTab() {
+    try {
     switch (currentTab) {
       case "iep-quarterly":
         renderTab1();
@@ -231,6 +234,9 @@
       case "student-evidence":
         renderTab6();
         break;
+    }
+    } catch (err) {
+      console.error('[tc-reporting] Error in renderCurrentTab:', err);
     }
   }
 
@@ -458,7 +464,7 @@
       // Compact table format
       html += `
         <table class="rp-table" style="margin-top: 20px;">
-          <thead>
+          <caption>IEP Goal Progress Summary</caption>
             <tr>
               <th>Goal Code</th>
               <th>Area</th>
@@ -643,12 +649,37 @@ Status: ${status}`;
   }
 
   /**
+   * Render an error card inside a tab container (used by error boundaries)
+   */
+  function renderTabErrorCard(container, tabFn, err) {
+    console.error('[tc-reporting] Error rendering tab:', err);
+    container.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'text-align:center; padding:32px 24px; color:rgba(255,255,255,.7);';
+    const msg = document.createElement('p');
+    msg.textContent = 'Something went wrong rendering this section.';
+    card.appendChild(msg);
+    const detail = document.createElement('p');
+    detail.style.cssText = 'font-size:12px; color:rgba(255,255,255,.4); margin-top:8px;';
+    detail.textContent = err.message || 'Unknown error';
+    card.appendChild(detail);
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'tc-btn';
+    retryBtn.textContent = 'Retry';
+    retryBtn.style.marginTop = '16px';
+    retryBtn.addEventListener('click', () => tabFn());
+    card.appendChild(retryBtn);
+    container.appendChild(card);
+  }
+
+  /**
    * TAB 1: IEP Quarterly Progress Report
    */
   function renderTab1() {
     const container = $("tab1Content");
     if (!container) return;
-
+    try {
     // Render filters
     const studentsHtml = studentsData
       .filter((s) => s.active !== false)
@@ -711,7 +742,15 @@ Status: ${status}`;
       if (templateSelect) {
         templateSelect.addEventListener("change", (e) => {
           tab1State.template = e.target.value;
-          localStorage.setItem('rc_report_template', e.target.value);
+          try {
+            localStorage.setItem('rc_report_template', e.target.value);
+          } catch (err) {
+            if (err.name === 'QuotaExceededError' || err.code === 22) {
+              console.warn('[tc-reporting] localStorage quota exceeded');
+            } else {
+              console.warn('[tc-reporting] Error saving template preference:', err.message);
+            }
+          }
           renderTab1();
         });
       }
@@ -754,6 +793,7 @@ Status: ${status}`;
       ${reportContent}
     `;
 
+    // SAFETY: all dynamic values in reportHtml pass through escapeHtml(); static HTML only otherwise
     container.innerHTML = reportHtml;
 
     // Attach event listeners for filters
@@ -775,7 +815,15 @@ Status: ${status}`;
     if (templateSelect) {
       templateSelect.addEventListener("change", (e) => {
         tab1State.template = e.target.value;
-        localStorage.setItem('rc_report_template', e.target.value);
+        try {
+          localStorage.setItem('rc_report_template', e.target.value);
+        } catch (err) {
+          if (err.name === 'QuotaExceededError' || err.code === 22) {
+            console.warn('[tc-reporting] localStorage quota exceeded');
+          } else {
+            console.warn('[tc-reporting] Error saving template preference:', err.message);
+          }
+        }
         renderTab1();
       });
     }
@@ -819,6 +867,9 @@ Status: ${status}`;
         });
       });
     });
+    } catch (err) {
+      renderTabErrorCard(container, renderTab1, err);
+    }
   }
 
   /**
@@ -937,7 +988,7 @@ Status: ${status}`;
 
     // Build grades table
     let html =
-      '<div class="rp-grades-section"><h3>Grades This Quarter</h3><table class="rp-table"><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
+      '<div class="rp-grades-section"><h3>Grades This Quarter</h3><table class="rp-table"><caption>Grades This Quarter</caption><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
 
     let totalScore = 0;
     let scoredCount = 0;
@@ -1137,6 +1188,7 @@ Status: ${status}`;
   function renderTab2() {
     const container = $("tab2Content");
     if (!container) return;
+    try {
 
     // Render student selector
     const studentsHtml = studentsData
@@ -1278,6 +1330,9 @@ Status: ${status}`;
         window.print();
       });
     }
+    } catch (err) {
+      renderTabErrorCard(container, renderTab2, err);
+    }
   }
 
   /**
@@ -1357,6 +1412,7 @@ Status: ${status}`;
         <div><strong>Overall Average:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== "N/A" ? "%" : ""}</span></div>
       </div>
       <table class="rp-table">
+        <caption>Grades Overview</caption>
         <thead><tr><th>Assignment</th><th>Score</th><th>Date</th></tr></thead>
         <tbody>${gradeRows}</tbody>
       </table>
@@ -1446,6 +1502,7 @@ Status: ${status}`;
         studentGoals.length > 0
           ? `
         <table class="rp-table">
+          <caption>IEP Goal Progress by Quarter</caption>
           <thead><tr><th>Goal</th><th>Area</th><th>Points (Q)</th><th>Latest Value</th></tr></thead>
           <tbody>${goalBreakdown}</tbody>
         </table>
@@ -1461,8 +1518,7 @@ Status: ${status}`;
   function renderTab3() {
     const container = $("tab3Content");
     if (!container) return;
-
-    // Render class selector
+    try {
     const classOptions = ["All Classes", ...CANON_CLASSES]
       .map(
         (cls) =>
@@ -1619,6 +1675,9 @@ Status: ${status}`;
     if (btnPrint) {
       btnPrint.addEventListener("click", () => window.print());
     }
+    } catch (err) {
+      renderTabErrorCard(container, renderTab3, err);
+    }
   }
 
   /**
@@ -1680,6 +1739,7 @@ Status: ${status}`;
       <h3>Assignment Performance</h3>
       <div class="rp-table-container">
         <table class="rp-table rp-sortable">
+          <caption>Assignment Performance</caption>
           <thead>
             <tr>
               <th>Assignment Title</th>
@@ -1759,6 +1819,7 @@ Status: ${status}`;
       <h3>Student Performance</h3>
       <div class="rp-table-container">
         <table class="rp-table rp-sortable">
+          <caption>Student Performance</caption>
           <thead>
             <tr>
               <th>Student Code</th>
@@ -1789,11 +1850,8 @@ Status: ${status}`;
     html += `
       <div class="rp-table-container">
         <table class="rp-table">
+          <caption>Goal Progress Across Quarters</caption>
           <thead>
-            <tr>
-              <th>Student</th>
-              <th>Goal</th>
-              <th>Q1 Avg</th>
               <th>Q2 Avg</th>
               <th>Q3 Avg</th>
               <th>Q4 Avg</th>
@@ -1930,8 +1988,7 @@ Status: ${status}`;
   function renderTab4() {
     const container = $("tab4Content");
     if (!container) return;
-
-    // Render filters
+    try {
     const classOptions = ["All Classes", ...CANON_CLASSES]
       .map(
         (cls) =>
@@ -2053,11 +2110,10 @@ Status: ${status}`;
       <h3>Compliance Table</h3>
       <div class="rp-table-container">
         <table class="rp-table">
+          <caption>Data Collection Compliance Log</caption>
           <thead>
             <tr>
               <th>Student Code</th>
-              <th>Student Name</th>
-              <th>Goal Code</th>
               <th>Goal Area</th>
               <th>Data Points (Q)</th>
               <th>Last Collected</th>
@@ -2119,6 +2175,9 @@ Status: ${status}`;
     const btnPrint = $("btnPrintCompliance");
     if (btnPrint) {
       btnPrint.addEventListener("click", () => window.print());
+    }
+    } catch (err) {
+      renderTabErrorCard(container, renderTab4, err);
     }
   }
 
@@ -2185,12 +2244,8 @@ Status: ${status}`;
       <h3>Grade Completion Gaps</h3>
       <div class="rp-table-container">
         <table class="rp-table">
+          <caption>Grade Completion Gaps</caption>
           <thead>
-            <tr>
-              <th>Student Code</th>
-              <th>Assignment</th>
-              <th>Assigned Date</th>
-              <th>Due Date</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -2255,6 +2310,7 @@ Status: ${status}`;
    * TAB 5: Batch Reports - Generate Quarterly Progress Reports for All Students
    */
   function renderTab5() {
+    try {
     // Set quarter selector to current quarter
     const quarterSelect = $("batchQuarterSelect");
     if (quarterSelect && !quarterSelect.value) {
@@ -2273,6 +2329,9 @@ Status: ${status}`;
         tab5State.quarter = e.target.value;
       });
       quarterSelect.dataset.listenerAttached = "true";
+    }
+    } catch (err) {
+      console.error('[tc-reporting] Error rendering batch reports tab:', err);
     }
   }
 
@@ -2488,8 +2547,7 @@ Status: ${status}`;
   function renderTab6() {
     const container = $("tab6Content");
     if (!container) return;
-
-    // Get date range options
+    try {
     const currentQ = getCurrentQuarter();
     const currentQLabel = getQuarterLabel(currentQ);
 
@@ -2685,6 +2743,9 @@ Status: ${status}`;
         });
       });
     }
+    } catch (err) {
+      renderTabErrorCard(container, renderTab6, err);
+    }
   }
 
   /**
@@ -2790,6 +2851,7 @@ Status: ${status}`;
       const adminHeaders = isParent ? '' : '<th>Data Pts</th>';
       goalsHtml = `
         <table class="rp-table" style="width:100%">
+          <caption>IEP Goal Progress</caption>
           <thead>
             <tr>
               <th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminHeaders}<th>Trend</th>
