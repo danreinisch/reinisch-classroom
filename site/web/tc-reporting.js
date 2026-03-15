@@ -68,6 +68,15 @@
   let tab3State = { classFilter: "All Classes", compareQuarters: false };
   let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
   let tab5State = { quarter: getCurrentQuarter() };
+  let tab6State = {
+    selectionMode: 'single',
+    studentCode: null,
+    selectedStudents: [],
+    audienceMode: 'parent',
+    dateRange: 'current-quarter',
+    customStart: null,
+    customEnd: null,
+  };
 
   /**
    * Escape HTML for XSS prevention
@@ -218,6 +227,9 @@
         break;
       case "batch-reports":
         renderTab5();
+        break;
+      case "student-evidence":
+        renderTab6();
         break;
     }
   }
@@ -2469,6 +2481,572 @@ Status: ${status}`;
   /**
    * Get goal data points for a quarter
    */
+  /**
+   * TAB 6: Student Evidence Report
+   * Generates comprehensive, printable evidence packets for IEP meetings / parent conferences.
+   */
+  function renderTab6() {
+    const container = $("tab6Content");
+    if (!container) return;
+
+    // Get date range options
+    const currentQ = getCurrentQuarter();
+    const currentQLabel = getQuarterLabel(currentQ);
+
+    const activeStudents = studentsData.filter((s) => s.active !== false);
+
+    // Build student dropdown options
+    const studentOptions = activeStudents
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.code)}" ${s.code === tab6State.studentCode ? "selected" : ""}>${escapeHtml(s.name || s.code)}</option>`
+      )
+      .join("");
+
+    // Build mode buttons
+    const modes = [
+      { id: 'single', label: 'Single' },
+      { id: 'multi', label: 'Multi-Select' },
+      { id: 'all', label: 'All Students' },
+    ];
+    const modeBtns = modes
+      .map(
+        (m) =>
+          `<button class="rp-ev-mode-btn${tab6State.selectionMode === m.id ? ' active' : ''}" data-mode="${escapeHtml(m.id)}" type="button">${escapeHtml(m.label)}</button>`
+      )
+      .join("");
+
+    // Build audience buttons
+    const audienceBtns = `
+      <button class="rp-ev-mode-btn${tab6State.audienceMode === 'parent' ? ' active' : ''}" data-audience="parent" type="button">Parent</button>
+      <button class="rp-ev-mode-btn${tab6State.audienceMode === 'admin' ? ' active' : ''}" data-audience="admin" type="button">Admin</button>
+    `;
+
+    // Single student selector
+    const singleSelector = tab6State.selectionMode === 'single' ? `
+      <div class="rp-filter-group">
+        <label for="tab6Student">Student:</label>
+        <select id="tab6Student" class="rp-select">
+          <option value="">-- Select Student --</option>
+          ${studentOptions}
+        </select>
+      </div>
+    ` : '';
+
+    // Multi-select panel
+    const multiPanel = tab6State.selectionMode === 'multi' ? `
+      <div class="rp-filter-group" style="flex-direction:column;align-items:flex-start;">
+        <label>Select Students:</label>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <button class="rp-ev-mode-btn" id="tab6SelectAll" type="button">Select All</button>
+          <button class="rp-ev-mode-btn" id="tab6ClearAll" type="button">Clear All</button>
+        </div>
+        <div class="rp-ev-multi-list" id="tab6MultiList">
+          ${activeStudents.map((s) => `
+            <label class="rp-ev-multi-item">
+              <input type="checkbox" value="${escapeHtml(s.code)}" ${tab6State.selectedStudents.includes(s.code) ? 'checked' : ''}>
+              ${escapeHtml(s.name || s.code)}
+            </label>
+          `).join('')}
+        </div>
+        <div class="rp-ev-counter" id="tab6Counter">${tab6State.selectedStudents.length} of ${activeStudents.length} selected</div>
+      </div>
+    ` : '';
+
+    // Date range selector
+    const dateRangeOptions = [
+      { value: 'current-quarter', label: `Current Quarter (${currentQLabel})` },
+      { value: 'Q1', label: getQuarterLabel('Q1') },
+      { value: 'Q2', label: getQuarterLabel('Q2') },
+      { value: 'Q3', label: getQuarterLabel('Q3') },
+      { value: 'Q4', label: getQuarterLabel('Q4') },
+      { value: 'all-time', label: 'All Time' },
+      { value: 'custom', label: 'Custom Range...' },
+    ];
+    const dateRangeHtml = dateRangeOptions
+      .map(
+        (o) =>
+          `<option value="${escapeHtml(o.value)}" ${tab6State.dateRange === o.value ? 'selected' : ''}>${escapeHtml(o.label)}</option>`
+      )
+      .join("");
+
+    const customRangeHtml = tab6State.dateRange === 'custom' ? `
+      <div class="rp-filter-group">
+        <label for="tab6CustomStart">From:</label>
+        <input type="date" id="tab6CustomStart" class="rp-select" value="${escapeHtml(tab6State.customStart || '')}">
+      </div>
+      <div class="rp-filter-group">
+        <label for="tab6CustomEnd">To:</label>
+        <input type="date" id="tab6CustomEnd" class="rp-select" value="${escapeHtml(tab6State.customEnd || '')}">
+      </div>
+    ` : '';
+
+    container.innerHTML = `
+      <div class="rp-ev-controls">
+        <div class="rp-filter-group">
+          <label>Selection Mode:</label>
+          <div class="rp-ev-mode-group" id="tab6ModeGroup">${modeBtns}</div>
+        </div>
+        ${singleSelector}
+        ${multiPanel}
+        <div class="rp-filter-group">
+          <label>Audience:</label>
+          <div class="rp-ev-mode-group" id="tab6AudienceGroup">${audienceBtns}</div>
+        </div>
+        <div class="rp-filter-group">
+          <label for="tab6DateRange">Date Range:</label>
+          <select id="tab6DateRange" class="rp-select">
+            ${dateRangeHtml}
+          </select>
+        </div>
+        ${customRangeHtml}
+        <div style="display:flex;align-items:flex-end;">
+          <button class="tc-btn" id="tab6GenerateBtn" type="button">Generate Report</button>
+        </div>
+      </div>
+      <div id="tab6ReportOutput"></div>
+    `;
+
+    // Wire up mode buttons
+    container.querySelectorAll('#tab6ModeGroup .rp-ev-mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tab6State.selectionMode = btn.dataset.mode;
+        renderTab6();
+      });
+    });
+
+    // Wire up audience buttons
+    container.querySelectorAll('#tab6AudienceGroup .rp-ev-mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tab6State.audienceMode = btn.dataset.audience;
+        renderTab6();
+      });
+    });
+
+    // Wire up single student selector
+    const studentSelect = $("tab6Student");
+    if (studentSelect) {
+      studentSelect.addEventListener('change', (e) => {
+        tab6State.studentCode = e.target.value || null;
+      });
+    }
+
+    // Wire up multi-select checkboxes
+    const multiList = $("tab6MultiList");
+    if (multiList) {
+      multiList.addEventListener('change', () => {
+        tab6State.selectedStudents = Array.from(
+          multiList.querySelectorAll('input[type=checkbox]:checked')
+        ).map((cb) => cb.value);
+        const counter = $("tab6Counter");
+        if (counter) counter.textContent = `${tab6State.selectedStudents.length} of ${activeStudents.length} selected`;
+      });
+    }
+    const selectAllBtn = $("tab6SelectAll");
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
+        tab6State.selectedStudents = activeStudents.map((s) => s.code);
+        renderTab6();
+      });
+    }
+    const clearAllBtn = $("tab6ClearAll");
+    if (clearAllBtn) {
+      clearAllBtn.addEventListener('click', () => {
+        tab6State.selectedStudents = [];
+        renderTab6();
+      });
+    }
+
+    // Wire up date range selector
+    const dateRangeSelect = $("tab6DateRange");
+    if (dateRangeSelect) {
+      dateRangeSelect.addEventListener('change', (e) => {
+        tab6State.dateRange = e.target.value;
+        renderTab6();
+      });
+    }
+
+    // Wire up custom date inputs
+    const customStart = $("tab6CustomStart");
+    if (customStart) {
+      customStart.addEventListener('change', (e) => { tab6State.customStart = e.target.value; });
+    }
+    const customEnd = $("tab6CustomEnd");
+    if (customEnd) {
+      customEnd.addEventListener('change', (e) => { tab6State.customEnd = e.target.value; });
+    }
+
+    // Wire up generate button
+    const generateBtn = $("tab6GenerateBtn");
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => {
+        generateEvidenceReport().catch((err) => {
+          console.error('[tc-reporting] Error generating evidence report:', err);
+        });
+      });
+    }
+  }
+
+  /**
+   * Resolve the quarter range for tab6State
+   */
+  function getTab6DateRange() {
+    const dr = tab6State.dateRange;
+    if (dr === 'current-quarter') return getQuarterDateRange(getCurrentQuarter());
+    if (dr === 'all-time') return { start: '2000-01-01', end: '2099-12-31' };
+    if (dr === 'custom') return { start: tab6State.customStart || '2000-01-01', end: tab6State.customEnd || '2099-12-31' };
+    // Q1..Q4
+    return getQuarterDateRange(dr);
+  }
+
+  /**
+   * Get display label for the selected date range
+   */
+  function getTab6PeriodLabel() {
+    const dr = tab6State.dateRange;
+    if (dr === 'all-time') return 'All Time';
+    if (dr === 'custom') return `${tab6State.customStart || '?'} – ${tab6State.customEnd || '?'}`;
+    if (dr === 'current-quarter') return getQuarterLabel(getCurrentQuarter());
+    return getQuarterLabel(dr);
+  }
+
+  /**
+   * Build the evidence report HTML for a single student
+   */
+  function buildStudentEvidenceHtml(student, quarterRange, isParent) {
+    const periodLabel = getTab6PeriodLabel();
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const audienceLabel = isParent ? 'Parent' : 'Admin';
+
+    // Classes from enrollments
+    const studentEnrollments = enrollmentsData.filter(
+      (e) => e.student_code === student.code || e.student_id === student.code
+    );
+    const classNames = studentEnrollments.length > 0
+      ? studentEnrollments.map((e) => escapeHtml(e.class_name || e.class_code || '')).filter(Boolean).join(', ')
+      : 'N/A';
+
+    const statusLabel = student.active !== false ? 'Active' : 'Inactive';
+
+    // ── Profile Header ────────────────────────────────────────────────────────
+    const profileHtml = `
+      <div class="rp-ev-profile-card">
+        <div class="rp-ev-profile-header">Student Evidence Report</div>
+        <div class="rp-ev-profile-grid">
+          <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)} (${escapeHtml(student.code)})</div>
+          <div><strong>Report Date:</strong> ${escapeHtml(todayLabel)}</div>
+          <div><strong>Classes:</strong> ${classNames}</div>
+          <div><strong>Period:</strong> ${escapeHtml(periodLabel)}</div>
+          <div><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
+          <div><strong>Mode:</strong> ${escapeHtml(audienceLabel)}</div>
+        </div>
+        <div class="rp-ev-confidential-banner">⚠️ CONFIDENTIAL — For authorized personnel only (FERPA)</div>
+      </div>
+    `;
+
+    // ── IEP Goal Progress Summary ─────────────────────────────────────────────
+    const activeGoals = goalsData.filter(
+      (g) => g.student_code === student.code && g.status === 'active'
+    );
+
+    let goalsHtml = '';
+    if (activeGoals.length === 0) {
+      goalsHtml = '<div class="rp-empty">No active IEP goals found for this student.</div>';
+    } else {
+      const goalRows = activeGoals.map((goal) => {
+        const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const sparkline = data.values.length > 0 ? renderSparkline(data.values) : '—';
+        const avgRaw = data.average != null ? data.average.toFixed(1) : null;
+        let progressCell = '';
+        if (isParent) {
+          if (avgRaw == null) {
+            progressCell = 'No data yet';
+          } else if (data.average >= 80) {
+            progressCell = '✅ On track';
+          } else if (data.average >= 60) {
+            progressCell = '📈 Making progress';
+          } else {
+            progressCell = '⚠️ Needs support';
+          }
+        } else {
+          progressCell = avgRaw != null ? `${avgRaw}%` : '—';
+        }
+        const targetDisplay = goal.target != null ? `${escapeHtml(String(goal.target))}%` : '—';
+        const baselineDisplay = goal.baseline != null ? `${escapeHtml(String(goal.baseline))}%` : '—';
+
+        return `
+          <tr>
+            <td>${escapeHtml(goal.code || goal.id || '—')}</td>
+            <td>${escapeHtml(goal.area || goal.skill_area || '—')}</td>
+            <td>${baselineDisplay}</td>
+            <td style="color:${avgRaw != null ? scoreColor(parseFloat(avgRaw)) : 'inherit'}">${progressCell}</td>
+            <td>${targetDisplay}</td>
+            <td>${isParent ? '' : `${data.count} pts`}</td>
+            <td>${sparkline}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const adminHeaders = isParent ? '' : '<th>Data Pts</th>';
+      goalsHtml = `
+        <table class="rp-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminHeaders}<th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>${goalRows}</tbody>
+        </table>
+      `;
+    }
+
+    // ── Assignment Detail Trail ───────────────────────────────────────────────
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+
+    // Filter instances by date range
+    const rangedInstances = studentInstances.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      if (isNaN(d.getTime())) return true; // Include if no date
+      return d >= startDate && d <= endDate;
+    });
+
+    let assignmentHtml = '';
+    if (assignmentsData.length === 0 && instancesData.length === 0) {
+      assignmentHtml = '<div class="rp-empty">Assignment detail data not available. Score-only view shown.</div>';
+    } else if (rangedInstances.length === 0) {
+      assignmentHtml = '<div class="rp-empty">No assignments found for this period.</div>';
+    } else {
+      assignmentHtml = rangedInstances.map((inst) => {
+        const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+        const submission = submissionsData.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+
+        const title = assignment?.title || `Assignment ${inst.assignment_id}`;
+        const category = assignment?.category || '—';
+        const type = assignment?.type || '—';
+        const score = submission?.score_total ?? submission?.score;
+        const status = submission ? (score != null ? 'Graded' : 'Submitted') : 'Pending';
+        const assignedDate = formatDate(inst.assigned_at || inst.created_at);
+        const deseTags = assignment?.dese_tags || assignment?.dese_standards || '';
+        const iepTags = assignment?.iep_tags || assignment?.iep_goals || '';
+
+        const scoreDisplay = score != null
+          ? `<span style="color:${scoreColor(score)}">${score}%</span>`
+          : '—';
+
+        const metaRow = isParent
+          ? `Category: ${escapeHtml(category)} | Assigned: ${escapeHtml(assignedDate)} | Status: ${escapeHtml(status)}`
+          : `Type: ${escapeHtml(type)} | Category: ${escapeHtml(category)} | Assigned: ${escapeHtml(assignedDate)} | Status: ${escapeHtml(status)} | Score: ${scoreDisplay}`;
+
+        const tagRow = !isParent && (deseTags || iepTags) ? `
+          <div class="rp-ev-tag-row">
+            ${deseTags ? `<strong>DESE Tags:</strong> ${escapeHtml(Array.isArray(deseTags) ? deseTags.join(', ') : String(deseTags))}` : ''}
+            ${iepTags ? ` &nbsp; <strong>IEP Tags:</strong> ${escapeHtml(Array.isArray(iepTags) ? iepTags.join(', ') : String(iepTags))}` : ''}
+          </div>
+        ` : '';
+
+        return `
+          <div class="rp-ev-assignment-card">
+            <div class="rp-ev-assignment-title">${escapeHtml(title)}</div>
+            <div class="rp-ev-assignment-meta">${metaRow}</div>
+            ${tagRow}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Overall Statistics ────────────────────────────────────────────────────
+    const scores = rangedInstances
+      .map((inst) => {
+        const sub = submissionsData.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+        return sub?.score_total ?? sub?.score ?? null;
+      })
+      .filter((s) => s != null);
+
+    const totalAssignments = rangedInstances.length;
+    const gradedCount = scores.length;
+    const pendingCount = totalAssignments - gradedCount;
+    const avgScore = gradedCount > 0 ? (scores.reduce((a, b) => a + b, 0) / gradedCount).toFixed(1) : 'N/A';
+    const maxScore = gradedCount > 0 ? Math.max(...scores) : 'N/A';
+    const minScore = gradedCount > 0 ? Math.min(...scores) : 'N/A';
+    const goalsOnTrack = activeGoals.filter((goal) => {
+      const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+      return data.average != null && data.average >= 70;
+    }).length;
+
+    const statsHtml = `
+      <div class="rp-ev-stats-card">
+        <div class="rp-ev-stats-title">📊 Overall Statistics</div>
+        <div class="rp-ev-stats-grid">
+          <div><strong>Total Assignments:</strong> ${totalAssignments}</div>
+          <div><strong>Graded:</strong> ${gradedCount}</div>
+          <div><strong>Pending:</strong> ${pendingCount}</div>
+          <div><strong>Average Score:</strong> ${avgScore !== 'N/A' ? `<span style="color:${scoreColor(parseFloat(avgScore))}">${avgScore}%</span>` : 'N/A'}</div>
+          <div><strong>Highest:</strong> ${maxScore !== 'N/A' ? `${maxScore}%` : 'N/A'}</div>
+          <div><strong>Lowest:</strong> ${minScore !== 'N/A' ? `${minScore}%` : 'N/A'}</div>
+          <div><strong>Goals on Track:</strong> ${goalsOnTrack}/${activeGoals.length}</div>
+          <div><strong>Data Points This Period:</strong> ${activeGoals.reduce((acc, g) => acc + getGoalProgressForQuarter(g.code, student.code, quarterRange).count, 0)}</div>
+        </div>
+      </div>
+    `;
+
+    return `
+      <div class="rp-ev-student-section">
+        ${profileHtml}
+        <div class="rp-ev-section-title">IEP Goal Progress Summary</div>
+        ${goalsHtml}
+        <div class="rp-ev-section-title">Assignment Detail Trail</div>
+        ${assignmentHtml}
+        ${statsHtml}
+      </div>
+    `;
+  }
+
+  /**
+   * Generate and render the evidence report for selected students
+   */
+  async function generateEvidenceReport() {
+    const output = $("tab6ReportOutput");
+    if (!output) return;
+
+    const quarterRange = getTab6DateRange();
+    const isParent = tab6State.audienceMode === 'parent';
+
+    // Determine which students to report on
+    let targetStudents = [];
+    if (tab6State.selectionMode === 'single') {
+      if (!tab6State.studentCode) {
+        await rcAlert('No Student Selected', 'Please select a student to generate a report.');
+        return;
+      }
+      const student = studentsData.find((s) => s.code === tab6State.studentCode);
+      if (!student) {
+        output.innerHTML = '<div class="rp-empty">Student not found.</div>';
+        return;
+      }
+      targetStudents = [student];
+    } else if (tab6State.selectionMode === 'multi') {
+      if (tab6State.selectedStudents.length === 0) {
+        await rcAlert('No Students Selected', 'Please select at least one student.');
+        return;
+      }
+      targetStudents = studentsData.filter(
+        (s) => tab6State.selectedStudents.includes(s.code) && s.active !== false
+      );
+    } else {
+      // all
+      targetStudents = studentsData.filter((s) => s.active !== false);
+      if (targetStudents.length === 0) {
+        await rcAlert('No Data', 'No active students found.');
+        return;
+      }
+    }
+
+    // Build report HTML for each student
+    const sections = targetStudents.map((student, idx) => {
+      const sectionHtml = buildStudentEvidenceHtml(student, quarterRange, isParent);
+      const separator = idx > 0 ? '<div class="rp-ev-page-break"></div>' : '';
+      return separator + sectionHtml;
+    });
+
+    output.innerHTML = `
+      ${sections.join('')}
+      <div class="rp-ev-export-bar">
+        <button class="tc-btn" id="tab6PrintBtn" type="button">🖨️ Print / PDF</button>
+        <button class="tc-btn" id="tab6CsvBtn" type="button">📊 Export CSV</button>
+      </div>
+    `;
+
+    // Wire export buttons
+    const printBtn = $("tab6PrintBtn");
+    if (printBtn) {
+      printBtn.addEventListener('click', () => window.print());
+    }
+
+    const csvBtn = $("tab6CsvBtn");
+    if (csvBtn) {
+      csvBtn.addEventListener('click', () => exportEvidenceCSV(targetStudents, quarterRange));
+    }
+  }
+
+  /**
+   * Export evidence data as CSV
+   */
+  function exportEvidenceCSV(targetStudents, quarterRange) {
+    const rows = [['Student', 'Assignment', 'Score', 'Date', 'Category', 'DESE Tags', 'IEP Tags', 'Status']];
+
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+
+    targetStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+
+      const rangedInstances = studentInstances.filter((inst) => {
+        const d = new Date(inst.assigned_at || inst.created_at || '');
+        if (isNaN(d.getTime())) return true;
+        return d >= startDate && d <= endDate;
+      });
+
+      if (rangedInstances.length === 0) {
+        rows.push([student.name || student.code, '(no assignments)', '', '', '', '', '', '']);
+        return;
+      }
+
+      rangedInstances.forEach((inst) => {
+        const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+        const submission = submissionsData.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+
+        const title = assignment?.title || `Assignment ${inst.assignment_id}`;
+        const score = submission?.score_total ?? submission?.score ?? '';
+        const date = formatDate(submission?.submitted_at || inst.assigned_at || inst.created_at);
+        const category = assignment?.category || '';
+        const deseTags = assignment?.dese_tags || assignment?.dese_standards || '';
+        const iepTags = assignment?.iep_tags || assignment?.iep_goals || '';
+        const status = submission ? (score !== '' ? 'Graded' : 'Submitted') : 'Pending';
+
+        rows.push([
+          student.name || student.code,
+          title,
+          score !== '' ? `${score}%` : '',
+          date,
+          category,
+          Array.isArray(deseTags) ? deseTags.join('; ') : String(deseTags),
+          Array.isArray(iepTags) ? iepTags.join('; ') : String(iepTags),
+          status,
+        ]);
+      });
+    });
+
+    const csvContent = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `student-evidence-${formatDateYYYYMMDD()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Get goal data points (helper for TAB 5 / TAB 6)
+   */
   function getGoalDataPoints(goalCode, studentCode, quarterRange) {
     const startDate = new Date(quarterRange.start);
     const endDate = new Date(quarterRange.end);
@@ -2572,6 +3150,16 @@ Status: ${status}`;
 
     // Load all data
     await loadData();
+
+    // Handle URL params: ?tab=evidence&student=X
+    const urlParams = new URLSearchParams(window.location.search);
+    const evidenceTab = urlParams.get('tab');
+    const evidenceStudent = urlParams.get('student');
+    if (evidenceTab === 'evidence' && evidenceStudent) {
+      tab6State.studentCode = evidenceStudent;
+      tab6State.selectionMode = 'single';
+      switchTab('student-evidence');
+    }
 
     console.log("[tc-reporting] Initialization complete");
   }

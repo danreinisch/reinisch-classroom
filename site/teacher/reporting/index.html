@@ -518,7 +518,9 @@
         .tc-sidebar,
         .rp-tabs,
         .rp-filters,
-        .rp-export-actions {
+        .rp-export-actions,
+        .rp-ev-export-bar,
+        .rp-ev-controls {
           display: none !important;
         }
         .tc-main {
@@ -535,6 +537,184 @@
           background: #fff;
           color: #000;
         }
+        .rp-ev-confidential-banner {
+          display: block !important;
+          background: #fff3cd !important;
+          color: #000 !important;
+          border: 2px solid #856404 !important;
+          font-weight: bold;
+          text-align: center;
+          padding: 6px 12px;
+          margin-bottom: 8px;
+        }
+        .rp-ev-page-break {
+          page-break-before: always;
+        }
+        .rp-ev-student-section {
+          page-break-inside: avoid;
+        }
+        .rp-ev-assignment-card {
+          page-break-inside: avoid;
+        }
+        .rp-table tr {
+          page-break-inside: avoid;
+        }
+      }
+
+      /* Evidence tab styles */
+      .rp-ev-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 10px;
+      }
+      .rp-ev-mode-group {
+        display: flex;
+        gap: 6px;
+      }
+      .rp-ev-mode-btn {
+        padding: 6px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.15s;
+      }
+      .rp-ev-mode-btn.active {
+        background: rgba(59, 130, 246, 0.4);
+        border-color: rgba(59, 130, 246, 0.7);
+      }
+      .rp-ev-multi-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .rp-ev-multi-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .rp-ev-multi-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .rp-ev-counter {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-top: 4px;
+      }
+      .rp-ev-export-bar {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.10);
+      }
+      .rp-ev-student-section {
+        margin-bottom: 40px;
+      }
+      .rp-ev-profile-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+      .rp-ev-profile-header {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        opacity: 0.95;
+      }
+      .rp-ev-profile-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 20px;
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      .rp-ev-confidential-banner {
+        background: rgba(234, 179, 8, 0.15);
+        border: 1px solid rgba(234, 179, 8, 0.4);
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 12px;
+        text-align: center;
+        letter-spacing: 0.5px;
+        color: #fbbf24;
+      }
+      .rp-ev-section-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 20px 0 10px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        opacity: 0.9;
+      }
+      .rp-ev-assignment-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+      }
+      .rp-ev-assignment-title {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+      .rp-ev-assignment-meta {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 10px;
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .rp-ev-tag-row {
+        font-size: 12px;
+        opacity: 0.75;
+        margin-top: 8px;
+      }
+      .rp-ev-stats-card {
+        background: rgba(59, 130, 246, 0.07);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-top: 16px;
+      }
+      .rp-ev-stats-title {
+        font-weight: 600;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      .rp-ev-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 8px 16px;
+        font-size: 13px;
+      }
+      .rp-ev-page-break {
+        border: none;
+        margin: 30px 0;
+        border-top: 2px dashed rgba(255, 255, 255, 0.15);
       }
     </style>
   </head>
@@ -718,6 +898,9 @@
               <button class="rp-tab" data-tab="batch-reports" type="button">
                 📋 Batch Reports
               </button>
+              <button class="rp-tab" data-tab="student-evidence" type="button">
+                📑 Student Evidence
+              </button>
             </div>
 
             <!-- Tab 1: IEP Quarterly Progress Report -->
@@ -782,6 +965,13 @@
                     Each student's section will start on a new page for easy printing.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <!-- Tab 6: Student Evidence Report -->
+            <div class="rp-tab-content" data-tab="student-evidence">
+              <div id="tab6Content">
+                <div class="rp-empty">Select a student to generate an evidence report.</div>
               </div>
             </div>
           </div>
