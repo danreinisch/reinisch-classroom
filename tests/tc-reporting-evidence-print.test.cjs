@@ -47,7 +47,7 @@ function getPrintBtnBlock() {
 // Helper: extract the buildEvidenceDocumentHtml body
 function getDocHtmlFn() {
   const idx = rpSrc.indexOf('function buildEvidenceDocumentHtml(');
-  return rpSrc.slice(idx, idx + 4000);
+  return rpSrc.slice(idx, idx + 6000);
 }
 
 // Helper: extract the generateEvidencePrintWindow body
@@ -239,6 +239,72 @@ test('index.html @media print FERPA confidential banner is visible', () => {
   assert.ok(
     printBlock.includes('rp-ev-confidential-banner'),
     'index.html @media print block should make .rp-ev-confidential-banner visible'
+  );
+});
+
+// ── Answer detail in evidence report ─────────────────────────────────────────
+
+console.log('\n--- Answer detail in evidence report ---');
+
+test('buildStudentEvidenceHtml includes answer detail logic', () => {
+  const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
+  assert.ok(
+    fn.includes('submission.answers') || fn.includes('rawAnswers'),
+    'buildStudentEvidenceHtml should use submission.answers for answer detail'
+  );
+});
+
+test('buildStudentEvidenceHtml shows answer detail table (rp-ev-ans-table)', () => {
+  const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
+  assert.ok(
+    fn.includes('rp-ev-ans-table'),
+    'buildStudentEvidenceHtml should render .rp-ev-ans-table for student responses'
+  );
+});
+
+test('buildEvidenceDocumentHtml has CSS for rp-ev-ans-table', () => {
+  const fn = getDocHtmlFn();
+  assert.ok(
+    fn.includes('rp-ev-ans-table'),
+    'buildEvidenceDocumentHtml should include CSS for .rp-ev-ans-table'
+  );
+});
+
+test('buildEvidenceDocumentHtml @media print covers rp-ev-ans-table', () => {
+  const fn = getDocHtmlFn();
+  const printIdx = fn.indexOf('@media print');
+  const printBlock = fn.slice(printIdx, printIdx + 2500);
+  assert.ok(
+    printBlock.includes('rp-ev-ans-table'),
+    'buildEvidenceDocumentHtml @media print should cover .rp-ev-ans-table'
+  );
+});
+
+test('index.html has CSS for rp-ev-ans-table (inline display styles)', () => {
+  assert.ok(
+    rpHtml.includes('rp-ev-ans-table'),
+    'index.html should include dark-theme styles for .rp-ev-ans-table'
+  );
+});
+
+test('index.html @media print covers rp-ev-ans-table', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-ev-ans-table'),
+    'index.html @media print should cover .rp-ev-ans-table'
+  );
+});
+
+test('answer detail is admin-only (not shown in parent mode)', () => {
+  const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
+  // The answer detail block should be guarded by !isParent
+  assert.ok(
+    fn.includes('!isParent') && fn.includes('rp-ev-answers'),
+    'answer detail should be guarded by !isParent check'
   );
 });
 

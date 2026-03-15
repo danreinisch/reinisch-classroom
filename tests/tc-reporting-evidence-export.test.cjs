@@ -385,7 +385,7 @@ test('_generateLibraryEvidencePrintWindow function is declared', () => {
 
 test('_generateLibraryEvidencePrintWindow opens new window', () => {
   const fnIdx = libSrc.indexOf('function _generateLibraryEvidencePrintWindow(');
-  const fnSection = libSrc.slice(fnIdx, fnIdx + 2000);
+  const fnSection = libSrc.slice(fnIdx, fnIdx + 4000);
   assert.ok(fnSection.includes("window.open("), 'should open new window');
 });
 
