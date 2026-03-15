@@ -271,15 +271,64 @@ test('active-only filter excludes inactive students', () => {
 
 console.log('\n--- Goal filtering ---');
 
-test('goals filtered by student_code and status=active', () => {
+// Mirror the isGoalActive helper from tc-reporting.js
+function isGoalActive(goal) {
+  if (!goal) return false;
+  if (!goal.status) return true;
+  const s = goal.status.toLowerCase();
+  return s !== 'closed' && s !== 'archived';
+}
+
+test('isGoalActive: accepts lowercase active', () => {
+  assert.ok(isGoalActive({ status: 'active' }));
+});
+
+test('isGoalActive: accepts Open (capitalized, from local adapter)', () => {
+  assert.ok(isGoalActive({ status: 'Open' }));
+});
+
+test('isGoalActive: accepts Active (capitalized, from Supabase)', () => {
+  assert.ok(isGoalActive({ status: 'Active' }));
+});
+
+test('isGoalActive: accepts OPEN (uppercase)', () => {
+  assert.ok(isGoalActive({ status: 'OPEN' }));
+});
+
+test('isGoalActive: rejects closed', () => {
+  assert.ok(!isGoalActive({ status: 'closed' }));
+});
+
+test('isGoalActive: rejects Closed (capitalized)', () => {
+  assert.ok(!isGoalActive({ status: 'Closed' }));
+});
+
+test('isGoalActive: rejects archived', () => {
+  assert.ok(!isGoalActive({ status: 'archived' }));
+});
+
+test('isGoalActive: treats missing status as active', () => {
+  assert.ok(isGoalActive({ code: 'G1', student_code: 'S1' }));
+  assert.ok(isGoalActive({ code: 'G2', student_code: 'S1', status: '' }));
+});
+
+test('goals filtered using isGoalActive includes Open and active, excludes closed/archived', () => {
   const goals = [
     { code: 'G1', student_code: 'S1', status: 'active' },
-    { code: 'G2', student_code: 'S1', status: 'archived' },
-    { code: 'G3', student_code: 'S2', status: 'active' },
+    { code: 'G2', student_code: 'S1', status: 'Open' },
+    { code: 'G3', student_code: 'S1', status: 'Active' },
+    { code: 'G4', student_code: 'S1', status: 'archived' },
+    { code: 'G5', student_code: 'S1', status: 'closed' },
+    { code: 'G6', student_code: 'S2', status: 'active' },
   ];
-  const filtered = goals.filter((g) => g.student_code === 'S1' && g.status === 'active');
-  assert.strictEqual(filtered.length, 1);
-  assert.strictEqual(filtered[0].code, 'G1');
+  const filtered = goals.filter((g) => g.student_code === 'S1' && isGoalActive(g));
+  assert.strictEqual(filtered.length, 3);
+  assert.ok(filtered.some((g) => g.code === 'G1'));
+  assert.ok(filtered.some((g) => g.code === 'G2'));
+  assert.ok(filtered.some((g) => g.code === 'G3'));
+  assert.ok(!filtered.some((g) => g.code === 'G4'));
+  assert.ok(!filtered.some((g) => g.code === 'G5'));
+  assert.ok(!filtered.some((g) => g.code === 'G6'));
 });
 
 // ── 7. CSV export format ──────────────────────────────────────────────────────

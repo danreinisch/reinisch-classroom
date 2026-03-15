@@ -91,6 +91,218 @@
   }
 
   /**
+   * Returns true if a goal should be considered active/open.
+   * Accepts any status except 'closed' or 'archived' (case-insensitive).
+   * Goals with a missing status are treated as active.
+   */
+  function isGoalActive(goal) {
+    if (!goal) return false;
+    if (!goal.status) return true;
+    const s = goal.status.toLowerCase();
+    return s !== 'closed' && s !== 'archived';
+  }
+
+  /**
+   * Build synthetic assignment items from assignment.meta.days[].questions[].
+   * Mirrors buildItemsFromMeta in tc-review.js / admin-backfill-items.js.
+   * Items get id = "syn_" + item_ref so they are distinguishable from DB rows.
+   */
+  function buildItemsFromMeta(assignmentId, meta) {
+    const items = [];
+    if (!meta || !Array.isArray(meta.days)) return items;
+    for (const day of meta.days) {
+      if (day.type === 'questions' && Array.isArray(day.questions)) {
+        for (const q of day.questions) {
+          const item_ref = `${day.day_number}_${q.number}`;
+          items.push({
+            id: `syn_${item_ref}`,
+            assignment_id: assignmentId,
+            item_ref,
+            answer_type: q.type || 'mcq',
+            points: q.points || 1,
+            meta: {
+              day: day.day_number,
+              question_number: q.number,
+              text: q.text,
+              choices: q.choices,
+              correct: q.correct,
+              hint: q.hint,
+            },
+            goal_codes: q.goal_codes || [],
+            dese_codes: q.dese_codes || [],
+          });
+        }
+      } else if (day.type === 'writing_prompt') {
+        const item_ref = `WP_${day.day_number}`;
+        items.push({
+          id: `syn_${item_ref}`,
+          assignment_id: assignmentId,
+          item_ref,
+          answer_type: 'constructed',
+          points: day.points || 5,
+          meta: {
+            day: day.day_number,
+            type: 'writing_prompt',
+            prompt: day.prompt,
+            structure: day.structure,
+          },
+          goal_codes: day.goal_codes || [],
+          dese_codes: day.dese_codes || [],
+        });
+      }
+    }
+    return items;
+  }
+
+  /**
+   * Build a rich per-question answer detail HTML block for the evidence report.
+   * Shows question text, choices, student answer, correct answer, DESE codes, and IEP goal descriptions.
+   * @param {Object} submission - submission row (has .answers JSONB)
+   * @param {Object} assignment - assignment row (has .meta.days[])
+   * @param {Array}  goalsData  - all goals (to resolve goal codes → descriptions)
+   * @param {boolean} isParent  - if true, hide answer keys
+   */
+  function buildRichAnswerDetailHtml(submission, assignment, goalsData, isParent) {
+    if (!submission) return '';
+
+    // Score breakdown (auto vs manual)
+    let html = '';
+    const hasAuto = submission.score_auto != null;
+    const hasManual = submission.score_manual != null;
+    if (hasAuto && hasManual) {
+      html += `<div class="rp-ev-score-breakdown">Auto-graded: ${submission.score_auto}% &nbsp;|&nbsp; Manual: ${submission.score_manual}%</div>`;
+    }
+
+    // Build items from meta for context
+    const items = buildItemsFromMeta(assignment?.id, assignment?.meta);
+    const rawAnswers = submission.answers || {};
+    const hasRawAnswers = rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers);
+
+    if (items.length > 0 && hasRawAnswers) {
+      let correctCount = 0;
+      let gradableCount = 0;
+      const questionCards = items.map((item) => {
+        const ref = item.item_ref;
+        const studentAns = rawAnswers[ref];
+        const correctAns = item.meta?.correct ?? item.correct;
+        const isCorrect = correctAns !== undefined && studentAns !== undefined && String(studentAns) === String(correctAns);
+        if (item.answer_type !== 'constructed' && correctAns !== undefined && studentAns !== undefined) {
+          gradableCount++;
+          if (isCorrect) correctCount++;
+        }
+
+        // Resolve IEP goal descriptions from goal codes
+        const goalDescs = (item.goal_codes || []).map((code) => {
+          const goal = goalsData.find((g) => g.code === code);
+          if (!goal) return escapeHtml(code);
+          const area = goal.area || goal.skill_area;
+          const desc = goal.desc || goal.description;
+          if (desc) return `${area ? escapeHtml(area) + ' — ' : ''}${escapeHtml(desc)}`;
+          return escapeHtml(goal.code || code);
+        });
+        const deseCodesArr = item.dese_codes || [];
+
+        const badgesHtml = [
+          deseCodesArr.length > 0
+            ? `<span class="rp-ev-badge rp-ev-badge-dese">DESE: ${escapeHtml(deseCodesArr.join(', '))}</span>`
+            : '',
+          ...goalDescs.map((d) => `<span class="rp-ev-badge rp-ev-badge-goal">IEP: ${d}</span>`),
+        ].filter(Boolean).join(' ');
+
+        if (item.answer_type === 'constructed') {
+          // Writing prompt
+          const prompt = item.meta?.prompt || '';
+          let studentText = '';
+          if (typeof studentAns === 'string') studentText = studentAns;
+          else if (studentAns && typeof studentAns === 'object') studentText = studentAns.value || JSON.stringify(studentAns);
+          const score = submission.score_manual ?? submission.score_total ?? submission.score;
+          const teacherNote = submission.teacher_note || '';
+          return `<div class="rp-ev-q-card">
+            <div class="rp-ev-q-header">
+              <span class="rp-ev-q-label">Writing Prompt (Day ${item.meta?.day || ref})</span>
+              ${badgesHtml ? `<div class="rp-ev-q-badges">${badgesHtml}</div>` : ''}
+            </div>
+            ${prompt ? `<div class="rp-ev-q-text">&ldquo;${escapeHtml(prompt)}&rdquo;</div>` : ''}
+            <div class="rp-ev-q-writing">
+              <div class="rp-ev-q-writing-label">Student Response:</div>
+              <div class="rp-ev-q-writing-text">${studentText ? escapeHtml(studentText) : '<em>No response recorded</em>'}</div>
+            </div>
+            ${!isParent && score != null ? `<div class="rp-ev-q-score">Score: ${escapeHtml(String(score))} (${hasManual ? 'Teacher scored' : 'Auto-graded'})</div>` : ''}
+            ${teacherNote ? `<div class="rp-ev-teacher-note"><strong>Teacher Note:</strong> ${escapeHtml(teacherNote)}</div>` : ''}
+          </div>`;
+        }
+
+        // MCQ / boolean
+        const questionText = item.meta?.text || '';
+        const day = item.meta?.day || '';
+        const qNum = item.meta?.question_number || ref;
+        const choices = item.meta?.choices || [];
+        const choicesHtml = choices.length > 0
+          ? choices.map((c) => {
+              const letter = c.letter || c.key || '';
+              const text = c.text || c.value || '';
+              const isStudentAns = studentAns !== undefined && String(studentAns) === String(letter);
+              const isCorrectAns = !isParent && correctAns !== undefined && String(correctAns) === String(letter);
+              const marker = isStudentAns && isCorrectAns ? ' ✓' : isStudentAns && !isCorrectAns ? ' ✗' : isCorrectAns ? ' ← correct' : '';
+              const rowClass = isStudentAns && isCorrectAns ? 'rp-ev-choice-correct' : isStudentAns ? 'rp-ev-choice-wrong' : isCorrectAns ? 'rp-ev-choice-answer' : '';
+              return `<div class="rp-ev-choice ${rowClass}">${escapeHtml(letter ? letter + ')' : '')} ${escapeHtml(text)}${marker ? `<span class="rp-ev-choice-mark">${marker}</span>` : ''}</div>`;
+            }).join('')
+          : studentAns !== undefined
+            ? `<div class="rp-ev-choice ${isCorrect ? 'rp-ev-choice-correct' : (correctAns !== undefined ? 'rp-ev-choice-wrong' : '')}">Answer: ${escapeHtml(String(studentAns))}${!isParent && correctAns !== undefined ? ` (Correct: ${escapeHtml(String(correctAns))})` : ''}${isCorrect ? ' ✓' : (correctAns !== undefined ? ' ✗' : '')}</div>`
+            : '<div class="rp-ev-choice rp-ev-choice-none"><em>No response</em></div>';
+
+        return `<div class="rp-ev-q-card">
+          <div class="rp-ev-q-header">
+            <span class="rp-ev-q-label">Q${qNum}${day ? ` (Day ${day})` : ''}</span>
+            ${badgesHtml ? `<div class="rp-ev-q-badges">${badgesHtml}</div>` : ''}
+          </div>
+          ${questionText ? `<div class="rp-ev-q-text">${escapeHtml(questionText)}</div>` : ''}
+          <div class="rp-ev-q-choices">${choicesHtml}</div>
+        </div>`;
+      }).join('');
+
+      const summaryHtml = !isParent && gradableCount > 0
+        ? `<div class="rp-ev-q-summary">${correctCount}/${gradableCount} correct (${Math.round((correctCount / gradableCount) * 100)}%)</div>`
+        : '';
+
+      html += `<div class="rp-ev-answers">
+        <div class="rp-ev-answers-label">Student Responses (${items.length} item${items.length !== 1 ? 's' : ''})</div>
+        ${summaryHtml}
+        ${questionCards}
+      </div>`;
+
+    } else if (hasRawAnswers) {
+      // Fallback: flat ref → value table when no item metadata available
+      const entries = Object.entries(rawAnswers);
+      if (entries.length > 0) {
+        const rows = entries.map(([ref, ans]) => {
+          let displayAns;
+          if (typeof ans === 'object' && ans !== null) {
+            displayAns = ans.value != null ? escapeHtml(String(ans.value)) : escapeHtml(JSON.stringify(ans));
+          } else {
+            displayAns = escapeHtml(String(ans));
+          }
+          return `<tr><td class="rp-ev-ans-ref">${escapeHtml(ref)}</td><td class="rp-ev-ans-val">${displayAns}</td></tr>`;
+        }).join('');
+        html += `<div class="rp-ev-answers">
+          <div class="rp-ev-answers-label">Student Responses (${entries.length} item${entries.length !== 1 ? 's' : ''})</div>
+          <table class="rp-ev-ans-table">
+            <thead><tr><th>Item</th><th>Response</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+      }
+    }
+
+    // Teacher note if present (for non-writing, non-parent view)
+    if (submission.teacher_note && !isParent) {
+      html += `<div class="rp-ev-teacher-note"><strong>Teacher Note:</strong> ${escapeHtml(submission.teacher_note)}</div>`;
+    }
+
+    return html;
+  }
+
+  /**
    * Escape XML for DOCX export
    */
   function escapeXml(text) {
@@ -772,7 +984,7 @@ Status: ${status}`;
 
     // Get student's goals
     const studentGoals = goalsData.filter(
-      (g) => g.student_code === tab1State.studentCode && g.status === "active"
+      (g) => g.student_code === tab1State.studentCode && isGoalActive(g)
     );
 
     // Render based on template selection
@@ -1869,7 +2081,7 @@ Status: ${status}`;
     `;
 
     for (const student of students) {
-      const studentGoals = goalsData.filter(g => g.student_code === student.code && g.status === 'active');
+      const studentGoals = goalsData.filter(g => g.student_code === student.code && isGoalActive(g));
       
       for (const goal of studentGoals) {
         const q1Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q1'));
@@ -2039,7 +2251,7 @@ Status: ${status}`;
     const allGoals = [];
     filteredStudents.forEach((student) => {
       const studentGoals = goalsData.filter(
-        (g) => g.student_code === student.code && g.status === "active"
+        (g) => g.student_code === student.code && isGoalActive(g)
       );
       studentGoals.forEach((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
@@ -2290,7 +2502,7 @@ Status: ${status}`;
 
     filteredStudents.forEach((student) => {
       const studentGoals = goalsData.filter(
-        (g) => g.student_code === student.code && g.status === "active"
+        (g) => g.student_code === student.code && isGoalActive(g)
       );
       studentGoals.forEach((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
@@ -2377,7 +2589,7 @@ Status: ${status}`;
     activeStudents.forEach((student, index) => {
       // Get student's goals
       const studentGoals = goalsData.filter(
-        (g) => g.student_code === student.code && g.status === "active"
+        (g) => g.student_code === student.code && isGoalActive(g)
       );
 
       if (studentGoals.length === 0) {
@@ -2859,7 +3071,7 @@ Status: ${status}`;
 
     // ── IEP Goal Progress Summary ─────────────────────────────────────────────
     const activeGoals = goalsData.filter(
-      (g) => g.student_code === student.code && g.status === 'active'
+      (g) => g.student_code === student.code && isGoalActive(g)
     );
 
     let goalsHtml = '';
@@ -2966,48 +3178,12 @@ Status: ${status}`;
         ` : '';
 
         // ── Answer detail (admin mode only) ───────────────────────────────────
-        let answerDetailHtml = '';
-        if (!isParent && submission) {
-          // Score breakdown (auto vs manual) if both components exist
-          const hasAuto = submission.score_auto != null;
-          const hasManual = submission.score_manual != null;
-          if (hasAuto && hasManual) {
-            const breakdown = `Auto-graded: ${submission.score_auto}% &nbsp;|&nbsp; Manual: ${submission.score_manual}%`;
-            answerDetailHtml += `<div class="rp-ev-score-breakdown">${breakdown}</div>`;
-          }
-
-          // Per-item responses from submission.answers JSONB
-          const rawAnswers = submission.answers;
-          if (rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers)) {
-            const entries = Object.entries(rawAnswers);
-            if (entries.length > 0) {
-              const rows = entries.map(([ref, ans]) => {
-                let displayAns;
-                if (typeof ans === 'object' && ans !== null) {
-                  displayAns = ans.value != null
-                    ? escapeHtml(String(ans.value))
-                    : escapeHtml(JSON.stringify(ans));
-                } else {
-                  displayAns = escapeHtml(String(ans));
-                }
-                return `<tr><td class="rp-ev-ans-ref">${escapeHtml(ref)}</td><td class="rp-ev-ans-val">${displayAns}</td></tr>`;
-              }).join('');
-              answerDetailHtml += `
-                <div class="rp-ev-answers">
-                  <div class="rp-ev-answers-label">Student Responses (${entries.length} item${entries.length !== 1 ? 's' : ''})</div>
-                  <table class="rp-ev-ans-table">
-                    <thead><tr><th>Item</th><th>Response</th></tr></thead>
-                    <tbody>${rows}</tbody>
-                  </table>
-                </div>`;
-            }
-          }
-
-          // Teacher note if present
-          if (submission.teacher_note) {
-            answerDetailHtml += `<div class="rp-ev-teacher-note"><strong>Teacher Note:</strong> ${escapeHtml(submission.teacher_note)}</div>`;
-          }
-        }
+        const answerDetailHtml = buildRichAnswerDetailHtml(
+          !isParent ? submission : null,
+          assignment,
+          goalsData,
+          isParent
+        );
 
         return `
           <div class="rp-ev-assignment-card">
@@ -3208,7 +3384,27 @@ Status: ${status}`;
     .rp-ev-tag-row { font-size: 12px; color: #666; margin-top: 4px; }
     .rp-ev-score-breakdown { font-size: 12px; color: #444; margin-top: 5px; }
     .rp-ev-answers { margin-top: 8px; }
-    .rp-ev-answers-label { font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; }
+    .rp-ev-answers-label { font-size: 12px; font-weight: 600; color: #444; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+    .rp-ev-q-summary { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 8px; }
+    .rp-ev-q-card { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; page-break-inside: avoid; }
+    .rp-ev-q-header { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    .rp-ev-q-label { font-weight: 600; font-size: 13px; color: #111; white-space: nowrap; }
+    .rp-ev-q-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+    .rp-ev-badge { font-size: 11px; padding: 1px 6px; border-radius: 10px; white-space: nowrap; }
+    .rp-ev-badge-dese { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .rp-ev-badge-goal { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .rp-ev-q-text { font-size: 13px; color: #222; margin-bottom: 6px; font-style: italic; }
+    .rp-ev-q-choices { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+    .rp-ev-choice { padding: 3px 8px; border-radius: 4px; color: #333; }
+    .rp-ev-choice-correct { background: #dcfce7; color: #166534; font-weight: 600; }
+    .rp-ev-choice-wrong { background: #fee2e2; color: #991b1b; font-weight: 600; }
+    .rp-ev-choice-answer { background: #f0fdf4; color: #166534; }
+    .rp-ev-choice-none { color: #888; font-style: italic; }
+    .rp-ev-choice-mark { margin-left: 6px; font-weight: 700; }
+    .rp-ev-q-writing { margin-top: 6px; }
+    .rp-ev-q-writing-label { font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .rp-ev-q-writing-text { font-size: 13px; color: #222; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 6px 8px; white-space: pre-wrap; }
+    .rp-ev-q-score { font-size: 12px; color: #444; margin-top: 4px; }
     .rp-ev-ans-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .rp-ev-ans-table th, .rp-ev-ans-table td { padding: 4px 8px; border: 1px solid #ddd; text-align: left; }
     .rp-ev-ans-table th { background: #f0f0f0; font-weight: 600; }
@@ -3234,6 +3430,17 @@ Status: ${status}`;
       .rp-ev-tag-row { color: #444 !important; }
       .rp-ev-score-breakdown { color: #333 !important; }
       .rp-ev-answers-label { color: #333 !important; }
+      .rp-ev-q-card { background: #fff !important; border: 1px solid #ccc !important; }
+      .rp-ev-q-label { color: #000 !important; }
+      .rp-ev-q-text { color: #111 !important; }
+      .rp-ev-badge-dese { background: #dbeafe !important; color: #1e40af !important; }
+      .rp-ev-badge-goal { background: #dcfce7 !important; color: #166534 !important; }
+      .rp-ev-choice { color: #111 !important; }
+      .rp-ev-choice-correct { background: #dcfce7 !important; color: #166534 !important; }
+      .rp-ev-choice-wrong { background: #fee2e2 !important; color: #991b1b !important; }
+      .rp-ev-choice-answer { background: #f0fdf4 !important; color: #166534 !important; }
+      .rp-ev-q-writing-text { background: #f8f9fa !important; border-color: #ccc !important; color: #111 !important; }
+      .rp-ev-q-summary { color: #000 !important; }
       .rp-ev-ans-table th { background: #f0f0f0 !important; }
       .rp-ev-ans-table th, .rp-ev-ans-table td { border-color: #ddd !important; color: #000 !important; }
       .rp-ev-ans-ref { color: #444 !important; }
@@ -3326,7 +3533,7 @@ Status: ${status}`;
         }
       }
       const avgScore = scoreCount > 0 ? (scoreSum / scoreCount).toFixed(1) : null;
-      const activeGoals = goalsData.filter((g) => g.student_code === s.code && g.status === 'active');
+      const activeGoals = goalsData.filter((g) => g.student_code === s.code && isGoalActive(g));
       let goalsOnTrack = 0;
       let dpCount = 0;
       for (const g of activeGoals) {
@@ -3442,7 +3649,7 @@ Status: ${status}`;
     const periodLabel = getTab6PeriodLabel();
     const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const audienceLabel = isParent ? 'Parent' : 'Admin';
-    const activeGoals = goalsData.filter((g) => g.student_code === student.code && g.status === 'active');
+    const activeGoals = goalsData.filter((g) => g.student_code === student.code && isGoalActive(g));
     const goalAreas = [...new Set(activeGoals.map((g) => g.area || g.skill_area || '—'))].join(', ') || '—';
     const studentInstances = instancesData.filter(
       (inst) => inst.student_code === student.code || inst.student_id === student.code
@@ -3550,7 +3757,7 @@ Status: ${status}`;
   function buildEvidenceGoalsHtml(student, quarterRange, isParent) {
     const periodLabel = getTab6PeriodLabel();
     const activeGoals = goalsData.filter(
-      (g) => g.student_code === student.code && g.status === 'active'
+      (g) => g.student_code === student.code && isGoalActive(g)
     );
 
     let rows = '';

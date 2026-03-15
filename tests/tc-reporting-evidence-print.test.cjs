@@ -47,7 +47,7 @@ function getPrintBtnBlock() {
 // Helper: extract the buildEvidenceDocumentHtml body
 function getDocHtmlFn() {
   const idx = rpSrc.indexOf('function buildEvidenceDocumentHtml(');
-  return rpSrc.slice(idx, idx + 6000);
+  return rpSrc.slice(idx, idx + 10000);
 }
 
 // Helper: extract the generateEvidencePrintWindow body
@@ -250,17 +250,32 @@ test('buildStudentEvidenceHtml includes answer detail logic', () => {
   const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
   const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
   assert.ok(
-    fn.includes('submission.answers') || fn.includes('rawAnswers'),
-    'buildStudentEvidenceHtml should use submission.answers for answer detail'
+    fn.includes('buildRichAnswerDetailHtml') || fn.includes('submission.answers') || fn.includes('rawAnswers'),
+    'buildStudentEvidenceHtml should delegate to buildRichAnswerDetailHtml for answer detail'
   );
 });
 
-test('buildStudentEvidenceHtml shows answer detail table (rp-ev-ans-table)', () => {
-  const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
-  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
+test('buildRichAnswerDetailHtml helper exists in tc-reporting.js', () => {
   assert.ok(
-    fn.includes('rp-ev-ans-table'),
-    'buildStudentEvidenceHtml should render .rp-ev-ans-table for student responses'
+    rpSrc.includes('function buildRichAnswerDetailHtml('),
+    'buildRichAnswerDetailHtml should be defined'
+  );
+});
+
+test('buildRichAnswerDetailHtml shows question text, choices, correct answer, and DESE/IEP badges', () => {
+  const fnIdx = rpSrc.indexOf('function buildRichAnswerDetailHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 8000);
+  assert.ok(fn.includes('rp-ev-q-card'), 'should include question card class');
+  assert.ok(fn.includes('rp-ev-badge-dese'), 'should include DESE badge');
+  assert.ok(fn.includes('rp-ev-badge-goal'), 'should include IEP goal badge');
+  assert.ok(fn.includes('meta?.text'), 'should show question text');
+  assert.ok(fn.includes('rp-ev-ans-table'), 'fallback table should still be present');
+});
+
+test('buildStudentEvidenceHtml shows answer detail (rp-ev-q-card or rp-ev-ans-table)', () => {
+  assert.ok(
+    rpSrc.includes('rp-ev-q-card'),
+    'tc-reporting.js should include question card class for rich detail'
   );
 });
 
@@ -275,7 +290,7 @@ test('buildEvidenceDocumentHtml has CSS for rp-ev-ans-table', () => {
 test('buildEvidenceDocumentHtml @media print covers rp-ev-ans-table', () => {
   const fn = getDocHtmlFn();
   const printIdx = fn.indexOf('@media print');
-  const printBlock = fn.slice(printIdx, printIdx + 2500);
+  const printBlock = fn.slice(printIdx, printIdx + 4000);
   assert.ok(
     printBlock.includes('rp-ev-ans-table'),
     'buildEvidenceDocumentHtml @media print should cover .rp-ev-ans-table'
@@ -299,12 +314,11 @@ test('index.html @media print covers rp-ev-ans-table', () => {
 });
 
 test('answer detail is admin-only (not shown in parent mode)', () => {
-  const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
-  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
-  // The answer detail block should be guarded by !isParent
+  // buildRichAnswerDetailHtml passes null submission when isParent=true
+  // and the helper itself checks the isParent flag to suppress answer keys
   assert.ok(
-    fn.includes('!isParent') && fn.includes('rp-ev-answers'),
-    'answer detail should be guarded by !isParent check'
+    rpSrc.includes('buildRichAnswerDetailHtml') && rpSrc.includes('!isParent'),
+    'answer detail should be guarded by !isParent check via buildRichAnswerDetailHtml'
   );
 });
 

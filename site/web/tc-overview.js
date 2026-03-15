@@ -59,6 +59,17 @@
   }
 
   /**
+   * Returns true if a goal is active/open (not closed or archived).
+   * Case-insensitive; goals with missing status are treated as active.
+   */
+  function isGoalActive(goal) {
+    if (!goal) return false;
+    if (!goal.status) return true;
+    const s = goal.status.toLowerCase();
+    return s !== 'closed' && s !== 'archived';
+  }
+
+  /**
    * Fetch all data resources exactly once and return them as a bundle.
    * Each render function receives this bundle instead of making its own calls.
    * Some methods (listSubmissions, listGoalProgress, listEvents) may not be
@@ -111,7 +122,7 @@
     }
 
     // 4. Goal Progress — average progress across all active goals' latest entries this quarter
-    const activeGoals = goals.filter((g) => g.status === "active");
+    const activeGoals = goals.filter((g) => isGoalActive(g));
     let avgProgress = null;
     if (activeGoals.length > 0) {
       let sumPercent = 0;
@@ -335,7 +346,7 @@
       const activeStudents = students.filter((s) => s.active !== false);
       for (const student of activeStudents) {
         const studentGoals = goals.filter(
-          (g) => g.student_code === student.code && g.status === "active"
+          (g) => g.student_code === student.code && isGoalActive(g)
         );
         for (const goal of studentGoals) {
           const hasProgressThisQuarter = progress.some(
@@ -406,7 +417,7 @@
 
     for (const student of students.filter((s) => s.active !== false)) {
       const studentGoals = goals.filter(
-        (g) => g.student_code === student.code && g.status === "active"
+        (g) => g.student_code === student.code && isGoalActive(g)
       );
       for (const goal of studentGoals) {
         const goalProgress = progress.filter(
@@ -487,7 +498,7 @@
       const activeStudents = students.filter((s) => s.active !== false);
       for (const student of activeStudents) {
         const studentGoals = goals.filter(
-          (g) => g.student_code === student.code && g.status === "active"
+          (g) => g.student_code === student.code && isGoalActive(g)
         );
         for (const goal of studentGoals) {
           const hasProgress = progress.some(
