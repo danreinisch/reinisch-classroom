@@ -69,44 +69,74 @@ test('exportEvidenceZip checks for JSZip availability', () => {
 
 test('exportEvidenceZip builds manifest.json', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes('manifest.json'), 'exportEvidenceZip should create manifest.json');
 });
 
 test('exportEvidenceZip builds index.html', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes('index.html'), 'exportEvidenceZip should create index.html');
 });
 
 test('exportEvidenceZip creates per-student folders', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes("root.folder("), 'exportEvidenceZip should call root.folder() for student folders');
 });
 
 test('exportEvidenceZip creates cover.html for each student', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes("'cover.html'"), 'exportEvidenceZip should create cover.html');
 });
 
 test('exportEvidenceZip creates assignments.html for each student', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes("'assignments.html'"), 'exportEvidenceZip should create assignments.html');
 });
 
 test('exportEvidenceZip creates goals.html for each student', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes("'goals.html'"), 'exportEvidenceZip should create goals.html');
 });
 
 test('exportEvidenceZip downloads ZIP file', () => {
   const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4000);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
   assert.ok(fnSection.includes('.zip'), 'exportEvidenceZip should download a .zip file');
+});
+
+test('exportEvidenceZip creates all-students.html combined document', () => {
+  const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
+  assert.ok(fnSection.includes("'all-students.html'"), 'exportEvidenceZip should create all-students.html');
+});
+
+test('exportEvidenceZip creates summary.csv', () => {
+  const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
+  assert.ok(fnSection.includes("'summary.csv'"), 'exportEvidenceZip should create summary.csv');
+});
+
+test('exportEvidenceZip summary.csv has required columns', () => {
+  const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
+  assert.ok(
+    fnSection.includes('Student Name') && fnSection.includes('Student Code') && fnSection.includes('Total Assignments'),
+    'exportEvidenceZip summary.csv should include Student Name, Student Code, Total Assignments columns'
+  );
+});
+
+test('exportEvidenceZip index.html TOC includes assignment counts', () => {
+  const fnIdx = rpSrc.indexOf('function exportEvidenceZip(');
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 8000);
+  assert.ok(
+    fnSection.includes('totalAssignments') || fnSection.includes('Total Assignments'),
+    'exportEvidenceZip index.html TOC should include assignment count per student'
+  );
 });
 
 // ── tc-reporting.js — print window function ───────────────────────────────────
