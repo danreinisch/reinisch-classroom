@@ -2965,11 +2965,56 @@ Status: ${status}`;
           </div>
         ` : '';
 
+        // ── Answer detail (admin mode only) ───────────────────────────────────
+        let answerDetailHtml = '';
+        if (!isParent && submission) {
+          // Score breakdown (auto vs manual) if both components exist
+          const hasAuto = submission.score_auto != null;
+          const hasManual = submission.score_manual != null;
+          if (hasAuto && hasManual) {
+            const breakdown = `Auto-graded: ${submission.score_auto}% &nbsp;|&nbsp; Manual: ${submission.score_manual}%`;
+            answerDetailHtml += `<div class="rp-ev-score-breakdown">${breakdown}</div>`;
+          }
+
+          // Per-item responses from submission.answers JSONB
+          const rawAnswers = submission.answers;
+          if (rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers)) {
+            const entries = Object.entries(rawAnswers);
+            if (entries.length > 0) {
+              const rows = entries.map(([ref, ans]) => {
+                let displayAns;
+                if (typeof ans === 'object' && ans !== null) {
+                  displayAns = ans.value != null
+                    ? escapeHtml(String(ans.value))
+                    : escapeHtml(JSON.stringify(ans));
+                } else {
+                  displayAns = escapeHtml(String(ans));
+                }
+                return `<tr><td class="rp-ev-ans-ref">${escapeHtml(ref)}</td><td class="rp-ev-ans-val">${displayAns}</td></tr>`;
+              }).join('');
+              answerDetailHtml += `
+                <div class="rp-ev-answers">
+                  <div class="rp-ev-answers-label">Student Responses (${entries.length} item${entries.length !== 1 ? 's' : ''})</div>
+                  <table class="rp-ev-ans-table">
+                    <thead><tr><th>Item</th><th>Response</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>`;
+            }
+          }
+
+          // Teacher note if present
+          if (submission.teacher_note) {
+            answerDetailHtml += `<div class="rp-ev-teacher-note"><strong>Teacher Note:</strong> ${escapeHtml(submission.teacher_note)}</div>`;
+          }
+        }
+
         return `
           <div class="rp-ev-assignment-card">
             <div class="rp-ev-assignment-title">${escapeHtml(title)}</div>
             <div class="rp-ev-assignment-meta">${metaRow}</div>
             ${tagRow}
+            ${answerDetailHtml}
           </div>
         `;
       }).join('');
@@ -3161,6 +3206,15 @@ Status: ${status}`;
     .rp-ev-assignment-title { font-weight: 600; margin-bottom: 4px; color: #111; }
     .rp-ev-assignment-meta { font-size: 13px; color: #555; }
     .rp-ev-tag-row { font-size: 12px; color: #666; margin-top: 4px; }
+    .rp-ev-score-breakdown { font-size: 12px; color: #444; margin-top: 5px; }
+    .rp-ev-answers { margin-top: 8px; }
+    .rp-ev-answers-label { font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; }
+    .rp-ev-ans-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .rp-ev-ans-table th, .rp-ev-ans-table td { padding: 4px 8px; border: 1px solid #ddd; text-align: left; }
+    .rp-ev-ans-table th { background: #f0f0f0; font-weight: 600; }
+    .rp-ev-ans-ref { color: #555; white-space: nowrap; }
+    .rp-ev-ans-val { color: #111; word-break: break-word; }
+    .rp-ev-teacher-note { font-size: 12px; color: #555; margin-top: 5px; font-style: italic; }
     .rp-ev-stats-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 10px; padding: 16px; margin-top: 16px; }
     .rp-ev-stats-title { font-weight: 600; margin-bottom: 10px; color: #111; }
     .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 14px; color: #111; }
@@ -3178,6 +3232,12 @@ Status: ${status}`;
       .rp-ev-assignment-title { color: #000 !important; }
       .rp-ev-assignment-meta { color: #333 !important; }
       .rp-ev-tag-row { color: #444 !important; }
+      .rp-ev-score-breakdown { color: #333 !important; }
+      .rp-ev-answers-label { color: #333 !important; }
+      .rp-ev-ans-table th { background: #f0f0f0 !important; }
+      .rp-ev-ans-table th, .rp-ev-ans-table td { border-color: #ddd !important; color: #000 !important; }
+      .rp-ev-ans-ref { color: #444 !important; }
+      .rp-ev-teacher-note { color: #444 !important; }
       .rp-ev-confidential-banner { background: #fff3cd !important; border: 2px solid #856404 !important; color: #000 !important; display: block !important; }
       .rp-table th { background: #f0f0f0 !important; }
       .rp-table th, .rp-table td { border-color: #ccc !important; color: #000 !important; }

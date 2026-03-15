@@ -3952,7 +3952,47 @@
         const metaRow = isParent
           ? `Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)}`
           : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
-        return `<div style="${cardStyle}"><div style="font-weight:600;margin-bottom:4px;">${title}</div><div style="font-size:13px;color:rgba(255,255,255,.7);">${metaRow}</div></div>`;
+
+        // Answer detail (admin mode only)
+        let answerDetail = '';
+        if (!isParent && submission) {
+          // Score breakdown
+          const hasAuto = submission.score_auto != null;
+          const hasManual = submission.score_manual != null;
+          if (hasAuto && hasManual) {
+            answerDetail += `<div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:5px;">Auto-graded: ${esc(String(submission.score_auto))}% &nbsp;|&nbsp; Manual: ${esc(String(submission.score_manual))}%</div>`;
+          }
+          // Per-item responses
+          const rawAnswers = submission.answers;
+          if (rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers)) {
+            const entries = Object.entries(rawAnswers);
+            if (entries.length > 0) {
+              const rows = entries.map(([ref, ans]) => {
+                let displayAns;
+                if (typeof ans === 'object' && ans !== null) {
+                  displayAns = ans.value != null ? esc(String(ans.value)) : esc(JSON.stringify(ans));
+                } else {
+                  displayAns = esc(String(ans));
+                }
+                return `<tr><td style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;">${esc(ref)}</td><td style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);font-size:11px;word-break:break-word;">${displayAns}</td></tr>`;
+              }).join('');
+              answerDetail += `
+                <div style="margin-top:8px;">
+                  <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Student Responses (${entries.length})</div>
+                  <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr><th style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:11px;text-align:left;">Item</th><th style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:11px;text-align:left;">Response</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>`;
+            }
+          }
+          // Teacher note
+          if (submission.teacher_note) {
+            answerDetail += `<div style="font-size:12px;font-style:italic;color:rgba(255,255,255,.6);margin-top:5px;"><strong>Teacher Note:</strong> ${esc(submission.teacher_note)}</div>`;
+          }
+        }
+
+        return `<div style="${cardStyle}"><div style="font-weight:600;margin-bottom:4px;">${title}</div><div style="font-size:13px;color:rgba(255,255,255,.7);">${metaRow}</div>${answerDetail}</div>`;
       }).join('');
     }
 
@@ -3977,25 +4017,44 @@
     const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const sections = targetStudents.map((student, idx) => {
       const sep = idx > 0 ? '<div style="page-break-before:always;"></div>' : '';
-      return sep + _buildLibraryEvidenceHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll);
+      return sep + _buildLibraryEvidenceHtmlPrintSafe(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll);
     }).join('');
 
     const docHtml = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/>
 <title>Student Evidence Report &mdash; ${periodLabel}</title>
 <style>
-  body{font-family:Arial,sans-serif;background:#0b1220;color:#e2e8f0;margin:0;padding:24px;}
-  @media print{body{background:white;color:#111;padding:0;}}
-  table th,table td{padding:6px 8px;border:1px solid rgba(255,255,255,.12);}
-  @media print{table th,table td{border:1px solid #ccc;}}
+  body{font-family:Arial,sans-serif;background:#fff;color:#111;margin:0;padding:24px;}
+  table{border-collapse:collapse;width:100%;}
+  table th,table td{padding:7px 10px;border:1px solid #ccc;text-align:left;}
+  table th{background:#f5f5f5;font-weight:600;}
+  .ev-profile{background:#f8f9fa;border:1px solid #ccc;border-radius:10px;padding:18px;margin-bottom:14px;}
+  .ev-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px;margin-bottom:10px;}
+  .ev-section-title{font-size:15px;font-weight:600;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #ccc;color:#111;}
+  .ev-card{background:#f8f9fa;border:1px solid #ccc;border-radius:8px;padding:12px 16px;margin-bottom:10px;}
+  .ev-card-title{font-weight:600;margin-bottom:4px;color:#111;}
+  .ev-card-meta{font-size:13px;color:#555;margin-bottom:6px;}
+  .ev-score-breakdown{font-size:12px;color:#444;margin-top:4px;}
+  .ev-answers{margin-top:8px;}
+  .ev-answers-label{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .ev-ans-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .ev-ans-table th,.ev-ans-table td{padding:3px 7px;border:1px solid #ddd;}
+  .ev-ans-table th{background:#f0f0f0;}
+  .ev-ans-ref{color:#555;white-space:nowrap;}
+  .ev-ans-val{word-break:break-word;}
+  .ev-teacher-note{font-size:12px;color:#555;font-style:italic;margin-top:4px;}
+  .ev-conf{background:#fff3cd;border:2px solid #856404;border-radius:6px;padding:8px 14px;font-size:13px;color:#000;font-weight:bold;}
+  .ev-empty{color:#888;font-style:italic;}
+  .ev-footer{margin-top:28px;border-top:1px solid #ccc;padding-top:10px;font-size:12px;color:#666;}
+  @media print{body{padding:0;} .ev-card{page-break-inside:avoid;} [style*="page-break-before"]{page-break-before:always;}}
 </style>
 </head><body>
-  <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid rgba(255,255,255,.15);">
+  <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #ccc;">
     <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Student Evidence Report</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.6);">Period: ${periodLabel} &nbsp;|&nbsp; Generated: ${generatedDate} &nbsp;|&nbsp; Data Source: ${sourceLabel}</div>
+    <div style="font-size:14px;color:#555;">Period: ${periodLabel} &nbsp;|&nbsp; Generated: ${generatedDate} &nbsp;|&nbsp; Data Source: ${sourceLabel}</div>
   </div>
   ${sections}
-  <div style="margin-top:32px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;font-size:12px;color:rgba(255,255,255,.45);">
+  <div class="ev-footer">
     Reinisch Classroom &mdash; Student Evidence Report &mdash; ${generatedDate}
   </div>
 </body></html>`;
@@ -4004,7 +4063,157 @@
     win.document.write(docHtml);
     win.document.close();
     win.focus();
-    win.print();
+    setTimeout(() => win.print(), 500);
+  }
+
+  /**
+   * Build print-safe (light theme) evidence HTML for one student — used by the print window.
+   */
+  function _buildLibraryEvidenceHtmlPrintSafe(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll) {
+    const esc = (v) => {
+      if (!v && v !== 0) return '';
+      const d = document.createElement('div');
+      d.textContent = String(v);
+      return d.innerHTML;
+    };
+
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const audienceLabel = isParent ? 'Parent' : 'Admin';
+
+    const studentEnrollments = enrollAll.filter(
+      (e) => e.student_code === student.code || e.student_id === student.code
+    );
+    const classNames = studentEnrollments.length > 0
+      ? studentEnrollments.map((e) => esc(e.class_name || e.class_code || '')).filter(Boolean).join(', ')
+      : 'N/A';
+
+    const profileHtml = `
+      <div class="ev-profile">
+        <div style="font-size:18px;font-weight:700;margin-bottom:10px;">Student Evidence Report</div>
+        <div class="ev-profile-grid">
+          <div><strong>Student:</strong> ${esc(student.name || student.code)} (${esc(student.code)})</div>
+          <div><strong>Report Date:</strong> ${esc(todayLabel)}</div>
+          <div><strong>Classes:</strong> ${classNames || 'N/A'}</div>
+          <div><strong>Period:</strong> ${esc(periodLabel)}</div>
+          <div><strong>Status:</strong> ${student.active !== false ? 'Active' : 'Inactive'}</div>
+          <div><strong>Mode:</strong> ${esc(audienceLabel)}</div>
+        </div>
+        <div class="ev-conf">&#9888; CONFIDENTIAL &mdash; For authorized personnel only (FERPA)</div>
+      </div>`;
+
+    // Goals
+    const activeGoals = goalsAll.filter(
+      (g) => g.student_code === student.code && g.status === 'active'
+    );
+
+    let goalsHtml = '';
+    if (activeGoals.length === 0) {
+      goalsHtml = '<div class="ev-empty">No active IEP goals found for this student.</div>';
+    } else {
+      const startDate = new Date(quarterRange.start);
+      const endDate = new Date(quarterRange.end);
+      const goalRows = activeGoals.map((goal) => {
+        const pts = progressAll.filter((p) => {
+          if (p.goal_code !== goal.code || p.student_code !== student.code) return false;
+          const pd = new Date(p.date);
+          return pd >= startDate && pd <= endDate;
+        });
+        const vals = pts.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
+        const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+        const progressCell = isParent
+          ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
+          : (avg != null ? `${avg}%` : '—');
+        const target = goal.target != null ? `${esc(String(goal.target))}%` : '—';
+        const baseline = goal.baseline != null ? `${esc(String(goal.baseline))}%` : '—';
+        const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
+        return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${target}</td>${adminCols}</tr>`;
+      }).join('');
+      const adminHeader = isParent ? '' : '<th>Data Pts</th>';
+      goalsHtml = `<table>
+        <caption style="text-align:left;font-weight:600;margin-bottom:6px;caption-side:top;">IEP Goal Progress</caption>
+        <thead><tr><th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminHeader}</tr></thead>
+        <tbody>${goalRows}</tbody>
+      </table>`;
+    }
+
+    // Assignments
+    const startDate2 = new Date(quarterRange.start);
+    const endDate2 = new Date(quarterRange.end);
+    const studentInsts = instancesAll.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const rangedInsts = studentInsts.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate2 && d <= endDate2);
+    });
+
+    let assignHtml = '';
+    if (rangedInsts.length === 0) {
+      assignHtml = '<div class="ev-empty">No assignments found for this period.</div>';
+    } else {
+      assignHtml = rangedInsts.map((inst) => {
+        const assignment = assignsAll.find((a) => a.id === inst.assignment_id);
+        const submission = subsAll.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+        const title = esc(assignment?.title || `Assignment ${inst.assignment_id}`);
+        const category = esc(assignment?.category || '—');
+        const type = esc(assignment?.type || '—');
+        const score = submission?.score_total ?? submission?.score;
+        const status = submission ? (score != null ? 'Graded' : 'Submitted') : 'Pending';
+        const assignedDate = esc(_libFormatDate(inst.assigned_at || inst.created_at));
+        const metaRow = isParent
+          ? `Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)}`
+          : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
+
+        // Answer detail (admin mode only)
+        let answerDetail = '';
+        if (!isParent && submission) {
+          const hasAuto = submission.score_auto != null;
+          const hasManual = submission.score_manual != null;
+          if (hasAuto && hasManual) {
+            answerDetail += `<div class="ev-score-breakdown">Auto-graded: ${esc(String(submission.score_auto))}% &nbsp;|&nbsp; Manual: ${esc(String(submission.score_manual))}%</div>`;
+          }
+          const rawAnswers = submission.answers;
+          if (rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers)) {
+            const entries = Object.entries(rawAnswers);
+            if (entries.length > 0) {
+              const rows = entries.map(([ref, ans]) => {
+                let displayAns;
+                if (typeof ans === 'object' && ans !== null) {
+                  displayAns = ans.value != null ? esc(String(ans.value)) : esc(JSON.stringify(ans));
+                } else {
+                  displayAns = esc(String(ans));
+                }
+                return `<tr><td class="ev-ans-ref">${esc(ref)}</td><td class="ev-ans-val">${displayAns}</td></tr>`;
+              }).join('');
+              answerDetail += `
+                <div class="ev-answers">
+                  <div class="ev-answers-label">Student Responses (${entries.length})</div>
+                  <table class="ev-ans-table">
+                    <thead><tr><th>Item</th><th>Response</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>`;
+            }
+          }
+          if (submission.teacher_note) {
+            answerDetail += `<div class="ev-teacher-note"><strong>Teacher Note:</strong> ${esc(submission.teacher_note)}</div>`;
+          }
+        }
+
+        return `<div class="ev-card"><div class="ev-card-title">${title}</div><div class="ev-card-meta">${metaRow}</div>${answerDetail}</div>`;
+      }).join('');
+    }
+
+    return `
+      <div style="margin-bottom:32px;">
+        ${profileHtml}
+        <div class="ev-section-title">IEP Goal Progress Summary</div>
+        ${goalsHtml}
+        <div class="ev-section-title">Assignment Detail Trail</div>
+        ${assignHtml}
+      </div>`;
   }
 
   async function _generateLibraryEvidenceZip(targetStudents, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll, subsAll, _enrollAll, assignsAll) {
