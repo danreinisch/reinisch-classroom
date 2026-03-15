@@ -337,6 +337,21 @@ test('answer detail shown for both modes; answer keys hidden in parent mode via 
     buildStudentFn.includes('student.code') && buildStudentFn.includes('g.student_code'),
     'buildStudentEvidenceHtml should filter goalsData by student.code before passing to buildRichAnswerDetailHtml'
   );
+  // buildRichAnswerDetailHtml must accept studentCode as 5th parameter (belt-and-suspenders FERPA guard)
+  assert.ok(
+    fn.includes('studentCode'),
+    'buildRichAnswerDetailHtml should accept studentCode parameter'
+  );
+  // Internal goal lookup must also filter by student_code
+  assert.ok(
+    fn.includes('g.student_code === studentCode'),
+    'buildRichAnswerDetailHtml should filter goal lookup by student_code internally'
+  );
+  // If studentCode is unknown the function must bail out (never leak)
+  assert.ok(
+    fn.includes('if (!studentCode) return null'),
+    'buildRichAnswerDetailHtml should bail out immediately when studentCode is unknown'
+  );
 });
 
 // ── index.html @media print — new visibility/hiding rules ────────────────────
