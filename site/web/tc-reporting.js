@@ -197,7 +197,7 @@
         const goalDescs = (item.goal_codes || []).map((code) => {
           if (!studentCode) return null;
           const goal = goalsData.find((g) => g.code === code && g.student_code === studentCode);
-          if (!goal) return escapeHtml(code);
+          if (!goal) return null;
           const area = goal.area || goal.skill_area;
           const desc = goal.desc || goal.description;
           if (desc) return `${area ? escapeHtml(area) + ' — ' : ''}${escapeHtml(desc)}`;

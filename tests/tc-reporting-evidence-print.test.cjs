@@ -352,6 +352,11 @@ test('answer detail shown for both modes; answer keys hidden in parent mode via 
     fn.includes('if (!studentCode) return null'),
     'buildRichAnswerDetailHtml should bail out immediately when studentCode is unknown'
   );
+  // FERPA: codes with no matching goal for this student must be suppressed (null), NOT shown as raw codes
+  assert.ok(
+    fn.includes('if (!goal) return null'),
+    'buildRichAnswerDetailHtml must return null (not escapeHtml(code)) when no matching goal found for student — FERPA: never display another student\'s raw goal code'
+  );
 });
 
 // ── index.html @media print — new visibility/hiding rules ────────────────────
