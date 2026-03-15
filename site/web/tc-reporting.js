@@ -465,6 +465,7 @@
       html += `
         <table class="rp-table" style="margin-top: 20px;">
           <caption>IEP Goal Progress Summary</caption>
+          <thead>
             <tr>
               <th>Goal Code</th>
               <th>Area</th>
@@ -1852,6 +1853,10 @@ Status: ${status}`;
         <table class="rp-table">
           <caption>Goal Progress Across Quarters</caption>
           <thead>
+            <tr>
+              <th>Student</th>
+              <th>Goal</th>
+              <th>Q1 Avg</th>
               <th>Q2 Avg</th>
               <th>Q3 Avg</th>
               <th>Q4 Avg</th>
@@ -2114,6 +2119,8 @@ Status: ${status}`;
           <thead>
             <tr>
               <th>Student Code</th>
+              <th>Student Name</th>
+              <th>Goal Code</th>
               <th>Goal Area</th>
               <th>Data Points (Q)</th>
               <th>Last Collected</th>
@@ -2246,6 +2253,11 @@ Status: ${status}`;
         <table class="rp-table">
           <caption>Grade Completion Gaps</caption>
           <thead>
+            <tr>
+              <th>Student Code</th>
+              <th>Assignment</th>
+              <th>Assigned Date</th>
+              <th>Due Date</th>
               <th>Status</th>
             </tr>
           </thead>

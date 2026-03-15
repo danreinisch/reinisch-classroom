@@ -942,6 +942,7 @@
     header.setAttribute('aria-expanded', String(expanded));
 
     const toggleIcon = document.createElement('span');
+    toggleIcon.style.cssText = `font-size:14px; transition:transform .2s ease; display:inline-block; transform:rotate(${expanded ? '0deg' : '-90deg'});`;
     toggleIcon.textContent = '\u25be';
 
     const titleEl = document.createElement('span');

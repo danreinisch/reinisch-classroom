@@ -95,8 +95,17 @@ console.log('\n--- Error boundaries on renderTab functions ---');
 
 const tabFunctions = ['renderTab1', 'renderTab2', 'renderTab3', 'renderTab4', 'renderTab5', 'renderTab6'];
 
+const tabSearchSizes = {
+  renderTab1: 3500,
+  renderTab2: 5500,
+  renderTab3: 6000,
+  renderTab4: 7500,
+  renderTab5: 1000,
+  renderTab6: 8000,
+};
+
 tabFunctions.forEach(fnName => {
-  const searchSize = fnName === 'renderTab6' ? 8000 : fnName === 'renderTab4' ? 7500 : fnName === 'renderTab3' ? 6000 : fnName === 'renderTab2' ? 5500 : 3500;
+  const searchSize = tabSearchSizes[fnName] || 3500;
   test(`${fnName} has try/catch error boundary`, () => {
     const fnIdx = src.indexOf(`function ${fnName}(`);
     assert.ok(fnIdx !== -1, `${fnName} not found in tc-reporting.js`);
