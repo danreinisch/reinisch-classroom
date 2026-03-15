@@ -4167,11 +4167,15 @@
           ? `Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)}`
           : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
 
-        // Answer detail (admin mode only)
+        // Pre-filter goals to this student only (FERPA: never show another
+        // student's IEP goal on this student's report).
+        const studentGoalsAll = student.code
+          ? goalsAll.filter((g) => g.student_code === student.code)
+          : [];
         const answerDetail = _buildLibraryRichAnswerHtml(
-          !isParent ? submission : null,
+          submission,
           assignment,
-          goalsAll,
+          studentGoalsAll,
           isParent,
           true /* darkTheme */
         );
@@ -4350,11 +4354,15 @@
           ? `Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)}`
           : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
 
-        // Answer detail (admin mode only)
+        // Pre-filter goals to this student only (FERPA: never show another
+        // student's IEP goal on this student's report).
+        const studentGoalsAll = student.code
+          ? goalsAll.filter((g) => g.student_code === student.code)
+          : [];
         const answerDetail = _buildLibraryRichAnswerHtml(
-          !isParent ? submission : null,
+          submission,
           assignment,
-          goalsAll,
+          studentGoalsAll,
           isParent,
           false /* lightTheme for print */
         );

@@ -313,12 +313,29 @@ test('index.html @media print covers rp-ev-ans-table', () => {
   );
 });
 
-test('answer detail is admin-only (not shown in parent mode)', () => {
-  // buildRichAnswerDetailHtml passes null submission when isParent=true
-  // and the helper itself checks the isParent flag to suppress answer keys
+test('answer detail shown for both modes; answer keys hidden in parent mode via !isParent guard', () => {
+  // buildRichAnswerDetailHtml receives the submission for both admin and parent modes.
+  // The isParent flag suppresses answer keys (correct answers, raw scores) inside the helper.
+  // FERPA: goalsData is pre-filtered to the current student before being passed in.
+  const fnIdx = rpSrc.indexOf('function buildRichAnswerDetailHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 6000);
   assert.ok(
-    rpSrc.includes('buildRichAnswerDetailHtml') && rpSrc.includes('!isParent'),
-    'answer detail should be guarded by !isParent check via buildRichAnswerDetailHtml'
+    fn.includes('!isParent'),
+    'buildRichAnswerDetailHtml should use !isParent to suppress answer keys in parent mode'
+  );
+  // Caller must NOT pass null submission for parent mode (parent needs question detail too)
+  const callerIdx = rpSrc.indexOf('buildRichAnswerDetailHtml(');
+  const callerBlock = rpSrc.slice(callerIdx, callerIdx + 300);
+  assert.ok(
+    !callerBlock.includes('!isParent ? submission : null'),
+    'caller should pass submission for both admin and parent modes'
+  );
+  // Caller must filter goalsData by student_code to prevent IEP cross-contamination
+  const buildStudentFnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
+  const buildStudentFn = rpSrc.slice(buildStudentFnIdx, buildStudentFnIdx + 20000);
+  assert.ok(
+    buildStudentFn.includes('student.code') && buildStudentFn.includes('g.student_code'),
+    'buildStudentEvidenceHtml should filter goalsData by student.code before passing to buildRichAnswerDetailHtml'
   );
 });
 
