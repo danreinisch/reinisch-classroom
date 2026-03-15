@@ -624,6 +624,48 @@
         .rp-ev-answers-label {
           color: #333 !important;
         }
+        .rp-ev-q-card {
+          background: #fff !important;
+          border: 1px solid #ccc !important;
+        }
+        .rp-ev-q-label {
+          color: #000 !important;
+        }
+        .rp-ev-q-text {
+          color: #111 !important;
+        }
+        .rp-ev-badge-dese {
+          background: #dbeafe !important;
+          color: #1e40af !important;
+        }
+        .rp-ev-badge-goal {
+          background: #dcfce7 !important;
+          color: #166534 !important;
+        }
+        .rp-ev-choice {
+          color: #111 !important;
+          opacity: 1 !important;
+        }
+        .rp-ev-choice-correct {
+          background: #dcfce7 !important;
+          color: #166534 !important;
+        }
+        .rp-ev-choice-wrong {
+          background: #fee2e2 !important;
+          color: #991b1b !important;
+        }
+        .rp-ev-choice-answer {
+          background: #f0fdf4 !important;
+          color: #166534 !important;
+        }
+        .rp-ev-q-writing-text {
+          background: #f8f9fa !important;
+          border-color: #ccc !important;
+          color: #111 !important;
+        }
+        .rp-ev-q-summary {
+          color: #000 !important;
+        }
         .rp-ev-ans-table th {
           background: #f0f0f0 !important;
         }
@@ -799,9 +841,121 @@
         font-size: 11px;
         font-weight: 600;
         opacity: 0.7;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+      }
+      .rp-ev-q-summary {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        opacity: 0.9;
+      }
+      .rp-ev-q-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+      }
+      .rp-ev-q-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+      .rp-ev-q-label {
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .rp-ev-q-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .rp-ev-badge {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+      .rp-ev-badge-dese {
+        background: rgba(59,130,246,0.2);
+        color: #93c5fd;
+        border: 1px solid rgba(59,130,246,0.3);
+      }
+      .rp-ev-badge-goal {
+        background: rgba(34,197,94,0.15);
+        color: #86efac;
+        border: 1px solid rgba(34,197,94,0.3);
+      }
+      .rp-ev-q-text {
+        font-size: 13px;
+        opacity: 0.9;
+        margin-bottom: 6px;
+        font-style: italic;
+      }
+      .rp-ev-q-choices {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        font-size: 13px;
+      }
+      .rp-ev-choice {
+        padding: 3px 8px;
+        border-radius: 4px;
+        opacity: 0.8;
+      }
+      .rp-ev-choice-correct {
+        background: rgba(34,197,94,0.2);
+        color: #86efac;
+        opacity: 1;
+        font-weight: 600;
+      }
+      .rp-ev-choice-wrong {
+        background: rgba(239,68,68,0.2);
+        color: #fca5a5;
+        opacity: 1;
+        font-weight: 600;
+      }
+      .rp-ev-choice-answer {
+        background: rgba(34,197,94,0.1);
+        color: #86efac;
+      }
+      .rp-ev-choice-none {
+        opacity: 0.5;
+        font-style: italic;
+      }
+      .rp-ev-choice-mark {
+        margin-left: 6px;
+        font-weight: 700;
+      }
+      .rp-ev-q-writing {
+        margin-top: 6px;
+      }
+      .rp-ev-q-writing-label {
+        font-size: 11px;
+        font-weight: 600;
+        opacity: 0.6;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-bottom: 3px;
+      }
+      .rp-ev-q-writing-text {
+        font-size: 13px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 4px;
+        padding: 6px 8px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .rp-ev-q-score {
+        font-size: 12px;
+        opacity: 0.65;
+        margin-top: 4px;
       }
       .rp-ev-ans-table {
         width: 100%;
@@ -1120,7 +1274,7 @@
 
     <script defer src="/web/teacher-shell.js"></script>
     <script src="/web/rc-modal.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
     <script defer src="/web/tc-reporting.js"></script>
   </body>
 </html>

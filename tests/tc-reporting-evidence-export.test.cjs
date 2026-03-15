@@ -472,12 +472,21 @@ test('library/index.html JSZip script has crossorigin', () => {
   assert.ok(libHtml.includes('crossorigin'), 'JSZip script tag should have crossorigin attribute');
 });
 
-test('reporting/index.html JSZip script has SRI integrity hash', () => {
-  assert.ok(rpHtml.includes('integrity="sha384-'), 'JSZip script tag should have SRI integrity hash');
+test('reporting/index.html JSZip script does not have a broken SRI integrity hash', () => {
+  // The wrong sha384-OLBgp1G... hash (for JSZip 3.1.3) must not be present since it blocks loading
+  assert.ok(
+    !rpHtml.includes('integrity="sha384-OLBgp1GsljhM2TJ'),
+    'reporting/index.html must not include the wrong JSZip 3.1.3 SRI hash'
+  );
+  assert.ok(rpHtml.includes('jszip'), 'JSZip script tag should still be present');
 });
 
-test('library/index.html JSZip script has SRI integrity hash', () => {
-  assert.ok(libHtml.includes('integrity="sha384-'), 'JSZip script tag should have SRI integrity hash');
+test('library/index.html JSZip script does not have a broken SRI integrity hash', () => {
+  assert.ok(
+    !libHtml.includes('integrity="sha384-OLBgp1GsljhM2TJ'),
+    'library/index.html must not include the wrong JSZip 3.1.3 SRI hash'
+  );
+  assert.ok(libHtml.includes('jszip'), 'JSZip script tag should still be present');
 });
 
 // ── ESLint compliance ─────────────────────────────────────────────────────────

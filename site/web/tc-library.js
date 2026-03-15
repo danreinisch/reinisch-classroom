@@ -3853,13 +3853,227 @@
     return 'Current Quarter';
   }
 
+  /**
+   * Returns true if a goal is active/open (not closed or archived).
+   * Case-insensitive; goals with missing status are treated as active.
+   */
+  function _isGoalActive(goal) {
+    if (!goal) return false;
+    if (!goal.status) return true;
+    const s = goal.status.toLowerCase();
+    return s !== 'closed' && s !== 'archived';
+  }
+
+  /**
+   * Build synthetic items from assignment.meta.days[] for rich answer display.
+   */
+  function _buildItemsFromMeta(assignmentId, meta) {
+    const items = [];
+    if (!meta || !Array.isArray(meta.days)) return items;
+    for (const day of meta.days) {
+      if (day.type === 'questions' && Array.isArray(day.questions)) {
+        for (const q of day.questions) {
+          const item_ref = `${day.day_number}_${q.number}`;
+          items.push({
+            id: `syn_${item_ref}`,
+            assignment_id: assignmentId,
+            item_ref,
+            answer_type: q.type || 'mcq',
+            points: q.points || 1,
+            meta: {
+              day: day.day_number,
+              question_number: q.number,
+              text: q.text,
+              choices: q.choices,
+              correct: q.correct,
+            },
+            goal_codes: q.goal_codes || [],
+            dese_codes: q.dese_codes || [],
+          });
+        }
+      } else if (day.type === 'writing_prompt') {
+        const item_ref = `WP_${day.day_number}`;
+        items.push({
+          id: `syn_${item_ref}`,
+          assignment_id: assignmentId,
+          item_ref,
+          answer_type: 'constructed',
+          points: day.points || 5,
+          meta: {
+            day: day.day_number,
+            type: 'writing_prompt',
+            prompt: day.prompt,
+          },
+          goal_codes: day.goal_codes || [],
+          dese_codes: day.dese_codes || [],
+        });
+      }
+    }
+    return items;
+  }
+
+  /**
+   * Build rich per-question answer detail HTML for the library evidence report.
+   * Works in both dark-theme (_buildLibraryEvidenceHtml) and print-safe contexts.
+   * @param {Object}  submission - submission row
+   * @param {Object}  assignment - assignment row (has .meta)
+   * @param {Array}   goalsAll   - all goals (to resolve goal codes → descriptions)
+   * @param {boolean} isParent   - hide answer keys when true
+   * @param {boolean} darkTheme  - use dark-theme inline styles when true
+   */
+  function _buildLibraryRichAnswerHtml(submission, assignment, goalsAll, isParent, darkTheme) {
+    if (!submission) return '';
+    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
+
+    let html = '';
+    const hasAuto = submission.score_auto != null;
+    const hasManual = submission.score_manual != null;
+    if (hasAuto && hasManual) {
+      const bStyle = darkTheme ? 'font-size:12px;color:rgba(255,255,255,.6);margin-top:5px;' : 'font-size:12px;color:#444;margin-top:5px;';
+      html += `<div style="${bStyle}">Auto-graded: ${esc(String(submission.score_auto))}% &nbsp;|&nbsp; Manual: ${esc(String(submission.score_manual))}%</div>`;
+    }
+
+    const items = _buildItemsFromMeta(assignment?.id, assignment?.meta);
+    const rawAnswers = submission.answers || {};
+    const hasRawAnswers = rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers);
+
+    if (items.length > 0 && hasRawAnswers) {
+      let correctCount = 0;
+      let gradableCount = 0;
+
+      const questionCards = items.map((item) => {
+        const ref = item.item_ref;
+        const studentAns = rawAnswers[ref];
+        const correctAns = item.meta?.correct ?? item.correct;
+        const isCorrect = correctAns !== undefined && studentAns !== undefined && String(studentAns) === String(correctAns);
+        if (item.answer_type !== 'constructed' && correctAns !== undefined && studentAns !== undefined) {
+          gradableCount++;
+          if (isCorrect) correctCount++;
+        }
+
+        // Resolve IEP goal descriptions
+        const goalDescs = (item.goal_codes || []).map((code) => {
+          const goal = goalsAll.find((g) => g.code === code);
+          if (!goal) return esc(code);
+          const area = goal.area || goal.skill_area;
+          const desc = goal.desc || goal.description;
+          if (desc) return `${area ? esc(area) + ' — ' : ''}${esc(desc)}`;
+          return esc(goal.code || code);
+        });
+
+        const deseCodes = item.dese_codes || [];
+
+        // Styles
+        const cardBg = darkTheme ? 'rgba(255,255,255,.03)' : '#fff';
+        const cardBorder = darkTheme ? 'rgba(255,255,255,.08)' : '#ddd';
+        const labelColor = darkTheme ? 'rgba(255,255,255,.9)' : '#111';
+        const textColor = darkTheme ? 'rgba(255,255,255,.75)' : '#222';
+        const badgeDeseBg = darkTheme ? 'rgba(59,130,246,.2)' : '#dbeafe';
+        const badgeDeseColor = darkTheme ? '#93c5fd' : '#1e40af';
+        const badgeGoalBg = darkTheme ? 'rgba(34,197,94,.15)' : '#dcfce7';
+        const badgeGoalColor = darkTheme ? '#86efac' : '#166534';
+
+        const badgesHtml = [
+          deseCodes.length > 0
+            ? `<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:${badgeDeseBg};color:${badgeDeseColor};">DESE: ${esc(deseCodes.join(', '))}</span>`
+            : '',
+          ...goalDescs.map((d) => `<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:${badgeGoalBg};color:${badgeGoalColor};">IEP: ${d}</span>`),
+        ].filter(Boolean).join(' ');
+
+        if (item.answer_type === 'constructed') {
+          const prompt = item.meta?.prompt || '';
+          let studentText = '';
+          if (typeof studentAns === 'string') studentText = studentAns;
+          else if (studentAns && typeof studentAns === 'object') studentText = studentAns.value || JSON.stringify(studentAns);
+          const score = submission.score_manual ?? submission.score_total ?? submission.score;
+          return `<div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+            <div style="font-weight:600;font-size:13px;color:${labelColor};margin-bottom:4px;">Writing Prompt (Day ${item.meta?.day || ref})${badgesHtml ? ` &nbsp; ${badgesHtml}` : ''}</div>
+            ${prompt ? `<div style="font-size:13px;font-style:italic;color:${textColor};margin-bottom:6px;">&ldquo;${esc(prompt)}&rdquo;</div>` : ''}
+            <div style="font-size:11px;font-weight:600;color:${textColor};opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Student Response:</div>
+            <div style="font-size:13px;color:${textColor};background:${darkTheme ? 'rgba(255,255,255,.04)' : '#f8f9fa'};border:1px solid ${cardBorder};border-radius:4px;padding:6px 8px;white-space:pre-wrap;word-break:break-word;">${studentText ? esc(studentText) : '<em>No response recorded</em>'}</div>
+            ${!isParent && score != null ? `<div style="font-size:12px;color:${textColor};opacity:.7;margin-top:4px;">Score: ${esc(String(score))} (${hasManual ? 'Teacher scored' : 'Auto-graded'})</div>` : ''}
+            ${submission.teacher_note ? `<div style="font-size:12px;font-style:italic;color:${textColor};opacity:.65;margin-top:4px;"><strong>Teacher Note:</strong> ${esc(submission.teacher_note)}</div>` : ''}
+          </div>`;
+        }
+
+        // MCQ
+        const questionText = item.meta?.text || '';
+        const day = item.meta?.day || '';
+        const qNum = item.meta?.question_number || ref;
+        const choices = item.meta?.choices || [];
+        const choicesHtml = choices.length > 0
+          ? choices.map((c) => {
+              const letter = c.letter || c.key || '';
+              const text = c.text || c.value || '';
+              const isStudentAns = studentAns !== undefined && String(studentAns) === String(letter);
+              const isCorrectAns = !isParent && correctAns !== undefined && String(correctAns) === String(letter);
+              const marker = isStudentAns && isCorrectAns ? ' ✓' : isStudentAns && !isCorrectAns ? ' ✗' : isCorrectAns ? ' ← correct' : '';
+              let rowBg = 'transparent', rowColor = textColor;
+              if (isStudentAns && isCorrectAns) { rowBg = darkTheme ? 'rgba(34,197,94,.2)' : '#dcfce7'; rowColor = darkTheme ? '#86efac' : '#166534'; }
+              else if (isStudentAns) { rowBg = darkTheme ? 'rgba(239,68,68,.2)' : '#fee2e2'; rowColor = darkTheme ? '#fca5a5' : '#991b1b'; }
+              else if (isCorrectAns) { rowBg = darkTheme ? 'rgba(34,197,94,.1)' : '#f0fdf4'; rowColor = darkTheme ? '#86efac' : '#166534'; }
+              return `<div style="padding:3px 8px;border-radius:4px;background:${rowBg};color:${rowColor};font-size:13px;${isStudentAns || isCorrectAns ? 'font-weight:600;' : ''}">${esc(letter ? letter + ')' : '')} ${esc(text)}${marker ? `<span style="margin-left:6px;font-weight:700;">${marker}</span>` : ''}</div>`;
+            }).join('')
+          : studentAns !== undefined
+            ? `<div style="font-size:13px;color:${isCorrect ? (darkTheme ? '#86efac' : '#166534') : (correctAns !== undefined ? (darkTheme ? '#fca5a5' : '#991b1b') : textColor)};padding:3px 8px;">Answer: ${esc(String(studentAns))}${!isParent && correctAns !== undefined ? ` (Correct: ${esc(String(correctAns))})` : ''}${isCorrect ? ' ✓' : (correctAns !== undefined ? ' ✗' : '')}</div>`
+            : `<div style="font-size:13px;color:${textColor};opacity:.5;font-style:italic;padding:3px 8px;">No response</div>`;
+
+        return `<div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+          <div style="font-weight:600;font-size:13px;color:${labelColor};margin-bottom:4px;">Q${qNum}${day ? ` (Day ${day})` : ''}${badgesHtml ? ` &nbsp; ${badgesHtml}` : ''}</div>
+          ${questionText ? `<div style="font-size:13px;font-style:italic;color:${textColor};margin-bottom:6px;">${esc(questionText)}</div>` : ''}
+          <div style="display:flex;flex-direction:column;gap:3px;">${choicesHtml}</div>
+        </div>`;
+      }).join('');
+
+      const summaryStyle = darkTheme ? 'font-size:13px;font-weight:600;color:rgba(255,255,255,.85);margin-bottom:8px;' : 'font-size:13px;font-weight:600;color:#111;margin-bottom:8px;';
+      const summaryHtml = !isParent && gradableCount > 0
+        ? `<div style="${summaryStyle}">${correctCount}/${gradableCount} correct (${Math.round((correctCount / gradableCount) * 100)}%)</div>`
+        : '';
+
+      const labelStyle = darkTheme ? 'font-size:11px;font-weight:600;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;' : 'font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;';
+      html += `<div style="margin-top:8px;">
+        <div style="${labelStyle}">Student Responses (${items.length})</div>
+        ${summaryHtml}
+        ${questionCards}
+      </div>`;
+
+    } else if (hasRawAnswers) {
+      // Fallback flat table
+      const entries = Object.entries(rawAnswers);
+      if (entries.length > 0) {
+        const borderColor = darkTheme ? 'rgba(255,255,255,.1)' : '#ddd';
+        const thBg = darkTheme ? 'rgba(255,255,255,.05)' : '#f0f0f0';
+        const refColor = darkTheme ? 'rgba(255,255,255,.55)' : '#555';
+        const rows = entries.map(([ref, ans]) => {
+          let displayAns;
+          if (typeof ans === 'object' && ans !== null) {
+            displayAns = ans.value != null ? esc(String(ans.value)) : esc(JSON.stringify(ans));
+          } else {
+            displayAns = esc(String(ans));
+          }
+          return `<tr><td style="padding:3px 7px;border:1px solid ${borderColor};font-size:11px;color:${refColor};white-space:nowrap;">${esc(ref)}</td><td style="padding:3px 7px;border:1px solid ${borderColor};font-size:11px;word-break:break-word;">${displayAns}</td></tr>`;
+        }).join('');
+        const labelStyle = darkTheme ? 'font-size:11px;font-weight:600;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;' : 'font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;';
+        html += `<div style="margin-top:8px;">
+          <div style="${labelStyle}">Student Responses (${entries.length})</div>
+          <table style="width:100%;border-collapse:collapse;"><thead><tr>
+            <th style="padding:3px 7px;border:1px solid ${borderColor};background:${thBg};font-size:11px;text-align:left;">Item</th>
+            <th style="padding:3px 7px;border:1px solid ${borderColor};background:${thBg};font-size:11px;text-align:left;">Response</th>
+          </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+      }
+    }
+
+    if (submission.teacher_note && !isParent) {
+      const noteColor = darkTheme ? 'rgba(255,255,255,.6)' : '#555';
+      html += `<div style="font-size:12px;font-style:italic;color:${noteColor};margin-top:5px;"><strong>Teacher Note:</strong> ${esc(submission.teacher_note)}</div>`;
+    }
+
+    return html;
+  }
+
   function _buildLibraryEvidenceHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll) {
-    const esc = (v) => {
-      if (!v && v !== 0) return '';
-      const d = document.createElement('div');
-      d.textContent = String(v);
-      return d.innerHTML;
-    };
+    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
 
     const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const audienceLabel = isParent ? 'Parent' : 'Admin';
@@ -3889,7 +4103,7 @@
 
     // Goals
     const activeGoals = goalsAll.filter(
-      (g) => g.student_code === student.code && g.status === 'active'
+      (g) => g.student_code === student.code && _isGoalActive(g)
     );
 
     let goalsHtml = '';
@@ -3954,43 +4168,13 @@
           : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
 
         // Answer detail (admin mode only)
-        let answerDetail = '';
-        if (!isParent && submission) {
-          // Score breakdown
-          const hasAuto = submission.score_auto != null;
-          const hasManual = submission.score_manual != null;
-          if (hasAuto && hasManual) {
-            answerDetail += `<div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:5px;">Auto-graded: ${esc(String(submission.score_auto))}% &nbsp;|&nbsp; Manual: ${esc(String(submission.score_manual))}%</div>`;
-          }
-          // Per-item responses
-          const rawAnswers = submission.answers;
-          if (rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers)) {
-            const entries = Object.entries(rawAnswers);
-            if (entries.length > 0) {
-              const rows = entries.map(([ref, ans]) => {
-                let displayAns;
-                if (typeof ans === 'object' && ans !== null) {
-                  displayAns = ans.value != null ? esc(String(ans.value)) : esc(JSON.stringify(ans));
-                } else {
-                  displayAns = esc(String(ans));
-                }
-                return `<tr><td style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;">${esc(ref)}</td><td style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);font-size:11px;word-break:break-word;">${displayAns}</td></tr>`;
-              }).join('');
-              answerDetail += `
-                <div style="margin-top:8px;">
-                  <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Student Responses (${entries.length})</div>
-                  <table style="width:100%;border-collapse:collapse;">
-                    <thead><tr><th style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:11px;text-align:left;">Item</th><th style="padding:3px 7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:11px;text-align:left;">Response</th></tr></thead>
-                    <tbody>${rows}</tbody>
-                  </table>
-                </div>`;
-            }
-          }
-          // Teacher note
-          if (submission.teacher_note) {
-            answerDetail += `<div style="font-size:12px;font-style:italic;color:rgba(255,255,255,.6);margin-top:5px;"><strong>Teacher Note:</strong> ${esc(submission.teacher_note)}</div>`;
-          }
-        }
+        const answerDetail = _buildLibraryRichAnswerHtml(
+          !isParent ? submission : null,
+          assignment,
+          goalsAll,
+          isParent,
+          true /* darkTheme */
+        );
 
         return `<div style="${cardStyle}"><div style="font-weight:600;margin-bottom:4px;">${title}</div><div style="font-size:13px;color:rgba(255,255,255,.7);">${metaRow}</div>${answerDetail}</div>`;
       }).join('');
@@ -4103,7 +4287,7 @@
 
     // Goals
     const activeGoals = goalsAll.filter(
-      (g) => g.student_code === student.code && g.status === 'active'
+      (g) => g.student_code === student.code && _isGoalActive(g)
     );
 
     let goalsHtml = '';
@@ -4167,40 +4351,13 @@
           : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
 
         // Answer detail (admin mode only)
-        let answerDetail = '';
-        if (!isParent && submission) {
-          const hasAuto = submission.score_auto != null;
-          const hasManual = submission.score_manual != null;
-          if (hasAuto && hasManual) {
-            answerDetail += `<div class="ev-score-breakdown">Auto-graded: ${esc(String(submission.score_auto))}% &nbsp;|&nbsp; Manual: ${esc(String(submission.score_manual))}%</div>`;
-          }
-          const rawAnswers = submission.answers;
-          if (rawAnswers && typeof rawAnswers === 'object' && !Array.isArray(rawAnswers)) {
-            const entries = Object.entries(rawAnswers);
-            if (entries.length > 0) {
-              const rows = entries.map(([ref, ans]) => {
-                let displayAns;
-                if (typeof ans === 'object' && ans !== null) {
-                  displayAns = ans.value != null ? esc(String(ans.value)) : esc(JSON.stringify(ans));
-                } else {
-                  displayAns = esc(String(ans));
-                }
-                return `<tr><td class="ev-ans-ref">${esc(ref)}</td><td class="ev-ans-val">${displayAns}</td></tr>`;
-              }).join('');
-              answerDetail += `
-                <div class="ev-answers">
-                  <div class="ev-answers-label">Student Responses (${entries.length})</div>
-                  <table class="ev-ans-table">
-                    <thead><tr><th>Item</th><th>Response</th></tr></thead>
-                    <tbody>${rows}</tbody>
-                  </table>
-                </div>`;
-            }
-          }
-          if (submission.teacher_note) {
-            answerDetail += `<div class="ev-teacher-note"><strong>Teacher Note:</strong> ${esc(submission.teacher_note)}</div>`;
-          }
-        }
+        const answerDetail = _buildLibraryRichAnswerHtml(
+          !isParent ? submission : null,
+          assignment,
+          goalsAll,
+          isParent,
+          false /* lightTheme for print */
+        );
 
         return `<div class="ev-card"><div class="ev-card-title">${title}</div><div class="ev-card-meta">${metaRow}</div>${answerDetail}</div>`;
       }).join('');
@@ -4279,7 +4436,7 @@
   function _buildLibraryCoverHtml(student, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll) {
     const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
     const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const activeGoals = goalsAll.filter((g) => g.student_code === student.code && g.status === 'active');
+    const activeGoals = goalsAll.filter((g) => g.student_code === student.code && _isGoalActive(g));
     const goalAreas = [...new Set(activeGoals.map((g) => g.area || g.skill_area || '—'))].join(', ') || '—';
     const startDate = new Date(quarterRange.start);
     const endDate = new Date(quarterRange.end);
@@ -4356,7 +4513,7 @@
 
   function _buildLibraryGoalsHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll) {
     const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
-    const activeGoals = goalsAll.filter((g) => g.student_code === student.code && g.status === 'active');
+    const activeGoals = goalsAll.filter((g) => g.student_code === student.code && _isGoalActive(g));
     const startDate = new Date(quarterRange.start);
     const endDate = new Date(quarterRange.end);
     let rows = activeGoals.length === 0
