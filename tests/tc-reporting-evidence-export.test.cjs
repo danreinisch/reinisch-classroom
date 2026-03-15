@@ -442,6 +442,14 @@ test('library/index.html JSZip script has crossorigin', () => {
   assert.ok(libHtml.includes('crossorigin'), 'JSZip script tag should have crossorigin attribute');
 });
 
+test('reporting/index.html JSZip script has SRI integrity hash', () => {
+  assert.ok(rpHtml.includes('integrity="sha384-'), 'JSZip script tag should have SRI integrity hash');
+});
+
+test('library/index.html JSZip script has SRI integrity hash', () => {
+  assert.ok(libHtml.includes('integrity="sha384-'), 'JSZip script tag should have SRI integrity hash');
+});
+
 // ── ESLint compliance ─────────────────────────────────────────────────────────
 
 console.log('\n--- ESLint compliance (no bare alert/confirm) ---');
