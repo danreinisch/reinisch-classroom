@@ -316,6 +316,9 @@
   let lessonsData = null;
   let syncStatus = "loading";
 
+  // Evidence report modal — student data loaded lazily
+  let _evidenceStudentsData = null;
+
   // Bulk edit state
   let bulkEditMode = false;
   const selectedAssignmentIds = new Set();
@@ -418,6 +421,15 @@
     exportBtn.appendChild(createIcon('download'));
     exportBtn.appendChild(document.createTextNode(' Export Library JSON'));
     tabsContainer.appendChild(exportBtn);
+
+    const evidenceBtn = document.createElement('button');
+    evidenceBtn.id = 'evidenceReportBtn';
+    evidenceBtn.className = 'tc-btn';
+    evidenceBtn.style.cssText = 'margin-left:8px; display:flex; align-items:center; gap:6px;';
+    evidenceBtn.setAttribute('aria-label', 'Generate Student Evidence Report');
+    evidenceBtn.appendChild(createIcon('fileText'));
+    evidenceBtn.appendChild(document.createTextNode(' Evidence Report'));
+    tabsContainer.appendChild(evidenceBtn);
 
     main.insertBefore(tabsContainer, main.firstChild);
   }
@@ -2705,6 +2717,10 @@
     // Upload Paper Assignment button
     const uploadBtn = $('uploadPaperBtn');
     if (uploadBtn) uploadBtn.addEventListener('click', openUploadPaperModal);
+
+    // Evidence Report button
+    const evidenceBtn = $('evidenceReportBtn');
+    if (evidenceBtn) evidenceBtn.addEventListener('click', openEvidenceReportModal);
   }
 
   // ── Assignment Detail Modal ───────────────────────────────────────────────────
@@ -3418,6 +3434,756 @@
     msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
     document.body.appendChild(msg);
     setTimeout(() => msg.remove(), 3500);
+  }
+
+
+  // ── Evidence Report Modal ─────────────────────────────────────────────────────
+
+  async function openEvidenceReportModal() {
+    const triggerEl = document.activeElement;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'evidenceReportOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'evidenceReportTitle');
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.80); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000; padding: 24px;
+    `;
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width: 620px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;';
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'evidenceReportTitle';
+    titleEl.style.cssText = 'margin: 0; font-size: 22px;';
+    titleEl.textContent = 'Student Evidence Report';
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'closeEvidenceReportBtn';
+    closeBtn.className = 'tc-btn';
+    closeBtn.style.cssText = 'padding: 8px 16px;';
+    closeBtn.setAttribute('aria-label', 'Close dialog');
+    closeBtn.textContent = '\u2715 Close';
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    function closeModal() {
+      document.removeEventListener('keydown', onEvidenceKeyDown);
+      if (document.body.contains(overlay)) document.body.removeChild(overlay);
+      if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
+    }
+    closeBtn.addEventListener('click', closeModal);
+
+    function onEvidenceKeyDown(e) {
+      if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+      if (e.key === 'Tab') {
+        const focusable = Array.from(
+          card.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+        ).filter((el) => el.offsetParent !== null);
+        if (focusable.length < 2) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    document.addEventListener('keydown', onEvidenceKeyDown);
+
+    // Show loading indicator while fetching students
+    const loadingEl = document.createElement('div');
+    loadingEl.style.cssText = 'text-align:center; padding:24px; color:rgba(255,255,255,.6);';
+    loadingEl.textContent = 'Loading student data\u2026';
+    card.appendChild(loadingEl);
+    closeBtn.focus();
+
+    // Load students lazily
+    if (!_evidenceStudentsData) {
+      try {
+        _evidenceStudentsData = (await db.listStudents()) || [];
+      } catch (err) {
+        console.warn('[tc-library] Could not load students for evidence report:', err);
+        _evidenceStudentsData = [];
+      }
+    }
+
+    card.removeChild(loadingEl);
+    _buildEvidenceReportForm(card, closeModal);
+
+    // Focus first focusable element in the form
+    const firstInput = card.querySelector('button:not([disabled]), input:not([disabled]), select:not([disabled])');
+    if (firstInput) firstInput.focus();
+  }
+
+  function _buildEvidenceReportForm(card, closeModal) {
+    const fieldStyle = 'width:100%; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:white; font-size:15px; box-sizing:border-box;';
+    const labelStyle = 'display:block; font-size:14px; color:rgba(255,255,255,.70); margin-bottom:8px;';
+    const sectionStyle = 'margin-bottom:18px;';
+    const modeBtnStyle = 'padding:6px 14px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:6px; color:white; cursor:pointer; font-size:13px; transition:background .15s;';
+    const modeBtnActiveStyle = 'padding:6px 14px; background:rgba(34,197,94,.20); border:1px solid rgba(34,197,94,.35); border-radius:6px; color:white; cursor:pointer; font-size:13px;';
+
+    // ── Evidence report form state ──
+    const formState = {
+      selectedStudents: [],        // array of student codes
+      dateRange: 'current-quarter',
+      customStart: '',
+      customEnd: '',
+      audience: 'parent',
+      outputFormat: 'print',
+    };
+
+    const activeStudents = (_evidenceStudentsData || []).filter((s) => s.active !== false);
+
+    // ── Section: Students ──
+    const studentsSection = document.createElement('div');
+    studentsSection.style.cssText = sectionStyle;
+    const studentsLabel = document.createElement('div');
+    studentsLabel.style.cssText = labelStyle;
+    studentsLabel.textContent = 'Select Students:';
+    studentsSection.appendChild(studentsLabel);
+
+    if (activeStudents.length === 0) {
+      const noStudents = document.createElement('div');
+      noStudents.style.cssText = 'color:rgba(255,255,255,.5); font-style:italic; font-size:14px;';
+      noStudents.textContent = 'No active students found.';
+      studentsSection.appendChild(noStudents);
+    } else {
+      // Define counter element and updater first so they can be referenced by button callbacks
+      const counterEl = document.createElement('div');
+      counterEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-top:4px;';
+      counterEl.textContent = '0 of ' + activeStudents.length + ' selected';
+
+      const updateCounter = () => {
+        counterEl.textContent = `${formState.selectedStudents.length} of ${activeStudents.length} selected`;
+      };
+
+      const studentCheckboxes = [];
+
+      const selectBtnRow = document.createElement('div');
+      selectBtnRow.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
+
+      const selectAllBtn = document.createElement('button');
+      selectAllBtn.type = 'button';
+      selectAllBtn.textContent = 'Select All';
+      selectAllBtn.style.cssText = modeBtnStyle;
+      selectAllBtn.addEventListener('click', () => {
+        formState.selectedStudents = activeStudents.map((s) => s.code);
+        studentCheckboxes.forEach((cb) => { cb.checked = true; });
+        updateCounter();
+      });
+
+      const clearAllBtn = document.createElement('button');
+      clearAllBtn.type = 'button';
+      clearAllBtn.textContent = 'Clear All';
+      clearAllBtn.style.cssText = modeBtnStyle;
+      clearAllBtn.addEventListener('click', () => {
+        formState.selectedStudents = [];
+        studentCheckboxes.forEach((cb) => { cb.checked = false; });
+        updateCounter();
+      });
+
+      selectBtnRow.appendChild(selectAllBtn);
+      selectBtnRow.appendChild(clearAllBtn);
+      studentsSection.appendChild(selectBtnRow);
+
+      const listEl = document.createElement('div');
+      listEl.style.cssText = 'max-height:160px; overflow-y:auto; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px;';
+
+      activeStudents.forEach((student) => {
+        const item = document.createElement('label');
+        item.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer; font-size:14px;';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = student.code;
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            if (!formState.selectedStudents.includes(student.code)) formState.selectedStudents.push(student.code);
+          } else {
+            formState.selectedStudents = formState.selectedStudents.filter((c) => c !== student.code);
+          }
+          updateCounter();
+        });
+        studentCheckboxes.push(cb);
+        item.appendChild(cb);
+        item.appendChild(document.createTextNode(student.name || student.code));
+        listEl.appendChild(item);
+      });
+      studentsSection.appendChild(listEl);
+      studentsSection.appendChild(counterEl);
+    }
+    card.appendChild(studentsSection);
+
+    // ── Section: Date Range ──
+    const dateSection = document.createElement('div');
+    dateSection.style.cssText = sectionStyle;
+    const dateLabel = document.createElement('label');
+    dateLabel.setAttribute('for', 'ev_dateRange');
+    dateLabel.style.cssText = labelStyle;
+    dateLabel.textContent = 'Date Range:';
+    const dateSelect = document.createElement('select');
+    dateSelect.id = 'ev_dateRange';
+    dateSelect.style.cssText = fieldStyle;
+    [
+      ['current-quarter', 'Current Quarter'],
+      ['Q1', 'Q1'],
+      ['Q2', 'Q2'],
+      ['Q3', 'Q3'],
+      ['Q4', 'Q4'],
+      ['all-time', 'All Time'],
+      ['custom', 'Custom Range\u2026'],
+    ].forEach(([val, lbl]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = lbl;
+      if (val === formState.dateRange) opt.selected = true;
+      dateSelect.appendChild(opt);
+    });
+
+    const customRangeEl = document.createElement('div');
+    customRangeEl.id = 'ev_customRange';
+    customRangeEl.style.cssText = 'display:flex; gap:8px; margin-top:8px;';
+    customRangeEl.style.display = 'none';
+
+    const startInput = document.createElement('input');
+    startInput.type = 'date';
+    startInput.id = 'ev_customStart';
+    startInput.style.cssText = fieldStyle + 'flex:1;';
+    const endInput = document.createElement('input');
+    endInput.type = 'date';
+    endInput.id = 'ev_customEnd';
+    endInput.style.cssText = fieldStyle + 'flex:1;';
+    customRangeEl.appendChild(startInput);
+    customRangeEl.appendChild(endInput);
+
+    dateSelect.addEventListener('change', (e) => {
+      formState.dateRange = e.target.value;
+      customRangeEl.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+    });
+    startInput.addEventListener('change', (e) => { formState.customStart = e.target.value; });
+    endInput.addEventListener('change', (e) => { formState.customEnd = e.target.value; });
+
+    dateSection.appendChild(dateLabel);
+    dateSection.appendChild(dateSelect);
+    dateSection.appendChild(customRangeEl);
+    card.appendChild(dateSection);
+
+    // ── Section: Audience ──
+    const audienceSection = document.createElement('div');
+    audienceSection.style.cssText = sectionStyle;
+    const audienceLabel = document.createElement('div');
+    audienceLabel.style.cssText = labelStyle;
+    audienceLabel.textContent = 'Audience:';
+    const audienceGroup = document.createElement('div');
+    audienceGroup.style.cssText = 'display:flex; gap:8px;';
+
+    ['parent', 'admin'].forEach((aud) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = aud === 'parent' ? 'Parent / IEP Team' : 'Admin';
+      btn.style.cssText = aud === formState.audience ? modeBtnActiveStyle : modeBtnStyle;
+      btn.dataset.audience = aud;
+      btn.addEventListener('click', () => {
+        formState.audience = aud;
+        audienceGroup.querySelectorAll('button').forEach((b) => {
+          b.style.cssText = b.dataset.audience === aud ? modeBtnActiveStyle : modeBtnStyle;
+        });
+      });
+      audienceGroup.appendChild(btn);
+    });
+    audienceSection.appendChild(audienceLabel);
+    audienceSection.appendChild(audienceGroup);
+    card.appendChild(audienceSection);
+
+    // ── Section: Output Format ──
+    const formatSection = document.createElement('div');
+    formatSection.style.cssText = sectionStyle;
+    const formatLabel = document.createElement('div');
+    formatLabel.style.cssText = labelStyle;
+    formatLabel.textContent = 'Output Format:';
+    const formatGroup = document.createElement('div');
+    formatGroup.style.cssText = 'display:flex; gap:8px;';
+
+    [['print', 'Print / PDF'], ['zip', 'ZIP Download']].forEach(([fmt, lbl]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = lbl;
+      btn.style.cssText = fmt === formState.outputFormat ? modeBtnActiveStyle : modeBtnStyle;
+      btn.dataset.format = fmt;
+      btn.addEventListener('click', () => {
+        formState.outputFormat = fmt;
+        formatGroup.querySelectorAll('button').forEach((b) => {
+          b.style.cssText = b.dataset.format === fmt ? modeBtnActiveStyle : modeBtnStyle;
+        });
+      });
+      formatGroup.appendChild(btn);
+    });
+    formatSection.appendChild(formatLabel);
+    formatSection.appendChild(formatGroup);
+    card.appendChild(formatSection);
+
+    // ── Generate Button ──
+    const generateBtn = document.createElement('button');
+    generateBtn.id = 'ev_generateBtn';
+    generateBtn.type = 'button';
+    generateBtn.className = 'tc-btn';
+    generateBtn.style.cssText = 'width:100%; padding:12px; font-size:16px; background:rgba(34,197,94,.20); border-color:rgba(34,197,94,.35); display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px;';
+    generateBtn.appendChild(createIcon('fileText'));
+    generateBtn.appendChild(document.createTextNode(' Generate'));
+    generateBtn.addEventListener('click', () => {
+      _runEvidenceGeneration(formState, card, closeModal).catch((err) => {
+        console.error('[tc-library] Evidence generation error:', err);
+      });
+    });
+    card.appendChild(generateBtn);
+  }
+
+  async function _runEvidenceGeneration(formState, card, closeModal) {
+    if (formState.selectedStudents.length === 0) {
+      await rcAlert('No Students Selected', 'Please select at least one student.');
+      return;
+    }
+
+    const generateBtn = card.querySelector('#ev_generateBtn');
+    if (generateBtn) { generateBtn.disabled = true; generateBtn.textContent = 'Generating\u2026'; }
+
+    try {
+      // Load additional data needed for the report
+      const [goalsAll, progressAll, instancesAll, subsAll, enrollAll] = await Promise.all([
+        db.listGoalsAll ? db.listGoalsAll() : Promise.resolve([]),
+        db.listGoalProgress ? db.listGoalProgress({}) : Promise.resolve([]),
+        instancesData.length > 0 ? Promise.resolve(instancesData) : (db.listAssignmentInstances ? db.listAssignmentInstances() : Promise.resolve([])),
+        submissionsData.length > 0 ? Promise.resolve(submissionsData) : (db.listSubmissions ? db.listSubmissions() : Promise.resolve([])),
+        db.listClassEnrollments ? db.listClassEnrollments() : Promise.resolve([]),
+      ]);
+
+      const targetStudents = (_evidenceStudentsData || []).filter(
+        (s) => formState.selectedStudents.includes(s.code)
+      );
+
+      if (targetStudents.length === 0) {
+        await rcAlert('No Data', 'No matching students found.');
+        return;
+      }
+
+      const isParent = formState.audience === 'parent';
+      const isRemoteNow = await isRemote();
+      const sourceLabel = isRemoteNow ? 'School Database' : 'My Device';
+
+      // Resolve date range
+      let quarterRange;
+      if (formState.dateRange === 'all-time') {
+        quarterRange = { start: '2000-01-01', end: '2099-12-31' };
+      } else if (formState.dateRange === 'custom') {
+        quarterRange = { start: formState.customStart || '2000-01-01', end: formState.customEnd || '2099-12-31' };
+      } else if (['Q1','Q2','Q3','Q4'].includes(formState.dateRange)) {
+        quarterRange = _getLibraryQuarterRange(formState.dateRange);
+      } else {
+        // current-quarter
+        quarterRange = _getLibraryQuarterRange('current');
+      }
+
+      const periodLabel = _getLibraryPeriodLabel(formState.dateRange, formState.customStart, formState.customEnd);
+
+      if (formState.outputFormat === 'zip') {
+        await _generateLibraryEvidenceZip(targetStudents, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignmentsData);
+        closeModal();
+      } else {
+        // Print mode
+        _generateLibraryEvidencePrintWindow(targetStudents, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignmentsData);
+        closeModal();
+      }
+    } catch (err) {
+      console.error('[tc-library] Evidence generation failed:', err);
+      await rcAlert('Generation Failed', 'Could not generate the evidence report. Please try again.');
+    } finally {
+      if (generateBtn) { generateBtn.disabled = false; generateBtn.textContent = 'Generate'; }
+    }
+  }
+
+  function _getLibraryQuarterRange(quarter) {
+    // Attempt to read from localStorage (quarter-utils pattern)
+    try {
+      const stored = localStorage.getItem('rc_quarter_dates');
+      if (stored) {
+        const qDates = JSON.parse(stored);
+        let qKey = quarter;
+        if (quarter === 'current') {
+          const now = new Date();
+          const mm = now.getMonth() + 1;
+          if (mm <= 2) qKey = 'Q2';
+          else if (mm <= 5) qKey = 'Q3';
+          else if (mm <= 8) qKey = 'Q4';
+          else qKey = 'Q1';
+        }
+        if (qDates[qKey]) return { start: qDates[qKey].start, end: qDates[qKey].end };
+      }
+    } catch (_e) { /* ignore */ }
+    // Fallback: broad calendar quarters
+    const year = new Date().getFullYear();
+    const ranges = {
+      Q1: { start: `${year}-08-16`, end: `${year}-10-17` },
+      Q2: { start: `${year}-10-18`, end: `${year}-12-20` },
+      Q3: { start: `${year + 1}-01-06`, end: `${year + 1}-03-14` },
+      Q4: { start: `${year + 1}-03-17`, end: `${year + 1}-06-06` },
+    };
+    if (quarter === 'current') {
+      const now = new Date();
+      const mm = now.getMonth() + 1;
+      if (mm <= 2) return ranges.Q2;
+      if (mm <= 5) return ranges.Q3;
+      if (mm <= 8) return ranges.Q4;
+      return ranges.Q1;
+    }
+    return ranges[quarter] || { start: '2000-01-01', end: '2099-12-31' };
+  }
+
+  function _getLibraryPeriodLabel(dateRange, customStart, customEnd) {
+    if (dateRange === 'all-time') return 'All Time';
+    if (dateRange === 'custom') return `${customStart || '?'} \u2013 ${customEnd || '?'}`;
+    if (['Q1','Q2','Q3','Q4'].includes(dateRange)) return dateRange;
+    return 'Current Quarter';
+  }
+
+  function _buildLibraryEvidenceHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll) {
+    const esc = (v) => {
+      if (!v && v !== 0) return '';
+      const d = document.createElement('div');
+      d.textContent = String(v);
+      return d.innerHTML;
+    };
+
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const audienceLabel = isParent ? 'Parent' : 'Admin';
+
+    const studentEnrollments = enrollAll.filter(
+      (e) => e.student_code === student.code || e.student_id === student.code
+    );
+    const classNames = studentEnrollments.length > 0
+      ? studentEnrollments.map((e) => esc(e.class_name || e.class_code || '')).filter(Boolean).join(', ')
+      : 'N/A';
+
+    const profileHtml = `
+      <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="font-size:20px;font-weight:700;margin-bottom:12px;">Student Evidence Report</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px;margin-bottom:12px;">
+          <div><strong>Student:</strong> ${esc(student.name || student.code)} (${esc(student.code)})</div>
+          <div><strong>Report Date:</strong> ${esc(todayLabel)}</div>
+          <div><strong>Classes:</strong> ${classNames || 'N/A'}</div>
+          <div><strong>Period:</strong> ${esc(periodLabel)}</div>
+          <div><strong>Status:</strong> ${student.active !== false ? 'Active' : 'Inactive'}</div>
+          <div><strong>Mode:</strong> ${esc(audienceLabel)}</div>
+        </div>
+        <div style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 14px;font-size:13px;color:#f87171;">
+          &#9888; CONFIDENTIAL &mdash; For authorized personnel only (FERPA)
+        </div>
+      </div>`;
+
+    // Goals
+    const activeGoals = goalsAll.filter(
+      (g) => g.student_code === student.code && g.status === 'active'
+    );
+
+    let goalsHtml = '';
+    if (activeGoals.length === 0) {
+      goalsHtml = '<div style="color:rgba(255,255,255,.5);font-style:italic;padding:8px 0;">No active IEP goals found for this student.</div>';
+    } else {
+      const startDate = new Date(quarterRange.start);
+      const endDate = new Date(quarterRange.end);
+      const goalRows = activeGoals.map((goal) => {
+        const pts = progressAll.filter((p) => {
+          if (p.goal_code !== goal.code || p.student_code !== student.code) return false;
+          const pd = new Date(p.date);
+          return pd >= startDate && pd <= endDate;
+        });
+        const vals = pts.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
+        const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+        const progressCell = isParent
+          ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
+          : (avg != null ? `${avg}%` : '—');
+        const target = goal.target != null ? `${esc(String(goal.target))}%` : '—';
+        const baseline = goal.baseline != null ? `${esc(String(goal.baseline))}%` : '—';
+        const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
+        return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${target}</td>${adminCols}</tr>`;
+      }).join('');
+      const adminHeader = isParent ? '' : '<th>Data Pts</th>';
+      goalsHtml = `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
+        <caption style="text-align:left;font-weight:600;margin-bottom:6px;">IEP Goal Progress</caption>
+        <thead><tr><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Goal</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Area</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Baseline</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Progress</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Target</th>${adminHeader}</tr></thead>
+        <tbody style="font-size:13px;">${goalRows}</tbody>
+      </table>`;
+    }
+
+    // Assignments
+    const startDate2 = new Date(quarterRange.start);
+    const endDate2 = new Date(quarterRange.end);
+    const studentInsts = instancesAll.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const rangedInsts = studentInsts.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate2 && d <= endDate2);
+    });
+
+    let assignHtml = '';
+    if (rangedInsts.length === 0) {
+      assignHtml = '<div style="color:rgba(255,255,255,.5);font-style:italic;padding:8px 0;">No assignments found for this period.</div>';
+    } else {
+      const cardStyle = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 16px;margin-bottom:10px;';
+      assignHtml = rangedInsts.map((inst) => {
+        const assignment = assignsAll.find((a) => a.id === inst.assignment_id);
+        const submission = subsAll.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+        const title = esc(assignment?.title || `Assignment ${inst.assignment_id}`);
+        const category = esc(assignment?.category || '—');
+        const type = esc(assignment?.type || '—');
+        const score = submission?.score_total ?? submission?.score;
+        const status = submission ? (score != null ? 'Graded' : 'Submitted') : 'Pending';
+        const assignedDate = esc(_libFormatDate(inst.assigned_at || inst.created_at));
+        const metaRow = isParent
+          ? `Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)}`
+          : `Type: ${type} | Category: ${category} | Assigned: ${assignedDate} | Status: ${esc(status)} | Score: ${score != null ? score + '%' : '—'}`;
+        return `<div style="${cardStyle}"><div style="font-weight:600;margin-bottom:4px;">${title}</div><div style="font-size:13px;color:rgba(255,255,255,.7);">${metaRow}</div></div>`;
+      }).join('');
+    }
+
+    return `
+      <div style="margin-bottom:32px;">
+        ${profileHtml}
+        <div style="font-size:16px;font-weight:600;margin:18px 0 10px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:6px;">IEP Goal Progress Summary</div>
+        ${goalsHtml}
+        <div style="font-size:16px;font-weight:600;margin:18px 0 10px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:6px;">Assignment Detail Trail</div>
+        ${assignHtml}
+      </div>`;
+  }
+
+  function _libFormatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function _generateLibraryEvidencePrintWindow(targetStudents, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll) {
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const sections = targetStudents.map((student, idx) => {
+      const sep = idx > 0 ? '<div style="page-break-before:always;"></div>' : '';
+      return sep + _buildLibraryEvidenceHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll);
+    }).join('');
+
+    const docHtml = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Student Evidence Report &mdash; ${periodLabel}</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#0b1220;color:#e2e8f0;margin:0;padding:24px;}
+  @media print{body{background:white;color:#111;padding:0;}}
+  table th,table td{padding:6px 8px;border:1px solid rgba(255,255,255,.12);}
+  @media print{table th,table td{border:1px solid #ccc;}}
+</style>
+</head><body>
+  <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid rgba(255,255,255,.15);">
+    <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Student Evidence Report</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.6);">Period: ${periodLabel} &nbsp;|&nbsp; Generated: ${generatedDate} &nbsp;|&nbsp; Data Source: ${sourceLabel}</div>
+  </div>
+  ${sections}
+  <div style="margin-top:32px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;font-size:12px;color:rgba(255,255,255,.45);">
+    Reinisch Classroom &mdash; Student Evidence Report &mdash; ${generatedDate}
+  </div>
+</body></html>`;
+    const win = window.open('', '_blank');
+    if (!win) { console.warn('[tc-library] Could not open print window.'); return; }
+    win.document.write(docHtml);
+    win.document.close();
+    win.focus();
+    win.print();
+  }
+
+  async function _generateLibraryEvidenceZip(targetStudents, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll, subsAll, _enrollAll, assignsAll) {
+    /* global JSZip */
+    if (typeof JSZip === 'undefined') {
+      throw new Error('JSZip is not loaded. Please check your network connection.');
+    }
+    // eslint-disable-next-line no-undef
+    const zip = new JSZip();
+    const today = new Date().toISOString().split('T')[0];
+    const folderName = `evidence-report-${today}`;
+    const root = zip.folder(folderName);
+    const generatedTs = new Date().toISOString();
+
+    // manifest.json
+    const manifest = {
+      generated: generatedTs,
+      period: periodLabel,
+      audience: isParent ? 'Parent' : 'Admin',
+      dataSource: sourceLabel,
+      students: targetStudents.map((s) => ({ code: s.code, name: s.name || s.code, active: s.active !== false })),
+      dateRange: quarterRange,
+    };
+    root.file('manifest.json', JSON.stringify(manifest, null, 2));
+
+    // index.html
+    const esc2 = (v) => {
+      if (!v && v !== 0) return '';
+      const d = document.createElement('div');
+      d.textContent = String(v);
+      return d.innerHTML;
+    };
+    const tocRows = targetStudents.map((s) => {
+      return `<li><a href="${esc2(s.code)}/cover.html">${esc2(s.name || s.code)}</a> &mdash; <a href="${esc2(s.code)}/assignments.html">Assignments</a> | <a href="${esc2(s.code)}/goals.html">Goals</a></li>`;
+    }).join('\n');
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    root.file('index.html', `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Evidence Report &mdash; ${esc2(periodLabel)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;}ul{line-height:2;}</style></head>
+<body><h1>Student Evidence Report</h1>
+<p>Period: ${esc2(periodLabel)} | Generated: ${esc2(generatedDate)} | Data Source: ${esc2(sourceLabel)}</p>
+<ul>${tocRows}</ul>
+<p style="color:#666;font-size:12px;margin-top:32px;">Reinisch Classroom &mdash; CONFIDENTIAL (FERPA)</p></body></html>`);
+
+    // Per-student folders
+    for (const student of targetStudents) {
+      const sFolder = root.folder(student.code);
+      sFolder.file('cover.html', _buildLibraryCoverHtml(student, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll));
+      sFolder.file('assignments.html', _buildLibraryAssignmentsHtml(student, quarterRange, isParent, periodLabel, instancesAll, subsAll, assignsAll));
+      sFolder.file('goals.html', _buildLibraryGoalsHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll));
+    }
+
+    const zipBlob = await root.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${folderName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function _buildLibraryCoverHtml(student, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll) {
+    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const activeGoals = goalsAll.filter((g) => g.student_code === student.code && g.status === 'active');
+    const goalAreas = [...new Set(activeGoals.map((g) => g.area || g.skill_area || '—'))].join(', ') || '—';
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    const rangedInsts = instancesAll.filter((inst) => {
+      if (inst.student_code !== student.code && inst.student_id !== student.code) return false;
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+    });
+    const dpCount = activeGoals.reduce((acc, g) => {
+      return acc + progressAll.filter((p) => {
+        if (p.goal_code !== g.code || p.student_code !== student.code) return false;
+        const pd = new Date(p.date);
+        return pd >= startDate && pd <= endDate;
+      }).length;
+    }, 0);
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<title>Cover &mdash; ${esc(student.name || student.code)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;}table{border-collapse:collapse;width:100%;}td,th{padding:10px 14px;border:1px solid #ddd;}th{background:#f5f5f5;}.conf{background:#fff3f3;border:1px solid #f87171;border-radius:6px;padding:10px;font-size:13px;color:#b91c1c;margin-top:20px;}</style>
+</head><body>
+<h1>Student Evidence Report</h1><h2>${esc(student.name || student.code)}</h2>
+<table>
+<tr><th>Student Code</th><td>${esc(student.code)}</td></tr>
+<tr><th>Period</th><td>${esc(periodLabel)}</td></tr>
+<tr><th>Audience</th><td>${esc(isParent ? 'Parent' : 'Admin')}</td></tr>
+<tr><th>Goal Areas</th><td>${esc(goalAreas)}</td></tr>
+<tr><th>Active Goals</th><td>${activeGoals.length}</td></tr>
+<tr><th>Assignments This Period</th><td>${rangedInsts.length}</td></tr>
+<tr><th>Data Points This Period</th><td>${dpCount}</td></tr>
+<tr><th>Data Source</th><td>${esc(sourceLabel)}</td></tr>
+<tr><th>Generated</th><td>${esc(generatedDate)}</td></tr>
+</table>
+<div class="conf">&#9888; CONFIDENTIAL &mdash; For authorized personnel only (FERPA)</div>
+<p style="margin-top:20px;"><a href="assignments.html">Assignments</a> | <a href="goals.html">Goal Progress</a></p>
+</body></html>`;
+  }
+
+  function _buildLibraryAssignmentsHtml(student, quarterRange, isParent, periodLabel, instancesAll, subsAll, assignsAll) {
+    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    const rangedInsts = instancesAll.filter((inst) => {
+      if (inst.student_code !== student.code && inst.student_id !== student.code) return false;
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+    });
+    let rows = rangedInsts.length === 0
+      ? '<tr><td colspan="5" style="color:#888;font-style:italic;">No assignments found.</td></tr>'
+      : rangedInsts.map((inst) => {
+          const a = assignsAll.find((x) => x.id === inst.assignment_id);
+          const sub = subsAll.find((s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id));
+          const score = sub?.score_total ?? sub?.score;
+          const status = sub ? (score != null ? 'Graded' : 'Submitted') : 'Pending';
+          const paperUrl = a?.paper_upload_url || sub?.paper_upload_url || '';
+          const paperCell = paperUrl ? `<a href="${esc(paperUrl)}" target="_blank">View Upload</a>` : '—';
+          return `<tr>
+            <td>${esc(a?.title || `Assignment ${inst.assignment_id}`)}</td>
+            <td>${esc(a?.category || '—')}</td>
+            <td>${esc(_libFormatDate(inst.assigned_at || inst.created_at))}</td>
+            <td>${esc(status)}</td>
+            ${isParent ? '' : `<td>${score != null ? esc(score + '%') : '—'}</td><td>${paperCell}</td>`}
+          </tr>`;
+        }).join('');
+    const adminCols = isParent ? '' : '<th>Score</th><th>Paper Upload</th>';
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<title>Assignments &mdash; ${esc(student.name || student.code)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}table{border-collapse:collapse;width:100%;}td,th{padding:9px 12px;border:1px solid #ddd;}th{background:#f5f5f5;}</style>
+</head><body>
+<h1>Assignments &mdash; ${esc(student.name || student.code)}</h1>
+<p>Period: ${esc(periodLabel)} | <a href="cover.html">Back to Cover</a></p>
+<table><thead><tr><th>Title</th><th>Category</th><th>Assigned</th><th>Status</th>${adminCols}</tr></thead>
+<tbody>${rows}</tbody></table>
+</body></html>`;
+  }
+
+  function _buildLibraryGoalsHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll) {
+    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
+    const activeGoals = goalsAll.filter((g) => g.student_code === student.code && g.status === 'active');
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    let rows = activeGoals.length === 0
+      ? '<tr><td colspan="6" style="color:#888;font-style:italic;">No active IEP goals found.</td></tr>'
+      : activeGoals.map((goal) => {
+          const pts = progressAll.filter((p) => {
+            if (p.goal_code !== goal.code || p.student_code !== student.code) return false;
+            const pd = new Date(p.date);
+            return pd >= startDate && pd <= endDate;
+          });
+          const vals = pts.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
+          const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+          const progress = isParent
+            ? (avg == null ? 'No data' : parseFloat(avg) >= 80 ? 'On track' : parseFloat(avg) >= 60 ? 'Making progress' : 'Needs support')
+            : (avg != null ? `${avg}%` : '—');
+          const dpCol = isParent ? '' : `<td>${pts.length} pts</td>`;
+          return `<tr>
+            <td>${esc(goal.code || goal.id || '—')}</td>
+            <td>${esc(goal.area || goal.skill_area || '—')}</td>
+            <td style="font-size:12px;">${esc(goal.desc || goal.description || '—')}</td>
+            <td>${goal.baseline != null ? esc(String(goal.baseline)) + '%' : '—'}</td>
+            <td>${esc(progress)}</td>
+            <td>${goal.target != null ? esc(String(goal.target)) + '%' : '—'}</td>
+            ${dpCol}
+          </tr>`;
+        }).join('');
+    const adminDpCol = isParent ? '' : '<th>Data Pts</th>';
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<title>Goals &mdash; ${esc(student.name || student.code)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}table{border-collapse:collapse;width:100%;}td,th{padding:9px 12px;border:1px solid #ddd;}th{background:#f5f5f5;}</style>
+</head><body>
+<h1>IEP Goal Progress &mdash; ${esc(student.name || student.code)}</h1>
+<p>Period: ${esc(periodLabel)} | <a href="cover.html">Back to Cover</a></p>
+<table><thead><tr><th>Goal</th><th>Area</th><th>Description</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminDpCol}</tr></thead>
+<tbody>${rows}</tbody></table>
+</body></html>`;
   }
 
   // ── Export ────────────────────────────────────────────────────────────────────

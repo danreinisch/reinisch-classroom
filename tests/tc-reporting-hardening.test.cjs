@@ -101,7 +101,7 @@ const tabSearchSizes = {
   renderTab3: 6000,
   renderTab4: 7500,
   renderTab5: 1000,
-  renderTab6: 8000,
+  renderTab6: 10000,
 };
 
 tabFunctions.forEach(fnName => {
