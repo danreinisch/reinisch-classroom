@@ -3177,11 +3177,16 @@ Status: ${status}`;
           </div>
         ` : '';
 
-        // ── Answer detail (admin mode only) ───────────────────────────────────
+        // ── Answer detail ─────────────────────────────────────────────────────
+        // Pre-filter goals to this student only (FERPA: never show another
+        // student's IEP goal on this student's report).
+        const studentGoalsData = student.code
+          ? goalsData.filter((g) => g.student_code === student.code)
+          : [];
         const answerDetailHtml = buildRichAnswerDetailHtml(
-          !isParent ? submission : null,
+          submission,
           assignment,
-          goalsData,
+          studentGoalsData,
           isParent
         );
 
