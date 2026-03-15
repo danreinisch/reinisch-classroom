@@ -308,6 +308,82 @@ test('answer detail is admin-only (not shown in parent mode)', () => {
   );
 });
 
+// ── index.html @media print — new visibility/hiding rules ────────────────────
+
+console.log('\n--- index.html @media print new rules ---');
+
+test('index.html @media print hides .rp-ev-mode-group', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-ev-mode-group'),
+    'index.html @media print should hide .rp-ev-mode-group'
+  );
+});
+
+test('index.html @media print hides .rp-ev-mode-btn', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-ev-mode-btn'),
+    'index.html @media print should hide .rp-ev-mode-btn'
+  );
+});
+
+test('index.html @media print hides #tab6GenerateBtn', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('tab6GenerateBtn'),
+    'index.html @media print should hide #tab6GenerateBtn'
+  );
+});
+
+test('index.html @media print shows #tab6ReportOutput', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('tab6ReportOutput'),
+    'index.html @media print should ensure #tab6ReportOutput is visible'
+  );
+});
+
+test('index.html @media print makes .rp-ev-student-section display block', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-ev-student-section') && printBlock.includes('display: block'),
+    'index.html @media print should set .rp-ev-student-section to display: block'
+  );
+});
+
+test('index.html @media print includes .rp-ev-profile-grid color override', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-ev-profile-grid'),
+    'index.html @media print should include .rp-ev-profile-grid color override'
+  );
+});
+
+test('index.html @media print includes .rp-ev-stats-grid div color override', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-ev-stats-grid'),
+    'index.html @media print should include .rp-ev-stats-grid color override'
+  );
+});
+
+test('index.html @media print includes .rp-empty color override', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 5000);
+  assert.ok(
+    printBlock.includes('rp-empty'),
+    'index.html @media print should include .rp-empty color override'
+  );
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed`);

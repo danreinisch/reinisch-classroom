@@ -3294,6 +3294,57 @@ Status: ${status}`;
     const root = zip.folder(folderName);
     const periodLabel = getTab6PeriodLabel();
     const generatedTs = new Date().toISOString();
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    // Compute per-student summary stats for TOC and CSV
+    const studentStats = targetStudents.map((s) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === s.code || inst.student_id === s.code
+      );
+      const startDate = new Date(quarterRange.start);
+      const endDate = new Date(quarterRange.end);
+      const rangedInstances = studentInstances.filter((inst) => {
+        const d = new Date(inst.assigned_at || inst.created_at || '');
+        return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+      });
+      const totalAssignments = rangedInstances.length;
+      let graded = 0;
+      let pending = 0;
+      let scoreSum = 0;
+      let scoreCount = 0;
+      for (const inst of rangedInstances) {
+        const submission = submissionsData.find(
+          (sub) => sub.instance_id === inst.id || (sub.assignment_instances && sub.assignment_instances.id === inst.id)
+        );
+        const score = submission?.score_total ?? submission?.score;
+        if (submission && score != null) {
+          graded++;
+          scoreSum += score;
+          scoreCount++;
+        } else {
+          pending++;
+        }
+      }
+      const avgScore = scoreCount > 0 ? (scoreSum / scoreCount).toFixed(1) : null;
+      const activeGoals = goalsData.filter((g) => g.student_code === s.code && g.status === 'active');
+      let goalsOnTrack = 0;
+      let dpCount = 0;
+      for (const g of activeGoals) {
+        const data = getGoalProgressForQuarter(g.code, s.code, quarterRange);
+        dpCount += data.count;
+        if (data.average != null && data.average >= 80) goalsOnTrack++;
+      }
+      return {
+        student: s,
+        totalAssignments,
+        graded,
+        pending,
+        avgScore,
+        activeGoals: activeGoals.length,
+        goalsOnTrack,
+        dpCount,
+      };
+    });
 
     // manifest.json
     const manifest = {
@@ -3310,22 +3361,48 @@ Status: ${status}`;
     };
     root.file('manifest.json', JSON.stringify(manifest, null, 2));
 
-    // index.html — master TOC
-    const tocRows = targetStudents.map((s) => {
+    // index.html — master TOC with summary stats
+    const tocRows = studentStats.map(({ student: s, totalAssignments, graded, avgScore }) => {
       const code = escapeHtml(s.code);
       const name = escapeHtml(s.name || s.code);
-      return `<li><a href="${code}/cover.html">${name}</a> &mdash; <a href="${code}/assignments.html">Assignments</a> | <a href="${code}/goals.html">Goals</a></li>`;
+      const scoreText = avgScore != null ? ` &mdash; Avg: ${escapeHtml(String(avgScore))}%` : '';
+      return `<tr>
+        <td><a href="${code}/cover.html">${name}</a></td>
+        <td>${escapeHtml(s.code)}</td>
+        <td>${totalAssignments}</td>
+        <td>${graded}${scoreText}</td>
+        <td><a href="${code}/assignments.html">Assignments</a></td>
+        <td><a href="${code}/goals.html">Goals</a></td>
+      </tr>`;
     }).join('\n');
     const indexHtml = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><title>Evidence Report Index — ${escapeHtml(periodLabel)}</title>
-<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;}h1{margin-bottom:6px;}ul{line-height:2;}</style></head>
+<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h1{margin-bottom:6px;}table{border-collapse:collapse;width:100%;margin-top:16px;}th,td{padding:9px 12px;border:1px solid #ddd;text-align:left;}th{background:#f5f5f5;font-weight:600;}tr:nth-child(even){background:#fafafa;}</style></head>
 <body>
   <h1>Student Evidence Report</h1>
-  <p>Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</p>
-  <ul>${tocRows}</ul>
+  <p>Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(generatedDate)} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)} &nbsp;|&nbsp; Students: ${targetStudents.length}</p>
+  <p><a href="all-students.html">📄 View All Students (combined document)</a></p>
+  <table>
+    <thead><tr><th>Student</th><th>Code</th><th>Total Assignments</th><th>Graded (Avg Score)</th><th>Assignments</th><th>Goals</th></tr></thead>
+    <tbody>${tocRows}</tbody>
+  </table>
   <p style="color:#666;font-size:12px;margin-top:32px;">Reinisch Classroom &mdash; CONFIDENTIAL (FERPA)</p>
 </body></html>`;
     root.file('index.html', indexHtml);
+
+    // all-students.html — combined document for all students
+    const allStudentsHtml = buildEvidenceDocumentHtml(targetStudents, quarterRange, isParent, sourceLabel, '');
+    root.file('all-students.html', allStudentsHtml);
+
+    // summary.csv — one row per student
+    const csvHeader = 'Student Name,Student Code,Total Assignments,Graded,Pending,Average Score,Goals on Track,Data Points';
+    const csvRows = studentStats.map(({ student: s, totalAssignments, graded, pending, avgScore, goalsOnTrack, dpCount }) => {
+      const name = (s.name || s.code).replace(/"/g, '""');
+      const code = s.code.replace(/"/g, '""');
+      const avg = avgScore != null ? avgScore : '';
+      return `"${name}","${code}",${totalAssignments},${graded},${pending},${avg},${goalsOnTrack},${dpCount}`;
+    }).join('\n');
+    root.file('summary.csv', `${csvHeader}\n${csvRows}`);
 
     // Per-student folders
     for (const student of targetStudents) {
@@ -3356,6 +3433,7 @@ Status: ${status}`;
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
 
   /**
    * Build cover page HTML for one student (ZIP use)

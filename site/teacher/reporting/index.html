@@ -514,14 +514,22 @@
 
       /* Print styles */
       @media print {
+        /* Hide navigation, chrome, and evidence report UI controls */
         .tc-topbar,
         .tc-sidebar,
         .rp-tabs,
         .rp-filters,
         .rp-export-actions,
         .rp-ev-export-bar,
-        .rp-ev-controls {
+        .rp-ev-controls,
+        .rp-ev-mode-group,
+        .rp-ev-mode-btn,
+        #tab6GenerateBtn {
           display: none !important;
+        }
+        /* Ensure the evidence report output area is visible */
+        #tab6ReportOutput {
+          display: block !important;
         }
         .tc-main {
           margin: 0;
@@ -548,10 +556,13 @@
           margin-bottom: 8px;
         }
         .rp-ev-page-break {
-          page-break-before: always;
+          page-break-before: always !important;
         }
         .rp-ev-student-section {
+          display: block !important;
           page-break-inside: avoid;
+          color: #111 !important;
+          background: white !important;
         }
         .rp-ev-assignment-card {
           page-break-inside: avoid;
@@ -567,29 +578,45 @@
           display: none !important;
         }
         /* Evidence report cards: white background with visible borders */
-        .rp-ev-profile-card,
-        .rp-ev-assignment-card,
-        .rp-ev-stats-card {
-          background: #fff !important;
-          color: #000 !important;
+        .rp-ev-profile-card {
+          background: #f8f9fa !important;
           border: 1px solid #ccc !important;
+          color: #111 !important;
+        }
+        .rp-ev-assignment-card {
+          background: #fafafa !important;
+          border: 1px solid #ddd !important;
+          color: #111 !important;
+        }
+        .rp-ev-stats-card {
+          background: #f8f9fa !important;
+          border: 1px solid #ccc !important;
+          color: #111 !important;
         }
         .rp-ev-section-title {
-          color: #000 !important;
+          color: #111 !important;
           border-bottom-color: #ccc !important;
         }
-        .rp-ev-student-section,
-        .rp-ev-profile-header,
+        .rp-ev-profile-header {
+          color: #111 !important;
+        }
+        .rp-ev-profile-grid,
+        .rp-ev-profile-grid div {
+          color: #111 !important;
+        }
         .rp-ev-stats-grid,
+        .rp-ev-stats-grid div {
+          color: #111 !important;
+        }
         .rp-ev-assignment-title,
         .rp-ev-stats-title {
-          color: #000 !important;
+          color: #111 !important;
         }
         .rp-ev-assignment-meta {
-          color: #333 !important;
+          color: #555 !important;
         }
         .rp-ev-tag-row {
-          color: #444 !important;
+          color: #666 !important;
         }
         .rp-ev-score-breakdown {
           color: #333 !important;
@@ -610,6 +637,9 @@
         }
         .rp-ev-teacher-note {
           color: #444 !important;
+        }
+        .rp-empty {
+          color: #666 !important;
         }
         .rp-table th {
           background: #f0f0f0 !important;
