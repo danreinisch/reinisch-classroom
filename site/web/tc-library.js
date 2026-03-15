@@ -3557,6 +3557,17 @@
       noStudents.textContent = 'No active students found.';
       studentsSection.appendChild(noStudents);
     } else {
+      // Define counter element and updater first so they can be referenced by button callbacks
+      const counterEl = document.createElement('div');
+      counterEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-top:4px;';
+      counterEl.textContent = '0 of ' + activeStudents.length + ' selected';
+
+      const updateCounter = () => {
+        counterEl.textContent = `${formState.selectedStudents.length} of ${activeStudents.length} selected`;
+      };
+
+      const studentCheckboxes = [];
+
       const selectBtnRow = document.createElement('div');
       selectBtnRow.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
 
@@ -3587,7 +3598,6 @@
       const listEl = document.createElement('div');
       listEl.style.cssText = 'max-height:160px; overflow-y:auto; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px;';
 
-      const studentCheckboxes = [];
       activeStudents.forEach((student) => {
         const item = document.createElement('label');
         item.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer; font-size:14px;';
@@ -3608,15 +3618,7 @@
         listEl.appendChild(item);
       });
       studentsSection.appendChild(listEl);
-
-      const counterEl = document.createElement('div');
-      counterEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-top:4px;';
-      counterEl.textContent = '0 of ' + activeStudents.length + ' selected';
       studentsSection.appendChild(counterEl);
-
-      const updateCounter = () => {
-        counterEl.textContent = `${formState.selectedStudents.length} of ${activeStudents.length} selected`;
-      };
     }
     card.appendChild(studentsSection);
 
@@ -3648,7 +3650,7 @@
 
     const customRangeEl = document.createElement('div');
     customRangeEl.id = 'ev_customRange';
-    customRangeEl.style.cssText = 'display:none; display:flex; gap:8px; margin-top:8px;';
+    customRangeEl.style.cssText = 'display:flex; gap:8px; margin-top:8px;';
     customRangeEl.style.display = 'none';
 
     const startInput = document.createElement('input');

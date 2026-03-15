@@ -2659,12 +2659,12 @@ Status: ${status}`;
       <button class="rp-ev-mode-btn${tab6State.outputFormat === 'zip' ? ' active' : ''}" data-format="zip" id="tab6FormatZip" type="button">📦 ZIP Download</button>
     `;
 
-    // Data source label
-    const autoSourceLabel = usingSupabase ? 'School Database' : 'My Device';
+    // Data source label — shown next to toggle when 'auto' is selected
+    const currentSourceLabel = usingSupabase ? 'School Database' : 'My Device';
     const dataSourceBtns = `
       <button class="rp-ev-mode-btn${tab6State.dataSource === 'local' ? ' active' : ''}" data-datasource="local" type="button">My Device</button>
       <button class="rp-ev-mode-btn${tab6State.dataSource === 'school' ? ' active' : ''}" data-datasource="school" type="button">School Database</button>
-      ${tab6State.dataSource === 'auto' ? `<span style="font-size:12px;color:rgba(255,255,255,.5);margin-left:6px;">Auto: ${escapeHtml(autoSourceLabel)}</span>` : ''}
+      ${tab6State.dataSource === 'auto' ? `<span style="font-size:12px;color:rgba(255,255,255,.5);margin-left:6px;">Auto: ${escapeHtml(currentSourceLabel)}</span>` : ''}
     `;
 
     container.innerHTML = `
