@@ -3108,7 +3108,9 @@ Status: ${status}`;
     // Wire export buttons
     const printBtn = $("tab6PrintBtn");
     if (printBtn) {
-      printBtn.addEventListener('click', () => window.print());
+      printBtn.addEventListener('click', () => {
+        generateEvidencePrintWindow(targetStudents, quarterRange, isParent, sourceLabel);
+      });
     }
 
     const printWindowBtn = $("tab6PrintWindowBtn");
@@ -3145,33 +3147,52 @@ Status: ${status}`;
   <meta charset="utf-8" />
   <title>Student Evidence Report — ${escapeHtml(studentNames)}</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #0b1220; color: #e2e8f0; margin: 0; padding: 24px; }
-    @media print { body { background: white; color: #111; padding: 0; } }
+    body { font-family: Arial, sans-serif; background: #fff; color: #111; margin: 0; padding: 24px; }
     .rp-ev-student-section { margin-bottom: 32px; }
-    .rp-ev-profile-card { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-    .rp-ev-profile-header { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .rp-ev-profile-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .rp-ev-profile-header { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #111; }
     .rp-ev-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; margin-bottom: 12px; }
-    .rp-ev-confidential-banner { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #f87171; }
-    .rp-ev-section-title { font-size: 16px; font-weight: 600; margin: 18px 0 10px; border-bottom: 1px solid rgba(255,255,255,.12); padding-bottom: 6px; }
+    .rp-ev-confidential-banner { background: #fff3cd; border: 2px solid #856404; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #000; font-weight: bold; margin-bottom: 10px; }
+    .rp-ev-section-title { font-size: 16px; font-weight: 600; margin: 18px 0 10px; border-bottom: 1px solid #ccc; padding-bottom: 6px; color: #111; }
     .rp-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
-    .rp-table th, .rp-table td { padding: 8px 10px; border: 1px solid rgba(255,255,255,.1); text-align: left; }
-    .rp-table th { background: rgba(255,255,255,.05); font-weight: 600; }
-    .rp-ev-assignment-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
-    .rp-ev-assignment-title { font-weight: 600; margin-bottom: 4px; }
-    .rp-ev-assignment-meta { font-size: 13px; color: rgba(255,255,255,.7); }
-    .rp-ev-tag-row { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 4px; }
-    .rp-ev-stats-card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 10px; padding: 16px; margin-top: 16px; }
-    .rp-ev-stats-title { font-weight: 600; margin-bottom: 10px; }
-    .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 14px; }
-    .rp-empty { color: rgba(255,255,255,.5); font-style: italic; padding: 10px 0; }
-    .rp-ev-doc-footer { margin-top: 32px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 12px; font-size: 12px; color: rgba(255,255,255,.45); }
+    .rp-table th, .rp-table td { padding: 8px 10px; border: 1px solid #ccc; text-align: left; }
+    .rp-table th { background: #f0f0f0; font-weight: 600; }
+    .rp-ev-assignment-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
+    .rp-ev-assignment-title { font-weight: 600; margin-bottom: 4px; color: #111; }
+    .rp-ev-assignment-meta { font-size: 13px; color: #555; }
+    .rp-ev-tag-row { font-size: 12px; color: #666; margin-top: 4px; }
+    .rp-ev-stats-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 10px; padding: 16px; margin-top: 16px; }
+    .rp-ev-stats-title { font-weight: 600; margin-bottom: 10px; color: #111; }
+    .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 14px; color: #111; }
+    .rp-empty { color: #888; font-style: italic; padding: 10px 0; }
+    .rp-ev-doc-footer { margin-top: 32px; border-top: 1px solid #ccc; padding-top: 12px; font-size: 12px; color: #666; }
+    @media print {
+      body { background: white; color: #111; padding: 0; }
+      .rp-ev-profile-card,
+      .rp-ev-assignment-card,
+      .rp-ev-stats-card { background: #fff !important; border: 1px solid #ccc !important; color: #000 !important; }
+      .rp-ev-profile-header,
+      .rp-ev-section-title,
+      .rp-ev-student-section,
+      .rp-ev-stats-grid,
+      .rp-ev-assignment-title { color: #000 !important; }
+      .rp-ev-assignment-meta { color: #333 !important; }
+      .rp-ev-tag-row { color: #444 !important; }
+      .rp-ev-confidential-banner { background: #fff3cd !important; border: 2px solid #856404 !important; color: #000 !important; display: block !important; }
+      .rp-table th { background: #f0f0f0 !important; }
+      .rp-table th, .rp-table td { border-color: #ccc !important; color: #000 !important; }
+      .rp-ev-doc-footer { border-top-color: #ccc !important; color: #444 !important; }
+      .rp-ev-page-break, [style*="page-break-before"] { page-break-before: always; }
+      .rp-ev-student-section { page-break-inside: avoid; }
+      .rp-ev-assignment-card { page-break-inside: avoid; }
+    }
     ${styleOverrides || ''}
   </style>
 </head>
 <body>
-  <div style="margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid rgba(255,255,255,.15);">
+  <div style="margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid #ccc;">
     <div style="font-size:22px; font-weight:700; margin-bottom:6px;">Student Evidence Report</div>
-    <div style="font-size:14px; color:rgba(255,255,255,.6);">Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(generatedDate)} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</div>
+    <div style="font-size:14px; color:#555;">Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(generatedDate)} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</div>
   </div>
   ${sections}
   <div class="rp-ev-doc-footer">
@@ -3194,7 +3215,8 @@ Status: ${status}`;
     win.document.write(docHtml);
     win.document.close();
     win.focus();
-    win.print();
+    // Delay allows the browser to fully render the document before triggering the print dialog
+    setTimeout(() => win.print(), 500);
   }
 
   /**

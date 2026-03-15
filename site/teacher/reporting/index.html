@@ -559,6 +559,50 @@
         .rp-table tr {
           page-break-inside: avoid;
         }
+        /* Ensure active tab content is visible; hide all inactive panels */
+        .rp-tab-content.active {
+          display: block !important;
+        }
+        .rp-tab-content:not(.active) {
+          display: none !important;
+        }
+        /* Evidence report cards: white background with visible borders */
+        .rp-ev-profile-card,
+        .rp-ev-assignment-card,
+        .rp-ev-stats-card {
+          background: #fff !important;
+          color: #000 !important;
+          border: 1px solid #ccc !important;
+        }
+        .rp-ev-section-title {
+          color: #000 !important;
+          border-bottom-color: #ccc !important;
+        }
+        .rp-ev-student-section,
+        .rp-ev-profile-header,
+        .rp-ev-stats-grid,
+        .rp-ev-assignment-title,
+        .rp-ev-stats-title {
+          color: #000 !important;
+        }
+        .rp-ev-assignment-meta {
+          color: #333 !important;
+        }
+        .rp-ev-tag-row {
+          color: #444 !important;
+        }
+        .rp-table th {
+          background: #f0f0f0 !important;
+        }
+        .rp-table th,
+        .rp-table td {
+          border-color: #ccc !important;
+          color: #000 !important;
+        }
+        .rp-ev-doc-footer {
+          border-top-color: #ccc !important;
+          color: #444 !important;
+        }
       }
 
       /* Evidence tab styles */
