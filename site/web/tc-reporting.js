@@ -76,6 +76,8 @@
     dateRange: 'current-quarter',
     customStart: null,
     customEnd: null,
+    outputFormat: 'print',  // 'print' | 'zip'
+    dataSource: 'auto',     // 'auto' | 'local' | 'school'
   };
 
   /**
@@ -139,7 +141,7 @@
 
       const pillMode = $("pillMode");
       if (pillMode) {
-        pillMode.textContent = usingSupabase ? "Supabase" : "Local (browser)";
+        pillMode.textContent = usingSupabase ? "School Database" : "My Device";
       }
 
       // Load all data in parallel
@@ -184,7 +186,7 @@
   function updateSyncStatus() {
     const pillMode = $("pillMode");
     if (pillMode) {
-      pillMode.textContent = usingSupabase ? "Supabase" : "Local (browser)";
+      pillMode.textContent = usingSupabase ? "School Database" : "My Device";
     }
   }
 
@@ -2651,6 +2653,20 @@ Status: ${status}`;
       </div>
     ` : '';
 
+    // Build output format buttons
+    const outputFormatBtns = `
+      <button class="rp-ev-mode-btn${tab6State.outputFormat === 'print' ? ' active' : ''}" data-format="print" id="tab6FormatPrint" type="button">🖨️ Print / PDF</button>
+      <button class="rp-ev-mode-btn${tab6State.outputFormat === 'zip' ? ' active' : ''}" data-format="zip" id="tab6FormatZip" type="button">📦 ZIP Download</button>
+    `;
+
+    // Data source label
+    const autoSourceLabel = usingSupabase ? 'School Database' : 'My Device';
+    const dataSourceBtns = `
+      <button class="rp-ev-mode-btn${tab6State.dataSource === 'local' ? ' active' : ''}" data-datasource="local" type="button">My Device</button>
+      <button class="rp-ev-mode-btn${tab6State.dataSource === 'school' ? ' active' : ''}" data-datasource="school" type="button">School Database</button>
+      ${tab6State.dataSource === 'auto' ? `<span style="font-size:12px;color:rgba(255,255,255,.5);margin-left:6px;">Auto: ${escapeHtml(autoSourceLabel)}</span>` : ''}
+    `;
+
     container.innerHTML = `
       <div class="rp-ev-controls">
         <div class="rp-filter-group">
@@ -2670,6 +2686,14 @@ Status: ${status}`;
           </select>
         </div>
         ${customRangeHtml}
+        <div class="rp-filter-group">
+          <label>Output Format:</label>
+          <div class="rp-ev-mode-group" id="tab6FormatGroup">${outputFormatBtns}</div>
+        </div>
+        <div class="rp-filter-group">
+          <label>Data Source:</label>
+          <div class="rp-ev-mode-group" id="tab6DataSourceGroup">${dataSourceBtns}</div>
+        </div>
         <div style="display:flex;align-items:flex-end;">
           <button class="tc-btn" id="tab6GenerateBtn" type="button">Generate Report</button>
         </div>
@@ -2745,6 +2769,22 @@ Status: ${status}`;
     if (customEnd) {
       customEnd.addEventListener('change', (e) => { tab6State.customEnd = e.target.value; });
     }
+
+    // Wire up output format buttons
+    container.querySelectorAll('#tab6FormatGroup .rp-ev-mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tab6State.outputFormat = btn.dataset.format;
+        renderTab6();
+      });
+    });
+
+    // Wire up data source buttons
+    container.querySelectorAll('#tab6DataSourceGroup .rp-ev-mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tab6State.dataSource = btn.dataset.datasource;
+        renderTab6();
+      });
+    });
 
     // Wire up generate button
     const generateBtn = $("tab6GenerateBtn");
@@ -3024,6 +3064,31 @@ Status: ${status}`;
       }
     }
 
+    // Resolve data source label
+    const sourceLabel = tab6State.dataSource === 'local' ? 'My Device'
+      : tab6State.dataSource === 'school' ? 'School Database'
+      : (usingSupabase ? 'School Database' : 'My Device');
+
+    if (tab6State.outputFormat === 'zip') {
+      // ZIP download mode
+      output.innerHTML = '<div class="rp-empty" id="tab6ZipProgress">Preparing ZIP package...</div>';
+      try {
+        await exportEvidenceZip(targetStudents, quarterRange, isParent, sourceLabel);
+        output.innerHTML = `
+          <div class="rp-ev-export-bar">
+            <span style="color:rgba(34,197,94,.9);">✅ ZIP package downloaded successfully.</span>
+            <button class="tc-btn" id="tab6CsvBtn" type="button">📊 Export CSV</button>
+          </div>`;
+        const csvBtn2 = $("tab6CsvBtn");
+        if (csvBtn2) csvBtn2.addEventListener('click', () => exportEvidenceCSV(targetStudents, quarterRange));
+      } catch (err) {
+        console.error('[tc-reporting] ZIP export error:', err);
+        output.innerHTML = `<div class="rp-empty">ZIP export failed: ${escapeHtml(String(err.message || err))}</div>`;
+      }
+      return;
+    }
+
+    // Print / PDF mode (default)
     // Build report HTML for each student
     const sections = targetStudents.map((student, idx) => {
       const sectionHtml = buildStudentEvidenceHtml(student, quarterRange, isParent);
@@ -3035,6 +3100,7 @@ Status: ${status}`;
       ${sections.join('')}
       <div class="rp-ev-export-bar">
         <button class="tc-btn" id="tab6PrintBtn" type="button">🖨️ Print / PDF</button>
+        <button class="tc-btn" id="tab6PrintWindowBtn" type="button">🗗 Open in New Window</button>
         <button class="tc-btn" id="tab6CsvBtn" type="button">📊 Export CSV</button>
       </div>
     `;
@@ -3045,10 +3111,328 @@ Status: ${status}`;
       printBtn.addEventListener('click', () => window.print());
     }
 
+    const printWindowBtn = $("tab6PrintWindowBtn");
+    if (printWindowBtn) {
+      printWindowBtn.addEventListener('click', () => {
+        generateEvidencePrintWindow(targetStudents, quarterRange, isParent, sourceLabel);
+      });
+    }
+
     const csvBtn = $("tab6CsvBtn");
     if (csvBtn) {
       csvBtn.addEventListener('click', () => exportEvidenceCSV(targetStudents, quarterRange));
     }
+  }
+
+  /**
+   * Build a complete print-friendly HTML document for evidence packets
+   */
+  function buildEvidenceDocumentHtml(targetStudents, quarterRange, isParent, sourceLabel, styleOverrides) {
+    const periodLabel = getTab6PeriodLabel();
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const studentNames = targetStudents.map((s) => escapeHtml(s.name || s.code)).join(', ');
+
+    // Build per-student sections
+    const sections = targetStudents.map((student, idx) => {
+      const sectionHtml = buildStudentEvidenceHtml(student, quarterRange, isParent);
+      const separator = idx > 0 ? '<div style="page-break-before:always;"></div>' : '';
+      return separator + sectionHtml;
+    }).join('');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Student Evidence Report — ${escapeHtml(studentNames)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0b1220; color: #e2e8f0; margin: 0; padding: 24px; }
+    @media print { body { background: white; color: #111; padding: 0; } }
+    .rp-ev-student-section { margin-bottom: 32px; }
+    .rp-ev-profile-card { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .rp-ev-profile-header { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .rp-ev-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; margin-bottom: 12px; }
+    .rp-ev-confidential-banner { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #f87171; }
+    .rp-ev-section-title { font-size: 16px; font-weight: 600; margin: 18px 0 10px; border-bottom: 1px solid rgba(255,255,255,.12); padding-bottom: 6px; }
+    .rp-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+    .rp-table th, .rp-table td { padding: 8px 10px; border: 1px solid rgba(255,255,255,.1); text-align: left; }
+    .rp-table th { background: rgba(255,255,255,.05); font-weight: 600; }
+    .rp-ev-assignment-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
+    .rp-ev-assignment-title { font-weight: 600; margin-bottom: 4px; }
+    .rp-ev-assignment-meta { font-size: 13px; color: rgba(255,255,255,.7); }
+    .rp-ev-tag-row { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 4px; }
+    .rp-ev-stats-card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 10px; padding: 16px; margin-top: 16px; }
+    .rp-ev-stats-title { font-weight: 600; margin-bottom: 10px; }
+    .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 14px; }
+    .rp-empty { color: rgba(255,255,255,.5); font-style: italic; padding: 10px 0; }
+    .rp-ev-doc-footer { margin-top: 32px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 12px; font-size: 12px; color: rgba(255,255,255,.45); }
+    ${styleOverrides || ''}
+  </style>
+</head>
+<body>
+  <div style="margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid rgba(255,255,255,.15);">
+    <div style="font-size:22px; font-weight:700; margin-bottom:6px;">Student Evidence Report</div>
+    <div style="font-size:14px; color:rgba(255,255,255,.6);">Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(generatedDate)} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</div>
+  </div>
+  ${sections}
+  <div class="rp-ev-doc-footer">
+    Reinisch Classroom &mdash; Student Evidence Report &mdash; ${escapeHtml(generatedDate)}
+  </div>
+</body>
+</html>`;
+  }
+
+  /**
+   * Open evidence report in a new print window
+   */
+  function generateEvidencePrintWindow(targetStudents, quarterRange, isParent, sourceLabel) {
+    const docHtml = buildEvidenceDocumentHtml(targetStudents, quarterRange, isParent, sourceLabel, '');
+    const win = window.open('', '_blank');
+    if (!win) {
+      console.warn('[tc-reporting] Could not open print window (blocked by browser).');
+      return;
+    }
+    win.document.write(docHtml);
+    win.document.close();
+    win.focus();
+    win.print();
+  }
+
+  /**
+   * Export evidence as a ZIP package using JSZip (loaded from CDN)
+   */
+  async function exportEvidenceZip(targetStudents, quarterRange, isParent, sourceLabel) {
+    /* global JSZip */
+    if (typeof JSZip === 'undefined') {
+      throw new Error('JSZip is not loaded. Please check your network connection and try again.');
+    }
+    // eslint-disable-next-line no-undef
+    const zip = new JSZip();
+    const today = formatDateYYYYMMDD();
+    const folderName = `evidence-report-${today}`;
+    const root = zip.folder(folderName);
+    const periodLabel = getTab6PeriodLabel();
+    const generatedTs = new Date().toISOString();
+
+    // manifest.json
+    const manifest = {
+      generated: generatedTs,
+      period: periodLabel,
+      audience: isParent ? 'Parent' : 'Admin',
+      dataSource: sourceLabel,
+      students: targetStudents.map((s) => ({
+        code: s.code,
+        name: s.name || s.code,
+        active: s.active !== false,
+      })),
+      dateRange: quarterRange,
+    };
+    root.file('manifest.json', JSON.stringify(manifest, null, 2));
+
+    // index.html — master TOC
+    const tocRows = targetStudents.map((s) => {
+      const code = escapeHtml(s.code);
+      const name = escapeHtml(s.name || s.code);
+      return `<li><a href="${code}/cover.html">${name}</a> &mdash; <a href="${code}/assignments.html">Assignments</a> | <a href="${code}/goals.html">Goals</a></li>`;
+    }).join('\n');
+    const indexHtml = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><title>Evidence Report Index — ${escapeHtml(periodLabel)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;}h1{margin-bottom:6px;}ul{line-height:2;}</style></head>
+<body>
+  <h1>Student Evidence Report</h1>
+  <p>Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</p>
+  <ul>${tocRows}</ul>
+  <p style="color:#666;font-size:12px;margin-top:32px;">Reinisch Classroom &mdash; CONFIDENTIAL (FERPA)</p>
+</body></html>`;
+    root.file('index.html', indexHtml);
+
+    // Per-student folders
+    for (const student of targetStudents) {
+      const sCode = student.code;
+      const sFolder = root.folder(sCode);
+
+      // cover.html
+      const coverHtml = buildEvidenceCoverHtml(student, quarterRange, isParent, sourceLabel);
+      sFolder.file('cover.html', coverHtml);
+
+      // assignments.html
+      const assignmentsHtml = buildEvidenceAssignmentsHtml(student, quarterRange, isParent);
+      sFolder.file('assignments.html', assignmentsHtml);
+
+      // goals.html
+      const goalsHtml = buildEvidenceGoalsHtml(student, quarterRange, isParent);
+      sFolder.file('goals.html', goalsHtml);
+    }
+
+    // Generate and download
+    const zipBlob = await root.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${folderName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Build cover page HTML for one student (ZIP use)
+   */
+  function buildEvidenceCoverHtml(student, quarterRange, isParent, sourceLabel) {
+    const periodLabel = getTab6PeriodLabel();
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const audienceLabel = isParent ? 'Parent' : 'Admin';
+    const activeGoals = goalsData.filter((g) => g.student_code === student.code && g.status === 'active');
+    const goalAreas = [...new Set(activeGoals.map((g) => g.area || g.skill_area || '—'))].join(', ') || '—';
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    const rangedInstances = studentInstances.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+    });
+    const dpCount = activeGoals.reduce(
+      (acc, g) => acc + getGoalProgressForQuarter(g.code, student.code, quarterRange).count, 0
+    );
+
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Cover — ${escapeHtml(student.name || student.code)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#111;}h1{font-size:26px;margin-bottom:4px;}table{border-collapse:collapse;width:100%;margin:16px 0;}td,th{padding:10px 14px;border:1px solid #ddd;text-align:left;}th{background:#f5f5f5;font-weight:600;}.conf{background:#fff3f3;border:1px solid #f87171;border-radius:6px;padding:10px;font-size:13px;color:#b91c1c;margin-top:20px;}</style>
+</head><body>
+  <h1>Student Evidence Report</h1>
+  <h2>${escapeHtml(student.name || student.code)}</h2>
+  <table>
+    <tr><th>Student Code</th><td>${escapeHtml(student.code)}</td></tr>
+    <tr><th>Period</th><td>${escapeHtml(periodLabel)}</td></tr>
+    <tr><th>Audience</th><td>${escapeHtml(audienceLabel)}</td></tr>
+    <tr><th>Goal Areas</th><td>${escapeHtml(goalAreas)}</td></tr>
+    <tr><th>Active Goals</th><td>${activeGoals.length}</td></tr>
+    <tr><th>Assignments This Period</th><td>${rangedInstances.length}</td></tr>
+    <tr><th>Data Points This Period</th><td>${dpCount}</td></tr>
+    <tr><th>Data Source</th><td>${escapeHtml(sourceLabel)}</td></tr>
+    <tr><th>Generated</th><td>${escapeHtml(generatedDate)}</td></tr>
+  </table>
+  <div class="conf">&#9888; CONFIDENTIAL &mdash; For authorized personnel only (FERPA)</div>
+  <p style="margin-top:20px;"><a href="assignments.html">View Assignments</a> | <a href="goals.html">View Goal Progress</a></p>
+</body></html>`;
+  }
+
+  /**
+   * Build assignments evidence HTML for one student (ZIP use)
+   */
+  function buildEvidenceAssignmentsHtml(student, quarterRange, isParent) {
+    const periodLabel = getTab6PeriodLabel();
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    const rangedInstances = studentInstances.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+    });
+
+    let rows = '';
+    if (rangedInstances.length === 0) {
+      rows = '<tr><td colspan="6" style="color:#888;font-style:italic;">No assignments found for this period.</td></tr>';
+    } else {
+      rows = rangedInstances.map((inst) => {
+        const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+        const submission = submissionsData.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+        const title = escapeHtml(assignment?.title || `Assignment ${inst.assignment_id}`);
+        const category = escapeHtml(assignment?.category || '—');
+        const type = escapeHtml(assignment?.type || '—');
+        const score = submission?.score_total ?? submission?.score;
+        const status = submission ? (score != null ? 'Graded' : 'Submitted') : 'Pending';
+        const scoreDisplay = score != null ? `${score}%` : '—';
+        const assignedDate = escapeHtml(formatDate(inst.assigned_at || inst.created_at));
+        const paperUrl = assignment?.paper_upload_url || submission?.paper_upload_url || '';
+        const paperCell = paperUrl
+          ? `<a href="${escapeHtml(paperUrl)}" target="_blank">View Upload</a>`
+          : '—';
+        return `<tr>
+          <td>${title}</td>
+          ${isParent ? '' : `<td>${type}</td>`}
+          <td>${category}</td>
+          <td>${assignedDate}</td>
+          <td>${escapeHtml(status)}</td>
+          <td>${isParent ? '' : escapeHtml(scoreDisplay)}</td>
+          ${isParent ? '' : `<td>${paperCell}</td>`}
+        </tr>`;
+      }).join('');
+    }
+
+    const adminCols = isParent ? '' : '<th>Type</th>';
+    const adminScoreCol = isParent ? '' : '<th>Score</th><th>Paper Upload</th>';
+
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Assignments — ${escapeHtml(student.name || student.code)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;color:#111;}h1{font-size:22px;}table{border-collapse:collapse;width:100%;}td,th{padding:9px 12px;border:1px solid #ddd;text-align:left;}th{background:#f5f5f5;font-weight:600;}tr:nth-child(even){background:#fafafa;}</style>
+</head><body>
+  <h1>Assignment Evidence — ${escapeHtml(student.name || student.code)}</h1>
+  <p style="color:#555;">Period: ${escapeHtml(periodLabel)} | <a href="cover.html">Back to Cover</a></p>
+  <table>
+    <thead><tr>${adminCols}<th>Title</th><th>Category</th><th>Assigned</th><th>Status</th>${adminScoreCol}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body></html>`;
+  }
+
+  /**
+   * Build goal progress HTML for one student (ZIP use)
+   */
+  function buildEvidenceGoalsHtml(student, quarterRange, isParent) {
+    const periodLabel = getTab6PeriodLabel();
+    const activeGoals = goalsData.filter(
+      (g) => g.student_code === student.code && g.status === 'active'
+    );
+
+    let rows = '';
+    if (activeGoals.length === 0) {
+      rows = '<tr><td colspan="6" style="color:#888;font-style:italic;">No active IEP goals found.</td></tr>';
+    } else {
+      rows = activeGoals.map((goal) => {
+        const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const avgRaw = data.average != null ? data.average.toFixed(1) : null;
+        const progressCell = isParent
+          ? (avgRaw == null ? 'No data yet' : data.average >= 80 ? 'On track' : data.average >= 60 ? 'Making progress' : 'Needs support')
+          : (avgRaw != null ? `${avgRaw}%` : '—');
+        const targetDisplay = goal.target != null ? `${escapeHtml(String(goal.target))}%` : '—';
+        const baselineDisplay = goal.baseline != null ? `${escapeHtml(String(goal.baseline))}%` : '—';
+        const goalDesc = escapeHtml(goal.desc || goal.description || '—');
+        const dpCol = isParent ? '' : `<td>${data.count} pts</td>`;
+        return `<tr>
+          <td>${escapeHtml(goal.code || goal.id || '—')}</td>
+          <td>${escapeHtml(goal.area || goal.skill_area || '—')}</td>
+          <td style="font-size:12px;">${goalDesc}</td>
+          <td>${baselineDisplay}</td>
+          <td>${escapeHtml(progressCell)}</td>
+          <td>${targetDisplay}</td>
+          ${dpCol}
+        </tr>`;
+      }).join('');
+    }
+
+    const adminDpCol = isParent ? '' : '<th>Data Pts</th>';
+
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Goal Progress — ${escapeHtml(student.name || student.code)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;color:#111;}h1{font-size:22px;}table{border-collapse:collapse;width:100%;}td,th{padding:9px 12px;border:1px solid #ddd;text-align:left;}th{background:#f5f5f5;font-weight:600;}tr:nth-child(even){background:#fafafa;}</style>
+</head><body>
+  <h1>IEP Goal Progress — ${escapeHtml(student.name || student.code)}</h1>
+  <p style="color:#555;">Period: ${escapeHtml(periodLabel)} | <a href="cover.html">Back to Cover</a></p>
+  <table>
+    <thead><tr><th>Goal</th><th>Area</th><th>Description</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminDpCol}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body></html>`;
   }
 
   /**
