@@ -3921,7 +3921,7 @@
    * @param {boolean} isParent   - hide answer keys when true
    * @param {boolean} darkTheme  - use dark-theme inline styles when true
    */
-  function _buildLibraryRichAnswerHtml(submission, assignment, goalsAll, isParent, darkTheme) {
+  function _buildLibraryRichAnswerHtml(submission, assignment, goalsAll, isParent, darkTheme, studentCode) {
     if (!submission) return '';
     const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
 
@@ -3952,14 +3952,17 @@
         }
 
         // Resolve IEP goal descriptions
+        // FERPA: only look up goals that belong to this student.
+        // If studentCode is unknown, show no IEP badges rather than leaking.
         const goalDescs = (item.goal_codes || []).map((code) => {
-          const goal = goalsAll.find((g) => g.code === code);
+          if (!studentCode) return null;
+          const goal = goalsAll.find((g) => g.code === code && g.student_code === studentCode);
           if (!goal) return esc(code);
           const area = goal.area || goal.skill_area;
           const desc = goal.desc || goal.description;
           if (desc) return `${area ? esc(area) + ' — ' : ''}${esc(desc)}`;
           return esc(goal.code || code);
-        });
+        }).filter(Boolean);
 
         const deseCodes = item.dese_codes || [];
 
@@ -4177,7 +4180,8 @@
           assignment,
           studentGoalsAll,
           isParent,
-          true /* darkTheme */
+          true /* darkTheme */,
+          student.code
         );
 
         return `<div style="${cardStyle}"><div style="font-weight:600;margin-bottom:4px;">${title}</div><div style="font-size:13px;color:rgba(255,255,255,.7);">${metaRow}</div>${answerDetail}</div>`;
@@ -4364,7 +4368,8 @@
           assignment,
           studentGoalsAll,
           isParent,
-          false /* lightTheme for print */
+          false /* lightTheme for print */,
+          student.code
         );
 
         return `<div class="ev-card"><div class="ev-card-title">${title}</div><div class="ev-card-meta">${metaRow}</div>${answerDetail}</div>`;

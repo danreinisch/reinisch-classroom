@@ -162,7 +162,7 @@
    * @param {Array}  goalsData  - all goals (to resolve goal codes → descriptions)
    * @param {boolean} isParent  - if true, hide answer keys
    */
-  function buildRichAnswerDetailHtml(submission, assignment, goalsData, isParent) {
+  function buildRichAnswerDetailHtml(submission, assignment, goalsData, isParent, studentCode) {
     if (!submission) return '';
 
     // Score breakdown (auto vs manual)
@@ -192,14 +192,17 @@
         }
 
         // Resolve IEP goal descriptions from goal codes
+        // FERPA: only look up goals that belong to this student.
+        // If studentCode is unknown, show no IEP badges rather than leaking.
         const goalDescs = (item.goal_codes || []).map((code) => {
-          const goal = goalsData.find((g) => g.code === code);
+          if (!studentCode) return null;
+          const goal = goalsData.find((g) => g.code === code && g.student_code === studentCode);
           if (!goal) return escapeHtml(code);
           const area = goal.area || goal.skill_area;
           const desc = goal.desc || goal.description;
           if (desc) return `${area ? escapeHtml(area) + ' — ' : ''}${escapeHtml(desc)}`;
           return escapeHtml(goal.code || code);
-        });
+        }).filter(Boolean);
         const deseCodesArr = item.dese_codes || [];
 
         const badgesHtml = [
@@ -3187,7 +3190,8 @@ Status: ${status}`;
           submission,
           assignment,
           studentGoalsData,
-          isParent
+          isParent,
+          student.code
         );
 
         return `
