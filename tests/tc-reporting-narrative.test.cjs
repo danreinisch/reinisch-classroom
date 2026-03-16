@@ -634,7 +634,7 @@ test('generateSpedTrackText uses buildRichProgressNarrative', () => {
 test('renderIEPProgressTemplate builds quarterly summary panel', () => {
   const fnIdx = src.indexOf('function renderIEPProgressTemplate(');
   assert.ok(fnIdx !== -1, 'renderIEPProgressTemplate not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 3500);
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
   assert.ok(
     fnSection.includes('rp-quarter-summary'),
     'renderIEPProgressTemplate should include quarterly summary panel'
@@ -644,7 +644,7 @@ test('renderIEPProgressTemplate builds quarterly summary panel', () => {
 test('renderIEPProgressTemplate pre-selects status in dropdown', () => {
   const fnIdx = src.indexOf('function renderIEPProgressTemplate(');
   assert.ok(fnIdx !== -1, 'renderIEPProgressTemplate not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
   assert.ok(
     fnSection.includes('statusValueMap') || fnSection.includes('selectedStatusValue'),
     'renderIEPProgressTemplate should pre-select status based on narrative engine'
@@ -654,7 +654,7 @@ test('renderIEPProgressTemplate pre-selects status in dropdown', () => {
 test('generateBatchReports uses buildRichProgressNarrative', () => {
   const fnIdx = src.indexOf('async function generateBatchReports(');
   assert.ok(fnIdx !== -1, 'generateBatchReports not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
   assert.ok(
     fnSection.includes('buildRichProgressNarrative'),
     'generateBatchReports should use buildRichProgressNarrative'
@@ -664,10 +664,96 @@ test('generateBatchReports uses buildRichProgressNarrative', () => {
 test('generateBatchReports includes quarterly summary panel HTML', () => {
   const fnIdx = src.indexOf('async function generateBatchReports(');
   assert.ok(fnIdx !== -1, 'generateBatchReports not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
   assert.ok(
     fnSection.includes('Quarterly IEP Progress Summary'),
     'generateBatchReports should include a quarterly summary panel'
+  );
+});
+
+test('renderIEPProgressTemplate summary panel includes per-goal detail rows', () => {
+  const fnIdx = src.indexOf('function renderIEPProgressTemplate(');
+  assert.ok(fnIdx !== -1, 'renderIEPProgressTemplate not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
+  assert.ok(
+    fnSection.includes('rp-qs-goals-detail'),
+    'renderIEPProgressTemplate summary panel should include per-goal detail container'
+  );
+  assert.ok(
+    fnSection.includes('rp-qs-goal-row'),
+    'renderIEPProgressTemplate summary panel should include per-goal row elements'
+  );
+  assert.ok(
+    fnSection.includes('rp-qs-goal-code'),
+    'renderIEPProgressTemplate summary panel should include per-goal code element'
+  );
+  assert.ok(
+    fnSection.includes('rp-qs-goal-desc'),
+    'renderIEPProgressTemplate summary panel should include per-goal description element'
+  );
+});
+
+test('renderIEPProgressTemplate summary panel shows per-goal data count and average', () => {
+  const fnIdx = src.indexOf('function renderIEPProgressTemplate(');
+  assert.ok(fnIdx !== -1, 'renderIEPProgressTemplate not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
+  assert.ok(
+    fnSection.includes('rp-qs-goal-metrics'),
+    'renderIEPProgressTemplate summary panel should show per-goal metrics (count and avg)'
+  );
+  assert.ok(
+    fnSection.includes('Data Points'),
+    'renderIEPProgressTemplate summary panel should label data point count'
+  );
+  assert.ok(
+    fnSection.includes('progress.count') || fnSection.includes('.count'),
+    'renderIEPProgressTemplate summary panel should reference data point count'
+  );
+  assert.ok(
+    fnSection.includes('progress.average') || fnSection.includes('.average'),
+    'renderIEPProgressTemplate summary panel should reference average score'
+  );
+});
+
+test('renderIEPProgressTemplate summary panel includes narrative for each goal', () => {
+  const fnIdx = src.indexOf('function renderIEPProgressTemplate(');
+  assert.ok(fnIdx !== -1, 'renderIEPProgressTemplate not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
+  assert.ok(
+    fnSection.includes('rp-qs-goal-narrative'),
+    'renderIEPProgressTemplate summary panel should include per-goal narrative element'
+  );
+  assert.ok(
+    fnSection.includes('escapeHtml(narrative)'),
+    'renderIEPProgressTemplate summary panel should render the narrative text via escapeHtml'
+  );
+});
+
+test('generateBatchReports summary banner includes per-goal detail rows', () => {
+  const fnIdx = src.indexOf('async function generateBatchReports(');
+  assert.ok(fnIdx !== -1, 'generateBatchReports not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
+  assert.ok(
+    fnSection.includes('batchGoalDetailRowsHtml'),
+    'generateBatchReports should build per-goal detail rows for the summary banner'
+  );
+  assert.ok(
+    fnSection.includes('Data Points'),
+    'generateBatchReports summary banner should label data point count per goal'
+  );
+  assert.ok(
+    fnSection.includes('escapeHtml(goal.desc'),
+    'generateBatchReports summary banner should show per-goal description'
+  );
+});
+
+test('generateBatchReports summary banner includes per-goal narrative', () => {
+  const fnIdx = src.indexOf('async function generateBatchReports(');
+  assert.ok(fnIdx !== -1, 'generateBatchReports not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 6000);
+  assert.ok(
+    fnSection.includes('escapeHtml(narrative)'),
+    'generateBatchReports summary banner should render each goal narrative via escapeHtml'
   );
 });
 

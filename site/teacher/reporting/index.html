@@ -347,6 +347,64 @@
       .rp-qs-needs-support .rp-qs-value { color: rgba(234, 179, 8, 0.9); }
       .rp-qs-no-data .rp-qs-value { color: rgba(156, 163, 175, 0.9); }
 
+      /* Per-goal detail rows inside the quarterly summary panel */
+      .rp-qs-goals-detail {
+        margin-top: 14px;
+        border-top: 1px solid rgba(59, 130, 246, 0.25);
+        padding-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .rp-qs-goal-row {
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+      }
+      .rp-qs-goal-row:last-child { border-bottom: none; }
+      .rp-qs-goal-header {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .rp-qs-goal-code {
+        font-weight: 700;
+        font-size: 13px;
+        color: rgba(147, 197, 253, 1);
+        white-space: nowrap;
+      }
+      .rp-qs-goal-desc {
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      .rp-qs-goal-status {
+        margin-left: auto;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+      .rp-qs-goal-status--met { background: rgba(22, 163, 74, 0.85); color: #fff; }
+      .rp-qs-goal-status--adequate { background: rgba(37, 99, 235, 0.85); color: #fff; }
+      .rp-qs-goal-status--insufficient { background: rgba(217, 119, 6, 0.85); color: #fff; }
+      .rp-qs-goal-status--not-progressing { background: rgba(220, 38, 38, 0.85); color: #fff; }
+      .rp-qs-goal-metrics {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-bottom: 4px;
+        display: flex;
+        gap: 12px;
+      }
+      .rp-qs-goal-metric strong { font-weight: 700; }
+      .rp-qs-goal-narrative {
+        font-size: 12px;
+        font-style: italic;
+        opacity: 0.85;
+        line-height: 1.55;
+      }
+
       .rp-grades-section {
         margin: 24px 0;
         padding: 16px;
