@@ -435,6 +435,115 @@ test('index.html @media print includes .rp-empty color override', () => {
   );
 });
 
+// ── Bug 1: DESE codes fallback to assignment-level tags ───────────────────────
+
+console.log('\n--- Bug 1: DESE codes fallback ---');
+
+test('buildRichAnswerDetailHtml falls back to assignment.dese_tags when item.dese_codes is empty', () => {
+  const fnIdx = rpSrc.indexOf('function buildRichAnswerDetailHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
+  // The function should reference dese_tags or dese_standards as a fallback
+  assert.ok(
+    fn.includes('dese_tags') || fn.includes('dese_standards'),
+    'buildRichAnswerDetailHtml should fall back to assignment.dese_tags or assignment.dese_standards when item.dese_codes is empty'
+  );
+});
+
+test('buildRichAnswerDetailHtml DESE fallback handles both array and string dese_tags', () => {
+  const fnIdx = rpSrc.indexOf('function buildRichAnswerDetailHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 10000);
+  // Should handle Array.isArray check or split(',') for string values
+  assert.ok(
+    fn.includes('Array.isArray') || fn.includes('.split('),
+    'buildRichAnswerDetailHtml should handle both array and string forms of dese_tags'
+  );
+});
+
+// ── Bug 2: No blank first page in PDF ────────────────────────────────────────
+
+console.log('\n--- Bug 2: Blank first page fix ---');
+
+test('buildEvidenceDocumentHtml @media print does NOT set page-break-inside:avoid on .rp-ev-student-section', () => {
+  const fn = getDocHtmlFn();
+  const printIdx = fn.indexOf('@media print');
+  const printBlock = fn.slice(printIdx, printIdx + 4000);
+  // The student section should not have page-break-inside: avoid in @media print
+  // as this causes blank first pages for multi-page students
+  const studentSectionBlock = printBlock.match(/\.rp-ev-student-section\s*\{[^}]*\}/);
+  if (studentSectionBlock) {
+    assert.ok(
+      !studentSectionBlock[0].includes('page-break-inside'),
+      'buildEvidenceDocumentHtml @media print must NOT set page-break-inside on .rp-ev-student-section (causes blank first page)'
+    );
+  } else {
+    // No .rp-ev-student-section block in print — that is also acceptable
+    assert.ok(true, 'No .rp-ev-student-section in @media print block is acceptable');
+  }
+});
+
+test('index.html @media print does NOT set page-break-inside:avoid on .rp-ev-student-section', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 6000);
+  const studentSectionBlock = printBlock.match(/\.rp-ev-student-section\s*\{[^}]*\}/);
+  if (studentSectionBlock) {
+    assert.ok(
+      !studentSectionBlock[0].includes('page-break-inside'),
+      'index.html @media print must NOT set page-break-inside:avoid on .rp-ev-student-section (causes blank first page)'
+    );
+  } else {
+    assert.ok(true, 'No .rp-ev-student-section in @media print block is acceptable');
+  }
+});
+
+// ── Bug 3: Professional PDF formatting ───────────────────────────────────────
+
+console.log('\n--- Bug 3: Professional PDF formatting ---');
+
+test('buildEvidenceDocumentHtml includes @page rule for proper print margins', () => {
+  const fn = getDocHtmlFn();
+  assert.ok(
+    fn.includes('@page'),
+    'buildEvidenceDocumentHtml should include @page rule for proper print margins'
+  );
+});
+
+test('buildEvidenceDocumentHtml .rp-ev-assignment-card has break-inside:avoid', () => {
+  const fn = getDocHtmlFn();
+  // The assignment card CSS should prevent splitting across pages
+  const assignCardBlock = fn.match(/\.rp-ev-assignment-card\s*\{[^}]*\}/);
+  assert.ok(
+    assignCardBlock && (assignCardBlock[0].includes('break-inside') || assignCardBlock[0].includes('page-break-inside')),
+    'buildEvidenceDocumentHtml .rp-ev-assignment-card should have break-inside:avoid to prevent page splits'
+  );
+});
+
+test('buildEvidenceDocumentHtml .rp-ev-q-card has break-inside:avoid', () => {
+  const fn = getDocHtmlFn();
+  const qCardBlock = fn.match(/\.rp-ev-q-card\s*\{[^}]*\}/);
+  assert.ok(
+    qCardBlock && (qCardBlock[0].includes('break-inside') || qCardBlock[0].includes('page-break-inside')),
+    'buildEvidenceDocumentHtml .rp-ev-q-card should have break-inside:avoid to prevent question splits'
+  );
+});
+
+test('buildStudentEvidenceHtml assignment trail section has rp-ev-section-break class', () => {
+  const fnIdx = rpSrc.indexOf('function buildStudentEvidenceHtml(');
+  const fn = rpSrc.slice(fnIdx, fnIdx + 15000);
+  assert.ok(
+    fn.includes('rp-ev-section-break'),
+    'buildStudentEvidenceHtml should add rp-ev-section-break to Assignment Detail Trail for clean page breaks'
+  );
+});
+
+test('index.html @media print includes .rp-ev-section-break rule', () => {
+  const printIdx = rpHtml.indexOf('@media print');
+  const printBlock = rpHtml.slice(printIdx, printIdx + 6000);
+  assert.ok(
+    printBlock.includes('rp-ev-section-break'),
+    'index.html @media print should include .rp-ev-section-break for page break management'
+  );
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -560,12 +560,13 @@
         }
         .rp-ev-student-section {
           display: block !important;
-          page-break-inside: avoid;
+          /* no break constraint — student sections span many pages; constraining causes blank page 1 */
           color: #111 !important;
           background: white !important;
         }
-        .rp-ev-assignment-card {
-          page-break-inside: avoid;
+        .rp-ev-section-break {
+          break-before: page;
+          page-break-before: always;
         }
         .rp-table tr {
           page-break-inside: avoid;
@@ -587,11 +588,15 @@
           background: #fafafa !important;
           border: 1px solid #ddd !important;
           color: #111 !important;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
         .rp-ev-stats-card {
           background: #f8f9fa !important;
           border: 1px solid #ccc !important;
           color: #111 !important;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
         .rp-ev-section-title {
           color: #111 !important;
@@ -624,9 +629,14 @@
         .rp-ev-answers-label {
           color: #333 !important;
         }
+        .rp-empty {
+          color: #666 !important;
+        }
         .rp-ev-q-card {
           background: #fff !important;
           border: 1px solid #ccc !important;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
         .rp-ev-q-label {
           color: #000 !important;
@@ -679,9 +689,6 @@
         }
         .rp-ev-teacher-note {
           color: #444 !important;
-        }
-        .rp-empty {
-          color: #666 !important;
         }
         .rp-table th {
           background: #f0f0f0 !important;
