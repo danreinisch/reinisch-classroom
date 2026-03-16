@@ -1233,7 +1233,8 @@ ${narrative}`;
     const count = quarterData.count;
     const quarter = quarterLabel || "this quarter";
 
-    // Deterministic phrase picker: same goal code → same index variation
+    // Deterministic phrase picker: same goal → same index variation across templates.
+    // Fall back to goal_area + desc when code is missing to preserve uniqueness.
     const hashCode = (str) => {
       let h = 0;
       for (let i = 0; i < str.length; i++) {
@@ -1241,7 +1242,8 @@ ${narrative}`;
       }
       return Math.abs(h);
     };
-    const seed = hashCode(goal.code || "");
+    const seedStr = goal.code || `${goal.goal_area || ""}${goal.desc || ""}` || "goal";
+    const seed = hashCode(seedStr);
     const pick = (arr) => arr[seed % arr.length];
 
     // --- Determine data density ---
@@ -1264,10 +1266,6 @@ ${narrative}`;
         status: "Not Making Progress",
       };
     }
-
-    // --- Score range ---
-    // (available but not currently used in phrase selection — reserved for future use)
-    // const scoreLevel = avg >= 80 ? "high" : avg >= 60 ? "moderate" : "low";
 
     // --- Baseline comparison ---
     const baselineDiff = avg - baselineVal;
