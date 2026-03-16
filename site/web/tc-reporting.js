@@ -203,7 +203,17 @@
           if (desc) return `${area ? escapeHtml(area) + ' — ' : ''}${escapeHtml(desc)}`;
           return escapeHtml(goal.code || code);
         }).filter(Boolean);
-        const deseCodesArr = item.dese_codes || [];
+        // Use item-level DESE codes; fall back to assignment-level tags when not set per-item
+        // (per-item codes come from TXT meta; assignment-level codes come from DB mappings)
+        const deseCodesArr = (item.dese_codes && item.dese_codes.length > 0)
+          ? item.dese_codes
+          : (() => {
+              const raw = assignment?.dese_tags || assignment?.dese_standards || '';
+              if (!raw) return [];
+              return Array.isArray(raw)
+                ? raw.map(s => String(s).trim()).filter(Boolean)
+                : String(raw).split(',').map(s => s.trim()).filter(Boolean);
+            })();
 
         const badgesHtml = [
           deseCodesArr.length > 0
@@ -3247,7 +3257,7 @@ Status: ${status}`;
         ${profileHtml}
         <div class="rp-ev-section-title">IEP Goal Progress Summary</div>
         ${goalsHtml}
-        <div class="rp-ev-section-title">Assignment Detail Trail</div>
+        <div class="rp-ev-section-title rp-ev-section-break">Assignment Detail Trail</div>
         ${assignmentHtml}
         ${statsHtml}
       </div>
@@ -3377,98 +3387,108 @@ Status: ${status}`;
   <meta charset="utf-8" />
   <title>Student Evidence Report — ${escapeHtml(studentNames)}</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #fff; color: #111; margin: 0; padding: 24px; }
+    @page { margin: 1.5cm 2cm; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #111; margin: 0; padding: 20px; font-size: 13px; line-height: 1.45; }
     .rp-ev-student-section { margin-bottom: 32px; }
-    .rp-ev-profile-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-    .rp-ev-profile-header { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #111; }
-    .rp-ev-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; margin-bottom: 12px; }
-    .rp-ev-confidential-banner { background: #fff3cd; border: 2px solid #856404; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #000; font-weight: bold; margin-bottom: 10px; }
-    .rp-ev-section-title { font-size: 16px; font-weight: 600; margin: 18px 0 10px; border-bottom: 1px solid #ccc; padding-bottom: 6px; color: #111; }
-    .rp-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
-    .rp-table th, .rp-table td { padding: 8px 10px; border: 1px solid #ccc; text-align: left; }
-    .rp-table th { background: #f0f0f0; font-weight: 600; }
-    .rp-ev-assignment-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
-    .rp-ev-assignment-title { font-weight: 600; margin-bottom: 4px; color: #111; }
-    .rp-ev-assignment-meta { font-size: 13px; color: #555; }
-    .rp-ev-tag-row { font-size: 12px; color: #666; margin-top: 4px; }
-    .rp-ev-score-breakdown { font-size: 12px; color: #444; margin-top: 5px; }
+    .rp-ev-profile-card { background: #f8f9fa; border: 2px solid #334155; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; }
+    .rp-ev-profile-header { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #111; letter-spacing: -0.3px; }
+    .rp-ev-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 13px; margin-bottom: 10px; }
+    .rp-ev-confidential-banner { background: #fff3cd; border: 2px solid #856404; border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #000; font-weight: bold; margin-top: 8px; }
+    .rp-ev-section-title { font-size: 15px; font-weight: 700; margin: 16px 0 8px; border-bottom: 2px solid #334155; padding-bottom: 4px; color: #111; text-transform: uppercase; letter-spacing: 0.4px; }
+    .rp-ev-section-break { break-before: page; page-break-before: always; }
+    .rp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+    .rp-table caption { font-size: 11px; font-weight: 600; color: #555; text-align: left; margin-bottom: 4px; }
+    .rp-table th, .rp-table td { padding: 6px 8px; border: 1px solid #ccc; text-align: left; vertical-align: top; }
+    .rp-table th { background: #f0f0f0; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .rp-table tbody tr:nth-child(even) td { background: #fafafa; }
+    .rp-table tr { break-inside: avoid; page-break-inside: avoid; }
+    .rp-ev-assignment-card { background: #fff; border: 1px solid #cbd5e1; border-left: 4px solid #334155; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid; }
+    .rp-ev-assignment-title { font-weight: 700; font-size: 14px; margin-bottom: 3px; color: #111; }
+    .rp-ev-assignment-meta { font-size: 12px; color: #555; line-height: 1.4; }
+    .rp-ev-tag-row { font-size: 11px; color: #555; margin-top: 3px; }
+    .rp-ev-score-breakdown { font-size: 11px; color: #444; margin-top: 4px; }
     .rp-ev-answers { margin-top: 8px; }
-    .rp-ev-answers-label { font-size: 12px; font-weight: 600; color: #444; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
-    .rp-ev-q-summary { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 8px; }
-    .rp-ev-q-card { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; page-break-inside: avoid; }
-    .rp-ev-q-header { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-    .rp-ev-q-label { font-weight: 600; font-size: 13px; color: #111; white-space: nowrap; }
-    .rp-ev-q-badges { display: flex; flex-wrap: wrap; gap: 4px; }
-    .rp-ev-badge { font-size: 11px; padding: 1px 6px; border-radius: 10px; white-space: nowrap; }
+    .rp-ev-answers-label { font-size: 11px; font-weight: 700; color: #444; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
+    .rp-ev-q-summary { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 6px; }
+    .rp-ev-q-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 10px; margin-bottom: 6px; break-inside: avoid; page-break-inside: avoid; }
+    .rp-ev-q-header { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+    .rp-ev-q-label { font-weight: 700; font-size: 12px; color: #111; white-space: nowrap; }
+    .rp-ev-q-badges { display: flex; flex-wrap: wrap; gap: 3px; }
+    .rp-ev-badge { font-size: 10px; padding: 1px 5px; border-radius: 10px; white-space: nowrap; font-weight: 600; }
     .rp-ev-badge-dese { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
     .rp-ev-badge-goal { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    .rp-ev-q-text { font-size: 13px; color: #222; margin-bottom: 6px; font-style: italic; }
-    .rp-ev-q-choices { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
-    .rp-ev-choice { padding: 3px 8px; border-radius: 4px; color: #333; }
+    .rp-ev-q-text { font-size: 12px; color: #222; margin-bottom: 5px; font-style: italic; line-height: 1.4; }
+    .rp-ev-q-choices { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+    .rp-ev-choice { padding: 2px 6px; border-radius: 3px; color: #333; }
     .rp-ev-choice-correct { background: #dcfce7; color: #166534; font-weight: 600; }
     .rp-ev-choice-wrong { background: #fee2e2; color: #991b1b; font-weight: 600; }
     .rp-ev-choice-answer { background: #f0fdf4; color: #166534; }
     .rp-ev-choice-none { color: #888; font-style: italic; }
-    .rp-ev-choice-mark { margin-left: 6px; font-weight: 700; }
-    .rp-ev-q-writing { margin-top: 6px; }
-    .rp-ev-q-writing-label { font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
-    .rp-ev-q-writing-text { font-size: 13px; color: #222; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 6px 8px; white-space: pre-wrap; }
-    .rp-ev-q-score { font-size: 12px; color: #444; margin-top: 4px; }
-    .rp-ev-ans-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .rp-ev-ans-table th, .rp-ev-ans-table td { padding: 4px 8px; border: 1px solid #ddd; text-align: left; }
-    .rp-ev-ans-table th { background: #f0f0f0; font-weight: 600; }
+    .rp-ev-choice-mark { margin-left: 5px; font-weight: 700; }
+    .rp-ev-q-writing { margin-top: 5px; }
+    .rp-ev-q-writing-label { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+    .rp-ev-q-writing-text { font-size: 12px; color: #222; background: #f8f9fa; border: 1px solid #ddd; border-radius: 3px; padding: 5px 8px; white-space: pre-wrap; line-height: 1.4; }
+    .rp-ev-q-score { font-size: 11px; color: #444; margin-top: 3px; }
+    .rp-ev-ans-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .rp-ev-ans-table th, .rp-ev-ans-table td { padding: 3px 7px; border: 1px solid #ddd; text-align: left; }
+    .rp-ev-ans-table th { background: #f0f0f0; font-weight: 600; font-size: 10px; text-transform: uppercase; }
     .rp-ev-ans-ref { color: #555; white-space: nowrap; }
     .rp-ev-ans-val { color: #111; word-break: break-word; }
-    .rp-ev-teacher-note { font-size: 12px; color: #555; margin-top: 5px; font-style: italic; }
-    .rp-ev-stats-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 10px; padding: 16px; margin-top: 16px; }
-    .rp-ev-stats-title { font-weight: 600; margin-bottom: 10px; color: #111; }
-    .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 14px; color: #111; }
-    .rp-empty { color: #888; font-style: italic; padding: 10px 0; }
-    .rp-ev-doc-footer { margin-top: 32px; border-top: 1px solid #ccc; padding-top: 12px; font-size: 12px; color: #666; }
+    .rp-ev-teacher-note { font-size: 11px; color: #555; margin-top: 4px; font-style: italic; }
+    .rp-ev-stats-card { background: #f8f9fa; border: 1px solid #ccc; border-radius: 6px; padding: 12px 16px; margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+    .rp-ev-stats-title { font-weight: 700; margin-bottom: 8px; color: #111; font-size: 13px; }
+    .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 5px; font-size: 12px; color: #111; }
+    .rp-empty { color: #888; font-style: italic; padding: 8px 0; font-size: 12px; }
+    .rp-ev-doc-footer { margin-top: 28px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 11px; color: #666; }
     @media print {
-      body { background: white; color: #111; padding: 0; }
-      .rp-ev-profile-card,
-      .rp-ev-assignment-card,
-      .rp-ev-stats-card { background: #fff !important; border: 1px solid #ccc !important; color: #000 !important; }
+      @page { margin: 1.5cm 2cm; }
+      body { background: white !important; color: #111 !important; padding: 0 !important; }
+      .rp-ev-profile-card { background: #f8f9fa !important; border-color: #334155 !important; color: #000 !important; }
+      .rp-ev-assignment-card { background: #fff !important; border-color: #cbd5e1 !important; color: #000 !important; }
+      .rp-ev-stats-card { background: #f8f9fa !important; border-color: #ccc !important; color: #000 !important; }
       .rp-ev-profile-header,
       .rp-ev-section-title,
-      .rp-ev-student-section,
-      .rp-ev-stats-grid,
+      .rp-ev-stats-grid div,
       .rp-ev-assignment-title { color: #000 !important; }
       .rp-ev-assignment-meta { color: #333 !important; }
       .rp-ev-tag-row { color: #444 !important; }
       .rp-ev-score-breakdown { color: #333 !important; }
       .rp-ev-answers-label { color: #333 !important; }
-      .rp-ev-q-card { background: #fff !important; border: 1px solid #ccc !important; }
+      .rp-ev-q-card { background: #fff !important; border-color: #ccc !important; }
       .rp-ev-q-label { color: #000 !important; }
       .rp-ev-q-text { color: #111 !important; }
-      .rp-ev-badge-dese { background: #dbeafe !important; color: #1e40af !important; }
-      .rp-ev-badge-goal { background: #dcfce7 !important; color: #166534 !important; }
+      .rp-ev-badge-dese { background: #dbeafe !important; color: #1e40af !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rp-ev-badge-goal { background: #dcfce7 !important; color: #166534 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .rp-ev-choice { color: #111 !important; }
-      .rp-ev-choice-correct { background: #dcfce7 !important; color: #166534 !important; }
-      .rp-ev-choice-wrong { background: #fee2e2 !important; color: #991b1b !important; }
-      .rp-ev-choice-answer { background: #f0fdf4 !important; color: #166534 !important; }
+      .rp-ev-choice-correct { background: #dcfce7 !important; color: #166534 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rp-ev-choice-wrong { background: #fee2e2 !important; color: #991b1b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rp-ev-choice-answer { background: #f0fdf4 !important; color: #166534 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .rp-ev-q-writing-text { background: #f8f9fa !important; border-color: #ccc !important; color: #111 !important; }
       .rp-ev-q-summary { color: #000 !important; }
-      .rp-ev-ans-table th { background: #f0f0f0 !important; }
+      .rp-ev-ans-table th { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .rp-ev-ans-table th, .rp-ev-ans-table td { border-color: #ddd !important; color: #000 !important; }
       .rp-ev-ans-ref { color: #444 !important; }
       .rp-ev-teacher-note { color: #444 !important; }
-      .rp-ev-confidential-banner { background: #fff3cd !important; border: 2px solid #856404 !important; color: #000 !important; display: block !important; }
-      .rp-table th { background: #f0f0f0 !important; }
+      .rp-ev-confidential-banner { background: #fff3cd !important; border: 2px solid #856404 !important; color: #000 !important; display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rp-table th { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .rp-table th, .rp-table td { border-color: #ccc !important; color: #000 !important; }
+      .rp-table tbody tr:nth-child(even) td { background: #fafafa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .rp-ev-doc-footer { border-top-color: #ccc !important; color: #444 !important; }
-      .rp-ev-page-break, [style*="page-break-before"] { page-break-before: always; }
-      .rp-ev-student-section { page-break-inside: avoid; }
-      .rp-ev-assignment-card { page-break-inside: avoid; }
+      .rp-ev-page-break, [style*="page-break-before"] { page-break-before: always; break-before: page; }
+      /* NOTE: .rp-ev-student-section intentionally has NO page-break-inside:avoid here.
+         Student sections span multiple pages; constraining them causes a blank first page. */
+      .rp-ev-assignment-card { break-inside: avoid; page-break-inside: avoid; }
+      .rp-ev-q-card { break-inside: avoid; page-break-inside: avoid; }
+      .rp-ev-stats-card { break-inside: avoid; page-break-inside: avoid; }
+      .rp-table tr { break-inside: avoid; page-break-inside: avoid; }
     }
     ${styleOverrides || ''}
   </style>
 </head>
 <body>
-  <div style="margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid #ccc;">
-    <div style="font-size:22px; font-weight:700; margin-bottom:6px;">Student Evidence Report</div>
-    <div style="font-size:14px; color:#555;">Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(generatedDate)} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</div>
+  <div style="margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid #334155;">
+    <div style="font-size:20px; font-weight:700; margin-bottom:4px; letter-spacing:-0.3px;">Reinisch Classroom — Student Evidence Report</div>
+    <div style="font-size:12px; color:#555;">Period: ${escapeHtml(periodLabel)} &nbsp;|&nbsp; Generated: ${escapeHtml(generatedDate)} &nbsp;|&nbsp; Data Source: ${escapeHtml(sourceLabel)}</div>
   </div>
   ${sections}
   <div class="rp-ev-doc-footer">
