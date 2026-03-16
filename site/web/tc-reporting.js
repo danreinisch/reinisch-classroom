@@ -488,22 +488,84 @@
     if (studentGoals.length === 0) {
       html += '<div class="rp-empty">No active IEP goals found for this student.</div>';
     } else {
+      // Pre-compute progress for all goals to build the summary panel
+      const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+      const goalSummaryData = studentGoals.map((g) => {
+        const gp = getGoalProgressForQuarter(g.code, tab1State.studentCode, quarterRange);
+        const prevGp = prevQuarterRange
+          ? getGoalProgressForQuarter(g.code, tab1State.studentCode, prevQuarterRange)
+          : null;
+        const { status } = buildRichProgressNarrative(student, g, gp, prevGp, tab1State.quarter);
+        return { goal: g, progress: gp, prevProgress: prevGp, status };
+      });
+
+      // Aggregate stats for summary panel
+      const totalDataPoints = goalSummaryData.reduce((s, d) => s + d.progress.count, 0);
+      const goalsWithData = goalSummaryData.filter((d) => d.progress.count > 0);
+      const overallAvg =
+        goalsWithData.length > 0
+          ? (goalsWithData.reduce((s, d) => s + d.progress.average, 0) / goalsWithData.length).toFixed(0)
+          : null;
+      const onTrackCount = goalSummaryData.filter(
+        (d) => d.status === "Goal Met" || d.status === "Making Adequate Progress"
+      ).length;
+      const needsSupportCount = goalSummaryData.filter(
+        (d) =>
+          d.status === "Progressing but Not Sufficient" || d.status === "Not Making Progress"
+      ).length;
+      const noDataCount = goalSummaryData.filter((d) => d.progress.count === 0).length;
+
+      // Quarterly IEP Progress Summary panel
+      html += `
+        <div class="rp-quarter-summary">
+          <div class="rp-quarter-summary-title">Quarterly IEP Progress Summary — ${escapeHtml(getQuarterLabel(tab1State.quarter))}</div>
+          <div class="rp-quarter-summary-stats">
+            <div class="rp-qs-stat">
+              <span class="rp-qs-value">${studentGoals.length}</span>
+              <span class="rp-qs-label">Active Goals</span>
+            </div>
+            <div class="rp-qs-stat rp-qs-on-track">
+              <span class="rp-qs-value">${onTrackCount}</span>
+              <span class="rp-qs-label">On Track</span>
+            </div>
+            <div class="rp-qs-stat rp-qs-needs-support">
+              <span class="rp-qs-value">${needsSupportCount}</span>
+              <span class="rp-qs-label">Needs Support</span>
+            </div>
+            <div class="rp-qs-stat rp-qs-no-data">
+              <span class="rp-qs-value">${noDataCount}</span>
+              <span class="rp-qs-label">No Data</span>
+            </div>
+            <div class="rp-qs-stat">
+              <span class="rp-qs-value">${overallAvg != null ? overallAvg + "%" : "N/A"}</span>
+              <span class="rp-qs-label">Avg Score</span>
+            </div>
+            <div class="rp-qs-stat">
+              <span class="rp-qs-value">${totalDataPoints}</span>
+              <span class="rp-qs-label">Data Points</span>
+            </div>
+          </div>
+        </div>
+      `;
+
       html += '<div class="rp-goals-section">';
 
-      // Process each goal
-      for (const goal of studentGoals) {
-        const goalProgressData = getGoalProgressForQuarter(
-          goal.code,
-          tab1State.studentCode,
-          quarterRange
-        );
-        const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
-        const prevGoalProgressData = prevQuarterRange
-          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
-          : null;
+      // Status-value mapping for select pre-selection
+      const statusValueMap = {
+        "Goal Met": "met",
+        "Making Adequate Progress": "adequate",
+        "Progressing but Not Sufficient": "insufficient",
+        "Not Making Progress": "not-progressing",
+      };
 
+      // Process each goal
+      for (const { goal, progress: goalProgressData, prevProgress: prevGoalProgressData, status } of goalSummaryData) {
         const narrative = generateNarrative(student, goal, goalProgressData, prevGoalProgressData);
         const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
+        const selectedStatusValue = statusValueMap[status] || "adequate";
+
+        const makeOption = (val, label) =>
+          `<option value="${val}"${selectedStatusValue === val ? " selected" : ""}>${label}</option>`;
 
         html += `
           <div class="rp-goal-card">
@@ -528,10 +590,10 @@
             <div class="rp-goal-status">
               <label><strong>Progress Status:</strong></label>
               <select class="rp-status-select" data-goal="${escapeHtml(goal.code)}">
-                <option value="adequate">Making Adequate Progress</option>
-                <option value="insufficient">Progressing but Not Sufficient</option>
-                <option value="not-progressing">Not Making Progress</option>
-                <option value="met">Goal Met</option>
+                ${makeOption("adequate", "Making Adequate Progress")}
+                ${makeOption("insufficient", "Progressing but Not Sufficient")}
+                ${makeOption("not-progressing", "Not Making Progress")}
+                ${makeOption("met", "Goal Met")}
               </select>
             </div>
             <div style="margin-top: 12px;">
@@ -791,25 +853,20 @@
     const baseline = goal.baseline || "N/A";
     const target = goal.target || "N/A";
 
-    // Calculate trend
+    // Calculate previous quarter data for trend and narrative
     const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
     const prevGoalProgressData = prevQuarterRange
       ? getGoalProgressForQuarter(goalCode, studentCode, prevQuarterRange)
       : null;
 
-    let trend = "N/A";
-    if (goalProgressData.average != null && prevGoalProgressData?.average != null) {
-      const diff = goalProgressData.average - prevGoalProgressData.average;
-      if (diff > 0) {
-        trend = `Improving (+${diff.toFixed(1)}% over quarter)`;
-      } else if (diff < 0) {
-        trend = `Declining (${diff.toFixed(1)}% over quarter)`;
-      } else {
-        trend = "Maintaining (no change)";
-      }
-    } else if (goalProgressData.average != null) {
-      trend = "New data this quarter";
-    }
+    // Use rich narrative engine for both narrative and status
+    const { narrative, status: richStatus } = buildRichProgressNarrative(
+      student || { name: studentCode, code: studentCode },
+      goal,
+      goalProgressData,
+      prevGoalProgressData,
+      tab1State.quarter
+    );
 
     // Format data points
     const dataPointsStr = dataPoints.length > 0
@@ -820,27 +877,17 @@
         }).join(', ')
       : "No data collected";
 
-    // Determine status
-    let status = "No data collected";
-    if (goalProgressData.average != null) {
-      if (goalProgressData.average >= (goal.target || 80)) {
-        status = "Met mastery criteria";
-      } else if (goalProgressData.average >= (goal.baseline || 0)) {
-        status = "Progressing toward mastery";
-      } else {
-        status = "Below baseline — review needed";
-      }
-    }
-
     const method = goal.measurement_type || "N/A";
 
     return `[Goal Code: ${goalCode}] ${goal.goal_area || ""}
 Reporting Period: ${quarterLabel} (${formatDateYYYYMMDD(quarterDates.start)} - ${formatDateYYYYMMDD(quarterDates.end)})
 Baseline: ${baseline}% | Current: ${current}% | Target: ${target}%
-Data Points: ${dataPointsStr}
-Trend: ${trend}
+Data Points (${goalProgressData.count}): ${dataPointsStr}
 Method: ${method}
-Status: ${status}`;
+Status: ${richStatus}
+
+Progress Summary:
+${narrative}`;
   }
 
   /**
@@ -1159,36 +1206,228 @@ Status: ${status}`;
   }
 
   /**
-   * Generate narrative for goal progress
+   * Rich narrative engine for IEP progress statements.
+   * Generates professional, varied progress narratives based on goal data dimensions:
+   *   - Trend direction (improving / maintaining / declining / new)
+   *   - Baseline comparison (above / at / below baseline)
+   *   - Target proximity (met / approaching / far)
+   *   - Data density (sufficient ≥3 / limited 1-2 / none)
+   *   - Score range (high ≥80% / moderate 60-79% / low <60%)
+   *
+   * Phrase selection is deterministic per goal code so that the same goal always
+   * gets the same phrasing, but different goals get varied language.
+   *
+   * @param {Object} student          - { name, code }
+   * @param {Object} goal             - { code, goal_area, desc, baseline, target }
+   * @param {Object} quarterData      - { average, count, values }
+   * @param {Object|null} prevData    - Previous quarter { average, count, values }
+   * @param {string} quarterLabel     - e.g. "Q3"
+   * @returns {{ narrative: string, status: string }}
+   */
+  function buildRichProgressNarrative(student, goal, quarterData, prevData, quarterLabel) {
+    const name = ((student.name || student.code || "Student").split(" ")[0]);
+    const area = goal.goal_area || goal.code || "this goal area";
+    const baselineVal = parseFloat(goal.baseline) || 0;
+    const targetVal = parseFloat(goal.target) || 80;
+    const avg = quarterData.average;
+    const count = quarterData.count;
+    const quarter = quarterLabel || "this quarter";
+
+    // Deterministic phrase picker: same goal code → same index variation
+    const hashCode = (str) => {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) {
+        h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+      }
+      return Math.abs(h);
+    };
+    const seed = hashCode(goal.code || "");
+    const pick = (arr) => arr[seed % arr.length];
+
+    // --- Determine data density ---
+    const dataLevel = count === 0 ? "none" : count <= 2 ? "limited" : "sufficient";
+
+    // --- No-data path ---
+    if (dataLevel === "none") {
+      const openings = [
+        `No performance data was collected for ${name} in the area of ${area} during ${quarter}.`,
+        `Data collection for ${area} was not recorded for ${name} during the ${quarter} reporting period.`,
+        `${name}'s progress on this goal was not measured during ${quarter}.`,
+      ];
+      const closings = [
+        `Increased data collection opportunities are recommended for the next quarter.`,
+        `Additional data points should be gathered to accurately measure progress toward the ${targetVal.toFixed(0)}% criterion.`,
+        `It is recommended that data collection for this goal be prioritized in the upcoming quarter.`,
+      ];
+      return {
+        narrative: `${pick(openings)} ${pick(closings)}`,
+        status: "Not Making Progress",
+      };
+    }
+
+    // --- Score range ---
+    // (available but not currently used in phrase selection — reserved for future use)
+    // const scoreLevel = avg >= 80 ? "high" : avg >= 60 ? "moderate" : "low";
+
+    // --- Baseline comparison ---
+    const baselineDiff = avg - baselineVal;
+    const baselineComp =
+      baselineDiff > 5 ? "above" : baselineDiff >= -5 ? "at" : "below";
+
+    // --- Target proximity ---
+    const targetDiff = avg - targetVal;
+    const targetProx =
+      targetDiff >= 0 ? "met" : targetDiff >= -10 ? "approaching" : "far";
+
+    // --- Trend direction ---
+    const prevAvg = prevData ? prevData.average : null;
+    const trendDiff = prevAvg != null ? avg - prevAvg : null;
+    const trend =
+      trendDiff == null
+        ? "new"
+        : trendDiff > 2
+        ? "improving"
+        : trendDiff < -2
+        ? "declining"
+        : "maintaining";
+
+    // --- Determine progress status ---
+    let status;
+    if (targetProx === "met") {
+      status = "Goal Met";
+    } else if (
+      trend === "improving" &&
+      baselineComp !== "below"
+    ) {
+      status = "Making Adequate Progress";
+    } else if (
+      trend === "maintaining" &&
+      (baselineComp === "above" || baselineComp === "at")
+    ) {
+      status = "Making Adequate Progress";
+    } else if (baselineComp === "above" && targetProx !== "far") {
+      status = "Making Adequate Progress";
+    } else if (baselineComp !== "below") {
+      status = "Progressing but Not Sufficient";
+    } else {
+      status = "Not Making Progress";
+    }
+
+    // --- Opening sentence (based on trend) ---
+    let opening;
+    if (trend === "improving") {
+      opening = pick([
+        `${name} demonstrated growth in ${area} during ${quarter}.`,
+        `${name} showed measurable improvement in ${area} this reporting period.`,
+        `${name} made meaningful progress in ${area} during ${quarter}.`,
+        `${name}'s performance in ${area} improved during the ${quarter} quarter.`,
+      ]);
+    } else if (trend === "declining") {
+      opening = pick([
+        `${name} experienced some challenges in ${area} during ${quarter}.`,
+        `${name}'s performance in ${area} showed a decline this reporting period.`,
+        `${name} required additional support in ${area} during the ${quarter} quarter.`,
+      ]);
+    } else if (trend === "maintaining") {
+      opening = pick([
+        `${name} continued to work on ${area} during ${quarter}.`,
+        `${name} maintained consistent performance in ${area} this quarter.`,
+        `${name}'s performance in ${area} remained steady during the ${quarter} reporting period.`,
+      ]);
+    } else {
+      // "new" — data exists but no previous quarter for comparison
+      opening = pick([
+        `${name} worked on ${area} during ${quarter}.`,
+        `During ${quarter}, ${name} engaged with goals in the area of ${area}.`,
+        `${name} demonstrated performance in ${area} during the ${quarter} reporting period.`,
+      ]);
+    }
+
+    // --- Middle sentence (data summary) ---
+    const avgStr = avg.toFixed(0);
+    const baselineStr = baselineVal.toFixed(0);
+    const countDesc = `${count} data point${count !== 1 ? "s" : ""}`;
+    const comparison =
+      baselineComp === "above"
+        ? `up from a baseline of ${baselineStr}%`
+        : baselineComp === "below"
+        ? `compared to a baseline of ${baselineStr}%`
+        : `consistent with a baseline of ${baselineStr}%`;
+
+    let middle;
+    if (dataLevel === "limited") {
+      middle = pick([
+        `With ${countDesc} collected, ${name} achieved an average of ${avgStr}%, ${comparison}.`,
+        `Based on ${countDesc}, ${name} scored an average of ${avgStr}%, ${comparison}.`,
+        `Data from ${countDesc} this quarter shows an average score of ${avgStr}%, ${comparison}.`,
+      ]);
+    } else {
+      middle = pick([
+        `With ${countDesc} collected, ${name} achieved an average of ${avgStr}%, ${comparison}.`,
+        `Across ${countDesc} this quarter, ${name} averaged ${avgStr}%, ${comparison}.`,
+        `Performance across ${countDesc} reflects an average of ${avgStr}%, ${comparison}.`,
+      ]);
+    }
+
+    // --- Closing sentence (target proximity) ---
+    const targetStr = targetVal.toFixed(0);
+    let closing;
+    if (targetProx === "met") {
+      closing = pick([
+        `${name} has met the target criterion of ${targetStr}% and is demonstrating mastery of this goal.`,
+        `With an average exceeding the ${targetStr}% criterion, ${name} has demonstrated mastery on this goal.`,
+        `${name} has achieved the annual goal target of ${targetStr}%, indicating successful mastery.`,
+      ]);
+    } else if (targetProx === "approaching") {
+      closing = pick([
+        `${name} is making adequate progress toward the annual target of ${targetStr}%.`,
+        `${name} is on track to meet the ${targetStr}% mastery criterion with continued support.`,
+        `With continued effort, ${name} is progressing toward the ${targetStr}% annual target.`,
+      ]);
+    } else {
+      // far from target
+      if (trend === "declining") {
+        closing = pick([
+          `Progress toward the ${targetStr}% annual criterion requires additional intervention and support.`,
+          `${name} continues to work toward the ${targetStr}% target; a review of current supports is recommended.`,
+          `Additional targeted intervention is recommended to help ${name} progress toward the ${targetStr}% criterion.`,
+        ]);
+      } else {
+        closing = pick([
+          `${name} continues to work toward the target criterion of ${targetStr}%. Continued practice and support are recommended.`,
+          `Additional instructional support will help ${name} reach the ${targetStr}% annual target.`,
+          `${name} is working toward the ${targetStr}% goal criterion and will benefit from continued focused instruction.`,
+        ]);
+      }
+    }
+
+    // Optional caveat for limited data
+    const caveat =
+      dataLevel === "limited"
+        ? pick([
+            " Note: This summary is based on limited data; additional collection will provide a clearer picture.",
+            " These results are based on limited data and should be interpreted with caution.",
+          ])
+        : "";
+
+    return {
+      narrative: `${opening} ${middle} ${closing}${caveat}`,
+      status,
+    };
+  }
+
+  /**
+   * Generate narrative for goal progress (uses rich narrative engine)
    */
   function generateNarrative(student, goal, quarterData, prevQuarterData) {
-    const name = student.name || student.code;
-    const avg = quarterData.average != null ? quarterData.average.toFixed(0) : "N/A";
-    const baseline = goal.baseline || "N/A";
-    const target = goal.target || "N/A";
-    const dataPoints = quarterData.count;
-    const goalArea = goal.goal_area || goal.code;
-
-    let progressStatement = "";
-    if (quarterData.average != null && prevQuarterData?.average != null) {
-      if (quarterData.average > prevQuarterData.average) {
-        progressStatement = `${name} is making adequate progress toward the annual goal.`;
-      } else if (quarterData.average === prevQuarterData.average) {
-        progressStatement = `${name} is maintaining current performance levels.`;
-      } else {
-        progressStatement = `${name} has shown a decline in performance. Consider reviewing supports and interventions.`;
-      }
-    } else if (quarterData.average != null) {
-      progressStatement = `${name} is working toward the annual goal.`;
-    } else {
-      progressStatement = `Insufficient data collected this quarter to determine progress.`;
-    }
-
-    if (quarterData.average != null) {
-      return `${name} demonstrated ${avg}% accuracy in ${goalArea}, compared to a baseline of ${baseline}%. Based on ${dataPoints} data point${dataPoints !== 1 ? "s" : ""} collected this quarter, ${progressStatement} Annual goal target: ${target}%.`;
-    } else {
-      return `${name} has a baseline of ${baseline}% in ${goalArea}. ${progressStatement} Annual goal target: ${target}%.`;
-    }
+    const { narrative } = buildRichProgressNarrative(
+      student,
+      goal,
+      quarterData,
+      prevQuarterData,
+      tab1State ? tab1State.quarter : "this quarter"
+    );
+    return narrative;
   }
 
   /**
@@ -2614,71 +2853,121 @@ Status: ${status}`;
       const enrollment = enrollmentsData.find((e) => e.student_code === student.code);
       const grade = enrollment?.class_name || "N/A";
 
+      // Pre-compute all goal progress for the summary panel
+      const goalSummaries = studentGoals.map((g) => {
+        const gp = getGoalProgressForQuarter(g.code, student.code, quarterRange);
+        const prevRange = getPreviousQuarterRange(quarter);
+        const prevGp = prevRange ? getGoalProgressForQuarter(g.code, student.code, prevRange) : null;
+        const { status } = buildRichProgressNarrative(student, g, gp, prevGp, quarter);
+        return { goal: g, progress: gp, status };
+      });
+      const totalDataPoints = goalSummaries.reduce((s, gs) => s + gs.progress.count, 0);
+      const goalsWithData = goalSummaries.filter((gs) => gs.progress.count > 0);
+      const overallAvg = goalsWithData.length > 0
+        ? (goalsWithData.reduce((s, gs) => s + gs.progress.average, 0) / goalsWithData.length).toFixed(0)
+        : null;
+      const onTrackCount = goalSummaries.filter((gs) =>
+        gs.status === "Goal Met" || gs.status === "Making Adequate Progress"
+      ).length;
+      const needsSupportCount = goalSummaries.filter((gs) =>
+        gs.status === "Progressing but Not Sufficient" || gs.status === "Not Making Progress"
+      ).length;
+      const noDataCount = goalSummaries.filter((gs) => gs.progress.count === 0).length;
+
       // Start student section with page break (except for first student)
       const pageBreakStyle = index > 0 ? "page-break-before: always;" : "";
       allStudentReportsHTML += `
         <div class="student-section" style="${pageBreakStyle}">
-          <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between;">
-            <span>Student Name: ${escapeHtml(student.name || student.code)}</span>
-            <span>Grade: ${escapeHtml(grade)}</span>
+          <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="font-size: 20px; font-weight: bold; color: #1e3a5f;">Reinisch Classroom — IEP Quarterly Progress Report</div>
+            <div style="display:flex; justify-content:space-between; margin-top: 6px; font-size: 14px;">
+              <span><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</span>
+              <span><strong>Grade/Class:</strong> ${escapeHtml(grade)}</span>
+              <span><strong>School Year:</strong> ${escapeHtml(schoolYearLabel)}</span>
+            </div>
           </div>
-          <div style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">
-            Progress for ${escapeHtml(quarter)} Quarter of their ${escapeHtml(schoolYearLabel)} School Year
+
+          <div style="background:#f0f4ff; border:1px solid #b8c9f0; border-radius:8px; padding:14px; margin-bottom:20px;">
+            <div style="font-size:15px; font-weight:bold; color:#1e3a5f; margin-bottom:10px;">
+              Quarterly IEP Progress Summary — ${escapeHtml(quarterLabel)}
+            </div>
+            <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:13px;">
+              <div style="text-align:center; min-width:80px;">
+                <div style="font-size:22px; font-weight:bold; color:#1e3a5f;">${studentGoals.length}</div>
+                <div style="color:#555;">Active Goals</div>
+              </div>
+              <div style="text-align:center; min-width:80px;">
+                <div style="font-size:22px; font-weight:bold; color:#16a34a;">${onTrackCount}</div>
+                <div style="color:#555;">On Track</div>
+              </div>
+              <div style="text-align:center; min-width:80px;">
+                <div style="font-size:22px; font-weight:bold; color:#d97706;">${needsSupportCount}</div>
+                <div style="color:#555;">Needs Support</div>
+              </div>
+              <div style="text-align:center; min-width:80px;">
+                <div style="font-size:22px; font-weight:bold; color:#9ca3af;">${noDataCount}</div>
+                <div style="color:#555;">No Data</div>
+              </div>
+              <div style="text-align:center; min-width:80px;">
+                <div style="font-size:22px; font-weight:bold; color:#1e3a5f;">${overallAvg != null ? overallAvg + "%" : "N/A"}</div>
+                <div style="color:#555;">Avg Score</div>
+              </div>
+              <div style="text-align:center; min-width:80px;">
+                <div style="font-size:22px; font-weight:bold; color:#1e3a5f;">${totalDataPoints}</div>
+                <div style="color:#555;">Data Points</div>
+              </div>
+            </div>
           </div>
       `;
 
-      // Generate report for each goal
-      studentGoals.forEach((goal) => {
-        const goalProgress = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+      // Generate report for each goal using pre-computed summaries
+      goalSummaries.forEach(({ goal, progress: goalProgress, status }) => {
         const dataPoints = getGoalDataPoints(goal.code, student.code, quarterRange);
 
-        // Calculate min, max for narrative
-        const values = dataPoints.map((dp) => parseFloat(dp.value) || 0);
-        const minValue = values.length > 0 ? Math.min(...values) : 0;
-        const maxValue = values.length > 0 ? Math.max(...values) : 0;
+        // Re-derive narrative (uses same deterministic engine as summary panel)
+        const prevRange2 = getPreviousQuarterRange(quarter);
+        const prevProgress2 = prevRange2 ? getGoalProgressForQuarter(goal.code, student.code, prevRange2) : null;
+        const { narrative } = buildRichProgressNarrative(student, goal, goalProgress, prevProgress2, quarter);
 
-        // Generate narrative
-        const narrative = generateProgressNarrative(
-          student.name || student.code,
-          goal,
-          quarter,
-          goalProgress.average,
-          minValue,
-          maxValue
-        );
+        // Status badge colors
+        const statusBadgeStyle =
+          status === "Goal Met"
+            ? "background:#16a34a;color:#fff;"
+            : status === "Making Adequate Progress"
+            ? "background:#2563eb;color:#fff;"
+            : status === "Progressing but Not Sufficient"
+            ? "background:#d97706;color:#fff;"
+            : "background:#dc2626;color:#fff;";
 
         allStudentReportsHTML += `
-          <div style="border-bottom: 2px solid #000; margin: 20px 0; padding-bottom: 20px;">
-            <div style="margin-bottom: 12px;">
-              <strong>Goal Code:</strong> ${escapeHtml(goal.code)}
+          <div style="border-bottom: 2px solid #000; margin: 20px 0; padding-bottom: 20px; break-inside: avoid;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+              <div>
+                <strong style="font-size:15px;">${escapeHtml(goal.code)}</strong>
+                &nbsp;&mdash;&nbsp;
+                <em>${escapeHtml(goal.goal_area || "N/A")}</em>
+              </div>
+              <span style="padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; ${statusBadgeStyle}">${escapeHtml(status)}</span>
             </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong>Goal Area:</strong> ${escapeHtml(goal.goal_area || "N/A")}
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong>Goal Description:</strong><br/>
+
+            <div style="margin-bottom: 10px; font-style: italic; color: #333;">
               ${escapeHtml(goal.desc || "N/A")}
             </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong>Baseline:</strong> ${escapeHtml(goal.baseline || "N/A")}% &nbsp;&nbsp;&nbsp;&nbsp;
-              <strong>Target/Mastery:</strong> ${escapeHtml(goal.target || "N/A")}%
+
+            <div style="display:flex; gap:24px; margin-bottom: 10px; font-size:13px;">
+              <span><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || "N/A"))}%</span>
+              <span><strong>Current Avg:</strong> ${goalProgress.average != null ? goalProgress.average.toFixed(0) + "%" : "N/A"}</span>
+              <span><strong>Target:</strong> ${escapeHtml(String(goal.target || "N/A"))}%</span>
+              <span><strong>Data Points:</strong> ${goalProgress.count}</span>
             </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong>Average of progress for the quarter:</strong> ${goalProgress.average}%<br/>
-              (Based on ${goalProgress.count} data point${goalProgress.count !== 1 ? "s" : ""} collected)
-            </div>
-            
-            <div style="margin-bottom: 12px;">
+
+            <div style="margin-bottom: 10px;">
               <strong>Snapshot of data collected:</strong><br/>
               ${generateDataPointsList(dataPoints)}
             </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong>Description of progress supporting selected summary statement:</strong><br/>
+
+            <div style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-left: 3px solid #2563eb;">
+              <strong>Progress Summary:</strong><br/>
               ${escapeHtml(narrative)}
             </div>
           </div>
@@ -3937,30 +4226,25 @@ Status: ${status}`;
   }
 
   /**
-   * Generate progress narrative
+   * Generate progress narrative using the rich narrative engine.
+   * Backward-compatible wrapper used by Tab 5 (batch reports) and SpedTrack copy.
+   *
+   * @param {string} studentName
+   * @param {Object} goal
+   * @param {string} quarter         - Quarter label, e.g. "Q3"
+   * @param {number|null} avgValue   - Average score (percentage, may be null)
+   * @param {number} dataPointCount  - Number of individual data points collected
+   * @param {Object|null} prevData   - Previous quarter { average, count, values } (optional)
+   * @returns {string} narrative text
    */
-  function generateProgressNarrative(studentName, goal, quarter, avgValue, minValue, maxValue) {
-    const firstName = studentName.split(" ")[0];
-
-    // Restate goal in past tense - simple heuristic
-    // Note: This is a basic conversion that removes modal verbs but doesn't add proper past tense
-    // Teachers can manually edit the narrative as needed in the generated report
-    let goalPastTense = goal.desc || "";
-    if (goalPastTense) {
-      goalPastTense = goalPastTense
-        .replace(/will be able to/gi, "")
-        .replace(/will /gi, "")
-        .replace(/can /gi, "")
-        .trim();
-    }
-
-    // Handle empty goal descriptions
-    if (!goalPastTense) {
-      goalPastTense = "work on their IEP goal";
-    }
-
-    const narrative = `${firstName} was able to ${goalPastTense}. During the ${quarter} quarter, ${firstName}'s scores ranged from ${minValue}% to ${maxValue}%, with an average of ${avgValue}%.`;
-
+  function generateProgressNarrative(studentName, goal, quarter, avgValue, dataPointCount, prevData) {
+    const student = { name: studentName, code: studentName };
+    const quarterData = {
+      average: avgValue != null ? parseFloat(avgValue) : null,
+      count: dataPointCount || 0,
+      values: [],
+    };
+    const { narrative } = buildRichProgressNarrative(student, goal, quarterData, prevData || null, quarter);
     return narrative;
   }
 
