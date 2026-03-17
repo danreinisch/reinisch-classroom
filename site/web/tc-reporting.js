@@ -495,8 +495,8 @@
         const prevGp = prevQuarterRange
           ? getGoalProgressForQuarter(g.code, tab1State.studentCode, prevQuarterRange)
           : null;
-        const { status } = buildRichProgressNarrative(student, g, gp, prevGp, tab1State.quarter);
-        return { goal: g, progress: gp, prevProgress: prevGp, status };
+        const { status, narrative } = buildRichProgressNarrative(student, g, gp, prevGp, tab1State.quarter);
+        return { goal: g, progress: gp, prevProgress: prevGp, status, narrative };
       });
 
       // Aggregate stats for summary panel
@@ -516,6 +516,27 @@
       const noDataCount = goalSummaryData.filter((d) => d.progress.count === 0).length;
 
       // Quarterly IEP Progress Summary panel
+      const goalDetailRowsHtml = goalSummaryData.map(({ goal, progress, status, narrative }) => {
+        const avgDisplay = progress.average != null ? progress.average.toFixed(0) + "%" : "N/A";
+        const statusClass =
+          status === "Goal Met" ? "rp-qs-goal-status--met" :
+          status === "Making Adequate Progress" ? "rp-qs-goal-status--adequate" :
+          status === "Progressing but Not Sufficient" ? "rp-qs-goal-status--insufficient" :
+          "rp-qs-goal-status--not-progressing";
+        return `
+          <div class="rp-qs-goal-row">
+            <div class="rp-qs-goal-header">
+              <span class="rp-qs-goal-code">${escapeHtml(goal.code)}</span>
+              <span class="rp-qs-goal-desc">${escapeHtml(goal.desc || "No description")}</span>
+              <span class="rp-qs-goal-status ${statusClass}">${escapeHtml(status)}</span>
+            </div>
+            <div class="rp-qs-goal-metrics">
+              <span class="rp-qs-goal-metric"><strong>${progress.count}</strong> Data Points</span>
+              <span class="rp-qs-goal-metric"><strong>${avgDisplay}</strong> Avg</span>
+            </div>
+            <div class="rp-qs-goal-narrative">${escapeHtml(narrative)}</div>
+          </div>`;
+      }).join("");
       html += `
         <div class="rp-quarter-summary">
           <div class="rp-quarter-summary-title">Quarterly IEP Progress Summary — ${escapeHtml(getQuarterLabel(tab1State.quarter))}</div>
@@ -545,6 +566,7 @@
               <span class="rp-qs-label">Data Points</span>
             </div>
           </div>
+          <div class="rp-qs-goals-detail">${goalDetailRowsHtml}</div>
         </div>
       `;
 
@@ -2856,8 +2878,8 @@ ${narrative}`;
         const gp = getGoalProgressForQuarter(g.code, student.code, quarterRange);
         const prevRange = getPreviousQuarterRange(quarter);
         const prevGp = prevRange ? getGoalProgressForQuarter(g.code, student.code, prevRange) : null;
-        const { status } = buildRichProgressNarrative(student, g, gp, prevGp, quarter);
-        return { goal: g, progress: gp, status };
+        const { status, narrative } = buildRichProgressNarrative(student, g, gp, prevGp, quarter);
+        return { goal: g, progress: gp, status, narrative };
       });
       const totalDataPoints = goalSummaries.reduce((s, gs) => s + gs.progress.count, 0);
       const goalsWithData = goalSummaries.filter((gs) => gs.progress.count > 0);
@@ -2874,6 +2896,26 @@ ${narrative}`;
 
       // Start student section with page break (except for first student)
       const pageBreakStyle = index > 0 ? "page-break-before: always;" : "";
+      const batchGoalDetailRowsHtml = goalSummaries.map(({ goal, progress, status, narrative }) => {
+        const avgDisplay = progress.average != null ? progress.average.toFixed(0) + "%" : "N/A";
+        const statusColor =
+          status === "Goal Met" ? "#16a34a" :
+          status === "Making Adequate Progress" ? "#2563eb" :
+          status === "Progressing but Not Sufficient" ? "#d97706" :
+          "#dc2626";
+        return `
+          <div style="border-top:1px solid #c7d7f0; padding:10px 0;">
+            <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+              <span style="font-weight:700; font-size:13px; color:#1e3a5f;">${escapeHtml(goal.code)}</span>
+              <span style="font-size:13px; color:#333;">${escapeHtml(goal.desc || "No description")}</span>
+              <span style="margin-left:auto; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; background:${statusColor}; color:#fff; white-space:nowrap;">${escapeHtml(status)}</span>
+            </div>
+            <div style="font-size:12px; color:#555; margin-bottom:4px;">
+              <strong>${progress.count}</strong> Data Points &nbsp;|&nbsp; <strong>${avgDisplay}</strong> Avg
+            </div>
+            <div style="font-size:12px; color:#444; font-style:italic; line-height:1.5;">${escapeHtml(narrative)}</div>
+          </div>`;
+      }).join("");
       allStudentReportsHTML += `
         <div class="student-section" style="${pageBreakStyle}">
           <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 16px;">
@@ -2889,7 +2931,7 @@ ${narrative}`;
             <div style="font-size:15px; font-weight:bold; color:#1e3a5f; margin-bottom:10px;">
               Quarterly IEP Progress Summary — ${escapeHtml(quarterLabel)}
             </div>
-            <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:13px;">
+            <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:13px; margin-bottom:12px;">
               <div style="text-align:center; min-width:80px;">
                 <div style="font-size:22px; font-weight:bold; color:#1e3a5f;">${studentGoals.length}</div>
                 <div style="color:#555;">Active Goals</div>
@@ -2915,6 +2957,7 @@ ${narrative}`;
                 <div style="color:#555;">Data Points</div>
               </div>
             </div>
+            ${batchGoalDetailRowsHtml}
           </div>
       `;
 
