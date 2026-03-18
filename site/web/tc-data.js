@@ -1117,7 +1117,7 @@
     const filtered = getFilteredStudents();
     
     // Build CSV rows
-    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Date', 'Value', 'Source', 'Quarter']];
+    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Baseline', 'Mastery', 'Target', 'Date', 'Value', 'Source', 'Quarter']];
     
     filtered.forEach(student => {
       let goals = student.goals;
@@ -1127,6 +1127,9 @@
       
       goals.forEach(goal => {
         const entries = getGoalProgressEntries(goal.code, student.code);
+        const baseline = goal.baseline != null ? String(goal.baseline) : '';
+        const mastery = goal.mastery != null ? String(goal.mastery) : (goal.target != null ? String(goal.target) : '');
+        const target = goal.target != null ? String(goal.target) : '';
         if (entries.length === 0) {
           // Add a row even if no data points
           rows.push([
@@ -1134,6 +1137,9 @@
             student.code,
             goal.code,
             goal.goal_area || 'Uncategorized',
+            baseline,
+            mastery,
+            target,
             '',
             '',
             '',
@@ -1146,6 +1152,9 @@
               student.code,
               goal.code,
               goal.goal_area || 'Uncategorized',
+              baseline,
+              mastery,
+              target,
               entry.date,
               entry.value,
               entry.source || 'manual',
