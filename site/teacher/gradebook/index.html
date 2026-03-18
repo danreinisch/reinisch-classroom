@@ -425,6 +425,45 @@
         cursor: pointer;
         font-size: 13px;
       }
+
+      /* Grouped column headers (Option A) */
+      table.gb-table th.gb-group-header {
+        cursor: pointer;
+        text-align: center;
+        background: rgba(34, 197, 94, 0.08);
+        border-bottom: 2px solid rgba(34, 197, 94, 0.3);
+      }
+      table.gb-table th.gb-group-header:hover {
+        background: rgba(34, 197, 94, 0.15);
+      }
+      table.gb-table th.gb-group-header.gb-group-header-expanded {
+        background: rgba(34, 197, 94, 0.15);
+        border-bottom-color: rgba(34, 197, 94, 0.5);
+      }
+      table.gb-table th.gb-group-assignment-col {
+        background: rgba(34, 197, 94, 0.04);
+        border-left: 1px solid rgba(34, 197, 94, 0.15);
+      }
+      .gb-group-header-label {
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .gb-group-header-count {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 2px;
+      }
+      .gb-group-expand-btn {
+        font-size: 11px;
+        color: rgba(34, 197, 94, 0.9);
+        margin-top: 3px;
+        user-select: none;
+      }
+      table.gb-table td.gb-group-cell {
+        background: rgba(34, 197, 94, 0.04);
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
     </style>
   </head>
   <body>
@@ -612,6 +651,7 @@
                   <option value="series">Sort: By Series</option>
                 </select>
                 <button class="gb-btn" type="button" id="btnToggleCompact">⊞ Comfortable</button>
+                <button class="gb-btn primary" type="button" id="btnToggleGroupedView">⊞ Grouped</button>
                 <button class="gb-btn" type="button" id="btnToggleMoreCols">⋯ Show More</button>
                 <button class="gb-btn" type="button" id="btnToggleAnalytics">📊 Analytics</button>
                 <button class="gb-btn" type="button" id="btnToggleMissing">🚨 Missing Work</button>
