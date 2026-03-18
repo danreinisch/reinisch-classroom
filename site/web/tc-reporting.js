@@ -705,13 +705,13 @@
         let statusColor = "#9ca3af";
         
         if (goalProgressData.average != null) {
-          const baseline = goal.baseline || 0;
-          const target = goal.target || 100;
-          const progressRange = target - baseline;
+          const baselineNum = parseGoalValue(goal.baseline) ?? 0;
+          const masteryNum = parseGoalValue(goal.mastery || goal.target) ?? 100;
+          const progressRange = masteryNum - baselineNum;
           
           // Avoid division by zero when target equals baseline
           if (progressRange !== 0) {
-            const progress = ((goalProgressData.average - baseline) / progressRange) * 100;
+            const progress = ((goalProgressData.average - baselineNum) / progressRange) * 100;
             if (progress >= 80) {
               statusText = "Excellent progress";
               statusColor = "#22c55e";
@@ -727,7 +727,7 @@
             }
           } else {
             // When target equals baseline, check if at or above target
-            if (goalProgressData.average >= target) {
+            if (goalProgressData.average >= masteryNum) {
               statusText = "At target";
               statusColor = "#22c55e";
             } else {
@@ -745,9 +745,9 @@
               ${escapeHtml(goal.desc || "No description")}
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-              <div><strong>Starting point:</strong> ${goal.baseline || 0}%</div>
+              <div><strong>Starting point:</strong> ${escapeHtml(String(goal.baseline || 'N/A'))}</div>
               <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
-              <div><strong>Goal:</strong> ${goal.target || 100}%</div>
+              <div><strong>Goal:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>
             </div>
             <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border-left: 4px solid ${statusColor};">
               <strong style="color: ${statusColor};">${statusText}</strong>
@@ -823,10 +823,10 @@
         let rowClass = "";
         
         if (goalProgressData.average != null) {
-          if (goalProgressData.average >= (goal.target || 80)) {
+          if (goalProgressData.average >= (parseGoalValue(goal.mastery || goal.target) ?? 80)) {
             status = "✅ At Target";
             rowClass = "rp-status-good";
-          } else if (goalProgressData.average >= (goal.baseline || 0)) {
+          } else if (goalProgressData.average >= (parseGoalValue(goal.baseline) ?? 0)) {
             status = "⚠️ Progressing";
             rowClass = "rp-status-warning";
           } else {
@@ -839,9 +839,9 @@
           <tr class="${rowClass}">
             <td><strong>${escapeHtml(goal.code)}</strong></td>
             <td>${escapeHtml(goal.goal_area || "N/A")}</td>
-            <td>${goal.baseline || 0}%</td>
+            <td>${escapeHtml(String(goal.baseline || 'N/A'))}</td>
             <td>${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</td>
-            <td>${goal.target || 100}%</td>
+            <td>${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</td>
             <td>${goalProgressData.count}</td>
             <td>${status}</td>
           </tr>
@@ -1803,9 +1803,9 @@ ${narrative}`;
               <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
             </div>
             <div class="rp-goal-summary-stats">
-              <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
+              <div><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || 'N/A'))}</div>
               <div><strong>Latest:</strong> ${latestValue != null ? latestValue.toFixed(0) : "N/A"}%</div>
-              <div><strong>Target:</strong> ${goal.target || 100}%</div>
+              <div><strong>Mastery:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>
             </div>
             <div class="rp-sparkline">${sparkline}</div>
           </div>
@@ -2296,7 +2296,7 @@ ${narrative}`;
       const studentGoals = goalsData.filter((g) => g.student_code === student.code);
       const goalsOnTrack = studentGoals.filter((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
-        return goalData.average != null && goalData.average >= (goal.baseline || 0);
+        return goalData.average != null && goalData.average >= (parseGoalValue(goal.baseline) ?? 0);
       }).length;
 
       return {
@@ -2481,7 +2481,7 @@ ${narrative}`;
       const studentGoals = goalsData.filter((g) => g.student_code === student.code);
       const goalsOnTrack = studentGoals.filter((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
-        return goalData.average != null && goalData.average >= (goal.baseline || 0);
+        return goalData.average != null && goalData.average >= (parseGoalValue(goal.baseline) ?? 0);
       }).length;
 
       csv += `${student.code},"${student.name || student.code}",${avgGrade},${complete},${missing},${goalsOnTrack}/${studentGoals.length}\n`;
@@ -3022,9 +3022,9 @@ ${narrative}`;
             </div>
 
             <div style="display:flex; gap:24px; margin-bottom: 10px; font-size:13px;">
-              <span><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || "N/A"))}%</span>
+              <span><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || "N/A"))}</span>
               <span><strong>Current Avg:</strong> ${goalProgress.average != null ? goalProgress.average.toFixed(0) + "%" : "N/A"}</span>
-              <span><strong>Target:</strong> ${escapeHtml(String(goal.target || "N/A"))}%</span>
+              <span><strong>Mastery:</strong> ${escapeHtml(String(goal.mastery || goal.target || "N/A"))}</span>
               <span><strong>Data Points:</strong> ${goalProgress.count}</span>
             </div>
 
@@ -3465,8 +3465,8 @@ ${narrative}`;
         } else {
           progressCell = avgRaw != null ? `${avgRaw}%` : '—';
         }
-        const targetDisplay = goal.target != null ? `${escapeHtml(String(goal.target))}%` : '—';
-        const baselineDisplay = goal.baseline != null ? `${escapeHtml(String(goal.baseline))}%` : '—';
+        const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
+        const baselineDisplay = goal.baseline != null ? escapeHtml(String(goal.baseline)) : '—';
 
         return `
           <tr>
@@ -4155,8 +4155,8 @@ ${narrative}`;
         const progressCell = isParent
           ? (avgRaw == null ? 'No data yet' : data.average >= 80 ? 'On track' : data.average >= 60 ? 'Making progress' : 'Needs support')
           : (avgRaw != null ? `${avgRaw}%` : '—');
-        const targetDisplay = goal.target != null ? `${escapeHtml(String(goal.target))}%` : '—';
-        const baselineDisplay = goal.baseline != null ? `${escapeHtml(String(goal.baseline))}%` : '—';
+        const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
+        const baselineDisplay = goal.baseline != null ? escapeHtml(String(goal.baseline)) : '—';
         const goalDesc = escapeHtml(goal.desc || goal.description || '—');
         const dpCol = isParent ? '' : `<td>${data.count} pts</td>`;
         return `<tr>

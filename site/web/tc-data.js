@@ -378,7 +378,7 @@
     const mastery = goal.mastery || goal.target || 'N/A';
     const target = goal.target || 'N/A';
     const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
-    const baselineNum = parseFloat(goal.baseline) || 0;
+    const baselineNum = parseGoalValue(goal.baseline) ?? 0;
     const delta = current != null ? current - baselineNum : null;
     
     // Determine trend
