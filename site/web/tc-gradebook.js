@@ -107,9 +107,12 @@
   const PREF_COMPACT = "rc_gb_compact";
   const PREF_SHOW_MORE = "rc_gb_show_more";
   const PREF_SORT = "rc_gb_sort";
+  const PREF_GROUPED_VIEW = "rc_gb_grouped_view";
   let isCompact = false;
   let showMoreColumns = false;
   let currentSort = "date";
+  let isGroupedView = true;
+  const expandedGroups = new Set();
   try {
     const compactRaw = localStorage.getItem(PREF_COMPACT);
     if (compactRaw !== null) {
@@ -122,6 +125,10 @@
     const sortRaw = localStorage.getItem(PREF_SORT);
     if (sortRaw) {
       currentSort = sortRaw;
+    }
+    const groupedRaw = localStorage.getItem(PREF_GROUPED_VIEW);
+    if (groupedRaw !== null) {
+      isGroupedView = groupedRaw === "true";
     }
   } catch {
     // If localStorage is unavailable (e.g., privacy mode), fall back to defaults.
@@ -673,6 +680,466 @@
     });
   }
 
+  // Build groups from a drafts array, ordered by CANON_CLASSES; uncategorised go last
+  function buildGroupsFromDrafts(drafts) {
+    const groupMap = new Map();
+    const ungrouped = [];
+    for (const draft of drafts) {
+      const series = draft.series;
+      if (series && CANON_CLASSES.includes(series)) {
+        if (!groupMap.has(series)) {
+          groupMap.set(series, { series, displayName: CLASS_DISPLAY[series] ?? series, drafts: [] });
+        }
+        groupMap.get(series).drafts.push(draft);
+      } else {
+        ungrouped.push(draft);
+      }
+    }
+    const groups = CANON_CLASSES.filter(cls => groupMap.has(cls)).map(cls => groupMap.get(cls));
+    return { groups, ungrouped };
+  }
+
+  // Calculate average score for a student across a specific set of drafts
+  function calculateGroupAverage(studentCode, scoreMap, groupDrafts) {
+    const studentScores = scoreMap.get(studentCode);
+    if (!studentScores) return null;
+    const scores = [];
+    for (const draft of groupDrafts) {
+      if (studentScores.has(draft.id)) {
+        const s = studentScores.get(draft.id);
+        if (typeof s === "number") scores.push(s);
+      }
+    }
+    if (scores.length === 0) return null;
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  }
+
+  // Count how many drafts in a group have a numeric score for the given student
+  function countGroupCompleted(studentCode, scoreMap, groupDrafts) {
+    const studentScores = scoreMap.get(studentCode);
+    if (!studentScores) return 0;
+    return groupDrafts.filter(d => studentScores.has(d.id) && typeof studentScores.get(d.id) === "number").length;
+  }
+
+  // Build an individual assignment <th> element (shared by individual mode and expanded groups)
+  function buildAssignmentTh(draft) {
+    const th = document.createElement("th");
+    th.style.minWidth = isCompact ? "68px" : "80px";
+
+    const fullTitle = draft.title || "(untitled)";
+    const titleEl = document.createElement("div");
+    titleEl.className = "gb-col-title";
+    titleEl.textContent = fullTitle.length > 15 ? fullTitle.substring(0, 15) + "…" : fullTitle;
+    titleEl.title = fullTitle;
+    th.appendChild(titleEl);
+
+    const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+    if (dateStr) {
+      const dateEl = document.createElement("div");
+      dateEl.className = "gb-col-date";
+      dateEl.textContent = dateStr;
+      th.appendChild(dateEl);
+    }
+
+    const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+    if (totalPossible) {
+      const ptsEl = document.createElement("div");
+      ptsEl.className = "gb-col-pts";
+      ptsEl.textContent = `${totalPossible} pts`;
+      th.appendChild(ptsEl);
+    }
+
+    return th;
+  }
+
+  // Build an individual score <td> element (Option D: pct + earned/possible)
+  function buildScoreTd(draft, studentCode, scoreMap) {
+    const td = document.createElement("td");
+    td.className = "gb-score-cell editable";
+
+    let currentScore = null;
+    const studentScores = scoreMap.get(studentCode);
+    if (studentScores && studentScores.has(draft.id)) {
+      const score = studentScores.get(draft.id);
+      if (typeof score === "number") {
+        currentScore = score;
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+
+        const pctLine = document.createElement("div");
+        pctLine.className = "gb-score-pct";
+        pctLine.textContent = `${score}%`;
+        td.appendChild(pctLine);
+
+        if (totalPossible) {
+          const ptsLine = document.createElement("div");
+          ptsLine.className = "gb-score-pts-line";
+          ptsLine.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
+          td.appendChild(ptsLine);
+        }
+
+        const colorClass = scoreColorClass(score);
+        if (colorClass) td.classList.add(colorClass);
+      } else {
+        td.textContent = "—";
+      }
+    } else {
+      td.textContent = "—";
+    }
+
+    td.addEventListener("click", () => {
+      const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+      makeScoreEditable(td, studentCode, draft.id, currentScore, totalPossible);
+    });
+
+    return td;
+  }
+
+  // Render gradebook in grouped/collapsed column mode (Option A)
+  function renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap) {
+    const { groups, ungrouped } = buildGroupsFromDrafts(drafts);
+    const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
+
+    // ── Header row ────────────────────────────────────────────────────────────
+    const headerRow = document.createElement("tr");
+
+    const thStudent = document.createElement("th");
+    thStudent.className = "gb-student-col";
+    thStudent.textContent = "Student";
+    headerRow.appendChild(thStudent);
+
+    for (const group of groups) {
+      const isExpanded = expandedGroups.has(group.series);
+      const totalInGroup = group.drafts.length;
+      // Count assignments that have at least one numeric score across any student
+      const gradedInGroup = group.drafts.filter(d =>
+        students.some(s => {
+          const sm = scoreMap.get(s.code);
+          return sm && sm.has(d.id) && typeof sm.get(d.id) === "number";
+        })
+      ).length;
+
+      if (!isExpanded) {
+        const th = document.createElement("th");
+        th.className = "gb-group-header";
+        th.style.minWidth = isCompact ? "80px" : "96px";
+
+        const labelEl = document.createElement("div");
+        labelEl.className = "gb-group-header-label";
+        labelEl.textContent = group.displayName;
+        th.appendChild(labelEl);
+
+        const countEl = document.createElement("div");
+        countEl.className = "gb-group-header-count";
+        countEl.textContent = `${gradedInGroup}/${totalInGroup}`;
+        th.appendChild(countEl);
+
+        const expandEl = document.createElement("div");
+        expandEl.className = "gb-group-expand-btn";
+        expandEl.setAttribute("aria-label", `Expand ${group.displayName} assignments`);
+        expandEl.textContent = "▸";
+        th.appendChild(expandEl);
+
+        th.addEventListener("click", () => {
+          expandedGroups.add(group.series);
+          renderGradebook();
+        });
+        headerRow.appendChild(th);
+      } else {
+        // Expanded: group label/collapse button + individual assignment columns
+        const thGroupLabel = document.createElement("th");
+        thGroupLabel.className = "gb-group-header gb-group-header-expanded";
+        thGroupLabel.style.minWidth = isCompact ? "64px" : "76px";
+
+        const labelEl = document.createElement("div");
+        labelEl.className = "gb-group-header-label";
+        labelEl.textContent = group.displayName;
+        thGroupLabel.appendChild(labelEl);
+
+        const collapseEl = document.createElement("div");
+        collapseEl.className = "gb-group-expand-btn";
+        collapseEl.setAttribute("aria-label", `Collapse ${group.displayName} assignments`);
+        collapseEl.textContent = "▴";
+        thGroupLabel.appendChild(collapseEl);
+
+        thGroupLabel.addEventListener("click", () => {
+          expandedGroups.delete(group.series);
+          renderGradebook();
+        });
+        headerRow.appendChild(thGroupLabel);
+
+        for (const draft of group.drafts) {
+          headerRow.appendChild(buildAssignmentTh(draft));
+        }
+      }
+    }
+
+    // Ungrouped assignment columns
+    for (const draft of ungrouped) {
+      headerRow.appendChild(buildAssignmentTh(draft));
+    }
+
+    // Average / Weighted / Trend extra columns
+    const thAvg = document.createElement("th");
+    thAvg.textContent = "Average";
+    thAvg.style.minWidth = "72px";
+    thAvg.dataset.extraCol = "1";
+    if (!showMoreColumns) thAvg.style.display = "none";
+    headerRow.appendChild(thAvg);
+
+    const thWeighted = document.createElement("th");
+    thWeighted.textContent = "Weighted";
+    thWeighted.style.minWidth = "72px";
+    thWeighted.dataset.extraCol = "1";
+    if (!showMoreColumns) thWeighted.style.display = "none";
+    headerRow.appendChild(thWeighted);
+
+    const thTrend = document.createElement("th");
+    thTrend.textContent = "Trend";
+    thTrend.style.minWidth = "56px";
+    thTrend.dataset.extraCol = "1";
+    if (!showMoreColumns) thTrend.style.display = "none";
+    headerRow.appendChild(thTrend);
+
+    tableHead.appendChild(headerRow);
+
+    // ── Data rows ─────────────────────────────────────────────────────────────
+    let isFirstRow = true;
+    for (const student of students) {
+      const tr = document.createElement("tr");
+      if (isFirstRow) {
+        tr.classList.add("gb-highlighted");
+        isFirstRow = false;
+      }
+
+      const studentScoreMap = scoreMap.get(student.code);
+      const completedCount = studentScoreMap
+        ? [...studentScoreMap.values()].filter(v => typeof v === "number").length
+        : 0;
+      const totalAssigned = allDraftsFlat.length;
+      const rowAverage = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
+      const trend = calculateTrend(student.code, scoreMap, allDraftsFlat);
+
+      // Student cell (sticky) with hover card
+      const tdStudent = document.createElement("td");
+      tdStudent.className = "gb-student-cell";
+      tdStudent.textContent = student.name || student.code;
+      const trendLabel = trend === "up" ? "↗ Improving" : trend === "down" ? "↘ Declining" : "→ Steady";
+      tdStudent.dataset.tooltip = JSON.stringify({
+        name: student.name || student.code,
+        code: student.code,
+        completed: completedCount,
+        total: totalAssigned,
+        avg: rowAverage,
+        trend: trendLabel
+      });
+      tdStudent.classList.add("gb-has-stats");
+      tr.appendChild(tdStudent);
+
+      // Group cells
+      for (const group of groups) {
+        const isExpanded = expandedGroups.has(group.series);
+        const groupAvg = calculateGroupAverage(student.code, scoreMap, group.drafts);
+        const done = countGroupCompleted(student.code, scoreMap, group.drafts);
+
+        // Group summary cell (present whether collapsed or expanded)
+        const tdGroupSummary = document.createElement("td");
+        tdGroupSummary.className = "gb-group-cell gb-score-cell";
+        if (groupAvg !== null) {
+          const avgLine = document.createElement("div");
+          avgLine.className = "gb-score-pct";
+          avgLine.textContent = `${groupAvg}%`;
+          tdGroupSummary.appendChild(avgLine);
+
+          const countLine = document.createElement("div");
+          countLine.className = "gb-score-pts-line";
+          countLine.textContent = `${done}/${group.drafts.length}`;
+          tdGroupSummary.appendChild(countLine);
+
+          const colorClass = scoreColorClass(groupAvg);
+          if (colorClass) tdGroupSummary.classList.add(colorClass);
+        } else {
+          tdGroupSummary.textContent = "—";
+        }
+        tr.appendChild(tdGroupSummary);
+
+        if (isExpanded) {
+          // Individual score cells within this expanded group (Option D)
+          for (const draft of group.drafts) {
+            tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
+          }
+        }
+      }
+
+      // Ungrouped score cells (Option D)
+      for (const draft of ungrouped) {
+        tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
+      }
+
+      // Average / Weighted / Trend cells
+      const tdAvg = document.createElement("td");
+      tdAvg.className = "gb-score-cell";
+      tdAvg.dataset.extraCol = "1";
+      if (!showMoreColumns) tdAvg.style.display = "none";
+      if (rowAverage !== null) {
+        tdAvg.textContent = `${rowAverage}%`;
+        const colorClass = scoreColorClass(rowAverage);
+        if (colorClass) tdAvg.classList.add(colorClass);
+      } else {
+        tdAvg.textContent = "—";
+      }
+      tr.appendChild(tdAvg);
+
+      const tdWeighted = document.createElement("td");
+      tdWeighted.className = "gb-score-cell";
+      tdWeighted.dataset.extraCol = "1";
+      if (!showMoreColumns) tdWeighted.style.display = "none";
+      const weighted = calculateWeightedAverage(student.code, scoreMap, allDraftsFlat);
+      if (weighted !== null) {
+        tdWeighted.textContent = `${weighted}%`;
+        const colorClass = scoreColorClass(weighted);
+        if (colorClass) tdWeighted.classList.add(colorClass);
+      } else {
+        tdWeighted.textContent = "—";
+      }
+      tr.appendChild(tdWeighted);
+
+      const tdTrend = document.createElement("td");
+      tdTrend.className = "gb-score-cell";
+      tdTrend.dataset.extraCol = "1";
+      tdTrend.style.textAlign = "center";
+      if (!showMoreColumns) tdTrend.style.display = "none";
+      const trendSpan = document.createElement("span");
+      if (trend === "up") {
+        trendSpan.className = "gb-trend-arrow gb-trend-up";
+        trendSpan.textContent = "↗️";
+      } else if (trend === "down") {
+        trendSpan.className = "gb-trend-arrow gb-trend-down";
+        trendSpan.textContent = "↘️";
+      } else {
+        trendSpan.className = "gb-trend-arrow gb-trend-flat";
+        trendSpan.textContent = "→";
+      }
+      tdTrend.appendChild(trendSpan);
+      tr.appendChild(tdTrend);
+
+      tableBody.appendChild(tr);
+    }
+
+    // ── Summary row ───────────────────────────────────────────────────────────
+    const summaryRow = document.createElement("tr");
+    summaryRow.className = "gb-summary-row";
+
+    const tdSummaryLabel = document.createElement("td");
+    tdSummaryLabel.className = "gb-student-cell";
+    tdSummaryLabel.textContent = "Class Average";
+    summaryRow.appendChild(tdSummaryLabel);
+
+    for (const group of groups) {
+      const isExpanded = expandedGroups.has(group.series);
+
+      // Group summary average across all students
+      const groupScores = [];
+      for (const student of students) {
+        const avg = calculateGroupAverage(student.code, scoreMap, group.drafts);
+        if (avg !== null) groupScores.push(avg);
+      }
+      const tdGroupSummary = document.createElement("td");
+      tdGroupSummary.className = "gb-group-cell gb-score-cell";
+      if (groupScores.length > 0) {
+        const overallGroupAvg = Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length);
+        tdGroupSummary.textContent = `${overallGroupAvg}%`;
+        const colorClass = scoreColorClass(overallGroupAvg);
+        if (colorClass) tdGroupSummary.classList.add(colorClass);
+      } else {
+        tdGroupSummary.textContent = "—";
+      }
+      summaryRow.appendChild(tdGroupSummary);
+
+      if (isExpanded) {
+        for (const draft of group.drafts) {
+          const td = document.createElement("td");
+          td.className = "gb-score-cell";
+          const avg = calculateColumnAverage(draft.id, scoreMap, students);
+          if (avg !== null) {
+            td.textContent = `${avg}%`;
+            const colorClass = scoreColorClass(avg);
+            if (colorClass) td.classList.add(colorClass);
+          } else {
+            td.textContent = "—";
+          }
+          summaryRow.appendChild(td);
+        }
+      }
+    }
+
+    // Ungrouped column averages
+    for (const draft of ungrouped) {
+      const td = document.createElement("td");
+      td.className = "gb-score-cell";
+      const avg = calculateColumnAverage(draft.id, scoreMap, students);
+      if (avg !== null) {
+        td.textContent = `${avg}%`;
+        const colorClass = scoreColorClass(avg);
+        if (colorClass) td.classList.add(colorClass);
+      } else {
+        td.textContent = "—";
+      }
+      summaryRow.appendChild(td);
+    }
+
+    // Overall average / weighted summary cells
+    const tdOverallAvg = document.createElement("td");
+    tdOverallAvg.className = "gb-score-cell";
+    tdOverallAvg.dataset.extraCol = "1";
+    if (!showMoreColumns) tdOverallAvg.style.display = "none";
+    const allScores = [];
+    for (const student of students) {
+      const avg = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
+      if (avg !== null) allScores.push(avg);
+    }
+    const overallAvg = allScores.length > 0
+      ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+      : null;
+    if (overallAvg !== null) {
+      tdOverallAvg.textContent = `${overallAvg}%`;
+      const colorClass = scoreColorClass(overallAvg);
+      if (colorClass) tdOverallAvg.classList.add(colorClass);
+    } else {
+      tdOverallAvg.textContent = "—";
+    }
+    summaryRow.appendChild(tdOverallAvg);
+
+    const tdOverallWeighted = document.createElement("td");
+    tdOverallWeighted.className = "gb-score-cell";
+    tdOverallWeighted.dataset.extraCol = "1";
+    if (!showMoreColumns) tdOverallWeighted.style.display = "none";
+    const allWeightedScores = [];
+    for (const student of students) {
+      const weighted = calculateWeightedAverage(student.code, scoreMap, allDraftsFlat);
+      if (weighted !== null) allWeightedScores.push(weighted);
+    }
+    const overallWeighted = allWeightedScores.length > 0
+      ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+      : null;
+    if (overallWeighted !== null) {
+      tdOverallWeighted.textContent = `${overallWeighted}%`;
+      const colorClass = scoreColorClass(overallWeighted);
+      if (colorClass) tdOverallWeighted.classList.add(colorClass);
+    } else {
+      tdOverallWeighted.textContent = "—";
+    }
+    summaryRow.appendChild(tdOverallWeighted);
+
+    const tdTrendEmpty = document.createElement("td");
+    tdTrendEmpty.className = "gb-score-cell";
+    tdTrendEmpty.dataset.extraCol = "1";
+    if (!showMoreColumns) tdTrendEmpty.style.display = "none";
+    tdTrendEmpty.textContent = "—";
+    summaryRow.appendChild(tdTrendEmpty);
+
+    tableBody.appendChild(summaryRow);
+  }
+
   // Render the gradebook table
   function renderGradebook() {
     const data = buildGradebookData();
@@ -681,7 +1148,7 @@
     const tableHead = $("gbTableHead");
     const tableBody = $("gbTableBody");
 
-    // Sync compact/show-more UI buttons state
+    // Sync compact/show-more/grouped-view UI buttons state
     const btnCompact = $("btnToggleCompact");
     if (btnCompact) {
       btnCompact.textContent = isCompact ? "☑ Compact" : "⊞ Comfortable";
@@ -691,6 +1158,11 @@
     if (btnShowMore) {
       btnShowMore.textContent = showMoreColumns ? "⋯ Show Less" : "⋯ Show More";
       btnShowMore.classList.toggle("primary", showMoreColumns);
+    }
+    const btnGroupedView = $("btnToggleGroupedView");
+    if (btnGroupedView) {
+      btnGroupedView.textContent = isGroupedView ? "⊞ Grouped" : "⊞ Individual";
+      btnGroupedView.classList.toggle("primary", isGroupedView);
     }
 
     // Apply/remove compact class on table wrapper
@@ -712,6 +1184,13 @@
 
     // Build header row
     tableHead.innerHTML = "";
+
+    // Grouped view (Option A): delegate to renderGroupedGradebook
+    if (isGroupedView) {
+      tableBody.innerHTML = "";
+      renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap);
+      return;
+    }
     const headerRow = document.createElement("tr");
 
     // Student name column (sticky)
@@ -2368,6 +2847,20 @@
   }
 
   /**
+   * Toggle grouped / individual column layout
+   */
+  function toggleGroupedView() {
+    isGroupedView = !isGroupedView;
+    expandedGroups.clear();
+    try {
+      localStorage.setItem(PREF_GROUPED_VIEW, isGroupedView ? "true" : "false");
+    } catch {
+      // Storage unavailable — preference won't persist but UI still works
+    }
+    renderGradebook();
+  }
+
+  /**
    * Set column sort order and re-render
    */
   function setSort(value) {
@@ -2545,6 +3038,12 @@
     const btnShowMore = $("btnToggleMoreCols");
     if (btnShowMore) {
       btnShowMore.addEventListener("click", toggleMoreColumns);
+    }
+
+    // Wire grouped/individual view toggle button
+    const btnToggleGroupedView = $("btnToggleGroupedView");
+    if (btnToggleGroupedView) {
+      btnToggleGroupedView.addEventListener("click", toggleGroupedView);
     }
 
     // Wire sort select
