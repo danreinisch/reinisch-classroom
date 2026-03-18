@@ -762,12 +762,12 @@
   // Build an individual assignment <th> element (shared by individual mode and expanded groups)
   function buildAssignmentTh(draft) {
     const th = document.createElement("th");
-    th.style.minWidth = isCompact ? "68px" : "80px";
+    th.style.minWidth = isCompact ? "56px" : "68px";
 
     const fullTitle = draft.title || "(untitled)";
     const titleEl = document.createElement("div");
     titleEl.className = "gb-col-title";
-    titleEl.textContent = fullTitle.length > 15 ? fullTitle.substring(0, 15) + "…" : fullTitle;
+    titleEl.textContent = fullTitle.length > 10 ? fullTitle.substring(0, 10) + "…" : fullTitle;
     titleEl.title = fullTitle;
     th.appendChild(titleEl);
 
@@ -884,25 +884,23 @@
         });
         headerRow.appendChild(th);
       } else {
-        // Expanded: collapse button + individual assignment columns
-        const thGroupLabel = document.createElement("th");
-        thGroupLabel.className = "gb-group-header gb-group-header-expanded";
-        thGroupLabel.style.minWidth = isCompact ? "64px" : "76px";
-
-        const collapseEl = document.createElement("div");
-        collapseEl.className = "gb-group-expand-btn";
-        collapseEl.setAttribute("aria-label", `Collapse ${group.displayName} assignments`);
-        collapseEl.textContent = "▴";
-        thGroupLabel.appendChild(collapseEl);
-
-        thGroupLabel.addEventListener("click", () => {
-          expandedGroups.delete(group.series);
-          renderGradebook();
-        });
-        headerRow.appendChild(thGroupLabel);
-
-        for (const draft of group.drafts) {
-          headerRow.appendChild(buildAssignmentTh(draft));
+        // Expanded: add collapse indicator to first assignment column only (no separate label TH)
+        for (let i = 0; i < group.drafts.length; i++) {
+          const th = buildAssignmentTh(group.drafts[i]);
+          if (i === 0) {
+            th.classList.add("gb-group-first-col");
+            th.style.cursor = "pointer";
+            const collapseEl = document.createElement("div");
+            collapseEl.className = "gb-group-expand-btn";
+            collapseEl.setAttribute("aria-label", `Collapse ${group.displayName} assignments`);
+            collapseEl.textContent = `◂ ${group.displayName}`;
+            th.insertBefore(collapseEl, th.firstChild);
+            th.addEventListener("click", () => {
+              expandedGroups.delete(group.series);
+              renderGradebook();
+            });
+          }
+          headerRow.appendChild(th);
         }
       }
     }
@@ -975,29 +973,29 @@
         const groupAvg = calculateGroupAverage(student.code, scoreMap, group.drafts);
         const done = countGroupCompleted(student.code, scoreMap, group.drafts);
 
-        // Group summary cell (present whether collapsed or expanded)
-        const tdGroupSummary = document.createElement("td");
-        tdGroupSummary.className = "gb-group-cell gb-score-cell";
-        if (groupAvg !== null) {
-          const avgLine = document.createElement("div");
-          avgLine.className = "gb-score-pct";
-          avgLine.textContent = `${groupAvg}%`;
-          tdGroupSummary.appendChild(avgLine);
+        if (!isExpanded) {
+          // Collapsed: single group summary cell
+          const tdGroupSummary = document.createElement("td");
+          tdGroupSummary.className = "gb-group-cell gb-score-cell";
+          if (groupAvg !== null) {
+            const avgLine = document.createElement("div");
+            avgLine.className = "gb-score-pct";
+            avgLine.textContent = `${groupAvg}%`;
+            tdGroupSummary.appendChild(avgLine);
 
-          const countLine = document.createElement("div");
-          countLine.className = "gb-score-pts-line";
-          countLine.textContent = `${done}/${group.drafts.length}`;
-          tdGroupSummary.appendChild(countLine);
+            const countLine = document.createElement("div");
+            countLine.className = "gb-score-pts-line";
+            countLine.textContent = `${done}/${group.drafts.length}`;
+            tdGroupSummary.appendChild(countLine);
 
-          const colorClass = scoreColorClass(groupAvg);
-          if (colorClass) tdGroupSummary.classList.add(colorClass);
+            const colorClass = scoreColorClass(groupAvg);
+            if (colorClass) tdGroupSummary.classList.add(colorClass);
+          } else {
+            tdGroupSummary.textContent = "—";
+          }
+          tr.appendChild(tdGroupSummary);
         } else {
-          tdGroupSummary.textContent = "—";
-        }
-        tr.appendChild(tdGroupSummary);
-
-        if (isExpanded) {
-          // Individual score cells within this expanded group (Option D)
+          // Expanded: individual score cells only (no redundant summary cell)
           for (const draft of group.drafts) {
             tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
           }
@@ -1077,19 +1075,21 @@
         const avg = calculateGroupAverage(student.code, scoreMap, group.drafts);
         if (avg !== null) groupScores.push(avg);
       }
-      const tdGroupSummary = document.createElement("td");
-      tdGroupSummary.className = "gb-group-cell gb-score-cell";
-      if (groupScores.length > 0) {
-        const overallGroupAvg = Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length);
-        tdGroupSummary.textContent = `${overallGroupAvg}%`;
-        const colorClass = scoreColorClass(overallGroupAvg);
-        if (colorClass) tdGroupSummary.classList.add(colorClass);
+      if (!isExpanded) {
+        // Collapsed: single group summary cell
+        const tdGroupSummary = document.createElement("td");
+        tdGroupSummary.className = "gb-group-cell gb-score-cell";
+        if (groupScores.length > 0) {
+          const overallGroupAvg = Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length);
+          tdGroupSummary.textContent = `${overallGroupAvg}%`;
+          const colorClass = scoreColorClass(overallGroupAvg);
+          if (colorClass) tdGroupSummary.classList.add(colorClass);
+        } else {
+          tdGroupSummary.textContent = "—";
+        }
+        summaryRow.appendChild(tdGroupSummary);
       } else {
-        tdGroupSummary.textContent = "—";
-      }
-      summaryRow.appendChild(tdGroupSummary);
-
-      if (isExpanded) {
+        // Expanded: individual column averages only (no redundant summary cell)
         for (const draft of group.drafts) {
           const td = document.createElement("td");
           td.className = "gb-score-cell";
