@@ -853,24 +853,29 @@
 
     for (const group of groups) {
       const isExpanded = expandedGroups.has(group.series);
-      const totalInGroup = group.drafts.length;
-      // Count assignments that have at least one numeric score across any student
-      const gradedInGroup = group.drafts.filter(d =>
-        students.some(s => {
-          const sm = scoreMap.get(s.code);
-          return sm && sm.has(d.id) && typeof sm.get(d.id) === "number";
-        })
-      ).length;
 
       if (!isExpanded) {
         const th = document.createElement("th");
         th.className = "gb-group-header";
-        th.style.minWidth = isCompact ? "80px" : "96px";
+        th.style.minWidth = isCompact ? "80px" : "150px";
 
-        const countEl = document.createElement("div");
-        countEl.className = "gb-group-header-count";
-        countEl.textContent = `${gradedInGroup}/${totalInGroup}`;
-        th.appendChild(countEl);
+        const nameEl = document.createElement("div");
+        nameEl.className = "gb-group-header-name";
+        nameEl.textContent = group.displayName;
+        th.appendChild(nameEl);
+
+        const listEl = document.createElement("div");
+        listEl.className = "gb-group-header-titles";
+        for (const draft of group.drafts) {
+          const titleSpan = document.createElement("div");
+          titleSpan.className = "gb-group-header-title-item";
+          const fullTitle = draft.title || "(untitled)";
+          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+          titleSpan.textContent = (fullTitle.length > 15 ? fullTitle.substring(0, 15) + "…" : fullTitle) + (dateStr ? ` ${dateStr}` : "");
+          titleSpan.title = fullTitle;
+          listEl.appendChild(titleSpan);
+        }
+        th.appendChild(listEl);
 
         const expandEl = document.createElement("div");
         expandEl.className = "gb-group-expand-btn";
