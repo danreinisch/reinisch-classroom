@@ -53,11 +53,11 @@ const local = {
     const map = store.get('iepGoals', {});
     return map[code] || [];
   },
-  async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
+  async upsertGoal({ student_code, code, desc, target = null, status = 'Open', baseline = null, mastery = null }) {
     const map = store.get('iepGoals', {});
     const goals = map[student_code] || [];
     const idx = goals.findIndex(g => g.code === code);
-    const goal = { code, desc, target, status };
+    const goal = { code, desc, target, status, baseline, mastery };
     if (idx >= 0) {
       goals[idx] = { ...goals[idx], ...goal };
     } else {
@@ -1236,7 +1236,7 @@ const remote = {
   async upsertGoal({ student_code, code, desc, target = null, status = 'Open', 
                      measurement_type = 'percent', data_collector = null,
                      data_collector_email = null, class_context = null,
-                     goal_area = null, baseline = null, case_manager = null, version = 1 }) {
+                     goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1 }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
@@ -1248,7 +1248,7 @@ const remote = {
       const fullPayload = { 
         student_id: stu.id, code, desc, target, status,
         measurement_type, data_collector, data_collector_email, class_context,
-        goal_area, baseline, case_manager, version
+        goal_area, baseline, mastery, case_manager, version
       };
       let { data, error } = await supabase.from('goals')
         .upsert(fullPayload, { onConflict: 'student_id,code' })
@@ -1280,7 +1280,7 @@ const remote = {
         .from('goals')
         .select(`id, code, desc, target, status, student_id,
                 measurement_type, data_collector, data_collector_email, class_context,
-                goal_area, baseline, case_manager, version,
+                goal_area, baseline, mastery, case_manager, version,
                 students!inner(code)`)
         .order('code', { foreignTable: 'students', ascending: true });
       
@@ -1317,6 +1317,7 @@ const remote = {
         class_context: g.class_context,
         goal_area: g.goal_area,
         baseline: g.baseline,
+        mastery: g.mastery,
         case_manager: g.case_manager,
         version: g.version
       }));

@@ -1701,12 +1701,12 @@
         </label>
         
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
-          <label>Baseline %*
-            <input type="number" id="replaceGoalBaseline" min="0" max="100" required />
+          <label>Baseline*
+            <input type="text" id="replaceGoalBaseline" required />
           </label>
           
-          <label>Target %*
-            <input type="number" id="replaceGoalTarget" min="0" max="100" required />
+          <label>Mastery*
+            <input type="text" id="replaceGoalMastery" />
           </label>
         </div>
         
@@ -5028,8 +5028,9 @@
           goal_code: goalEl.querySelector('.goal-code')?.value || '',
           goal_area: goalEl.querySelector('.goal-area')?.value || '',
           goal_text: goalEl.querySelector('.goal-text')?.value || '',
-          baseline: parseInt(goalEl.querySelector('.goal-baseline')?.value) || 0,
-          target: goalEl.querySelector('.goal-target')?.value || '80',
+          baseline: goalEl.querySelector('.goal-baseline')?.value?.trim() || '',
+          mastery: goalEl.querySelector('.goal-mastery')?.value?.trim() || '',
+          target: goalEl.querySelector('.goal-target')?.value?.trim() || '',
           case_manager: goalEl.querySelector('.goal-case-manager')?.value || 'Teacher',
           active: goalEl.querySelector('.goal-active')?.checked !== false
         })).filter(g => g.goal_code);
@@ -5424,14 +5425,14 @@
       qs('#replaceGoalOldInfo').innerHTML = `
         <strong>${goal.code}</strong> (v${goal.version || 1}) - ${goal.goal_area || 'N/A'}<br>
         ${goal.desc}<br>
-        <span class="subtle" style="font-size:11px">Baseline: ${goal.baseline}% • Target: ${goal.target}%</span>
+        <span class="subtle" style="font-size:11px">Baseline: ${goal.baseline || 'N/A'} • Mastery: ${goal.mastery || goal.target || 'N/A'}</span>
       `;
       
       // Pre-populate new goal fields with current values
       qs('#replaceGoalCode').value = ''; // Leave blank for auto-increment
       qs('#replaceGoalText').value = goal.desc || '';
       qs('#replaceGoalBaseline').value = goal.baseline || '';
-      qs('#replaceGoalTarget').value = goal.target || '';
+      qs('#replaceGoalMastery').value = goal.mastery || goal.target || '';
       qs('#replaceGoalStartDate').value = new Date().toISOString().split('T')[0];
       qs('#replaceGoalCaseManager').value = goal.case_manager || '';
       
@@ -5448,8 +5449,8 @@
           goal_code: qs('#replaceGoalCode').value || replaceGoalState.oldGoal.code,
           goal_text: qs('#replaceGoalText').value,
           goal_area: replaceGoalState.oldGoal.goal_area,
-          baseline: parseInt(qs('#replaceGoalBaseline').value),
-          target: qs('#replaceGoalTarget').value,
+          baseline: qs('#replaceGoalBaseline').value.trim(),
+          mastery: qs('#replaceGoalMastery').value.trim(),
           start_date: qs('#replaceGoalStartDate').value,
           case_manager: qs('#replaceGoalCaseManager').value
         };
@@ -5712,16 +5713,22 @@
             </label>
           </div>
           
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
             <div>
-              <label for="baseline-${i}">Baseline %*
-                <input type="number" id="baseline-${i}" min="0" max="100" value="0" required aria-required="true" />
+              <label for="baseline-${i}">Baseline*
+                <input type="text" id="baseline-${i}" value="" required aria-required="true" />
               </label>
             </div>
             
             <div>
-              <label for="target-${i}">Mastery/Target %*
-                <input type="number" id="target-${i}" min="0" max="100" value="80" required aria-required="true" />
+              <label for="mastery-${i}">Mastery*
+                <input type="text" id="mastery-${i}" value="" required aria-required="true" />
+              </label>
+            </div>
+            
+            <div>
+              <label for="target-${i}">Target
+                <input type="text" id="target-${i}" value="" />
               </label>
             </div>
           </div>
@@ -5818,8 +5825,9 @@
         
         const goalCode = qs(`#goalCode-${i}`).value.trim();
         const goalText = qs(`#goalText-${i}`).value.trim();
-        const baseline = parseInt(qs(`#baseline-${i}`).value);
-        const target = parseInt(qs(`#target-${i}`).value);
+        const baseline = qs(`#baseline-${i}`).value.trim();
+        const mastery = qs(`#mastery-${i}`).value.trim();
+        const target = qs(`#target-${i}`).value.trim();
         const caseManager = qs(`#caseManager-${i}`).value.trim();
         const active = qs(`#active-${i}`).checked;
         
@@ -5828,6 +5836,7 @@
           goal_code: goalCode,
           goal_text: goalText,
           baseline,
+          mastery,
           target,
           case_manager: caseManager,
           active
@@ -5877,18 +5886,18 @@
           break;
         }
         
-        // Validate percentages
-        const baseline = parseInt(qs(`#baseline-${i}`).value);
-        const target = parseInt(qs(`#target-${i}`).value);
+        // Validate baseline and mastery (now text, just check they're not empty)
+        const baseline = qs(`#baseline-${i}`).value.trim();
+        const mastery = qs(`#mastery-${i}`).value.trim();
         
-        if (isNaN(baseline) || baseline < 0 || baseline > 100) {
-          showGoalWizardError(1, `Goal ${i + 1}: Baseline must be between 0 and 100`);
+        if (!baseline) {
+          showGoalWizardError(1, `Goal ${i + 1}: Baseline is required`);
           isValid = false;
           break;
         }
         
-        if (isNaN(target) || target < 0 || target > 100) {
-          showGoalWizardError(1, `Goal ${i + 1}: Target must be between 0 and 100`);
+        if (!mastery) {
+          showGoalWizardError(1, `Goal ${i + 1}: Mastery is required`);
           isValid = false;
           break;
         }

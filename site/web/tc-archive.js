@@ -319,9 +319,9 @@
           </div>
           <div class="ar-goal-desc">${escapeHtml(latest.desc || 'No description')}</div>
           <div class="ar-goal-stats">
-            <span>Baseline: ${latest.baseline || 0}%</span>
+            <span>Baseline: ${escapeHtml(String(latest.baseline || 'N/A'))}</span>
             <span>→</span>
-            <span>Target: ${latest.target || 100}%</span>
+            <span>Mastery: ${escapeHtml(String(latest.mastery || latest.target || 'N/A'))}</span>
             <span>→</span>
             <span>Final Avg: ${finalAvg}${finalAvg !== 'N/A' ? '%' : ''}</span>
           </div>
@@ -586,6 +586,7 @@
         <th>Area</th>
         <th>Description</th>
         <th>Baseline</th>
+        <th>Mastery</th>
         <th>Target</th>
       </tr>
     </thead>
@@ -595,8 +596,9 @@
         <td>${escapeXml(g.code)}</td>
         <td>${escapeXml(g.goal_area || 'N/A')}</td>
         <td>${escapeXml(g.desc || 'N/A')}</td>
-        <td>${g.baseline || 0}%</td>
-        <td>${g.target || 100}%</td>
+        <td>${escapeXml(String(g.baseline || 'N/A'))}</td>
+        <td>${escapeXml(String(g.mastery || g.target || 'N/A'))}</td>
+        <td>${escapeXml(String(g.target || 'N/A'))}</td>
       </tr>`).join('')}
     </tbody>
   </table>`}
