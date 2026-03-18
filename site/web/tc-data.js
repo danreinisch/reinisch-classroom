@@ -35,6 +35,28 @@
     return date.toISOString().split("T")[0];
   }
 
+  /**
+   * Parse a goal value (baseline or mastery) to a number.
+   * Supports: plain numbers ("72"), percentages ("60%"), fractions ("3/5" → 60).
+   * Returns null if the value cannot be parsed.
+   * @param {string|number|null} val
+   * @returns {number|null}
+   */
+  function parseGoalValue(val) {
+    if (val == null || val === '') return null;
+    const s = String(val).trim();
+    const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+    if (fracMatch) {
+      const num = parseFloat(fracMatch[1]);
+      const den = parseFloat(fracMatch[2]);
+      return den !== 0 ? (num / den) * 100 : null;
+    }
+    const pctMatch = s.match(/^(\d+(?:\.\d+)?)%$/);
+    if (pctMatch) return parseFloat(pctMatch[1]);
+    const num = parseFloat(s);
+    return isNaN(num) ? null : num;
+  }
+
   // Helper to determine score color class based on percentage
   function scoreColorClass(score) {
     if (score == null || isNaN(score)) return "";
@@ -352,10 +374,12 @@
     const entries = getGoalProgressEntries(goal.code, studentCode);
     const avg = calculateGoalAverage(goal.code, studentCode);
     
-    const baseline = goal.baseline || 0;
-    const target = goal.target || 100;
+    const baseline = goal.baseline || 'N/A';
+    const mastery = goal.mastery || goal.target || 'N/A';
+    const target = goal.target || 'N/A';
     const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
-    const delta = current != null ? current - baseline : null;
+    const baselineNum = parseFloat(goal.baseline) || 0;
+    const delta = current != null ? current - baselineNum : null;
     
     // Determine trend
     let trend = '→';
@@ -373,8 +397,9 @@
     
     return `
       <div class="dt-stats">
-        <span>Baseline: <strong>${baseline}%</strong></span>
-        <span>Target: <strong>${target}%</strong></span>
+        <span>Baseline: <strong>${baseline}</strong></span>
+        <span>Mastery: <strong>${mastery}</strong></span>
+        <span>Target: <strong>${target}</strong></span>
         <span>Current: <strong class="${currentClass}">${current != null ? current + '%' : 'N/A'}</strong></span>
         <span>Rolling Avg: <strong class="${avgClass}">${avg != null ? avg + '%' : 'N/A'}</strong></span>
         <span>Delta: <strong>${delta != null ? (delta >= 0 ? '+' : '') + delta : 'N/A'}</strong></span>
@@ -974,8 +999,9 @@
     // Get data entries and work samples
     const entries = getGoalProgressEntries(goal.code, studentCode);
     const avg = calculateGoalAverage(goal.code, studentCode);
-    const baseline = goal.baseline || 0;
-    const target = goal.target || 100;
+    const baseline = goal.baseline || 'N/A';
+    const mastery = goal.mastery || goal.target || 'N/A';
+    const target = goal.target || 'N/A';
     const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
     
     // Calculate trend
@@ -1030,8 +1056,9 @@
   <p><strong>Quarter:</strong> ${getQuarterLabel(currentQuarterFilter)}</p>
   
   <h2>Summary</h2>
-  <p><strong>Baseline:</strong> ${baseline}%</p>
-  <p><strong>Target:</strong> ${target}%</p>
+  <p><strong>Baseline:</strong> ${baseline}</p>
+  <p><strong>Mastery:</strong> ${mastery}</p>
+  <p><strong>Target:</strong> ${target}</p>
   <p><strong>Current Value:</strong> ${current != null ? current + '%' : 'N/A'}</p>
   <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? avg + '%' : 'N/A'}</p>
   <p><strong>Trend:</strong> ${escapeXml(trend)}</p>
@@ -1439,8 +1466,9 @@
       const goal = goalMap.get(`${p.student_code}_${p.goal_code}`);
       const issueKey = `${p.student_code}_${p.goal_code}_${p.date}`;
       
-      // Progress > Mastery (using goal.target field which represents mastery threshold percentage)
-      if (goal && goal.target && p.percent > goal.target) {
+      // Progress > Mastery (using goal.mastery or goal.target as mastery threshold)
+      const masteryThreshold = parseGoalValue(goal.mastery || goal.target);
+      if (goal && masteryThreshold != null && p.percent > masteryThreshold) {
         const key = `exceeds_mastery_${issueKey}`;
         if (!dismissed.has(key)) {
           issues.push({
@@ -1449,7 +1477,7 @@
             severity: 'warning',
             student_code: p.student_code,
             goal_code: p.goal_code,
-            message: `Progress (${p.percent}%) exceeds mastery target (${goal.target}%)`,
+            message: `Progress (${p.percent}%) exceeds mastery target (${goal.mastery || goal.target})`,
             date: p.date
           });
         }

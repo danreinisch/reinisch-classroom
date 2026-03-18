@@ -634,10 +634,15 @@
       ? `<span class="st-badge st-badge-measurement"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(goal.measurement_type)}</span>`
       : '';
     
-    // Baseline and target display with friendly empty states
+    // Baseline, mastery, and target display with friendly empty states
     const baselineHtml = (goal.baseline != null && goal.baseline !== '')
-      ? escapeHtml(formatProgressValue(goal.baseline, goal.measurement_type))
+      ? escapeHtml(String(goal.baseline))
       : '<span class="st-metric-empty">Not yet set</span>';
+    const masteryHtml = (goal.mastery != null && goal.mastery !== '')
+      ? escapeHtml(String(goal.mastery))
+      : (goal.target != null && goal.target !== '')
+        ? escapeHtml(formatProgressValue(goal.target, goal.measurement_type))
+        : '<span class="st-metric-empty">Not yet set</span>';
     const targetHtml = (goal.target != null && goal.target !== '')
       ? escapeHtml(formatProgressValue(goal.target, goal.measurement_type))
       : '<span class="st-metric-empty">Not yet set</span>';
@@ -743,6 +748,10 @@
           <div class="st-metric">
             <span class="st-metric-label">Baseline:</span>
             <span class="st-metric-value">${baselineHtml}</span>
+          </div>
+          <div class="st-metric">
+            <span class="st-metric-label">Mastery:</span>
+            <span class="st-metric-value">${masteryHtml}</span>
           </div>
           <div class="st-metric">
             <span class="st-metric-label">Target:</span>

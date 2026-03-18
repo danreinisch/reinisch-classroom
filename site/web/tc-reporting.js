@@ -91,6 +91,28 @@
   }
 
   /**
+   * Parse a goal value (baseline or mastery) to a number.
+   * Supports: plain numbers ("72"), percentages ("60%"), fractions ("3/5" → 60).
+   * Returns null if the value cannot be parsed.
+   * @param {string|number|null} val
+   * @returns {number|null}
+   */
+  function parseGoalValue(val) {
+    if (val == null || val === '') return null;
+    const s = String(val).trim();
+    const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+    if (fracMatch) {
+      const num = parseFloat(fracMatch[1]);
+      const den = parseFloat(fracMatch[2]);
+      return den !== 0 ? (num / den) * 100 : null;
+    }
+    const pctMatch = s.match(/^(\d+(?:\.\d+)?)%$/);
+    if (pctMatch) return parseFloat(pctMatch[1]);
+    const num = parseFloat(s);
+    return isNaN(num) ? null : num;
+  }
+
+  /**
    * Returns true if a goal should be considered active/open.
    * Accepts any status except 'closed' or 'archived' (case-insensitive).
    * Goals with a missing status are treated as active.
@@ -600,8 +622,8 @@
             </div>
             <div class="rp-goal-desc">${escapeHtml(goal.desc || "No description")}</div>
             <div class="rp-goal-targets">
-              <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
-              <div><strong>Target:</strong> ${goal.target || 100}%</div>
+              <div><strong>Baseline:</strong> ${goal.baseline || 'N/A'}</div>
+              <div><strong>Mastery:</strong> ${goal.mastery || goal.target || 'N/A'}</div>
               <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
               <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
             </div>
@@ -1249,8 +1271,8 @@ ${narrative}`;
   function buildRichProgressNarrative(student, goal, quarterData, prevData, quarterLabel) {
     const name = ((student.name || student.code || "Student").split(" ")[0]);
     const area = goal.goal_area || goal.code || "this goal area";
-    const baselineVal = parseFloat(goal.baseline) || 0;
-    const targetVal = parseFloat(goal.target) || 80;
+    const baselineVal = parseGoalValue(goal.baseline) ?? 0;
+    const targetVal = parseGoalValue(goal.mastery || goal.target) ?? 80;
     const avg = quarterData.average;
     const count = quarterData.count;
     const quarter = quarterLabel || "this quarter";
@@ -1280,7 +1302,7 @@ ${narrative}`;
       ];
       const closings = [
         `Increased data collection opportunities are recommended for the next quarter.`,
-        `Additional data points should be gathered to accurately measure progress toward the ${targetVal.toFixed(0)}% criterion.`,
+        `Additional data points should be gathered to accurately measure progress toward the ${goal.mastery || goal.target || targetVal.toFixed(0)} criterion.`,
         `It is recommended that data collection for this goal be prioritized in the upcoming quarter.`,
       ];
       return {
@@ -1365,14 +1387,15 @@ ${narrative}`;
 
     // --- Middle sentence (data summary) ---
     const avgStr = avg.toFixed(0);
-    const baselineStr = baselineVal.toFixed(0);
+    // Display the raw text baseline value (e.g. "1/5", "60%"); fall back to numeric string
+    const baselineStr = (goal.baseline != null && goal.baseline !== '') ? String(goal.baseline) : baselineVal.toFixed(0);
     const countDesc = `${count} data point${count !== 1 ? "s" : ""}`;
     const comparison =
       baselineComp === "above"
-        ? `up from a baseline of ${baselineStr}%`
+        ? `up from a baseline of ${baselineStr}`
         : baselineComp === "below"
-        ? `compared to a baseline of ${baselineStr}%`
-        : `consistent with a baseline of ${baselineStr}%`;
+        ? `compared to a baseline of ${baselineStr}`
+        : `consistent with a baseline of ${baselineStr}`;
 
     let middle;
     if (dataLevel === "limited") {
@@ -1390,7 +1413,10 @@ ${narrative}`;
     }
 
     // --- Closing sentence (target proximity) ---
-    const targetStr = targetVal.toFixed(0);
+    // Display the raw mastery text value (e.g. "80%", "3/5"); fall back to numeric string
+    const targetStr = (goal.mastery != null && goal.mastery !== '') ? String(goal.mastery)
+      : (goal.target != null && goal.target !== '') ? String(goal.target)
+      : targetVal.toFixed(0);
     let closing;
     if (targetProx === "met") {
       closing = pick([

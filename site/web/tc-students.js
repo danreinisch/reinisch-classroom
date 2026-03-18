@@ -1440,6 +1440,10 @@
             <input type="text" class="st-form-input" name="baseline" value="${escapeHtml(goal.baseline || '')}" />
           </div>
           <div class="st-form-group">
+            <label class="st-form-label">Mastery</label>
+            <input type="text" class="st-form-input" name="mastery" value="${escapeHtml(goal.mastery || '')}" />
+          </div>
+          <div class="st-form-group">
             <label class="st-form-label">Target</label>
             <input type="text" class="st-form-input" name="target" value="${escapeHtml(goal.target || '')}" />
           </div>
@@ -1956,6 +1960,7 @@
       desc: form.querySelector('[name="goal_desc"]').value,
       measurement_type: form.querySelector('[name="measurement_type"]').value,
       baseline: form.querySelector('[name="baseline"]').value,
+      mastery: form.querySelector('[name="mastery"]').value,
       target: form.querySelector('[name="target"]').value,
       case_manager: form.querySelector('[name="case_manager"]').value,
       data_collector: form.querySelector('[name="data_collector"]').value,
@@ -2345,6 +2350,10 @@
             <input type="text" name="baseline" class="st-form-input" required>
           </div>
           <div class="st-form-group">
+            <label class="st-form-label">Mastery:</label>
+            <input type="text" name="mastery" class="st-form-input">
+          </div>
+          <div class="st-form-group">
             <label class="st-form-label">Target:</label>
             <input type="text" name="target" class="st-form-input" required>
           </div>
@@ -2397,6 +2406,7 @@
       goal_text: formData.get('goal_text'),
       measurement_type: formData.get('measurement_type'),
       baseline: formData.get('baseline'),
+      mastery: formData.get('mastery'),
       target: formData.get('target'),
       case_manager: formData.get('case_manager'),
       data_collector: formData.get('data_collector'),
@@ -2872,6 +2882,10 @@
                 <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="baseline" value="${escapeHtml(goal.baseline || '')}" required>
               </div>
               <div class="st-form-group">
+                <label class="st-form-label">Mastery</label>
+                <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="mastery" value="${escapeHtml(goal.mastery || '')}">
+              </div>
+              <div class="st-form-group">
                 <label class="st-form-label">Target</label>
                 <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="target" value="${escapeHtml(goal.target || '')}" required>
               </div>
@@ -2946,6 +2960,7 @@
           desc: '',
           measurement_type: 'Accuracy',
           baseline: '',
+          mastery: '',
           target: '',
           case_manager: student.primary_case_manager || '',
           data_collector: 'Dan Reinisch',
@@ -3145,8 +3160,11 @@
       'Student Code IEP Goal Code',
       'Goal Area',
       'Measurement Type',
+      'Baseline',
+      'Mastery',
       'Teacher to Collect Data',
-      'Teacher to Collect Data Email'
+      'Teacher to Collect Data Email',
+      'Student: Active/Inactive'
     ];
     
     const csvContent = headers.join(',') + '\n';
@@ -3184,6 +3202,9 @@
       else if (normalized === 'class') columnMap.class = index;
       else if (normalized === 'goal area') columnMap.goal_area = index;
       else if (normalized === 'case manager') columnMap.case_manager = index;
+      else if (normalized === 'baseline') columnMap.baseline = index;
+      else if (normalized === 'mastery') columnMap.mastery = index;
+      else if (normalized === 'student: active/inactive' || normalized === 'active/inactive') columnMap.active_status = index;
       else if (normalized.includes('teacher to collect data') && !normalized.includes('email')) columnMap.data_collector = index;
       else if (normalized.includes('teacher to collect data email')) columnMap.data_collector_email = index;
       // More flexible matching for IEP due date
@@ -3257,6 +3278,9 @@
           primary_case_manager: row[columnMap.case_manager]?.trim() || null,
           iep_due: iepDueParsed,
           eval_due: evalDueParsed,
+          active: columnMap.active_status !== undefined
+            ? (row[columnMap.active_status]?.trim().toLowerCase() !== 'inactive')
+            : true,
           enrollments: new Set(),
           goals: [],
           isExisting: existingCodes.has(code)
@@ -3307,6 +3331,8 @@
           code: finalGoalCode, // CSV column is 'goal_code' but DB field is 'code'
           goal_area: row[columnMap.goal_area]?.trim(),
           measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
+          baseline: row[columnMap.baseline]?.trim() || null,
+          mastery: row[columnMap.mastery]?.trim() || null,
           case_manager: row[columnMap.case_manager]?.trim(),
           // Store multi-value data_collector as-is (don't split on commas)
           data_collector: row[columnMap.data_collector]?.trim(),
@@ -3575,6 +3601,7 @@
           primary_case_manager: studentData.primary_case_manager,
           iep_due: studentData.iep_due,
           eval_due: studentData.eval_due,
+          active: studentData.active !== undefined ? studentData.active : true,
           status: 'active'
         });
 
@@ -3596,6 +3623,8 @@
             goal_text: goal.goal_text,
             goal_area: goal.goal_area,
             measurement_type: goal.measurement_type,
+            baseline: goal.baseline,
+            mastery: goal.mastery,
             case_manager: goal.case_manager,
             data_collector: goal.data_collector,
             data_collector_email: goal.data_collector_email,
@@ -3641,6 +3670,31 @@
   // ============================================================================
   // IEP COMPLIANCE DASHBOARD FUNCTIONS
   // ============================================================================
+
+  /**
+   * Parse a goal value (baseline or mastery) to a number.
+   * Supports: plain numbers ("72"), percentages ("60%"), fractions ("3/5" → 60).
+   * Returns null if the value cannot be parsed.
+   * @param {string|number|null} val
+   * @returns {number|null}
+   */
+  function parseGoalValue(val) {
+    if (val == null || val === '') return null;
+    const s = String(val).trim();
+    // Fraction format: "3/5"
+    const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+    if (fracMatch) {
+      const num = parseFloat(fracMatch[1]);
+      const den = parseFloat(fracMatch[2]);
+      return den !== 0 ? (num / den) * 100 : null;
+    }
+    // Percentage format: "60%"
+    const pctMatch = s.match(/^(\d+(?:\.\d+)?)%$/);
+    if (pctMatch) return parseFloat(pctMatch[1]);
+    // Plain number: "72"
+    const num = parseFloat(s);
+    return isNaN(num) ? null : num;
+  }
 
   /**
    * Linear regression helper for goal mastery predictions
@@ -3765,10 +3819,10 @@
     const MS_PER_DAY = 86400000;
     const dateRange = sorted.length === 1 ? MS_PER_DAY : (maxDate - minDate);
     
-    const baseline = goal.baseline || 0;
-    const mastery = goal.mastery || 100;
-    const maxY = Math.max(100, mastery, ...sorted.map(p => p.percent));
-    const minY = Math.min(0, baseline);
+    const baselineNum = parseGoalValue(goal.baseline) ?? 0;
+    const masteryNum = parseGoalValue(goal.mastery || goal.target) ?? 100;
+    const maxY = Math.max(100, masteryNum, ...sorted.map(p => p.percent));
+    const minY = Math.min(0, baselineNum);
     // Handle all points having same value by adding small range
     const yRange = (maxY - minY) || 10;
     
@@ -3803,8 +3857,8 @@
     }).join('');
     
     // Baseline and mastery lines
-    const baselineY = scaleY(baseline);
-    const masteryY = scaleY(mastery);
+    const baselineY = scaleY(baselineNum);
+    const masteryY = scaleY(masteryNum);
     
     return `
       <div class="st-timeline-chart-container" style="margin-bottom: 24px;">
@@ -3814,14 +3868,14 @@
           <line x1="${padding.left}" y1="${baselineY}" x2="${width - padding.right}" y2="${baselineY}" 
                 stroke="#9ca3af" stroke-width="2" stroke-dasharray="5,5" />
           <text x="${padding.left - 5}" y="${baselineY - 5}" fill="#9ca3af" font-size="10" text-anchor="end">
-            Baseline: ${baseline}%
+            Baseline: ${escapeHtml(String(goal.baseline || 0))}
           </text>
           
           <!-- Mastery line (gold dashed) -->
           <line x1="${padding.left}" y1="${masteryY}" x2="${width - padding.right}" y2="${masteryY}" 
                 stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5" />
           <text x="${padding.left - 5}" y="${masteryY - 5}" fill="#fbbf24" font-size="10" text-anchor="end">
-            Target: ${mastery}%
+            Mastery: ${escapeHtml(String(goal.mastery || goal.target || 100))}
           </text>
           
           <!-- Progress line (teal/green) -->
@@ -4000,10 +4054,11 @@
       const projectionDate = iepDue || new Date(new Date().setFullYear(new Date().getFullYear() + 1));
       const daysToProject = Math.floor((projectionDate - startDate) / (1000 * 60 * 60 * 24));
       const projected = predictAt(regression, daysToProject);
-      const mastery = goal.mastery || 80;
+      const masteryRaw = goal.mastery || goal.target || 80;
+      const masteryNum = parseGoalValue(masteryRaw) ?? 80;
       
       let status, color;
-      if (projected >= mastery) {
+      if (projected >= masteryNum) {
         status = '🟢 On track to meet mastery';
         color = '#22c55e';
       } else if (regression.slope > 0) {
@@ -4019,7 +4074,7 @@
           <div style="font-weight: 600;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
           <div style="margin-top: 8px; font-size: 13px;">
             Projected to reach <strong>${Math.round(projected)}%</strong> by ${iepDue ? formatDate(iepDue) : 'next year'} 
-            (target: <strong>${mastery}%</strong>)
+            (target: <strong>${escapeHtml(String(masteryRaw))}</strong>)
           </div>
           <div style="margin-top: 8px; color: ${color}; font-weight: 600; font-size: 14px;">
             ${status}

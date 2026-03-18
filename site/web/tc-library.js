@@ -4126,8 +4126,8 @@
         const progressCell = isParent
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
           : (avg != null ? `${avg}%` : '—');
-        const target = goal.target != null ? `${esc(String(goal.target))}%` : '—';
-        const baseline = goal.baseline != null ? `${esc(String(goal.baseline))}%` : '—';
+        const target = goal.target != null ? esc(String(goal.target)) : '—';
+        const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
         const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
         return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${target}</td>${adminCols}</tr>`;
       }).join('');
@@ -4315,8 +4315,8 @@
         const progressCell = isParent
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
           : (avg != null ? `${avg}%` : '—');
-        const target = goal.target != null ? `${esc(String(goal.target))}%` : '—';
-        const baseline = goal.baseline != null ? `${esc(String(goal.baseline))}%` : '—';
+        const target = goal.target != null ? esc(String(goal.target)) : '—';
+        const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
         const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
         return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${target}</td>${adminCols}</tr>`;
       }).join('');
@@ -4547,9 +4547,9 @@
             <td>${esc(goal.code || goal.id || '—')}</td>
             <td>${esc(goal.area || goal.skill_area || '—')}</td>
             <td style="font-size:12px;">${esc(goal.desc || goal.description || '—')}</td>
-            <td>${goal.baseline != null ? esc(String(goal.baseline)) + '%' : '—'}</td>
+            <td>${goal.baseline != null ? esc(String(goal.baseline)) : '—'}</td>
             <td>${esc(progress)}</td>
-            <td>${goal.target != null ? esc(String(goal.target)) + '%' : '—'}</td>
+            <td>${goal.target != null ? esc(String(goal.target)) : '—'}</td>
             ${dpCol}
           </tr>`;
         }).join('');
