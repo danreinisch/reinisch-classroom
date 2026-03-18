@@ -438,6 +438,11 @@
     const contentEl = $("ovAtRiskContent");
     if (!contentEl) return;
 
+    // Thresholds for at-risk classification and near-mastery callout
+    const STALLED_THRESHOLD = 5;       // ≤5% above baseline counts as "stalled"
+    const NEAR_MASTERY_THRESHOLD = 5;  // within 5% of mastery counts as "near mastery"
+    const BAR_PADDING = 1.1;           // 10% padding above max value for progress bar scale
+
     const regressing = [];
     const stalled = [];
     const nearMastery = [];
@@ -475,8 +480,8 @@
           currentRaw: recent.value,
         };
 
-        // Near mastery: within 5% of mastery and not yet there
-        if (masteryNum != null && currentNum >= masteryNum - 5 && currentNum < masteryNum) {
+        // Near mastery: within threshold of mastery and not yet there
+        if (masteryNum != null && currentNum >= masteryNum - NEAR_MASTERY_THRESHOLD && currentNum < masteryNum) {
           nearMastery.push(item);
         }
 
@@ -484,8 +489,8 @@
         if (currentNum < baselineNum) {
           regressing.push(item);
         }
-        // Stalled: at or just above baseline (≤ 5% gain — no meaningful growth)
-        else if (currentNum <= baselineNum + 5) {
+        // Stalled: at or just above baseline (no meaningful growth)
+        else if (currentNum <= baselineNum + STALLED_THRESHOLD) {
           stalled.push(item);
         }
       }
@@ -515,7 +520,7 @@
 
     function buildProgressBar(item, fillClass) {
       if (item.mastery == null) return '';
-      const maxVal = Math.max(item.mastery, item.current, item.baseline) * 1.1 || 100;
+      const maxVal = Math.max(item.mastery, item.current, item.baseline) * BAR_PADDING || 100;
       const currentPct = Math.min(100, (item.current / maxVal) * 100).toFixed(1);
       const baselinePct = Math.min(100, (item.baseline / maxVal) * 100).toFixed(1);
       const masteryPct = Math.min(100, (item.mastery / maxVal) * 100).toFixed(1);
