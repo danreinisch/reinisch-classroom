@@ -98,21 +98,37 @@
         opacity: 0.9;
         position: sticky;
         top: 0;
-        background: rgba(20, 20, 20, 0.95);
+        background: #141414;
         z-index: 10;
+        border-bottom: 2px solid rgba(34, 197, 94, 0.3);
       }
       table.gb-table th.gb-student-col {
         position: sticky;
         left: 0;
         z-index: 20;
-        background: rgba(20, 20, 20, 0.95);
+        background: #141414;
       }
       table.gb-table td.gb-student-cell {
         position: sticky;
         left: 0;
-        background: rgba(20, 20, 20, 0.95);
+        background: #141414;
         font-weight: 500;
         z-index: 5;
+      }
+      table.gb-table tbody tr:nth-child(even) td.gb-student-cell {
+        background: #1a1a1a;
+      }
+      table.gb-table tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      table.gb-table tbody tr:nth-child(odd) {
+        background: transparent;
+      }
+      table.gb-table tbody tr:hover {
+        background: rgba(34, 197, 94, 0.06) !important;
+      }
+      table.gb-table tbody tr:hover td.gb-student-cell {
+        background: #161f16 !important;
       }
       table.gb-table td.gb-score-cell {
         text-align: center;
@@ -430,23 +446,19 @@
       table.gb-table th.gb-group-header {
         cursor: pointer;
         text-align: center;
-        background: rgba(34, 197, 94, 0.08);
+        background: #15221a;
         border-bottom: 2px solid rgba(34, 197, 94, 0.3);
       }
       table.gb-table th.gb-group-header:hover {
-        background: rgba(34, 197, 94, 0.15);
+        background: #1a2e20;
       }
       table.gb-table th.gb-group-header.gb-group-header-expanded {
-        background: rgba(34, 197, 94, 0.15);
+        background: #1a2e20;
         border-bottom-color: rgba(34, 197, 94, 0.5);
       }
       table.gb-table th.gb-group-assignment-col {
-        background: rgba(34, 197, 94, 0.04);
+        background: #151e17;
         border-left: 1px solid rgba(34, 197, 94, 0.15);
-      }
-      .gb-group-header-label {
-        font-weight: 700;
-        font-size: 12px;
       }
       .gb-group-header-count {
         font-size: 11px;
