@@ -680,13 +680,51 @@
     });
   }
 
+  // Infer the CANON_CLASSES series for a draft using multiple fallback strategies.
+  // Returns a matching CANON_CLASSES string or null.
+  function inferSeriesFromDraft(draft) {
+    // Strategy 1: use draft.series directly if it matches a known class
+    if (draft.series && CANON_CLASSES.includes(draft.series)) {
+      return draft.series;
+    }
+
+    // Strategy 2: search the draft title for a CANON_CLASSES keyword (case-insensitive)
+    const title = (draft.title || '').toLowerCase();
+    for (const cls of CANON_CLASSES) {
+      if (title.includes(cls.toLowerCase())) {
+        return cls;
+      }
+    }
+
+    // Strategy 3: look up which students were assigned this draft via
+    //   assignmentInstancesData → classEnrollmentsData, then pick the most
+    //   common CANON_CLASS among those enrollments.
+    const instancesForDraft = assignmentInstancesData.filter(i => i.assignment_id === draft.id);
+    if (instancesForDraft.length > 0) {
+      const classCounts = new Map();
+      for (const instance of instancesForDraft) {
+        const enrollment = classEnrollmentsData.find(
+          e => e.student_code === instance.student_code && e.active !== false
+        );
+        if (enrollment && enrollment.class_name && CANON_CLASSES.includes(enrollment.class_name)) {
+          classCounts.set(enrollment.class_name, (classCounts.get(enrollment.class_name) || 0) + 1);
+        }
+      }
+      if (classCounts.size > 0) {
+        return [...classCounts.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+      }
+    }
+
+    return null;
+  }
+
   // Build groups from a drafts array, ordered by CANON_CLASSES; uncategorised go last
   function buildGroupsFromDrafts(drafts) {
     const groupMap = new Map();
     const ungrouped = [];
     for (const draft of drafts) {
-      const series = draft.series;
-      if (series && CANON_CLASSES.includes(series)) {
+      const series = inferSeriesFromDraft(draft);
+      if (series) {
         if (!groupMap.has(series)) {
           groupMap.set(series, { series, displayName: CLASS_DISPLAY[series] ?? series, drafts: [] });
         }
@@ -798,6 +836,12 @@
   function renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap) {
     const { groups, ungrouped } = buildGroupsFromDrafts(drafts);
     const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
+
+    // Show an informational banner when no class groupings could be inferred
+    const noGroupsBannerEl = $("gbNoGroupsBanner");
+    if (noGroupsBannerEl) {
+      noGroupsBannerEl.style.display = groups.length === 0 && drafts.length > 0 ? "block" : "none";
+    }
 
     // ── Header row ────────────────────────────────────────────────────────────
     const headerRow = document.createElement("tr");
@@ -1201,33 +1245,7 @@
 
     // Assignment columns
     for (const draft of drafts) {
-      const th = document.createElement("th");
-      th.style.minWidth = isCompact ? "68px" : "80px";
-
-      const fullTitle = draft.title || "(untitled)";
-      const titleEl = document.createElement("div");
-      titleEl.className = "gb-col-title";
-      titleEl.textContent = fullTitle.length > 15 ? fullTitle.substring(0, 15) + "…" : fullTitle;
-      titleEl.title = fullTitle;
-      th.appendChild(titleEl);
-
-      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      if (dateStr) {
-        const dateEl = document.createElement("div");
-        dateEl.className = "gb-col-date";
-        dateEl.textContent = dateStr;
-        th.appendChild(dateEl);
-      }
-
-      const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-      if (totalPossible) {
-        const ptsEl = document.createElement("div");
-        ptsEl.className = "gb-col-pts";
-        ptsEl.textContent = `${totalPossible} pts`;
-        th.appendChild(ptsEl);
-      }
-
-      headerRow.appendChild(th);
+      headerRow.appendChild(buildAssignmentTh(draft));
     }
 
     // Average / Weighted / Trend columns (shown only when showMoreColumns is true)
@@ -1295,50 +1313,8 @@
       tr.appendChild(tdStudent);
 
       // Score cells
-      const studentScores = scoreMap.get(student.code);
       for (const draft of drafts) {
-        const td = document.createElement("td");
-        td.className = "gb-score-cell editable";
-
-        let currentScore = null;
-        if (studentScores && studentScores.has(draft.id)) {
-          const score = studentScores.get(draft.id);
-          if (typeof score === "number") {
-            currentScore = score;
-            const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-
-            // Two-line display: percentage primary, points secondary
-            const pctLine = document.createElement("div");
-            pctLine.className = "gb-score-pct";
-            pctLine.textContent = `${score}%`;
-            td.appendChild(pctLine);
-
-            if (totalPossible) {
-              const ptsLine = document.createElement("div");
-              ptsLine.className = "gb-score-pts-line";
-              ptsLine.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
-              td.appendChild(ptsLine);
-            }
-
-            // Apply color class
-            const colorClass = scoreColorClass(score);
-            if (colorClass) {
-              td.classList.add(colorClass);
-            }
-          } else {
-            td.textContent = "—";
-          }
-        } else {
-          td.textContent = "—";
-        }
-
-        // Make cell editable on click
-        td.addEventListener("click", () => {
-          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-          makeScoreEditable(td, student.code, draft.id, currentScore, totalPossible);
-        });
-
-        tr.appendChild(td);
+        tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
       }
 
       // Average / Weighted / Trend cells
