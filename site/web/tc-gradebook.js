@@ -867,11 +867,6 @@
         th.className = "gb-group-header";
         th.style.minWidth = isCompact ? "80px" : "96px";
 
-        const labelEl = document.createElement("div");
-        labelEl.className = "gb-group-header-label";
-        labelEl.textContent = group.displayName;
-        th.appendChild(labelEl);
-
         const countEl = document.createElement("div");
         countEl.className = "gb-group-header-count";
         countEl.textContent = `${gradedInGroup}/${totalInGroup}`;
@@ -889,15 +884,10 @@
         });
         headerRow.appendChild(th);
       } else {
-        // Expanded: group label/collapse button + individual assignment columns
+        // Expanded: collapse button + individual assignment columns
         const thGroupLabel = document.createElement("th");
         thGroupLabel.className = "gb-group-header gb-group-header-expanded";
         thGroupLabel.style.minWidth = isCompact ? "64px" : "76px";
-
-        const labelEl = document.createElement("div");
-        labelEl.className = "gb-group-header-label";
-        labelEl.textContent = group.displayName;
-        thGroupLabel.appendChild(labelEl);
 
         const collapseEl = document.createElement("div");
         collapseEl.className = "gb-group-expand-btn";
