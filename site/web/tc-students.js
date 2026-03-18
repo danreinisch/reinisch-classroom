@@ -8,6 +8,7 @@
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
+  const { parseGoalValue } = await import('/web/goal-utils.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -3670,31 +3671,6 @@
   // ============================================================================
   // IEP COMPLIANCE DASHBOARD FUNCTIONS
   // ============================================================================
-
-  /**
-   * Parse a goal value (baseline or mastery) to a number.
-   * Supports: plain numbers ("72"), percentages ("60%"), fractions ("3/5" → 60).
-   * Returns null if the value cannot be parsed.
-   * @param {string|number|null} val
-   * @returns {number|null}
-   */
-  function parseGoalValue(val) {
-    if (val == null || val === '') return null;
-    const s = String(val).trim();
-    // Fraction format: "3/5"
-    const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-    if (fracMatch) {
-      const num = parseFloat(fracMatch[1]);
-      const den = parseFloat(fracMatch[2]);
-      return den !== 0 ? (num / den) * 100 : null;
-    }
-    // Percentage format: "60%"
-    const pctMatch = s.match(/^(\d+(?:\.\d+)?)%$/);
-    if (pctMatch) return parseFloat(pctMatch[1]);
-    // Plain number: "72"
-    const num = parseFloat(s);
-    return isNaN(num) ? null : num;
-  }
 
   /**
    * Linear regression helper for goal mastery predictions

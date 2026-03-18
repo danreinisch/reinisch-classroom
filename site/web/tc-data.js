@@ -8,6 +8,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
+  const { parseGoalValue } = await import('/web/goal-utils.js');
 
   const $ = (id) => document.getElementById(id);
 
@@ -33,28 +34,6 @@
   // Helper to format date as YYYY-MM-DD
   function formatDateYYYYMMDD(date = new Date()) {
     return date.toISOString().split("T")[0];
-  }
-
-  /**
-   * Parse a goal value (baseline or mastery) to a number.
-   * Supports: plain numbers ("72"), percentages ("60%"), fractions ("3/5" → 60).
-   * Returns null if the value cannot be parsed.
-   * @param {string|number|null} val
-   * @returns {number|null}
-   */
-  function parseGoalValue(val) {
-    if (val == null || val === '') return null;
-    const s = String(val).trim();
-    const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-    if (fracMatch) {
-      const num = parseFloat(fracMatch[1]);
-      const den = parseFloat(fracMatch[2]);
-      return den !== 0 ? (num / den) * 100 : null;
-    }
-    const pctMatch = s.match(/^(\d+(?:\.\d+)?)%$/);
-    if (pctMatch) return parseFloat(pctMatch[1]);
-    const num = parseFloat(s);
-    return isNaN(num) ? null : num;
   }
 
   // Helper to determine score color class based on percentage

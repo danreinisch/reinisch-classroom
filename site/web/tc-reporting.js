@@ -15,6 +15,7 @@
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getSupabase } = await import("/web/supabase-client.js");
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
+  const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
 
   // Constants - keep in sync with other teacher pages
   const CANON_CLASSES = [
@@ -88,40 +89,6 @@
     const div = document.createElement("div");
     div.textContent = String(text);
     return div.innerHTML;
-  }
-
-  /**
-   * Parse a goal value (baseline or mastery) to a number.
-   * Supports: plain numbers ("72"), percentages ("60%"), fractions ("3/5" → 60).
-   * Returns null if the value cannot be parsed.
-   * @param {string|number|null} val
-   * @returns {number|null}
-   */
-  function parseGoalValue(val) {
-    if (val == null || val === '') return null;
-    const s = String(val).trim();
-    const fracMatch = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-    if (fracMatch) {
-      const num = parseFloat(fracMatch[1]);
-      const den = parseFloat(fracMatch[2]);
-      return den !== 0 ? (num / den) * 100 : null;
-    }
-    const pctMatch = s.match(/^(\d+(?:\.\d+)?)%$/);
-    if (pctMatch) return parseFloat(pctMatch[1]);
-    const num = parseFloat(s);
-    return isNaN(num) ? null : num;
-  }
-
-  /**
-   * Returns true if a goal should be considered active/open.
-   * Accepts any status except 'closed' or 'archived' (case-insensitive).
-   * Goals with a missing status are treated as active.
-   */
-  function isGoalActive(goal) {
-    if (!goal) return false;
-    if (!goal.status) return true;
-    const s = goal.status.toLowerCase();
-    return s !== 'closed' && s !== 'archived';
   }
 
   /**

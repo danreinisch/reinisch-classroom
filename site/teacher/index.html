@@ -251,6 +251,150 @@
         grid-template-columns: 1fr !important;
       }
     }
+
+    /* ── Command Center: Row Cards ─────────────────────────────────────── */
+    .ov-summary {
+      font-size: 12px;
+      color: var(--rc-ink-dim);
+      margin-bottom: 10px;
+      padding: 5px 8px;
+      background: rgba(0,0,0,0.18);
+      border-radius: var(--rc-radius-sm);
+    }
+    .ov-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--rc-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .ov-count-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 10px;
+      line-height: 1.5;
+    }
+    .ov-badge-red   { background: rgba(239,68,68,.18);  color: #ef4444; }
+    .ov-badge-amber { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .ov-badge-green { background: rgba(34,197,94,.18);  color: #22c55e; }
+
+    .ov-scroll-body {
+      max-height: 240px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+      margin-bottom: 2px;
+    }
+    .ov-scroll-body::-webkit-scrollbar        { width: 4px; }
+    .ov-scroll-body::-webkit-scrollbar-track  { background: rgba(255,255,255,.04); border-radius: 2px; }
+    .ov-scroll-body::-webkit-scrollbar-thumb  { background: rgba(255,255,255,.18); border-radius: 2px; }
+    .ov-scroll-body::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.32); }
+
+    .ov-row-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.22);
+      border: 1px solid var(--rc-border);
+      border-radius: var(--rc-radius-sm);
+      transition: background 0.15s ease;
+    }
+    .ov-row-card:hover { background: var(--rc-glass-hover); }
+    .ov-row-card--red   { border-left: 3px solid rgba(239,68,68,.6); }
+    .ov-row-card--amber { border-left: 3px solid rgba(245,158,11,.6); }
+    .ov-row-card--green { border-left: 3px solid rgba(34,197,94,.6); }
+
+    .ov-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .ov-dot-red   { background: #ef4444; }
+    .ov-dot-amber { background: #f59e0b; }
+    .ov-dot-green { background: #22c55e; }
+
+    .ov-row-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .ov-row-primary {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .ov-student-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--rc-ink);
+    }
+    .ov-student-code {
+      font-size: 11px;
+      color: var(--rc-muted);
+    }
+    .ov-row-secondary {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .ov-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,.08);
+      color: var(--rc-ink-dim);
+      white-space: nowrap;
+    }
+    .ov-badge-area {
+      background: rgba(59,130,246,.15);
+      color: rgba(147,197,253,.9);
+    }
+    .ov-row-meta {
+      font-size: 11px;
+      color: var(--rc-muted);
+      margin-top: 1px;
+    }
+    .ov-progress-track {
+      position: relative;
+      height: 6px;
+      background: rgba(255,255,255,.08);
+      border-radius: 3px;
+      margin-top: 4px;
+      overflow: visible;
+    }
+    .ov-progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .ov-fill-red   { background: rgba(239,68,68,.7); }
+    .ov-fill-amber { background: rgba(245,158,11,.7); }
+    .ov-fill-green { background: rgba(34,197,94,.7); }
+    .ov-progress-marker {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 2px;
+      transform: translateX(-50%);
+      border-radius: 1px;
+    }
+    .ov-marker-baseline { background: rgba(255,255,255,.45); }
+    .ov-marker-mastery  { background: rgba(34,197,94,.85); }
   </style>
 </head>
 <body>

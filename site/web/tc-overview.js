@@ -15,6 +15,7 @@
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getCurrentQuarter, getQuarterDateRange } = await import("/web/quarter-utils.js");
+  const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -56,17 +57,6 @@
       iconEl.style.background = "#f59e0b";
       textEl.textContent = "Local mode";
     }
-  }
-
-  /**
-   * Returns true if a goal is active/open (not closed or archived).
-   * Case-insensitive; goals with missing status are treated as active.
-   */
-  function isGoalActive(goal) {
-    if (!goal) return false;
-    if (!goal.status) return true;
-    const s = goal.status.toLowerCase();
-    return s !== 'closed' && s !== 'archived';
   }
 
   /**
@@ -361,6 +351,7 @@
               student: student.name,
               studentCode: student.code,
               goalCode: goal.code,
+              goalArea: goal.goal_area || '',
             });
           }
         }
@@ -378,31 +369,65 @@
 
     $("ovOverdueCard").classList.add("alert-red");
 
-    let html = '<div class="ov-list-body">';
+    // Summary header
+    const summaryParts = [];
+    if (unreviewed.length > 0) summaryParts.push(`⚠️ ${unreviewed.length} unreviewed`);
+    if (missingProgress.length > 0) summaryParts.push(`${missingProgress.length} goals missing progress`);
+
+    let html = `<div class="ov-summary">${summaryParts.join(' · ')}</div>`;
+    html += '<div class="ov-list-body">';
 
     if (unreviewed.length > 0) {
-      html += `<div style="margin-bottom: 12px;"><strong>${unreviewed.length} unreviewed submission${unreviewed.length !== 1 ? "s" : ""}:</strong></div>`;
-      html += '<div style="max-height: 150px; overflow-y: auto;">';
-      for (const sub of unreviewed.slice(0, 10)) {
+      html += `<div class="ov-section-header"><span>Unreviewed Submissions</span><span class="ov-count-badge ov-badge-red">${unreviewed.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      for (const sub of unreviewed) {
         const student = studentMap.get(sub.student_code);
         const instance = instances.find((i) => i.id === sub.assignment_instance_id);
         const assignment = instance ? assignmentMap.get(instance.assignment_id) : null;
         const submittedDate = new Date(sub.submitted_at);
-        html += `<div class="ov-card-alert">• ${student?.name || sub.student_code} — ${assignment?.title || "Assignment"} (${getRelativeTime(submittedDate)})</div>`;
+        const studentName = student?.name || sub.student_code;
+        const studentCode = student?.code || sub.student_code;
+        html += `
+        <div class="ov-row-card ov-row-card--red">
+          <span class="ov-status-dot ov-dot-red"></span>
+          <div class="ov-row-body">
+            <div class="ov-row-primary">
+              <span class="ov-student-name">${studentName}</span>
+              <span class="ov-student-code">${studentCode}</span>
+            </div>
+            <div class="ov-row-secondary">
+              <span class="ov-badge">${assignment?.title || 'Assignment'}</span>
+              <span class="ov-row-meta">${getRelativeTime(submittedDate)}</span>
+            </div>
+          </div>
+        </div>`;
       }
-      html += "</div>";
+      html += '</div>';
     }
 
     if (missingProgress.length > 0) {
-      html += `<div style="margin-top: 12px; margin-bottom: 8px;"><strong>${missingProgress.length} goal${missingProgress.length !== 1 ? "s" : ""} without progress data this quarter:</strong></div>`;
-      html += '<div style="max-height: 120px; overflow-y: auto;">';
-      for (const item of missingProgress.slice(0, 10)) {
-        html += `<div class="ov-card-alert">• ${item.student} — Goal ${item.goalCode}</div>`;
+      html += `<div class="ov-section-header" style="${unreviewed.length > 0 ? 'margin-top: 12px;' : ''}"><span>Goals Without Progress This Quarter</span><span class="ov-count-badge ov-badge-amber">${missingProgress.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      for (const item of missingProgress) {
+        html += `
+        <div class="ov-row-card ov-row-card--amber">
+          <span class="ov-status-dot ov-dot-amber"></span>
+          <div class="ov-row-body">
+            <div class="ov-row-primary">
+              <span class="ov-student-name">${item.student}</span>
+              <span class="ov-student-code">${item.studentCode}</span>
+            </div>
+            <div class="ov-row-secondary">
+              <span class="ov-badge">${item.goalCode}</span>
+              ${item.goalArea ? `<span class="ov-badge ov-badge-area">${item.goalArea}</span>` : ''}
+            </div>
+          </div>
+        </div>`;
       }
-      html += "</div>";
+      html += '</div>';
     }
 
-    html += "</div>";
+    html += '</div>';
     contentEl.innerHTML = html;
   }
 
@@ -413,7 +438,9 @@
     const contentEl = $("ovAtRiskContent");
     if (!contentEl) return;
 
-    const atRisk = [];
+    const regressing = [];
+    const stalled = [];
+    const nearMastery = [];
 
     for (const student of students.filter((s) => s.active !== false)) {
       const studentGoals = goals.filter(
@@ -429,39 +456,130 @@
         goalProgress.sort((a, b) => new Date(b.date) - new Date(a.date));
         const recent = goalProgress[0];
 
-        const baseline = goal.baseline_percent || goal.baseline_points || 0;
-        const current = recent.percent || recent.points || 0;
+        const baselineNum = parseGoalValue(goal.baseline);
+        const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+        const currentNum = recent.value != null ? parseFloat(recent.value) : null;
 
-        if (current <= baseline) {
-          atRisk.push({
-            studentCode: student.code,
-            studentName: student.name,
-            goalCode: goal.code,
-            current,
-            baseline,
-          });
+        if (currentNum == null || baselineNum == null) continue;
+
+        const item = {
+          studentCode: student.code,
+          studentName: student.name,
+          goalCode: goal.code,
+          goalArea: goal.goal_area || '',
+          current: Math.round(currentNum * 10) / 10,
+          baseline: Math.round(baselineNum * 10) / 10,
+          mastery: masteryNum != null ? Math.round(masteryNum * 10) / 10 : null,
+          baselineRaw: goal.baseline,
+          masteryRaw: goal.mastery || goal.target || null,
+          currentRaw: recent.value,
+        };
+
+        // Near mastery: within 5% of mastery and not yet there
+        if (masteryNum != null && currentNum >= masteryNum - 5 && currentNum < masteryNum) {
+          nearMastery.push(item);
+        }
+
+        // Regressing: current < baseline (going backward)
+        if (currentNum < baselineNum) {
+          regressing.push(item);
+        }
+        // Stalled: at or just above baseline (≤ 5% gain — no meaningful growth)
+        else if (currentNum <= baselineNum + 5) {
+          stalled.push(item);
         }
       }
     }
 
-    if (atRisk.length === 0) {
+    const atRiskCount = regressing.length + stalled.length;
+
+    if (atRiskCount === 0 && nearMastery.length === 0) {
       contentEl.innerHTML = `<div class="ov-card-empty">${SVG_CHECK} All students progressing above baseline</div>`;
       $("ovAtRiskCard").classList.remove("alert-amber");
       $("ovAtRiskCard").classList.add("alert-green");
       return;
     }
 
-    $("ovAtRiskCard").classList.add("alert-amber");
-
-    let html = '<div class="ov-list-body">';
-    html += `<div style="margin-bottom: 8px;"><strong>${atRisk.length} student${atRisk.length !== 1 ? "s" : ""} at or below baseline:</strong></div>`;
-    html += '<div style="max-height: 200px; overflow-y: auto;">';
-
-    for (const item of atRisk.slice(0, 10)) {
-      html += `<div class="ov-card-alert">• ${item.studentCode} — Goal ${item.goalCode}: ${item.current}% (baseline: ${item.baseline}%)</div>`;
+    if (atRiskCount > 0) {
+      $("ovAtRiskCard").classList.add("alert-amber");
     }
 
-    html += "</div></div>";
+    // Summary header
+    const summaryParts = [];
+    if (regressing.length > 0) summaryParts.push(`🔴 ${regressing.length} regressing`);
+    if (stalled.length > 0) summaryParts.push(`🟡 ${stalled.length} stalled`);
+    if (nearMastery.length > 0) summaryParts.push(`🎉 ${nearMastery.length} near mastery`);
+
+    let html = `<div class="ov-summary">${summaryParts.join(' · ')}</div>`;
+    html += '<div class="ov-list-body">';
+
+    function buildProgressBar(item, fillClass) {
+      if (item.mastery == null) return '';
+      const maxVal = Math.max(item.mastery, item.current, item.baseline) * 1.1 || 100;
+      const currentPct = Math.min(100, (item.current / maxVal) * 100).toFixed(1);
+      const baselinePct = Math.min(100, (item.baseline / maxVal) * 100).toFixed(1);
+      const masteryPct = Math.min(100, (item.mastery / maxVal) * 100).toFixed(1);
+      return `
+        <div class="ov-progress-track" title="Current: ${item.currentRaw} | Baseline: ${item.baselineRaw} | Mastery: ${item.masteryRaw}">
+          <div class="ov-progress-fill ${fillClass}" style="width:${currentPct}%"></div>
+          <div class="ov-progress-marker ov-marker-baseline" style="left:${baselinePct}%" title="Baseline: ${item.baselineRaw}"></div>
+          <div class="ov-progress-marker ov-marker-mastery" style="left:${masteryPct}%" title="Mastery: ${item.masteryRaw}"></div>
+        </div>`;
+    }
+
+    function buildAtRiskRow(item, severity) {
+      const cardClass = severity === 'red' ? 'ov-row-card--red' : severity === 'green' ? 'ov-row-card--green' : 'ov-row-card--amber';
+      const dotClass = severity === 'red' ? 'ov-dot-red' : severity === 'green' ? 'ov-dot-green' : 'ov-dot-amber';
+      const fillClass = severity === 'red' ? 'ov-fill-red' : severity === 'green' ? 'ov-fill-green' : 'ov-fill-amber';
+      const metaText = item.masteryRaw
+        ? `${item.currentRaw} current · baseline: ${item.baselineRaw} · mastery: ${item.masteryRaw}`
+        : `${item.currentRaw} current · baseline: ${item.baselineRaw}`;
+      return `
+      <div class="ov-row-card ${cardClass}">
+        <span class="ov-status-dot ${dotClass}"></span>
+        <div class="ov-row-body">
+          <div class="ov-row-primary">
+            <span class="ov-student-name">${item.studentName}</span>
+            <span class="ov-student-code">${item.studentCode}</span>
+          </div>
+          <div class="ov-row-secondary">
+            <span class="ov-badge">${item.goalCode}</span>
+            ${item.goalArea ? `<span class="ov-badge ov-badge-area">${item.goalArea}</span>` : ''}
+          </div>
+          ${buildProgressBar(item, fillClass)}
+          <div class="ov-row-meta">${metaText}</div>
+        </div>
+      </div>`;
+    }
+
+    if (regressing.length > 0) {
+      html += `<div class="ov-section-header"><span>Regressing</span><span class="ov-count-badge ov-badge-red">${regressing.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      for (const item of regressing) {
+        html += buildAtRiskRow(item, 'red');
+      }
+      html += '</div>';
+    }
+
+    if (stalled.length > 0) {
+      html += `<div class="ov-section-header"${regressing.length > 0 ? ' style="margin-top: 12px;"' : ''}><span>Stalled</span><span class="ov-count-badge ov-badge-amber">${stalled.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      for (const item of stalled) {
+        html += buildAtRiskRow(item, 'amber');
+      }
+      html += '</div>';
+    }
+
+    if (nearMastery.length > 0) {
+      html += `<div class="ov-section-header ov-section-header--success"${atRiskCount > 0 ? ' style="margin-top: 12px;"' : ''}><span>🎉 Near Mastery</span><span class="ov-count-badge ov-badge-green">${nearMastery.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      for (const item of nearMastery) {
+        html += buildAtRiskRow(item, 'green');
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
     contentEl.innerHTML = html;
   }
 
