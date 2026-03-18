@@ -3466,6 +3466,7 @@ ${narrative}`;
           progressCell = avgRaw != null ? `${avgRaw}%` : '—';
         }
         const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
+        const masteryDisplay = goal.mastery != null ? escapeHtml(String(goal.mastery)) : targetDisplay;
         const baselineDisplay = goal.baseline != null ? escapeHtml(String(goal.baseline)) : '—';
 
         return `
@@ -3474,6 +3475,7 @@ ${narrative}`;
             <td>${escapeHtml(goal.area || goal.skill_area || '—')}</td>
             <td>${baselineDisplay}</td>
             <td style="color:${avgRaw != null ? scoreColor(parseFloat(avgRaw)) : 'inherit'}">${progressCell}</td>
+            <td>${masteryDisplay}</td>
             <td>${targetDisplay}</td>
             <td>${isParent ? '' : `${data.count} pts`}</td>
             <td>${sparkline}</td>
@@ -3487,7 +3489,7 @@ ${narrative}`;
           <caption>IEP Goal Progress</caption>
           <thead>
             <tr>
-              <th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminHeaders}<th>Trend</th>
+              <th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Mastery</th><th>Target</th>${adminHeaders}<th>Trend</th>
             </tr>
           </thead>
           <tbody>${goalRows}</tbody>
@@ -4156,6 +4158,7 @@ ${narrative}`;
           ? (avgRaw == null ? 'No data yet' : data.average >= 80 ? 'On track' : data.average >= 60 ? 'Making progress' : 'Needs support')
           : (avgRaw != null ? `${avgRaw}%` : '—');
         const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
+        const masteryDisplay = goal.mastery != null ? escapeHtml(String(goal.mastery)) : targetDisplay;
         const baselineDisplay = goal.baseline != null ? escapeHtml(String(goal.baseline)) : '—';
         const goalDesc = escapeHtml(goal.desc || goal.description || '—');
         const dpCol = isParent ? '' : `<td>${data.count} pts</td>`;
@@ -4165,6 +4168,7 @@ ${narrative}`;
           <td style="font-size:12px;">${goalDesc}</td>
           <td>${baselineDisplay}</td>
           <td>${escapeHtml(progressCell)}</td>
+          <td>${masteryDisplay}</td>
           <td>${targetDisplay}</td>
           ${dpCol}
         </tr>`;
@@ -4181,7 +4185,7 @@ ${narrative}`;
   <h1>IEP Goal Progress — ${escapeHtml(student.name || student.code)}</h1>
   <p style="color:#555;">Period: ${escapeHtml(periodLabel)} | <a href="cover.html">Back to Cover</a></p>
   <table>
-    <thead><tr><th>Goal</th><th>Area</th><th>Description</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminDpCol}</tr></thead>
+    <thead><tr><th>Goal</th><th>Area</th><th>Description</th><th>Baseline</th><th>Progress</th><th>Mastery</th><th>Target</th>${adminDpCol}</tr></thead>
     <tbody>${rows}</tbody>
   </table>
 </body></html>`;

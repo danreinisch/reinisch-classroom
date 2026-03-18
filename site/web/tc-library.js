@@ -4127,14 +4127,15 @@
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
           : (avg != null ? `${avg}%` : '—');
         const target = goal.target != null ? esc(String(goal.target)) : '—';
+        const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
         const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
         const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
-        return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${target}</td>${adminCols}</tr>`;
+        return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${mastery}</td><td>${target}</td>${adminCols}</tr>`;
       }).join('');
       const adminHeader = isParent ? '' : '<th>Data Pts</th>';
       goalsHtml = `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
         <caption style="text-align:left;font-weight:600;margin-bottom:6px;">IEP Goal Progress</caption>
-        <thead><tr><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Goal</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Area</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Baseline</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Progress</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Target</th>${adminHeader}</tr></thead>
+        <thead><tr><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Goal</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Area</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Baseline</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Progress</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Mastery</th><th style="padding:6px 8px;border:1px solid rgba(255,255,255,.12);">Target</th>${adminHeader}</tr></thead>
         <tbody style="font-size:13px;">${goalRows}</tbody>
       </table>`;
     }
@@ -4316,14 +4317,15 @@
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
           : (avg != null ? `${avg}%` : '—');
         const target = goal.target != null ? esc(String(goal.target)) : '—';
+        const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
         const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
         const adminCols = isParent ? '' : `<td>${pts.length} pts</td>`;
-        return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${target}</td>${adminCols}</tr>`;
+        return `<tr><td>${esc(goal.code || goal.id || '—')}</td><td>${esc(goal.area || goal.skill_area || '—')}</td><td>${baseline}</td><td>${esc(progressCell)}</td><td>${mastery}</td><td>${target}</td>${adminCols}</tr>`;
       }).join('');
       const adminHeader = isParent ? '' : '<th>Data Pts</th>';
       goalsHtml = `<table>
         <caption style="text-align:left;font-weight:600;margin-bottom:6px;caption-side:top;">IEP Goal Progress</caption>
-        <thead><tr><th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminHeader}</tr></thead>
+        <thead><tr><th>Goal</th><th>Area</th><th>Baseline</th><th>Progress</th><th>Mastery</th><th>Target</th>${adminHeader}</tr></thead>
         <tbody>${goalRows}</tbody>
       </table>`;
     }
@@ -4549,6 +4551,7 @@
             <td style="font-size:12px;">${esc(goal.desc || goal.description || '—')}</td>
             <td>${goal.baseline != null ? esc(String(goal.baseline)) : '—'}</td>
             <td>${esc(progress)}</td>
+            <td>${goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—')}</td>
             <td>${goal.target != null ? esc(String(goal.target)) : '—'}</td>
             ${dpCol}
           </tr>`;
@@ -4560,7 +4563,7 @@
 </head><body>
 <h1>IEP Goal Progress &mdash; ${esc(student.name || student.code)}</h1>
 <p>Period: ${esc(periodLabel)} | <a href="cover.html">Back to Cover</a></p>
-<table><thead><tr><th>Goal</th><th>Area</th><th>Description</th><th>Baseline</th><th>Progress</th><th>Target</th>${adminDpCol}</tr></thead>
+<table><thead><tr><th>Goal</th><th>Area</th><th>Description</th><th>Baseline</th><th>Progress</th><th>Mastery</th><th>Target</th>${adminDpCol}</tr></thead>
 <tbody>${rows}</tbody></table>
 </body></html>`;
   }
