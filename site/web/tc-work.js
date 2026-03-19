@@ -1517,6 +1517,8 @@
   // Expose for use by mega-split and QoL modules
   window.__rcRemoteSaveDraft = remoteSaveDraft;
   window.__rcRemoteDeleteDraft = remoteDeleteDraft;
+  window.__rcAutoMapFromTeacherTxt = autoMapFromTeacherTxt;
+  window.__rcJoinTagOnlyLines = __rc_joinTagOnlyLines;
 
   // ========================================
   // Issue Assignment from Draft
@@ -2011,6 +2013,168 @@ function normalizeTaggedAssignmentText(input) {
   //   return parseMegaSections(text).length >= 2;
   // }
 
+  function parseStudentSections(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const isSep = (ln) => /^\s*={3,}\s*$/.test(ln);
+
+    const sections = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      if (!isSep(lines[i])) { i++; continue; }
+
+      // Look for "Assignment: SXXX" on the very next non-blank line
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === "") j++;
+      if (j >= lines.length) { i++; continue; }
+
+      const assignMatch = lines[j].trim().match(/^Assignment\s*:\s*(\S+)/i);
+      if (!assignMatch) { i++; continue; }
+
+      const studentCode = assignMatch[1].trim();
+
+      // Look for "Class: ..." on the following line(s)
+      let cls = "";
+      for (let k = j + 1; k < Math.min(j + 5, lines.length); k++) {
+        const clsMatch = lines[k].trim().match(/^Class\s*:\s*(.+)/i);
+        if (clsMatch) { cls = clsMatch[1].trim(); break; }
+      }
+
+      // Find the separator that closes the header block (separates header from content)
+      let sepEnd = -1;
+      for (let k = i + 1; k < lines.length; k++) {
+        if (isSep(lines[k])) { sepEnd = k; break; }
+      }
+      if (sepEnd === -1) { i++; continue; }
+
+      // Find the separator that ends the content block (start of next student section)
+      let bodyEnd = lines.length;
+      for (let k = sepEnd + 1; k < lines.length; k++) {
+        if (isSep(lines[k])) { bodyEnd = k; break; }
+      }
+      const fullBody = lines.slice(sepEnd + 1, bodyEnd).join("\n").trim();
+
+      sections.push({ studentCode, className: cls, body: fullBody });
+
+      // Advance past the closing separator
+      i = sepEnd + 1;
+    }
+
+    return sections;
+  }
+
+  async function splitByStudentFromCurrentForm() {
+    const form = document.getElementById("workDraftForm");
+    if (!form) return;
+
+    const titleEl = getFormEl("draftTitle", 'input[name="title"]');
+    const releaseEl = getFormEl("draftRelease", 'input[name="releaseAt"]');
+    const dueEl = getFormEl("draftDue", 'input[name="dueAt"]');
+    const notesEl = getFormEl("draftNotes", 'textarea[name="notes"]');
+    const autoReleaseEl = document.getElementById("draftAutoRelease");
+
+    const { assignment: aIn } = pickFileInputs(form);
+    const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
+
+    if (!aFile) {
+      await rcAlert("No File Selected", "Choose a student assignment TXT file first.");
+      return;
+    }
+
+    const raw = await readFileText(aFile);
+    const sections = parseStudentSections(raw);
+
+    if (sections.length === 0) {
+      await rcAlert(
+        "No Student Sections Found",
+        "That file doesn't contain any 'Assignment: SXXX' headers between separator lines."
+      );
+      return;
+    }
+
+    const studentList = sections
+      .map((s) => `${s.studentCode}${s.className ? ` (${s.className})` : ""}`)
+      .join(", ");
+
+    const confirmed = await rcConfirm(
+      "Split by Student",
+      `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""}: ${studentList}.\n\nCreate one draft per student?`,
+      "Create Drafts"
+    );
+    if (!confirmed) return;
+
+    const baseTitle = getVal(titleEl) || aFile.name;
+    const notes = getVal(notesEl) || "";
+    const releaseAt = toIsoMaybe(getVal(releaseEl));
+    const dueAt = toIsoMaybe(getVal(dueEl));
+    const autoRelease = autoReleaseEl ? !!autoReleaseEl.checked : false;
+
+    const ensureBound = (t) =>
+      t && t.length > 120000 ? t.slice(0, 120000) + "\n…(truncated)\n" : t || "";
+
+    const drafts = loadDrafts();
+
+    for (const sec of sections) {
+      const t = `${baseTitle} — ${sec.studentCode}`;
+
+      let assignText = ensureBound(sec.body);
+      if (typeof normalizeTaggedAssignmentText === "function") {
+        assignText = normalizeTaggedAssignmentText(assignText);
+      }
+      if (typeof window.__rcJoinTagOnlyLines === "function") {
+        assignText = window.__rcJoinTagOnlyLines(assignText);
+      }
+
+      let mappingText = "";
+      if (typeof window.__rcAutoMapFromTeacherTxt === "function") {
+        try {
+          const mapObj = window.__rcAutoMapFromTeacherTxt(assignText);
+          mappingText = JSON.stringify(mapObj, null, 2);
+        } catch (e) {
+          console.warn("autoMapFromTeacherTxt failed for", sec.studentCode, e);
+        }
+      }
+
+      drafts.unshift({
+        id: makeId(),
+        title: t,
+        className: sec.className || "",
+        releaseAt,
+        dueAt,
+        notes: notes || null,
+        autoRelease,
+        createdAt: new Date().toISOString(),
+        meta: { scoring_defaults: {}, total_possible: null },
+        assignment: {
+          kind: "file",
+          name: aFile.name,
+          link: null,
+          text: ensureBound(sec.body),
+        },
+        mapping: {
+          kind: "auto",
+          name: "auto-mapping.json",
+          link: null,
+          text: mappingText,
+        },
+      });
+    }
+
+    saveDrafts(drafts);
+
+    if (typeof window.__rcRemoteSaveDraft === "function") {
+      for (const d of drafts.slice(0, sections.length)) {
+        window.__rcRemoteSaveDraft(d);
+      }
+    }
+
+    await rcAlert(
+      "Drafts Created",
+      `Created ${sections.length} draft${sections.length !== 1 ? "s" : ""} (one per student).`
+    );
+    location.reload();
+  }
+
   function loadDrafts() {
     try {
       return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]");
@@ -2339,6 +2503,7 @@ function normalizeTaggedAssignmentText(input) {
   function wire() {
     const form = document.getElementById("workDraftForm");
     const btn = document.getElementById("btnSplitMega");
+    const btnStudent = document.getElementById("btnSplitByStudent");
 
     ensureClassDropdown();
     // ensureMegaCheckbox(); // DISABLED: replaced by preview panel
@@ -2389,11 +2554,19 @@ function normalizeTaggedAssignmentText(input) {
                 classSel.disabled = false;
                 updateClassDropdownLabel("Individual Class");
               }
+              if (btnStudent) btnStudent.style.display = "none";
               lastItemCounts = { questions: 0, writingPrompts: 0 };
               updateScoringTotalDisplay();
               return;
             }
-            
+
+            // Show "Split by Student" button whenever a .txt file is selected
+            if (btnStudent) {
+              const isTxt = f.name.toLowerCase().endsWith(".txt") ||
+                f.type === "text/plain";
+              btnStudent.style.display = isTxt ? "" : "none";
+            }
+
             const txt = await readFileText(f);
             renderFilePreviewPanel(txt);
             // Update scoring total from parsed file
@@ -2421,6 +2594,18 @@ function normalizeTaggedAssignmentText(input) {
           e.preventDefault();
           e.stopImmediatePropagation();
           splitMegaFromCurrentForm().catch((err) => console.warn(err));
+        },
+        true
+      );
+    }
+
+    if (btnStudent) {
+      btnStudent.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          splitByStudentFromCurrentForm().catch((err) => console.warn(err));
         },
         true
       );
