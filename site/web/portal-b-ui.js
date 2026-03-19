@@ -3,6 +3,20 @@
 // Handles assignment grouping, grades, resubmissions, toasts, and UI interactions
 
 /**
+ * Convert a numeric percentage to a letter grade
+ * @param {number} pct - Score percentage (0-100)
+ * @returns {string} Letter grade (A, B, C, D, or F)
+ */
+function percentToLetterGrade(pct) {
+  if (pct == null || isNaN(pct)) return '—';
+  if (pct >= 90) return 'A';
+  if (pct >= 80) return 'B';
+  if (pct >= 70) return 'C';
+  if (pct >= 60) return 'D';
+  return 'F';
+}
+
+/**
  * Load and display assignments with Portal B grouping
  * @param {Object} db - Database adapter
  * @param {Object} currentUser - Current student user
@@ -50,23 +64,46 @@ export async function loadStudentAssignmentsPortalB(db, currentUser, feature, qs
         submissionsMap[instance.id] = instanceSubmissions[0];
       }
     }
-    
-    // Group assignments by status
-    const groups = helpers.groupAssignmentsByStatus(myInstances, submissionsMap);
-    
-    // Render each section
-    renderSection('upcoming', groups[helpers.AssignmentStatus.UPCOMING], assignmentMap, qs, helpers, feature);
-    renderSection('in-progress', groups[helpers.AssignmentStatus.IN_PROGRESS], assignmentMap, qs, helpers, feature);
-    renderSection('late', groups[helpers.AssignmentStatus.LATE], assignmentMap, qs, helpers, feature);
-    renderSection('missing', groups[helpers.AssignmentStatus.MISSING], assignmentMap, qs, helpers, feature);
-    renderSection('submitted', groups[helpers.AssignmentStatus.SUBMITTED], assignmentMap, qs, helpers, feature);
-    renderSection('graded', groups[helpers.AssignmentStatus.GRADED], assignmentMap, qs, helpers, feature);
-    
-    // Render All section (combines all)
-    const allAssignments = Object.values(groups).flat();
-    renderAllSection(allAssignments, assignmentMap, qs, helpers, feature);
-    
-    return { groups, submissionsMap };
+
+    // Extract unique class names and populate filter dropdown
+    const classNames = new Set();
+    for (const instance of myInstances) {
+      const assignment = assignmentMap.get(instance.assignment_id);
+      const name = assignment?.meta?.class_name || assignment?.class_id || null;
+      if (name) classNames.add(name);
+    }
+
+    const classFilterSelect = qs('#assignmentClassFilter');
+    if (classFilterSelect && classNames.size > 0) {
+      // Reset to just the default option
+      classFilterSelect.innerHTML = '<option value="">All Classes</option>';
+      for (const name of [...classNames].sort()) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        classFilterSelect.appendChild(opt);
+      }
+
+      // Replace element to remove any previously attached listeners before adding new one
+      const freshSelect = classFilterSelect.cloneNode(true);
+      classFilterSelect.parentNode.replaceChild(freshSelect, classFilterSelect);
+
+      // Re-render when filter changes
+      freshSelect.addEventListener('change', () => {
+        const selectedClass = freshSelect.value;
+        const filtered = selectedClass
+          ? myInstances.filter(i => {
+              const a = assignmentMap.get(i.assignment_id);
+              return (a?.meta?.class_name || a?.class_id) === selectedClass;
+            })
+          : myInstances;
+        renderAllSections(filtered, submissionsMap, assignmentMap, qs, helpers, feature);
+      });
+    }
+
+    renderAllSections(myInstances, submissionsMap, assignmentMap, qs, helpers, feature);
+
+    return { groups: helpers.groupAssignmentsByStatus(myInstances, submissionsMap), submissionsMap };
     
   } catch (err) {
     console.error('Failed to load assignments:', err);
@@ -76,7 +113,25 @@ export async function loadStudentAssignmentsPortalB(db, currentUser, feature, qs
 }
 
 /**
- * Render a status section
+ * Group and render all status sections
+ */
+function renderAllSections(instances, submissionsMap, assignmentMap, qs, helpers, feature) {
+  const groups = helpers.groupAssignmentsByStatus(instances, submissionsMap);
+
+  renderSection('upcoming', groups[helpers.AssignmentStatus.UPCOMING], assignmentMap, qs, helpers, feature);
+  renderSection('in-progress', groups[helpers.AssignmentStatus.IN_PROGRESS], assignmentMap, qs, helpers, feature);
+  renderSection('late', groups[helpers.AssignmentStatus.LATE], assignmentMap, qs, helpers, feature);
+  renderSection('missing', groups[helpers.AssignmentStatus.MISSING], assignmentMap, qs, helpers, feature);
+  renderSection('submitted', groups[helpers.AssignmentStatus.SUBMITTED], assignmentMap, qs, helpers, feature);
+  renderSection('graded', groups[helpers.AssignmentStatus.GRADED], assignmentMap, qs, helpers, feature);
+
+  // All section
+  const allAssignments = Object.values(groups).flat();
+  renderAllSection(allAssignments, assignmentMap, qs, helpers, feature);
+}
+
+/**
+ * Render a status section, grouping assignments by class name
  */
 function renderSection(sectionId, assignments, assignmentMap, qs, helpers, feature) {
   const container = qs(`#${sectionId}Content`);
@@ -88,14 +143,33 @@ function renderSection(sectionId, assignments, assignmentMap, qs, helpers, featu
     container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments in this category</div>';
     return;
   }
-  
+
+  // Group by class name
+  const byClass = new Map();
   for (const item of assignments) {
-    container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
+    const assignment = assignmentMap.get(item.instance.assignment_id) || {};
+    const className = assignment.meta?.class_name || assignment.class_id || '';
+    if (!byClass.has(className)) byClass.set(className, []);
+    byClass.get(className).push(item);
+  }
+
+  const hasMultipleClasses = byClass.size > 1;
+
+  for (const [className, items] of byClass) {
+    if (hasMultipleClasses && className) {
+      const subheader = document.createElement('h3');
+      subheader.className = 'st-class-subheader';
+      subheader.textContent = className;
+      container.appendChild(subheader);
+    }
+    for (const item of items) {
+      container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
+    }
   }
 }
 
 /**
- * Render the All tab with all assignments
+ * Render the All tab with all assignments, grouped by class name
  */
 function renderAllSection(assignments, assignmentMap, qs, helpers, feature) {
   const container = qs('#allContent');
@@ -107,9 +181,28 @@ function renderAllSection(assignments, assignmentMap, qs, helpers, feature) {
     container.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments</div>';
     return;
   }
-  
+
+  // Group by class name
+  const byClass = new Map();
   for (const item of assignments) {
-    container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
+    const assignment = assignmentMap.get(item.instance.assignment_id) || {};
+    const className = assignment.meta?.class_name || assignment.class_id || '';
+    if (!byClass.has(className)) byClass.set(className, []);
+    byClass.get(className).push(item);
+  }
+
+  const hasMultipleClasses = byClass.size > 1;
+
+  for (const [className, items] of byClass) {
+    if (hasMultipleClasses && className) {
+      const subheader = document.createElement('h3');
+      subheader.className = 'st-class-subheader';
+      subheader.textContent = className;
+      container.appendChild(subheader);
+    }
+    for (const item of items) {
+      container.appendChild(renderAssignmentCard(item, assignmentMap, helpers, feature));
+    }
   }
 }
 
@@ -260,7 +353,16 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
     const trendIcons = { up: '↗', down: '↘', flat: '→' };
     
     const overallAvgEl = qs('#overallAverage');
-    if (overallAvgEl) overallAvgEl.textContent = overallAvg;
+    if (overallAvgEl) {
+      overallAvgEl.textContent = overallAvg;
+      // Add letter grade badge next to the numeric average
+      const letterGrade = percentToLetterGrade(overallAvg);
+      const gradeClass = `st-letter-grade-${letterGrade.toLowerCase().replace('+', '').replace('-', '')}`;
+      const badge = document.createElement('span');
+      badge.className = `st-letter-grade ${gradeClass}`;
+      badge.textContent = letterGrade;
+      overallAvgEl.parentNode.appendChild(badge);
+    }
     
     const overallTrendEl = qs('#overallTrend');
     if (overallTrendEl && trend.direction) {
@@ -284,13 +386,18 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       classAveragesEl.innerHTML = '';
       for (const [classId, avg] of Object.entries(classAverages)) {
         const statDiv = document.createElement('div');
-        statDiv.className = 'grade-stat';
+        const gradeKey = percentToLetterGrade(avg).charAt(0).toLowerCase();
+        statDiv.className = `grade-stat grade-avg-${gradeKey}`;
         const labelDiv = document.createElement('div');
         labelDiv.className = 'grade-stat-label';
         labelDiv.textContent = classId;
         const valueDiv = document.createElement('div');
         valueDiv.className = 'grade-stat-value';
         valueDiv.textContent = `${avg}%`;
+        const letterSpan = document.createElement('span');
+        letterSpan.className = `st-letter-grade st-letter-grade-${gradeKey} st-class-avg-letter`;
+        letterSpan.textContent = percentToLetterGrade(avg);
+        valueDiv.appendChild(letterSpan);
         statDiv.appendChild(labelDiv);
         statDiv.appendChild(valueDiv);
         classAveragesEl.appendChild(statDiv);
@@ -462,7 +569,9 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       filterDiv.appendChild(filterSelect);
       tableSection.appendChild(filterDiv);
       
-      // Table
+      // Table (wrapped for mobile horizontal scrolling)
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'graded-table-wrapper';
       const table = document.createElement('table');
       table.className = 'graded-assignments-table';
       table.id = 'gradedAssignmentsTable';
@@ -478,7 +587,8 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
       const tbody = document.createElement('tbody');
       tbody.id = 'gradedAssignmentsBody';
       table.appendChild(tbody);
-      tableSection.appendChild(table);
+      tableWrapper.appendChild(table);
+      tableSection.appendChild(tableWrapper);
       
       const parentEl = qs('#classAverages');
       if (parentEl && parentEl.parentNode) {
