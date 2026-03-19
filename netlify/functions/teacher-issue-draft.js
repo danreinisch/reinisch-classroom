@@ -839,7 +839,7 @@ exports.handler = async (event) => {
         // dese_codes belong only in assignment_item_mappings (see step 5c below).
         const itemsPayload = itemsToUpsert.map(({ dese_codes: _dc, ...item }) => item);
 
-        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items`;
+        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?on_conflict=assignment_id,item_ref`;
         const itemsResponse = await fetch(itemsUrl, {
           method: 'POST',
           headers: {
@@ -891,7 +891,7 @@ exports.handler = async (event) => {
         if (mappingsToUpsert.length > 0) {
           console.log(`[teacher-issue-draft] [${requestId}] Upserting ${mappingsToUpsert.length} assignment_item_mappings`);
 
-          const mappingsUrl = `${SUPABASE_URL}/rest/v1/assignment_item_mappings`;
+          const mappingsUrl = `${SUPABASE_URL}/rest/v1/assignment_item_mappings?on_conflict=item_id`;
           const mappingsResponse = await fetch(mappingsUrl, {
             method: 'POST',
             headers: {

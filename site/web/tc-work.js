@@ -1578,6 +1578,46 @@
     }
   }
 
+  async function handleIssueAllDrafts() {
+    const drafts = readDrafts();
+    const pending = drafts.filter((d) => !d.issuedAt && d.className);
+
+    if (pending.length === 0) {
+      await rcAlert("No Drafts to Issue", "All drafts have already been issued, or no drafts have a class assigned.");
+      return;
+    }
+
+    const confirmed = await rcConfirm(
+      "Issue All Drafts",
+      `This will issue ${pending.length} draft${pending.length !== 1 ? "s" : ""} to their respective classes. Continue?`,
+      "Issue All"
+    );
+    if (!confirmed) return;
+
+    let successCount = 0;
+    const failures = [];
+
+    for (let i = 0; i < pending.length; i++) {
+      const draft = pending[i];
+      setMsg("ok", `Issuing ${i + 1} of ${pending.length}: "${draft.title}"…`);
+      try {
+        await handleIssueDraft(draft.id);
+        successCount++;
+      } catch (err) {
+        console.error("[tc-work] Issue All - failed for draft:", draft.id, err);
+        failures.push(`"${draft.title}": ${err.message || "unknown error"}`);
+      }
+    }
+
+    if (failures.length === 0) {
+      setMsg("ok", `✓ Issued all ${successCount} draft${successCount !== 1 ? "s" : ""} successfully.`);
+    } else {
+      setMsg("err", `Issued ${successCount} of ${pending.length}. ${failures.length} failed — check the browser console for details.`);
+    }
+    setTimeout(clearMsg, 6000);
+    renderTable(readDrafts());
+  }
+
   function showToast(text, bg = '#22c55e', color = '#0b1220') {
     const msg = document.createElement('div');
     msg.textContent = text;
@@ -1632,6 +1672,8 @@
     if (_ca) _ca.addEventListener("click", clearAll);
     const _daa = $("btnDeleteAllAssignments");
     if (_daa) _daa.addEventListener("click", deleteAllAssignments);
+    const _ia = $("btnIssueAll");
+    if (_ia) _ia.addEventListener("click", () => handleIssueAllDrafts().catch((err) => console.error(err)));
     const _fe = $("btnFillExample");
     if (_fe) _fe.addEventListener("click", fillExample);
     const _ce = $("btnCancelEdit");
@@ -2281,11 +2323,48 @@ function normalizeTaggedAssignmentText(input) {
     const panel = document.getElementById("rcFilePreviewPanel");
     if (!panel) return;
 
-    const sections = parseMegaSections(text);
-    
     // Clear previous content
     panel.innerHTML = "";
     panel.style.display = "none";
+
+    const btnStudent = document.getElementById("btnSplitByStudent");
+
+    // Check for student-sections format first (Assignment: SXXX headers)
+    const studentSections = parseStudentSections(text);
+    if (studentSections.length >= 1) {
+      // Student-individualized file detected — show info panel, no class checkboxes
+      panel.style.display = "block";
+
+      const studentList = studentSections
+        .map((s) => `<strong>${s.studentCode}</strong>${s.className ? ` (${s.className})` : ""}`)
+        .join(", ");
+
+      panel.innerHTML = `
+        <div class="work-card" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 20px;">🎓</span>
+            <strong>Detected ${studentSections.length} individualized student assignment${studentSections.length !== 1 ? "s" : ""}</strong>
+          </div>
+          <div style="font-size: 13px; margin-bottom: 8px;">Students: ${studentList}</div>
+          <div class="work-subtle" style="font-size: 12px;">
+            Click <strong>Split by Student</strong> to create one draft per student.
+          </div>
+        </div>
+      `;
+
+      // Show the Split by Student button prominently
+      if (btnStudent) btnStudent.style.display = "";
+
+      // Enable class dropdown (not used for student splits, but keep it accessible)
+      const classSel = document.getElementById("draftClass");
+      if (classSel) {
+        classSel.disabled = false;
+        updateClassDropdownLabel("Individual Class");
+      }
+      return;
+    }
+
+    const sections = parseMegaSections(text);
 
     if (sections.length >= 2) {
       // Multi-class file detected
