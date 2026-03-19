@@ -2011,6 +2011,78 @@ function normalizeTaggedAssignmentText(input) {
   //   return parseMegaSections(text).length >= 2;
   // }
 
+  /**
+   * Parse a student-based individualized assignment file.
+   * Each student section is bounded by ======= separator lines and starts with:
+   *   Assignment: SXXX
+   *   Class: Some Class Name
+   *
+   * @param {string} text - Raw file content
+   * @returns {{ studentCode: string, className: string, body: string }[]}
+   */
+  function parseStudentSections(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const isSep = (ln) => /^\s*={3,}\s*$/.test(ln);
+
+    // Find all separator line indices
+    const sepIndices = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (isSep(lines[i])) sepIndices.push(i);
+    }
+
+    const sections = [];
+
+    // Scan consecutive separator pairs: sep[i] ... sep[i+1]
+    // The lines between them should be "Assignment: SXXX" and "Class: ..."
+    for (let i = 0; i + 1 < sepIndices.length; i++) {
+      const topSep = sepIndices[i];
+      const botSep = sepIndices[i + 1];
+
+      // Collect non-blank lines between the two separators
+      const between = [];
+      for (let k = topSep + 1; k < botSep; k++) {
+        const t = lines[k].trim();
+        if (t) between.push(t);
+      }
+
+      // Must have exactly Assignment: and Class: lines (allow small header blocks)
+      const assignLine = between.find((l) => /^Assignment\s*:\s*/i.test(l));
+      const classLine = between.find((l) => /^Class\s*:\s*/i.test(l));
+      if (!assignLine || !classLine) continue;
+
+      const studentCode = assignLine.replace(/^Assignment\s*:\s*/i, "").trim();
+      const className = classLine.replace(/^Class\s*:\s*/i, "").trim();
+      if (!studentCode || !className) continue;
+
+      // Body is everything after botSep until the next top-level separator that
+      // starts another student block (or end of file)
+      const bodyStart = botSep + 1;
+      // Find the next student-block opener: a sep that is followed (within a few
+      // lines) by another sep with Assignment/Class lines between them
+      let bodyEnd = lines.length;
+      for (let j = i + 1; j + 1 < sepIndices.length; j++) {
+        const nextTop = sepIndices[j];
+        const nextBot = sepIndices[j + 1];
+        const nextBetween = [];
+        for (let k = nextTop + 1; k < nextBot; k++) {
+          const t = lines[k].trim();
+          if (t) nextBetween.push(t);
+        }
+        const hasAssign = nextBetween.some((l) => /^Assignment\s*:\s*/i.test(l));
+        const hasClass = nextBetween.some((l) => /^Class\s*:\s*/i.test(l));
+        if (hasAssign && hasClass) {
+          bodyEnd = nextTop;
+          break;
+        }
+      }
+
+      const body = lines.slice(bodyStart, bodyEnd).join("\n").trim();
+      sections.push({ studentCode, className, body });
+    }
+
+    return sections;
+  }
+
   function loadDrafts() {
     try {
       return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]");
@@ -2118,13 +2190,20 @@ function normalizeTaggedAssignmentText(input) {
     if (!panel) return;
 
     const sections = parseMegaSections(text);
+    const studentSections = parseStudentSections(text);
+
+    // Show/hide the Split by Student button
+    const btnSplitByStudent = document.getElementById("btnSplitByStudent");
+    if (btnSplitByStudent) {
+      btnSplitByStudent.style.display = studentSections.length >= 2 ? "" : "none";
+    }
     
     // Clear previous content
     panel.innerHTML = "";
     panel.style.display = "none";
 
     if (sections.length >= 2) {
-      // Multi-class file detected
+      // Multi-class file detected (Assignments for Multiple Classes)
       panel.style.display = "block";
       
       let html = `
@@ -2184,6 +2263,97 @@ function normalizeTaggedAssignmentText(input) {
       panel.innerHTML = html;
 
       // Disable class dropdown for mega files and remove required attribute
+      const classSel = document.getElementById("draftClass");
+      if (classSel) {
+        classSel.value = "";
+        classSel.disabled = true;
+        classSel.removeAttribute("required");
+        updateClassDropdownLabel("Individual Class (from file)");
+      }
+    } else if (studentSections.length >= 2) {
+      // Student-based individualized file detected (Assignments for Multiple Students)
+      panel.style.display = "block";
+
+      const allCodes = studentSections.map((s) => s.studentCode);
+      const MAX_CODES_IN_SUMMARY = 5;
+      const codeList = allCodes.length > MAX_CODES_IN_SUMMARY
+        ? allCodes.slice(0, MAX_CODES_IN_SUMMARY).join(", ") + `… and ${allCodes.length - MAX_CODES_IN_SUMMARY} more`
+        : allCodes.join(", ");
+
+      let html = `
+        <div class="work-card" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 20px;">👥</span>
+            <strong>Detected ${studentSections.length} individualized student assignments (${codeList}):</strong>
+          </div>
+          <div class="work-tablewrap">
+            <table class="work-table" style="font-size: 13px;">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">✅</th>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Questions</th>
+                  <th>Writing Prompts</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      studentSections.forEach((section, idx) => {
+        const counts = countSectionItems(section.body);
+        html += `
+          <tr>
+            <td style="text-align: center;">
+              <input type="checkbox"
+                     class="rcPreviewStudentCheckbox"
+                     data-student="${section.studentCode}"
+                     data-class="${section.className}"
+                     data-section-index="${idx}"
+                     checked
+                     style="width: 18px; height: 18px; cursor: pointer;" />
+            </td>
+            <td><strong>${section.studentCode}</strong></td>
+            <td>${section.className}</td>
+            <td>${counts.questions}</td>
+            <td>${counts.writingPrompts}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <button type="button" class="work-btn" id="rcSelectAllStudents" style="font-size: 12px; padding: 4px 10px;">Select All</button>
+            <button type="button" class="work-btn" id="rcDeselectAllStudents" style="font-size: 12px; padding: 4px 10px;">Deselect All</button>
+          </div>
+          <div class="work-subtle" style="margin-top: 10px; font-size: 12px;">
+            <strong>👥 Individualized student assignments detected</strong> — The class dropdown above is disabled.<br/>
+            Each checked student will get their own draft with their class and content.<br/>
+            Uncheck any student you want to skip.
+          </div>
+        </div>
+      `;
+
+      panel.innerHTML = html;
+
+      // Wire select/deselect all buttons
+      const selAll = panel.querySelector("#rcSelectAllStudents");
+      const deselAll = panel.querySelector("#rcDeselectAllStudents");
+      if (selAll) {
+        selAll.addEventListener("click", () => {
+          panel.querySelectorAll(".rcPreviewStudentCheckbox").forEach((cb) => { cb.checked = true; });
+        });
+      }
+      if (deselAll) {
+        deselAll.addEventListener("click", () => {
+          panel.querySelectorAll(".rcPreviewStudentCheckbox").forEach((cb) => { cb.checked = false; });
+        });
+      }
+
+      // Disable class dropdown for student-based files
       const classSel = document.getElementById("draftClass");
       if (classSel) {
         classSel.value = "";
@@ -2336,6 +2506,111 @@ function normalizeTaggedAssignmentText(input) {
     location.reload();
   }
 
+  async function splitByStudentFromCurrentForm() {
+    const form = document.getElementById("workDraftForm");
+    if (!form) return;
+
+    const titleEl = getFormEl("draftTitle", 'input[name="title"]');
+    const releaseEl = getFormEl("draftRelease", 'input[name="releaseAt"]');
+    const dueEl = getFormEl("draftDue", 'input[name="dueAt"]');
+    const notesEl = getFormEl("draftNotes", 'textarea[name="notes"]');
+
+    const { assignment: aIn } = pickFileInputs(form);
+    const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
+
+    if (!aFile) {
+      await rcAlert('No File Selected', 'Choose a student assignment TXT file first.');
+      return;
+    }
+
+    const raw = await readFileText(aFile);
+    const studentSections = parseStudentSections(raw);
+
+    if (studentSections.length < 2) {
+      await rcAlert('Error',
+        "That file doesn't look like a multi-student individualized TXT (need 2+ student sections with Assignment: and Class: headers)."
+      );
+      return;
+    }
+
+    const baseTitle = getVal(titleEl) || aFile.name;
+    const notes = getVal(notesEl) || "";
+    const releaseAt = toIsoMaybe(getVal(releaseEl));
+    const dueAt = toIsoMaybe(getVal(dueEl));
+
+    const ensureBound = (t) =>
+      t && t.length > 120000 ? t.slice(0, 120000) + "\n…(truncated)\n" : t || "";
+
+    const drafts = loadDrafts();
+
+    // Get checked students from preview panel
+    const checkboxes = document.querySelectorAll(".rcPreviewStudentCheckbox:checked");
+    const checkedStudents = new Set(
+      Array.from(checkboxes).map((cb) => cb.getAttribute("data-student"))
+    );
+
+    if (checkedStudents.size === 0) {
+      await rcAlert('Validation', 'Please select at least one student to create drafts for.');
+      return;
+    }
+
+    const createdDrafts = [];
+
+    for (const sec of studentSections) {
+      if (!checkedStudents.has(sec.studentCode)) continue;
+
+      const t = `${baseTitle} — ${sec.studentCode}`;
+
+      // Auto-map the student's body text
+      let mappingText = null;
+      if (typeof autoMapFromTeacherTxt === "function") {
+        try {
+          const mapResult = autoMapFromTeacherTxt(sec.body);
+          mappingText = JSON.stringify(mapResult, null, 2);
+        } catch (e) {
+          console.warn("autoMapFromTeacherTxt failed for", sec.studentCode, e);
+        }
+      }
+
+      const draft = {
+        id: makeId(),
+        title: t,
+        className: sec.className,
+        releaseAt,
+        dueAt,
+        createdAt: new Date().toISOString(),
+        notes,
+        assignment: {
+          kind: "file",
+          name: aFile.name,
+          link: null,
+          text: ensureBound(sec.body),
+        },
+        mapping: {
+          name: mappingText ? "auto-generated" : null,
+          kind: mappingText ? "auto" : null,
+          link: null,
+          text: ensureBound(mappingText),
+        },
+      };
+
+      drafts.unshift(draft);
+      createdDrafts.push(draft);
+    }
+
+    saveDrafts(drafts);
+
+    // Sync to remote if available
+    if (typeof window.__rcRemoteSaveDraft === 'function') {
+      for (const draft of createdDrafts) {
+        window.__rcRemoteSaveDraft(draft);
+      }
+    }
+
+    await rcAlert('Drafts Created', `Created ${createdDrafts.length} student drafts from individualized assignment file.`);
+    location.reload();
+  }
+
   function wire() {
     const form = document.getElementById("workDraftForm");
     const btn = document.getElementById("btnSplitMega");
@@ -2384,6 +2659,9 @@ function normalizeTaggedAssignmentText(input) {
                 panel.innerHTML = "";
                 panel.style.display = "none";
               }
+              // Hide split buttons when file is cleared
+              const btnSplitByStudentEl = document.getElementById("btnSplitByStudent");
+              if (btnSplitByStudentEl) btnSplitByStudentEl.style.display = "none";
               // Restore label when file is cleared
               if (classSel) {
                 classSel.disabled = false;
@@ -2421,6 +2699,24 @@ function normalizeTaggedAssignmentText(input) {
           e.preventDefault();
           e.stopImmediatePropagation();
           splitMegaFromCurrentForm().catch((err) => console.warn(err));
+        },
+        true
+      );
+    }
+
+    const btnStudent = document.getElementById("btnSplitByStudent");
+    if (btnStudent) {
+      try {
+        btnStudent.type = "button";
+      } catch (e) {
+        /* ignore */
+      }
+      btnStudent.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          splitByStudentFromCurrentForm().catch((err) => console.warn(err));
         },
         true
       );
