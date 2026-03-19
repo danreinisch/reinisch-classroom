@@ -3294,7 +3294,21 @@
       }
       
       const goals = goalsData.goals || [];
-      tabState.goalsData = goals;
+
+      // Safety-net filter: exclude inactive/archived goals (mirrors isGoalActive from goal-utils.js)
+      const activeGoals = goals.filter(g => {
+        // Exclude goals explicitly marked inactive (goal versioning)
+        if (g.active === false) return false;
+        // Exclude goals with closed/archived status
+        if (g.status) {
+          const s = g.status.toLowerCase();
+          if (s === 'closed' || s === 'archived') return false;
+        }
+        return true;
+      });
+      console.log(LOG_PREFIX, 'Filtered goals:', goals.length, '->', activeGoals.length, 'active');
+
+      tabState.goalsData = activeGoals;
       
       // Fetch progress data
       let progressMap = new Map();
@@ -3330,11 +3344,11 @@
       
       // Update dashboard goals count
       if (dashGoalsCount) {
-        dashGoalsCount.textContent = goals.length;
+        dashGoalsCount.textContent = activeGoals.length;
       }
       
       // Render goals in Goals tab
-      if (goals.length === 0) {
+      if (activeGoals.length === 0) {
         goalsContainer.innerHTML = `
           <div class="st-goals-empty">
             <div class="st-goals-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></div>
@@ -3342,12 +3356,12 @@
           </div>
         `;
       } else {
-        goalsContainer.innerHTML = goals.map(goal => renderGoalCard(goal, progressMap)).join('');
+        goalsContainer.innerHTML = activeGoals.map(goal => renderGoalCard(goal, progressMap)).join('');
       }
       
       // Render goals snapshot for dashboard (max 3)
       if (dashGoalsSnapshot) {
-        const snapshot = goals.slice(0, 3);
+        const snapshot = activeGoals.slice(0, 3);
         if (snapshot.length === 0) {
           dashGoalsSnapshot.innerHTML = '<p style="opacity:0.7;">No goals yet</p>';
         } else {
@@ -3356,7 +3370,7 @@
       }
       
       // Attach event listeners to "Show more" buttons in both Goals tab and Dashboard snapshot
-      if (goals.length > 0) {
+      if (activeGoals.length > 0) {
         attachShowMoreListeners();
       }
       
