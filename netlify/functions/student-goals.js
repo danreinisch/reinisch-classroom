@@ -93,10 +93,10 @@ exports.handler = async (event) => {
 
     const studentId = studentData[0].id;
 
-    // Now fetch goals for this student
-    const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=*&student_id=eq.${studentId}&order=code`;
+    // Now fetch goals for this student — active=eq.true excludes archived/replaced goal versions
+    const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=*&student_id=eq.${studentId}&active=eq.true&order=code`;
     
-    console.log(`[student-goals] [${requestId}] Fetching goals for student ID:`, studentId);
+    console.log(`[student-goals] [${requestId}] Fetching active goals for student ID:`, studentId);
     
     const goalsResponse = await fetch(goalsUrl, {
       method: 'GET',
@@ -115,7 +115,7 @@ exports.handler = async (event) => {
 
     const goals = await goalsResponse.json();
     
-    console.log(`[student-goals] [${requestId}] Successfully fetched ${goals.length} goals`);
+    console.log(`[student-goals] [${requestId}] Successfully fetched ${goals.length} active goals (active=true filter applied)`);
     
     return jsonResponse(
       event,
