@@ -1113,7 +1113,7 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
     if (e1) throw e1;
-    const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
+    const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).eq('active', true).or('status.is.null,status.not.in.(closed,archived,Closed,Archived)').order('code');
     if (error) throw error; return data;
   },
   async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open',

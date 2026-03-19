@@ -93,8 +93,9 @@ exports.handler = async (event) => {
 
     const studentId = studentData[0].id;
 
-    // Now fetch goals for this student — active=eq.true excludes archived/replaced goal versions
-    const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=*&student_id=eq.${studentId}&active=eq.true&order=code`;
+    // Now fetch goals for this student — active=eq.true excludes archived/replaced goal versions;
+    // the or() filter excludes goals explicitly marked closed/archived while preserving null status
+    const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=*&student_id=eq.${studentId}&active=eq.true&or=(status.is.null,status.not.in.(closed,archived,Closed,Archived))&order=code`;
     
     console.log(`[student-goals] [${requestId}] Fetching active goals for student ID:`, studentId);
     
@@ -115,7 +116,7 @@ exports.handler = async (event) => {
 
     const goals = await goalsResponse.json();
     
-    console.log(`[student-goals] [${requestId}] Successfully fetched ${goals.length} active goals (active=true filter applied)`);
+    console.log(`[student-goals] [${requestId}] Successfully fetched ${goals.length} active goals (active=true + status filter applied)`);
     
     return jsonResponse(
       event,

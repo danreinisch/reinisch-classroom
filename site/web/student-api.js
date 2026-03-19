@@ -172,7 +172,16 @@ export function createStudentApiAdapter(studentCode) {
     
     // Goals
     async listGoalsByStudentCode(code) {
-      return await getStudentGoals(code || studentCode);
+      const goals = await getStudentGoals(code || studentCode);
+      // Safety-net filter: exclude inactive/closed/archived goals (mirrors isGoalActive from goal-utils.js)
+      return goals.filter(g => {
+        if (g.active === false) return false;
+        if (g.status) {
+          const s = g.status.toLowerCase();
+          if (s === 'closed' || s === 'archived') return false;
+        }
+        return true;
+      });
     },
     
     // Goal progress
