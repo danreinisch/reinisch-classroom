@@ -3272,8 +3272,8 @@
     
     // Show loading state
     goalsContainer.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+      <div class="st-goals-loading">
+        <div class="st-goals-loading-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
         <div>Loading your goals...</div>
       </div>
     `;
@@ -3336,9 +3336,9 @@
       // Render goals in Goals tab
       if (goals.length === 0) {
         goalsContainer.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></div>
-            <div>No goals found for your account.</div>
+          <div class="st-goals-empty">
+            <div class="st-goals-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></div>
+            <div class="st-goals-empty-msg">No goals found for your account.</div>
           </div>
         `;
       } else {
@@ -3363,10 +3363,10 @@
     } catch (err) {
       console.error(LOG_PREFIX, 'Error loading goals:', err);
       goalsContainer.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
-          <div style="color: var(--ink);">Goals temporarily unavailable</div>
-          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
+        <div class="st-goals-error">
+          <div class="st-goals-error-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+          <div class="st-goals-error-title">Goals temporarily unavailable</div>
+          <div class="st-goals-error-detail">Please try refreshing the page or contact your teacher if this persists.</div>
         </div>
       `;
       if (dashGoalsCount) {
@@ -3538,6 +3538,110 @@
           toggleBtn.textContent = 'Use dropdown instead';
         }
       });
+    }
+
+    // Forgot password / Reset password handlers
+    const btnForgotPassword = document.getElementById('btnForgotPassword');
+    const btnBackToLogin = document.getElementById('btnBackToLogin');
+    const btnResetPassword = document.getElementById('btnResetPassword');
+    const resetPasswordSection = document.getElementById('resetPasswordSection');
+
+    if (btnForgotPassword) {
+      btnForgotPassword.addEventListener('click', () => {
+        showResetPasswordSection(true);
+      });
+    }
+
+    if (btnBackToLogin) {
+      btnBackToLogin.addEventListener('click', () => {
+        showResetPasswordSection(false);
+      });
+    }
+
+    if (btnResetPassword) {
+      btnResetPassword.addEventListener('click', handleResetPassword);
+    }
+  }
+
+  /**
+   * Show or hide the reset password section vs login forms
+   */
+  function showResetPasswordSection(show) {
+    const resetSection = document.getElementById('resetPasswordSection');
+    const loginForm = document.getElementById('studentLoginForm');
+    const manualEntrySection = document.getElementById('manualEntrySection');
+    const toggleBtn = document.getElementById('btnToggleManualEntry');
+    const divider = document.querySelector('.st-divider');
+    const forgotBtn = document.getElementById('btnForgotPassword');
+    const resetMsg = document.getElementById('resetPasswordMsg');
+
+    if (show) {
+      if (resetSection) resetSection.classList.add('show');
+      if (loginForm) loginForm.style.display = 'none';
+      if (manualEntrySection) manualEntrySection.classList.remove('show');
+      if (toggleBtn) toggleBtn.style.display = 'none';
+      if (divider) divider.style.display = 'none';
+      if (forgotBtn) forgotBtn.style.display = 'none';
+      // Clear previous messages
+      if (resetMsg) { resetMsg.style.display = 'none'; resetMsg.textContent = ''; resetMsg.className = 'st-reset-msg'; }
+      const codeInput = document.getElementById('resetStudentCode');
+      if (codeInput) codeInput.value = '';
+    } else {
+      if (resetSection) resetSection.classList.remove('show');
+      if (loginForm) loginForm.style.display = '';
+      if (toggleBtn) toggleBtn.style.display = '';
+      if (divider) divider.style.display = '';
+      if (forgotBtn) forgotBtn.style.display = '';
+    }
+  }
+
+  /**
+   * Handle "Reset Password" button click
+   */
+  async function handleResetPassword() {
+    const codeInput = document.getElementById('resetStudentCode');
+    const btnReset = document.getElementById('btnResetPassword');
+    const resetMsg = document.getElementById('resetPasswordMsg');
+
+    if (!codeInput || !resetMsg) return;
+
+    const code = codeInput.value.trim();
+    if (!code) {
+      resetMsg.textContent = 'Please enter your student code.';
+      resetMsg.className = 'st-reset-msg error';
+      resetMsg.style.display = 'block';
+      return;
+    }
+
+    if (btnReset) { btnReset.disabled = true; btnReset.textContent = 'Resetting...'; }
+    resetMsg.style.display = 'none';
+
+    try {
+      const res = await fetch('/.netlify/functions/student-reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        resetMsg.textContent = 'Your password has been reset to your default password (your student code + "!"). Please log in with that password and then change it in Settings.';
+        resetMsg.className = 'st-reset-msg success';
+        resetMsg.style.display = 'block';
+        // Auto-return to login after 3 seconds
+        setTimeout(() => showResetPasswordSection(false), 3000);
+      } else {
+        resetMsg.textContent = data.error || 'Could not reset your password. Please ask your teacher for help.';
+        resetMsg.className = 'st-reset-msg error';
+        resetMsg.style.display = 'block';
+      }
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Reset password error:', err);
+      resetMsg.textContent = 'Unable to reach the server. Please check your connection and try again.';
+      resetMsg.className = 'st-reset-msg error';
+      resetMsg.style.display = 'block';
+    } finally {
+      if (btnReset) { btnReset.disabled = false; btnReset.textContent = 'Reset Password'; }
     }
   }
 

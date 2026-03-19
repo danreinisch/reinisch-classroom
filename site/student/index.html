@@ -298,6 +298,197 @@
         color: #fca5a5;
       }
 
+      /* Goals: loading, empty, error states */
+      .st-goals-loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--muted);
+      }
+
+      .st-goals-loading > div:first-child {
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .st-goals-empty {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--muted);
+      }
+
+      .st-goals-empty-icon {
+        margin-bottom: 16px;
+        opacity: 0.4;
+      }
+
+      .st-goals-empty-msg {
+        font-size: 17px;
+        margin-bottom: 8px;
+        opacity: 0.8;
+      }
+
+      .st-goals-error {
+        text-align: center;
+        padding: 40px;
+        color: var(--muted);
+      }
+
+      .st-goals-error-icon {
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .st-goals-error-title {
+        color: var(--ink);
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .st-goals-error-detail {
+        font-size: 14px;
+        opacity: 0.7;
+      }
+
+      /* Assignment class filter */
+      .st-class-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      .st-class-filter-bar label {
+        font-size: 13px;
+        opacity: 0.7;
+        flex-shrink: 0;
+      }
+
+      #assignmentClassFilter {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--rc-glass-border);
+        border-radius: 8px;
+        color: inherit;
+        padding: 6px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        max-width: 220px;
+      }
+
+      /* Class subheaders within assignment status sections */
+      .st-class-subheader {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        opacity: 0.6;
+        margin: 16px 0 8px;
+        padding: 4px 0 4px 4px;
+        border-left: 3px solid rgba(168, 85, 247, 0.5);
+        text-transform: uppercase;
+      }
+
+      .st-class-subheader:first-child {
+        margin-top: 4px;
+      }
+
+      /* Grades: letter grade badge */
+      .st-letter-grade {
+        display: inline-block;
+        font-size: 28px;
+        font-weight: 800;
+        line-height: 1;
+        margin-left: 12px;
+        padding: 4px 12px;
+        border-radius: 10px;
+        vertical-align: middle;
+      }
+
+      .st-letter-grade-a { color: #86efac; background: rgba(34,197,94,0.12); }
+      .st-letter-grade-b { color: #93c5fd; background: rgba(59,130,246,0.12); }
+      .st-letter-grade-c { color: #fde047; background: rgba(234,179,8,0.12); }
+      .st-letter-grade-d { color: #fdba74; background: rgba(249,115,22,0.12); }
+      .st-letter-grade-f { color: #fca5a5; background: rgba(239,68,68,0.12); }
+
+      /* Compact letter grade used inside class average rows */
+      .st-class-avg-letter {
+        font-size: 14px;
+        padding: 2px 8px;
+        margin-left: 8px;
+      }
+
+      /* Grades: color-coded class average rows */
+      .grade-stat.grade-avg-a { border-left: 3px solid #22c55e; }
+      .grade-stat.grade-avg-b { border-left: 3px solid #3b82f6; }
+      .grade-stat.grade-avg-c { border-left: 3px solid #eab308; }
+      .grade-stat.grade-avg-d { border-left: 3px solid #f97316; }
+      .grade-stat.grade-avg-f { border-left: 3px solid #ef4444; }
+
+      /* Grades table: alternating rows */
+      #gradedAssignmentsTable tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      #gradedAssignmentsTable tbody tr:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      /* Grades table: mobile scroll */
+      .graded-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Login: forgot password section */
+      .st-forgot-password-link {
+        display: block;
+        text-align: center;
+        margin-top: 12px;
+        font-size: 13px;
+        color: #60a5fa;
+        cursor: pointer;
+        text-decoration: underline;
+        background: none;
+        border: none;
+        padding: 0;
+      }
+
+      .st-forgot-password-link:hover {
+        opacity: 0.8;
+      }
+
+      #resetPasswordSection {
+        margin-top: 24px;
+        display: none;
+      }
+
+      #resetPasswordSection.show {
+        display: block;
+      }
+
+      #resetPasswordSection .st-form-group {
+        margin-bottom: 14px;
+      }
+
+      .st-reset-msg {
+        font-size: 14px;
+        margin-top: 10px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        min-height: 0;
+      }
+
+      .st-reset-msg.success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      .st-reset-msg.error {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fca5a5;
+      }
+
       /* Goal cards */
       .st-goal-card {
         padding: 20px;
@@ -2361,6 +2552,21 @@
                   <button type="submit" class="st-btn">Log In</button>
                 </form>
               </div>
+
+              <!-- Forgot Password Section -->
+              <div id="resetPasswordSection">
+                <h3 style="text-align:center; margin: 0 0 16px;">Reset Your Password</h3>
+                <p style="text-align:center; font-size:14px; opacity:0.8; margin-bottom:20px;">Enter your student code and your password will be reset to your default.</p>
+                <div class="st-form-group">
+                  <label for="resetStudentCode">Student Code</label>
+                  <input type="text" id="resetStudentCode" placeholder="Enter your student code" autocomplete="off" />
+                </div>
+                <button type="button" id="btnResetPassword" class="st-btn">Reset Password</button>
+                <div id="resetPasswordMsg" class="st-reset-msg" style="display:none;"></div>
+                <button type="button" id="btnBackToLogin" class="st-forgot-password-link" style="margin-top:14px;">← Back to Login</button>
+              </div>
+
+              <button type="button" id="btnForgotPassword" class="st-forgot-password-link">Forgot your password?</button>
             </div>
           </div>
 
@@ -2483,6 +2689,12 @@
                   My Assignments
                 </h1>
                 <p style="opacity:0.8; margin-bottom:24px;">View and manage your assignments</p>
+                <div class="st-class-filter-bar" id="assignmentClassFilterBar">
+                  <label for="assignmentClassFilter">Class:</label>
+                  <select id="assignmentClassFilter">
+                    <option value="">All Classes</option>
+                  </select>
+                </div>
                 <div class="st-status-tabs" id="assignmentStatusTabs">
                   <button class="st-status-tab active" data-status="all">All</button>
                   <button class="st-status-tab" data-status="in-progress">In Progress</button>
