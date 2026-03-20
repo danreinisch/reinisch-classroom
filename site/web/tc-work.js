@@ -2,7 +2,28 @@
   "use strict";
 
   const STORAGE_KEY = "rc_tc_work_drafts_v1";
+  const BATCH_COLLAPSED_KEY = "rc_tc_work_batch_collapsed_v1";
+  const SHOW_ISSUED_KEY = "rc_tc_work_show_issued_v1";
   const MAX_TEXT_BYTES = 800_000; // keep localStorage safe-ish
+
+  function loadBatchCollapsed() {
+    try {
+      const raw = localStorage.getItem(BATCH_COLLAPSED_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) { return {}; }
+  }
+
+  function saveBatchCollapsed(map) {
+    try { localStorage.setItem(BATCH_COLLAPSED_KEY, JSON.stringify(map)); } catch (_) { /* noop */ }
+  }
+
+  function loadShowIssued() {
+    try { return localStorage.getItem(SHOW_ISSUED_KEY) === "true"; } catch (_) { return false; }
+  }
+
+  function saveShowIssued(val) {
+    try { localStorage.setItem(SHOW_ISSUED_KEY, val ? "true" : "false"); } catch (_) { /* noop */ }
+  }
 
   const $ = (id) => document.getElementById(id);
 
@@ -97,7 +118,7 @@
     }
   }
 
-  function inferSource(d) {
+  function _inferSource(d) {
     if (d.assignment && d.assignment.kind === "file")
       return `file: ${d.assignment.name || "assignment"}`;
     if (d.assignment && d.assignment.kind === "link") return `link`;
@@ -113,28 +134,304 @@
     });
   }
 
+  // SVG constants used by renderTable
+  const SVG_EDIT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+  const SVG_DUPE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  const SVG_EYE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+  const SVG_SEND = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+  const SVG_DL   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
+  const SVG_DEL  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+
+  function makeDraftActionButtons(d) {
+    const tdActions = document.createElement("td");
+    tdActions.style.whiteSpace = "nowrap";
+
+    const btnEdit = document.createElement("button");
+    btnEdit.type = "button"; btnEdit.className = "work-btn"; btnEdit.title = "Edit";
+    btnEdit.innerHTML = SVG_EDIT + " Edit"; // SAFETY: static SVG + static text
+    btnEdit.addEventListener("click", () => startEdit(d.id));
+    tdActions.appendChild(btnEdit);
+
+    const btnDuplicate = document.createElement("button");
+    btnDuplicate.type = "button"; btnDuplicate.className = "work-btn"; btnDuplicate.style.marginLeft = "8px"; btnDuplicate.title = "Duplicate";
+    btnDuplicate.innerHTML = SVG_DUPE + " Duplicate"; // SAFETY: static SVG + static text
+    btnDuplicate.addEventListener("click", () => duplicateOne(d.id));
+    tdActions.appendChild(btnDuplicate);
+
+    const btnPreview = document.createElement("button");
+    btnPreview.type = "button"; btnPreview.className = "work-btn"; btnPreview.style.marginLeft = "8px"; btnPreview.title = "Preview";
+    btnPreview.innerHTML = SVG_EYE + " Preview"; // SAFETY: static SVG + static text
+    btnPreview.addEventListener("click", () => openPreview(d.id));
+    tdActions.appendChild(btnPreview);
+
+    if (!d.issuedAt) {
+      const btnIssue = document.createElement("button");
+      btnIssue.type = "button"; btnIssue.className = "work-btn primary"; btnIssue.style.marginLeft = "8px"; btnIssue.title = "Issue";
+      btnIssue.innerHTML = SVG_SEND + " Issue"; // SAFETY: static SVG + static text
+      btnIssue.addEventListener("click", () => handleIssueDraft(d.id));
+      tdActions.appendChild(btnIssue);
+    }
+
+    const btnExport = document.createElement("button");
+    btnExport.type = "button"; btnExport.className = "work-btn"; btnExport.style.marginLeft = "8px"; btnExport.title = "Export";
+    btnExport.innerHTML = SVG_DL + " Export"; // SAFETY: static SVG + static text
+    btnExport.addEventListener("click", () => exportOne(d.id));
+    tdActions.appendChild(btnExport);
+
+    const btnDel = document.createElement("button");
+    btnDel.type = "button"; btnDel.className = "work-btn danger"; btnDel.style.marginLeft = "8px"; btnDel.title = "Delete";
+    btnDel.innerHTML = SVG_DEL + " Delete"; // SAFETY: static SVG + static text
+    btnDel.addEventListener("click", () => deleteOne(d.id));
+    tdActions.appendChild(btnDel);
+
+    return tdActions;
+  }
+
+  function makeStatusBadge(d) {
+    const span = document.createElement("span");
+    span.style.cssText = "display:inline-block;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;margin-left:6px;";
+    if (d.issuedAt) {
+      span.textContent = "✓ Issued";
+      span.style.background = "rgba(34,197,94,0.15)";
+      span.style.color = "rgba(34,197,94,0.9)";
+      span.style.border = "1px solid rgba(34,197,94,0.3)";
+    } else {
+      span.textContent = "Draft";
+      span.style.background = "rgba(156,163,175,0.15)";
+      span.style.color = "rgba(156,163,175,0.8)";
+      span.style.border = "1px solid rgba(156,163,175,0.25)";
+    }
+    return span;
+  }
+
+  function makeBatchStatusBadge(issuedCount, total) {
+    const span = document.createElement("span");
+    span.style.cssText = "display:inline-block;padding:1px 8px;border-radius:8px;font-size:11px;font-weight:600;margin-left:8px;";
+    if (issuedCount === 0) {
+      span.textContent = `0 of ${total} issued`;
+      span.style.background = "rgba(249,115,22,0.12)";
+      span.style.color = "rgba(249,115,22,0.9)";
+      span.style.border = "1px solid rgba(249,115,22,0.25)";
+    } else if (issuedCount === total) {
+      span.textContent = "All issued ✓";
+      span.style.background = "rgba(34,197,94,0.15)";
+      span.style.color = "rgba(34,197,94,0.9)";
+      span.style.border = "1px solid rgba(34,197,94,0.3)";
+    } else {
+      span.textContent = `${issuedCount} of ${total} issued`;
+      span.style.background = "rgba(234,179,8,0.12)";
+      span.style.color = "rgba(234,179,8,0.9)";
+      span.style.border = "1px solid rgba(234,179,8,0.25)";
+    }
+    return span;
+  }
+
   function renderTable(drafts) {
     const empty = $("draftsEmpty");
     const table = $("draftsTable");
     const tbody = $("draftsTbody");
     if (!empty || !table || !tbody) return;
 
-    if (!drafts.length) {
-      empty.style.display = "block";
-      table.style.display = "none";
-      tbody.innerHTML = "";
+    const showIssued = loadShowIssued();
+
+    // Sync the toggle UI if present
+    const tog = $("showIssuedToggle");
+    if (tog) tog.checked = showIssued;
+
+    // Separate batched vs ungrouped drafts
+    const batchMap = new Map(); // batchId -> [drafts]
+    const ungrouped = [];
+    for (const d of drafts) {
+      if (d.batchId) {
+        if (!batchMap.has(d.batchId)) batchMap.set(d.batchId, []);
+        batchMap.get(d.batchId).push(d);
+      } else {
+        ungrouped.push(d);
+      }
+    }
+
+    // Determine what to render (apply show-issued filter)
+    const batchEntries = [];
+    for (const [batchId, bDrafts] of batchMap) {
+      const allIssued = bDrafts.every(d => !!d.issuedAt);
+      if (!showIssued && allIssued) continue; // fully-issued batch hidden when toggle is off
+      batchEntries.push({ batchId, bDrafts, allIssued });
+    }
+
+    const visibleUngrouped = ungrouped.filter(d => showIssued || !d.issuedAt);
+
+    if (batchEntries.length === 0 && visibleUngrouped.length === 0) {
+      if (drafts.length > 0) {
+        // There are drafts but all are hidden by the filter — show a subtle message
+        empty.style.display = "none";
+        table.style.display = "none";
+        tbody.innerHTML = "";
+        let hint = $("draftsIssuedHint");
+        if (!hint) {
+          hint = document.createElement("div");
+          hint.id = "draftsIssuedHint";
+          hint.className = "work-empty";
+          hint.style.cssText = "font-size:13px;opacity:0.7;";
+          table.parentNode.insertBefore(hint, table);
+        }
+        hint.textContent = 'All drafts have been issued. Turn on "Show issued assignments" to view them.';
+        hint.style.display = "block";
+      } else {
+        empty.style.display = "block";
+        table.style.display = "none";
+        tbody.innerHTML = "";
+      }
       return;
     }
+
+    // Hide the issued hint if visible
+    const existingHint = $("draftsIssuedHint");
+    if (existingHint) existingHint.style.display = "none";
 
     empty.style.display = "none";
     table.style.display = "table";
     tbody.innerHTML = "";
 
-    for (const d of drafts) {
+    const collapsedMap = loadBatchCollapsed();
+
+    // Render batch group rows first (they appear at top, ordered by most-recent draft createdAt)
+    batchEntries.sort((a, b) => {
+      const aLatest = Math.max(...a.bDrafts.map(d => new Date(d.createdAt || 0).getTime()));
+      const bLatest = Math.max(...b.bDrafts.map(d => new Date(d.createdAt || 0).getTime()));
+      return bLatest - aLatest; // newest first
+    });
+
+    for (const { batchId, bDrafts, allIssued } of batchEntries) {
+      const total = bDrafts.length;
+      const issuedCount = bDrafts.filter(d => !!d.issuedAt).length;
+      const firstDraft = bDrafts[0];
+      const batchTitle = safeStr(firstDraft.batchTitle) || safeStr(firstDraft.title).replace(/ — S\d+.*$/, "") || "(untitled batch)";
+      const batchClass = safeStr(firstDraft.className) || "—";
+
+      // Default: collapsed if all issued, expanded if any pending
+      const isCollapsed = collapsedMap[batchId] !== undefined
+        ? collapsedMap[batchId]
+        : allIssued;
+
+      // Batch header row
+      const trBatch = document.createElement("tr");
+      trBatch.style.cssText = "background:rgba(139,92,246,0.07);cursor:pointer;";
+
+      const tdToggle = document.createElement("td");
+      tdToggle.style.cssText = "width:28px;text-align:center;font-size:13px;user-select:none;";
+      tdToggle.textContent = isCollapsed ? "▶" : "▼";
+      trBatch.appendChild(tdToggle);
+
+      const tdBatchTitle = document.createElement("td");
+      tdBatchTitle.colSpan = 3;
+      const titleSpan = document.createElement("span");
+      titleSpan.style.cssText = "font-weight:600;";
+      titleSpan.textContent = batchTitle; // SAFETY: textContent, no HTML injection
+      tdBatchTitle.appendChild(titleSpan);
+      const countSpan = document.createElement("span");
+      countSpan.style.cssText = "opacity:0.65;font-size:12px;margin-left:8px;";
+      countSpan.textContent = `${total} draft${total !== 1 ? "s" : ""} · ${batchClass}`;
+      tdBatchTitle.appendChild(countSpan);
+      tdBatchTitle.appendChild(makeBatchStatusBadge(issuedCount, total));
+      trBatch.appendChild(tdBatchTitle);
+
+      // Batch action buttons
+      const tdBatchActions = document.createElement("td");
+      tdBatchActions.style.whiteSpace = "nowrap";
+
+      const unissuedInBatch = bDrafts.filter(d => !d.issuedAt);
+      if (unissuedInBatch.length > 0) {
+        const btnIssueAll = document.createElement("button");
+        btnIssueAll.type = "button"; btnIssueAll.className = "work-btn primary"; btnIssueAll.title = "Issue all in batch";
+        btnIssueAll.innerHTML = SVG_SEND + " Issue All"; // SAFETY: static SVG + static text
+        btnIssueAll.addEventListener("click", (e) => { e.stopPropagation(); issueAllInBatch(batchId); });
+        tdBatchActions.appendChild(btnIssueAll);
+      }
+
+      const btnExportAll = document.createElement("button");
+      btnExportAll.type = "button"; btnExportAll.className = "work-btn"; btnExportAll.style.marginLeft = "8px"; btnExportAll.title = "Export all in batch";
+      btnExportAll.innerHTML = SVG_DL + " Export All"; // SAFETY: static SVG + static text
+      btnExportAll.addEventListener("click", (e) => { e.stopPropagation(); bDrafts.forEach(d => exportOne(d.id)); });
+      tdBatchActions.appendChild(btnExportAll);
+
+      const btnDelAll = document.createElement("button");
+      btnDelAll.type = "button"; btnDelAll.className = "work-btn danger"; btnDelAll.style.marginLeft = "8px"; btnDelAll.title = "Delete all in batch";
+      btnDelAll.innerHTML = SVG_DEL + " Delete All"; // SAFETY: static SVG + static text
+      btnDelAll.addEventListener("click", (e) => { e.stopPropagation(); deleteAllInBatch(batchId); });
+      tdBatchActions.appendChild(btnDelAll);
+
+      trBatch.appendChild(tdBatchActions);
+      tbody.appendChild(trBatch);
+
+      // Toggle collapse on row click
+      trBatch.addEventListener("click", () => {
+        const newCollapsed = !isCollapsed;
+        const cm = loadBatchCollapsed();
+        cm[batchId] = newCollapsed;
+        saveBatchCollapsed(cm);
+        renderTable(readDrafts());
+      });
+
+      if (!isCollapsed) {
+        // Render child draft rows
+        for (const d of bDrafts) {
+          const tr = document.createElement("tr");
+          tr.style.cssText = "background:rgba(139,92,246,0.03);";
+
+          // Indent column (takes the place of toggle column in batch header)
+          const tdIndent = document.createElement("td");
+          tdIndent.style.cssText = "padding-left:24px;opacity:0.4;font-size:11px;";
+          tdIndent.textContent = "└";
+          tr.appendChild(tdIndent);
+
+          const tdTitle = document.createElement("td");
+          {
+            const sp = document.createElement("span");
+            sp.textContent = safeStr(d.title) || "(untitled)"; // SAFETY: textContent
+            tdTitle.appendChild(sp);
+            tdTitle.appendChild(makeStatusBadge(d));
+          }
+          tr.appendChild(tdTitle);
+
+          const tdClass = document.createElement("td");
+          tdClass.textContent = safeStr(d.className) || "—";
+          tr.appendChild(tdClass);
+
+          const tdWhen = document.createElement("td");
+          const releaseDiv = document.createElement("div");
+          releaseDiv.textContent = "Release: " + formatWhen(d.releaseAt);
+          if (d.autoRelease) {
+            const clockIcon = document.createElement("span");
+            // SAFETY: static SVG, no user data
+            clockIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px; margin-left:4px; opacity:0.7;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+            releaseDiv.appendChild(clockIcon);
+          }
+          const dueDiv = document.createElement("div");
+          dueDiv.textContent = "Due: " + formatWhen(d.dueAt);
+          tdWhen.appendChild(releaseDiv);
+          tdWhen.appendChild(dueDiv);
+          tr.appendChild(tdWhen);
+
+          tr.appendChild(makeDraftActionButtons(d));
+          tbody.appendChild(tr);
+        }
+      }
+    }
+
+    // Render ungrouped drafts (sorted newest first)
+    ungrouped.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    for (const d of visibleUngrouped) {
       const tr = document.createElement("tr");
 
+      // Empty first column (aligns with batch toggle column)
+      const tdEmpty = document.createElement("td");
+      tr.appendChild(tdEmpty);
+
       const tdTitle = document.createElement("td");
-      tdTitle.textContent = safeStr(d.title) || "(untitled)";
+      const sp = document.createElement("span");
+      sp.textContent = safeStr(d.title) || "(untitled)"; // SAFETY: textContent
+      tdTitle.appendChild(sp);
+      tdTitle.appendChild(makeStatusBadge(d));
       tr.appendChild(tdTitle);
 
       const tdClass = document.createElement("td");
@@ -145,8 +442,8 @@
       const releaseDiv = document.createElement("div");
       releaseDiv.textContent = "Release: " + formatWhen(d.releaseAt);
       if (d.autoRelease) {
-        // SAFETY: static SVG icon, no user data
         const clockIcon = document.createElement("span");
+        // SAFETY: static SVG, no user data
         clockIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px; margin-left:4px; opacity:0.7;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
         releaseDiv.appendChild(clockIcon);
       }
@@ -156,73 +453,7 @@
       tdWhen.appendChild(dueDiv);
       tr.appendChild(tdWhen);
 
-      const tdSrc = document.createElement("td");
-      tdSrc.textContent = inferSource(d);
-      tr.appendChild(tdSrc);
-
-      const tdActions = document.createElement("td");
-      tdActions.style.whiteSpace = "nowrap";
-
-      const btnEdit = document.createElement("button");
-      btnEdit.type = "button";
-      btnEdit.className = "work-btn";
-      btnEdit.title = "Edit";
-      // SAFETY: static SVG icon + static label text, no user data
-      btnEdit.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit';
-      btnEdit.addEventListener("click", () => startEdit(d.id));
-      tdActions.appendChild(btnEdit);
-
-      const btnDuplicate = document.createElement("button");
-      btnDuplicate.type = "button";
-      btnDuplicate.className = "work-btn";
-      btnDuplicate.style.marginLeft = "8px";
-      btnDuplicate.title = "Duplicate";
-      // SAFETY: static SVG icon + static label text, no user data
-      btnDuplicate.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Duplicate';
-      btnDuplicate.addEventListener("click", () => duplicateOne(d.id));
-      tdActions.appendChild(btnDuplicate);
-
-      const btnPreview = document.createElement("button");
-      btnPreview.type = "button";
-      btnPreview.className = "work-btn";
-      btnPreview.style.marginLeft = "8px";
-      btnPreview.title = "Preview";
-      // SAFETY: static SVG icon + static label text, no user data
-      btnPreview.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Preview';
-      btnPreview.addEventListener("click", () => openPreview(d.id));
-      tdActions.appendChild(btnPreview);
-
-      const btnIssue = document.createElement("button");
-      btnIssue.type = "button";
-      btnIssue.className = "work-btn primary";
-      btnIssue.style.marginLeft = "8px";
-      btnIssue.title = "Issue";
-      // SAFETY: static SVG icon + static label text, no user data
-      btnIssue.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Issue';
-      btnIssue.addEventListener("click", () => handleIssueDraft(d.id));
-      tdActions.appendChild(btnIssue);
-
-      const btnExport = document.createElement("button");
-      btnExport.type = "button";
-      btnExport.className = "work-btn";
-      btnExport.style.marginLeft = "8px";
-      btnExport.title = "Export";
-      // SAFETY: static SVG icon + static label text, no user data
-      btnExport.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export';
-      btnExport.addEventListener("click", () => exportOne(d.id));
-      tdActions.appendChild(btnExport);
-
-      const btnDel = document.createElement("button");
-      btnDel.type = "button";
-      btnDel.className = "work-btn danger";
-      btnDel.style.marginLeft = "8px";
-      btnDel.title = "Delete";
-      // SAFETY: static SVG icon + static label text, no user data
-      btnDel.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
-      btnDel.addEventListener("click", () => deleteOne(d.id));
-      tdActions.appendChild(btnDel);
-
-      tr.appendChild(tdActions);
+      tr.appendChild(makeDraftActionButtons(d));
       tbody.appendChild(tr);
     }
   }
@@ -1519,6 +1750,8 @@
   window.__rcRemoteDeleteDraft = remoteDeleteDraft;
   window.__rcAutoMapFromTeacherTxt = autoMapFromTeacherTxt;
   window.__rcJoinTagOnlyLines = __rc_joinTagOnlyLines;
+  window.__rcShowToast = showToast;
+  window.__rcRenderTable = () => renderTable(readDrafts());
 
   // ========================================
   // Issue Assignment from Draft
@@ -1566,8 +1799,16 @@
 
       if (result.ok) {
         const issued = result.issued_count || 0;
+        // Mark issuedAt in localStorage
+        const updatedDrafts = readDrafts();
+        const d = updatedDrafts.find(x => x.id === draftId);
+        if (d) {
+          d.issuedAt = nowISO();
+          writeDrafts(updatedDrafts);
+        }
         setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}`);
         setTimeout(clearMsg, 5000);
+        renderTable(readDrafts());
       } else {
         throw new Error(result.error || "Issue failed");
       }
@@ -1576,6 +1817,65 @@
       setMsg("err", `Failed to issue: ${err.message}`);
       setTimeout(clearMsg, 5000);
     }
+  }
+
+  async function issueAllInBatch(batchId) {
+    const allDrafts = readDrafts();
+    const batchDrafts = allDrafts.filter(d => d.batchId === batchId);
+    const pending = batchDrafts.filter(d => !d.issuedAt && d.className);
+
+    if (pending.length === 0) {
+      await rcAlert("Nothing to Issue", "All drafts in this batch have already been issued.");
+      return;
+    }
+
+    const studentList = pending.map(d => d.title).join(", ");
+    const confirmed = await rcConfirm(
+      "Issue Batch",
+      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""}?\n\n${studentList}`,
+      "Issue All"
+    );
+    if (!confirmed) return;
+
+    let successCount = 0;
+    const failures = [];
+
+    for (let i = 0; i < pending.length; i++) {
+      const draft = pending[i];
+      setMsg("ok", `Issuing ${i + 1} of ${pending.length}: "${draft.title}"…`);
+      try {
+        await handleIssueDraft(draft.id);
+        successCount++;
+      } catch (err) {
+        console.error("[tc-work] Issue batch - failed for draft:", draft.id, err);
+        failures.push(draft.title);
+      }
+    }
+
+    if (failures.length === 0) {
+      showToast(`✓ Issued all ${successCount} draft${successCount !== 1 ? "s" : ""} in batch`);
+    } else {
+      setMsg("err", `Issued ${successCount} of ${pending.length}. ${failures.length} failed — check console.`);
+      setTimeout(clearMsg, 6000);
+    }
+    renderTable(readDrafts());
+  }
+
+  async function deleteAllInBatch(batchId) {
+    const allDrafts = readDrafts();
+    const batchDrafts = allDrafts.filter(d => d.batchId === batchId);
+
+    const confirmed = await rcConfirm(
+      "Delete Batch",
+      `Delete all ${batchDrafts.length} draft${batchDrafts.length !== 1 ? "s" : ""} in this batch? This cannot be undone.`,
+      "Delete All"
+    );
+    if (!confirmed) return;
+
+    const remaining = allDrafts.filter(d => d.batchId !== batchId);
+    writeDrafts(remaining);
+    for (const d of batchDrafts) remoteDeleteDraft(d.id);
+    renderTable(remaining);
   }
 
   async function handleIssueAllDrafts() {
@@ -1640,13 +1940,6 @@
 
       try {
         await handleIssueDraft(draft.id);
-        // Mark as issued
-        const updatedDrafts = readDrafts();
-        const d = updatedDrafts.find(x => x.id === draft.id);
-        if (d) {
-          d.issuedAt = nowISO();
-          writeDrafts(updatedDrafts);
-        }
         autoIssuedCount++;
       } catch (err) {
         console.warn('[tc-work] Auto-issue failed for draft:', draft.id, err);
@@ -1680,6 +1973,16 @@
     if (_ce) _ce.addEventListener("click", cancelEdit);
 
     installStudentPreviewSanitizer();
+
+    // Show Issued toggle
+    const _sit = $("showIssuedToggle");
+    if (_sit) {
+      _sit.checked = loadShowIssued();
+      _sit.addEventListener("change", () => {
+        saveShowIssued(_sit.checked);
+        renderTable(readDrafts());
+      });
+    }
 
     wireModal();
     wireFileLabels();
@@ -2098,8 +2401,8 @@ function normalizeTaggedAssignmentText(input) {
 
       sections.push({ studentCode, className: cls, body: fullBody });
 
-      // Advance past the closing separator
-      i = sepEnd + 1;
+      // Advance past the body end to avoid re-scanning body content (performance fix)
+      i = bodyEnd;
     }
 
     return sections;
@@ -2151,14 +2454,32 @@ function normalizeTaggedAssignmentText(input) {
     const dueAt = toIsoMaybe(getVal(dueEl));
     const autoRelease = autoReleaseEl ? !!autoReleaseEl.checked : false;
 
+    // Read scoring defaults from form inputs (mirrors onSaveDraft)
+    const getEl = (id) => document.getElementById(id);
+    const scoringDefaults = {
+      mcq: Math.max(0, parseInt((getEl("scoringMcq") && getEl("scoringMcq").value) || "1", 10) || 1),
+      boolean: Math.max(0, parseInt((getEl("scoringBoolean") && getEl("scoringBoolean").value) || "1", 10) || 1),
+      constructed: Math.max(0, parseInt((getEl("scoringConstructed") && getEl("scoringConstructed").value) || "5", 10) || 5),
+      multi: Math.max(0, parseInt((getEl("scoringMulti") && getEl("scoringMulti").value) || "1", 10) || 1),
+    };
+    const scoringDisplay = getEl("scoringTotalDisplay");
+    const totalPossibleMatch = scoringDisplay && scoringDisplay.textContent.match(/Total:\s*(\d+)\s*pts/);
+    const totalPossible = totalPossibleMatch ? parseInt(totalPossibleMatch[1], 10) : null;
+
     const ensureBound = (t) =>
       t && t.length > 120000 ? t.slice(0, 120000) + "\n…(truncated)\n" : t || "";
 
+    // Generate a shared batchId for all drafts in this split
+    const batchId = "batch_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+
     const drafts = loadDrafts();
+
+    const fallbackMapping = JSON.stringify({ version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
 
     for (const sec of sections) {
       const t = `${baseTitle} — ${sec.studentCode}`;
 
+      // Store the normalized assignment text (consistent with normal Save Draft flow)
       let assignText = ensureBound(sec.body);
       if (typeof normalizeTaggedAssignmentText === "function") {
         assignText = normalizeTaggedAssignmentText(assignText);
@@ -2167,18 +2488,21 @@ function normalizeTaggedAssignmentText(input) {
         assignText = window.__rcJoinTagOnlyLines(assignText);
       }
 
-      let mappingText = "";
+      let mappingText = fallbackMapping;
       if (typeof window.__rcAutoMapFromTeacherTxt === "function") {
         try {
           const mapObj = window.__rcAutoMapFromTeacherTxt(assignText);
           mappingText = JSON.stringify(mapObj, null, 2);
         } catch (e) {
           console.warn("autoMapFromTeacherTxt failed for", sec.studentCode, e);
+          mappingText = fallbackMapping;
         }
       }
 
       drafts.unshift({
         id: makeId(),
+        batchId,
+        batchTitle: baseTitle,
         title: t,
         className: sec.className || "",
         releaseAt,
@@ -2186,12 +2510,12 @@ function normalizeTaggedAssignmentText(input) {
         notes: notes || null,
         autoRelease,
         createdAt: new Date().toISOString(),
-        meta: { scoring_defaults: {}, total_possible: null },
+        meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
         assignment: {
           kind: "file",
           name: aFile.name,
           link: null,
-          text: ensureBound(sec.body),
+          text: assignText,
         },
         mapping: {
           kind: "auto",
@@ -2210,11 +2534,12 @@ function normalizeTaggedAssignmentText(input) {
       }
     }
 
-    await rcAlert(
-      "Drafts Created",
-      `Created ${sections.length} draft${sections.length !== 1 ? "s" : ""} (one per student).`
-    );
-    location.reload();
+    if (typeof window.__rcShowToast === "function") {
+      window.__rcShowToast(`✓ Created ${sections.length} draft${sections.length !== 1 ? "s" : ""} (one per student)`);
+    }
+    if (typeof window.__rcRenderTable === "function") {
+      window.__rcRenderTable();
+    }
   }
 
   function loadDrafts() {

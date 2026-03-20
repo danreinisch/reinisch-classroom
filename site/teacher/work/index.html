@@ -453,6 +453,14 @@
             Create and manage assignment drafts. Upload an assignment file or paste a link, then issue to students.
           </p>
 
+          <div class="work-card" style="background: rgba(139, 92, 246, 0.06); border-color: rgba(139, 92, 246, 0.20); margin-bottom: 16px; display: flex; align-items: center; gap: 14px; padding: 14px 18px;">
+            <span style="font-size: 24px;">🎓</span>
+            <div>
+              <div style="font-weight: 600; margin-bottom: 2px;">SPED / Individualized Assignments</div>
+              <div class="work-subtle" style="font-size: 13px;">Upload a single TXT file with per-student sections to create individualized drafts for multiple students at once. Use the <strong>Split by Student</strong> button after selecting your file.</div>
+            </div>
+          </div>
+
           <section class="work-card" aria-label="Create assignment draft">
             <div class="work-row" style="gap: 14px">
               <h2 style="margin: 0">Create Draft</h2>
@@ -645,6 +653,11 @@ JSON:
               </div>
             </div>
 
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.8; margin-top: 10px;">
+              <input type="checkbox" id="showIssuedToggle" />
+              Show issued assignments
+            </label>
+
             <div id="draftsEmpty" class="work-empty">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-bottom: 8px; opacity: 0.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               <div>No drafts yet.</div>
@@ -654,10 +667,10 @@ JSON:
               <table class="work-table" id="draftsTable" style="display: none">
                 <thead>
                   <tr>
-                    <th>Title</th>
+                    <th style="width: 28px;"></th>
+                    <th>Title / Batch</th>
                     <th>Class</th>
                     <th>Release / Due</th>
-                    <th>Source</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
