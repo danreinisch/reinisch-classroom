@@ -76,6 +76,11 @@
   // UI indicator for missing dates
   const MISSING_DATE_WARNING = ' ⚠️';
 
+  // Inline SVG status icons for table cells and status badges
+  const SVG_STATUS_OK   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  const SVG_STATUS_WARN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  const SVG_STATUS_BAD  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
   const CLASS_CODE_TO_CANONICAL_NAMES = {
@@ -486,9 +491,9 @@
       if (status.status !== 'ok') allOk = false;
     }
     
-    if (allOk) return '✅';
-    if (anyBehind) return '🔴';
-    return '⚠️';
+    if (allOk) return SVG_STATUS_OK;
+    if (anyBehind) return SVG_STATUS_BAD;
+    return SVG_STATUS_WARN;
   }
 
   /**
@@ -1166,7 +1171,7 @@
     }
 
     const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
-    const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? '⚠️ ' : '';
+    const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? SVG_STATUS_WARN + ' ' : '';
     const classContext = goal.class_context ? `<div class="st-goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
     
     // Show token management for external data collectors (not Dan Reinisch)
@@ -1194,7 +1199,7 @@
     const quarterProgress = getProgressThisQuarter(goal.student_code, goal.code);
     const dataStatus = getGoalDataStatus(goal.student_code, goal.code);
 
-    const statusEmoji = dataStatus.status === 'ok' ? '✅' : dataStatus.status === 'warning' ? '⚠️' : '🔴';
+    const statusEmoji = dataStatus.status === 'ok' ? SVG_STATUS_OK : dataStatus.status === 'warning' ? SVG_STATUS_WARN : SVG_STATUS_BAD;
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
 
@@ -3894,8 +3899,8 @@
           new Date(p.date) >= qRange.start && 
           new Date(p.date) <= qRange.end
         );
-        const indicator = hasData ? '✅' : '⚠️';
-        return `<td style="text-align: center; font-size: 20px; ${q === currentQ ? 'background: rgba(34,197,94,0.15);' : ''}">${indicator}</td>`;
+        const indicator = hasData ? SVG_STATUS_OK : SVG_STATUS_WARN;
+        return `<td style="text-align: center; ${q === currentQ ? 'background: rgba(34,197,94,0.15);' : ''}">${indicator}</td>`;
       }).join('');
       
       return `
