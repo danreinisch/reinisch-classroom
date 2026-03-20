@@ -27,6 +27,8 @@
         border-radius: 16px;
         padding: 28px 32px;
         max-width: 440px;
+        max-height: 85vh;
+        overflow-y: auto;
         width: 90%;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(12px);
