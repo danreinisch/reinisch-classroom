@@ -960,8 +960,21 @@ exports.handler = async (event) => {
       } else {
         console.log(`[teacher-issue-draft] [${requestId}] Found ${students.length} students`);
 
+        // If the draft targets a specific student (e.g. from "Split by Student"),
+        // filter to only that student to avoid issuing to the whole class.
+        let targetStudents = students;
+        if (draft.studentCode && typeof draft.studentCode === 'string') {
+          const code = draft.studentCode.trim();
+          targetStudents = students.filter(s => s.code === code);
+          if (targetStudents.length === 0) {
+            console.error(`[teacher-issue-draft] [${requestId}] Student ${code} not found in class ${draft.className}`);
+            return jsonResponse(event, 404, { ok: false, error: `Student ${code} not found in class ${draft.className}` }, { 'Cache-Control': 'no-store' }, requestId);
+          }
+          console.log(`[teacher-issue-draft] [${requestId}] Filtered to target student: ${code}`);
+        }
+
         // Step 8: Build instances to upsert
-        const instances = students.map(student => ({
+        const instances = targetStudents.map(student => ({
           assignment_id: assignmentId,
           student_id: student.id,
           assigned_at: new Date().toISOString().substring(0, 10),

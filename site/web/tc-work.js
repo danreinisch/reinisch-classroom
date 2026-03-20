@@ -141,6 +141,7 @@
   const SVG_SEND = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
   const SVG_DL   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
   const SVG_DEL  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+  const SVG_RECALL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-4.95"></path></svg>';
 
   function makeDraftActionButtons(d) {
     const tdActions = document.createElement("td");
@@ -170,6 +171,14 @@
       btnIssue.innerHTML = SVG_SEND + " Issue"; // SAFETY: static SVG + static text
       btnIssue.addEventListener("click", () => handleIssueDraft(d.id));
       tdActions.appendChild(btnIssue);
+    }
+
+    if (d.issuedAt) {
+      const btnRecall = document.createElement("button");
+      btnRecall.type = "button"; btnRecall.className = "work-btn danger"; btnRecall.style.marginLeft = "8px"; btnRecall.title = "Recall";
+      btnRecall.innerHTML = SVG_RECALL + " Recall"; // SAFETY: static SVG + static text
+      btnRecall.addEventListener("click", () => handleRecallDraft(d.id));
+      tdActions.appendChild(btnRecall);
     }
 
     const btnExport = document.createElement("button");
@@ -346,6 +355,15 @@
         btnIssueAll.innerHTML = SVG_SEND + " Issue All"; // SAFETY: static SVG + static text
         btnIssueAll.addEventListener("click", (e) => { e.stopPropagation(); issueAllInBatch(batchId); });
         tdBatchActions.appendChild(btnIssueAll);
+      }
+
+      const issuedInBatch = bDrafts.filter(d => !!d.issuedAt);
+      if (issuedInBatch.length > 0) {
+        const btnRecallAll = document.createElement("button");
+        btnRecallAll.type = "button"; btnRecallAll.className = "work-btn danger"; btnRecallAll.style.marginLeft = "8px"; btnRecallAll.title = "Recall all issued in batch";
+        btnRecallAll.innerHTML = SVG_RECALL + " Recall All"; // SAFETY: static SVG + static text
+        btnRecallAll.addEventListener("click", (e) => { e.stopPropagation(); recallAllInBatch(batchId); });
+        tdBatchActions.appendChild(btnRecallAll);
       }
 
       const btnExportAll = document.createElement("button");
@@ -1809,11 +1827,12 @@
 
       if (result.ok) {
         const issued = result.issued_count || 0;
-        // Mark issuedAt in localStorage
+        // Mark issuedAt and store assignmentId in localStorage
         const updatedDrafts = readDrafts();
         const d = updatedDrafts.find(x => x.id === draftId);
         if (d) {
           d.issuedAt = nowISO();
+          if (result.assignment_id) d.assignmentId = result.assignment_id;
           writeDrafts(updatedDrafts);
         }
         setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}`);
@@ -1887,6 +1906,117 @@
     writeDrafts(remaining);
     for (const d of batchDrafts) remoteDeleteDraft(d.id);
     renderTable(remaining);
+  }
+
+  async function handleRecallDraft(draftId) {
+    const drafts = readDrafts();
+    const draft = drafts.find(d => d.id === draftId);
+
+    if (!draft) {
+      setMsg("err", "Draft not found");
+      setTimeout(clearMsg, 3000);
+      return false;
+    }
+
+    if (!draft.assignmentId) {
+      setMsg("err", "No assignment ID on this draft — it may have been issued before recall was supported.");
+      setTimeout(clearMsg, 5000);
+      return false;
+    }
+
+    const confirmed = await rcConfirm(
+      "Recall Assignment",
+      "This will remove the assignment from all students who received it. Submissions will be deleted. Continue?",
+      "Recall",
+      { danger: true }
+    );
+    if (!confirmed) return false;
+
+    return _doRecallDraft(draftId, draft);
+  }
+
+  async function _doRecallDraft(draftId, draft) {
+    setMsg("ok", `Recalling "${draft.title}"…`);
+
+    try {
+      const response = await fetch("/.netlify/functions/teacher-recall-assignment", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignment_id: draft.assignmentId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errorData.error || `Recall failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.ok) {
+        const n = result.recalled_instances || 0;
+        // Clear issuedAt and assignmentId on the draft
+        const updatedDrafts = readDrafts();
+        const d = updatedDrafts.find(x => x.id === draftId);
+        if (d) {
+          delete d.issuedAt;
+          delete d.assignmentId;
+          writeDrafts(updatedDrafts);
+        }
+        showToast(`✓ Recalled assignment — removed from ${n} student${n !== 1 ? "s" : ""}`);
+        clearMsg();
+        renderTable(readDrafts());
+        return true;
+      } else {
+        throw new Error(result.error || "Recall failed");
+      }
+    } catch (err) {
+      console.error("[tc-work] Recall draft error:", err);
+      setMsg("err", `Failed to recall: ${err.message}`);
+      setTimeout(clearMsg, 5000);
+      return false;
+    }
+  }
+
+  async function recallAllInBatch(batchId) {
+    const allDrafts = readDrafts();
+    const batchDrafts = allDrafts.filter(d => d.batchId === batchId);
+    const issued = batchDrafts.filter(d => !!d.issuedAt && !!d.assignmentId);
+
+    if (issued.length === 0) {
+      await rcAlert("Nothing to Recall", "No issued drafts with a tracked assignment ID found in this batch.");
+      return;
+    }
+
+    const confirmed = await rcConfirm(
+      "Recall All in Batch",
+      `This will recall ${issued.length} issued assignment${issued.length !== 1 ? "s" : ""}, removing them from all students who received them. Submissions will be deleted. Continue?`,
+      "Recall All",
+      { danger: true }
+    );
+    if (!confirmed) return;
+
+    let successCount = 0;
+    const failures = [];
+
+    for (let i = 0; i < issued.length; i++) {
+      const draft = issued[i];
+      setMsg("ok", `Recalling ${i + 1} of ${issued.length}: "${draft.title}"…`);
+      const ok = await _doRecallDraft(draft.id, draft);
+      if (ok) {
+        successCount++;
+      } else {
+        failures.push(draft.title);
+      }
+    }
+
+    if (failures.length === 0) {
+      showToast(`✓ Recalled all ${successCount} assignment${successCount !== 1 ? "s" : ""} in batch`);
+    } else {
+      setMsg("err", `Recalled ${successCount} of ${issued.length}. ${failures.length} failed — check console.`);
+      setTimeout(clearMsg, 6000);
+    }
+    renderTable(readDrafts());
   }
 
   async function handleIssueAllDrafts() {
@@ -2524,6 +2654,7 @@ function normalizeTaggedAssignmentText(input) {
         batchTitle: baseTitle,
         title: t,
         className: sec.className || "",
+        studentCode: sec.studentCode,
         releaseAt,
         dueAt,
         notes: notes || null,
