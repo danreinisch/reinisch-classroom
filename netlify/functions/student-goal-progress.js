@@ -94,8 +94,8 @@ exports.handler = async (event) => {
 
     const studentId = studentData[0].id;
 
-    // Fetch goal progress for this student with joined goal data
-    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area)&student_id=eq.${studentId}&order=date.desc`;
+    // Fetch goal progress for this student with joined goal data — filter to active goals only
+    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area)&student_id=eq.${studentId}&goals.active=eq.true&order=date.desc`;
     
     console.log(`[student-goal-progress] [${requestId}] Fetching goal progress for student ID:`, studentId);
     

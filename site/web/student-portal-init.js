@@ -566,7 +566,8 @@
    */
   function renderGoalCard(goal, progressMap) {
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
-    const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
+    // Clean up any "Baseline: XX%" text that leaked into the description field
+    let fullDesc = (goal.desc || goal.goal_text || '(No goal description provided)').replace(/\s*Baseline:?\s*\d+%?\s*$/i, '').trim();
     
     // Truncate description to MAX_DESC_LENGTH chars
     let descHtml = '';
