@@ -2449,13 +2449,24 @@ function normalizeTaggedAssignmentText(input) {
       return;
     }
 
-    const studentList = sections
-      .map((s) => `${s.studentCode}${s.className ? ` (${s.className})` : ""}`)
-      .join(", ");
+    // Build a grouped-by-class summary for large student lists
+    const byClass = {};
+    for (const s of sections) {
+      const classLabel = s.className || "(no class)";
+      if (!byClass[classLabel]) byClass[classLabel] = [];
+      byClass[classLabel].push(s.studentCode);
+    }
+    const classCount = Object.keys(byClass).length;
+    const groupedLines = Object.entries(byClass)
+      .map(([classLabel, codes]) => `• ${classLabel}: ${codes.join(", ")}`)
+      .join("\n");
+    const summary = classCount > 1
+      ? `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""} across ${classCount} classes.\n\n${groupedLines}`
+      : `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""}.\n\n${groupedLines}`;
 
     const confirmed = await rcConfirm(
       "Split by Student",
-      `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""}: ${studentList}.\n\nCreate one draft per student?`,
+      `${summary}\n\nCreate one draft per student?`,
       "Create Drafts"
     );
     if (!confirmed) return;
@@ -2660,8 +2671,6 @@ function normalizeTaggedAssignmentText(input) {
     panel.innerHTML = "";
     panel.style.display = "none";
 
-    const btnStudent = document.getElementById("btnSplitByStudent");
-
     // Check for student-sections format first (Assignment: SXXX headers)
     const studentSections = parseStudentSections(text);
     if (studentSections.length >= 1) {
@@ -2684,9 +2693,6 @@ function normalizeTaggedAssignmentText(input) {
           </div>
         </div>
       `;
-
-      // Show the Split by Student button prominently
-      if (btnStudent) btnStudent.style.display = "";
 
       // Enable class dropdown (not used for student splits, but keep it accessible)
       const classSel = document.getElementById("draftClass");
@@ -2966,17 +2972,9 @@ function normalizeTaggedAssignmentText(input) {
                 classSel.disabled = false;
                 updateClassDropdownLabel("Individual Class");
               }
-              if (btnStudent) btnStudent.style.display = "none";
               lastItemCounts = { questions: 0, writingPrompts: 0 };
               updateScoringTotalDisplay();
               return;
-            }
-
-            // Show "Split by Student" button whenever a .txt file is selected
-            if (btnStudent) {
-              const isTxt = f.name.toLowerCase().endsWith(".txt") ||
-                f.type === "text/plain";
-              btnStudent.style.display = isTxt ? "" : "none";
             }
 
             const txt = await readFileText(f);
