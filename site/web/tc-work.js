@@ -1305,6 +1305,21 @@
     return out;
   }
 
+  function readScoringDefaults() {
+    return {
+      mcq: Math.max(0, parseInt(($("scoringMcq") && $("scoringMcq").value) || "1", 10) || 1),
+      boolean: Math.max(0, parseInt(($("scoringBoolean") && $("scoringBoolean").value) || "1", 10) || 1),
+      constructed: Math.max(0, parseInt(($("scoringConstructed") && $("scoringConstructed").value) || "5", 10) || 5),
+      multi: Math.max(0, parseInt(($("scoringMulti") && $("scoringMulti").value) || "1", 10) || 1),
+    };
+  }
+
+  function readTotalPossible() {
+    const scoringDisplay = $("scoringTotalDisplay");
+    const m = scoringDisplay && scoringDisplay.textContent.match(/Total:\s*(\d+)\s*pts/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
   async function onSaveDraft(e) {
     e.preventDefault();
     clearMsg();
@@ -1317,17 +1332,10 @@
     const autoRelease = $("draftAutoRelease") ? !!$("draftAutoRelease").checked : false;
 
     // Read scoring defaults from form (with fallbacks)
-    const scoringDefaults = {
-      mcq: Math.max(0, parseInt(($("scoringMcq") && $("scoringMcq").value) || "1", 10) || 1),
-      boolean: Math.max(0, parseInt(($("scoringBoolean") && $("scoringBoolean").value) || "1", 10) || 1),
-      constructed: Math.max(0, parseInt(($("scoringConstructed") && $("scoringConstructed").value) || "5", 10) || 5),
-      multi: Math.max(0, parseInt(($("scoringMulti") && $("scoringMulti").value) || "1", 10) || 1),
-    };
+    const scoringDefaults = readScoringDefaults();
 
     // Extract total_possible from scoring display (updated dynamically by wire())
-    const scoringDisplay = $("scoringTotalDisplay");
-    const totalPossibleMatch = scoringDisplay && scoringDisplay.textContent.match(/Total:\s*(\d+)\s*pts/);
-    const totalPossible = totalPossibleMatch ? parseInt(totalPossibleMatch[1], 10) : null;
+    const totalPossible = readTotalPossible();
 
     const assignmentFile = $("assignmentFile").files && $("assignmentFile").files[0];
     const assignmentLink = safeStr($("assignmentLink").value).trim();
@@ -1752,6 +1760,8 @@
   window.__rcJoinTagOnlyLines = __rc_joinTagOnlyLines;
   window.__rcShowToast = showToast;
   window.__rcRenderTable = () => renderTable(readDrafts());
+  window.__rcReadScoringDefaults = readScoringDefaults;
+  window.__rcReadTotalPossible = readTotalPossible;
 
   // ========================================
   // Issue Assignment from Draft
@@ -1843,11 +1853,12 @@
     for (let i = 0; i < pending.length; i++) {
       const draft = pending[i];
       setMsg("ok", `Issuing ${i + 1} of ${pending.length}: "${draft.title}"…`);
-      try {
-        await handleIssueDraft(draft.id);
+      await handleIssueDraft(draft.id);
+      // Check if issuedAt was set (handleIssueDraft handles its own errors)
+      const refreshed = readDrafts().find(d => d.id === draft.id);
+      if (refreshed && refreshed.issuedAt) {
         successCount++;
-      } catch (err) {
-        console.error("[tc-work] Issue batch - failed for draft:", draft.id, err);
+      } else {
         failures.push(draft.title);
       }
     }
@@ -1900,12 +1911,13 @@
     for (let i = 0; i < pending.length; i++) {
       const draft = pending[i];
       setMsg("ok", `Issuing ${i + 1} of ${pending.length}: "${draft.title}"…`);
-      try {
-        await handleIssueDraft(draft.id);
+      await handleIssueDraft(draft.id);
+      // Check if issuedAt was set (handleIssueDraft handles its own errors)
+      const refreshed = readDrafts().find(d => d.id === draft.id);
+      if (refreshed && refreshed.issuedAt) {
         successCount++;
-      } catch (err) {
-        console.error("[tc-work] Issue All - failed for draft:", draft.id, err);
-        failures.push(`"${draft.title}": ${err.message || "unknown error"}`);
+      } else {
+        failures.push(`"${draft.title}"`);
       }
     }
 
@@ -2454,17 +2466,13 @@ function normalizeTaggedAssignmentText(input) {
     const dueAt = toIsoMaybe(getVal(dueEl));
     const autoRelease = autoReleaseEl ? !!autoReleaseEl.checked : false;
 
-    // Read scoring defaults from form inputs (mirrors onSaveDraft)
-    const getEl = (id) => document.getElementById(id);
-    const scoringDefaults = {
-      mcq: Math.max(0, parseInt((getEl("scoringMcq") && getEl("scoringMcq").value) || "1", 10) || 1),
-      boolean: Math.max(0, parseInt((getEl("scoringBoolean") && getEl("scoringBoolean").value) || "1", 10) || 1),
-      constructed: Math.max(0, parseInt((getEl("scoringConstructed") && getEl("scoringConstructed").value) || "5", 10) || 5),
-      multi: Math.max(0, parseInt((getEl("scoringMulti") && getEl("scoringMulti").value) || "1", 10) || 1),
-    };
-    const scoringDisplay = getEl("scoringTotalDisplay");
-    const totalPossibleMatch = scoringDisplay && scoringDisplay.textContent.match(/Total:\s*(\d+)\s*pts/);
-    const totalPossible = totalPossibleMatch ? parseInt(totalPossibleMatch[1], 10) : null;
+    // Read scoring defaults using the shared helper from the main IIFE (or fallback inline)
+    const scoringDefaults = typeof window.__rcReadScoringDefaults === "function"
+      ? window.__rcReadScoringDefaults()
+      : { mcq: 1, boolean: 1, constructed: 5, multi: 1 };
+    const totalPossible = typeof window.__rcReadTotalPossible === "function"
+      ? window.__rcReadTotalPossible()
+      : null;
 
     const ensureBound = (t) =>
       t && t.length > 120000 ? t.slice(0, 120000) + "\n…(truncated)\n" : t || "";
@@ -2495,7 +2503,7 @@ function normalizeTaggedAssignmentText(input) {
           mappingText = JSON.stringify(mapObj, null, 2);
         } catch (e) {
           console.warn("autoMapFromTeacherTxt failed for", sec.studentCode, e);
-          mappingText = fallbackMapping;
+          // mappingText stays as fallbackMapping
         }
       }
 
