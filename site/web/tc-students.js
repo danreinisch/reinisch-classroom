@@ -1176,8 +1176,8 @@
     // Get color category for the goal area
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
     
-    // Handle description truncation
-    const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
+    // Handle description truncation — clean up any "Baseline: XX%" text that leaked into the description field
+    const fullDesc = (goal.desc || goal.goal_text || '(No goal description provided)').replace(/\s*Baseline:?\s*\d+%?\s*$/i, '').trim();
     const needsTruncation = fullDesc.length > 120;
     const descPreview = needsTruncation ? fullDesc.substring(0, 120) : fullDesc;
     

@@ -1275,13 +1275,15 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      // Try with new columns first
+      // Try with new columns first — filter to active, non-closed/archived goals only
       let { data, error } = await supabase
         .from('goals')
         .select(`id, code, desc, target, status, student_id,
                 measurement_type, data_collector, data_collector_email, class_context,
                 goal_area, baseline, mastery, case_manager, version,
                 students!inner(code)`)
+        .eq('active', true)
+        .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
         .order('code', { foreignTable: 'students', ascending: true });
       
       // Graceful fallback: if schema error, retry with basic columns only
@@ -1290,6 +1292,8 @@ const remote = {
         const fallback = await supabase
           .from('goals')
           .select('id, code, desc, target, status, student_id, students!inner(code)')
+          .eq('active', true)
+          .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
           .order('code', { foreignTable: 'students', ascending: true });
         if (fallback.error) throw fallback.error;
         return (fallback.data || []).map(g => ({
@@ -1515,6 +1519,8 @@ const remote = {
         .from('goals')
         .select('*')
         .eq('student_id', student.id)
+        .eq('active', true)
+        .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
         .order('code');
       
       if (error) throw error;
