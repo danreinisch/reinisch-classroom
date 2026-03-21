@@ -65,7 +65,7 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
       if (!notes) return null;
       const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
       if (!m) return null;
-      return { cat: m[1], payload: m[2] };
+      return { category: m[1], rawData: m[2] };
     };
 
     const entries = quarterData.entries || [];
@@ -80,11 +80,11 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
     if (category === 'session_outcome') {
       const validEntries = entries.filter(e => {
         const p = parseObsPrefix(e.notes);
-        return p && p.cat === 'session_outcome' && p.payload !== 'na';
+        return p && p.category === 'session_outcome' && p.rawData !== 'na';
       });
       const metCount = validEntries.filter(e => {
         const p = parseObsPrefix(e.notes);
-        return p && p.payload === 'met';
+        return p && p.rawData === 'met';
       }).length;
       const validCount = validEntries.length;
       const targetSessions = safeParseFloat(goal.mastery || goal.target) || 3;
