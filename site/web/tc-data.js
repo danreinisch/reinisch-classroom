@@ -44,6 +44,44 @@
     return "dt-score-red";
   }
 
+  // Parse [obs:category:payload] prefix from progress entry notes
+  function parseObsNotes(notes) {
+    if (!notes) return null;
+    const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
+    if (!m) return null;
+    return { category: m[1], payload: m[2], userNote: notes.slice(m[0].length).trim() };
+  }
+
+  // Format an observation progress entry value as a human-readable string
+  function formatObsValue(entry, _goal) {
+    const parsed = parseObsNotes(entry.notes);
+    if (!parsed) return entry.value != null ? `${parseFloat(entry.value).toFixed(0)}%` : '—';
+
+    switch (parsed.category) {
+      case 'session_outcome': {
+        const outcomeLabels = { met: 'Met', not_met: 'Not Met', na: 'N/A' };
+        return outcomeLabels[parsed.payload] || 'Not Addressed';
+      }
+      case 'tally': {
+        const parts = parsed.payload.split('/');
+        return parts.length === 2
+          ? `${parts[0]} of ${parts[1]} (${entry.value != null ? parseFloat(entry.value).toFixed(0) + '%' : '—'})`
+          : `${entry.value}%`;
+      }
+      case 'prompt_count': {
+        const promptCount = parseFloat(parsed.payload);
+        return `${parsed.payload} prompt${promptCount !== 1 ? 's' : ''}`;
+      }
+      case 'checklist': {
+        const items = parsed.payload ? parsed.payload.split(',') : [];
+        const metCount = items.filter(i => i.includes('=met')).length;
+        return `${metCount}/${items.length} behaviors met`;
+      }
+      default:
+        return entry.value != null ? `${parseFloat(entry.value).toFixed(0)}%` : '—';
+    }
+  }
+
   // Load data from Supabase or localStorage
   async function loadData() {
     try {
@@ -319,12 +357,14 @@
       return `<div style="padding: 10px; opacity: 0.7; font-size: 13px;">No data points recorded for this quarter.</div>`;
     }
     
+    const isObs = goal.measurement_type === 'Observation';
     const rows = entries.map(entry => {
-      const scoreClass = scoreColorClass(entry.value);
+      const scoreClass = isObs ? '' : scoreColorClass(entry.value);
+      const displayValue = isObs ? formatObsValue(entry, goal) : `${entry.value}%`;
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
-          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${entry.id}" data-goal="${goal.code}" data-student="${studentCode}" data-value="${entry.value}">${entry.value}%</td>
+          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${entry.id}" data-goal="${goal.code}" data-student="${studentCode}" data-value="${entry.value}">${displayValue}</td>
           <td>${entry.source || 'manual'}</td>
         </tr>
       `;
@@ -369,6 +409,63 @@
       const secondAvg = secondHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / secondHalf.length;
       if (secondAvg > firstAvg + 5) trend = '↗';
       else if (secondAvg < firstAvg - 5) trend = '↘';
+    }
+
+    // Observation-specific stats display
+    if (goal.measurement_type === 'Observation') {
+      const obsConfig = goal.observation_config || {};
+      const category = obsConfig.category || '';
+
+      let currentDisplay = 'N/A';
+      let avgDisplay = 'N/A';
+      let avgClass = '';
+
+      if (category === 'session_outcome') {
+        const recentWindow = entries.slice(-5);
+        const metCount = recentWindow.filter(e => {
+          const p = parseObsNotes(e.notes);
+          return p && p.category === 'session_outcome' && p.payload === 'met';
+        }).length;
+        const validCount = recentWindow.filter(e => {
+          const p = parseObsNotes(e.notes);
+          return p && p.category === 'session_outcome' && p.payload !== 'na';
+        }).length;
+        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        avgDisplay = validCount > 0 ? `${metCount} of ${validCount} sessions met` : 'N/A';
+      } else if (category === 'tally') {
+        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        avgDisplay = avg != null ? `${avg.toFixed(0)}% (avg success rate)` : 'N/A';
+        avgClass = scoreColorClass(avg);
+      } else if (category === 'prompt_count') {
+        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        // For prompt_count, lower is better — invert color logic
+        const promptAvg = avg != null ? avg : null;
+        if (promptAvg != null) {
+          avgDisplay = `Avg ${promptAvg.toFixed(1)} prompts`;
+          avgClass = promptAvg <= 1 ? 'dt-score-green' : promptAvg <= 3 ? 'dt-score-amber' : 'dt-score-red';
+        }
+      } else if (category === 'behavior_checklist') {
+        const totalBehaviors = (obsConfig.sub_behaviors || []).length || 1;
+        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        const avgMet = avg != null ? (avg / 100) * totalBehaviors : null;
+        avgDisplay = avgMet != null ? `Avg ${avgMet.toFixed(1)}/${totalBehaviors} behaviors met` : 'N/A';
+        avgClass = scoreColorClass(avg);
+      } else {
+        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        avgDisplay = avg != null ? `${avg.toFixed(0)}%` : 'N/A';
+        avgClass = scoreColorClass(avg);
+      }
+
+      return `
+        <div class="dt-stats">
+          <span>Baseline: <strong>${baseline}</strong></span>
+          <span>Mastery: <strong>${mastery}</strong></span>
+          <span>Target: <strong>${target}</strong></span>
+          <span>Current: <strong>${currentDisplay}</strong></span>
+          <span>Summary: <strong class="${avgClass}">${avgDisplay}</strong></span>
+          <span>Trend: <strong>${trend}</strong></span>
+        </div>
+      `;
     }
     
     const avgClass = scoreColorClass(avg);
@@ -464,6 +561,19 @@
     // Build metadata badges - show case manager and data collector if available
     const metaBadges = [];
     metaBadges.push(`<span>Area: <strong>${goal.goal_area || 'Uncategorized'}</strong></span>`);
+
+    // Add observation category badge when applicable
+    if (goal.measurement_type === 'Observation') {
+      const obsConfig = goal.observation_config || {};
+      const categoryLabels = {
+        session_outcome: 'Session Outcome',
+        tally: 'Tally',
+        prompt_count: 'Prompt Count',
+        behavior_checklist: 'Behavior Checklist',
+      };
+      const catLabel = categoryLabels[obsConfig.category] || 'Observation';
+      metaBadges.push(`<span class="dt-badge dt-badge-obs">${catLabel}</span>`);
+    }
     
     // Show case manager if available
     if (goal.case_manager) {

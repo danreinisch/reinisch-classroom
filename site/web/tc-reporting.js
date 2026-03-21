@@ -506,7 +506,10 @@
 
       // Quarterly IEP Progress Summary panel
       const goalDetailRowsHtml = goalSummaryData.map(({ goal, progress, status, narrative }) => {
-        const avgDisplay = progress.average != null ? progress.average.toFixed(0) + "%" : "N/A";
+        const isObs = goal.measurement_type === 'Observation';
+        const avgDisplay = isObs
+          ? (progress.count > 0 ? status : 'No Data')
+          : (progress.average != null ? progress.average.toFixed(0) + "%" : "N/A");
         const statusClass =
           status === "Goal Met" ? "rp-qs-goal-status--met" :
           status === "Making Adequate Progress" ? "rp-qs-goal-status--adequate" :
@@ -575,6 +578,10 @@
         const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
         const selectedStatusValue = statusValueMap[status] || "adequate";
 
+        const currentDisplay = goal.measurement_type === 'Observation'
+          ? (goalProgressData.count > 0 ? status : 'No Data')
+          : (goalProgressData.average != null ? goalProgressData.average.toFixed(0) + '%' : 'N/A');
+
         const makeOption = (val, label) =>
           `<option value="${val}"${selectedStatusValue === val ? " selected" : ""}>${label}</option>`;
 
@@ -591,7 +598,7 @@
             <div class="rp-goal-targets">
               <div><strong>Baseline:</strong> ${goal.baseline || 'N/A'}</div>
               <div><strong>Mastery:</strong> ${goal.mastery || goal.target || 'N/A'}</div>
-              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
+              <div><strong>Current:</strong> ${currentDisplay}</div>
               <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
             </div>
             <div class="rp-goal-narrative">
@@ -1163,7 +1170,7 @@ ${narrative}`;
    */
   function getGoalProgressForQuarter(goalCode, studentCode, quarterRange) {
     if (!quarterRange.start || !quarterRange.end) {
-      return { average: null, count: 0, values: [] };
+      return { average: null, count: 0, values: [], entries: [] };
     }
 
     const startDate = new Date(quarterRange.start);
@@ -1178,14 +1185,14 @@ ${narrative}`;
     });
 
     if (relevantProgress.length === 0) {
-      return { average: null, count: 0, values: [] };
+      return { average: null, count: 0, values: [], entries: [] };
     }
 
     const values = relevantProgress.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
     const average =
       values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
 
-    return { average, count: values.length, values };
+    return { average, count: values.length, values, entries: relevantProgress };
   }
 
   /**
@@ -1256,6 +1263,172 @@ ${narrative}`;
     const seedStr = goal.code || `${goal.goal_area || ""}${goal.desc || ""}` || "goal";
     const seed = hashCode(seedStr);
     const pick = (arr) => arr[seed % arr.length];
+
+    // ── Observation branch ────────────────────────────────────────────────────
+    // Goals with measurement_type === 'Observation' get category-specific narrative
+    // language rather than percentage-based copy.
+    if (goal.measurement_type === 'Observation') {
+      const obsConfig = goal.observation_config || {};
+      const category = obsConfig.category || '';
+
+      // Helper: parse [obs:category:payload] prefix from a notes string
+      const parseObsPrefix = (notes) => {
+        if (!notes) return null;
+        const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
+        if (!m) return null;
+        return { cat: m[1], payload: m[2] };
+      };
+
+      const entries = quarterData.entries || [];
+
+      if (count === 0) {
+        return {
+          narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.`,
+          status: 'Not Making Progress',
+        };
+      }
+
+      // ── session_outcome ──
+      if (category === 'session_outcome') {
+        const validEntries = entries.filter(e => {
+          const p = parseObsPrefix(e.notes);
+          return p && p.cat === 'session_outcome' && p.payload !== 'na';
+        });
+        const metEntries = validEntries.filter(e => {
+          const p = parseObsPrefix(e.notes);
+          return p && p.payload === 'met';
+        });
+        const metCount = metEntries.length;
+        const validCount = validEntries.length;
+        const targetSessions = parseGoalValue(goal.mastery || goal.target) ?? 3;
+        let status;
+        if (validCount === 0) {
+          status = 'Not Making Progress';
+        } else if (metCount >= targetSessions) {
+          status = 'Goal Met';
+        } else if (metCount >= targetSessions * 0.6) {
+          status = 'Making Adequate Progress';
+        } else if (metCount > 0) {
+          status = 'Progressing but Not Sufficient';
+        } else {
+          status = 'Not Making Progress';
+        }
+        const narrative = validCount > 0
+          ? pick([
+              `${name} met the behavioral target in ${metCount} of ${validCount} observed session${validCount !== 1 ? 's' : ''} during ${quarter}.`,
+              `During ${quarter}, ${name} demonstrated the target behavior in ${metCount} out of ${validCount} recorded session${validCount !== 1 ? 's' : ''}.`,
+              `Observation data from ${quarter} indicates ${name} met the session target ${metCount} of ${validCount} time${validCount !== 1 ? 's' : ''}.`,
+            ])
+          : `No evaluable observation sessions were recorded for ${name} in ${area} during ${quarter}.`;
+        return { narrative, status };
+      }
+
+      // ── tally ──
+      if (category === 'tally') {
+        const prevAvg = prevData ? prevData.average : null;
+        const trendDiff = prevAvg != null ? avg - prevAvg : null;
+        const trend = trendDiff == null ? 'new' : trendDiff > 2 ? 'improving' : trendDiff < -2 ? 'declining' : 'maintaining';
+        let status;
+        if (avg == null) {
+          status = 'Not Making Progress';
+        } else if (avg >= targetVal) {
+          status = 'Goal Met';
+        } else if (trend === 'improving') {
+          status = 'Making Adequate Progress';
+        } else if (avg >= baselineVal) {
+          status = 'Progressing but Not Sufficient';
+        } else {
+          status = 'Not Making Progress';
+        }
+        const avgStr = avg != null ? avg.toFixed(0) : '—';
+        const countDesc = `${count} observed opportunit${count !== 1 ? 'ies' : 'y'}`;
+        const narrative = pick([
+          `${name} demonstrated the target behavior in an average of ${avgStr}% of opportunities across ${countDesc} during ${quarter}.`,
+          `Across ${countDesc} in ${quarter}, ${name} averaged a ${avgStr}% success rate for this observational goal.`,
+          `Tally data collected over ${countDesc} this quarter shows ${name} achieved the target ${avgStr}% of the time.`,
+        ]);
+        return { narrative, status };
+      }
+
+      // ── prompt_count ──
+      if (category === 'prompt_count') {
+        const targetMax = obsConfig.target_max_prompts != null ? obsConfig.target_max_prompts : (parseGoalValue(goal.mastery || goal.target) ?? 2);
+        // avg stores the numeric prompt count average (raw values, not %)
+        const avgPrompts = avg != null ? avg : null;
+        let status;
+        if (avgPrompts == null) {
+          status = 'Not Making Progress';
+        } else if (avgPrompts <= targetMax) {
+          status = 'Goal Met';
+        } else if (avgPrompts <= targetMax * 1.5) {
+          status = 'Making Adequate Progress';
+        } else {
+          status = 'Progressing but Not Sufficient';
+        }
+        const avgStr = avgPrompts != null ? avgPrompts.toFixed(1) : '—';
+        const countDesc = `${count} session${count !== 1 ? 's' : ''}`;
+        const narrative = pick([
+          `${name} required an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} to initiate the target behavior across ${countDesc} during ${quarter}. The goal target is ${targetMax} or fewer prompt${targetMax !== 1 ? 's' : ''}.`,
+          `Across ${countDesc} in ${quarter}, ${name} averaged ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} per observation. The target maximum is ${targetMax} prompt${targetMax !== 1 ? 's' : ''}.`,
+          `Data collected over ${countDesc} this quarter indicates ${name} needed an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} (target: ${targetMax} or fewer).`,
+        ]);
+        return { narrative, status };
+      }
+
+      // ── behavior_checklist ──
+      if (category === 'behavior_checklist') {
+        const subBehaviors = obsConfig.sub_behaviors || [];
+        const totalBehaviors = subBehaviors.length || 1;
+        const behaviorCounts = {};
+        for (const e of entries) {
+          const p = parseObsPrefix(e.notes);
+          if (!p || p.cat !== 'checklist') continue;
+          const items = p.payload ? p.payload.split(',') : [];
+          for (const item of items) {
+            const eqIdx = item.lastIndexOf('=');
+            if (eqIdx === -1) continue;
+            const bName = item.slice(0, eqIdx).trim();
+            const outcome = item.slice(eqIdx + 1).trim();
+            if (!behaviorCounts[bName]) behaviorCounts[bName] = { met: 0, total: 0 };
+            behaviorCounts[bName].total++;
+            if (outcome === 'met') behaviorCounts[bName].met++;
+          }
+        }
+        const consistentlyMet = Object.keys(behaviorCounts).filter(b => {
+          const bc = behaviorCounts[b];
+          return bc.total > 0 && (bc.met / bc.total) >= 0.75;
+        });
+        const avgMet = avg != null ? ((avg / 100) * totalBehaviors).toFixed(1) : '—';
+        let status;
+        if (avg == null) {
+          status = 'Not Making Progress';
+        } else if (avg >= targetVal) {
+          status = 'Goal Met';
+        } else if (avg >= baselineVal) {
+          status = 'Making Adequate Progress';
+        } else {
+          status = 'Not Making Progress';
+        }
+        const countDesc = `${count} observation${count !== 1 ? 's' : ''}`;
+        const consistentNote = consistentlyMet.length > 0
+          ? ` ${name} consistently demonstrated: ${consistentlyMet.slice(0, 3).join(', ')}.`
+          : '';
+        const narrative = pick([
+          `${name} met an average of ${avgMet} of ${totalBehaviors} target behaviors per session across ${countDesc} during ${quarter}.${consistentNote}`,
+          `Across ${countDesc} in ${quarter}, ${name} demonstrated an average of ${avgMet}/${totalBehaviors} checklist behaviors.${consistentNote}`,
+          `Behavior checklist data from ${countDesc} this quarter shows ${name} averaged ${avgMet} of ${totalBehaviors} behaviors met per session.${consistentNote}`,
+        ]);
+        return { narrative, status };
+      }
+
+      // Fallback for unknown observation category
+      const avgStr = avg != null ? avg.toFixed(0) : '—';
+      return {
+        narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr}.`,
+        status: avg != null && avg >= targetVal ? 'Goal Met' : 'Progressing but Not Sufficient',
+      };
+    }
+    // ── End observation branch ────────────────────────────────────────────────
 
     // --- Determine data density ---
     const dataLevel = count === 0 ? "none" : count <= 2 ? "limited" : "sufficient";

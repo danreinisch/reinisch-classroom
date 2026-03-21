@@ -118,6 +118,11 @@
       let sumPercent = 0;
       let countWithProgress = 0;
       for (const goal of activeGoals) {
+        // Exclude prompt_count observation goals — their raw values are counts, not percentages
+        if (goal.measurement_type === 'Observation') {
+          const obsConfig = goal.observation_config || {};
+          if (obsConfig.category === 'prompt_count') continue;
+        }
         const goalProgress = progress.filter(
           (p) =>
             p.goal_code === goal.code &&
@@ -460,6 +465,67 @@
         // Sort by date to get most recent
         goalProgress.sort((a, b) => new Date(b.date) - new Date(a.date));
         const recent = goalProgress[0];
+
+        // Observation goals need category-aware at-risk logic
+        if (goal.measurement_type === 'Observation') {
+          const obsConfig = goal.observation_config || {};
+          const category = obsConfig.category || '';
+
+          if (category === 'session_outcome') {
+            // At-risk if met count in recent window is below target
+            const window5 = goalProgress.slice(0, 5);
+            const metCount = window5.filter(e => {
+              const notes = e.notes || '';
+              return notes.includes('[obs:session_outcome:met]');
+            }).length;
+            const targetSessions = parseGoalValue(goal.mastery || goal.target) ?? 3;
+            if (metCount < targetSessions * 0.5) {
+              const item = {
+                studentCode: student.code,
+                studentName: student.name,
+                goalCode: goal.code,
+                goalArea: goal.goal_area || '',
+                current: metCount,
+                baseline: 0,
+                mastery: null,
+                baselineRaw: goal.baseline || '0',
+                masteryRaw: goal.mastery || goal.target || null,
+                currentRaw: `${metCount}/${window5.length} sessions met`,
+              };
+              stalled.push(item);
+            }
+            continue;
+          }
+
+          if (category === 'prompt_count') {
+            // At-risk if average prompt count exceeds target max
+            const recentValues = goalProgress.slice(0, 5).map(e => parseFloat(e.value)).filter(v => !isNaN(v));
+            if (recentValues.length === 0) continue;
+            const avgPrompts = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
+            const targetMax = obsConfig.target_max_prompts != null
+              ? obsConfig.target_max_prompts
+              : (parseGoalValue(goal.mastery || goal.target) ?? 2);
+            if (avgPrompts > targetMax * 1.5) {
+              const item = {
+                studentCode: student.code,
+                studentName: student.name,
+                goalCode: goal.code,
+                goalArea: goal.goal_area || '',
+                current: Math.round(avgPrompts * 10) / 10,
+                baseline: 0,
+                mastery: null,
+                baselineRaw: goal.baseline || '0',
+                masteryRaw: goal.mastery || goal.target || null,
+                currentRaw: `Avg ${avgPrompts.toFixed(1)} prompts (target: ${targetMax})`,
+              };
+              stalled.push(item);
+            }
+            continue;
+          }
+
+          // For tally and behavior_checklist: their values are stored as 0-100 percentages
+          // — fall through to standard percentage comparison below.
+        }
 
         const baselineNum = parseGoalValue(goal.baseline);
         const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);

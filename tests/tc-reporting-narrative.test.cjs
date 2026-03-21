@@ -35,11 +35,13 @@ function test(name, fn) {
 // This mirrors the logic in site/web/tc-reporting.js exactly so tests can run
 // without a browser environment.
 
+function safeParseFloat(v) { return parseFloat(v) || 0; }
+
 function buildRichProgressNarrative(student, goal, quarterData, prevData, quarterLabel) {
   const name = ((student.name || student.code || 'Student').split(' ')[0]);
   const area = goal.goal_area || goal.code || 'this goal area';
-  const baselineVal = parseFloat(goal.baseline) || 0;
-  const targetVal = parseFloat(goal.target) || 80;
+  const baselineVal = safeParseFloat(goal.baseline);
+  const targetVal = safeParseFloat(goal.target) || 80;
   const avg = quarterData.average;
   const count = quarterData.count;
   const quarter = quarterLabel || 'this quarter';
@@ -53,6 +55,81 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
   };
   const seed = hashCode(goal.code || '');
   const pick = (arr) => arr[seed % arr.length];
+
+  // ── Observation branch ──────────────────────────────────────────────────────
+  if (goal.measurement_type === 'Observation') {
+    const obsConfig = goal.observation_config || {};
+    const category = obsConfig.category || '';
+
+    const parseObsPrefix = (notes) => {
+      if (!notes) return null;
+      const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
+      if (!m) return null;
+      return { cat: m[1], payload: m[2] };
+    };
+
+    const entries = quarterData.entries || [];
+
+    if (count === 0) {
+      return {
+        narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.`,
+        status: 'Not Making Progress',
+      };
+    }
+
+    if (category === 'session_outcome') {
+      const validEntries = entries.filter(e => {
+        const p = parseObsPrefix(e.notes);
+        return p && p.cat === 'session_outcome' && p.payload !== 'na';
+      });
+      const metCount = validEntries.filter(e => {
+        const p = parseObsPrefix(e.notes);
+        return p && p.payload === 'met';
+      }).length;
+      const validCount = validEntries.length;
+      const targetSessions = safeParseFloat(goal.mastery || goal.target) || 3;
+      let status;
+      if (validCount === 0) { status = 'Not Making Progress'; }
+      else if (metCount >= targetSessions) { status = 'Goal Met'; }
+      else if (metCount >= targetSessions * 0.6) { status = 'Making Adequate Progress'; }
+      else if (metCount > 0) { status = 'Progressing but Not Sufficient'; }
+      else { status = 'Not Making Progress'; }
+      const narrative = validCount > 0
+        ? pick([
+            `${name} met the behavioral target in ${metCount} of ${validCount} observed session${validCount !== 1 ? 's' : ''} during ${quarter}.`,
+            `During ${quarter}, ${name} demonstrated the target behavior in ${metCount} out of ${validCount} recorded session${validCount !== 1 ? 's' : ''}.`,
+            `Observation data from ${quarter} indicates ${name} met the session target ${metCount} of ${validCount} time${validCount !== 1 ? 's' : ''}.`,
+          ])
+        : `No evaluable observation sessions were recorded for ${name} in ${area} during ${quarter}.`;
+      return { narrative, status };
+    }
+
+    if (category === 'prompt_count') {
+      const targetMax = obsConfig.target_max_prompts != null ? obsConfig.target_max_prompts : (safeParseFloat(goal.mastery || goal.target) || 2);
+      const avgPrompts = avg != null ? avg : null;
+      let status;
+      if (avgPrompts == null) { status = 'Not Making Progress'; }
+      else if (avgPrompts <= targetMax) { status = 'Goal Met'; }
+      else if (avgPrompts <= targetMax * 1.5) { status = 'Making Adequate Progress'; }
+      else { status = 'Progressing but Not Sufficient'; }
+      const avgStr = avgPrompts != null ? avgPrompts.toFixed(1) : '—';
+      const countDesc = `${count} session${count !== 1 ? 's' : ''}`;
+      const narrative = pick([
+        `${name} required an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} to initiate the target behavior across ${countDesc} during ${quarter}. The goal target is ${targetMax} or fewer prompt${targetMax !== 1 ? 's' : ''}.`,
+        `Across ${countDesc} in ${quarter}, ${name} averaged ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} per observation. The target maximum is ${targetMax} prompt${targetMax !== 1 ? 's' : ''}.`,
+        `Data collected over ${countDesc} this quarter indicates ${name} needed an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} (target: ${targetMax} or fewer).`,
+      ]);
+      return { narrative, status };
+    }
+
+    // Fallback observation
+    const avgStr2 = avg != null ? avg.toFixed(0) : '—';
+    return {
+      narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr2}.`,
+      status: avg != null && avg >= targetVal ? 'Goal Met' : 'Progressing but Not Sufficient',
+    };
+  }
+  // ── End observation branch ──────────────────────────────────────────────────
 
   const dataLevel = count === 0 ? 'none' : count <= 2 ? 'limited' : 'sufficient';
 
@@ -762,6 +839,181 @@ test('four canonical progress statuses are defined', () => {
   assert.ok(src.includes('"Making Adequate Progress"'), 'Making Adequate Progress status should be used');
   assert.ok(src.includes('"Progressing but Not Sufficient"'), 'Progressing but Not Sufficient status should be used');
   assert.ok(src.includes('"Not Making Progress"'), 'Not Making Progress status should be used');
+});
+
+// ── Observation branch tests ─────────────────────────────────────────────────
+
+console.log('\n--- Observation narrative branch ---');
+
+const studentObs = { name: 'Jordan Smith', code: 'S099' };
+
+test('session_outcome goal — met target returns Goal Met status', () => {
+  const goal = {
+    code: 'S099.OBS.1',
+    goal_area: 'Behavior',
+    measurement_type: 'Observation',
+    observation_config: { category: 'session_outcome' },
+    baseline: '0',
+    mastery: '3',
+    target: '3',
+  };
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+  ];
+  const quarterData = { average: 100, count: 3, values: [100, 100, 100], entries };
+  const { status } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.strictEqual(status, 'Goal Met');
+});
+
+test('session_outcome goal — narrative uses observation language, not percentage-based', () => {
+  const goal = {
+    code: 'S099.OBS.1',
+    goal_area: 'Behavior',
+    measurement_type: 'Observation',
+    observation_config: { category: 'session_outcome' },
+    baseline: '0',
+    mastery: '3',
+    target: '3',
+  };
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:not_met]', value: 0 },
+  ];
+  const quarterData = { average: 67, count: 3, values: [100, 100, 0], entries };
+  const { narrative } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.ok(
+    narrative.toLowerCase().includes('session') || narrative.toLowerCase().includes('observed'),
+    `Narrative should use observation language, got: ${narrative}`
+  );
+  assert.ok(
+    !narrative.includes('achieved an average of') && !narrative.includes('averaged 67%'),
+    `Narrative should NOT use percentage-based language: ${narrative}`
+  );
+});
+
+test('session_outcome goal — narrative mentions met count and session count', () => {
+  const goal = {
+    code: 'S099.OBS.2',
+    goal_area: 'Behavior',
+    measurement_type: 'Observation',
+    observation_config: { category: 'session_outcome' },
+    baseline: '0',
+    mastery: '5',
+    target: '5',
+  };
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:not_met]', value: 0 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:not_met]', value: 0 },
+  ];
+  const quarterData = { average: 60, count: 5, values: [100, 100, 0, 100, 0], entries };
+  const { narrative } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.ok(narrative.includes('3'), `Narrative should mention met count (3): ${narrative}`);
+  assert.ok(narrative.includes('5'), `Narrative should mention session count (5): ${narrative}`);
+});
+
+test('session_outcome goal — no data returns Not Making Progress', () => {
+  const goal = {
+    code: 'S099.OBS.1',
+    goal_area: 'Behavior',
+    measurement_type: 'Observation',
+    observation_config: { category: 'session_outcome' },
+    baseline: '0',
+    mastery: '3',
+    target: '3',
+  };
+  const quarterData = { average: null, count: 0, values: [], entries: [] };
+  const { status } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.strictEqual(status, 'Not Making Progress');
+});
+
+test('prompt_count goal — narrative mentions prompts, not percentage', () => {
+  const goal = {
+    code: 'S099.OBS.3',
+    goal_area: 'Self-Management',
+    measurement_type: 'Observation',
+    observation_config: { category: 'prompt_count', target_max_prompts: 2 },
+    baseline: '5',
+    mastery: '2',
+    target: '2',
+  };
+  const entries = [
+    { notes: '[obs:prompt_count:3]', value: 3 },
+    { notes: '[obs:prompt_count:2]', value: 2 },
+    { notes: '[obs:prompt_count:4]', value: 4 },
+  ];
+  const quarterData = { average: 3, count: 3, values: [3, 2, 4], entries };
+  const { narrative } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.ok(
+    narrative.toLowerCase().includes('prompt'),
+    `Narrative should mention prompts: ${narrative}`
+  );
+  assert.ok(
+    !narrative.includes('achieved an average of') && !narrative.includes('%'),
+    `Narrative should NOT use percentage-based language: ${narrative}`
+  );
+});
+
+test('prompt_count goal — at or below target returns Goal Met', () => {
+  const goal = {
+    code: 'S099.OBS.3',
+    goal_area: 'Self-Management',
+    measurement_type: 'Observation',
+    observation_config: { category: 'prompt_count', target_max_prompts: 2 },
+    baseline: '5',
+    mastery: '2',
+    target: '2',
+  };
+  const entries = [
+    { notes: '[obs:prompt_count:1]', value: 1 },
+    { notes: '[obs:prompt_count:2]', value: 2 },
+    { notes: '[obs:prompt_count:2]', value: 2 },
+  ];
+  const quarterData = { average: 1.67, count: 3, values: [1, 2, 2], entries };
+  const { status } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.strictEqual(status, 'Goal Met');
+});
+
+test('prompt_count goal — well above target returns Progressing but Not Sufficient', () => {
+  const goal = {
+    code: 'S099.OBS.3',
+    goal_area: 'Self-Management',
+    measurement_type: 'Observation',
+    observation_config: { category: 'prompt_count', target_max_prompts: 2 },
+    baseline: '5',
+    mastery: '2',
+    target: '2',
+  };
+  const entries = [
+    { notes: '[obs:prompt_count:6]', value: 6 },
+    { notes: '[obs:prompt_count:7]', value: 7 },
+    { notes: '[obs:prompt_count:8]', value: 8 },
+  ];
+  const quarterData = { average: 7, count: 3, values: [6, 7, 8], entries };
+  const { status } = buildRichProgressNarrative(studentObs, goal, quarterData, null, 'Q3');
+  assert.strictEqual(status, 'Progressing but Not Sufficient');
+});
+
+test('observation branch exists in tc-reporting.js source', () => {
+  assert.ok(
+    src.includes("goal.measurement_type === 'Observation'"),
+    "tc-reporting.js should contain observation branch in buildRichProgressNarrative"
+  );
+});
+
+test('getGoalProgressForQuarter returns entries array', () => {
+  const fnIdx = src.indexOf('function getGoalProgressForQuarter(');
+  assert.ok(fnIdx !== -1, 'getGoalProgressForQuarter not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 1000);
+  assert.ok(
+    fnSection.includes('entries'),
+    'getGoalProgressForQuarter should return entries array for observation notes parsing'
+  );
 });
 
 // ── Summary ──────────────────────────────────────────────────────────────────
