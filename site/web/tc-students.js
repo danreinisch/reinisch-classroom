@@ -2522,7 +2522,7 @@
       class_context: goal.class_context,
       version: goal.version,
       status: goal.status,
-      observation_config: gatherObservationConfig(form)
+      observation_config: form.querySelector('[name="measurement_type"]').value === 'Observation' ? gatherObservationConfig(form) : null
     };
 
     try {
@@ -3038,7 +3038,7 @@
       class_context: formData.get('class_context') || null,
       status: 'active',
       version: 1,
-      observation_config: gatherObservationConfig(form)
+      observation_config: formData.get('measurement_type') === 'Observation' ? gatherObservationConfig(form) : null
     };
 
     try {
@@ -3588,7 +3588,7 @@
                 rcAlert('Validation Error', `Goal ${idx + 1}: ${obsErrors.join('\n')}`);
                 return;
               }
-              iepWizardData.newGoals[idx].observation_config = gatherObservationConfig(wform);
+              iepWizardData.newGoals[idx].observation_config = wform.querySelector('[name="measurement_type"]')?.value === 'Observation' ? gatherObservationConfig(wform) : null;
             }
           }
           iepWizardData.step++;
