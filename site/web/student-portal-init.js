@@ -1017,7 +1017,10 @@
     panel.id = 'assignmentPanel';
     
     // Build the panel UI
-    if (!meta.days || meta.days.length === 0) {
+    if (assignment.page) {
+      // HTML page assignment - render in iframe
+      renderHtmlAssignmentPanel(panel, instance);
+    } else if (!meta.days || meta.days.length === 0) {
       // No structured content - show fallback
       renderNoContentPanel(panel, instance);
     } else {
@@ -1076,6 +1079,42 @@
     panel.querySelector('#panelCloseBtn').addEventListener('click', closeAssignmentViewer);
   }
   
+  /**
+   * Render an HTML page assignment inside an iframe
+   */
+  function renderHtmlAssignmentPanel(panel, instance) {
+    const assignment = instance.assignment || {};
+    const title = escapeHtml(assignment.title || 'Assignment');
+    const studentName = sessionStorage.getItem('rc_user_name') || instance.student_name || '';
+    
+    const pageUrl = assignment.page;
+    const iframeSrc = studentName
+      ? pageUrl + (pageUrl.includes('?') ? '&' : '?') + 'student=' + encodeURIComponent(studentName)
+      : pageUrl;
+    
+    panel.innerHTML = `
+      <button class="st-panel-back-btn" id="panelBackBtn">
+        ← Back to Dashboard
+      </button>
+      <div class="st-panel-header">
+        <h2>${title}</h2>
+        <button class="st-panel-close-btn" id="panelCloseBtn">✕</button>
+      </div>
+      <iframe
+        src="${escapeHtml(iframeSrc)}"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        style="width: 100%; flex: 1; border: none; min-height: 0;"
+        title="${title}"
+      ></iframe>
+    `;
+    
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+    
+    panel.querySelector('#panelBackBtn').addEventListener('click', closeAssignmentViewer);
+    panel.querySelector('#panelCloseBtn').addEventListener('click', closeAssignmentViewer);
+  }
+
   /**
    * Render structured assignment with days/questions/writing prompts
    */
