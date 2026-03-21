@@ -74,6 +74,7 @@
   // ─── Imports ──────────────────────────────────────────────────────────────
   const { db } = await import('/web/data-adapter.js');
   const { getSchedule, getCurrentPeriod } = await import('/web/class-schedule.js');
+  const { buildObservationNotes } = await import('/web/obs-utils.js');
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function escapeHtml(text) {
@@ -238,27 +239,7 @@
     );
   }
 
-  // ─── Build Notes String ───────────────────────────────────────────────────
-  function buildNotes(category, responseData, noteText) {
-    let prefix = '';
-    const { response, successful, opportunities, promptCount, checkedBehaviors, subBehaviors } = responseData;
-
-    if (category === 'session_outcome') {
-      prefix = `[obs:session_outcome:${response || 'not_addressed'}]`;
-    } else if (category === 'tally') {
-      prefix = `[obs:tally:${successful || 0}/${opportunities || 0}]`;
-    } else if (category === 'prompt_count') {
-      prefix = `[obs:prompt_count:${promptCount != null ? promptCount : 0}]`;
-    } else if (category === 'behavior_checklist') {
-      const parts = (subBehaviors || []).map((sb, i) => {
-        const checked = checkedBehaviors && checkedBehaviors[i];
-        return escapeHtml(sb) + '=' + (checked ? 'met' : 'not_met');
-      });
-      prefix = `[obs:checklist:${parts.join(',')}]`;
-    }
-
-    return noteText ? `${prefix} ${noteText}` : prefix;
-  }
+  // buildNotes is now provided by obs-utils.js (imported as buildObservationNotes)
 
   // ─── Calculate Value ──────────────────────────────────────────────────────
   function calcValue(category, responseData) {
@@ -296,7 +277,7 @@
   async function saveObservation(goal, responseData, noteText, periodLabel, saveIndicatorEl) {
     const category = goal.observation_config?.category;
     const value = calcValue(category, responseData);
-    const notes = buildNotes(category, responseData, noteText);
+    const notes = buildObservationNotes(category, responseData, noteText);
     const date = todayStr();
 
     const savedAt = new Date().toISOString();

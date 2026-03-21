@@ -16,6 +16,7 @@
   const { getSupabase } = await import("/web/supabase-client.js");
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
   const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
+  const { parseObservationNotes } = await import("/web/obs-utils.js");
 
   // Constants - keep in sync with other teacher pages
   const CANON_CLASSES = [
@@ -1271,13 +1272,7 @@ ${narrative}`;
       const obsConfig = goal.observation_config || {};
       const category = obsConfig.category || '';
 
-      // Helper: parse [obs:category:payload] prefix from a notes string
-      const parseObsPrefix = (notes) => {
-        if (!notes) return null;
-        const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
-        if (!m) return null;
-        return { cat: m[1], payload: m[2] };
-      };
+      // Helper: parse [obs:category:payload] prefix — provided by obs-utils.js as parseObservationNotes
 
       const entries = quarterData.entries || [];
 
@@ -1291,12 +1286,12 @@ ${narrative}`;
       // ── session_outcome ──
       if (category === 'session_outcome') {
         const validEntries = entries.filter(e => {
-          const p = parseObsPrefix(e.notes);
-          return p && p.cat === 'session_outcome' && p.payload !== 'na';
+          const p = parseObservationNotes(e.notes);
+          return p && p.category === 'session_outcome' && p.rawData !== 'na';
         });
         const metEntries = validEntries.filter(e => {
-          const p = parseObsPrefix(e.notes);
-          return p && p.payload === 'met';
+          const p = parseObservationNotes(e.notes);
+          return p && p.rawData === 'met';
         });
         const metCount = metEntries.length;
         const validCount = validEntries.length;
@@ -1381,9 +1376,9 @@ ${narrative}`;
         const totalBehaviors = subBehaviors.length || 1;
         const behaviorCounts = {};
         for (const e of entries) {
-          const p = parseObsPrefix(e.notes);
-          if (!p || p.cat !== 'checklist') continue;
-          const items = p.payload ? p.payload.split(',') : [];
+          const p = parseObservationNotes(e.notes);
+          if (!p || p.category !== 'checklist') continue;
+          const items = p.rawData ? p.rawData.split(',') : [];
           for (const item of items) {
             const eqIdx = item.lastIndexOf('=');
             if (eqIdx === -1) continue;

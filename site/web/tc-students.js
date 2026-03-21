@@ -10,6 +10,7 @@
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
   const { parseGoalValue } = await import('/web/goal-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
+  const { formatObservationValue } = await import('/web/obs-utils.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -125,60 +126,7 @@
     return String(Math.round(num * 10) / 10);
   }
 
-  /**
-   * Format a progress entry value/notes for display on an Observation goal card.
-   * Parses the [obs:...] prefix from notes to produce a human-readable label.
-   *
-   * Notes prefix formats (written by both tc-observation.js and handleSaveProgressData):
-   *   [obs:session_outcome:met|not_met|not_addressed|not_applicable]
-   *   [obs:tally:3/5]
-   *   [obs:prompt_count:2]
-   *   [obs:checklist:Behavior A=met,Behavior B=not_met]
-   */
-  function formatObservationProgressEntry(entry) {
-    const notes = entry.notes || '';
-    const value = entry.value;
-
-    // Session outcome
-    const soMatch = notes.match(/\[obs:session_outcome:([^\]]+)\]/);
-    if (soMatch) {
-      const r = soMatch[1];
-      if (r === 'met') return 'Met';
-      if (r === 'not_met') return 'Not Met';
-      if (r === 'not_addressed') return 'Not Addressed';
-      if (r === 'not_applicable') return 'N/A';
-      return r;
-    }
-
-    // Tally
-    const tallyMatch = notes.match(/\[obs:tally:(\d+)\/(\d+)\]/);
-    if (tallyMatch) {
-      const successful = tallyMatch[1];
-      const opportunities = tallyMatch[2];
-      const pct = Number(opportunities) > 0 ? ` (${Math.round((Number(successful) / Number(opportunities)) * 100)}%)` : '';
-      return `${successful} of ${opportunities} opportunities${pct}`;
-    }
-
-    // Prompt count
-    const pcMatch = notes.match(/\[obs:prompt_count:(\d+)\]/);
-    if (pcMatch) {
-      const n = Number(pcMatch[1]);
-      return `${n} prompt${n !== 1 ? 's' : ''}`;
-    }
-
-    // Behavior checklist
-    const clMatch = notes.match(/\[obs:checklist:([^\]]*)\]/);
-    if (clMatch) {
-      const parts = clMatch[1] ? clMatch[1].split(',') : [];
-      const total = parts.length;
-      const met = parts.filter(p => p.endsWith('=met')).length;
-      return `${met}/${total} behaviors met`;
-    }
-
-    // Fallback: show raw value if present
-    if (value != null) return String(Math.round(parseFloat(value) * 10) / 10);
-    return '—';
-  }
+  // formatObservationProgressEntry is now provided by obs-utils.js (imported as formatObservationValue)
 
   function abbreviateClass(fullName) {
     return CLASS_ABBREVIATIONS[fullName] || fullName;
@@ -1557,7 +1505,7 @@
         avgFormatted = formatProgressValue(avg, goal.measurement_type);
       }
       const rows = sorted.map(e => {
-        const val = isObs ? formatObservationProgressEntry(e) : formatProgressValue(e.value, goal.measurement_type);
+        const val = isObs ? formatObservationValue(e, goal) : formatProgressValue(e.value, goal.measurement_type);
         const dt = formatDate(e.date);
         return `<tr><td style="padding:2px 8px 2px 0;font-size:12px;">${escapeHtml(dt)}</td><td style="padding:2px 0;font-size:12px;">${escapeHtml(val)}</td></tr>`;
       }).join('');

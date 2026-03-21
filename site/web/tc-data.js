@@ -9,6 +9,7 @@
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
   const { parseGoalValue } = await import('/web/goal-utils.js');
+  const { parseObservationNotes, formatObservationValue } = await import('/web/obs-utils.js');
 
   const $ = (id) => document.getElementById(id);
 
@@ -44,43 +45,8 @@
     return "dt-score-red";
   }
 
-  // Parse [obs:category:payload] prefix from progress entry notes
-  function parseObsNotes(notes) {
-    if (!notes) return null;
-    const m = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
-    if (!m) return null;
-    return { category: m[1], payload: m[2], userNote: notes.slice(m[0].length).trim() };
-  }
-
-  // Format an observation progress entry value as a human-readable string
-  function formatObsValue(entry, _goal) {
-    const parsed = parseObsNotes(entry.notes);
-    if (!parsed) return entry.value != null ? `${parseFloat(entry.value).toFixed(0)}%` : '—';
-
-    switch (parsed.category) {
-      case 'session_outcome': {
-        const outcomeLabels = { met: 'Met', not_met: 'Not Met', na: 'N/A' };
-        return outcomeLabels[parsed.payload] || 'Not Addressed';
-      }
-      case 'tally': {
-        const parts = parsed.payload.split('/');
-        return parts.length === 2
-          ? `${parts[0]} of ${parts[1]} (${entry.value != null ? parseFloat(entry.value).toFixed(0) + '%' : '—'})`
-          : `${entry.value}%`;
-      }
-      case 'prompt_count': {
-        const promptCount = parseFloat(parsed.payload);
-        return `${parsed.payload} prompt${promptCount !== 1 ? 's' : ''}`;
-      }
-      case 'checklist': {
-        const items = parsed.payload ? parsed.payload.split(',') : [];
-        const metCount = items.filter(i => i.includes('=met')).length;
-        return `${metCount}/${items.length} behaviors met`;
-      }
-      default:
-        return entry.value != null ? `${parseFloat(entry.value).toFixed(0)}%` : '—';
-    }
-  }
+  // parseObsNotes and formatObsValue are now provided by obs-utils.js
+  // (imported as parseObservationNotes and formatObservationValue)
 
   // Load data from Supabase or localStorage
   async function loadData() {
@@ -360,7 +326,7 @@
     const isObs = goal.measurement_type === 'Observation';
     const rows = entries.map(entry => {
       const scoreClass = isObs ? '' : scoreColorClass(entry.value);
-      const displayValue = isObs ? formatObsValue(entry, goal) : `${entry.value}%`;
+      const displayValue = isObs ? formatObservationValue(entry, goal) : `${entry.value}%`;
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
@@ -423,21 +389,21 @@
       if (category === 'session_outcome') {
         const recentWindow = entries.slice(-5);
         const metCount = recentWindow.filter(e => {
-          const p = parseObsNotes(e.notes);
-          return p && p.category === 'session_outcome' && p.payload === 'met';
+          const p = parseObservationNotes(e.notes);
+          return p && p.category === 'session_outcome' && p.rawData === 'met';
         }).length;
         const validCount = recentWindow.filter(e => {
-          const p = parseObsNotes(e.notes);
-          return p && p.category === 'session_outcome' && p.payload !== 'na';
+          const p = parseObservationNotes(e.notes);
+          return p && p.category === 'session_outcome' && p.rawData !== 'na';
         }).length;
-        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        if (entries.length > 0) currentDisplay = formatObservationValue(entries[entries.length - 1], goal);
         avgDisplay = validCount > 0 ? `${metCount} of ${validCount} sessions met` : 'N/A';
       } else if (category === 'tally') {
-        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        if (entries.length > 0) currentDisplay = formatObservationValue(entries[entries.length - 1], goal);
         avgDisplay = avg != null ? `${avg.toFixed(0)}% (avg success rate)` : 'N/A';
         avgClass = scoreColorClass(avg);
       } else if (category === 'prompt_count') {
-        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        if (entries.length > 0) currentDisplay = formatObservationValue(entries[entries.length - 1], goal);
         // For prompt_count, lower is better — invert color logic
         const promptAvg = avg != null ? avg : null;
         if (promptAvg != null) {
@@ -446,12 +412,12 @@
         }
       } else if (category === 'behavior_checklist') {
         const totalBehaviors = (obsConfig.sub_behaviors || []).length || 1;
-        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        if (entries.length > 0) currentDisplay = formatObservationValue(entries[entries.length - 1], goal);
         const avgMet = avg != null ? (avg / 100) * totalBehaviors : null;
         avgDisplay = avgMet != null ? `Avg ${avgMet.toFixed(1)}/${totalBehaviors} behaviors met` : 'N/A';
         avgClass = scoreColorClass(avg);
       } else {
-        if (entries.length > 0) currentDisplay = formatObsValue(entries[entries.length - 1], goal);
+        if (entries.length > 0) currentDisplay = formatObservationValue(entries[entries.length - 1], goal);
         avgDisplay = avg != null ? `${avg.toFixed(0)}%` : 'N/A';
         avgClass = scoreColorClass(avg);
       }
