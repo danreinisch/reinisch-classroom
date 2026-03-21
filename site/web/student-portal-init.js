@@ -1110,6 +1110,11 @@
     
     panel.style.display = 'flex';
     panel.style.flexDirection = 'column';
+    // Make panel near-full-screen for HTML assignments
+    panel.style.width = '95vw';
+    panel.style.maxWidth = '1200px';
+    panel.style.height = '92vh';
+    panel.style.maxHeight = '92vh';
     
     panel.querySelector('#panelBackBtn').addEventListener('click', closeAssignmentViewer);
     panel.querySelector('#panelCloseBtn').addEventListener('click', closeAssignmentViewer);
