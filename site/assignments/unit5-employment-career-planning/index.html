@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit 5: Types of Employment &amp; Career Planning</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --success: #22c55e;
+    --error: #ef4444;
+    --warning: #f59e0b;
+    --radius: 12px;
+  }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+  header {
+    text-align: center;
+    padding: 32px 16px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  header .unit-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+  header h1 {
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  header .student-name {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  /* Day navigation */
+  .day-nav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    justify-content: center;
+  }
+  .day-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .day-btn:hover { border-color: var(--accent); color: var(--text); }
+  .day-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .day-btn.completed { border-color: var(--success); color: var(--success); }
+  /* Quiz card */
+  .quiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .quiz-card .day-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .day-number {
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .day-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  /* Questions */
+  .question-block {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .question-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .question-text {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .question-text .q-num {
+    color: var(--accent2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  /* Multiple choice */
+  .mc-options { display: flex; flex-direction: column; gap: 8px; }
+  .mc-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 14px;
+  }
+  .mc-option:hover { border-color: var(--accent); }
+  .mc-option input[type="radio"] { accent-color: var(--accent); cursor: pointer; }
+  .mc-option label { cursor: pointer; flex: 1; color: var(--text); line-height: 1.4; }
+  .mc-option.selected { border-color: var(--accent); background: rgba(108,99,255,0.12); }
+  .mc-option.correct { border-color: var(--success); background: rgba(34,197,94,0.12); }
+  .mc-option.incorrect { border-color: var(--error); background: rgba(239,68,68,0.12); }
+  /* Fill in the blank */
+  .fill-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .fill-input:focus { border-color: var(--accent); }
+  .fill-input.correct { border-color: var(--success); }
+  .fill-input.incorrect { border-color: var(--error); }
+  /* Matching */
+  .matching-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .match-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
+  .match-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    outline: none;
+  }
+  .match-select:focus { border-color: var(--accent); }
+  .match-select.correct { border-color: var(--success); }
+  .match-select.incorrect { border-color: var(--error); }
+  /* Feedback */
+  .feedback {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { color: var(--success); }
+  .feedback.incorrect { color: var(--error); }
+  /* Submit / Score */
+  .quiz-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .btn-submit {
+    background: var(--accent);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 12px 36px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-submit:hover { opacity: 0.88; }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .score-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    margin-top: 16px;
+    display: none;
+  }
+  .score-panel.show { display: block; }
+  .score-big {
+    font-size: 3rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent2);
+  }
+  .score-label { font-size: 15px; color: var(--text-muted); margin-top: 4px; }
+  .submit-status { font-size: 13px; color: var(--text-muted); margin-top: 12px; }
+  /* Progress bar */
+  .progress-bar-wrap { background: var(--surface2); border-radius: 99px; height: 6px; margin-bottom: 24px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s; }
+</style>
+</head>
+<body>
+<script>
+  // ── Supabase config ──────────────────────────────────────────────
+  const SUPABASE_URL = 'https://yrcvsotxnelnlcagblbe.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyY3Zzb3R4bmVsbmxjYWdibGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODc4NjgsImV4cCI6MjA3NDU2Mzg2OH0.BzlqqvrPTddM5K_dbxCkcNlHgqEIEiOaTX6fkFKimlI';
+  const SUPABASE_TABLE = 'quiz_submissions';
+  // ────────────────────────────────────────────────────────────────
+
+  // Quiz content — 7 days covering Employment & Career Planning
+  const DAYS = [
+    {
+      day: 1,
+      title: 'Types of Employment',
+      questions: [
+        {
+          id: 'q1_1', type: 'mc',
+          text: 'Which type of employment involves working for yourself rather than an employer?',
+          options: ['Full-time employment', 'Part-time employment', 'Self-employment', 'Temporary employment'],
+          answer: 2
+        },
+        {
+          id: 'q1_2', type: 'mc',
+          text: 'What does "at-will employment" mean?',
+          options: [
+            'The employee can only be fired for cause',
+            'Either the employer or employee can end the relationship at any time for any legal reason',
+            'The employee has a guaranteed contract for one year',
+            'The employer must give 30 days notice before termination'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q1_3', type: 'fill',
+          text: 'A _______ employee typically works fewer than 35 hours per week and may not receive full benefits.',
+          answer: 'part-time'
+        },
+        {
+          id: 'q1_4', type: 'mc',
+          text: 'Which of the following best describes a "freelancer"?',
+          options: [
+            'An employee with full benefits and a fixed schedule',
+            'A person who works on a project basis for multiple clients',
+            'A government employee with civil service protections',
+            'A seasonal worker hired only for busy periods'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q1_5', type: 'fill',
+          text: 'A _______ contract specifies the terms of employment including pay, hours, and duration of work.',
+          answer: 'written'
+        }
+      ]
+    },
+    {
+      day: 2,
+      title: 'Job Applications & Resumes',
+      questions: [
+        {
+          id: 'q2_1', type: 'mc',
+          text: 'What is the primary purpose of a resume?',
+          options: [
+            'To list your personal hobbies and interests',
+            'To summarize your skills, experience, and education for a potential employer',
+            'To explain why you left your last job',
+            'To provide three references from friends'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q2_2', type: 'mc',
+          text: 'Which section of a resume lists your previous jobs and responsibilities?',
+          options: ['Objective', 'Education', 'Work Experience', 'References'],
+          answer: 2
+        },
+        {
+          id: 'q2_3', type: 'fill',
+          text: 'A _______ letter accompanies your resume and explains why you are interested in the job.',
+          answer: 'cover'
+        },
+        {
+          id: 'q2_4', type: 'mc',
+          text: 'When listing work experience on a resume, you should generally use _______ order.',
+          options: ['alphabetical', 'reverse chronological', 'chronological', 'random'],
+          answer: 1
+        },
+        {
+          id: 'q2_5', type: 'fill',
+          text: 'Using _______ words at the start of bullet points (e.g., "managed," "created," "improved") makes a resume stronger.',
+          answer: 'action'
+        }
+      ]
+    },
+    {
+      day: 3,
+      title: 'Interview Skills',
+      questions: [
+        {
+          id: 'q3_1', type: 'mc',
+          text: 'What should you do to prepare for a job interview?',
+          options: [
+            'Research the company and practice common interview questions',
+            'Arrive 20 minutes late to show you have a busy schedule',
+            'Wear casual clothes to seem relaxed',
+            'Ask the interviewer about salary in the first 5 minutes'
+          ],
+          answer: 0
+        },
+        {
+          id: 'q3_2', type: 'mc',
+          text: 'The STAR method (Situation, Task, Action, Result) is used to answer which type of interview questions?',
+          options: ['Salary negotiation questions', 'Behavioral interview questions', 'Technical skill tests', 'Background check questions'],
+          answer: 1
+        },
+        {
+          id: 'q3_3', type: 'fill',
+          text: 'After an interview, it is professional to send a _______ note or email within 24 hours.',
+          answer: 'thank-you'
+        },
+        {
+          id: 'q3_4', type: 'mc',
+          text: 'Which is the best response when asked "What is your greatest weakness?"',
+          options: [
+            '"I have no weaknesses"',
+            '"I work too hard" with no further explanation',
+            'A real weakness you have identified and are actively working to improve',
+            'Listing several major flaws that are directly relevant to the job'
+          ],
+          answer: 2
+        },
+        {
+          id: 'q3_5', type: 'fill',
+          text: 'Making _______ contact during an interview shows confidence and engagement.',
+          answer: 'eye'
+        }
+      ]
+    },
+    {
+      day: 4,
+      title: 'Workplace Rights & Responsibilities',
+      questions: [
+        {
+          id: 'q4_1', type: 'mc',
+          text: 'Which US law prohibits employment discrimination based on race, color, religion, sex, or national origin?',
+          options: ['Fair Labor Standards Act', 'Title VII of the Civil Rights Act', 'Americans with Disabilities Act', 'Family and Medical Leave Act'],
+          answer: 1
+        },
+        {
+          id: 'q4_2', type: 'mc',
+          text: 'The minimum wage is set by:',
+          options: [
+            'Individual employers only',
+            'Federal and/or state law, whichever is higher',
+            'Labor unions only',
+            'The President of the United States without Congressional approval'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q4_3', type: 'fill',
+          text: 'OSHA stands for the Occupational Safety and _______ Administration.',
+          answer: 'Health'
+        },
+        {
+          id: 'q4_4', type: 'mc',
+          text: 'If you work more than 40 hours in a week, federal law generally requires _______ pay.',
+          options: ['double', 'overtime (1.5x)', 'regular', 'bonus'],
+          answer: 1
+        },
+        {
+          id: 'q4_5', type: 'fill',
+          text: 'A _______ is a formal complaint filed with a government agency when an employer violates labor laws.',
+          answer: 'grievance'
+        }
+      ]
+    },
+    {
+      day: 5,
+      title: 'Career Planning & Goal Setting',
+      questions: [
+        {
+          id: 'q5_1', type: 'mc',
+          text: 'A SMART goal is Specific, Measurable, Achievable, Relevant, and _______ .',
+          options: ['Realistic', 'Time-bound', 'Rewarding', 'Resourced'],
+          answer: 1
+        },
+        {
+          id: 'q5_2', type: 'mc',
+          text: 'What is a career pathway?',
+          options: [
+            'A single job you hold for your entire career',
+            'A sequence of related jobs and experiences that lead toward a long-term career goal',
+            'A list of every job that has ever existed',
+            'A government program for job placement'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q5_3', type: 'fill',
+          text: 'A _______ assessment helps you identify your strengths, interests, and values to guide career decisions.',
+          answer: 'career'
+        },
+        {
+          id: 'q5_4', type: 'mc',
+          text: 'Networking means:',
+          options: [
+            'Setting up computer networks',
+            'Building professional relationships that may lead to job opportunities',
+            'Applying to every job posting you see',
+            'Negotiating salary before getting an offer'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q5_5', type: 'fill',
+          text: 'A _______ plan outlines the steps and timeline needed to reach your career goals.',
+          answer: 'career'
+        }
+      ]
+    },
+    {
+      day: 6,
+      title: 'Pay, Benefits & Taxes',
+      questions: [
+        {
+          id: 'q6_1', type: 'mc',
+          text: 'What is the difference between gross pay and net pay?',
+          options: [
+            'There is no difference',
+            'Gross pay is earnings before deductions; net pay is take-home pay after deductions',
+            'Net pay is higher than gross pay',
+            'Gross pay only includes overtime earnings'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q6_2', type: 'mc',
+          text: 'Which form do you fill out when you start a new job to tell your employer how much tax to withhold?',
+          options: ['W-2', 'W-4', '1099', '1040'],
+          answer: 1
+        },
+        {
+          id: 'q6_3', type: 'fill',
+          text: 'Health insurance, retirement plans, and paid vacation are examples of employee _______ .',
+          answer: 'benefits'
+        },
+        {
+          id: 'q6_4', type: 'mc',
+          text: 'FICA taxes fund which two programs?',
+          options: [
+            'Medicare and Medicaid',
+            'Social Security and Medicare',
+            'Unemployment insurance and workers\' compensation',
+            'Federal income tax and state income tax'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q6_5', type: 'fill',
+          text: 'A 401(k) is a type of _______ savings account offered by employers.',
+          answer: 'retirement'
+        }
+      ]
+    },
+    {
+      day: 7,
+      title: 'Professional Development & Advancement',
+      questions: [
+        {
+          id: 'q7_1', type: 'mc',
+          text: 'Which of the following is an example of professional development?',
+          options: [
+            'Watching television after work',
+            'Attending a workshop to improve your skills',
+            'Talking to coworkers about personal topics',
+            'Arriving late to work consistently'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q7_2', type: 'mc',
+          text: 'A mentor is:',
+          options: [
+            'Your direct supervisor who evaluates your performance',
+            'An experienced person who provides guidance and advice to help you grow professionally',
+            'A government-appointed career counselor',
+            'Someone who fills in for you when you are absent'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q7_3', type: 'fill',
+          text: 'A performance _______ is a formal evaluation where a supervisor assesses your work over a period of time.',
+          answer: 'review'
+        },
+        {
+          id: 'q7_4', type: 'mc',
+          text: 'Which of the following best demonstrates a strong work ethic?',
+          options: [
+            'Completing only the minimum required tasks',
+            'Consistently showing up on time, meeting deadlines, and going beyond expectations',
+            'Asking for a raise every month',
+            'Avoiding feedback from supervisors'
+          ],
+          answer: 1
+        },
+        {
+          id: 'q7_5', type: 'fill',
+          text: 'Continuing _______ — such as earning certifications or taking classes — can help you advance in your career.',
+          answer: 'education'
+        }
+      ]
+    }
+  ];
+
+  // ── State ───────────────────────────────────────────────────────
+  let currentDayIndex = 0;
+  let answers = {};
+  let submitted = {};
+  let studentName = 'Student';
+
+  // Read ?student= param (sanitize: trim, max 100 chars, strip control characters)
+  (function () {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('student');
+      if (s) {
+        // Remove control characters and limit length
+        const clean = s.replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, 100);
+        if (clean) studentName = clean;
+      }
+    } catch (e) { /* ignore */ }
+  })();
+
+  // ── Supabase submit ─────────────────────────────────────────────
+  async function submitToSupabase(dayData, correct, total, answerDetails) {
+    if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_PROJECT')) {
+      return { ok: false, message: '⚠ Supabase not configured — grade not submitted.' };
+    }
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const payload = {
+      student_name: studentName,
+      unit: 5,
+      day: dayData.day,
+      day_title: dayData.title,
+      score: correct,
+      total: total,
+      percentage: pct,
+      answers: answerDetails,
+      submitted_at: new Date().toISOString()
+    };
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+      if (!res.ok) {
+        const errText = await res.text();
+        return { ok: false, message: `⚠ Submission error (${res.status}): ${errText}` };
+      }
+      return { ok: true, message: `✓ Score submitted for ${studentName}` };
+    } catch (err) {
+      return { ok: false, message: `⚠ Network error: ${err.message}` };
+    }
+  }
+
+  // ── Rendering ───────────────────────────────────────────────────
+  function renderDay(dayIndex) {
+    const day = DAYS[dayIndex];
+    const container = document.getElementById('quiz-container');
+    container.innerHTML = '';
+
+    // Progress bar
+    const totalDays = DAYS.length;
+    const completedCount = Object.keys(submitted).length;
+    const pct = Math.round((completedCount / totalDays) * 100);
+    const progressWrap = document.createElement('div');
+    progressWrap.className = 'progress-bar-wrap';
+    progressWrap.innerHTML = `<div class="progress-bar-fill" style="width:${pct}%"></div>`;
+    container.appendChild(progressWrap);
+
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+
+    // Day header
+    const header = document.createElement('div');
+    header.className = 'day-header';
+    header.innerHTML = `<span class="day-number">Day ${day.day}</span><span class="day-title">${escHtml(day.title)}</span>`;
+    card.appendChild(header);
+
+    // Questions
+    const isSubmitted = !!submitted[day.day];
+    day.questions.forEach((q, qi) => {
+      const block = document.createElement('div');
+      block.className = 'question-block';
+
+      const qText = document.createElement('div');
+      qText.className = 'question-text';
+      qText.innerHTML = `<span class="q-num">${qi + 1}.</span>${escHtml(q.text)}`;
+      block.appendChild(qText);
+
+      if (q.type === 'mc') {
+        const opts = document.createElement('div');
+        opts.className = 'mc-options';
+        q.options.forEach((opt, oi) => {
+          const label = document.createElement('label');
+          label.className = 'mc-option';
+          const rid = `${q.id}_o${oi}`;
+          label.innerHTML = `<input type="radio" name="${escHtml(q.id)}" id="${escHtml(rid)}" value="${oi}" ${isSubmitted ? 'disabled' : ''}>
+            <label for="${escHtml(rid)}">${escHtml(opt)}</label>`;
+          // Restore previous answer
+          if (answers[q.id] !== undefined && answers[q.id] === oi) {
+            label.querySelector('input').checked = true;
+            label.classList.add('selected');
+          }
+          if (isSubmitted) {
+            if (oi === q.answer) label.classList.add('correct');
+            else if (answers[q.id] === oi && oi !== q.answer) label.classList.add('incorrect');
+          }
+          if (!isSubmitted) {
+            label.querySelector('input').addEventListener('change', () => {
+              document.querySelectorAll(`[name="${q.id}"]`).forEach(r => r.closest('.mc-option').classList.remove('selected'));
+              label.classList.add('selected');
+              answers[q.id] = oi;
+            });
+          }
+          opts.appendChild(label);
+        });
+        block.appendChild(opts);
+      } else if (q.type === 'fill') {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'fill-input';
+        inp.placeholder = 'Type your answer…';
+        inp.id = q.id;
+        inp.disabled = isSubmitted;
+        if (answers[q.id] !== undefined) inp.value = answers[q.id];
+        if (isSubmitted) {
+          const userAns = (answers[q.id] || '').trim().toLowerCase();
+          const correct = q.answer.toLowerCase();
+          inp.classList.add(userAns === correct ? 'correct' : 'incorrect');
+        } else {
+          inp.addEventListener('input', () => { answers[q.id] = inp.value; });
+        }
+        block.appendChild(inp);
+        if (isSubmitted) {
+          const hint = document.createElement('div');
+          hint.className = 'feedback show';
+          const userAns = (answers[q.id] || '').trim().toLowerCase();
+          if (userAns === q.answer.toLowerCase()) {
+            hint.className += ' correct';
+            hint.textContent = '✓ Correct!';
+          } else {
+            hint.className += ' incorrect';
+            hint.textContent = `✗ Answer: ${q.answer}`;
+          }
+          block.appendChild(hint);
+        }
+      }
+      card.appendChild(block);
+    });
+
+    // Score panel (if submitted)
+    if (isSubmitted) {
+      const sp = document.createElement('div');
+      sp.className = 'score-panel show';
+      const { correct, total, statusMsg } = submitted[day.day];
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+      sp.innerHTML = `<div class="score-big">${pct}%</div>
+        <div class="score-label">${correct} / ${total} correct</div>
+        <div class="submit-status">${escHtml(statusMsg)}</div>`;
+      card.appendChild(sp);
+    } else {
+      // Submit button
+      const actions = document.createElement('div');
+      actions.className = 'quiz-actions';
+      const btn = document.createElement('button');
+      btn.className = 'btn-submit';
+      btn.textContent = 'Submit Answers';
+      btn.addEventListener('click', () => handleSubmit(day, btn, card));
+      actions.appendChild(btn);
+      card.appendChild(actions);
+    }
+
+    container.appendChild(card);
+  }
+
+  async function handleSubmit(day, btn, card) {
+    // Validate all answered
+    let allAnswered = true;
+    day.questions.forEach(q => {
+      if (answers[q.id] === undefined || answers[q.id] === '') allAnswered = false;
+    });
+    if (!allAnswered) {
+      if (!confirm('You have unanswered questions. Submit anyway?')) return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    // Score
+    let correct = 0;
+    const answerDetails = [];
+    day.questions.forEach(q => {
+      let isCorrect = false;
+      if (q.type === 'mc') {
+        isCorrect = answers[q.id] === q.answer;
+      } else if (q.type === 'fill') {
+        isCorrect = (answers[q.id] || '').trim().toLowerCase() === q.answer.toLowerCase();
+      }
+      if (isCorrect) correct++;
+      answerDetails.push({ id: q.id, type: q.type, answer: answers[q.id], correct: isCorrect });
+    });
+
+    const result = await submitToSupabase(day, correct, day.questions.length, answerDetails);
+    submitted[day.day] = { correct, total: day.questions.length, statusMsg: result.message };
+
+    // Update day nav
+    renderDayNav();
+    // Re-render to show results
+    renderDay(currentDayIndex);
+  }
+
+  function renderDayNav() {
+    const nav = document.getElementById('day-nav');
+    nav.innerHTML = '';
+    DAYS.forEach((d, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'day-btn' + (i === currentDayIndex ? ' active' : '') + (submitted[d.day] ? ' completed' : '');
+      btn.textContent = `Day ${d.day}`;
+      btn.title = d.title;
+      btn.addEventListener('click', () => {
+        currentDayIndex = i;
+        renderDayNav();
+        renderDay(i);
+      });
+      nav.appendChild(btn);
+    });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('student-name-display').textContent = studentName;
+    renderDayNav();
+    renderDay(0);
+  });
+</script>
+<header>
+  <div class="unit-badge">Unit 5</div>
+  <h1>Types of Employment &amp; Career Planning</h1>
+  <div class="student-name">Student: <span id="student-name-display"></span></div>
+</header>
+<div class="container">
+  <div id="day-nav" class="day-nav"></div>
+  <div id="quiz-container"></div>
+</div>
+</body>
+</html>
