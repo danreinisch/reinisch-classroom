@@ -97,9 +97,9 @@ const tabFunctions = ['renderTab1', 'renderTab2', 'renderTab3', 'renderTab4', 'r
 
 const tabSearchSizes = {
   renderTab1: 3500,
-  renderTab2: 5500,
+  renderTab2: 6000,
   renderTab3: 6000,
-  renderTab4: 7500,
+  renderTab4: 8500,
   renderTab5: 1000,
   renderTab6: 10000,
 };

@@ -319,12 +319,29 @@
       return `<div style="padding: 10px; opacity: 0.7; font-size: 13px;">No data points recorded for this quarter.</div>`;
     }
     
+    const isObservation = goal.measurement_type === "Observation";
+
     const rows = entries.map(entry => {
-      const scoreClass = scoreColorClass(entry.value);
+      // For observation goals, show a friendly label instead of raw "XX%"
+      let valueDisplay;
+      if (isObservation) {
+        const obsLabel = formatObsEntryValue(entry);
+        if (obsLabel) {
+          valueDisplay = escapeHtml(obsLabel);
+        } else if (entry.value != null) {
+          valueDisplay = escapeHtml(String(parseFloat(entry.value).toFixed(1)));
+        } else {
+          valueDisplay = "—";
+        }
+      } else {
+        valueDisplay = `${entry.value}%`;
+      }
+
+      const scoreClass = isObservation ? "" : scoreColorClass(entry.value);
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
-          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${entry.id}" data-goal="${goal.code}" data-student="${studentCode}" data-value="${entry.value}">${entry.value}%</td>
+          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${entry.id}" data-goal="${goal.code}" data-student="${studentCode}" data-value="${entry.value}">${valueDisplay}</td>
           <td>${entry.source || 'manual'}</td>
         </tr>
       `;
@@ -370,7 +387,115 @@
       if (secondAvg > firstAvg + 5) trend = '↗';
       else if (secondAvg < firstAvg - 5) trend = '↘';
     }
-    
+
+    // Observation-aware stats
+    if (goal.measurement_type === "Observation") {
+      const obsCat = goal.observation_config?.category || "";
+      const validEntries = entries.filter(e => e.value != null && !isNaN(parseFloat(e.value)));
+
+      if (obsCat === "session_outcome") {
+        const soEntries = entries.filter(e => {
+          const p = parseObservationNotes(e.notes);
+          return p && p.category === "session_outcome" &&
+            (p.rawData === "met" || p.rawData === "not_met");
+        });
+        const metCount = soEntries.filter(e => {
+          const p = parseObservationNotes(e.notes);
+          return p && p.rawData === "met";
+        }).length;
+        const totalValid = soEntries.length;
+        const targetMet = goal.observation_config?.target_met ?? 3;
+        const targetWindow = goal.observation_config?.target_window ?? 5;
+        return `
+          <div class="dt-stats">
+            <span>Met: <strong>${metCount} of ${totalValid} sessions</strong></span>
+            <span>Target: <strong>${targetMet} of ${targetWindow} sessions</strong></span>
+            <span>Trend: <strong>${trend}</strong></span>
+          </div>
+        `;
+      }
+
+      if (obsCat === "tally") {
+        let totalSuccessful = 0, totalOpportunities = 0, parsedSessions = 0;
+        entries.forEach(e => {
+          const p = parseObservationNotes(e.notes);
+          if (!p || p.category !== "tally") return;
+          const parts = (p.rawData || "").split("/");
+          const s = parseInt(parts[0], 10);
+          const o = parseInt(parts[1], 10);
+          if (!isNaN(s) && !isNaN(o) && o > 0) {
+            totalSuccessful += s;
+            totalOpportunities += o;
+            parsedSessions++;
+          }
+        });
+        const avgClass = scoreColorClass(avg);
+        const avgS = parsedSessions > 0 ? (totalSuccessful / parsedSessions).toFixed(1) : 'N/A';
+        const avgO = parsedSessions > 0 ? (totalOpportunities / parsedSessions).toFixed(0) : 'N/A';
+        return `
+          <div class="dt-stats">
+            <span>Baseline: <strong>${baseline}</strong></span>
+            <span>Mastery: <strong>${mastery}</strong></span>
+            <span>Avg: <strong class="${avgClass}">${avg != null ? avg + '%' : 'N/A'}</strong></span>
+            <span>Per session: <strong>${avgS}/${avgO}</strong></span>
+            <span>Trend: <strong>${trend}</strong></span>
+          </div>
+        `;
+      }
+
+      if (obsCat === "prompt_count") {
+        const targetMax = goal.observation_config?.target_max_prompts ?? 2;
+        const avgPrompts = validEntries.length > 0
+          ? (validEntries.reduce((s, e) => s + parseFloat(e.value), 0) / validEntries.length).toFixed(1)
+          : 'N/A';
+        const currentPrompts = current != null ? current : null;
+        const atTarget = currentPrompts != null && currentPrompts <= targetMax;
+        return `
+          <div class="dt-stats">
+            <span>Avg Prompts: <strong>${avgPrompts}</strong></span>
+            <span>Target: <strong>${targetMax} or fewer</strong></span>
+            <span>Current: <strong>${currentPrompts != null ? currentPrompts + ' prompt' + (currentPrompts !== 1 ? 's' : '') : 'N/A'}</strong></span>
+            <span>At Target: <strong>${currentPrompts != null ? (atTarget ? 'Yes' : 'No') : '—'}</strong></span>
+            <span>Trend: <strong>${trend}</strong></span>
+          </div>
+        `;
+      }
+
+      if (obsCat === "behavior_checklist") {
+        const subBehaviors = Array.isArray(goal.observation_config?.sub_behaviors)
+          ? goal.observation_config.sub_behaviors : [];
+        const behaviorStats = {};
+        entries.forEach(e => {
+          const p = parseObservationNotes(e.notes);
+          if (!p || p.category !== "checklist" || !p.rawData) return;
+          p.rawData.split(",").forEach(part => {
+            const eqIdx = part.lastIndexOf("=");
+            if (eqIdx === -1) return;
+            const bName = part.slice(0, eqIdx).trim();
+            const result = part.slice(eqIdx + 1).trim();
+            if (!bName) return;
+            if (!behaviorStats[bName]) behaviorStats[bName] = { met: 0, total: 0 };
+            behaviorStats[bName].total++;
+            if (result === "met") behaviorStats[bName].met++;
+          });
+        });
+        const avgClass = scoreColorClass(avg);
+        const behaviorRows = Object.entries(behaviorStats).map(([bName, stats]) => {
+          const pct = stats.total > 0 ? Math.round((stats.met / stats.total) * 100) : 0;
+          return `<span style="font-size:11px;">${escapeHtml(bName)}: <strong>${stats.met}/${stats.total} (${pct}%)</strong></span>`;
+        }).join(' &nbsp;');
+        return `
+          <div class="dt-stats">
+            <span>Overall: <strong class="${avgClass}">${avg != null ? avg + '%' : 'N/A'} behaviors met</strong></span>
+            <span>Mastery: <strong>${mastery}</strong></span>
+            <span>Trend: <strong>${trend}</strong></span>
+          </div>
+          ${behaviorRows ? `<div class="dt-stats" style="flex-wrap:wrap;gap:6px;">${behaviorRows}</div>` : ''}
+        `;
+      }
+    }
+
+    // Standard (non-observation) stats
     const avgClass = scoreColorClass(avg);
     const currentClass = scoreColorClass(current);
     
@@ -400,15 +525,49 @@
     if (entries.length < 2) {
       return '';
     }
-    
+
+    // For session_outcome: render a binary Met/Not Met strip instead of a line chart
+    if (goal.measurement_type === "Observation" &&
+        goal.observation_config?.category === "session_outcome") {
+      const width = 200;
+      const height = 40;
+      const dotR = 7;
+      const spacing = Math.min(20, (width - 8) / entries.length);
+      let dots = '';
+      entries.forEach((e, i) => {
+        const p = parseObservationNotes(e.notes);
+        const result = p ? p.rawData : null;
+        const cx = 8 + i * spacing;
+        const cy = height / 2;
+        let color;
+        if (result === "met") color = "rgba(34,197,94,0.85)";
+        else if (result === "not_met") color = "rgba(239,68,68,0.75)";
+        else color = "rgba(156,163,175,0.5)";
+        dots += `<circle cx="${cx}" cy="${cy}" r="${dotR}" fill="${color}" />`;
+      });
+      return `
+        <div class="dt-sparkline" title="● Met  ● Not Met  ● Not Addressed">
+          <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true">
+            ${dots}
+          </svg>
+        </div>
+      `;
+    }
+
     const width = 200;
     const height = 40;
     const padding = 4;
+    const isPromptCount = goal.measurement_type === "Observation" &&
+      goal.observation_config?.category === "prompt_count";
     
     // Get values sorted by date
     const values = entries.map(e => parseFloat(e.value));
-    const max = Math.max(...values, 100);
-    const min = Math.min(...values, 0);
+    // For prompt_count, invert: lower counts → higher on chart (lower = better)
+    const chartValues = isPromptCount
+      ? values.map(v => -v)
+      : values;
+    const max = Math.max(...chartValues);
+    const min = Math.min(...chartValues);
     const range = max - min || 1;
     
     const stepX = (width - 2 * padding) / (values.length - 1);
@@ -416,11 +575,12 @@
     // Build polyline points
     let points = '';
     let circles = '';
-    values.forEach((val, i) => {
+    chartValues.forEach((val, i) => {
       const x = padding + i * stepX;
       const y = height - padding - ((val - min) / range) * (height - 2 * padding);
       points += `${x},${y} `;
-      circles += `<circle cx="${x}" cy="${y}" r="2" fill="rgba(34, 197, 94, 0.9)" />`;
+      const dotColor = isPromptCount ? "rgba(99,102,241,0.9)" : "rgba(34, 197, 94, 0.9)";
+      circles += `<circle cx="${x}" cy="${y}" r="2" fill="${dotColor}" />`;
     });
     
     // Build polygon points for fill area (add bottom corners)
@@ -431,13 +591,16 @@
     
     // Create unique gradient ID (sanitize goal code to prevent XSS)
     const safeGradientId = `sparkGradient-${goal.code.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    const strokeColor = isPromptCount ? "rgba(99,102,241,0.8)" : "rgba(34, 197, 94, 0.8)";
+    const fillStop = isPromptCount ? "rgba(99,102,241,0.2)" : "rgba(34, 197, 94, 0.2)";
+    const titleAttr = isPromptCount ? 'title="Inverted: lower prompts = higher on chart (lower is better)"' : '';
     
     return `
-      <div class="dt-sparkline">
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <div class="dt-sparkline" ${titleAttr}>
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true">
           <defs>
             <linearGradient id="${safeGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:rgba(34, 197, 94, 0.2);stop-opacity:1" />
+              <stop offset="0%" style="stop-color:${fillStop};stop-opacity:1" />
               <stop offset="100%" style="stop-color:rgba(34, 197, 94, 0.02);stop-opacity:1" />
             </linearGradient>
           </defs>
@@ -448,7 +611,7 @@
           <polyline 
             points="${points.trim()}" 
             fill="none" 
-            stroke="rgba(34, 197, 94, 0.8)" 
+            stroke="${strokeColor}" 
             stroke-width="2" 
             stroke-linecap="round" 
             stroke-linejoin="round"
@@ -464,6 +627,21 @@
     // Build metadata badges - show case manager and data collector if available
     const metaBadges = [];
     metaBadges.push(`<span>Area: <strong>${goal.goal_area || 'Uncategorized'}</strong></span>`);
+
+    // Observation category badge (indigo, matching tc-students.js style)
+    if (goal.measurement_type === "Observation") {
+      const obsCatLabel = {
+        session_outcome: "Session Outcome",
+        tally: "Tally",
+        prompt_count: "Prompt Count",
+        behavior_checklist: "Behavior Checklist",
+      }[goal.observation_config?.category] || "Observation";
+      metaBadges.push(
+        `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);">` +
+        `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>` +
+        `${escapeHtml(obsCatLabel)}</span>`
+      );
+    }
     
     // Show case manager if available
     if (goal.case_manager) {
@@ -1174,6 +1352,60 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /**
+   * Parse the [obs:category:data] prefix from a progress entry's notes string.
+   * Returns { category, rawData, userNote } or null if not an observation entry.
+   */
+  function parseObservationNotes(notes) {
+    if (!notes) return null;
+    const match = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
+    if (!match) return null;
+    return {
+      category: match[1],
+      rawData: match[2],
+      userNote: notes.slice(match[0].length).trim(),
+    };
+  }
+
+  /**
+   * Return a short observation-friendly label for a data point's value.
+   * For non-observation entries, returns null (caller should use raw value).
+   * @param {Object} entry - progress entry with .notes and .value
+   * @returns {string|null}
+   */
+  function formatObsEntryValue(entry) {
+    const parsed = parseObservationNotes(entry.notes);
+    if (!parsed) return null;
+    const { category, rawData } = parsed;
+    if (category === "session_outcome") {
+      if (rawData === "met") return "Met";
+      if (rawData === "not_met") return "Not Met";
+      if (rawData === "not_addressed") return "Not Addressed";
+      if (rawData === "not_applicable") return "N/A";
+      return rawData;
+    }
+    if (category === "tally") {
+      const parts = (rawData || "").split("/");
+      const s = parseInt(parts[0], 10);
+      const o = parseInt(parts[1], 10);
+      if (!isNaN(s) && !isNaN(o) && o > 0) {
+        return `${s}/${o} (${Math.round((s / o) * 100)}%)`;
+      }
+      return rawData;
+    }
+    if (category === "prompt_count") {
+      const n = parseInt(rawData, 10);
+      return !isNaN(n) ? `${n} prompt${n !== 1 ? "s" : ""}` : rawData;
+    }
+    if (category === "checklist") {
+      const parts = (rawData || "").split(",");
+      const met = parts.filter(p => p.endsWith("=met")).length;
+      const total = parts.length;
+      return `${met}/${total} met (${total > 0 ? Math.round((met / total) * 100) : 0}%)`;
+    }
+    return null;
   }
   
   function parseCSV(text) {

@@ -24,6 +24,21 @@
   const SVG_CHECK =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
+  /**
+   * Parse the [obs:category:data] prefix from a progress entry's notes string.
+   * Returns { category, rawData, userNote } or null if not an observation entry.
+   */
+  function parseObservationNotes(notes) {
+    if (!notes) return null;
+    const match = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
+    if (!match) return null;
+    return {
+      category: match[1],
+      rawData: match[2],
+      userNote: notes.slice(match[0].length).trim(),
+    };
+  }
+
   // State
   let syncStatus = "local";
 
@@ -128,6 +143,41 @@
         if (goalProgress.length === 0) continue;
         goalProgress.sort((a, b) => new Date(b.date) - new Date(a.date));
         const latest = goalProgress[0];
+
+        // Observation-aware contribution to average
+        if (goal.measurement_type === "Observation") {
+          const obsCat = goal.observation_config?.category || "";
+          if (obsCat === "session_outcome") {
+            // Use met/total from valid (met+not_met) entries as percentage contribution
+            const validEntries = goalProgress.filter((p) => {
+              const parsed = parseObservationNotes(p.notes);
+              return parsed && parsed.category === "session_outcome" &&
+                (parsed.rawData === "met" || parsed.rawData === "not_met");
+            });
+            const metCount = validEntries.filter((p) => {
+              const parsed = parseObservationNotes(p.notes);
+              return parsed && parsed.rawData === "met";
+            }).length;
+            if (validEntries.length > 0) {
+              sumPercent += (metCount / validEntries.length) * 100;
+              countWithProgress++;
+            }
+            continue;
+          }
+          if (obsCat === "prompt_count") {
+            // Convert to compliance %: ≤ target_max → 100%, else inverse scale
+            const targetMax = goal.observation_config?.target_max_prompts ?? 2;
+            const val = latest.value != null ? parseFloat(latest.value) : null;
+            if (val != null && !isNaN(val)) {
+              const compliance = val <= targetMax ? 100 : Math.max(0, 100 - ((val - targetMax) / (targetMax + 1)) * 100);
+              sumPercent += compliance;
+              countWithProgress++;
+            }
+            continue;
+          }
+          // tally and behavior_checklist: values already stored as percentages — fall through
+        }
+
         const val = latest.percent != null ? latest.percent : latest.value != null ? latest.value : null;
         if (val != null) {
           sumPercent += val;
@@ -460,6 +510,67 @@
         // Sort by date to get most recent
         goalProgress.sort((a, b) => new Date(b.date) - new Date(a.date));
         const recent = goalProgress[0];
+
+        // Observation-aware at-risk classification
+        if (goal.measurement_type === "Observation") {
+          const obsCat = goal.observation_config?.category || "";
+
+          if (obsCat === "session_outcome") {
+            const targetMet = parseInt(goal.observation_config?.target_met ?? 3, 10);
+            const targetWindow = parseInt(goal.observation_config?.target_window ?? 5, 10);
+            // Count met/not_met in the most recent window entries
+            const recentWindow = goalProgress.slice(0, targetWindow);
+            const validWindow = recentWindow.filter((p) => {
+              const parsed = parseObservationNotes(p.notes);
+              return parsed && parsed.category === "session_outcome" &&
+                (parsed.rawData === "met" || parsed.rawData === "not_met");
+            });
+            const metCount = validWindow.filter((p) => {
+              const parsed = parseObservationNotes(p.notes);
+              return parsed && parsed.rawData === "met";
+            }).length;
+            const totalValid = validWindow.length;
+            if (totalValid > 0 && metCount < targetMet) {
+              regressing.push({
+                studentCode: student.code,
+                studentName: student.name,
+                goalCode: goal.code,
+                goalArea: goal.goal_area || '',
+                current: metCount,
+                baseline: 0,
+                mastery: targetMet,
+                baselineRaw: "0",
+                masteryRaw: String(targetMet),
+                currentRaw: `${metCount}/${totalValid} met`,
+              });
+            }
+            continue;
+          }
+
+          if (obsCat === "prompt_count") {
+            const targetMax = parseInt(goal.observation_config?.target_max_prompts ?? 2, 10);
+            // Average prompts over recent entries
+            const recentEntries = goalProgress.slice(0, 5).filter(p => p.value != null && !isNaN(parseFloat(p.value)));
+            if (recentEntries.length === 0) continue;
+            const avgPrompts = recentEntries.reduce((s, p) => s + parseFloat(p.value), 0) / recentEntries.length;
+            if (avgPrompts > targetMax) {
+              regressing.push({
+                studentCode: student.code,
+                studentName: student.name,
+                goalCode: goal.code,
+                goalArea: goal.goal_area || '',
+                current: Math.round(avgPrompts * 10) / 10,
+                baseline: 0,
+                mastery: targetMax,
+                baselineRaw: "0",
+                masteryRaw: String(targetMax),
+                currentRaw: `avg ${(Math.round(avgPrompts * 10) / 10)} prompts (target ≤${targetMax})`,
+              });
+            }
+            continue;
+          }
+          // tally and behavior_checklist: fall through to standard percentage logic
+        }
 
         const baselineNum = parseGoalValue(goal.baseline);
         const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);

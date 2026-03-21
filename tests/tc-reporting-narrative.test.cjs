@@ -764,6 +764,559 @@ test('four canonical progress statuses are defined', () => {
   assert.ok(src.includes('"Not Making Progress"'), 'Not Making Progress status should be used');
 });
 
+// ── parseObservationNotes source-level checks ─────────────────────────────────
+
+console.log('\n--- parseObservationNotes source-level checks ---');
+
+test('parseObservationNotes function exists in tc-reporting.js', () => {
+  assert.ok(
+    src.includes('function parseObservationNotes('),
+    'parseObservationNotes should be defined in tc-reporting.js'
+  );
+});
+
+test('parseObservationNotes parses [obs:session_outcome:met] prefix', () => {
+  const fnIdx = src.indexOf('function parseObservationNotes(');
+  assert.ok(fnIdx !== -1, 'parseObservationNotes not found');
+  // The regex pattern should be present in the function
+  const fnSection = src.slice(fnIdx, fnIdx + 500);
+  assert.ok(
+    fnSection.includes('obs:') || fnSection.includes('\\[obs:'),
+    'parseObservationNotes should handle [obs:...] prefix'
+  );
+});
+
+test('getObservationAverageDisplay function exists in tc-reporting.js', () => {
+  assert.ok(
+    src.includes('function getObservationAverageDisplay('),
+    'getObservationAverageDisplay should be defined in tc-reporting.js'
+  );
+});
+
+test('getObservationAverageDisplay handles session_outcome', () => {
+  const fnIdx = src.indexOf('function getObservationAverageDisplay(');
+  assert.ok(fnIdx !== -1, 'getObservationAverageDisplay not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 2000);
+  assert.ok(
+    fnSection.includes('session_outcome') && fnSection.includes('Met:'),
+    'getObservationAverageDisplay should handle session_outcome with "Met:" label'
+  );
+});
+
+test('getObservationAverageDisplay handles prompt_count', () => {
+  const fnIdx = src.indexOf('function getObservationAverageDisplay(');
+  assert.ok(fnIdx !== -1, 'getObservationAverageDisplay not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 2000);
+  assert.ok(
+    fnSection.includes('prompt_count') && fnSection.includes('prompts'),
+    'getObservationAverageDisplay should handle prompt_count with "prompts" label'
+  );
+});
+
+// ── Observation narrative engine ──────────────────────────────────────────────
+
+console.log('\n--- Observation narrative engine source-level checks ---');
+
+test('buildRichProgressNarrative handles Observation measurement type', () => {
+  const fnIdx = src.indexOf('function buildRichProgressNarrative(');
+  assert.ok(fnIdx !== -1, 'buildRichProgressNarrative not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 8000);
+  assert.ok(
+    fnSection.includes("measurement_type") && fnSection.includes("Observation"),
+    'buildRichProgressNarrative should branch on measurement_type === "Observation"'
+  );
+});
+
+test('buildRichProgressNarrative handles session_outcome category', () => {
+  const fnIdx = src.indexOf('function buildRichProgressNarrative(');
+  assert.ok(fnIdx !== -1);
+  const fnSection = src.slice(fnIdx, fnIdx + 8000);
+  assert.ok(fnSection.includes('"session_outcome"'), 'should handle session_outcome');
+  assert.ok(
+    fnSection.includes('target_met') || fnSection.includes('targetMet'),
+    'should use target_met for session_outcome'
+  );
+});
+
+test('buildRichProgressNarrative handles tally category', () => {
+  const fnIdx = src.indexOf('function buildRichProgressNarrative(');
+  assert.ok(fnIdx !== -1);
+  const fnSection = src.slice(fnIdx, fnIdx + 8000);
+  assert.ok(fnSection.includes('"tally"'), 'should handle tally');
+  assert.ok(
+    fnSection.includes('opportunities'),
+    'tally narrative should mention opportunities'
+  );
+});
+
+test('buildRichProgressNarrative handles prompt_count category', () => {
+  const fnIdx = src.indexOf('function buildRichProgressNarrative(');
+  assert.ok(fnIdx !== -1);
+  const fnSection = src.slice(fnIdx, fnIdx + 8000);
+  assert.ok(fnSection.includes('"prompt_count"'), 'should handle prompt_count');
+  assert.ok(
+    fnSection.includes('prompts') && fnSection.includes('target_max_prompts'),
+    'prompt_count narrative should reference prompts and target'
+  );
+});
+
+test('buildRichProgressNarrative handles behavior_checklist category', () => {
+  const fnIdx = src.indexOf('function buildRichProgressNarrative(');
+  assert.ok(fnIdx !== -1);
+  // Use a larger slice since the function now includes all observation branches
+  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  assert.ok(fnSection.includes('"behavior_checklist"'), 'should handle behavior_checklist');
+  assert.ok(
+    fnSection.includes('behaviors'),
+    'behavior_checklist narrative should mention behaviors'
+  );
+});
+
+// ── Inline observation narrative tests ───────────────────────────────────────
+
+console.log('\n--- Inline observation narrative tests ---');
+
+// Mirror of parseObservationNotes for test use
+function parseObservationNotes(notes) {
+  if (!notes) return null;
+  const match = notes.match(/^\[obs:(\w+):([^\]]*)\]/);
+  if (!match) return null;
+  return {
+    category: match[1],
+    rawData: match[2],
+    userNote: notes.slice(match[0].length).trim(),
+  };
+}
+
+// Observation-aware mirror of buildRichProgressNarrative for tests
+function buildRichProgressNarrativeObs(student, goal, quarterData, prevData, quarterLabel) {
+  const name = ((student.name || student.code || 'Student').split(' ')[0]);
+  const area = goal.goal_area || goal.code || 'this goal area';
+  const targetVal = parseFloat(goal.target) || 80;
+  const avg = quarterData.average;
+  const count = quarterData.count;
+  const quarter = quarterLabel || 'this quarter';
+
+  const hashCode = (str) => {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h);
+  };
+  const seed = hashCode(goal.code || '');
+  const pick = (arr) => arr[seed % arr.length];
+
+  if (goal.measurement_type === 'Observation') {
+    const obsCat = goal.observation_config?.category || '';
+    const entries = quarterData.entries || [];
+
+    if (obsCat === 'session_outcome') {
+      const targetMet = goal.observation_config?.target_met ?? 3;
+      const targetMetNum = parseInt(targetMet, 10) || 3;
+      const validEntries = entries.filter((e) => {
+        const p = parseObservationNotes(e.notes);
+        return p && p.category === 'session_outcome' &&
+          (p.rawData === 'met' || p.rawData === 'not_met');
+      });
+      const metCount = validEntries.filter((e) => {
+        const p = parseObservationNotes(e.notes);
+        return p && p.rawData === 'met';
+      }).length;
+      const totalValid = validEntries.length;
+      if (totalValid === 0) {
+        return { narrative: pick([
+          `No observation data was collected for ${name} in the area of ${area} during ${quarter}.`,
+          `Observation sessions for ${name} were not recorded in ${area} during the ${quarter} reporting period.`,
+          `${name}'s progress on this observational goal was not measured during ${quarter}.`,
+        ]), status: 'Not Making Progress' };
+      }
+      const metStr = `${metCount} of ${totalValid}`;
+      const targetStr = `${targetMet} of ${goal.observation_config?.target_window ?? 5}`;
+      let status;
+      if (metCount >= targetMetNum) status = 'Goal Met';
+      else if (metCount >= targetMetNum - 1 && totalValid >= 3) status = 'Making Adequate Progress';
+      else if (totalValid >= 2) status = 'Progressing but Not Sufficient';
+      else status = 'Not Making Progress';
+      const metFraction = totalValid > 0 ? metCount / totalValid : 0;
+      let narrative;
+      if (metCount >= targetMetNum) {
+        narrative = pick([
+          `During ${quarter}, ${name} met the target in ${metStr} observed sessions for ${area}, meeting the IEP target of ${targetStr}.`,
+          `${name} demonstrated the session outcome in ${metStr} sessions during ${quarter}, achieving the criterion of ${targetStr} for ${area}.`,
+        ]);
+      } else if (metFraction > 0.4) {
+        narrative = pick([
+          `During ${quarter}, ${name} met the session outcome in ${metStr} observed sessions for ${area}. Continued progress toward the ${targetStr} criterion is needed.`,
+          `${name} met the target in ${metStr} sessions during ${quarter} for ${area}. The IEP target is ${targetStr}.`,
+        ]);
+      } else {
+        narrative = pick([
+          `During ${quarter}, ${name} met the target in ${metStr} observed sessions for ${area}. Additional support is recommended to reach the ${targetStr} criterion.`,
+          `${name} met the session outcome in ${metStr} sessions during ${quarter} for ${area}. Increased opportunities and support are recommended to meet the ${targetStr} target.`,
+        ]);
+      }
+      return { narrative, status };
+    }
+
+    if (obsCat === 'prompt_count') {
+      const targetMax = goal.observation_config?.target_max_prompts ?? 2;
+      const targetMaxNum = parseInt(targetMax, 10) || 2;
+      if (count === 0) {
+        return { narrative: 'No prompt count data was collected.', status: 'Not Making Progress' };
+      }
+      const avgPrompts = avg != null ? avg.toFixed(1) : 'N/A';
+      let status;
+      if (avg != null && avg <= targetMaxNum) status = 'Goal Met';
+      else if (avg != null && avg <= targetMaxNum + 1 && count >= 3) status = 'Making Adequate Progress';
+      else if (avg != null && avg <= targetMaxNum + 2) status = 'Progressing but Not Sufficient';
+      else status = 'Not Making Progress';
+      const countDesc = `${count} observed session${count !== 1 ? 's' : ''}`;
+      let narrative;
+      if (avg != null && avg <= targetMaxNum) {
+        narrative = pick([
+          `${name} required an average of ${avgPrompts} prompts during ${countDesc} in ${area}, within the target of ${targetMax} or fewer prompts.`,
+          `Across ${countDesc}, ${name} averaged ${avgPrompts} prompts for ${area}, meeting the criterion of ${targetMax} or fewer.`,
+        ]);
+      } else {
+        narrative = pick([
+          `${name} required an average of ${avgPrompts} prompts during ${countDesc} in ${area}. The IEP target is ${targetMax} or fewer prompts.`,
+          `Across ${countDesc}, ${name} averaged ${avgPrompts} prompts for ${area}. The target criterion of ${targetMax} or fewer prompts has not yet been met.`,
+        ]);
+      }
+      return { narrative, status };
+    }
+
+    if (obsCat === 'tally') {
+      if (count === 0) {
+        return { narrative: 'No tally data collected.', status: 'Not Making Progress' };
+      }
+      const pctAvg = avg != null ? avg.toFixed(0) : 'N/A';
+      let status;
+      if (avg != null && avg >= targetVal) status = 'Goal Met';
+      else if (avg != null && avg >= targetVal - 15 && count >= 3) status = 'Making Adequate Progress';
+      else if (count > 0) status = 'Progressing but Not Sufficient';
+      else status = 'Not Making Progress';
+      let narrative = pick([
+        `Across ${count} observed sessions, ${name} averaged ${pctAvg}% accuracy in ${area}.`,
+        `${name} averaged ${pctAvg}% across ${count} observed sessions for ${area}.`,
+      ]);
+      return { narrative, status };
+    }
+
+    if (obsCat === 'behavior_checklist') {
+      if (count === 0) {
+        return { narrative: 'No behavior checklist data collected.', status: 'Not Making Progress' };
+      }
+      const pctAvg = avg != null ? avg.toFixed(0) : 'N/A';
+      let status;
+      if (avg != null && avg >= targetVal) status = 'Goal Met';
+      else if (avg != null && avg >= targetVal - 15 && count >= 3) status = 'Making Adequate Progress';
+      else if (count > 0) status = 'Progressing but Not Sufficient';
+      else status = 'Not Making Progress';
+      return {
+        narrative: `${name} demonstrated targeted behaviors in ${pctAvg}% of observed opportunities across ${count} observed sessions in ${area}.`,
+        status,
+      };
+    }
+  }
+
+  // Fallback to standard percentage narrative for unknown observation categories
+  return buildRichProgressNarrative(student, goal, quarterData, prevData, quarterLabel);
+}
+
+const obsStudent = { name: 'Alex Johnson', code: 'S010' };
+
+// Session outcome tests
+const soGoal = {
+  code: 'S010.SO.1',
+  goal_area: 'Self-Regulation',
+  measurement_type: 'Observation',
+  observation_config: { category: 'session_outcome', target_met: 3, target_window: 5 },
+  baseline: null, target: null,
+};
+
+test('session_outcome: no data returns "Not Making Progress"', () => {
+  const { status } = buildRichProgressNarrativeObs(obsStudent, soGoal, { average: null, count: 0, values: [], entries: [] }, null, 'Q3');
+  assert.strictEqual(status, 'Not Making Progress');
+});
+
+test('session_outcome: met 3 of 3 returns "Goal Met"', () => {
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+  ];
+  const { status } = buildRichProgressNarrativeObs(obsStudent, soGoal,
+    { average: 100, count: 3, values: [100, 100, 100], entries }, null, 'Q3');
+  assert.strictEqual(status, 'Goal Met');
+});
+
+test('session_outcome: goal met narrative mentions session counts', () => {
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, soGoal,
+    { average: 100, count: 3, values: [100, 100, 100], entries }, null, 'Q3');
+  assert.ok(narrative.includes('3 of 3'), `Should mention 3 of 3: ${narrative}`);
+});
+
+test('session_outcome: not_addressed entries excluded from window', () => {
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:not_addressed]', value: null },
+    { notes: '[obs:session_outcome:not_met]', value: 0 },
+    { notes: '[obs:session_outcome:not_applicable]', value: null },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, soGoal,
+    { average: 50, count: 2, values: [100, 0], entries }, null, 'Q3');
+  // Only met + not_met count: 1 of 2
+  assert.ok(narrative.includes('1 of 2'), `Should show 1 of 2 (not_addressed excluded): ${narrative}`);
+});
+
+test('session_outcome: narrative mentions student name', () => {
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:not_met]', value: 0 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, soGoal,
+    { average: 50, count: 2, values: [100, 0], entries }, null, 'Q3');
+  assert.ok(narrative.includes('Alex'), `Narrative should include student first name: ${narrative}`);
+});
+
+test('session_outcome: narrative mentions goal area', () => {
+  const entries = [
+    { notes: '[obs:session_outcome:met]', value: 100 },
+    { notes: '[obs:session_outcome:met]', value: 100 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, soGoal,
+    { average: 100, count: 2, values: [100, 100], entries }, null, 'Q3');
+  assert.ok(narrative.includes('Self-Regulation'), `Narrative should mention goal area: ${narrative}`);
+});
+
+// Prompt count tests
+const pcGoal = {
+  code: 'S010.PC.1',
+  goal_area: 'Following Directions',
+  measurement_type: 'Observation',
+  observation_config: { category: 'prompt_count', target_max_prompts: 2 },
+  baseline: null, target: null,
+};
+
+test('prompt_count: no data returns "Not Making Progress"', () => {
+  const { status } = buildRichProgressNarrativeObs(obsStudent, pcGoal,
+    { average: null, count: 0, values: [], entries: [] }, null, 'Q3');
+  assert.strictEqual(status, 'Not Making Progress');
+});
+
+test('prompt_count: avg within target returns "Goal Met"', () => {
+  const entries = [
+    { notes: '[obs:prompt_count:1]', value: 1 },
+    { notes: '[obs:prompt_count:2]', value: 2 },
+    { notes: '[obs:prompt_count:1]', value: 1 },
+  ];
+  const { status } = buildRichProgressNarrativeObs(obsStudent, pcGoal,
+    { average: 1.33, count: 3, values: [1, 2, 1], entries }, null, 'Q3');
+  assert.strictEqual(status, 'Goal Met');
+});
+
+test('prompt_count: narrative mentions "prompts"', () => {
+  const entries = [
+    { notes: '[obs:prompt_count:1]', value: 1 },
+    { notes: '[obs:prompt_count:2]', value: 2 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, pcGoal,
+    { average: 1.5, count: 2, values: [1, 2], entries }, null, 'Q3');
+  assert.ok(narrative.toLowerCase().includes('prompt'), `Narrative should mention prompts: ${narrative}`);
+});
+
+test('prompt_count: narrative mentions target max prompts', () => {
+  const entries = [
+    { notes: '[obs:prompt_count:4]', value: 4 },
+    { notes: '[obs:prompt_count:3]', value: 3 },
+    { notes: '[obs:prompt_count:4]', value: 4 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, pcGoal,
+    { average: 3.67, count: 3, values: [4, 3, 4], entries }, null, 'Q3');
+  assert.ok(narrative.includes('2'), `Narrative should mention target (2): ${narrative}`);
+});
+
+// Tally tests
+const tallyGoal = {
+  code: 'S010.TA.1',
+  goal_area: 'Reading Fluency',
+  measurement_type: 'Observation',
+  observation_config: { category: 'tally' },
+  baseline: null, target: 80,
+};
+
+test('tally: no data returns "Not Making Progress"', () => {
+  const { status } = buildRichProgressNarrativeObs(obsStudent, tallyGoal,
+    { average: null, count: 0, values: [], entries: [] }, null, 'Q3');
+  assert.strictEqual(status, 'Not Making Progress');
+});
+
+test('tally: average at/above target returns "Goal Met"', () => {
+  const entries = [
+    { notes: '[obs:tally:4/5]', value: 80 },
+    { notes: '[obs:tally:5/5]', value: 100 },
+  ];
+  const { status } = buildRichProgressNarrativeObs(obsStudent, tallyGoal,
+    { average: 90, count: 2, values: [80, 100], entries }, null, 'Q3');
+  assert.strictEqual(status, 'Goal Met');
+});
+
+test('tally: narrative mentions percentage', () => {
+  const entries = [
+    { notes: '[obs:tally:3/5]', value: 60 },
+    { notes: '[obs:tally:4/5]', value: 80 },
+    { notes: '[obs:tally:4/5]', value: 80 },
+    { notes: '[obs:tally:3/5]', value: 60 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, tallyGoal,
+    { average: 70, count: 4, values: [60, 80, 80, 60], entries }, null, 'Q3');
+  assert.ok(narrative.includes('70%'), `Narrative should mention average %: ${narrative}`);
+});
+
+// Behavior checklist tests
+const checklistGoal = {
+  code: 'S010.CL.1',
+  goal_area: 'Classroom Behavior',
+  measurement_type: 'Observation',
+  observation_config: {
+    category: 'behavior_checklist',
+    sub_behaviors: ['Follow request', 'Raise hand', 'Stay in seat'],
+  },
+  baseline: null, target: 80,
+};
+
+test('behavior_checklist: no data returns "Not Making Progress"', () => {
+  const { status } = buildRichProgressNarrativeObs(obsStudent, checklistGoal,
+    { average: null, count: 0, values: [], entries: [] }, null, 'Q3');
+  assert.strictEqual(status, 'Not Making Progress');
+});
+
+test('behavior_checklist: high average returns "Goal Met"', () => {
+  const entries = [
+    { notes: '[obs:checklist:Follow request=met,Raise hand=met,Stay in seat=met]', value: 100 },
+    { notes: '[obs:checklist:Follow request=met,Raise hand=met,Stay in seat=not_met]', value: 67 },
+    { notes: '[obs:checklist:Follow request=met,Raise hand=met,Stay in seat=met]', value: 100 },
+  ];
+  const { status } = buildRichProgressNarrativeObs(obsStudent, checklistGoal,
+    { average: 89, count: 3, values: [100, 67, 100], entries }, null, 'Q3');
+  assert.strictEqual(status, 'Goal Met');
+});
+
+test('behavior_checklist: narrative mentions percentage of behaviors', () => {
+  const entries = [
+    { notes: '[obs:checklist:Follow request=met,Raise hand=not_met,Stay in seat=met]', value: 67 },
+    { notes: '[obs:checklist:Follow request=met,Raise hand=met,Stay in seat=not_met]', value: 67 },
+  ];
+  const { narrative } = buildRichProgressNarrativeObs(obsStudent, checklistGoal,
+    { average: 67, count: 2, values: [67, 67], entries }, null, 'Q3');
+  assert.ok(narrative.includes('67%'), `Narrative should mention 67%: ${narrative}`);
+});
+
+// parseObservationNotes inline tests
+console.log('\n--- parseObservationNotes inline tests ---');
+
+test('parseObservationNotes returns null for empty notes', () => {
+  assert.strictEqual(parseObservationNotes(''), null);
+  assert.strictEqual(parseObservationNotes(null), null);
+  assert.strictEqual(parseObservationNotes(undefined), null);
+});
+
+test('parseObservationNotes returns null for non-observation notes', () => {
+  assert.strictEqual(parseObservationNotes('Some regular teacher note'), null);
+  assert.strictEqual(parseObservationNotes('100%'), null);
+});
+
+test('parseObservationNotes parses session_outcome:met', () => {
+  const result = parseObservationNotes('[obs:session_outcome:met]');
+  assert.ok(result !== null, 'Should parse obs prefix');
+  assert.strictEqual(result.category, 'session_outcome');
+  assert.strictEqual(result.rawData, 'met');
+  assert.strictEqual(result.userNote, '');
+});
+
+test('parseObservationNotes parses tally with slash notation', () => {
+  const result = parseObservationNotes('[obs:tally:3/5] teacher note here');
+  assert.ok(result !== null);
+  assert.strictEqual(result.category, 'tally');
+  assert.strictEqual(result.rawData, '3/5');
+  assert.strictEqual(result.userNote, 'teacher note here');
+});
+
+test('parseObservationNotes parses prompt_count', () => {
+  const result = parseObservationNotes('[obs:prompt_count:2]');
+  assert.ok(result !== null);
+  assert.strictEqual(result.category, 'prompt_count');
+  assert.strictEqual(result.rawData, '2');
+});
+
+test('parseObservationNotes parses checklist with sub-behaviors', () => {
+  const result = parseObservationNotes('[obs:checklist:Follow request=met,Raise hand=not_met]');
+  assert.ok(result !== null);
+  assert.strictEqual(result.category, 'checklist');
+  assert.ok(result.rawData.includes('Follow request=met'));
+  assert.ok(result.rawData.includes('Raise hand=not_met'));
+});
+
+// ── getGoalProgressForQuarter includes entries ────────────────────────────────
+
+console.log('\n--- getGoalProgressForQuarter includes entries ---');
+
+// Mirror with entries return
+function getGoalProgressForQuarterWithEntries(goalCode, studentCode, quarterRange, progressData) {
+  if (!quarterRange.start || !quarterRange.end) {
+    return { average: null, count: 0, values: [], entries: [] };
+  }
+  const startDate = new Date(quarterRange.start);
+  const endDate = new Date(quarterRange.end);
+  const relevantProgress = progressData.filter((p) => {
+    if (p.goal_code !== goalCode) return false;
+    if (p.student_code !== studentCode) return false;
+    const pDate = new Date(p.date);
+    return pDate >= startDate && pDate <= endDate;
+  });
+  if (relevantProgress.length === 0) return { average: null, count: 0, values: [], entries: [] };
+  const values = relevantProgress.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
+  const average = values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : null;
+  return { average, count: values.length, values, entries: relevantProgress };
+}
+
+const obsProgressData = [
+  { goal_code: 'S010.SO.1', student_code: 'S010', date: '2026-01-10', value: 100, notes: '[obs:session_outcome:met]' },
+  { goal_code: 'S010.SO.1', student_code: 'S010', date: '2026-01-15', value: 0, notes: '[obs:session_outcome:not_met]' },
+  { goal_code: 'S010.SO.1', student_code: 'S010', date: '2026-01-20', value: null, notes: '[obs:session_outcome:not_addressed]' },
+  { goal_code: 'S010.SO.1', student_code: 'S010', date: '2026-02-01', value: 100, notes: '[obs:session_outcome:met]' },
+];
+
+test('getGoalProgressForQuarter returns entries array', () => {
+  const result = getGoalProgressForQuarterWithEntries('S010.SO.1', 'S010', q3Range, obsProgressData);
+  assert.ok(Array.isArray(result.entries), 'entries should be an array');
+});
+
+test('getGoalProgressForQuarter entries contain notes for observation parsing', () => {
+  const result = getGoalProgressForQuarterWithEntries('S010.SO.1', 'S010', q3Range, obsProgressData);
+  // 3 entries in q3Range (null value entry excluded from count but included in entries)
+  assert.ok(result.entries.length >= 2, `Should have at least 2 entries: ${result.entries.length}`);
+  const hasNotes = result.entries.every(e => 'notes' in e);
+  assert.ok(hasNotes, 'All entries should have notes property');
+});
+
+test('tc-reporting.js getGoalProgressForQuarter returns entries in return value', () => {
+  const fnIdx = src.indexOf('function getGoalProgressForQuarter(');
+  assert.ok(fnIdx !== -1, 'getGoalProgressForQuarter not found');
+  const fnSection = src.slice(fnIdx, fnIdx + 800);
+  assert.ok(
+    fnSection.includes('entries:') || fnSection.includes('entries :'),
+    'getGoalProgressForQuarter should include entries in return value'
+  );
+});
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed`);
