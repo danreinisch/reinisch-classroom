@@ -125,6 +125,61 @@
     return String(Math.round(num * 10) / 10);
   }
 
+  /**
+   * Format a progress entry value/notes for display on an Observation goal card.
+   * Parses the [obs:...] prefix from notes to produce a human-readable label.
+   *
+   * Notes prefix formats (written by both tc-observation.js and handleSaveProgressData):
+   *   [obs:session_outcome:met|not_met|not_addressed|not_applicable]
+   *   [obs:tally:3/5]
+   *   [obs:prompt_count:2]
+   *   [obs:checklist:Behavior A=met,Behavior B=not_met]
+   */
+  function formatObservationProgressEntry(entry) {
+    const notes = entry.notes || '';
+    const value = entry.value;
+
+    // Session outcome
+    const soMatch = notes.match(/\[obs:session_outcome:([^\]]+)\]/);
+    if (soMatch) {
+      const r = soMatch[1];
+      if (r === 'met') return 'Met';
+      if (r === 'not_met') return 'Not Met';
+      if (r === 'not_addressed') return 'Not Addressed';
+      if (r === 'not_applicable') return 'N/A';
+      return r;
+    }
+
+    // Tally
+    const tallyMatch = notes.match(/\[obs:tally:(\d+)\/(\d+)\]/);
+    if (tallyMatch) {
+      const successful = tallyMatch[1];
+      const opportunities = tallyMatch[2];
+      const pct = Number(opportunities) > 0 ? ` (${Math.round((Number(successful) / Number(opportunities)) * 100)}%)` : '';
+      return `${successful} of ${opportunities} opportunities${pct}`;
+    }
+
+    // Prompt count
+    const pcMatch = notes.match(/\[obs:prompt_count:(\d+)\]/);
+    if (pcMatch) {
+      const n = Number(pcMatch[1]);
+      return `${n} prompt${n !== 1 ? 's' : ''}`;
+    }
+
+    // Behavior checklist
+    const clMatch = notes.match(/\[obs:checklist:([^\]]*)\]/);
+    if (clMatch) {
+      const parts = clMatch[1] ? clMatch[1].split(',') : [];
+      const total = parts.length;
+      const met = parts.filter(p => p.endsWith('=met')).length;
+      return `${met}/${total} behaviors met`;
+    }
+
+    // Fallback: show raw value if present
+    if (value != null) return String(Math.round(parseFloat(value) * 10) / 10);
+    return '—';
+  }
+
   function abbreviateClass(fullName) {
     return CLASS_ABBREVIATIONS[fullName] || fullName;
   }
@@ -1477,16 +1532,38 @@
     let progressToggleBtn = '';
     if (quarterProgress.length > 0) {
       const sorted = [...quarterProgress].sort((a, b) => new Date(b.date) - new Date(a.date));
-      const avg = sorted.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / sorted.length;
-      const avgFormatted = formatProgressValue(avg, goal.measurement_type);
+      const isObs = goal.measurement_type === 'Observation';
+      let avgFormatted;
+      if (isObs) {
+        // For Observation goals, show rolling summary instead of numeric average
+        const obsCat = goal.observation_config?.category;
+        const numericEntries = sorted.filter(e => e.value !== null && e.value !== undefined);
+        if (obsCat === 'session_outcome') {
+          const metCount = numericEntries.filter(e => parseFloat(e.value) === 100).length;
+          avgFormatted = `${metCount} of ${numericEntries.length} met`;
+        } else if (obsCat === 'prompt_count') {
+          const avgPc = numericEntries.length > 0
+            ? numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length
+            : null;
+          avgFormatted = avgPc !== null ? `avg ${Math.round(avgPc * 10) / 10} prompts` : '—';
+        } else {
+          const avg = numericEntries.length > 0
+            ? numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length
+            : null;
+          avgFormatted = avg !== null ? `${Math.round(avg * 10) / 10}%` : '—';
+        }
+      } else {
+        const avg = sorted.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / sorted.length;
+        avgFormatted = formatProgressValue(avg, goal.measurement_type);
+      }
       const rows = sorted.map(e => {
-        const val = formatProgressValue(e.value, goal.measurement_type);
+        const val = isObs ? formatObservationProgressEntry(e) : formatProgressValue(e.value, goal.measurement_type);
         const dt = formatDate(e.date);
         return `<tr><td style="padding:2px 8px 2px 0;font-size:12px;">${escapeHtml(dt)}</td><td style="padding:2px 0;font-size:12px;">${escapeHtml(val)}</td></tr>`;
       }).join('');
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
-          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — Avg: ${escapeHtml(avgFormatted)}</div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${escapeHtml(avgFormatted)}</div>
           <table style="border-collapse:collapse;width:100%;">
             <thead><tr><th style="text-align:left;font-size:11px;opacity:0.7;padding:0 8px 2px 0;">Date</th><th style="text-align:left;font-size:11px;opacity:0.7;">Value</th></tr></thead>
             <tbody>${rows}</tbody>
@@ -1631,6 +1708,98 @@
           </div>
         </div>
       `;
+    } else if (goal.measurement_type === 'Observation') {
+      const obsCat = goal.observation_config?.category || '';
+      const OBS_MET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+      const OBS_NOT_MET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+      const OBS_NOT_ADDRESSED_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+      const OBS_NOT_APPLICABLE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+
+      if (obsCat === 'session_outcome') {
+        const targetMet = goal.observation_config?.target_met ?? 3;
+        const targetWindow = goal.observation_config?.target_window ?? 5;
+        measurementFields = `
+          <div class="st-form-group">
+            <label class="st-form-label">Session Outcome</label>
+            <div class="obs-response-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button type="button" class="obs-response-btn" data-response="met" style="display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;min-height:44px;">
+                ${OBS_MET_SVG} Met
+              </button>
+              <button type="button" class="obs-response-btn" data-response="not_met" style="display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;min-height:44px;">
+                ${OBS_NOT_MET_SVG} Not Met
+              </button>
+              <button type="button" class="obs-response-btn" data-response="not_addressed" style="display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;min-height:44px;">
+                ${OBS_NOT_ADDRESSED_SVG} Not Addressed
+              </button>
+              <button type="button" class="obs-response-btn" data-response="not_applicable" style="display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;min-height:44px;">
+                ${OBS_NOT_APPLICABLE_SVG} N/A
+              </button>
+            </div>
+            <input type="hidden" name="obs_response" value="" />
+            <div class="obs-rolling-inline" style="font-size:12px;color:#6b7280;margin-top:4px;">Target: ${escapeHtml(String(targetMet))} of ${escapeHtml(String(targetWindow))} sessions</div>
+          </div>
+        `;
+      } else if (obsCat === 'tally') {
+        measurementFields = `
+          <div class="st-form-group">
+            <label class="st-form-label">Tally</label>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <input type="number" class="st-form-input" name="obs_successful" placeholder="0" min="0" style="width:80px;" />
+              <span style="font-size:13px;">of</span>
+              <input type="number" class="st-form-input" name="obs_opportunities" placeholder="0" min="0" style="width:80px;" />
+              <span style="font-size:13px;">opportunities</span>
+              <span class="obs-tally-pct" style="font-size:13px;font-weight:600;color:#2563eb;"></span>
+            </div>
+          </div>
+        `;
+      } else if (obsCat === 'prompt_count') {
+        const maxPrompts = goal.observation_config?.target_max_prompts ?? 2;
+        const promptBtns = [0, 1, 2, 3, '4+'].map(val => {
+          return `<button type="button" class="obs-prompt-count-btn" data-count="${val === '4+' ? 4 : val}" style="display:inline-flex;align-items:center;justify-content:center;min-width:48px;min-height:44px;padding:10px;border:1px solid rgba(0,0,0,0.12);border-radius:10px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;">${escapeHtml(String(val))}</button>`;
+        }).join('');
+        measurementFields = `
+          <div class="st-form-group">
+            <label class="st-form-label">Prompt Count</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+              ${promptBtns}
+            </div>
+            <input type="hidden" name="obs_prompt_count" value="" />
+            <div class="obs-prompt-status" style="font-size:12px;color:#6b7280;">Target: ${escapeHtml(String(maxPrompts))} or fewer prompts</div>
+          </div>
+        `;
+      } else if (obsCat === 'behavior_checklist') {
+        const subBehaviors = Array.isArray(goal.observation_config?.sub_behaviors) ? goal.observation_config.sub_behaviors : [];
+        const checkboxItems = subBehaviors.map((sb, idx) => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+            <input type="checkbox" name="obs_behavior_${idx}" style="width:18px;height:18px;margin:0;cursor:pointer;accent-color:#22c55e;" />
+            ${escapeHtml(sb)}
+          </label>
+        `).join('');
+        const emptyMsg = subBehaviors.length === 0
+          ? `<div style="font-size:12px;color:#6b7280;">No sub-behaviors configured for this goal.</div>`
+          : '';
+        measurementFields = `
+          <div class="st-form-group">
+            <label class="st-form-label">Behavior Checklist</label>
+            ${emptyMsg}
+            <div class="obs-checklist-items" data-total="${subBehaviors.length}">
+              ${checkboxItems}
+            </div>
+            <div class="obs-checklist-summary-inline" style="font-size:12px;color:#6b7280;margin-top:4px;">0 of ${subBehaviors.length} demonstrated</div>
+            <button type="button" class="st-btn st-btn-secondary st-btn-small obs-not-addressed-inline-btn" data-response="not_addressed" style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;">
+              ${OBS_NOT_ADDRESSED_SVG} Not Addressed Today
+            </button>
+            <input type="hidden" name="obs_not_addressed" value="" />
+          </div>
+        `;
+      } else {
+        measurementFields = `
+          <div class="st-form-group">
+            <label class="st-form-label">Observation Value</label>
+            <input type="number" class="st-form-input" name="value" placeholder="Enter value" />
+          </div>
+        `;
+      }
     } else {
       measurementFields = `
         <div class="st-form-group">
@@ -2027,6 +2196,65 @@
           return;
         }
 
+        // Observation response button (session outcome radio-style buttons).
+        // Exclude obs-not-addressed-inline-btn — that's a toggle for behavior checklist,
+        // handled separately below to avoid radio-clearing the session outcome row.
+        const obsResponseBtn = e.target.closest('.obs-response-btn');
+        if (obsResponseBtn && !obsResponseBtn.classList.contains('obs-not-addressed-inline-btn')) {
+          const row = obsResponseBtn.closest('.obs-response-row');
+          if (row) {
+            row.querySelectorAll('.obs-response-btn').forEach(b => b.classList.remove('active'));
+          }
+          obsResponseBtn.classList.toggle('active');
+          const card = obsResponseBtn.closest('[data-goal-id]');
+          if (card) {
+            const hiddenInput = card.querySelector('[name="obs_response"]');
+            if (hiddenInput) hiddenInput.value = obsResponseBtn.dataset.response || '';
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        // Observation prompt count button
+        const obsPromptBtn = e.target.closest('.obs-prompt-count-btn');
+        if (obsPromptBtn) {
+          const card = obsPromptBtn.closest('[data-goal-id]');
+          const goalId = card?.dataset?.goalId;
+          const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
+          const maxPrompts = goal?.observation_config?.target_max_prompts ?? 2;
+          // Clear all prompt buttons in the row
+          card.querySelectorAll('.obs-prompt-count-btn').forEach(b => b.classList.remove('active', 'over-target'));
+          obsPromptBtn.classList.add('active');
+          const countVal = Number(obsPromptBtn.dataset.count);
+          if (countVal > maxPrompts) obsPromptBtn.classList.add('over-target');
+          // Set hidden input
+          const hiddenInput = card.querySelector('[name="obs_prompt_count"]');
+          if (hiddenInput) hiddenInput.value = String(obsPromptBtn.dataset.count);
+          // Update status text
+          const statusEl = card.querySelector('.obs-prompt-status');
+          if (statusEl) {
+            statusEl.textContent = `Target: ${maxPrompts} or fewer prompts`;
+            statusEl.style.color = countVal <= maxPrompts ? '#22c55e' : '#ef4444';
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        // Observation "Not Addressed Today" button (behavior checklist)
+        const obsNotAddressedBtn = e.target.closest('.obs-not-addressed-inline-btn');
+        if (obsNotAddressedBtn) {
+          obsNotAddressedBtn.classList.toggle('active');
+          const card = obsNotAddressedBtn.closest('[data-goal-id]');
+          if (card) {
+            const hiddenInput = card.querySelector('[name="obs_not_addressed"]');
+            if (hiddenInput) {
+              hiddenInput.value = obsNotAddressedBtn.classList.contains('active') ? 'not_addressed' : '';
+            }
+          }
+          e.stopPropagation();
+          return;
+        }
+
         // Cancel Data button
         const cancelDataBtn = e.target.closest('.cancel-data-btn');
         if (cancelDataBtn) {
@@ -2169,9 +2397,41 @@
           return;
         }
       });
+
+      // Input handler for live observation form updates
+      tableBody.addEventListener('input', (e) => {
+        // Tally: update percentage display as numbers are typed
+        const tallyInput = e.target.closest('[name="obs_successful"], [name="obs_opportunities"]');
+        if (tallyInput) {
+          const card = tallyInput.closest('[data-goal-id]');
+          if (card) {
+            const s = Number(card.querySelector('[name="obs_successful"]')?.value) || 0;
+            const o = Number(card.querySelector('[name="obs_opportunities"]')?.value) || 0;
+            const pctEl = card.querySelector('.obs-tally-pct');
+            if (pctEl) {
+              pctEl.textContent = o > 0 ? `${Math.round((s / o) * 100)}%` : '';
+            }
+          }
+          return;
+        }
+
+        // Behavior checklist: update summary count as checkboxes are toggled
+        const cbInput = e.target.closest('[type="checkbox"][name^="obs_behavior_"]');
+        if (cbInput) {
+          const card = cbInput.closest('[data-goal-id]');
+          if (card) {
+            const total = Number(card.querySelector('.obs-checklist-items')?.dataset?.total) || 0;
+            const checked = card.querySelectorAll('[type="checkbox"][name^="obs_behavior_"]:checked').length;
+            const summaryEl = card.querySelector('.obs-checklist-summary-inline');
+            if (summaryEl) {
+              summaryEl.textContent = `${checked} of ${total} demonstrated`;
+            }
+          }
+        }
+      });
     }
 
-    // Quarter date form handling
+
     document.addEventListener('click', (e) => {
       if (e.target.id === 'stCancelQuarterEdit') {
         const displayEl = document.getElementById('stQuarterDisplay');
@@ -2431,6 +2691,65 @@
         }
         calculatedValue = count / minutes;
         notes = `${count} per ${minutes} minutes${notes ? '. ' + notes : ''}`;
+      } else if (goal.measurement_type === 'Observation') {
+        const obsCat = goal.observation_config?.category || '';
+        if (obsCat === 'session_outcome') {
+          const response = card.querySelector('[name="obs_response"]')?.value || '';
+          if (!response) {
+            await rcAlert('Validation', 'Please select a session outcome');
+            return;
+          }
+          if (response === 'met') calculatedValue = 100;
+          else if (response === 'not_met') calculatedValue = 0;
+          else calculatedValue = null;
+          const notePrefix = `[obs:session_outcome:${response}]`;
+          notes = dataNotes ? `${notePrefix} ${dataNotes}` : notePrefix;
+        } else if (obsCat === 'tally') {
+          const successful = Number(card.querySelector('[name="obs_successful"]')?.value) || 0;
+          const opportunities = Number(card.querySelector('[name="obs_opportunities"]')?.value) || 0;
+          if (opportunities === 0) {
+            await rcAlert('Validation', 'Please enter the number of opportunities');
+            return;
+          }
+          calculatedValue = Math.round((successful / opportunities) * 10000) / 100;
+          const notePrefix = `[obs:tally:${successful}/${opportunities}]`;
+          notes = dataNotes ? `${notePrefix} ${dataNotes}` : notePrefix;
+        } else if (obsCat === 'prompt_count') {
+          const countStr = card.querySelector('[name="obs_prompt_count"]')?.value;
+          if (countStr === '' || countStr == null) {
+            await rcAlert('Validation', 'Please select a prompt count');
+            return;
+          }
+          calculatedValue = Number(countStr);
+          const notePrefix = `[obs:prompt_count:${calculatedValue}]`;
+          notes = dataNotes ? `${notePrefix} ${dataNotes}` : notePrefix;
+        } else if (obsCat === 'behavior_checklist') {
+          const subBehaviors = Array.isArray(goal.observation_config?.sub_behaviors) ? goal.observation_config.sub_behaviors : [];
+          const notAddressed = card.querySelector('[name="obs_not_addressed"]')?.value === 'not_addressed';
+          if (notAddressed) {
+            calculatedValue = null;
+            const notePrefix = `[obs:checklist:not_addressed]`;
+            notes = dataNotes ? `${notePrefix} ${dataNotes}` : notePrefix;
+          } else {
+            const checkedBehaviors = subBehaviors.map((_, idx) =>
+              card.querySelector(`[name="obs_behavior_${idx}"]`)?.checked || false
+            );
+            const metCount = checkedBehaviors.filter(Boolean).length;
+            calculatedValue = subBehaviors.length > 0
+              ? Math.round((metCount / subBehaviors.length) * 10000) / 100
+              : null;
+            const parts = subBehaviors.map((sb, i) => `${sb}=${checkedBehaviors[i] ? 'met' : 'not_met'}`);
+            const notePrefix = `[obs:checklist:${parts.join(',')}]`;
+            notes = dataNotes ? `${notePrefix} ${dataNotes}` : notePrefix;
+          }
+        } else {
+          const value = parseFloat(card.querySelector('[name="value"]')?.value);
+          if (isNaN(value)) {
+            await rcAlert('Validation', 'Please enter a valid value');
+            return;
+          }
+          calculatedValue = value;
+        }
       } else {
         const value = parseFloat(card.querySelector('[name="value"]').value);
         if (isNaN(value)) {
