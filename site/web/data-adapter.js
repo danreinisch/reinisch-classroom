@@ -110,7 +110,8 @@ const local = {
   async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open', 
                      measurement_type = 'percent', data_collector = null, 
                      data_collector_email = null, class_context = null, 
-                     goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1 }) {
+                     goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
+                     observation_config = null }) {
     const map = store.get('iepGoals', {});
     const goals = map[student_code] || [];
     const idx = goals.findIndex(g => g.code === code);
@@ -118,7 +119,8 @@ const local = {
     const description = goal_text || desc;
     const goal = { 
       code, desc: description, target, status, measurement_type, data_collector, 
-      data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version 
+      data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version,
+      observation_config
     };
     if (idx >= 0) {
       goals[idx] = { ...goals[idx], ...goal };
@@ -1119,7 +1121,8 @@ const remote = {
   async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open',
                      measurement_type = 'percent', data_collector = null,
                      data_collector_email = null, class_context = null,
-                     goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1 }) {
+                     goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
+                     observation_config = null }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Lookup student by code
@@ -1132,7 +1135,8 @@ const remote = {
     const fullPayload = { 
       student_id: stu.id, code, desc: description, target, status,
       measurement_type, data_collector, data_collector_email, class_context,
-      goal_area, baseline, mastery, case_manager, version
+      goal_area, baseline, mastery, case_manager, version,
+      observation_config
     };
     let { data, error } = await supabase.from('goals')
       .upsert(fullPayload, { onConflict: 'student_id,code' })
@@ -1163,7 +1167,7 @@ const remote = {
       .from('goals')
       .select(`id, code, desc, target, status, student_id, 
               measurement_type, data_collector, data_collector_email, class_context,
-              goal_area, baseline, mastery, case_manager, version,
+              goal_area, baseline, mastery, case_manager, version, observation_config,
               students!inner(code)`)
       .eq('active', true)
       .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
@@ -1206,7 +1210,8 @@ const remote = {
       baseline: g.baseline,
       mastery: g.mastery,
       case_manager: g.case_manager,
-      version: g.version
+      version: g.version,
+      observation_config: g.observation_config
     }));
   },
   async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {

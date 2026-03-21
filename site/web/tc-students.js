@@ -9,6 +9,7 @@
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
   const { parseGoalValue } = await import('/web/goal-utils.js');
+  const { getSchedule } = await import('/web/class-schedule.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -188,6 +189,260 @@
     });
   }
 
+  /**
+   * Map observation category value to a human-readable label
+   */
+  function obsCategoryLabel(category) {
+    const labels = {
+      session_outcome: 'Session Outcome',
+      tally: 'Tally',
+      prompt_count: 'Prompt Count',
+      behavior_checklist: 'Behavior Checklist'
+    };
+    return labels[category] || category;
+  }
+
+  /**
+   * Gather observation_config from a form element.
+   * Returns null if measurement_type is not Observation.
+   * @param {HTMLElement} container - The form or container element
+   * @returns {Object|null}
+   */
+  function gatherObservationConfig(container) {
+    const measEl = container.querySelector('[name="measurement_type"]');
+    if (!measEl || measEl.value !== 'Observation') return null;
+
+    const catEl = container.querySelector('[name="observation_category"]');
+    const category = catEl ? catEl.value : '';
+
+    const config = { category };
+
+    if (category === 'session_outcome') {
+      config.target_met = parseInt(container.querySelector('[name="obs_target_met"]')?.value) || null;
+      config.target_window = parseInt(container.querySelector('[name="obs_target_window"]')?.value) || null;
+    } else if (category === 'prompt_count') {
+      config.target_max_prompts = parseInt(container.querySelector('[name="obs_target_max_prompts"]')?.value);
+      if (isNaN(config.target_max_prompts)) config.target_max_prompts = null;
+    } else if (category === 'behavior_checklist') {
+      const inputs = container.querySelectorAll('[name="obs_sub_behavior"]');
+      config.sub_behaviors = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+    }
+
+    // Class periods (checkboxes)
+    const periodBoxes = container.querySelectorAll('[name="obs_class_period"]:checked');
+    config.class_periods = Array.from(periodBoxes).map(cb => cb.value);
+
+    return config;
+  }
+
+  /**
+   * Validate observation config fields.
+   * Returns an array of error strings (empty = valid).
+   * @param {HTMLElement} container
+   * @returns {string[]}
+   */
+  function validateObservationConfig(container) {
+    const measEl = container.querySelector('[name="measurement_type"]');
+    if (!measEl || measEl.value !== 'Observation') return [];
+
+    const errors = [];
+    const catEl = container.querySelector('[name="observation_category"]');
+    const category = catEl ? catEl.value : '';
+
+    if (!category) {
+      errors.push('Observation category is required.');
+    }
+
+    if (category === 'session_outcome') {
+      const metVal = parseInt(container.querySelector('[name="obs_target_met"]')?.value);
+      const winVal = parseInt(container.querySelector('[name="obs_target_window"]')?.value);
+      if (!metVal || metVal < 1) errors.push('Target: "met" count must be at least 1.');
+      if (!winVal || winVal < 1) errors.push('Target: "window" must be at least 1.');
+      if (metVal && winVal && winVal < metVal) errors.push('Target window must be ≥ target met count.');
+    } else if (category === 'prompt_count') {
+      const maxVal = parseInt(container.querySelector('[name="obs_target_max_prompts"]')?.value);
+      if (isNaN(maxVal) || maxVal < 0) errors.push('Target max prompts must be 0 or greater.');
+    } else if (category === 'behavior_checklist') {
+      const inputs = container.querySelectorAll('[name="obs_sub_behavior"]');
+      const nonEmpty = Array.from(inputs).filter(i => i.value.trim());
+      if (nonEmpty.length === 0) errors.push('At least one sub-behavior is required.');
+    }
+
+    const periodBoxes = container.querySelectorAll('[name="obs_class_period"]:checked');
+    if (periodBoxes.length === 0) errors.push('At least one class period must be selected.');
+
+    return errors;
+  }
+
+  /**
+   * Build the HTML for observation configuration fields.
+   * @param {Object|null} obsConfig - Existing observation_config (for pre-population on edit)
+   * @param {Array} schedulePeriods - Array of period objects from getSchedule()
+   * @param {string} idPrefix - A unique prefix for element IDs within this form context
+   * @returns {string} HTML string
+   */
+  function renderObservationConfigHtml(obsConfig, schedulePeriods) {
+    const cat = obsConfig?.category || '';
+    const showObs = !!obsConfig;
+    const displayObs = showObs ? '' : 'display:none';
+
+    // Category-specific fields
+    const soDisplay = cat === 'session_outcome' ? '' : 'display:none';
+    const pcDisplay = cat === 'prompt_count' ? '' : 'display:none';
+    const bcDisplay = cat === 'behavior_checklist' ? '' : 'display:none';
+
+    const targetMet = obsConfig?.target_met ?? '';
+    const targetWindow = obsConfig?.target_window ?? '';
+    const targetMaxPrompts = obsConfig?.target_max_prompts ?? '';
+
+    // Sub-behaviors for checklist
+    const subBehaviors = (obsConfig?.category === 'behavior_checklist' && Array.isArray(obsConfig?.sub_behaviors) && obsConfig.sub_behaviors.length > 0)
+      ? obsConfig.sub_behaviors
+      : [''];
+    const subBehaviorsHtml = subBehaviors.map((sb, i) => `
+      <div class="obs-sub-behavior-row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+        <input type="text" name="obs_sub_behavior" class="st-form-input" value="${escapeHtml(sb)}" placeholder="e.g., Raise hand" style="flex:1;" />
+        <button type="button" class="st-btn st-btn-danger st-btn-small obs-remove-behavior-btn" aria-label="Remove sub-behavior"${i === 0 ? ' style="visibility:hidden"' : ''}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `).join('');
+
+    // Class period checkboxes
+    let periodPickerHtml = '';
+    if (!schedulePeriods || schedulePeriods.length === 0) {
+      periodPickerHtml = '<p style="font-size:13px;color:#6b7280;margin:4px 0;">Configure your bell schedule in Settings to enable period selection.</p>';
+    } else {
+      const selectedPeriods = obsConfig?.class_periods || [];
+      periodPickerHtml = schedulePeriods
+        .filter(p => !p.planning)
+        .map(p => {
+          const label = escapeHtml(p.name || p.label || '');
+          const checked = selectedPeriods.includes(p.name || p.label) ? 'checked' : '';
+          return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:4px;cursor:pointer;">
+            <input type="checkbox" name="obs_class_period" value="${label}" ${checked} style="margin:0;" />
+            ${label}
+          </label>`;
+        }).join('');
+    }
+
+    return `
+      <div class="obs-config-section" style="${displayObs}">
+        <div class="st-form-group">
+          <label class="st-form-label">Observation Category</label>
+          <select name="observation_category" class="st-form-select obs-category-select">
+            <option value="">Select category...</option>
+            <option value="session_outcome" ${cat === 'session_outcome' ? 'selected' : ''}>Session Outcome (Met / Not Met per session)</option>
+            <option value="tally" ${cat === 'tally' ? 'selected' : ''}>Tally (X of Y opportunities)</option>
+            <option value="prompt_count" ${cat === 'prompt_count' ? 'selected' : ''}>Prompt Count (number of prompts needed)</option>
+            <option value="behavior_checklist" ${cat === 'behavior_checklist' ? 'selected' : ''}>Behavior Checklist (multiple sub-behaviors)</option>
+          </select>
+        </div>
+        <div class="obs-category-fields obs-session-outcome-fields" style="${soDisplay}">
+          <div class="st-form-row">
+            <div class="st-form-group">
+              <label class="st-form-label">Target: met sessions</label>
+              <input type="number" name="obs_target_met" class="st-form-input" min="1" value="${escapeHtml(String(targetMet))}" placeholder="e.g., 3" />
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Target: window size</label>
+              <input type="number" name="obs_target_window" class="st-form-input" min="1" value="${escapeHtml(String(targetWindow))}" placeholder="e.g., 5" />
+            </div>
+          </div>
+        </div>
+        <div class="obs-category-fields obs-prompt-count-fields" style="${pcDisplay}">
+          <div class="st-form-group">
+            <label class="st-form-label">Target: max prompts (or fewer)</label>
+            <input type="number" name="obs_target_max_prompts" class="st-form-input" min="0" value="${escapeHtml(String(targetMaxPrompts))}" placeholder="e.g., 2" />
+          </div>
+        </div>
+        <div class="obs-category-fields obs-behavior-checklist-fields" style="${bcDisplay}">
+          <div class="st-form-group">
+            <label class="st-form-label">Sub-Behaviors</label>
+            <div class="obs-sub-behaviors-list">${subBehaviorsHtml}</div>
+            <button type="button" class="st-btn st-btn-secondary st-btn-small obs-add-behavior-btn" style="margin-top:4px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Sub-Behavior
+            </button>
+          </div>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Observe during which class periods?</label>
+          <div class="obs-period-picker" style="padding:6px 0;">
+            ${periodPickerHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Wire up show/hide and dynamic sub-behavior list for observation config fields
+   * within a given container element.
+   * @param {HTMLElement} container
+   */
+  function initObservationFields(container) {
+    const measSel = container.querySelector('[name="measurement_type"]');
+    const obsSection = container.querySelector('.obs-config-section');
+    if (!measSel || !obsSection) return;
+
+    function updateObsVisibility() {
+      const isObs = measSel.value === 'Observation';
+      obsSection.style.display = isObs ? '' : 'none';
+    }
+
+    measSel.addEventListener('change', updateObsVisibility);
+    updateObsVisibility();
+
+    // Show/hide category-specific fields
+    const catSel = obsSection.querySelector('.obs-category-select');
+    if (catSel) {
+      const updateCategoryFields = () => {
+        const cat = catSel.value;
+        obsSection.querySelectorAll('.obs-category-fields').forEach(el => {
+          el.style.display = 'none';
+        });
+        if (cat === 'session_outcome') {
+          const el = obsSection.querySelector('.obs-session-outcome-fields');
+          if (el) el.style.display = '';
+        } else if (cat === 'prompt_count') {
+          const el = obsSection.querySelector('.obs-prompt-count-fields');
+          if (el) el.style.display = '';
+        } else if (cat === 'behavior_checklist') {
+          const el = obsSection.querySelector('.obs-behavior-checklist-fields');
+          if (el) el.style.display = '';
+        }
+      };
+      catSel.addEventListener('change', updateCategoryFields);
+      updateCategoryFields();
+    }
+
+    // Dynamic sub-behavior add/remove
+    obsSection.addEventListener('click', (e) => {
+      if (e.target.closest('.obs-add-behavior-btn')) {
+        const list = obsSection.querySelector('.obs-sub-behaviors-list');
+        if (!list) return;
+        const row = document.createElement('div');
+        row.className = 'obs-sub-behavior-row';
+        row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+        row.innerHTML = `
+          <input type="text" name="obs_sub_behavior" class="st-form-input" value="" placeholder="e.g., Raise hand" style="flex:1;" />
+          <button type="button" class="st-btn st-btn-danger st-btn-small obs-remove-behavior-btn" aria-label="Remove sub-behavior">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        `;
+        list.appendChild(row);
+      }
+      if (e.target.closest('.obs-remove-behavior-btn')) {
+        const row = e.target.closest('.obs-sub-behavior-row');
+        const list = obsSection.querySelector('.obs-sub-behaviors-list');
+        if (row && list && list.querySelectorAll('.obs-sub-behavior-row').length > 1) {
+          row.remove();
+        }
+      }
+    });
+  }
+
   function parseCSVLine(line) {
     const result = [];
     let current = '';
@@ -288,6 +543,7 @@
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
+  let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
 
 
   function renderQuarterBar() {
@@ -537,6 +793,13 @@
       console.log('[tc-students] Loading data...');
       isSyncing = true;
       updateSyncIndicator();
+
+      // Load schedule periods for observation config UI (best-effort, don't block on failure)
+      getSchedule().then(s => {
+        _cachedSchedulePeriods = (s?.periods || []).filter(p => !p.planning);
+      }).catch(() => {
+        _cachedSchedulePeriods = [];
+      });
 
       // Load students, goals and enrollments in parallel first so that the
       // fallback path in loadProgressEntries can enrich rows using those arrays.
@@ -843,6 +1106,11 @@
         ${tabContent}
       </div>
     `;
+
+    // Wire up observation config show/hide for any inline edit forms rendered
+    container.querySelectorAll('.st-goal-edit-form').forEach(form => {
+      initObservationFields(form);
+    });
   }
 
   async function renderStudentGoalsTab(student, studentGoals) {
@@ -1230,6 +1498,16 @@
     // Determine if this card should be collapsed
     const isExpanded = expandMode === 'all' || expandedGoalCards.has(goal.id);
     const collapsedClass = isExpanded ? '' : 'collapsed';
+
+    // Build observation category badge (shown when measurement_type === 'Observation')
+    let obsBadgeHtml = '';
+    if (goal.measurement_type === 'Observation' && goal.observation_config?.category) {
+      const catLabel = escapeHtml(obsCategoryLabel(goal.observation_config.category));
+      const itemSuffix = goal.observation_config.category === 'behavior_checklist' && Array.isArray(goal.observation_config.sub_behaviors)
+        ? ` · ${goal.observation_config.sub_behaviors.length} items`
+        : '';
+      obsBadgeHtml = `<span class="st-badge" style="background:#e0e7ff;color:#3730a3;margin-left:4px;">${catLabel}${itemSuffix}</span>`;
+    }
     
     return `
       <div class="st-goal-card ${collapsedClass}" data-goal-id="${goal.id}" data-area="${colorCategory}">
@@ -1239,6 +1517,7 @@
             <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
             <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
             <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+            ${obsBadgeHtml}
           </div>
           <span class="st-goal-quarter-status">${statusEmoji} ${quarterProgress.length}/${dataStatus.expected}</span>
           <span class="st-goal-chevron">▶</span>
@@ -1438,8 +1717,10 @@
             <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
             <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
             <option value="Other" ${goal.measurement_type === 'Other' ? 'selected' : ''}>Other</option>
+            <option value="Observation" ${goal.measurement_type === 'Observation' ? 'selected' : ''}>Observation</option>
           </select>
         </div>
+        ${renderObservationConfigHtml(goal.observation_config || null, _cachedSchedulePeriods)}
         <div class="st-form-row">
           <div class="st-form-group">
             <label class="st-form-label">Baseline</label>
@@ -1958,6 +2239,13 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
+    // Validate observation config if applicable
+    const obsErrors = validateObservationConfig(form);
+    if (obsErrors.length > 0) {
+      await rcAlert('Validation Error', obsErrors.join('\n'));
+      return;
+    }
+
     const formData = {
       id: goalId,
       student_code: goal.student_code,
@@ -1973,7 +2261,8 @@
       expected_data_points: parseInt(form.querySelector('[name="expected_data_points"]').value) || 3,
       class_context: goal.class_context,
       version: goal.version,
-      status: goal.status
+      status: goal.status,
+      observation_config: gatherObservationConfig(form)
     };
 
     try {
@@ -2348,8 +2637,10 @@
             <option value="Frequency">Frequency</option>
             <option value="Duration">Duration</option>
             <option value="Rate">Rate</option>
+            <option value="Observation">Observation</option>
           </select>
         </div>
+        ${renderObservationConfigHtml(null, _cachedSchedulePeriods)}
         <div class="st-form-row">
           <div class="st-form-group">
             <label class="st-form-label">Baseline:</label>
@@ -2392,12 +2683,20 @@
 
     document.body.appendChild(modal);
 
+    // Wire up observation config show/hide
+    initObservationFields(modal);
+
     document.getElementById('cancel-goal').addEventListener('click', () => {
       modal.remove();
     });
 
     document.getElementById('add-goal-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const obsErrors = validateObservationConfig(e.target);
+      if (obsErrors.length > 0) {
+        await rcAlert('Validation Error', obsErrors.join('\n'));
+        return;
+      }
       await handleAddGoal(e.target, studentCode);
       modal.remove();
     });
@@ -2419,7 +2718,8 @@
       data_collector_email: formData.get('data_collector_email') || null,
       class_context: formData.get('class_context') || null,
       status: 'active',
-      version: 1
+      version: 1,
+      observation_config: gatherObservationConfig(form)
     };
 
     try {
@@ -2880,8 +3180,10 @@
                 <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
                 <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
                 <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
+                <option value="Observation" ${goal.measurement_type === 'Observation' ? 'selected' : ''}>Observation</option>
               </select>
             </div>
+            ${renderObservationConfigHtml(goal.observation_config || null, _cachedSchedulePeriods)}
             <div class="st-form-row">
               <div class="st-form-group">
                 <label class="st-form-label">Baseline</label>
@@ -2941,6 +3243,11 @@
     const modal = createModal(title, content);
     document.body.appendChild(modal);
 
+    // Wire up observation config show/hide for any wizard goal forms
+    modal.querySelectorAll('.st-wizard-goal-form').forEach(form => {
+      initObservationFields(form);
+    });
+
     // Event handlers
     modal.addEventListener('click', (e) => {
       if (e.target.id === 'wizard-cancel') {
@@ -2952,6 +3259,19 @@
         showNewIEPWizard(studentCode);
       } else if (e.target.id === 'wizard-next') {
         if (iepWizardData.step === 2) {
+          // Collect observation_config from each wizard goal form before advancing
+          const wizardForms = modal.querySelectorAll('.st-wizard-goal-form');
+          for (const wform of wizardForms) {
+            const idx = parseInt(wform.dataset.goalIndex);
+            if (!isNaN(idx) && iepWizardData.newGoals[idx]) {
+              const obsErrors = validateObservationConfig(wform);
+              if (obsErrors.length > 0) {
+                rcAlert('Validation Error', `Goal ${idx + 1}: ${obsErrors.join('\n')}`);
+                return;
+              }
+              iepWizardData.newGoals[idx].observation_config = gatherObservationConfig(wform);
+            }
+          }
           iepWizardData.step++;
           modal.remove();
           showNewIEPWizard(studentCode);
