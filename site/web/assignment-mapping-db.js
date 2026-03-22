@@ -2,6 +2,17 @@
 // Handles CRUD for assignment items, mappings, and submission answers
 
 /**
+ * Returns the starting calendar year of the current school year.
+ * Aug–Dec → current year; Jan–Jul → current year - 1.
+ * @returns {number}
+ */
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+/**
  * Insert assignment items and mappings
  * Transactional: all or nothing
  * 
@@ -273,6 +284,7 @@ export async function insertGoalProgress(supabase, submissionId, studentId, assi
       source: 'assignment',
       assignment_instance_id: assignmentInstanceId,
       collected_by: 'system',
+      school_year: getCurrentSchoolYear(),
       // We need to look up goal_id by goal_code
       // For Phase 1, we'll store goal_code in meta and handle in a separate query
       meta: { goal_code: rollup.goal_code }
@@ -314,7 +326,8 @@ export async function insertGoalProgress(supabase, submissionId, studentId, assi
           value: rec.value,
           source: rec.source,
           assignment_instance_id: rec.assignment_instance_id,
-          collected_by: rec.collected_by
+          collected_by: rec.collected_by,
+          school_year: rec.school_year
         };
       })
       .filter(rec => rec !== null);

@@ -279,7 +279,7 @@ const local = {
   async addSubmission(payload) {
     const submissions = store.get('submissions', []);
     const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
-    submissions.push({ id, ...payload, submitted_at: new Date().toISOString() });
+    submissions.push({ id, ...payload, submitted_at: new Date().toISOString(), school_year: getCurrentSchoolYear() });
     store.set('submissions', submissions);
     
     // Update instance status to 'Submitted'
@@ -650,6 +650,7 @@ const local = {
       value: parseFloat(value),
       source,
       collected_by,
+      school_year: getCurrentSchoolYear(),
       created_at: new Date().toISOString()
     };
     
@@ -1342,6 +1343,7 @@ const remote = {
       // paper_upload_url stored in the related assignment.meta field
       answers: record.answers || null,
       score_total: record.score_total || null,
+      school_year: record.school_year || getCurrentSchoolYear(),
     };
     // submission_id and student_id are nullable after the 20260312 migration (paper uploads)
     if (record.submission_id) payload.submission_id = record.submission_id;
@@ -1444,7 +1446,8 @@ const remote = {
         score_manual: payload.score_manual || null,
         score_total: payload.score_total || null,
         detail: payload.detail || {},
-        notes: payload.notes || null
+        notes: payload.notes || null,
+        school_year: getCurrentSchoolYear()
       })
       .select('id')
       .single();
@@ -2065,7 +2068,8 @@ const remote = {
         date,
         value: safeValue,
         source,
-        collected_by
+        collected_by,
+        school_year: getCurrentSchoolYear()
       })
       .select()
       .single();
