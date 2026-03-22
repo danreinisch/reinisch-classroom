@@ -48,33 +48,195 @@ const MIN_QUESTION_LENGTH = 10;
 const MAX_QUESTION_LENGTH = 500;
 
 /**
- * Detect questions from HTML content
- * Looks for data-qref attributes first, then auto-numbers block-level elements
+ * Infer answer_type and normalize correct value from a raw correct string.
+ * Logic mirrors parseTxtMapping() in assignment-mapping-parsers.js:
+ *   - empty / dash  → constructed  (correct: null)
+ *   - contains ";"  → multi        (correct: string[])
+ *   - "true"/"false"→ boolean      (correct: boolean)
+ *   - otherwise     → mcq          (correct: string)
+ */
+function inferAnswerType(rawCorrect) {
+  const val = (rawCorrect || '').trim();
+  if (!val || val === '-') {
+    return { answer_type: 'constructed', correct: null };
+  }
+  if (val.includes(';')) {
+    return {
+      answer_type: 'multi',
+      correct: val.split(';').map(c => c.trim()).filter(c => c)
+    };
+  }
+  if (/^(true|false)$/i.test(val)) {
+    return { answer_type: 'boolean', correct: val.toLowerCase() === 'true' };
+  }
+  return { answer_type: 'mcq', correct: val };
+}
+
+/**
+ * Parse a semicolon-separated code string into an array.
+ * Returns [] for empty / dash values.
+ */
+function parseCodeArray(codeStr) {
+  if (!codeStr || codeStr === '-') return [];
+  return codeStr.split(';').map(c => c.trim()).filter(c => c.length > 0);
+}
+
+/**
+ * Detect questions from HTML content.
+ *
+ * Detection strategy (each pass runs only if all previous passes found zero questions):
+ *   1. [data-qref] — explicit inline annotation with optional data-rc-* mapping attributes
+ *   2. Form inputs (input[name], select[name], textarea[name]) — grouped by name, Q*/question* pattern
+ *   3. <fieldset> with <legend>
+ *   4. <ol> > <li> ordered list items
+ *   5. Class/ID patterns: .question, [class*="q-"], [id^="q-"], [id^="question"], [data-question]
+ *   6. <table tr> where the first cell matches a question-number pattern
+ *   7. Block-element fallback: p, div.question, section, article, li (legacy)
  */
 export function detectQuestionsFromHTML(htmlContent) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlContent, 'text/html');
   const questions = [];
 
-  // First pass: look for elements with data-qref attribute
+  // ── Pass 1: [data-qref] with full inline mapping attribute extraction ─────────
   const explicitQuestions = doc.querySelectorAll('[data-qref]');
   if (explicitQuestions.length > 0) {
     explicitQuestions.forEach((el, idx) => {
       const q_ref = el.getAttribute('data-qref');
-      const label = el.textContent.trim().substring(0, 100); // First 100 chars as label
+      const label = el.textContent.trim().substring(0, 100) || `Question ${idx + 1}`;
+
+      // Parse optional mapping attributes
+      const pointsRaw = el.getAttribute('data-points');
+      const pointsParsed = parseFloat(pointsRaw);
+      const points = pointsRaw !== null ? (isNaN(pointsParsed) ? 1 : pointsParsed) : 1;
+
+      const rawCorrect = el.getAttribute('data-correct');
+      const rawAnswerType = el.getAttribute('data-answer-type');
+
+      let answer_type, correct;
+      if (rawAnswerType && ['mcq', 'multi', 'boolean', 'constructed'].includes(rawAnswerType)) {
+        // Explicit answer-type overrides auto-detection
+        answer_type = rawAnswerType;
+        const inferred = inferAnswerType(rawCorrect);
+        correct = inferred.correct;
+      } else {
+        const inferred = inferAnswerType(rawCorrect);
+        answer_type = inferred.answer_type;
+        correct = inferred.correct;
+      }
+
+      const dese_codes = parseCodeArray(el.getAttribute('data-dese'));
+      const default_goal_codes = parseCodeArray(el.getAttribute('data-goal'));
+
       questions.push({
         q_ref,
-        label: label || `Question ${idx + 1}`,
+        label,
         skill_tags: [],
-        points: 1,
-        default_goal_codes: [],
+        points,
+        default_goal_codes,
+        dese_codes,
+        correct,
+        answer_type,
         per_student_overrides: {}
       });
     });
     return questions;
   }
 
-  // Second pass: auto-number block-level elements (p, div, section, article, li)
+  // ── Pass 2: Form inputs grouped by name (Q*/question* patterns) ──────────────
+  const inputEls = doc.querySelectorAll('input[name], select[name], textarea[name]');
+  const seenNames = new Set();
+  inputEls.forEach((el) => {
+    const name = el.getAttribute('name');
+    if (!name || seenNames.has(name)) return;
+    if (/^Q\d+$/i.test(name) || /^question/i.test(name)) {
+      seenNames.add(name);
+      questions.push({
+        q_ref: name,
+        label: name,
+        skill_tags: [],
+        points: 1,
+        default_goal_codes: [],
+        per_student_overrides: {}
+      });
+    }
+  });
+  if (questions.length > 0) return questions;
+
+  // ── Pass 3: <fieldset> with <legend> ─────────────────────────────────────────
+  const fieldsets = doc.querySelectorAll('fieldset');
+  fieldsets.forEach((fs, idx) => {
+    const legend = fs.querySelector('legend');
+    const label = legend ? legend.textContent.trim().substring(0, 100) : `Question ${idx + 1}`;
+    questions.push({
+      q_ref: `Q${idx + 1}`,
+      label,
+      skill_tags: [],
+      points: 1,
+      default_goal_codes: [],
+      per_student_overrides: {}
+    });
+  });
+  if (questions.length > 0) return questions;
+
+  // ── Pass 4: <ol> > <li> ordered list items ───────────────────────────────────
+  const olItems = doc.querySelectorAll('ol > li');
+  olItems.forEach((li, idx) => {
+    const text = li.textContent.trim();
+    if (text.length > MIN_QUESTION_LENGTH) {
+      questions.push({
+        q_ref: `Q${idx + 1}`,
+        label: text.substring(0, 100),
+        skill_tags: [],
+        points: 1,
+        default_goal_codes: [],
+        per_student_overrides: {}
+      });
+    }
+  });
+  if (questions.length > 0) return questions;
+
+  // ── Pass 5: Class/ID pattern elements ────────────────────────────────────────
+  const patternEls = doc.querySelectorAll(
+    '.question, [class*="q-"], [id^="q-"], [id^="question"], [data-question]'
+  );
+  patternEls.forEach((el, idx) => {
+    const text = el.textContent.trim();
+    if (text.length > MIN_QUESTION_LENGTH) {
+      const id = el.getAttribute('id') || el.getAttribute('data-question') || `Q${idx + 1}`;
+      questions.push({
+        q_ref: id,
+        label: text.substring(0, 100),
+        skill_tags: [],
+        points: 1,
+        default_goal_codes: [],
+        per_student_overrides: {}
+      });
+    }
+  });
+  if (questions.length > 0) return questions;
+
+  // ── Pass 6: Table rows where first cell looks like a question number ──────────
+  const tableRows = doc.querySelectorAll('table tr');
+  tableRows.forEach((row, idx) => {
+    const firstCell = row.querySelector('td, th');
+    if (!firstCell) return;
+    const cellText = firstCell.textContent.trim();
+    if (/^\d+[.)\s]/.test(cellText) || /^Q\d+/i.test(cellText)) {
+      const label = row.textContent.trim().substring(0, 100);
+      questions.push({
+        q_ref: `Q${idx + 1}`,
+        label,
+        skill_tags: [],
+        points: 1,
+        default_goal_codes: [],
+        per_student_overrides: {}
+      });
+    }
+  });
+  if (questions.length > 0) return questions;
+
+  // ── Pass 7: Block-element fallback (legacy) ───────────────────────────────────
   const blockElements = doc.querySelectorAll('p, div.question, section, article, li');
   blockElements.forEach((el, idx) => {
     // Skip if it's likely a container with nested questions

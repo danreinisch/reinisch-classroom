@@ -194,7 +194,82 @@ JSON manifests provide more control and support advanced scoring configurations.
 }
 ```
 
-## HTML Package with Manifest
+## HTML Inline Mapping Convention (`data-rc-*` Attributes)
+
+HTML assignment authors can embed mapping data directly in their markup using data attributes
+on question container elements.  When `detectQuestionsFromHTML()` finds `[data-qref]` elements
+it extracts all of these attributes and builds a fully-mapped question object — no sidecar file needed.
+
+### Attribute Reference
+
+| Attribute | Required | Default | Description | Example |
+|---|---|---|---|---|
+| `data-qref` | Yes | — | Unique question reference | `data-qref="Q1"` |
+| `data-points` | No | `1` | Max points for the question | `data-points="2"` |
+| `data-correct` | No | — | Correct answer(s); semicolon-separated for multi-select | `data-correct="B"` or `data-correct="A;C;D"` |
+| `data-answer-type` | No | auto-detected | One of: `mcq`, `multi`, `boolean`, `constructed` | `data-answer-type="constructed"` |
+| `data-dese` | No | — | DESE standard codes, semicolon-separated | `data-dese="MA.8.EE.1;MA.8.EE.2"` |
+| `data-goal` | No | — | IEP goal codes, semicolon-separated | `data-goal="MATH.1;MATH.2"` |
+
+### Answer-Type Auto-Detection
+
+When `data-answer-type` is omitted the type is inferred from `data-correct` using the same
+rules as the TXT mapping pipeline:
+
+| `data-correct` value | Detected type |
+|---|---|
+| empty or `-` | `constructed` |
+| contains `;` | `multi` |
+| `true` or `false` (any case) | `boolean` |
+| anything else | `mcq` |
+
+Providing `data-answer-type` explicitly overrides auto-detection.
+
+### Example Annotated HTML
+
+```html
+<div data-qref="Q1" data-points="1" data-correct="B" data-dese="MA.8.EE.1" data-goal="MATH.1">
+  <p>1. What is 2 + 2?</p>
+  <label><input type="radio" name="Q1" value="A"> 3</label>
+  <label><input type="radio" name="Q1" value="B"> 4</label>
+</div>
+
+<div data-qref="Q2" data-points="2" data-correct="A;C;D" data-dese="MA.8.EE.3" data-goal="MATH.2">
+  <p>2. Select all that simplify correctly</p>
+  <label><input type="checkbox" name="Q2" value="A"> Option A</label>
+  <label><input type="checkbox" name="Q2" value="C"> Option C</label>
+  <label><input type="checkbox" name="Q2" value="D"> Option D</label>
+</div>
+
+<div data-qref="Q3" data-points="1" data-correct="true" data-dese="MA.8.G.1" data-goal="MATH.4">
+  <p>3. All squares are rectangles. True or False?</p>
+  <label><input type="radio" name="Q3" value="true"> True</label>
+  <label><input type="radio" name="Q3" value="false"> False</label>
+</div>
+
+<div data-qref="Q4" data-points="3" data-answer-type="constructed"
+     data-dese="MA.8.EE.4;MA.8.F.2" data-goal="MATH.1;MATH.5">
+  <p>4. Explain the relationship between slope and y-intercept.</p>
+  <textarea name="Q4"></textarea>
+</div>
+```
+
+## HTML Question Detection Strategy
+
+`detectQuestionsFromHTML()` applies detection passes in priority order.  Each pass only runs
+if all previous passes found zero questions.
+
+| Pass | Selector / Strategy | Notes |
+|---|---|---|
+| 1 | `[data-qref]` | Full inline attribute extraction (points, correct, DESE, goal codes) |
+| 2 | `input[name], select[name], textarea[name]` | Names matching `/^Q\d+$/i` or `/^question/i`; grouped by name |
+| 3 | `fieldset` with `legend` | Legend text becomes the question label |
+| 4 | `ol > li` | Each `<li>` longer than 10 chars becomes a question |
+| 5 | `.question`, `[class*="q-"]`, `[id^="q-"]`, `[id^="question"]`, `[data-question]` | Common class/ID patterns |
+| 6 | `table tr` | Rows whose first `td`/`th` matches `/^\d+[.)\s]/` or `/^Q\d+/i` |
+| 7 | `p, div.question, section, article, li` | Legacy block-element fallback (10–500 char filter) |
+
+
 
 HTML packages can include an `assignment_manifest.json` file in the ZIP root:
 
