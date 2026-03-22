@@ -4659,6 +4659,609 @@
     `;
   }
 
+  // ─── Bulk Observation Configuration ─────────────────────────────────────────
+
+  /**
+   * Return a stable string key for a goal object, used to track selection.
+   * Uses the DB id when available, otherwise falls back to student_code::code.
+   * @param {Object} goal
+   * @returns {string}
+   */
+  function getBulkGoalId(goal) {
+    return goal.id != null ? String(goal.id) : `${goal.student_code}::${goal.code}`;
+  }
+
+  /**
+   * Inject the "Bulk Obs Config" toolbar button into the Students page toolbar.
+   * The button is inserted before the "Add Student" button.
+   */
+  function injectBulkObsConfigButton() {
+    const addStudentBtn = document.getElementById('stAddStudent');
+    if (!addStudentBtn || document.getElementById('stBulkObsConfigBtn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'stBulkObsConfigBtn';
+    btn.type = 'button';
+    btn.className = 'st-btn st-btn-small';
+    btn.title = 'Bulk configure goals as observation type';
+    btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+    btn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+        <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+        <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+        <line x1="17" y1="16" x2="23" y2="16"/>
+      </svg>
+      Bulk Obs Config
+    `;
+    addStudentBtn.parentNode.insertBefore(btn, addStudentBtn);
+    btn.addEventListener('click', showBulkObsConfigModal);
+  }
+
+  /**
+   * Gather observation config from the bulk config form container.
+   * Uses bulk_obs_* field names to avoid collisions with per-goal forms.
+   * @param {HTMLElement} container
+   * @returns {Object|null}
+   */
+  function gatherBulkObsConfigValues(container) {
+    const catEl = container.querySelector('[name="bulk_obs_category"]');
+    const category = catEl ? catEl.value : '';
+    if (!category) return null;
+
+    const config = { category };
+
+    if (category === 'session_outcome') {
+      config.target_met = parseInt(container.querySelector('[name="bulk_obs_target_met"]')?.value) || null;
+      config.target_window = parseInt(container.querySelector('[name="bulk_obs_target_window"]')?.value) || null;
+    } else if (category === 'prompt_count') {
+      const raw = parseInt(container.querySelector('[name="bulk_obs_target_max_prompts"]')?.value);
+      config.target_max_prompts = isNaN(raw) ? null : raw;
+    } else if (category === 'behavior_checklist') {
+      const inputs = container.querySelectorAll('[name="bulk_obs_sub_behavior"]');
+      config.sub_behaviors = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+    }
+
+    const periodBoxes = container.querySelectorAll('[name="bulk_obs_class_period"]:checked');
+    config.class_periods = Array.from(periodBoxes).map(cb => cb.value);
+
+    return config;
+  }
+
+  /**
+   * Validate bulk obs config form values.
+   * @param {HTMLElement} container
+   * @returns {string[]} Array of error strings (empty = valid)
+   */
+  function validateBulkObsConfigValues(container) {
+    const errors = [];
+    const catEl = container.querySelector('[name="bulk_obs_category"]');
+    const category = catEl ? catEl.value : '';
+
+    if (!category) {
+      errors.push('Observation category is required.');
+      return errors;
+    }
+
+    if (category === 'session_outcome') {
+      const metVal = parseInt(container.querySelector('[name="bulk_obs_target_met"]')?.value);
+      const winVal = parseInt(container.querySelector('[name="bulk_obs_target_window"]')?.value);
+      if (!metVal || metVal < 1) errors.push('Target: "met" count must be at least 1.');
+      if (!winVal || winVal < 1) errors.push('Target: "window" must be at least 1.');
+      if (metVal && winVal && winVal < metVal) errors.push('Target window must be ≥ target met count.');
+    } else if (category === 'prompt_count') {
+      const maxVal = parseInt(container.querySelector('[name="bulk_obs_target_max_prompts"]')?.value);
+      if (isNaN(maxVal) || maxVal < 0) errors.push('Target max prompts must be 0 or greater.');
+    } else if (category === 'behavior_checklist') {
+      const inputs = container.querySelectorAll('[name="bulk_obs_sub_behavior"]');
+      const nonEmpty = Array.from(inputs).filter(i => i.value.trim());
+      if (nonEmpty.length === 0) errors.push('At least one sub-behavior is required.');
+    }
+
+    const periodBoxes = container.querySelectorAll('[name="bulk_obs_class_period"]:checked');
+    if (periodBoxes.length === 0) errors.push('At least one class period must be selected.');
+
+    return errors;
+  }
+
+  /**
+   * Build the category-specific and period-picker HTML for the bulk config panel.
+   * Uses bulk_obs_* field name prefix to avoid ID/name collisions.
+   * @param {Array} schedulePeriods - Period objects from getSchedule()
+   * @returns {string} HTML string
+   */
+  function renderBulkObsConfigPanelHtml(schedulePeriods) {
+    let periodPickerHtml = '';
+    if (!schedulePeriods || schedulePeriods.length === 0) {
+      periodPickerHtml = '<p style="font-size:13px;color:#6b7280;margin:4px 0;">Configure your bell schedule in Settings to enable period selection.</p>';
+    } else {
+      periodPickerHtml = schedulePeriods
+        .filter(p => !p.planning)
+        .map(p => {
+          const label = escapeHtml(p.name || p.label || '');
+          return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:4px;cursor:pointer;">
+            <input type="checkbox" name="bulk_obs_class_period" value="${label}" style="margin:0;" />
+            ${label}
+          </label>`;
+        }).join('');
+    }
+
+    return `
+      <div class="st-form-group">
+        <label class="st-form-label" for="bulkObsCategory">Observation Category</label>
+        <select id="bulkObsCategory" name="bulk_obs_category" class="st-form-select">
+          <option value="">Select category...</option>
+          <option value="session_outcome">Session Outcome (Met / Not Met per session)</option>
+          <option value="tally">Tally (X of Y opportunities)</option>
+          <option value="prompt_count">Prompt Count (number of prompts needed)</option>
+          <option value="behavior_checklist">Behavior Checklist (multiple sub-behaviors)</option>
+        </select>
+      </div>
+      <div class="bulk-obs-category-fields bulk-obs-session-outcome-fields" style="display:none">
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">Target: met sessions</label>
+            <input type="number" name="bulk_obs_target_met" class="st-form-input" min="1" placeholder="e.g., 3" />
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">Target: window size</label>
+            <input type="number" name="bulk_obs_target_window" class="st-form-input" min="1" placeholder="e.g., 5" />
+          </div>
+        </div>
+      </div>
+      <div class="bulk-obs-category-fields bulk-obs-prompt-count-fields" style="display:none">
+        <div class="st-form-group">
+          <label class="st-form-label">Target: max prompts (or fewer)</label>
+          <input type="number" name="bulk_obs_target_max_prompts" class="st-form-input" min="0" placeholder="e.g., 2" />
+        </div>
+      </div>
+      <div class="bulk-obs-category-fields bulk-obs-behavior-checklist-fields" style="display:none">
+        <div class="st-form-group">
+          <label class="st-form-label">Sub-Behaviors</label>
+          <div class="bulk-obs-sub-behaviors-list">
+            <div class="bulk-obs-sub-behavior-row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+              <input type="text" name="bulk_obs_sub_behavior" class="st-form-input" value="" placeholder="e.g., Raise hand" style="flex:1;" />
+              <button type="button" class="st-btn st-btn-danger st-btn-small bulk-obs-remove-behavior-btn" aria-label="Remove sub-behavior" style="visibility:hidden">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="st-btn st-btn-small bulk-obs-add-behavior-btn" style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Sub-Behavior
+          </button>
+        </div>
+      </div>
+      <div class="st-form-group">
+        <label class="st-form-label">Observe during which class periods?</label>
+        <div class="bulk-obs-period-picker" style="padding:6px 0;">
+          ${periodPickerHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Wire up category show/hide and sub-behavior add/remove for the bulk config panel.
+   * @param {HTMLElement} panel - The config panel container element
+   */
+  function initBulkObsConfigFields(panel) {
+    const catSel = panel.querySelector('[name="bulk_obs_category"]');
+    if (!catSel) return;
+
+    const updateCategoryFields = () => {
+      const cat = catSel.value;
+      panel.querySelectorAll('.bulk-obs-category-fields').forEach(el => {
+        el.style.display = 'none';
+      });
+      if (cat === 'session_outcome') {
+        const el = panel.querySelector('.bulk-obs-session-outcome-fields');
+        if (el) el.style.display = '';
+      } else if (cat === 'prompt_count') {
+        const el = panel.querySelector('.bulk-obs-prompt-count-fields');
+        if (el) el.style.display = '';
+      } else if (cat === 'behavior_checklist') {
+        const el = panel.querySelector('.bulk-obs-behavior-checklist-fields');
+        if (el) el.style.display = '';
+      }
+    };
+    catSel.addEventListener('change', updateCategoryFields);
+    updateCategoryFields();
+
+    // Sub-behavior add/remove
+    panel.addEventListener('click', (e) => {
+      if (e.target.closest('.bulk-obs-add-behavior-btn')) {
+        const list = panel.querySelector('.bulk-obs-sub-behaviors-list');
+        if (!list) return;
+        const row = document.createElement('div');
+        row.className = 'bulk-obs-sub-behavior-row';
+        row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+        row.innerHTML = `
+          <input type="text" name="bulk_obs_sub_behavior" class="st-form-input" value="" placeholder="e.g., Raise hand" style="flex:1;" />
+          <button type="button" class="st-btn st-btn-danger st-btn-small bulk-obs-remove-behavior-btn" aria-label="Remove sub-behavior">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        `;
+        list.appendChild(row);
+      }
+      if (e.target.closest('.bulk-obs-remove-behavior-btn')) {
+        const row = e.target.closest('.bulk-obs-sub-behavior-row');
+        const list = panel.querySelector('.bulk-obs-sub-behaviors-list');
+        if (row && list && list.querySelectorAll('.bulk-obs-sub-behavior-row').length > 1) {
+          row.remove();
+        }
+      }
+    });
+  }
+
+  /**
+   * Show the Bulk Observation Configuration modal.
+   * Lists all active goals, lets the teacher select multiple, and applies
+   * a shared observation_config to all selected goals at once.
+   */
+  async function showBulkObsConfigModal() {
+    const periods = _cachedSchedulePeriods.slice();
+
+    // Group goals by student for display
+    const studentMap = new Map(allStudents.map(s => [s.code, s]));
+
+    // Gather unique students and goal areas for filter dropdowns
+    const studentCodes = [...new Set(allGoals.map(g => g.student_code))].sort();
+    const goalAreas = [...new Set(allGoals.map(g => g.goal_area).filter(Boolean))].sort();
+    const measurementTypes = [...new Set(allGoals.map(g => g.measurement_type || 'Other').filter(Boolean))].sort();
+
+    const studentOptions = studentCodes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    const goalAreaOptions = goalAreas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+    const measOptions = measurementTypes.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+
+    const configPanelHtml = renderBulkObsConfigPanelHtml(periods);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'bulkObsConfigOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'bulkObsConfigTitle');
+    overlay.style.cssText = [
+      'position:fixed;top:0;left:0;right:0;bottom:0;',
+      'background:rgba(0,0,0,0.82);backdrop-filter:blur(3px);',
+      'display:flex;align-items:flex-start;justify-content:center;',
+      'z-index:2000;padding:24px;overflow-y:auto;'
+    ].join('');
+
+    overlay.innerHTML = `
+      <div style="background:rgba(20,20,24,0.99);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:28px 32px;width:100%;max-width:1100px;margin:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.1);">
+          <h2 id="bulkObsConfigTitle" style="margin:0;font-size:20px;font-weight:700;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:8px;">
+              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+              <line x1="17" y1="16" x2="23" y2="16"/>
+            </svg>
+            Bulk Observation Configuration
+          </h2>
+          <button id="bulkObsCloseBtn" type="button" class="st-btn st-btn-small" aria-label="Close bulk obs config">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+
+          <!-- Left: Goal selection table -->
+          <div style="flex:1;min-width:0;">
+            <!-- Filter row -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <select id="bulkObsFilterStudent" class="st-form-select" style="flex:1;min-width:140px;max-width:200px;">
+                <option value="">All Students</option>
+                ${studentOptions}
+              </select>
+              <select id="bulkObsFilterArea" class="st-form-select" style="flex:1;min-width:140px;max-width:200px;">
+                <option value="">All Goal Areas</option>
+                ${goalAreaOptions}
+              </select>
+              <select id="bulkObsFilterMeas" class="st-form-select" style="flex:1;min-width:140px;max-width:200px;">
+                <option value="">All Types</option>
+                ${measOptions}
+              </select>
+              <button id="bulkObsSelectAll" type="button" class="st-btn st-btn-small">Select All</button>
+              <button id="bulkObsDeselectAll" type="button" class="st-btn st-btn-small">Deselect All</button>
+            </div>
+            <!-- Goal table -->
+            <div style="max-height:420px;overflow-y:auto;border:1px solid rgba(255,255,255,0.08);border-radius:10px;">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);">
+                    <th style="padding:8px 10px;text-align:left;width:32px;"></th>
+                    <th style="padding:8px 10px;text-align:left;">Student</th>
+                    <th style="padding:8px 10px;text-align:left;">Goal</th>
+                    <th style="padding:8px 10px;text-align:left;">Goal Area</th>
+                    <th style="padding:8px 10px;text-align:left;">Type</th>
+                    <th style="padding:8px 10px;text-align:left;">Obs Category</th>
+                  </tr>
+                </thead>
+                <tbody id="bulkObsGoalTableBody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+            <div id="bulkObsSelectionSummary" style="margin-top:8px;font-size:13px;opacity:0.7;"></div>
+          </div>
+
+          <!-- Right: Config panel -->
+          <div id="bulkObsConfigPanel" style="width:320px;flex-shrink:0;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;">
+            <h3 style="margin:0 0 16px 0;font-size:15px;font-weight:600;">Observation Configuration</h3>
+            <div id="bulkObsConfigFields">
+              ${configPanelHtml}
+            </div>
+            <div id="bulkObsErrorMsg" style="color:rgba(239,68,68,0.9);font-size:13px;margin-bottom:10px;display:none;"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);">
+              <button id="bulkObsApplyBtn" type="button" class="st-btn st-btn-primary" style="width:100%;">
+                Apply to Selected
+              </button>
+              <button id="bulkObsClearBtn" type="button" class="st-btn st-btn-danger" style="width:100%;">
+                Remove Obs Config from Selected
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Close on backdrop click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+    overlay.querySelector('#bulkObsCloseBtn').addEventListener('click', () => overlay.remove());
+
+    // Wire up category fields
+    const configPanel = overlay.querySelector('#bulkObsConfigPanel');
+    initBulkObsConfigFields(configPanel);
+
+    // Track filtered + all goal IDs for select/deselect
+    let visibleGoalIds = [];
+
+    /**
+     * Render the goal table rows based on current filter state.
+     */
+    function renderGoalRows() {
+      const filterStudent = overlay.querySelector('#bulkObsFilterStudent').value;
+      const filterArea = overlay.querySelector('#bulkObsFilterArea').value;
+      const filterMeas = overlay.querySelector('#bulkObsFilterMeas').value;
+
+      const filtered = allGoals.filter(g => {
+        if (filterStudent && g.student_code !== filterStudent) return false;
+        if (filterArea && g.goal_area !== filterArea) return false;
+        if (filterMeas && (g.measurement_type || 'Other') !== filterMeas) return false;
+        return true;
+      });
+
+      visibleGoalIds = filtered.map(g => getBulkGoalId(g));
+
+      const tbody = overlay.querySelector('#bulkObsGoalTableBody');
+      if (!tbody) return;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;opacity:0.6;">No goals match the current filters.</td></tr>`;
+        updateSelectionSummary();
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(g => {
+        const goalId = getBulkGoalId(g);
+        const student = studentMap.get(g.student_code);
+        const studentLabel = escapeHtml(g.student_code);
+        const isObs = g.measurement_type === 'Observation';
+        const obsCat = isObs && g.observation_config?.category ? obsCategoryLabel(g.observation_config.category) : '—';
+        const rowStyle = isObs ? 'background:rgba(99,102,241,0.08);' : '';
+        return `
+          <tr data-goal-id="${escapeHtml(goalId)}" style="${rowStyle}border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px;text-align:center;">
+              <input type="checkbox" class="bulk-obs-goal-check" data-goal-id="${escapeHtml(goalId)}" ${isObs ? 'checked' : ''} aria-label="Select goal ${escapeHtml(g.code || '')} for student ${escapeHtml(g.student_code)}" />
+            </td>
+            <td style="padding:8px 10px;white-space:nowrap;">${studentLabel}${student && student.name ? ` <span style="opacity:0.55;font-size:12px;">(${escapeHtml(student.name)})</span>` : ''}</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:12px;">${escapeHtml(g.code || '')}</td>
+            <td style="padding:8px 10px;">${escapeHtml(g.goal_area || '—')}</td>
+            <td style="padding:8px 10px;">${escapeHtml(g.measurement_type || 'Other')}</td>
+            <td style="padding:8px 10px;">${escapeHtml(obsCat)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      updateSelectionSummary();
+    }
+
+    function updateSelectionSummary() {
+      const checked = overlay.querySelectorAll('.bulk-obs-goal-check:checked');
+      const summary = overlay.querySelector('#bulkObsSelectionSummary');
+      if (summary) {
+        summary.textContent = `${checked.length} goal${checked.length !== 1 ? 's' : ''} selected`;
+      }
+    }
+
+    // Filter change handlers
+    overlay.querySelector('#bulkObsFilterStudent').addEventListener('change', renderGoalRows);
+    overlay.querySelector('#bulkObsFilterArea').addEventListener('change', renderGoalRows);
+    overlay.querySelector('#bulkObsFilterMeas').addEventListener('change', renderGoalRows);
+
+    // Select All / Deselect All (only visible rows)
+    overlay.querySelector('#bulkObsSelectAll').addEventListener('click', () => {
+      visibleGoalIds.forEach(id => {
+        const cb = overlay.querySelector(`.bulk-obs-goal-check[data-goal-id="${CSS.escape(id)}"]`);
+        if (cb) cb.checked = true;
+      });
+      updateSelectionSummary();
+    });
+    overlay.querySelector('#bulkObsDeselectAll').addEventListener('click', () => {
+      visibleGoalIds.forEach(id => {
+        const cb = overlay.querySelector(`.bulk-obs-goal-check[data-goal-id="${CSS.escape(id)}"]`);
+        if (cb) cb.checked = false;
+      });
+      updateSelectionSummary();
+    });
+
+    // Delegate checkbox change to update summary
+    overlay.querySelector('#bulkObsGoalTableBody').addEventListener('change', (e) => {
+      if (e.target.classList.contains('bulk-obs-goal-check')) {
+        updateSelectionSummary();
+      }
+    });
+
+    /**
+     * Get the list of currently selected goals (by data-goal-id).
+     * @returns {Array} Array of goal objects
+     */
+    function getSelectedGoals() {
+      const checked = overlay.querySelectorAll('.bulk-obs-goal-check:checked');
+      const selectedIds = new Set(Array.from(checked).map(cb => cb.dataset.goalId));
+      return allGoals.filter(g => selectedIds.has(getBulkGoalId(g)));
+    }
+
+    // Apply to Selected
+    overlay.querySelector('#bulkObsApplyBtn').addEventListener('click', async () => {
+      const errorEl = overlay.querySelector('#bulkObsErrorMsg');
+      errorEl.style.display = 'none';
+
+      const errors = validateBulkObsConfigValues(configPanel);
+      if (errors.length > 0) {
+        errorEl.textContent = errors.join(' ');
+        errorEl.style.display = '';
+        return;
+      }
+
+      const selected = getSelectedGoals();
+      if (selected.length === 0) {
+        errorEl.textContent = 'No goals selected. Check at least one goal to configure.';
+        errorEl.style.display = '';
+        return;
+      }
+
+      const obsConfig = gatherBulkObsConfigValues(configPanel);
+      const categoryLabel = obsCategoryLabel(obsConfig.category);
+      const periodList = obsConfig.class_periods.length > 0 ? obsConfig.class_periods.join(', ') : '(none)';
+      const previewMsg = `This will configure ${selected.length} goal${selected.length !== 1 ? 's' : ''} as "${categoryLabel}" observation goals with class periods: ${periodList}.\n\nProceed?`;
+
+      const confirmed = await rcConfirm('Apply Observation Config', previewMsg, 'Apply');
+      if (!confirmed) return;
+
+      const applyBtn = overlay.querySelector('#bulkObsApplyBtn');
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Saving…';
+
+      let successCount = 0;
+      let failCount = 0;
+      for (const goal of selected) {
+        try {
+          await db.upsertGoal({
+            student_code: goal.student_code,
+            code: goal.code,
+            goal_text: goal.goal_text || goal.desc || '',
+            desc: goal.desc || goal.goal_text || '',
+            target: goal.target,
+            status: goal.status || 'active',
+            measurement_type: 'Observation',
+            data_collector: goal.data_collector || null,
+            data_collector_email: goal.data_collector_email || null,
+            class_context: goal.class_context || null,
+            goal_area: goal.goal_area || null,
+            baseline: goal.baseline || null,
+            mastery: goal.mastery || null,
+            case_manager: goal.case_manager || null,
+            version: goal.version || 1,
+            observation_config: obsConfig
+          });
+          successCount++;
+        } catch (err) {
+          console.error('[tc-students] Bulk obs config failed for goal', goal.code, err);
+          failCount++;
+        }
+      }
+
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'Apply to Selected';
+
+      if (failCount > 0) {
+        await rcAlert('Partial Success', `${successCount} goal${successCount !== 1 ? 's' : ''} configured successfully. ${failCount} failed — check console for details.`);
+      } else {
+        await rcAlert('Done', `${successCount} goal${successCount !== 1 ? 's' : ''} configured successfully as ${categoryLabel} observation goals.`);
+      }
+
+      overlay.remove();
+      await loadData();
+    });
+
+    // Remove Observation Config from Selected
+    overlay.querySelector('#bulkObsClearBtn').addEventListener('click', async () => {
+      const selected = getSelectedGoals();
+      if (selected.length === 0) {
+        const errorEl = overlay.querySelector('#bulkObsErrorMsg');
+        errorEl.textContent = 'No goals selected. Check at least one goal to clear.';
+        errorEl.style.display = '';
+        return;
+      }
+
+      const confirmed = await rcConfirm(
+        'Remove Observation Config',
+        `This will remove the observation configuration from ${selected.length} goal${selected.length !== 1 ? 's' : ''}, resetting their measurement type to "Other".\n\nProceed?`,
+        'Remove',
+        { danger: true }
+      );
+      if (!confirmed) return;
+
+      const clearBtn = overlay.querySelector('#bulkObsClearBtn');
+      clearBtn.disabled = true;
+      clearBtn.textContent = 'Clearing…';
+
+      let successCount = 0;
+      let failCount = 0;
+      for (const goal of selected) {
+        try {
+          await db.upsertGoal({
+            student_code: goal.student_code,
+            code: goal.code,
+            goal_text: goal.goal_text || goal.desc || '',
+            desc: goal.desc || goal.goal_text || '',
+            target: goal.target,
+            status: goal.status || 'active',
+            measurement_type: 'Other',
+            data_collector: goal.data_collector || null,
+            data_collector_email: goal.data_collector_email || null,
+            class_context: goal.class_context || null,
+            goal_area: goal.goal_area || null,
+            baseline: goal.baseline || null,
+            mastery: goal.mastery || null,
+            case_manager: goal.case_manager || null,
+            version: goal.version || 1,
+            observation_config: null
+          });
+          successCount++;
+        } catch (err) {
+          console.error('[tc-students] Bulk obs clear failed for goal', goal.code, err);
+          failCount++;
+        }
+      }
+
+      clearBtn.disabled = false;
+      clearBtn.textContent = 'Remove Obs Config from Selected';
+
+      if (failCount > 0) {
+        await rcAlert('Partial Success', `${successCount} goal${successCount !== 1 ? 's' : ''} cleared. ${failCount} failed — check console for details.`);
+      } else {
+        await rcAlert('Done', `Observation config removed from ${successCount} goal${successCount !== 1 ? 's' : ''}.`);
+      }
+
+      overlay.remove();
+      await loadData();
+    });
+
+    // Initial render
+    renderGoalRows();
+  }
+
   /**
    * Show a styled confirmation modal and return a Promise<boolean>
    * @param {string} title - Modal title
@@ -4720,6 +5323,7 @@
     renderClassFilterOptions();
     renderGoalAreaFilterOptions();
     setupEventHandlers();
+    injectBulkObsConfigButton();
     loadData();
   }
 
