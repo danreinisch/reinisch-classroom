@@ -587,6 +587,7 @@ const CATEGORY_KEYWORDS = {
   'Daily Living':          ['daily living', 'cooking', 'hygiene', 'money', 'budget', 'time management', 'laundry', 'cleaning', 'safety', 'nutrition'],
   'Community':             ['community', 'field trip', 'volunteer', 'civic', 'neighborhood', 'public', 'transportation'],
   'Self-Advocacy':         ['self-advocacy', 'advocacy', 'self-determination', 'rights', 'accommodation', 'iep', 'transition', 'goal setting'],
+  'Recall Practice':       ['recall', 'retrieval', 'review', 'practice test', 'spaced practice', 'flashcard', 'retrieval practice'],
   'Assessment':            ['assessment', 'quiz', 'test', 'exam', 'evaluation', 'benchmark', 'diagnostic', 'pre-test', 'post-test', 'final'],
   'Other':                 []
 };
@@ -689,11 +690,31 @@ test('Self-Advocacy keyword: "iep"', () => {
 });
 
 test('Assessment keyword: "quiz"', () => {
-  assert.strictEqual(suggestCategory('Math Quiz Review'), 'Assessment');
+  assert.strictEqual(suggestCategory('Math Quiz'), 'Assessment');
 });
 
 test('Assessment keyword: "exam"', () => {
-  assert.strictEqual(suggestCategory('Final Exam Review'), 'Assessment');
+  assert.strictEqual(suggestCategory('Final Exam'), 'Assessment');
+});
+
+test('Recall Practice keyword: "recall"', () => {
+  assert.strictEqual(suggestCategory('Unit 3 Recall Activity'), 'Recall Practice');
+});
+
+test('Recall Practice keyword: "retrieval"', () => {
+  assert.strictEqual(suggestCategory('Retrieval Practice Set'), 'Recall Practice');
+});
+
+test('Recall Practice keyword: "review"', () => {
+  assert.strictEqual(suggestCategory('Weekly Review Sheet'), 'Recall Practice');
+});
+
+test('Recall Practice keyword: "practice test"', () => {
+  assert.strictEqual(suggestCategory('Practice Test — Fractions'), 'Recall Practice');
+});
+
+test('Recall Practice keyword: "flashcard"', () => {
+  assert.strictEqual(suggestCategory('Flashcard Drill Activity'), 'Recall Practice');
 });
 
 test('case-insensitive matching', () => {

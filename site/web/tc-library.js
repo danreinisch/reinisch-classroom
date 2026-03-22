@@ -28,6 +28,7 @@
     'Daily Living',
     'Community',
     'Self-Advocacy',
+    'Recall Practice',
     'Assessment',
     'Other'
   ];
@@ -42,6 +43,7 @@
     'Community':             { bg: 'rgba(248,113,113,.22)', color: '#f87171' },
     'Self-Advocacy':         { bg: 'rgba(129,140,248,.22)', color: '#818cf8' },
     'Assessment':            { bg: 'rgba(244,63,94,.22)',   color: '#f43f5e' },
+    'Recall Practice':       { bg: 'rgba(192,132,252,.22)', color: '#c084fc' },
     'Other':                 { bg: 'rgba(148,163,184,.18)', color: '#94a3b8' }
   };
 
@@ -56,6 +58,7 @@
     'Daily Living':          ['daily living', 'cooking', 'hygiene', 'money', 'budget', 'time management', 'laundry', 'cleaning', 'safety', 'nutrition'],
     'Community':             ['community', 'field trip', 'volunteer', 'civic', 'neighborhood', 'public', 'transportation'],
     'Self-Advocacy':         ['self-advocacy', 'advocacy', 'self-determination', 'rights', 'accommodation', 'iep', 'transition', 'goal setting'],
+    'Recall Practice':       ['recall', 'retrieval', 'review', 'practice test', 'spaced practice', 'flashcard', 'retrieval practice'],
     'Assessment':            ['assessment', 'quiz', 'test', 'exam', 'evaluation', 'benchmark', 'diagnostic', 'pre-test', 'post-test', 'final'],
     'Other':                 []
   };
