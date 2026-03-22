@@ -10,7 +10,7 @@
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
   const { parseGoalValue } = await import('/web/goal-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
-  const { formatObservationValue } = await import('/web/obs-utils.js');
+  const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -82,6 +82,15 @@
   const SVG_STATUS_OK   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
   const SVG_STATUS_WARN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
   const SVG_STATUS_BAD  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
+  // Observation icon constants (used in goal cards and toast notifications)
+  const ST_CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>';
+  const ST_WARN_SVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  const OBS_HIST_CHECK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  const OBS_HIST_X     = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+  const OBS_HIST_HASH  = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>';
+  const OBS_HIST_ALERT = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  const OBS_HIST_LIST  = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
 
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
@@ -1343,6 +1352,30 @@
     }, 3000);
   }
 
+  function showObsToast(container, message, isError) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      ${isError
+        ? 'background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25);'
+        : 'background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25);'}
+    `;
+    toast.innerHTML = (isError ? ST_WARN_SVG : ST_CHECK_SVG) + ' ' + escapeHtml(message);
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.3s';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
   // UI Constants for active state styling
   const ACTIVE_STATE_STYLES = {
     background: 'rgba(59, 130, 246, 0.2)',
@@ -1478,18 +1511,30 @@
     const progressDetailId = `tc-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
     let progressDetailHtml = '';
     let progressToggleBtn = '';
+    const isObs = goal.measurement_type === 'Observation';
+    const obsCatForCard = isObs ? (goal.observation_config?.category || '') : '';
+
     if (quarterProgress.length > 0) {
       const sorted = [...quarterProgress].sort((a, b) => new Date(b.date) - new Date(a.date));
-      const isObs = goal.measurement_type === 'Observation';
       let avgFormatted;
+      let avgIsHtml = false;
       if (isObs) {
         // For Observation goals, show rolling summary instead of numeric average
-        const obsCat = goal.observation_config?.category;
         const numericEntries = sorted.filter(e => e.value !== null && e.value !== undefined);
-        if (obsCat === 'session_outcome') {
+        if (obsCatForCard === 'session_outcome') {
+          const targetMet = goal.observation_config?.target_met ?? 3;
           const metCount = numericEntries.filter(e => parseFloat(e.value) === 100).length;
-          avgFormatted = `${metCount} of ${numericEntries.length} met`;
-        } else if (obsCat === 'prompt_count') {
+          const total = numericEntries.length;
+          let rollingColor = '#6b7280';
+          if (total > 0) {
+            const diff = metCount - targetMet;
+            if (diff >= 0) rollingColor = '#22c55e';
+            else if (diff >= -1) rollingColor = '#f59e0b';
+            else rollingColor = '#ef4444';
+          }
+          avgFormatted = `<span style="color:${rollingColor}">${metCount} of ${total} met</span>`;
+          avgIsHtml = true;
+        } else if (obsCatForCard === 'prompt_count') {
           const avgPc = numericEntries.length > 0
             ? numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length
             : null;
@@ -1507,11 +1552,26 @@
       const rows = sorted.map(e => {
         const val = isObs ? formatObservationValue(e, goal) : formatProgressValue(e.value, goal.measurement_type);
         const dt = formatDate(e.date);
-        return `<tr><td style="padding:2px 8px 2px 0;font-size:12px;">${escapeHtml(dt)}</td><td style="padding:2px 0;font-size:12px;">${escapeHtml(val)}</td></tr>`;
+        let obsIcon = '';
+        if (isObs) {
+          const parsedEntry = parseObservationNotes(e.notes);
+          if (obsCatForCard === 'session_outcome' && parsedEntry) {
+            if (parsedEntry.rawData === 'met') obsIcon = OBS_HIST_CHECK;
+            else if (parsedEntry.rawData === 'not_met') obsIcon = OBS_HIST_X;
+          } else if (obsCatForCard === 'tally') {
+            obsIcon = OBS_HIST_HASH;
+          } else if (obsCatForCard === 'prompt_count') {
+            obsIcon = OBS_HIST_ALERT;
+          } else if (obsCatForCard === 'behavior_checklist') {
+            obsIcon = OBS_HIST_LIST;
+          }
+        }
+        return `<tr><td style="padding:2px 8px 2px 0;font-size:12px;">${escapeHtml(dt)}</td><td style="padding:2px 0;font-size:12px;">${obsIcon}${escapeHtml(val)}</td></tr>`;
       }).join('');
+      const avgDisplay = avgIsHtml ? avgFormatted : escapeHtml(avgFormatted);
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
-          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${escapeHtml(avgFormatted)}</div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${avgDisplay}</div>
           <table style="border-collapse:collapse;width:100%;">
             <thead><tr><th style="text-align:left;font-size:11px;opacity:0.7;padding:0 8px 2px 0;">Date</th><th style="text-align:left;font-size:11px;opacity:0.7;">Value</th></tr></thead>
             <tbody>${rows}</tbody>
@@ -1520,22 +1580,38 @@
       progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" aria-expanded="false" style="margin-left:auto;">📈 View Data</button>`;
     }
 
+    // Empty state for observation goals with no data
+    let obsEmptyState = '';
+    if (isObs && quarterProgress.length === 0) {
+      const periods = goal.observation_config?.class_periods;
+      let periodDisplay = '';
+      if (Array.isArray(periods) && periods.length > 0) {
+        const periodBadges = periods.map(p =>
+          `<span style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.2);border-radius:4px;padding:1px 6px;font-size:11px;margin-left:3px;">${escapeHtml(p)}</span>`
+        ).join('');
+        periodDisplay = ' during' + periodBadges;
+      }
+      obsEmptyState = `<div style="font-size:12px;color:#6b7280;padding:6px 0;font-style:italic;">No observations recorded — data will be collected${periodDisplay}</div>`;
+    }
+
     // Determine if this card should be collapsed
     const isExpanded = expandMode === 'all' || expandedGoalCards.has(goal.id);
     const collapsedClass = isExpanded ? '' : 'collapsed';
 
     // Build observation category badge (shown when measurement_type === 'Observation')
     let obsBadgeHtml = '';
-    if (goal.measurement_type === 'Observation' && goal.observation_config?.category) {
+    if (isObs && goal.observation_config?.category) {
       const catLabel = escapeHtml(obsCategoryLabel(goal.observation_config.category));
       const itemSuffix = goal.observation_config.category === 'behavior_checklist' && Array.isArray(goal.observation_config.sub_behaviors)
         ? ` · ${goal.observation_config.sub_behaviors.length} items`
         : '';
-      obsBadgeHtml = `<span class="st-badge" style="background:#e0e7ff;color:#3730a3;margin-left:4px;">${catLabel}${itemSuffix}</span>`;
+      obsBadgeHtml = `<span class="st-badge" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.25);border-radius:6px;padding:2px 8px;font-size:11px;margin-left:4px;">${catLabel}${itemSuffix}</span>`;
     }
-    
+
+    const obsCardStyle = isObs ? ' style="border-left: 3px solid var(--rc-accent, #6366f1);"' : '';
+
     return `
-      <div class="st-goal-card ${collapsedClass}" data-goal-id="${goal.id}" data-area="${colorCategory}">
+      <div class="st-goal-card ${collapsedClass}"${obsCardStyle} data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
           <div class="st-goal-title-line">
             <span class="st-goal-icon">${icon}</span>
@@ -1572,6 +1648,7 @@
             ${progressToggleBtn ? `<div class="st-data-status-item" style="margin-left:auto;">${progressToggleBtn}</div>` : ''}
           </div>
           ${progressDetailHtml}
+          ${obsEmptyState}
         </div>
         <div class="st-goal-meta">
           <div class="st-goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
@@ -2767,7 +2844,12 @@
 
       // Show success message
       showToast(`Data saved for ${goal.code}`);
-      
+
+      // Show inline obs toast before re-render
+      if (goal.measurement_type === 'Observation') {
+        showObsToast(card, 'Observation data saved', false);
+      }
+
       // Reset state
       enteringDataGoalId = null;
       
@@ -2778,6 +2860,9 @@
       }
     } catch (error) {
       console.error('[tc-students] Error saving progress data:', error);
+      if (goal && goal.measurement_type === 'Observation') {
+        showObsToast(card, 'Save failed — data stored locally', true);
+      }
       await rcAlert('Error', 'Failed to save progress data');
     }
   }

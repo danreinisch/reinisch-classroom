@@ -320,6 +320,9 @@
     const entries = getGoalProgressEntries(goal.code, studentCode);
     
     if (entries.length === 0) {
+      if (goal.measurement_type === 'Observation') {
+        return `<div style="padding: 10px; font-size: 13px; color: #6b7280;">No observation data recorded yet. Data will appear here after you record observations using the end-of-period pop-up or the inline form on the Students page.</div>`;
+      }
       return `<div style="padding: 10px; opacity: 0.7; font-size: 13px;">No data points recorded for this quarter.</div>`;
     }
     
