@@ -372,12 +372,6 @@
       btnExportAll.addEventListener("click", (e) => { e.stopPropagation(); bDrafts.forEach(d => exportOne(d.id)); });
       tdBatchActions.appendChild(btnExportAll);
 
-      const btnDelAll = document.createElement("button");
-      btnDelAll.type = "button"; btnDelAll.className = "work-btn danger"; btnDelAll.style.marginLeft = "8px"; btnDelAll.title = "Delete all in batch";
-      btnDelAll.innerHTML = SVG_DEL + " Delete All"; // SAFETY: static SVG + static text
-      btnDelAll.addEventListener("click", (e) => { e.stopPropagation(); deleteAllInBatch(batchId); });
-      tdBatchActions.appendChild(btnDelAll);
-
       trBatch.appendChild(tdBatchActions);
       tbody.appendChild(trBatch);
 
