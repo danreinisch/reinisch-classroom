@@ -3156,6 +3156,12 @@
               return;
             }
             
+            // Phase 1: Require a mapping file for HTML assignments when flag is on
+            if (getFeatureFlag('assignmentMappingV1') && (!currentMapping || !currentMapping.valid)) {
+              addNotif('HTML assignments require a mapping file for reporting', { type: 'error' });
+              return;
+            }
+            
             addNotif('Processing HTML file...', { type: 'info' });
             
             // Read file content
@@ -3226,6 +3232,12 @@
             
             if (!htmlUrl) {
               addNotif('Please enter an HTML URL', { type: 'error' });
+              return;
+            }
+
+            // Phase 1: Require a mapping file for HTML assignments when flag is on
+            if (getFeatureFlag('assignmentMappingV1') && (!currentMapping || !currentMapping.valid)) {
+              addNotif('HTML assignments require a mapping file for reporting', { type: 'error' });
               return;
             }
             

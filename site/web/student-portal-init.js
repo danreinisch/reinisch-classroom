@@ -46,6 +46,9 @@
   // Remains null if the module cannot be loaded; calendar quarters are used as fallback.
   let quarterUtils = null;
 
+  // Cleanup function returned by initHtmlAssignmentBridge(); called in closeAssignmentViewer().
+  let htmlBridgeCleanup = null;
+
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
   // ============================================================================
@@ -1118,11 +1121,15 @@
     
     panel.querySelector('#panelBackBtn').addEventListener('click', closeAssignmentViewer);
     panel.querySelector('#panelCloseBtn').addEventListener('click', closeAssignmentViewer);
-  }
 
-  /**
-   * Render structured assignment with days/questions/writing prompts
-   */
+    // Initialise the postMessage bridge so the iframe can submit answers
+    const studentCode = sessionStorage.getItem('rc_user_code');
+    import('/web/html-assignment-bridge.js').then(({ initHtmlAssignmentBridge }) => {
+      htmlBridgeCleanup = initHtmlAssignmentBridge(instance.id, studentCode);
+    }).catch(err => {
+      console.warn(LOG_PREFIX, 'Could not load html-assignment-bridge:', err);
+    });
+  }
   function renderStructuredAssignment(panel, instance) {
     const assignment = instance.assignment || {};
     const meta = assignment.meta || {};
@@ -2233,6 +2240,12 @@
    * Close the assignment viewer
    */
   function closeAssignmentViewer() {
+    // Remove the HTML assignment postMessage bridge if one is active
+    if (htmlBridgeCleanup) {
+      htmlBridgeCleanup();
+      htmlBridgeCleanup = null;
+    }
+
     const panel = document.getElementById('assignmentPanel');
     const backdrop = document.getElementById('assignmentPanelBackdrop');
     
