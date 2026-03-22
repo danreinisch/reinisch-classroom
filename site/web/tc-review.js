@@ -571,6 +571,28 @@
         });
       }
     }
+    // Fallback: HTML manifest format — meta.questions is a flat array from detectQuestionsFromHTML
+    if (items.length === 0 && meta.questions && Array.isArray(meta.questions) && meta.questions.length > 0) {
+      for (var i = 0; i < meta.questions.length; i++) {
+        var q = meta.questions[i];
+        var qRef = q.q_ref || ('Q' + (i + 1));
+        items.push({
+          id: SYNTHETIC_ID_PREFIX + qRef,
+          assignment_id: assignmentId,
+          item_ref: qRef,
+          answer_type: q.answer_type || 'constructed',
+          points: (typeof q.points === 'number') ? q.points : 1,
+          correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
+          meta: {
+            question_number: qRef,
+            text: q.label || '',
+            correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
+          },
+          goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
+          dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
+        });
+      }
+    }
     return items;
   }
 
