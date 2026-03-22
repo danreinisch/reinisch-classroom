@@ -16,6 +16,7 @@
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getCurrentQuarter, getQuarterDateRange } = await import("/web/quarter-utils.js");
   const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
+  const { getSchedule } = await import("/web/class-schedule.js");
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -66,7 +67,7 @@
    * available in all adapter implementations; guard with existence checks.
    */
   async function loadAllData() {
-    const [students, submissions, goals, instances, assignments, progress, events] =
+    const [students, submissions, goals, instances, assignments, progress, events, schedule] =
       await Promise.all([
         db.listStudents(),
         db.listSubmissions ? db.listSubmissions({}) : Promise.resolve([]),
@@ -75,14 +76,15 @@
         db.listAssignments(),
         db.listGoalProgress ? db.listGoalProgress({}) : Promise.resolve([]),
         db.listEvents ? db.listEvents() : Promise.resolve([]),
+        getSchedule().catch(() => ({ periods: [], schoolDays: [1, 2, 3, 4, 5], passingMinutes: 4 })),
       ]);
-    return { students, submissions, goals, instances, assignments, progress, events };
+    return { students, submissions, goals, instances, assignments, progress, events, schedule };
   }
 
   /**
    * Load and display KPIs (uses pre-fetched data bundle)
    */
-  function renderKPIs({ students, submissions, goals, instances, progress }) {
+  function renderKPIs({ students, submissions, goals, instances, progress, schedule }) {
     const currentQuarter = getCurrentQuarter();
     const quarterRange = getQuarterDateRange(currentQuarter);
 
@@ -169,6 +171,52 @@
     if (kpiGoalsSub)
       kpiGoalsSub.textContent =
         activeGoals.length > 0 ? `Avg across ${activeGoals.length} goal${activeGoals.length !== 1 ? "s" : ""}` : "";
+
+    // 5. Observation Coverage KPI — % of observation goals with data in last 5 school days
+    const kpiObsCoverageCard = $("kpiObsCoverageCard");
+    const kpiObsCoverage = $("kpiObsCoverage");
+    const kpiObsCoverageSub = $("kpiObsCoverageSub");
+
+    if (kpiObsCoverageCard) {
+      const obsGoals = activeGoals.filter(g => g.measurement_type === 'Observation');
+      if (obsGoals.length === 0) {
+        kpiObsCoverageCard.style.display = 'none';
+      } else {
+        kpiObsCoverageCard.style.display = '';
+        const schoolDayNums = (schedule && schedule.schoolDays) ? schedule.schoolDays : [1, 2, 3, 4, 5];
+        const last5Days = [];
+        const iterDate = new Date();
+        iterDate.setHours(0, 0, 0, 0);
+        while (last5Days.length < 5) {
+          if (schoolDayNums.includes(iterDate.getDay())) {
+            last5Days.unshift(formatDateYMD(iterDate));
+          }
+          iterDate.setDate(iterDate.getDate() - 1);
+        }
+        const startDate = last5Days[0];
+
+        let obsWithData = 0;
+        for (const goal of obsGoals) {
+          const hasData = progress.some(p =>
+            p.goal_code === goal.code &&
+            p.student_code === goal.student_code &&
+            p.date >= startDate
+          );
+          if (hasData) obsWithData++;
+        }
+
+        const coveragePct = Math.round((obsWithData / obsGoals.length) * 100);
+        const coverageColor = coveragePct >= 80 ? '#22c55e' : coveragePct >= 50 ? '#eab308' : '#ef4444';
+
+        if (kpiObsCoverage) {
+          kpiObsCoverage.textContent = `${coveragePct}%`;
+          kpiObsCoverage.style.color = coverageColor;
+        }
+        if (kpiObsCoverageSub) {
+          kpiObsCoverageSub.textContent = `${obsWithData} of ${obsGoals.length} goal${obsGoals.length !== 1 ? 's' : ''}`;
+        }
+      }
+    }
 
     console.log("[tc-overview] KPIs rendered:", {
       activeStudents,
