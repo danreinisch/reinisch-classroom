@@ -1,6 +1,6 @@
-// Admin action: clear all assignment data from Supabase
+// Admin diagnostic: returns assignment data counts from Supabase
 // GET  /.netlify/functions/admin-clear-assignments  → returns counts (no deletion)
-// POST /.netlify/functions/admin-clear-assignments  → deletes everything
+// POST /.netlify/functions/admin-clear-assignments  → disabled (returns 403); repurpose for Close School Year workflow when needed
 // Auth: Requires teacher/admin session cookie
 
 const {
@@ -113,44 +113,13 @@ exports.handler = async (event) => {
     }
   }
 
-  // POST: delete everything
-  console.log(`[admin-clear-assignments] [${requestId}] Authorized user: ${user}`);
-
-  try {
-    // Delete in child-first order to respect foreign key constraints
-    const submissionsDeleted = await deleteFrom('submissions');
-    console.log(`[admin-clear-assignments] [${requestId}] Deleted ${submissionsDeleted} submissions`);
-
-    const instancesDeleted = await deleteFrom('assignment_instances');
-    console.log(`[admin-clear-assignments] [${requestId}] Deleted ${instancesDeleted} assignment_instances`);
-
-    const assignmentsDeleted = await deleteFrom('assignments');
-    console.log(`[admin-clear-assignments] [${requestId}] Deleted ${assignmentsDeleted} assignments`);
-
-    console.log(`[admin-clear-assignments] [${requestId}] Clear complete by ${user}`);
-
-    return jsonResponse(
-      event,
-      200,
-      {
-        ok: true,
-        deleted: {
-          submissions: submissionsDeleted,
-          assignment_instances: instancesDeleted,
-          assignments: assignmentsDeleted,
-        },
-      },
-      { 'Cache-Control': 'no-store' },
-      requestId
-    );
-  } catch (err) {
-    console.error(`[admin-clear-assignments] [${requestId}] Error:`, err);
-    return jsonResponse(
-      event,
-      500,
-      { ok: false, error: String(err?.message || err) },
-      { 'Cache-Control': 'no-store' },
-      requestId
-    );
-  }
+  // POST: disabled in production — use the Close School Year workflow instead
+  console.log(`[admin-clear-assignments] [${requestId}] POST attempt by ${user} — rejected (disabled in production)`);
+  return jsonResponse(
+    event,
+    403,
+    { ok: false, error: 'Destructive bulk delete is disabled in production. Use the Close School Year workflow instead.' },
+    { 'Cache-Control': 'no-store' },
+    requestId
+  );
 };
