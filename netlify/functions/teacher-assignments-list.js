@@ -1,7 +1,14 @@
 // Teacher assignments list endpoint
 // GET /.netlify/functions/teacher-assignments-list
 // Auth: Requires teacher session cookie
-// Returns: List of assignments with fields for issuing dropdown
+// Returns: List of assignments with fields for issuing dropdown (filtered to current school year)
+
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 const {
   generateRequestId,
   jsonResponse,
@@ -57,8 +64,9 @@ exports.handler = async (event) => {
   console.log(`[teacher-assignments-list] [${requestId}] Authorized user: ${authResult.user.username}`);
 
   try {
-    // Query assignments table with fields needed for issuing dropdown
-    const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,title,type,series,page,created_at&order=created_at.desc`;
+    // Query assignments table with fields needed for issuing dropdown, filtered to current school year
+    const currentYear = getCurrentSchoolYear();
+    const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,title,type,series,page,created_at,school_year&or=(school_year.eq.${currentYear},school_year.is.null)&order=created_at.desc`;
     
     console.log(`[teacher-assignments-list] [${requestId}] Fetching assignments`);
     
