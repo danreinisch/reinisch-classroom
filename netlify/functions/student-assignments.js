@@ -14,6 +14,12 @@ const {
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-assignments] [${requestId}] Request received`);
@@ -95,7 +101,8 @@ exports.handler = async (event) => {
     const studentId = student.id;
 
     // Fetch assignment instances for this student with joined assignment data
-    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,resubmission_count,assignments!inner(id,title,type,series,page,hero,meta)&student_id=eq.${studentId}&order=assigned_at.desc`;
+    const schoolYear = getCurrentSchoolYear();
+    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,resubmission_count,school_year,assignments!inner(id,title,type,series,page,hero,meta)&student_id=eq.${studentId}&or=(school_year.eq.${schoolYear},school_year.is.null)&order=assigned_at.desc`;
     
     console.log(`[student-assignments] [${requestId}] Fetching assignment instances for student ID:`, studentId);
     
@@ -126,6 +133,7 @@ exports.handler = async (event) => {
       status: inst.status,
       settings: inst.settings || {},
       resubmission_count: inst.resubmission_count || 0,
+      school_year: inst.school_year,
       assignment: inst.assignments
     }));
     

@@ -14,6 +14,12 @@ const {
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-submissions] [${requestId}] Request received`);
@@ -97,7 +103,8 @@ exports.handler = async (event) => {
     // The assignment_instances!inner join ensures we only return submissions that belong
     // to this student (via student_id), and the nested assignments+classes joins provide
     // the title/class_name needed by renderGradeRow() in student-portal-init.js.
-    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id,assignments(id,title,section,classes(name)))&assignment_instances.student_id=eq.${studentId}&order=submitted_at.desc`;
+    const schoolYear = getCurrentSchoolYear();
+    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id,assignments(id,title,section,classes(name)))&assignment_instances.student_id=eq.${studentId}&or=(school_year.eq.${schoolYear},school_year.is.null)&order=submitted_at.desc`;
     
     console.log(`[student-submissions] [${requestId}] Fetching submissions for student ID:`, studentId);
     
