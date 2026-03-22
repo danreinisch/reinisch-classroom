@@ -34,6 +34,17 @@ const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig(
 const { SESSION_SECRET } = process.env;
 
 /**
+ * Returns the starting calendar year of the current school year.
+ * Aug–Dec → current year; Jan–Jul → current year - 1.
+ * @returns {number}
+ */
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+/**
  * Parse TXT assignment content into structured JSON metadata
  * Extracts class-specific content, day groups, questions, and writing prompts
  * Strips DESE Standard(s) and IEP Goal Code(s) lines (teacher-only data)
@@ -735,7 +746,8 @@ exports.handler = async (event) => {
         description: draft.notes || null,
         class_id: targetClass.id,
         active: true,
-        meta: parsedMeta || {}
+        meta: parsedMeta || {},
+        school_year: getCurrentSchoolYear()
       };
 
       console.log(`[teacher-issue-draft] [${requestId}] Creating new assignment record`);
@@ -981,6 +993,7 @@ exports.handler = async (event) => {
           due_at: dueAt || null,
           status: 'Assigned',
           settings: {},
+          school_year: getCurrentSchoolYear(),
         }));
 
         // Use upsert with resolution=merge-duplicates for idempotency
