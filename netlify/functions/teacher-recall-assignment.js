@@ -206,6 +206,7 @@ exports.handler = async (event) => {
         type: assignmentMeta.type || null,
         series: assignmentMeta.series || null,
         meta: assignmentMeta.meta || null,
+        category: assignmentMeta.meta?.category || null,
         recalled_at: new Date().toISOString(),
         recalled_by: authResult.user.username,
         school_year: assignmentMeta.school_year || getCurrentSchoolYear(),

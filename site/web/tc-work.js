@@ -1838,18 +1838,53 @@
       return false;
     }
 
-    const confirmed = await rcConfirm(
-      "Recall Assignment",
-      "This will remove the assignment from all students who received it. Submissions will be deleted. Continue?",
-      "Recall",
-      { danger: true }
-    );
-    if (!confirmed) return false;
+    const reason = await new Promise((resolve) => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'rc-modal-backdrop';
+      const reasonInputId = 'recallReasonInput_' + Date.now();
+      backdrop.innerHTML = `
+        <div class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="rc-recall-title">
+          <div class="rc-modal-title" id="rc-recall-title">Recall Assignment</div>
+          <div class="rc-modal-message">This will remove the assignment from all students who received it. Submissions will be deleted.</div>
+          <div style="margin:12px 0 4px;">
+            <label for="${reasonInputId}" style="display:block;font-size:12px;margin-bottom:6px;color:rgba(255,255,255,.6);">Reason (optional)</label>
+            <input id="${reasonInputId}" type="text" maxlength="255" placeholder="e.g. Needs revision…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#fff;font-size:13px;padding:7px 10px;outline:none;">
+          </div>
+          <div class="rc-modal-actions">
+            <button class="rc-modal-btn" id="rcRecallCancelBtn">Cancel</button>
+            <button class="rc-modal-btn rc-modal-btn-danger" id="rcRecallConfirmBtn">Recall</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
 
-    return _doRecallDraft(draftId, draft);
+      const confirmBtn = backdrop.querySelector('#rcRecallConfirmBtn');
+      const cancelBtn = backdrop.querySelector('#rcRecallCancelBtn');
+      const reasonInput = backdrop.querySelector(`#${reasonInputId}`);
+      reasonInput.addEventListener('focus', () => { reasonInput.style.borderColor = 'rgba(96,165,250,.6)'; reasonInput.style.boxShadow = '0 0 0 2px rgba(96,165,250,.2)'; });
+      reasonInput.addEventListener('blur', () => { reasonInput.style.borderColor = 'rgba(255,255,255,.18)'; reasonInput.style.boxShadow = 'none'; });
+      reasonInput.focus();
+
+      const cleanup = (confirmed) => {
+        const val = reasonInput.value.trim() || null;
+        backdrop.remove();
+        resolve(confirmed ? val : undefined);
+      };
+
+      confirmBtn.addEventListener('click', () => cleanup(true));
+      cancelBtn.addEventListener('click', () => cleanup(false));
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) cleanup(false); });
+      backdrop.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); cleanup(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); cleanup(false); }
+      });
+    });
+    if (reason === undefined) return false; // cancelled
+
+    return _doRecallDraft(draftId, draft, reason);
   }
 
-  async function _doRecallDraft(draftId, draft) {
+  async function _doRecallDraft(draftId, draft, reason) {
     setMsg("ok", `Recalling "${draft.title}"…`);
 
     try {
@@ -1857,7 +1892,7 @@
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignment_id: draft.assignmentId })
+        body: JSON.stringify({ assignment_id: draft.assignmentId, reason: reason || undefined })
       });
 
       if (!response.ok) {
