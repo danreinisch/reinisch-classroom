@@ -15,6 +15,17 @@ const store = {
 const DATA_ADAPTER_DEBUG = localStorage.getItem('rc_debug_data_adapter') === 'true';
 
 /**
+ * Returns the starting calendar year of the current school year.
+ * Aug–Dec → current year; Jan–Jul → current year - 1.
+ * @returns {number}
+ */
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+/**
  * Robust detection for schema-related errors from Supabase/PostgREST
  * Checks for various error conditions that indicate missing columns or tables
  * @param {Error} error - The error object to check
@@ -910,6 +921,7 @@ const local = {
       value: parseFloat(value),
       source,
       collected_by,
+      school_year: getCurrentSchoolYear(),
       created_at: new Date().toISOString()
     };
     
@@ -2631,7 +2643,8 @@ const remote = {
           date,
           value: safeValue,
           source,
-          collected_by
+          collected_by,
+          school_year: getCurrentSchoolYear()
         })
         .select()
         .single();

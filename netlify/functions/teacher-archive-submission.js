@@ -17,6 +17,12 @@ const { getSupabaseConfig } = require('./_lib/supa');
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 async function supaFetch(path, init = {}) {
   const res = await fetch(`${SUPABASE_URL}${path}`, {
     ...init,
@@ -67,7 +73,7 @@ exports.handler = async function (event) {
   try {
     // 1. Fetch the submission
     const subRes = await supaFetch(
-      `/rest/v1/submissions?id=eq.${encodeURIComponent(submission_id)}&select=id,instance_id,answers,score_auto,score_manual,score_total,feedback,submitted_at,review_status`
+      `/rest/v1/submissions?id=eq.${encodeURIComponent(submission_id)}&select=id,instance_id,answers,score_auto,score_manual,score_total,feedback,submitted_at,review_status,school_year`
     );
     if (!subRes.ok || !Array.isArray(subRes.data) || subRes.data.length === 0) {
       return jsonResponse(event, 404, { error: 'Submission not found' }, {}, requestId);
@@ -156,6 +162,7 @@ exports.handler = async function (event) {
       submitted_at: submission.submitted_at,
       reviewed_at: new Date().toISOString(),
       archived_at: new Date().toISOString(),
+      school_year: submission.school_year || getCurrentSchoolYear(),
     };
 
     // 8. Insert into submission_archives

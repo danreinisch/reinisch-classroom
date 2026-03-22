@@ -2,6 +2,12 @@
 // Body: { assignment_id, student_name, content?, content_url? }
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
 
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -28,7 +34,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const payload = [{ assignment_id, student_name, content: content || null, content_url: content_url || null }];
+    const payload = [{ assignment_id, student_name, content: content || null, content_url: content_url || null, school_year: getCurrentSchoolYear() }];
     const url = `${SUPABASE_URL}/rest/v1/submissions`;
     const res = await fetch(url, {
       method: 'POST',

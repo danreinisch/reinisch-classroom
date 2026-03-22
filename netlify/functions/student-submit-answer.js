@@ -17,6 +17,12 @@ const { getSupabaseConfig } = require('./_lib/supa');
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-submit-answer] [${requestId}] Request received`);
@@ -242,7 +248,8 @@ exports.handler = async (event) => {
           body: JSON.stringify({
             instance_id: instance_id,
             answers: updatedSettings.answers || answers || {},
-            submitted_at: new Date().toISOString()
+            submitted_at: new Date().toISOString(),
+            school_year: getCurrentSchoolYear()
           })
         });
 
