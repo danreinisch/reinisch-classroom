@@ -823,6 +823,8 @@
     const result = await submitToSupabase(day, correct, total, answerDetails);
 
     // Offer retry if score ≤ 60%
+    // Note: this standalone quiz doesn't load rc-modal.js, so we use the browser's
+    // built-in confirm() dialog here instead of rcConfirm().
     if (percentCorrect <= 60) {
       const wantRetry = confirm(
         `You scored ${percentCorrect}% (${correct}/${total} correct).\n\nWould you like to try again? Your correct answers will be locked — only your incorrect answers can be changed.`

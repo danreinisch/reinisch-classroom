@@ -1255,9 +1255,9 @@
       const choicesHtml = choices.map(choice => {
         const isChecked = savedAnswer === choice.letter ? 'checked' : '';
         const disabledAttr = (isReadOnly || isLocked) ? 'disabled' : '';
-        // In retry mode, mark the correct (selected) choice of a locked question
-        const isCorrectLockedChoice = isLocked && savedAnswer === choice.letter;
-        const choiceClass = isCorrectLockedChoice ? 'locked-correct' : (isLocked ? 'locked-disabled' : '');
+        // In retry mode, mark the selected choice of a locked question with the locked-correct style
+        const isSelectedLockedChoice = isLocked && savedAnswer === choice.letter;
+        const choiceClass = isSelectedLockedChoice ? 'locked-correct' : (isLocked ? 'locked-disabled' : '');
         return `
           <div class="st-choice ${choiceClass}" data-question-id="${questionId}" data-letter="${choice.letter}">
             <input type="radio" name="q_${questionId}" id="q_${questionId}_${choice.letter}" value="${choice.letter}" ${isChecked} ${disabledAttr}>
@@ -1463,7 +1463,7 @@
           const wantRetry = await rcConfirm(
             'Try Again?',
             `You scored ${Math.round(scoreTotal)}%. Would you like to retry the questions you got wrong? Your correct answers will be locked.`,
-            'Try Again'
+            'Retry Incorrect Answers'
           );
           if (wantRetry) {
             // Enter (or update) retry mode
