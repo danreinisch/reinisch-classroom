@@ -54,7 +54,7 @@ exports.handler = async (event) => {
   try {
     const currentYear = getCurrentSchoolYear();
     // Filter by current school year (allow null rows as fallback, matching PR 5 pattern)
-    const recallUrl = `${SUPABASE_URL}/rest/v1/recall_library?select=id,assignment_id,title,type,series,meta,recalled_at,recalled_by,school_year,reason,created_at&or=(school_year.eq.${currentYear},school_year.is.null)&order=recalled_at.desc`;
+    const recallUrl = `${SUPABASE_URL}/rest/v1/recall_library?select=id,assignment_id,title,type,series,meta,recalled_at,recalled_by,school_year,reason,category,created_at&or=(school_year.eq.${currentYear},school_year.is.null)&order=recalled_at.desc`;
 
     console.log(`[teacher-recall-library-list] [${requestId}] Fetching recall library entries for school_year=${currentYear}`);
 

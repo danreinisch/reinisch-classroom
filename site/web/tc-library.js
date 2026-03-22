@@ -319,6 +319,12 @@
   let lessonsData = null;
   let syncStatus = "loading";
 
+  // Recall Library state
+  let _recallLibraryEntries = null;
+  let _recallLibraryLoading = false;
+  let _recallCategoryFilter = 'All';
+  let _recallSearchQuery = '';
+
   // Evidence report modal — student data loaded lazily
   let _evidenceStudentsData = null;
 
@@ -405,6 +411,16 @@
     lessonsBtn.appendChild(document.createTextNode(' Lessons'));
     tabsContainer.appendChild(lessonsBtn);
 
+    const recallLibBtn = document.createElement('button');
+    recallLibBtn.className = 'tc-btn tc-lib-tab-btn';
+    recallLibBtn.dataset.tab = 'recallLibrary';
+    recallLibBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    recallLibBtn.setAttribute('role', 'tab');
+    recallLibBtn.setAttribute('aria-selected', 'false');
+    recallLibBtn.appendChild(createIcon('refreshCw'));
+    recallLibBtn.appendChild(document.createTextNode(' Recall Library'));
+    tabsContainer.appendChild(recallLibBtn);
+
     const spacer = document.createElement('div');
     spacer.style.cssText = 'flex:1;';
     tabsContainer.appendChild(spacer);
@@ -450,8 +466,14 @@
     lessonsTab.className = 'tc-lib-tab-content';
     lessonsTab.setAttribute('role', 'tabpanel');
     lessonsTab.style.display = 'none';
+    const recallLibraryTab = document.createElement('div');
+    recallLibraryTab.id = 'recallLibraryTab';
+    recallLibraryTab.className = 'tc-lib-tab-content';
+    recallLibraryTab.setAttribute('role', 'tabpanel');
+    recallLibraryTab.style.display = 'none';
     main.appendChild(assignmentsTab);
     main.appendChild(lessonsTab);
+    main.appendChild(recallLibraryTab);
   }
 
   function switchTab(tabName) {
@@ -463,14 +485,16 @@
     });
     const assignmentsTab = $("assignmentsTab");
     const lessonsTab = $("lessonsTab");
-    if (assignmentsTab && lessonsTab) {
-      assignmentsTab.style.display = tabName === "assignments" ? "block" : "none";
-      lessonsTab.style.display = tabName === "lessons" ? "block" : "none";
-    }
+    const recallLibraryTab = $("recallLibraryTab");
+    if (assignmentsTab) assignmentsTab.style.display = tabName === "assignments" ? "block" : "none";
+    if (lessonsTab) lessonsTab.style.display = tabName === "lessons" ? "block" : "none";
+    if (recallLibraryTab) recallLibraryTab.style.display = tabName === "recallLibrary" ? "block" : "none";
     if (tabName === "assignments") {
       renderAssignmentsTab();
     } else if (tabName === "lessons") {
       renderLessonsTab();
+    } else if (tabName === "recallLibrary") {
+      renderRecallLibraryTab();
     }
   }
 
@@ -558,6 +582,216 @@
       } catch (_) { /* meta string is not valid JSON */ }
     }
     return 'Uncategorized';
+  }
+
+  // ── Recall Library ────────────────────────────────────────────────────────────
+
+  async function loadRecallLibrary() {
+    if (_recallLibraryLoading) return;
+    _recallLibraryLoading = true;
+    console.log("[tc-library] Loading recall library...");
+    try {
+      const response = await fetch('/.netlify/functions/teacher-recall-library-list', {
+        credentials: 'same-origin',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        _recallLibraryEntries = Array.isArray(data.entries) ? data.entries : [];
+        console.log(`[tc-library] Loaded ${_recallLibraryEntries.length} recall library entries`);
+      } else {
+        console.warn("[tc-library] Failed to load recall library:", response.status);
+        _recallLibraryEntries = [];
+      }
+    } catch (err) {
+      console.error("[tc-library] Error loading recall library:", err);
+      _recallLibraryEntries = [];
+    } finally {
+      _recallLibraryLoading = false;
+    }
+  }
+
+  async function renderRecallLibraryTab() {
+    const container = $("recallLibraryTab");
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Show shimmer while loading
+    if (_recallLibraryEntries === null) {
+      const shimmerWrap = document.createElement('div');
+      shimmerWrap.style.cssText = 'display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:16px; padding:8px 0;';
+      for (let i = 0; i < 4; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'tc-lib-shimmer';
+        cell.style.cssText = 'height:160px; border-radius:10px;';
+        shimmerWrap.appendChild(cell);
+      }
+      container.appendChild(shimmerWrap);
+
+      await loadRecallLibrary();
+      container.innerHTML = '';
+    }
+
+    const entries = _recallLibraryEntries || [];
+
+    // Toolbar: search + category filter
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:16px;';
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search by title…';
+    searchInput.value = _recallSearchQuery;
+    searchInput.style.cssText = 'background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:#fff; font-size:13px; padding:7px 12px; outline:none; flex:1; min-width:180px; max-width:300px;';
+    searchInput.addEventListener('input', () => {
+      _recallSearchQuery = searchInput.value;
+      _renderRecallCards(container, entries, filterBar);
+    });
+    toolbar.appendChild(searchInput);
+
+    const filterBar = document.createElement('div');
+    filterBar.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; align-items:center;';
+    _buildRecallCategoryFilter(filterBar, entries, container);
+    toolbar.appendChild(filterBar);
+
+    container.appendChild(toolbar);
+
+    // Cards area
+    const cardsArea = document.createElement('div');
+    cardsArea.id = 'recallCardsArea';
+    container.appendChild(cardsArea);
+
+    _renderRecallCards(cardsArea, entries, filterBar);
+  }
+
+  function _buildRecallCategoryFilter(filterBar, entries, container) {
+    filterBar.innerHTML = '';
+    const uniqueCategories = Array.from(new Set(entries.map(e => e.category || 'Uncategorized')));
+    const cats = ['All', ...uniqueCategories];
+    cats.forEach(cat => {
+      const pill = document.createElement('button');
+      pill.className = 'tc-btn';
+      pill.style.cssText = 'font-size:12px; padding:4px 10px; border-radius:20px;';
+      if (cat === _recallCategoryFilter) pill.classList.add('active');
+      pill.textContent = cat;
+      pill.addEventListener('click', () => {
+        _recallCategoryFilter = cat;
+        const cardsArea = $('recallCardsArea');
+        if (cardsArea) _renderRecallCards(cardsArea, entries, filterBar);
+        _buildRecallCategoryFilter(filterBar, entries, container);
+      });
+      filterBar.appendChild(pill);
+    });
+  }
+
+  function _renderRecallCards(cardsArea, entries, filterBar) {
+    cardsArea.innerHTML = '';
+
+    const query = _recallSearchQuery.toLowerCase();
+    const filtered = entries.filter(e => {
+      const matchCat = _recallCategoryFilter === 'All' || (e.category || 'Uncategorized') === _recallCategoryFilter;
+      const matchSearch = !query || (e.title || '').toLowerCase().includes(query);
+      return matchCat && matchSearch;
+    });
+
+    if (filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'text-align:center; padding:48px 24px; color:rgba(255,255,255,.45); font-size:14px;';
+      if (entries.length === 0) {
+        empty.textContent = 'No recalled assignments yet. When you recall an assignment from the Work tab, it will appear here.';
+      } else {
+        empty.textContent = 'No recalled assignments match your current filter.';
+      }
+      cardsArea.appendChild(empty);
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:16px;';
+
+    filtered.forEach(entry => {
+      grid.appendChild(_renderRecallCard(entry));
+    });
+
+    cardsArea.appendChild(grid);
+  }
+
+  function _renderRecallCard(entry) {
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding:16px; border-left:4px solid #f59e0b; display:flex; flex-direction:column; gap:8px;';
+
+    // Title
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-size:15px; font-weight:600; color:#fff; line-height:1.3;';
+    titleEl.textContent = entry.title || '(Untitled)';
+    card.appendChild(titleEl);
+
+    // Badges row
+    const badgesRow = document.createElement('div');
+    badgesRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; align-items:center;';
+
+    const category = entry.category || 'Uncategorized';
+    badgesRow.appendChild(renderCategoryBadge(category));
+
+    if (entry.type) {
+      const typeBadge = document.createElement('span');
+      typeBadge.style.cssText = 'background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); padding:3px 10px; border-radius:12px; font-size:11px; white-space:nowrap;';
+      typeBadge.textContent = entry.type;
+      badgesRow.appendChild(typeBadge);
+    }
+
+    card.appendChild(badgesRow);
+
+    // Series
+    if (entry.series) {
+      const seriesEl = document.createElement('div');
+      seriesEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.5);';
+      seriesEl.textContent = 'Series: ' + entry.series;
+      card.appendChild(seriesEl);
+    }
+
+    // Meta row: recalled date + recalled by
+    const metaRow = document.createElement('div');
+    metaRow.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); display:flex; flex-wrap:wrap; gap:8px;';
+
+    if (entry.recalled_at) {
+      const dateEl = document.createElement('span');
+      const d = new Date(entry.recalled_at);
+      dateEl.textContent = 'Recalled: ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      metaRow.appendChild(dateEl);
+    }
+
+    if (entry.recalled_by) {
+      const byEl = document.createElement('span');
+      byEl.textContent = 'By: ' + entry.recalled_by;
+      metaRow.appendChild(byEl);
+    }
+
+    card.appendChild(metaRow);
+
+    // Reason
+    if (entry.reason) {
+      const reasonEl = document.createElement('div');
+      reasonEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.5); font-style:italic;';
+      reasonEl.textContent = '\u201c' + entry.reason + '\u201d';
+      card.appendChild(reasonEl);
+    }
+
+    // Re-Issue button
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'margin-top:4px;';
+    const reIssueBtn = document.createElement('button');
+    reIssueBtn.className = 'tc-btn';
+    reIssueBtn.style.cssText = 'font-size:12px; padding:5px 12px;';
+    reIssueBtn.appendChild(createIcon('refreshCw', 14));
+    reIssueBtn.appendChild(document.createTextNode(' Re-Issue'));
+    reIssueBtn.addEventListener('click', () => {
+      showToast('Re-issue coming soon', '#f59e0b', '#000');
+    });
+    btnRow.appendChild(reIssueBtn);
+    card.appendChild(btnRow);
+
+    return card;
   }
 
   function renderCategoryBadge(category) {
