@@ -10,6 +10,7 @@
   const { CANON_CLASSES } = await import('/web/constants.js');
   const { parseGoalValue } = await import('/web/goal-utils.js');
   const { parseObservationNotes, formatObservationValue } = await import('/web/obs-utils.js');
+  const { getSchedule } = await import('/web/class-schedule.js');
 
   const $ = (id) => document.getElementById(id);
 
@@ -31,6 +32,7 @@
   let syncStatus = "local";
   let expandedStudents = new Set(); // Track which students are expanded
   let hasAutoExpanded = false; // Track if we've auto-expanded on initial load
+  let scheduleData = null; // Cached bell schedule for heatmap
 
   // Helper to format date as YYYY-MM-DD
   function formatDateYYYYMMDD(date = new Date()) {
@@ -525,6 +527,161 @@
     `;
   }
 
+  /**
+   * Render an inline SVG trend chart for observation goals.
+   * Supports all 4 categories: session_outcome (rolling met-rate line),
+   * tally (success % line), prompt_count (raw count line, lower=better),
+   * behavior_checklist (stacked bar). Shows last 20 data points.
+   * Uses pure SVG — no external chart libraries.
+   */
+  function renderObsTrendChart(goal, studentCode) {
+    const entries = getGoalProgressEntries(goal.code, studentCode);
+    if (entries.length < 2) return '';
+    const obsConfig = goal.observation_config || {};
+    const category = obsConfig.category || '';
+    const VALID = ['session_outcome', 'tally', 'prompt_count', 'behavior_checklist'];
+    if (!VALID.includes(category)) return '';
+
+    const recent = entries.slice(-20);
+    const n = recent.length;
+    const W = 400, H = 120;
+    const padL = 32, padR = 8, padT = 8, padB = 24;
+    const cW = W - padL - padR;
+    const cH = H - padT - padB;
+
+    // Map data index to x coordinate
+    const iToX = (i) => padL + (n === 1 ? cW / 2 : (i / (n - 1)) * cW);
+    // Map value v in [0, maxV] to y coordinate (0 = bottom, maxV = top)
+    const vToY = (v, maxV = 100) => padT + (1 - Math.min(maxV, Math.max(0, v)) / maxV) * cH;
+
+    // X-axis labels (index 0, every 5th, and last)
+    const xLbls = recent.map((e, i) => {
+      if (i !== 0 && i % 5 !== 0 && i !== n - 1) return '';
+      const x = iToX(i).toFixed(1);
+      const lbl = new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `<text x="${x}" y="${H - 4}" fill="rgba(255,255,255,0.4)" font-size="8" text-anchor="middle">${lbl}</text>`;
+    }).join('');
+
+    // Horizontal grid lines
+    const makeGrid = (steps, maxV = 100, fmt = (v) => `${v}%`) => steps.map(v => {
+      const y = vToY(v, maxV).toFixed(1);
+      return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>` +
+        `<text x="${padL - 3}" y="${(parseFloat(y) + 3.5).toFixed(1)}" fill="rgba(255,255,255,0.35)" font-size="8" text-anchor="end">${fmt(v)}</text>`;
+    }).join('');
+
+    // Dashed target line
+    const makeDash = (y, label, color = 'rgba(255,255,255,0.4)') =>
+      `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4"/>` +
+      `<text x="${W - padR - 2}" y="${(y - 3).toFixed(1)}" fill="${color}" font-size="7" text-anchor="end">${label}</text>`;
+
+    let grid = makeGrid([0, 25, 50, 75, 100]);
+    let tLine = '';
+    let body = '';
+
+    if (category === 'session_outcome') {
+      const winSize = obsConfig.target_window || 5;
+      const pts = recent.map((e, i) => {
+        const win = recent.slice(Math.max(0, i - winSize + 1), i + 1);
+        const met = win.filter(w => { const p = parseObservationNotes(w.notes); return p && p.rawData === 'met'; }).length;
+        const valid = win.filter(w => { const p = parseObservationNotes(w.notes); return p && p.rawData !== 'not_applicable'; }).length;
+        const rate = valid > 0 ? (met / valid) * 100 : 0;
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        return { x: iToX(i), y: vToY(rate), title: `${d}: ${rate.toFixed(0)}% (${met}/${valid} met)` };
+      });
+      if (obsConfig.target_met != null && obsConfig.target_window) {
+        tLine = makeDash(vToY((obsConfig.target_met / obsConfig.target_window) * 100), `Target ${obsConfig.target_met}/${obsConfig.target_window}`);
+      }
+      const polyPts = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const botY = (padT + cH).toFixed(1);
+      const fillPts = `${polyPts} ${pts[n - 1].x.toFixed(1)},${botY} ${pts[0].x.toFixed(1)},${botY}`;
+      const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#22c55e"><title>${p.title}</title></circle>`).join('');
+      body = `<polygon points="${fillPts}" fill="rgba(34,197,94,0.1)"/>` +
+        `<polyline points="${polyPts}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` + dots;
+
+    } else if (category === 'tally') {
+      const pts = recent.map((e, i) => {
+        const rate = e.value != null ? parseFloat(e.value) : 0;
+        const p = parseObservationNotes(e.notes);
+        const raw = p ? p.rawData : '';
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        return { x: iToX(i), y: vToY(rate), title: `${d}: ${rate.toFixed(0)}% (${raw})` };
+      });
+      const mastNum = parseFloat(goal.mastery || goal.target);
+      if (!isNaN(mastNum) && mastNum > 0 && mastNum <= 100) {
+        tLine = makeDash(vToY(mastNum), `Target ${mastNum}%`);
+      }
+      const polyPts = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const botY = (padT + cH).toFixed(1);
+      const fillPts = `${polyPts} ${pts[n - 1].x.toFixed(1)},${botY} ${pts[0].x.toFixed(1)},${botY}`;
+      const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#3b82f6"><title>${p.title}</title></circle>`).join('');
+      body = `<polygon points="${fillPts}" fill="rgba(59,130,246,0.1)"/>` +
+        `<polyline points="${polyPts}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` + dots;
+
+    } else if (category === 'prompt_count') {
+      const rawCounts = recent.map(e => {
+        const p = parseObservationNotes(e.notes);
+        if (p && p.category === 'prompt_count') {
+          const c = parseFloat(p.rawData);
+          return isNaN(c) ? (e.value != null ? parseFloat(e.value) : 0) : c;
+        }
+        return e.value != null ? parseFloat(e.value) : 0;
+      });
+      const tMax = obsConfig.target_max_prompts != null ? obsConfig.target_max_prompts : null;
+      const maxVal = Math.max(...rawCounts, tMax != null ? tMax : 0, 1);
+      const scale = maxVal * 1.25;
+      const gridStep = Math.max(1, Math.ceil(scale / 4));
+      const gridSteps = [...new Set([0, gridStep, gridStep * 2, gridStep * 3, Math.ceil(scale)])];
+      grid = makeGrid(gridSteps, scale, v => String(v));
+      const pts = recent.map((e, i) => {
+        const count = rawCounts[i];
+        const isGood = tMax == null || count <= tMax;
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        return {
+          x: iToX(i), y: vToY(count, scale),
+          title: `${d}: ${count} prompt${count !== 1 ? 's' : ''}${tMax != null ? ` (target \u2264${tMax})` : ''}`,
+          dotColor: isGood ? '#22c55e' : '#ef4444'
+        };
+      });
+      if (tMax != null) {
+        tLine = makeDash(vToY(tMax, scale), `Target \u2264${tMax}`, '#22c55e');
+      }
+      const polyPts = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const botY = (padT + cH).toFixed(1);
+      const fillPts = `${polyPts} ${pts[n - 1].x.toFixed(1)},${botY} ${pts[0].x.toFixed(1)},${botY}`;
+      const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${p.dotColor}"><title>${p.title}</title></circle>`).join('');
+      body = `<polygon points="${fillPts}" fill="rgba(59,130,246,0.08)"/>` +
+        `<polyline points="${polyPts}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` + dots;
+
+    } else if (category === 'behavior_checklist') {
+      const totalBehaviors = (obsConfig.sub_behaviors || []).length || 1;
+      const barW = Math.max(4, Math.min(18, cW / n - 2));
+      body = recent.map((e, i) => {
+        const p = parseObservationNotes(e.notes);
+        let met = 0, notMet = 0;
+        if (p && p.category === 'checklist' && p.rawData !== 'not_addressed') {
+          const items = p.rawData ? p.rawData.split(',') : [];
+          met = items.filter(it => it.includes('=met')).length;
+          notMet = items.length - met;
+        }
+        const bx = (iToX(i) - barW / 2).toFixed(1);
+        const metH = Math.max(0, (met / totalBehaviors) * cH);
+        const notMetH = Math.max(0, (notMet / totalBehaviors) * cH);
+        const metYv = (padT + cH - metH).toFixed(1);
+        const notMetYv = (padT + cH - metH - notMetH).toFixed(1);
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        const total = met + notMet || totalBehaviors;
+        const ttl = `${d}: ${met}/${total} behaviors met`;
+        return `<rect x="${bx}" y="${notMetYv}" width="${barW}" height="${notMetH.toFixed(1)}" fill="#ef4444" opacity="0.8"><title>${ttl}</title></rect>` +
+          `<rect x="${bx}" y="${metYv}" width="${barW}" height="${metH.toFixed(1)}" fill="#22c55e" opacity="0.8"><title>${ttl}</title></rect>`;
+      }).join('');
+    }
+
+    return `<div class="obs-chart-container" style="margin: 6px 0; max-width: 100%;">` +
+      `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
+      grid + xLbls + tLine + body +
+      `</svg></div>`;
+  }
+
   // Render a single goal row
   function renderGoalRow(goal, studentCode) {
     // Build metadata badges - show case manager and data collector if available
@@ -569,7 +726,7 @@
           ${metaBadges.join(' ')}
         </div>
         ${renderGoalStats(goal, studentCode)}
-        ${renderSparkline(goal, studentCode)}
+        ${goal.measurement_type === 'Observation' ? renderObsTrendChart(goal, studentCode) : renderSparkline(goal, studentCode)}
         ${renderDataPointsTable(goal, studentCode)}
         <button class="dt-btn primary" data-action="add-data" data-goal="${goal.code}" data-student="${studentCode}">+ Add Data Point</button>
         <div class="dt-inline-form" style="display: none;" data-goal="${goal.code}" data-student="${studentCode}">
@@ -582,6 +739,111 @@
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Render the Observation Coverage heatmap at the top of the Data page.
+   * Shows the last 10 school days × each class period that has observation goals.
+   * Green = all goals recorded, Yellow = partial, Red = none recorded.
+   */
+  function renderObsCoverageHeatmap() {
+    const container = $('dtObsHeatmap');
+    if (!container) return;
+
+    const obsGoals = goalsData.filter(g => g.measurement_type === 'Observation');
+    if (obsGoals.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Group observation goals by class period
+    const periodGoals = {};
+    for (const goal of obsGoals) {
+      const periods = (goal.observation_config || {}).class_periods || [];
+      for (const period of periods) {
+        if (!periodGoals[period]) periodGoals[period] = [];
+        periodGoals[period].push(goal);
+      }
+    }
+
+    const periodLabels = Object.keys(periodGoals).sort();
+    if (periodLabels.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Determine school days from cached schedule (default Mon-Fri)
+    const schoolDayNums = (scheduleData && scheduleData.schoolDays) ? scheduleData.schoolDays : [1, 2, 3, 4, 5];
+
+    // Find last 10 school days (oldest first)
+    const last10 = [];
+    const iterDate = new Date();
+    iterDate.setHours(0, 0, 0, 0);
+    while (last10.length < 10) {
+      if (schoolDayNums.includes(iterDate.getDay())) {
+        last10.unshift(formatDateYYYYMMDD(iterDate));
+      }
+      iterDate.setDate(iterDate.getDate() - 1);
+    }
+
+    // Table header
+    const thDates = last10.map(ds => {
+      const lbl = new Date(ds + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `<th style="padding:3px 6px;text-align:center;font-size:10px;opacity:0.5;white-space:nowrap;">${lbl}</th>`;
+    }).join('');
+
+    // Table rows
+    const rows = periodLabels.map(period => {
+      const goals = periodGoals[period];
+      const cells = last10.map(dateStr => {
+        let recorded = 0;
+        for (const goal of goals) {
+          const found = progressData.some(p =>
+            p.goal_code === goal.code &&
+            p.student_code === goal.student_code &&
+            p.date === dateStr
+          );
+          if (found) recorded++;
+        }
+        const total = goals.length;
+        let color, ttl;
+        if (recorded === 0) {
+          color = '#ef4444'; ttl = `${dateStr}: 0/${total} recorded`;
+        } else if (recorded === total) {
+          color = '#22c55e'; ttl = `${dateStr}: ${recorded}/${total} recorded`;
+        } else {
+          color = '#eab308'; ttl = `${dateStr}: ${recorded}/${total} recorded`;
+        }
+        return `<td style="padding:3px 6px;text-align:center;"><div title="${ttl}" style="width:18px;height:18px;border-radius:3px;background:${color};margin:0 auto;opacity:0.85;"></div></td>`;
+      }).join('');
+
+      return `<tr>
+        <td style="padding:4px 8px;font-size:12px;white-space:nowrap;color:var(--rc-ink,#e8edf4);">${escapeHtml(period)}</td>
+        ${cells}
+        <td style="padding:4px 8px;text-align:right;font-size:11px;opacity:0.6;">${goals.length} goal${goals.length !== 1 ? 's' : ''}</td>
+      </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="margin-bottom:16px;">
+        <h3 style="margin:0 0 8px 0;font-size:14px;font-weight:600;color:var(--rc-ink,#e8edf4);">Observation Coverage by Period</h3>
+        <div style="overflow-x:auto;">
+          <table style="border-collapse:collapse;min-width:100%;">
+            <thead><tr>
+              <th style="padding:4px 8px;text-align:left;font-size:12px;opacity:0.6;">Period</th>
+              ${thDates}
+              <th style="padding:4px 8px;text-align:right;font-size:12px;opacity:0.6;">Goals</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px;font-size:11px;opacity:0.65;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:3px;"></span>All recorded</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#eab308;border-radius:2px;margin-right:3px;"></span>Partial</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:3px;"></span>None</span>
+        </div>
+      </div>`;
+    container.style.display = 'block';
   }
 
   // Render accordion
@@ -1241,6 +1503,71 @@
   // Bulk add progress (placeholder)
   async function bulkAddProgress() {
     await rcAlert('Coming Soon', 'Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple students/goals at once.');
+  }
+
+  /**
+   * Export all observation goal progress data as a CSV file.
+   * Columns: Date, Student Code, Student Name, Goal Code, Goal Area,
+   *          Category, Value, Raw Data, Note
+   * Sorted by date descending, then student code.
+   */
+  function exportObservationsCsv() {
+    const obsGoals = goalsData.filter(g => g.measurement_type === 'Observation');
+    if (obsGoals.length === 0) return;
+
+    const goalKey = (g) => `${g.student_code}:${g.code}`;
+    const goalSet = new Set(obsGoals.map(goalKey));
+    const goalMap = new Map(obsGoals.map(g => [goalKey(g), g]));
+    const studentMap = new Map(studentsData.map(s => [s.code, s]));
+
+    const obsEntries = progressData.filter(p => goalSet.has(`${p.student_code}:${p.goal_code}`));
+    obsEntries.sort((a, b) => {
+      if (b.date !== a.date) return b.date.localeCompare(a.date);
+      return (a.student_code || '').localeCompare(b.student_code || '');
+    });
+
+    const OBS_CAT_LABELS = {
+      session_outcome: 'Session Outcome',
+      tally: 'Tally',
+      prompt_count: 'Prompt Count',
+      behavior_checklist: 'Behavior Checklist',
+    };
+
+    const rows = [['Date', 'Student Code', 'Student Name', 'Goal Code', 'Goal Area', 'Category', 'Value', 'Raw Data', 'Note']];
+    for (const entry of obsEntries) {
+      const goal = goalMap.get(`${entry.student_code}:${entry.goal_code}`);
+      if (!goal) continue;
+      const student = studentMap.get(entry.student_code);
+      const parsed = parseObservationNotes(entry.notes);
+      const obsConfig = goal.observation_config || {};
+      const catLabel = OBS_CAT_LABELS[obsConfig.category] || obsConfig.category || '';
+      const displayValue = formatObservationValue(entry, goal);
+      const rawData = parsed ? parsed.rawData : (entry.value != null ? String(entry.value) : '');
+      const userNote = parsed ? parsed.userNote : '';
+      rows.push([
+        entry.date || '',
+        entry.student_code || '',
+        student ? student.name : entry.student_code || '',
+        entry.goal_code || '',
+        goal.goal_area || 'Uncategorized',
+        catLabel,
+        displayValue,
+        rawData,
+        userNote
+      ]);
+    }
+
+    const csvContent = rows.map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `observation-data-${formatDateYYYYMMDD()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // ===== SPEDTRACK IMPORT FUNCTIONALITY =====
@@ -1944,10 +2271,26 @@
     renderGoalAreaFilters();
     renderDataCollectorFilter();
     renderAccordion();
+    renderObsCoverageHeatmap();
+
+    // Show/hide the obs export button based on whether observation goals exist
+    const obsExportBtn = $('dtObsExportCsv');
+    if (obsExportBtn) {
+      const hasObsGoals = goalsData.some(g => g.measurement_type === 'Observation');
+      obsExportBtn.style.display = hasObsGoals ? '' : 'none';
+    }
   }
 
   // Initialize
   async function init() {
+    // Pre-load bell schedule for the period heatmap
+    try {
+      scheduleData = await getSchedule();
+    } catch (err) {
+      console.warn('[data] Error loading schedule for heatmap:', err);
+      scheduleData = { periods: [], schoolDays: [1, 2, 3, 4, 5], passingMinutes: 4 };
+    }
+
     await loadData();
 
     // Sub-tab navigation
@@ -2001,6 +2344,12 @@
     const csvBtn = $('dtExportCsv');
     if (csvBtn) {
       csvBtn.addEventListener('click', exportToCsv);
+    }
+
+    // Set up Observation CSV export button
+    const obsExportBtn = $('dtObsExportCsv');
+    if (obsExportBtn) {
+      obsExportBtn.addEventListener('click', exportObservationsCsv);
     }
     
     // Set up Bulk Add Progress button
