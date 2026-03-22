@@ -128,3 +128,52 @@ The inline annotation convention mirrors the pipe-delimited TXT mapping format p
 | *(answer type inferred)* | `data-answer-type` | Optional explicit override |
 
 An HTML assignment annotated with `data-rc-*` attributes produces a manifest structurally equivalent to one generated from a TXT mapping file, enabling the same scoring pipeline (`scoreSubmission()`), goal rollup (`computeGoalRollups()`), and IEP progress reporting (`tc-reporting.js`) for both assignment types.
+
+---
+
+## Scoring Pipeline Integration
+
+### How `manifestQuestionsToItems()` Bridges Manifest → DB Items
+
+The module `web/html-manifest-to-items.js` (mirrored at `site/web/html-manifest-to-items.js`) provides the bridge between the manifest produced by `detectQuestionsFromHTML()` and the `assignment_items` + `assignment_item_mappings` database rows that the scoring pipeline depends on.
+
+#### Data Flow
+
+```
+detectQuestionsFromHTML()          ← parses inline data-* attributes from HTML
+        ↓
+manifestQuestionsToItems()         ← converts manifest questions → items array
+        ↓
+insertAssignmentItems()            ← persists assignment_items + assignment_item_mappings rows
+        ↓
+scoreSubmission()                  ← scores student answers against stored items
+        ↓
+computeGoalRollups()               ← aggregates per-goal scores from item mappings
+        ↓
+tc-gradebook.js / tc-reporting.js  ← displays scores and IEP progress
+```
+
+#### Field Mapping
+
+`manifestQuestionsToItems()` converts each question object from `detectQuestionsFromHTML()` into the item format required by `insertAssignmentItems()`:
+
+| Manifest field (`detectQuestionsFromHTML`) | Item field (`insertAssignmentItems`) | Notes |
+|---|---|---|
+| `q_ref` | `ref` | Question identifier; questions with falsy `q_ref` are skipped |
+| `answer_type` | `answer_type` | Defaults to `'constructed'` if missing |
+| `points` | `points` | Defaults to `1` if missing |
+| `correct` | `correct` | Defaults to `null` if missing |
+| `dese_codes` | `dese_codes` | Defaults to `[]` if missing |
+| `default_goal_codes` | `goal_codes` | Defaults to `[]` if missing |
+| `label` | `notes` | First 100 chars of question text |
+| *(generated)* | `scoring` | `{}` — Phase 1: no custom scoring config |
+
+#### Gradebook and Reporting Parity
+
+Once items are persisted via `insertAssignmentItems()`, HTML assignments are treated identically to TXT assignments throughout the pipeline:
+
+- **`tc-gradebook.js`** — displays per-assignment scores and weighted averages
+- **`tc-reporting.js`** — renders per-question breakdowns in Evidence ZIP exports and IEP Progress Reports
+- **Goal rollup** — `computeGoalRollups()` aggregates scores by `goal_codes`, feeding `upsertGoalProgress()` entries that appear in IEP reports and DOCX exports
+
+This means an HTML assignment annotated with `data-qref`, `data-points`, `data-correct`, `data-dese`, and `data-goal` attributes will produce the same gradebook and IEP evidence output as an equivalent TXT quiz with a pipe-delimited mapping file.
