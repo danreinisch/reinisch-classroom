@@ -337,11 +337,17 @@ const local = {
     store.set('assignments', arr);
     return arr[idx];
   },
-  async listAssignments() { return store.get('assignments', []); },
+  async listAssignments() {
+    const currentYear = getCurrentSchoolYear();
+    return store.get('assignments', []).filter(i => !i.school_year || i.school_year === currentYear);
+  },
   async listAssignmentInstances() {
     const arr = store.get('assignmentInstances', []);
+    const currentYear = getCurrentSchoolYear();
     // Return with snake_case field names to match remote
-    return arr.map(inst => ({
+    return arr
+      .filter(inst => !inst.school_year || inst.school_year === currentYear)
+      .map(inst => ({
       id: inst.id || (inst.assignment_id + '-' + inst.student_code),
       assignment_id: inst.assignment_id,
       student_code: inst.student_code,
@@ -388,7 +394,8 @@ const local = {
   // Portal B: List submissions (filtered by student if provided)
   async listSubmissions(filters = {}) {
     const submissions = store.get('submissions', []);
-    let result = [...submissions];
+    const currentYear = getCurrentSchoolYear();
+    let result = submissions.filter(s => !s.school_year || s.school_year === currentYear);
     
     if (filters.student_code) {
       const instances = store.get('assignmentInstances', []);
@@ -778,7 +785,8 @@ const local = {
   // ============================================================================
   async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
     console.log('[goal-progress] listGoalProgress (local mode)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
-    const progressArr = store.get('goalProgress', []);
+    const currentYear = getCurrentSchoolYear();
+    const progressArr = store.get('goalProgress', []).filter(p => !p.school_year || p.school_year === currentYear);
     const students = store.get('students', []);
     const goalsMap = store.get('iepGoals', {});
     
@@ -1703,9 +1711,11 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
+      const schoolYear = getCurrentSchoolYear();
       const { data, error } = await supabase
         .from('assignments')
         .select('id, title, type, series, page, hero, meta, created_at, active')
+        .or(`school_year.eq.${schoolYear},school_year.is.null`)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
@@ -1716,6 +1726,7 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
+      const schoolYear = getCurrentSchoolYear();
       // Join assignment_instances with students to get student code/name
       const { data, error } = await supabase
         .from('assignment_instances')
@@ -1728,7 +1739,8 @@ const remote = {
           status,
           settings,
           students!inner(code, name)
-        `);
+        `)
+        .or(`school_year.eq.${schoolYear},school_year.is.null`);
       if (error) throw error;
       
       // Flatten to include student_code and student_name at top level
@@ -1824,9 +1836,11 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
+      const schoolYear = getCurrentSchoolYear();
       let query = supabase
         .from('submissions')
         .select('*, assignment_instances!inner(id, assignment_id, student_id, students!inner(code))')
+        .or(`school_year.eq.${schoolYear},school_year.is.null`)
         .neq('review_status', 'finalized')
         .order('submitted_at', { ascending: false });
       
@@ -2480,6 +2494,7 @@ const remote = {
     
     return await withRetry(async () => {
       console.log('[goal-progress] listGoalProgress (remote)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
+      const schoolYear = getCurrentSchoolYear();
       
       let query = supabase
         .from('goal_progress')
@@ -2497,6 +2512,7 @@ const remote = {
           students!inner(id, code, name),
           classes(id, name)
         `)
+        .or(`school_year.eq.${schoolYear},school_year.is.null`)
         .order('date', { ascending: true });
       
       // Apply filters
