@@ -3217,6 +3217,25 @@
             }
             
             addNotif(`Created single HTML assignment: "${title}"`, { type: 'success' });
+
+            // Persist assignment items from HTML manifest
+            if (manifest.questions && manifest.questions.length > 0 && window.supabase) {
+              try {
+                const { manifestQuestionsToItems } = await import('/web/html-manifest-to-items.js');
+                const items = manifestQuestionsToItems(manifest.questions);
+                if (items.length > 0) {
+                  const { insertAssignmentItems } = await import('/web/assignment-mapping-db.js');
+                  const itemResult = await insertAssignmentItems(window.supabase, assignment.id, items);
+                  if (itemResult.success) {
+                    console.log('[assignments] Persisted', itemResult.item_count, 'items and', itemResult.mapping_count, 'mappings');
+                  } else {
+                    console.warn('[assignments] Failed to persist items:', itemResult.error);
+                  }
+                }
+              } catch (itemErr) {
+                console.warn('[assignments] Could not persist assignment items:', itemErr);
+              }
+            }
             
             // Show manifest summary
             qs('#zipManifestSummary').style.display = 'block';
@@ -3343,6 +3362,25 @@
             }
             
             addNotif(`Created assignment from URL: "${title}"`, { type: 'success' });
+
+            // Persist assignment items from HTML manifest
+            if (manifest.questions && manifest.questions.length > 0 && window.supabase) {
+              try {
+                const { manifestQuestionsToItems } = await import('/web/html-manifest-to-items.js');
+                const items = manifestQuestionsToItems(manifest.questions);
+                if (items.length > 0) {
+                  const { insertAssignmentItems } = await import('/web/assignment-mapping-db.js');
+                  const itemResult = await insertAssignmentItems(window.supabase, assignment.id, items);
+                  if (itemResult.success) {
+                    console.log('[assignments] Persisted', itemResult.item_count, 'items and', itemResult.mapping_count, 'mappings');
+                  } else {
+                    console.warn('[assignments] Failed to persist items:', itemResult.error);
+                  }
+                }
+              } catch (itemErr) {
+                console.warn('[assignments] Could not persist assignment items:', itemErr);
+              }
+            }
             
             // Show manifest summary
             qs('#zipManifestSummary').style.display = 'block';
