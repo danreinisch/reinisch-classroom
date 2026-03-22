@@ -1,8 +1,14 @@
 // Teacher recall assignment endpoint
 // POST /.netlify/functions/teacher-recall-assignment
 // Auth: Requires teacher session cookie
-// Body: { assignment_id }
+// Body: { assignment_id, reason? }
 // Returns: { ok, recalled_instances, recalled_submissions }
+
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
 
 const {
   generateRequestId,
@@ -59,25 +65,47 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id } = parseResult.data;
+  const { assignment_id, reason } = parseResult.data;
 
-  if (!assignment_id || typeof assignment_id !== 'string') {
-    console.log(`[teacher-recall-assignment] [${requestId}] Missing or invalid assignment_id`);
-    return jsonResponse(event, 400, { ok: false, error: 'assignment_id is required and must be a string' }, {}, requestId);
+  if (!assignment_id) {
+    console.log(`[teacher-recall-assignment] [${requestId}] Missing assignment_id`);
+    return jsonResponse(event, 400, { ok: false, error: 'assignment_id is required' }, {}, requestId);
   }
 
-  // Basic UUID format validation to prevent injection
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidPattern.test(assignment_id)) {
+  // assignment_id is a bigint in the DB — accept numeric strings or integers
+  const assignmentIdStr = String(assignment_id).trim();
+  if (!/^\d+$/.test(assignmentIdStr)) {
     console.log(`[teacher-recall-assignment] [${requestId}] Invalid assignment_id format`);
-    return jsonResponse(event, 400, { ok: false, error: 'assignment_id must be a valid UUID' }, {}, requestId);
+    return jsonResponse(event, 400, { ok: false, error: 'assignment_id must be a positive integer' }, {}, requestId);
   }
 
-  console.log(`[teacher-recall-assignment] [${requestId}] Recalling assignment: ${assignment_id}`);
+  console.log(`[teacher-recall-assignment] [${requestId}] Recalling assignment: ${assignmentIdStr}`);
 
   try {
-    // Step 1: Fetch assignment_instances for this assignment to get their IDs
-    const instancesQueryUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&assignment_id=eq.${encodeURIComponent(assignment_id)}`;
+    // Step 1: Fetch assignment metadata to preserve in recall_library before deletion
+    const assignmentMetaUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,title,type,series,meta,school_year&id=eq.${assignmentIdStr}&limit=1`;
+
+    console.log(`[teacher-recall-assignment] [${requestId}] Fetching assignment metadata`);
+
+    const assignmentMetaResponse = await fetch(assignmentMetaUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    let assignmentMeta = null;
+    if (assignmentMetaResponse.ok) {
+      const rows = await assignmentMetaResponse.json().catch(() => []);
+      assignmentMeta = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    } else {
+      console.warn(`[teacher-recall-assignment] [${requestId}] Could not fetch assignment metadata: ${assignmentMetaResponse.status}`);
+    }
+
+    // Step 2: Fetch assignment_instances for this assignment to get their IDs
+    const instancesQueryUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&assignment_id=eq.${assignmentIdStr}`;
 
     console.log(`[teacher-recall-assignment] [${requestId}] Fetching assignment instances`);
 
@@ -145,7 +173,7 @@ exports.handler = async (event) => {
     }
 
     // Step 3: Delete assignment_instances for this assignment
-    const deleteInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?assignment_id=eq.${encodeURIComponent(assignment_id)}`;
+    const deleteInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?assignment_id=eq.${assignmentIdStr}`;
 
     console.log(`[teacher-recall-assignment] [${requestId}] Deleting assignment instances`);
 
@@ -169,6 +197,44 @@ exports.handler = async (event) => {
     const recalled_instances = Array.isArray(deletedInstances) ? deletedInstances.length : 0;
 
     console.log(`[teacher-recall-assignment] [${requestId}] Deleted ${recalled_instances} instance(s)`);
+
+    // Step 4: Insert a record into recall_library to preserve assignment metadata
+    if (assignmentMeta) {
+      const recallRecord = {
+        assignment_id: assignmentMeta.id,
+        title: assignmentMeta.title || '',
+        type: assignmentMeta.type || null,
+        series: assignmentMeta.series || null,
+        meta: assignmentMeta.meta || null,
+        recalled_at: new Date().toISOString(),
+        recalled_by: authResult.user.username,
+        school_year: assignmentMeta.school_year || getCurrentSchoolYear(),
+        reason: reason || null,
+        created_at: new Date().toISOString(),
+      };
+
+      const insertRecallUrl = `${SUPABASE_URL}/rest/v1/recall_library`;
+      const insertRecallResponse = await fetch(insertRecallUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify(recallRecord),
+      });
+
+      if (!insertRecallResponse.ok) {
+        // Log but do not fail the recall — the instances/submissions are already deleted
+        const errorText = await insertRecallResponse.text();
+        console.warn(`[teacher-recall-assignment] [${requestId}] Failed to insert recall_library record: ${insertRecallResponse.status} - ${errorText}`);
+      } else {
+        console.log(`[teacher-recall-assignment] [${requestId}] Recall library record created for assignment ${assignmentIdStr}`);
+      }
+    } else {
+      console.warn(`[teacher-recall-assignment] [${requestId}] Skipping recall_library insert — assignment metadata not available`);
+    }
 
     console.log(`[teacher-recall-assignment] [${requestId}] Recall complete: ${recalled_instances} instance(s), ${recalled_submissions} submission(s) removed`);
 
