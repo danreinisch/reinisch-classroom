@@ -513,5 +513,76 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(writingAnswer.earned_points, null, 'Writing answer should have earned_points: null');
   })();
 
+  // ── Group: Scoring Results in Response ────────────────────────────────────
+  console.log('\n--- Scoring Results in Response ---');
+
+  await test('submit: true with correct MCQ answers → response includes score_total and results', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: '1_1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } },
+      { id: 'item-2', item_ref: '1_2', answer_type: 'mcq', points: 1, meta: { correct: 'B' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { '1_1': 'A', '1_2': 'B' }, // both correct
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.ok, true);
+    assert.strictEqual(body.score_total, 100, 'score_total should be 100 when all correct');
+    assert(Array.isArray(body.results), 'results should be an array');
+    assert.strictEqual(body.results.length, 2, 'results should have one entry per scored item');
+    body.results.forEach(r => {
+      assert(r.item_ref, 'Each result should have item_ref');
+      assert.strictEqual(r.is_correct, true, 'All answers are correct');
+    });
+  })();
+
+  await test('submit: true with one wrong MCQ → results includes is_correct: false for wrong item', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: '1_1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } },
+      { id: 'item-2', item_ref: '1_2', answer_type: 'mcq', points: 1, meta: { correct: 'B' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { '1_1': 'A', '1_2': 'C' }, // second is wrong
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.ok, true);
+    assert.strictEqual(body.score_total, 50, 'score_total should be 50% when half correct');
+    const wrongResult = body.results.find(r => r.item_ref === '1_2');
+    assert(wrongResult, 'Result for wrong item should be present');
+    assert.strictEqual(wrongResult.is_correct, false, 'Wrong answer item should have is_correct: false');
+  })();
+
+  await test('submit: false (auto-save) → response has ok: true with null score_total and empty results', async () => {
+    reset();
+    setupBasicMocks();
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { '1_1': 'A' },
+      submit: false
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.ok, true);
+    assert.strictEqual(body.score_total, null, 'score_total should be null for auto-saves');
+    assert(Array.isArray(body.results) && body.results.length === 0, 'results should be empty for auto-saves');
+  })();
+
   console.log('\n✓ All student-submit-answer tests passed!');
 })();

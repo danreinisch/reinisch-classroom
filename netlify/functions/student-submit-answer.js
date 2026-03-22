@@ -185,6 +185,8 @@ exports.handler = async (event) => {
     
     // Step 6: Upsert submission record if status is "Submitted"
     let submissionId = null;
+    let responseScoreTotal = null;
+    let responseScoringResults = [];
     if (newStatus === 'Submitted') {
       console.log(`[student-submit-answer] [${requestId}] Upserting submission record`);
 
@@ -311,6 +313,11 @@ exports.handler = async (event) => {
                   max_points: maxPoints,
                   scored_at: new Date().toISOString()
                 });
+
+                // Track per-item result for the response (auto-scored items only)
+                if (isCorrect !== null) {
+                  responseScoringResults.push({ item_ref: itemRef, is_correct: isCorrect });
+                }
               }
             }
 
@@ -357,6 +364,7 @@ exports.handler = async (event) => {
                 const scoreAuto = autoScoredAnswers.reduce((sum, a) => sum + (a.earned_points || 0), 0);
                 const maxPointsTotal = autoScoredAnswers.reduce((sum, a) => sum + (a.max_points || 0), 0);
                 const scoreTotal = maxPointsTotal > 0 ? Math.round((scoreAuto / maxPointsTotal) * 100) : null;
+                responseScoreTotal = scoreTotal;
                 const submissionsUpdateUrl = `${SUPABASE_URL}/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`;
                 const scoreAutoResponse = await fetch(submissionsUpdateUrl, {
                   method: 'PATCH',
@@ -384,7 +392,7 @@ exports.handler = async (event) => {
     return jsonResponse(
       event,
       200,
-      { ok: true },
+      { ok: true, score_total: responseScoreTotal, results: responseScoringResults },
       { 'Cache-Control': 'no-store' },
       requestId
     );

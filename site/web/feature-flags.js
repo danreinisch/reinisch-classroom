@@ -166,6 +166,13 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'teacher_center_assignments',
     default: false,
     description: 'Enable Teacher Center Assignments workflow with URL/HTML/ZIP uploads, mapping support, and student portal integration'
+  },
+
+  // Student Portal: Retry Below 60%
+  retryBelowSixty: {
+    key: FEATURE_PREFIX + 'retry_below_sixty',
+    default: true,
+    description: 'Show retry prompt when student scores 60% or below — locks correct answers so only incorrect questions are re-attempted'
   }
 };
 
