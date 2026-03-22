@@ -177,3 +177,42 @@ Once items are persisted via `insertAssignmentItems()`, HTML assignments are tre
 - **Goal rollup** — `computeGoalRollups()` aggregates scores by `goal_codes`, feeding `upsertGoalProgress()` entries that appear in IEP reports and DOCX exports
 
 This means an HTML assignment annotated with `data-qref`, `data-points`, `data-correct`, `data-dese`, and `data-goal` attributes will produce the same gradebook and IEP evidence output as an equivalent TXT quiz with a pipe-delimited mapping file.
+
+---
+
+## Evidence Reports and IEP Progress Reports
+
+### Rich Per-Question Cards for HTML Assignments
+
+Evidence Reports (exported from `tc-reporting.js`) and the Review Queue (`tc-review.js`) and Library evidence view (`tc-library.js`) all render **rich per-question cards** with DESE standard badges and IEP goal descriptions for HTML assignments.
+
+These renderers use `buildItemsFromMeta(assignmentId, meta)` (or `_buildItemsFromMeta` in `tc-library.js`) to build a list of synthetic items from the assignment metadata. The function supports two metadata formats:
+
+1. **TXT/structured format** — `meta.days[].questions[]` — used by assignments created from pipe-delimited TXT mapping files.
+2. **HTML manifest format (fallback)** — `meta.questions[]` (flat array) — used by HTML assignments created via the inline `data-*` annotation path from `detectQuestionsFromHTML()`.
+
+When `meta.days` is absent or empty but `meta.questions` is a non-empty flat array, `buildItemsFromMeta` builds synthetic items from that flat array. Each question object in `meta.questions` has the shape:
+
+```js
+{
+  q_ref: 'Q1',           // question reference ID
+  label: 'Question text',
+  points: 1,
+  answer_type: 'mcq',    // 'mcq' | 'multi' | 'boolean' | 'constructed'
+  correct: 'B',          // correct answer (or null for constructed)
+  dese_codes: ['MA.8.EE.1'],
+  default_goal_codes: ['MATH.1'],
+}
+```
+
+These are mapped to the same item shape used throughout the rendering pipeline, so DESE badges, IEP goal descriptions, and the ✓/✗ correctness markers all work identically for HTML assignments and TXT assignments.
+
+### What This Enables
+
+- **Evidence Reports** — `buildRichAnswerDetailHtml()` in `tc-reporting.js` renders per-question cards with answer comparison, DESE codes, and IEP goal descriptions for HTML assignments
+- **IEP Progress Reports** — per-item detail appears in DOCX exports for HTML assignments
+- **Review Queue** — `tc-review.js` renders the same rich detail for HTML assignments submitted by students
+- **Library evidence view** — `tc-library.js` renders matching evidence cards for all assignment types
+
+All existing TXT assignment reporting is unchanged — the `meta.days` path is always checked first and takes priority.
+
