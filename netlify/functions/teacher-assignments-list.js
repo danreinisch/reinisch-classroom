@@ -15,6 +15,12 @@ const { getSupabaseConfig } = require('./_lib/supa');
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[teacher-assignments-list] [${requestId}] Request received`);
@@ -58,7 +64,8 @@ exports.handler = async (event) => {
 
   try {
     // Query assignments table with fields needed for issuing dropdown
-    const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,title,type,series,page,created_at&order=created_at.desc`;
+    const schoolYear = getCurrentSchoolYear();
+    const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,title,type,series,page,created_at,school_year&or=(school_year.eq.${schoolYear},school_year.is.null)&order=created_at.desc`;
     
     console.log(`[teacher-assignments-list] [${requestId}] Fetching assignments`);
     
