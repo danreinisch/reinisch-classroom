@@ -16,6 +16,17 @@ const { getSupabaseConfig } = require('./_lib/supa');
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
+/**
+ * Returns the starting calendar year of the current school year.
+ * Aug–Dec → current year; Jan–Jul → current year - 1.
+ * @returns {number}
+ */
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 // Max upload size: 20 MB base64-encoded (~15 MB raw file)
 const MAX_BODY_BYTES = 20 * 1024 * 1024;
 
@@ -146,6 +157,7 @@ exports.handler = async function (event) {
         student_code: trimmedStudentCode || null,
         notes: notes || null,
       }),
+      school_year: getCurrentSchoolYear(),
     };
 
     const asgInsertRes = await supaFetch(
@@ -235,6 +247,7 @@ exports.handler = async function (event) {
         assignment_id: assignment.id,
         student_id: student.id,
         status: 'Submitted',
+        school_year: getCurrentSchoolYear(),
       };
 
       const instInsertRes = await supaFetch(

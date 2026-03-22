@@ -39,6 +39,17 @@ function isSchemaError(error) {
 }
 
 /**
+ * Returns the starting calendar year of the current school year.
+ * Aug–Dec → current year; Jan–Jul → current year - 1.
+ * @returns {number}
+ */
+function getCurrentSchoolYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+/**
  * Mapping from DB class codes to UI canonical class names
  * Some classes have multiple sections (SC/S1) which are represented as separate UI tabs
  */
@@ -185,9 +196,10 @@ const local = {
   async createAssignment(a) {
     const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
     const arr = store.get('assignments', []);
-    arr.push({ id, ...a, created_at: new Date().toISOString() });
+    const entry = { id, ...a, school_year: a.school_year ?? getCurrentSchoolYear(), created_at: new Date().toISOString() };
+    arr.push(entry);
     store.set('assignments', arr);
-    return { id, ...a, created_at: new Date().toISOString() };
+    return entry;
   },
 
   async updateAssignment(id, updates) {
@@ -241,7 +253,8 @@ const local = {
       assigned_at: inst.assigned_at,
       due_at: inst.due_at,
       status: inst.status,
-      settings: inst.settings
+      settings: inst.settings,
+      school_year: inst.school_year
     }));
   },
   async upsertAssignmentInstance(x) {
@@ -255,7 +268,8 @@ const local = {
       assigned_at: x.assigned_at || new Date().toISOString().split('T')[0],
       due_at: x.due_at,
       status: x.status || 'Assigned',
-      settings: x.settings || {}
+      settings: x.settings || {},
+      school_year: x.school_year ?? getCurrentSchoolYear()
     };
     if (i >= 0) arr[i] = instance;
     else arr.push(instance);
@@ -1342,7 +1356,7 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     const { data, error } = await supabase
       .from('assignments')
-      .select('id, title, type, series, active, page, hero, meta, created_at')
+      .select('id, title, type, series, active, page, hero, meta, created_at, school_year')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -1362,6 +1376,7 @@ const remote = {
         due_at,
         status,
         settings,
+        school_year,
         students!inner(code, name)
       `);
     if (error) throw error;
@@ -1377,7 +1392,8 @@ const remote = {
       assigned_at: inst.assigned_at,
       due_at: inst.due_at,
       status: inst.status,
-      settings: inst.settings
+      settings: inst.settings,
+      school_year: inst.school_year
     }));
     
     // Sort by student code
@@ -1401,7 +1417,8 @@ const remote = {
       student_id: stu.id,
       due_at: x.due_at || null,
       status: x.status || 'Assigned',
-      settings: x.settings || {}
+      settings: x.settings || {},
+      school_year: x.school_year ?? getCurrentSchoolYear()
     };
     
     // Upsert on unique (assignment_id, student_id) and return the row id
