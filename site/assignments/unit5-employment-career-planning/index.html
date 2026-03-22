@@ -244,6 +244,29 @@
   /* Progress bar */
   .progress-bar-wrap { background: var(--surface2); border-radius: 99px; height: 6px; margin-bottom: 24px; overflow: hidden; }
   .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s; }
+  /* Retry mode */
+  .retry-banner {
+    background: rgba(59,130,246,0.10);
+    border: 1px solid rgba(59,130,246,0.28);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #93c5fd;
+  }
+  .question-block.retry-locked { border-left: 3px solid rgba(34,197,94,0.5); padding-left: 12px; }
+  .retry-correct-badge {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #86efac;
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.3);
+    border-radius: 10px;
+    padding: 1px 7px;
+    vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -566,6 +589,9 @@
   let answers = {};
   let submitted = {};
   let studentName = 'Student';
+  // Retry state: tracks which days are in retry mode and which question IDs are locked
+  let retryMode = {};     // { [day]: true/false }
+  let retryLocked = {};   // { [day]: Set of question IDs that are locked (correct) }
 
   // Read ?student= param (sanitize: trim, max 100 chars, strip control characters)
   (function () {
@@ -645,15 +671,27 @@
     header.innerHTML = `<span class="day-number">Day ${day.day}</span><span class="day-title">${escHtml(day.title)}</span>`;
     card.appendChild(header);
 
+    // Retry mode banner
+    const isInRetryMode = !!retryMode[day.day];
+    if (isInRetryMode) {
+      const banner = document.createElement('div');
+      banner.className = 'retry-banner';
+      banner.textContent = '🔄 Retry Mode — Correct answers are locked. Only your incorrect answers can be changed.';
+      card.appendChild(banner);
+    }
+
     // Questions
-    const isSubmitted = !!submitted[day.day];
+    const isSubmitted = !!submitted[day.day] && !isInRetryMode;
+    const lockedIds = retryLocked[day.day] || new Set();
     day.questions.forEach((q, qi) => {
       const block = document.createElement('div');
       block.className = 'question-block';
+      const isLocked = isInRetryMode && lockedIds.has(q.id);
+      if (isLocked) block.classList.add('retry-locked');
 
       const qText = document.createElement('div');
       qText.className = 'question-text';
-      qText.innerHTML = `<span class="q-num">${qi + 1}.</span>${escHtml(q.text)}`;
+      qText.innerHTML = `<span class="q-num">${qi + 1}.</span>${escHtml(q.text)}${isLocked ? ' <span class="retry-correct-badge">✓ Correct</span>' : ''}`;
       block.appendChild(qText);
 
       if (q.type === 'mc') {
@@ -663,7 +701,8 @@
           const label = document.createElement('label');
           label.className = 'mc-option';
           const rid = `${q.id}_o${oi}`;
-          label.innerHTML = `<input type="radio" name="${escHtml(q.id)}" id="${escHtml(rid)}" value="${oi}" ${isSubmitted ? 'disabled' : ''}>
+          const isDisabled = isSubmitted || isLocked;
+          label.innerHTML = `<input type="radio" name="${escHtml(q.id)}" id="${escHtml(rid)}" value="${oi}" ${isDisabled ? 'disabled' : ''}>
             <label for="${escHtml(rid)}">${escHtml(opt)}</label>`;
           // Restore previous answer
           if (answers[q.id] !== undefined && answers[q.id] === oi) {
@@ -674,7 +713,11 @@
             if (oi === q.answer) label.classList.add('correct');
             else if (answers[q.id] === oi && oi !== q.answer) label.classList.add('incorrect');
           }
-          if (!isSubmitted) {
+          if (isLocked) {
+            if (oi === q.answer) label.classList.add('correct');
+            else label.style.opacity = '0.4';
+          }
+          if (!isDisabled) {
             label.querySelector('input').addEventListener('change', () => {
               document.querySelectorAll(`[name="${q.id}"]`).forEach(r => r.closest('.mc-option').classList.remove('selected'));
               label.classList.add('selected');
@@ -690,12 +733,14 @@
         inp.className = 'fill-input';
         inp.placeholder = 'Type your answer…';
         inp.id = q.id;
-        inp.disabled = isSubmitted;
+        inp.disabled = isSubmitted || isLocked;
         if (answers[q.id] !== undefined) inp.value = answers[q.id];
         if (isSubmitted) {
           const userAns = (answers[q.id] || '').trim().toLowerCase();
           const correct = q.answer.toLowerCase();
           inp.classList.add(userAns === correct ? 'correct' : 'incorrect');
+        } else if (isLocked) {
+          inp.classList.add('correct');
         } else {
           inp.addEventListener('input', () => { answers[q.id] = inp.value; });
         }
@@ -717,7 +762,7 @@
       card.appendChild(block);
     });
 
-    // Score panel (if submitted)
+    // Score panel (if fully submitted and not in retry)
     if (isSubmitted) {
       const sp = document.createElement('div');
       sp.className = 'score-panel show';
@@ -733,7 +778,7 @@
       actions.className = 'quiz-actions';
       const btn = document.createElement('button');
       btn.className = 'btn-submit';
-      btn.textContent = 'Submit Answers';
+      btn.textContent = isInRetryMode ? 'Re-submit Answers' : 'Submit Answers';
       btn.addEventListener('click', () => handleSubmit(day, btn, card));
       actions.appendChild(btn);
       card.appendChild(actions);
@@ -743,9 +788,13 @@
   }
 
   async function handleSubmit(day, btn, card) {
-    // Validate all answered
+    const isInRetryMode = !!retryMode[day.day];
+    const lockedIds = retryLocked[day.day] || new Set();
+
+    // Validate: only check unanswered questions that are NOT locked in retry mode
     let allAnswered = true;
     day.questions.forEach(q => {
+      if (isInRetryMode && lockedIds.has(q.id)) return; // skip locked questions
       if (answers[q.id] === undefined || answers[q.id] === '') allAnswered = false;
     });
     if (!allAnswered) {
@@ -768,8 +817,36 @@
       answerDetails.push({ id: q.id, type: q.type, answer: answers[q.id], correct: isCorrect });
     });
 
-    const result = await submitToSupabase(day, correct, day.questions.length, answerDetails);
-    submitted[day.day] = { correct, total: day.questions.length, statusMsg: result.message };
+    const total = day.questions.length;
+    const percentCorrect = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+    const result = await submitToSupabase(day, correct, total, answerDetails);
+
+    // Offer retry if score ≤ 60%
+    if (percentCorrect <= 60) {
+      const wantRetry = confirm(
+        `You scored ${percentCorrect}% (${correct}/${total} correct).\n\nWould you like to try again? Your correct answers will be locked — only your incorrect answers can be changed.`
+      );
+      if (wantRetry) {
+        // Enter retry mode: lock questions the student got correct
+        retryMode[day.day] = true;
+        retryLocked[day.day] = new Set(
+          answerDetails.filter(d => d.correct).map(d => d.id)
+        );
+        // Clear incorrect answers so student must re-answer them
+        answerDetails.forEach(d => {
+          if (!d.correct) delete answers[d.id];
+        });
+        renderDayNav();
+        renderDay(currentDayIndex);
+        return;
+      }
+    }
+
+    // No retry — finalize
+    delete retryMode[day.day];
+    delete retryLocked[day.day];
+    submitted[day.day] = { correct, total, statusMsg: result.message };
 
     // Update day nav
     renderDayNav();

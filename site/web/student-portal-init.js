@@ -851,10 +851,20 @@
     currentQuestionIndex: 0,
     currentDay: 0,
     answers: new Map(),
+    isRetryMode: false,
+    retryLockedQuestionIds: new Set(),
   };
   
   // Constants
   const PANEL_TRANSITION_MS = 300; // Must match CSS transition duration
+
+  /**
+   * Check if the retry-below-60% feature is enabled via feature flag (localStorage).
+   */
+  function isRetryFeatureEnabled() {
+    const stored = localStorage.getItem('rc_feature_retry_below_sixty');
+    return stored === null ? true : stored === 'true';
+  }
   
   /**
    * Text-to-speech utility function for accessibility
@@ -1233,17 +1243,23 @@
     const questions = dayData.questions || [];
     const isReadOnly = assignmentViewerState.isReadOnly;
     const isGraded = assignmentViewerState.isGraded;
+    const isRetryMode = assignmentViewerState.isRetryMode;
+    const retryLockedIds = assignmentViewerState.retryLockedQuestionIds || new Set();
     
     const questionsHtml = questions.map((q) => {
       const questionId = `${dayData.day_number}_${q.number}`;
       const choices = q.choices || [];
       const savedAnswer = assignmentViewerState.answers.get(questionId);
+      const isLocked = isRetryMode && retryLockedIds.has(questionId);
       
       const choicesHtml = choices.map(choice => {
         const isChecked = savedAnswer === choice.letter ? 'checked' : '';
-        const disabledAttr = isReadOnly ? 'disabled' : '';
+        const disabledAttr = (isReadOnly || isLocked) ? 'disabled' : '';
+        // In retry mode, mark the correct (selected) choice of a locked question
+        const isCorrectLockedChoice = isLocked && savedAnswer === choice.letter;
+        const choiceClass = isCorrectLockedChoice ? 'locked-correct' : (isLocked ? 'locked-disabled' : '');
         return `
-          <div class="st-choice" data-question-id="${questionId}" data-letter="${choice.letter}">
+          <div class="st-choice ${choiceClass}" data-question-id="${questionId}" data-letter="${choice.letter}">
             <input type="radio" name="q_${questionId}" id="q_${questionId}_${choice.letter}" value="${choice.letter}" ${isChecked} ${disabledAttr}>
             <label class="st-choice-label" for="q_${questionId}_${choice.letter}">
               <strong>${choice.letter})</strong> ${escapeHtml(choice.text)}
@@ -1252,6 +1268,8 @@
           </div>
         `;
       }).join('');
+
+      const retryLockedBadge = isLocked ? `<div class="st-retry-correct-badge">✓ Correct</div>` : '';
       
       const hintHtml = q.hint ? `
         <div class="st-hint-section">
@@ -1264,8 +1282,8 @@
       ` : '';
       
       return `
-        <div class="st-question-container">
-          <div class="st-question-number">Question ${q.number}</div>
+        <div class="st-question-container${isLocked ? ' retry-locked' : ''}">
+          <div class="st-question-number">Question ${q.number}${retryLockedBadge}</div>
           <div class="st-question-text">
             ${escapeHtml(q.text)}
             <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud" aria-label="Read question ${q.number} aloud">🔊</button>
@@ -1281,6 +1299,12 @@
     const readOnlyBanner = isReadOnly ? `
       <div class="st-submitted-banner">
         ${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}
+      </div>
+    ` : '';
+
+    const retryBanner = isRetryMode ? `
+      <div class="st-retry-banner">
+        🔄 Retry Mode — Correct answers are locked. Only your incorrect answers can be changed.
       </div>
     ` : '';
 
@@ -1306,7 +1330,7 @@
     const isLastDay = assignmentViewerState.currentDay === days.length - 1;
 
     const submitQuestionsHtml = (!isReadOnly && isLastDay) ? `
-      <button class="st-submit-btn" id="submitQuestionsBtn">Submit Assignment</button>
+      <button class="st-submit-btn" id="submitQuestionsBtn">${isRetryMode ? 'Re-submit Answers' : 'Submit Assignment'}</button>
     ` : '';
 
     const bottomDayTabsHtml = (!isLastDay && days.length > 1) ? `
@@ -1323,6 +1347,7 @@
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
+      ${retryBanner}
       ${progressHtml}
       ${vocabHtml}
       ${questionsHtml}
@@ -1330,10 +1355,14 @@
       ${bottomDayTabsHtml}
     `;
     
-    // Attach choice handlers (only if not read-only)
+    // Attach choice handlers (only if not read-only and question is not retry-locked)
     if (!isReadOnly) {
       container.querySelectorAll('.st-choice').forEach(choiceEl => {
         const input = choiceEl.querySelector('input[type="radio"]');
+        // Skip locked choices in retry mode
+        if (choiceEl.classList.contains('locked-correct') || choiceEl.classList.contains('locked-disabled')) {
+          return;
+        }
         
         choiceEl.addEventListener('click', function(e) {
           // Handle all clicks uniformly — don't bail out for INPUT clicks
@@ -1399,26 +1428,21 @@
     const submitQuestionsBtn = container.querySelector('#submitQuestionsBtn');
     if (submitQuestionsBtn) {
       submitQuestionsBtn.addEventListener('click', async function() {
-        if (!await rcConfirm('Submit Assignment', "Are you sure? You won't be able to change your answers.", 'Submit', { danger: true })) {
+        const currentlyRetrying = assignmentViewerState.isRetryMode;
+        const confirmMsg = currentlyRetrying
+          ? "Re-submit your updated answers?"
+          : "Are you sure? You won't be able to change your answers.";
+        if (!await rcConfirm('Submit Assignment', confirmMsg, 'Submit', { danger: true })) {
           return;
         }
         
         this.disabled = true;
         this.textContent = 'Submitting...';
         
-        try {
-          await saveAnswersToServer(instance, true);
-          
-          // Feature 1: Clear saved answers after successful submit
-          clearSavedAnswers(instance.id);
-          
-          this.textContent = '✓ Submitted!';
-          setTimeout(() => {
-            assignmentViewerState.isReadOnly = true;
-            renderQuestionsDay(container, dayData, instance);
-          }, 1000);
-        } catch (err) {
-          console.error(LOG_PREFIX, 'Failed to submit assignment:', err);
+        const submitResult = await saveAnswersToServer(instance, true);
+
+        if (submitResult === null) {
+          // Server error — restore button so student can retry
           let errorMsg = container.querySelector('.st-submit-error');
           if (!errorMsg) {
             errorMsg = document.createElement('div');
@@ -1427,9 +1451,42 @@
             this.parentElement.insertBefore(errorMsg, this.nextSibling);
           }
           errorMsg.textContent = 'Failed to submit. Please try again.';
-          this.textContent = 'Submit Assignment';
+          this.textContent = currentlyRetrying ? 'Re-submit Answers' : 'Submit Assignment';
           this.disabled = false;
+          return;
         }
+
+        // Check retry eligibility: score ≤ 60% on a fully-scored submission
+        const scoreTotal = submitResult.score_total;
+        const hasAutoScore = scoreTotal !== null && scoreTotal !== undefined;
+        if (hasAutoScore && scoreTotal <= 60 && isRetryFeatureEnabled()) {
+          const wantRetry = await rcConfirm(
+            'Try Again?',
+            `You scored ${Math.round(scoreTotal)}%. Would you like to retry the questions you got wrong? Your correct answers will be locked.`,
+            'Try Again'
+          );
+          if (wantRetry) {
+            // Enter (or update) retry mode
+            const results = submitResult.results || [];
+            assignmentViewerState.isRetryMode = true;
+            assignmentViewerState.retryLockedQuestionIds = new Set(
+              results.filter(r => r.is_correct === true).map(r => r.item_ref)
+            );
+            renderQuestionsDay(container, dayData, instance);
+            showToast('Retry mode active — only your incorrect answers are editable.', 'info');
+            return;
+          }
+        }
+
+        // No retry (score > 60% or student declined) — mark as read-only
+        clearSavedAnswers(instance.id);
+        assignmentViewerState.isRetryMode = false;
+        assignmentViewerState.retryLockedQuestionIds = new Set();
+        this.textContent = '✓ Submitted!';
+        setTimeout(() => {
+          assignmentViewerState.isReadOnly = true;
+          renderQuestionsDay(container, dayData, instance);
+        }, 1000);
       });
     }
 
@@ -1906,7 +1963,7 @@
     const studentCode = sessionStorage.getItem('rc_user_code');
     if (!studentCode) {
       console.warn(LOG_PREFIX, 'No student code in session, cannot save answers');
-      return;
+      return null;
     }
     
     const answersObj = {};
@@ -1932,10 +1989,13 @@
         throw new Error(`Save failed: ${response.status}`);
       }
       
+      const data = await response.json();
       console.log(LOG_PREFIX, 'Answers saved successfully');
+      return data;
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to save answers:', err);
       // Don't alert - let the student continue working
+      return null;
     }
   }
   
