@@ -2779,9 +2779,51 @@ function normalizeTaggedAssignmentText(input) {
       ? `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""} across ${classCount} classes.\n\n${groupedLines}`
       : `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""}.\n\n${groupedLines}`;
 
+    // Validate enrollments before showing the confirmation dialog
+    let enrollmentWarnings = "";
+    try {
+      const pairs = sections
+        .filter(s => s.className)
+        .map(s => ({ studentCode: s.studentCode, className: s.className }));
+      if (pairs.length > 0) {
+        const resp = await fetch("/.netlify/functions/teacher-validate-enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pairs }),
+        });
+        if (resp.ok) {
+          const validationData = await resp.json();
+          if (validationData.ok) {
+            const warnings = [];
+            for (const r of validationData.results) {
+              if (r.classFound && !r.enrolled) {
+                warnings.push(`• ${r.studentCode} is NOT enrolled in your ${r.className} class`);
+              }
+            }
+            // Check for enrolled students missing from the file
+            const codesInFile = new Set(sections.map(s => s.studentCode));
+            for (const [className, enrolledCodes] of Object.entries(validationData.enrolledStudentsByClass || {})) {
+              for (const code of enrolledCodes) {
+                if (!codesInFile.has(code)) {
+                  warnings.push(`• ${code} IS enrolled in ${className} but was NOT in the file (missing section?)`);
+                }
+              }
+            }
+            if (warnings.length > 0) {
+              enrollmentWarnings = "\n\n⚠️ Enrollment Warnings:\n" + warnings.join("\n");
+            }
+          }
+        } else {
+          console.warn("[splitByStudent] Enrollment validation returned non-OK status:", resp.status);
+        }
+      }
+    } catch (validationErr) {
+      console.warn("[splitByStudent] Enrollment validation failed (proceeding without):", validationErr);
+    }
+
     const confirmed = await rcConfirm(
       "Split by Student",
-      `${summary}\n\nCreate one draft per student?`,
+      `${summary}${enrollmentWarnings}\n\nCreate one draft per student?`,
       "Create Drafts"
     );
     if (!confirmed) return;
@@ -2993,8 +3035,10 @@ function normalizeTaggedAssignmentText(input) {
       // Student-individualized file detected — show info panel, no class checkboxes
       panel.style.display = "block";
 
-      const studentList = studentSections
-        .map((s) => `<strong>${s.studentCode}</strong>${s.className ? ` (${s.className})` : ""}`)
+      // Render panel immediately with plain student list; update with badges after validation
+      const studentListId = "rcStudentEnrollmentList_" + (renderFilePreviewPanel._counter = (renderFilePreviewPanel._counter || 0) + 1);
+      const studentListHtml = studentSections
+        .map((s) => `<span data-student-code="${escapeHtml(s.studentCode)}" data-class-name="${escapeHtml(s.className || "")}"><strong>${escapeHtml(s.studentCode)}</strong>${s.className ? ` (${escapeHtml(s.className)})` : ""}</span>`)
         .join(", ");
 
       panel.innerHTML = `
@@ -3003,7 +3047,7 @@ function normalizeTaggedAssignmentText(input) {
             <span style="font-size: 20px;">🎓</span>
             <strong>Detected ${studentSections.length} individualized student assignment${studentSections.length !== 1 ? "s" : ""}</strong>
           </div>
-          <div style="font-size: 13px; margin-bottom: 8px;">Students: ${studentList}</div>
+          <div id="${studentListId}" style="font-size: 13px; margin-bottom: 8px;">Students: ${studentListHtml}</div>
           <div class="work-subtle" style="font-size: 12px;">
             Click <strong>Split by Student</strong> to create one draft per student.
           </div>
@@ -3016,6 +3060,51 @@ function normalizeTaggedAssignmentText(input) {
         classSel.disabled = false;
         updateClassDropdownLabel("Individual Class");
       }
+
+      // Async: validate enrollments and update badges once response arrives
+      const pairsToValidate = studentSections
+        .filter(s => s.className)
+        .map(s => ({ studentCode: s.studentCode, className: s.className }));
+
+      if (pairsToValidate.length > 0) {
+        fetch("/.netlify/functions/teacher-validate-enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pairs: pairsToValidate }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data || !data.ok) return;
+            const listEl = document.getElementById(studentListId);
+            if (!listEl) return;
+
+            // Build a lookup: "CODE|CLASS" → enrolled bool
+            const enrolledMap = {};
+            for (const r of data.results) {
+              enrolledMap[`${r.studentCode}|${r.className}`] = { enrolled: r.enrolled, classFound: r.classFound };
+            }
+
+            // Update each student span with a badge
+            const spans = listEl.querySelectorAll("[data-student-code]");
+            spans.forEach(span => {
+              const code = span.getAttribute("data-student-code");
+              const cls = span.getAttribute("data-class-name");
+              const key = `${code}|${cls}`;
+              const info = cls ? enrolledMap[key] : null;
+              let badge = "";
+              if (info && info.classFound) {
+                badge = info.enrolled
+                  ? ` <span title="Enrolled in your class" style="color:#16a34a;">✅</span>`
+                  : ` <span title="NOT enrolled in your class" style="color:#d97706;">⚠️</span>`;
+              }
+              span.innerHTML = `<strong>${escapeHtml(code)}</strong>${cls ? ` (${escapeHtml(cls)})` : ""}${badge}`;
+            });
+          })
+          .catch(err => {
+            console.warn("[renderFilePreviewPanel] Enrollment validation failed:", err);
+          });
+      }
+
       return;
     }
 
