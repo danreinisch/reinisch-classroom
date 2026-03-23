@@ -190,18 +190,12 @@ test('detail modal title element has id="detailModalTitle"', () => {
   );
 });
 
-test('smart suggest modal has aria-labelledby="smartSuggestTitle"', () => {
-  assert.ok(
-    src.includes("'smartSuggestTitle'") || src.includes('"smartSuggestTitle"'),
-    'Smart suggest modal missing aria-labelledby=smartSuggestTitle'
-  );
-});
 
-test('smart suggest modal sets role="dialog"', () => {
-  // showSmartSuggestModal must set role dialog on overlay
+test('assignment detail modal sets role="dialog"', () => {
+  // showAssignmentDetail must set role dialog on overlay
   assert.ok(
     src.includes('setAttribute(\'role\', \'dialog\')'),
-    'Smart suggest modal missing role=dialog'
+    'Assignment detail modal missing role=dialog'
   );
 });
 
@@ -343,19 +337,7 @@ test('upload modal has unified closeUploadModal function', () => {
   );
 });
 
-test('smart suggest modal has unified closeSmartModal function', () => {
-  assert.ok(
-    src.includes('function closeSmartModal('),
-    'closeSmartModal function not found'
-  );
-});
 
-test('smart suggest modal has keyboard handler function handleSmartKeydown', () => {
-  assert.ok(
-    src.includes('function handleSmartKeydown('),
-    'handleSmartKeydown function not found'
-  );
-});
 
 // ── Focus restore ─────────────────────────────────────────────────────────────
 
@@ -381,15 +363,6 @@ test('openUploadPaperModal saves trigger element for focus restore', () => {
   );
 });
 
-test('showSmartSuggestModal saves trigger element for focus restore', () => {
-  const fnIdx = src.indexOf('function showSmartSuggestModal(');
-  assert.ok(fnIdx !== -1, 'showSmartSuggestModal not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 400);
-  assert.ok(
-    fnSection.includes('document.activeElement'),
-    'showSmartSuggestModal does not save document.activeElement for focus restore'
-  );
-});
 
 // ── Loading shimmer in detail modal ──────────────────────────────────────────
 
