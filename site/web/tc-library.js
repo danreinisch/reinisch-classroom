@@ -722,8 +722,47 @@
     reIssueBtn.style.cssText = 'font-size:12px; padding:5px 12px;';
     reIssueBtn.appendChild(createIcon('refreshCw', 14));
     reIssueBtn.appendChild(document.createTextNode(' Re-Issue'));
-    reIssueBtn.addEventListener('click', () => {
-      showToast('Re-issue coming soon', '#f59e0b', '#000');
+    reIssueBtn.addEventListener('click', async () => {
+      const confirmed = await rcConfirm(
+        'Re-Issue Assignment',
+        `This will create a new draft from "${entry.title || '(Untitled)'}" in your Work tab, ready to be edited and issued to a class.\n\nContinue?`,
+        'Create Draft'
+      );
+      if (!confirmed) return;
+
+      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 5);
+
+      const newDraft = {
+        id: newId,
+        title: entry.title || '(Untitled)',
+        className: entry.series || '',
+        batchId: null,
+        assignment: {
+          kind: entry.type || 'file',
+          text: entry.meta?.page || '',
+        },
+        mapping: entry.meta?.mapping || null,
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+        reissuedFrom: entry.assignment_id,
+      };
+
+      try {
+        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
+        drafts.unshift(newDraft);
+        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
+      } catch (err) {
+        console.error('[tc-library] Failed to save re-issue draft:', err);
+        showToast('Could not save draft — storage may be full.', '#ef4444', '#fff');
+        return;
+      }
+
+      showToast('Draft created from recalled assignment — redirecting to Work tab…');
+      window.location.href = '/teacher/work/';
     });
     btnRow.appendChild(reIssueBtn);
     card.appendChild(btnRow);
