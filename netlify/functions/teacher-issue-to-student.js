@@ -114,7 +114,9 @@ exports.handler = async (event) => {
     console.log(`[teacher-issue-to-student] [${requestId}] Assignment verified: "${assignmentRows[0].title}"`);
 
     // Step 2: Look up student UUIDs from codes
-    const quotedCodes = student_codes.map(c => `"${c.trim()}"`).join(',');
+    // Normalize codes to uppercase to match DB storage convention
+    const normalizedCodes = student_codes.map(c => c.trim().toUpperCase());
+    const quotedCodes = normalizedCodes.map(c => `"${c}"`).join(',');
     const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&code=in.(${quotedCodes})`;
     const studentsResponse = await fetch(studentsUrl, {
       method: 'GET',
@@ -131,12 +133,12 @@ exports.handler = async (event) => {
     const students = await studentsResponse.json();
 
     if (!Array.isArray(students) || students.length === 0) {
-      return jsonResponse(event, 404, { ok: false, error: `No students found for codes: ${student_codes.join(', ')}` }, { 'Cache-Control': 'no-store' }, requestId);
+      return jsonResponse(event, 404, { ok: false, error: `No students found for codes: ${normalizedCodes.join(', ')}` }, { 'Cache-Control': 'no-store' }, requestId);
     }
 
     // Warn about any codes not found
     const foundCodes = new Set(students.map(s => s.code));
-    const notFound = student_codes.filter(c => !foundCodes.has(c));
+    const notFound = normalizedCodes.filter(c => !foundCodes.has(c));
     if (notFound.length > 0) {
       console.warn(`[teacher-issue-to-student] [${requestId}] Student codes not found: ${notFound.join(', ')}`);
     }
@@ -144,10 +146,20 @@ exports.handler = async (event) => {
     console.log(`[teacher-issue-to-student] [${requestId}] Found ${students.length} student(s)`);
 
     // Step 3: Build instance rows and upsert with ON CONFLICT DO NOTHING
+    // Build a UTC date string (YYYY-MM-DD) for assigned_at — using UTC avoids
+    // timezone-shift issues when running in a Node.js Lambda environment.
+    const todayUtc = (() => {
+      const d = new Date();
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    })();
+
     const instances = students.map(student => ({
       assignment_id: parseInt(assignmentIdStr, 10),
       student_id: student.id,
-      assigned_at: new Date().toISOString().slice(0, 10), // date only (CURRENT_DATE format)
+      assigned_at: todayUtc,
       status: 'Assigned',
       settings: {},
       ...(due_at ? { due_at } : {}),
