@@ -925,6 +925,105 @@ exports.handler = async (event) => {
       }
     }
 
+    // Step 5b-alt: Create/upsert assignment_items from HTML manifest meta.questions
+    else if (parsedMeta && Array.isArray(parsedMeta.questions) && parsedMeta.questions.length > 0) {
+      const itemsToUpsert = [];
+      for (let i = 0; i < parsedMeta.questions.length; i++) {
+        const q = parsedMeta.questions[i];
+        const qRef = q.q_ref || ('Q' + (i + 1));
+        itemsToUpsert.push({
+          assignment_id: assignmentId,
+          item_ref: qRef,
+          answer_type: q.answer_type || 'constructed',
+          points: (typeof q.points === 'number') ? q.points : 1,
+          goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
+          dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
+          meta: {
+            question_number: qRef,
+            text: q.label || '',
+            correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
+          },
+        });
+      }
+
+      if (itemsToUpsert.length > 0) {
+        console.log(`[teacher-issue-draft] [${requestId}] Creating/updating ${itemsToUpsert.length} HTML manifest assignment_items`);
+
+        // Strip dese_codes before POSTing: assignment_items has no dese_codes column.
+        const itemsPayload = itemsToUpsert.map(({ dese_codes: _dc, ...item }) => item);
+
+        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?on_conflict=assignment_id,item_ref`;
+        const itemsResponse = await fetch(itemsUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=representation'
+          },
+          body: JSON.stringify(itemsPayload)
+        });
+
+        if (!itemsResponse.ok) {
+          const errorText = await itemsResponse.text();
+          console.error(`[teacher-issue-draft] [${requestId}] HTML manifest assignment_items upsert failed: ${itemsResponse.status} - ${errorText}`);
+          throw new Error(`Failed to create assignment items: ${itemsResponse.status} - ${errorText}`);
+        }
+
+        const upsertedItems = await itemsResponse.json();
+        console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} HTML manifest assignment_items`);
+
+        // Populate assignment_item_mappings for items that have goal/DESE codes
+        const upsertedMap = {};
+        (Array.isArray(upsertedItems) ? upsertedItems : []).forEach(function(item) {
+          upsertedMap[item.item_ref] = item;
+        });
+
+        const mappingsToUpsert = [];
+        for (let j = 0; j < itemsToUpsert.length; j++) {
+          const original = itemsToUpsert[j];
+          if (!original.item_ref) continue;
+          const upserted = upsertedMap[original.item_ref];
+          if (!upserted || !upserted.id) continue;
+
+          const goalCodes = original.goal_codes || [];
+          const deseCodes = original.dese_codes || [];
+
+          if (goalCodes.length > 0 || deseCodes.length > 0) {
+            mappingsToUpsert.push({
+              item_id: upserted.id,
+              goal_codes: goalCodes,
+              dese_codes: deseCodes,
+              weight: 1.0
+            });
+          }
+        }
+
+        if (mappingsToUpsert.length > 0) {
+          console.log(`[teacher-issue-draft] [${requestId}] Upserting ${mappingsToUpsert.length} HTML manifest assignment_item_mappings`);
+
+          const mappingsUrl = `${SUPABASE_URL}/rest/v1/assignment_item_mappings?on_conflict=item_id`;
+          const mappingsResponse = await fetch(mappingsUrl, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates,return=minimal'
+            },
+            body: JSON.stringify(mappingsToUpsert)
+          });
+
+          if (!mappingsResponse.ok) {
+            const errorText = await mappingsResponse.text();
+            console.warn(`[teacher-issue-draft] [${requestId}] HTML manifest assignment_item_mappings upsert failed: ${mappingsResponse.status} - ${errorText}`);
+          } else {
+            console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${mappingsToUpsert.length} HTML manifest assignment_item_mappings`);
+          }
+        }
+      }
+    }
+
     // Step 6: Convert due date to ISO 8601 if provided
     let dueAt = null;
     if (draft.dueAt) {

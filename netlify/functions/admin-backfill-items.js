@@ -18,45 +18,72 @@ const { SESSION_SECRET } = process.env;
 /**
  * Build assignment_items rows from a parsed meta object.
  * Mirrors the item creation logic in teacher-issue-draft.js.
+ * Supports two formats:
+ *   Path A: TXT structured format  — meta.days[].questions[]
+ *   Path B: HTML manifest format   — meta.questions[] (flat array from detectQuestionsFromHTML)
  */
 function buildItemsFromMeta(assignmentId, meta) {
   const items = [];
-  if (!meta || !Array.isArray(meta.days)) return items;
+  if (!meta) return items;
 
-  for (const day of meta.days) {
-    if (day.type === 'questions' && Array.isArray(day.questions)) {
-      for (const q of day.questions) {
+  // Path A: TXT structured format — meta.days[].questions[]
+  if (Array.isArray(meta.days)) {
+    for (const day of meta.days) {
+      if (day.type === 'questions' && Array.isArray(day.questions)) {
+        for (const q of day.questions) {
+          items.push({
+            assignment_id: assignmentId,
+            item_ref: `${day.day_number}_${q.number}`,
+            answer_type: 'mcq',
+            points: 1,
+            meta: {
+              day: day.day_number,
+              question_number: q.number,
+              text: q.text,
+              choices: q.choices,
+              correct: q.correct,
+              hint: q.hint,
+            },
+          });
+        }
+      } else if (day.type === 'writing_prompt') {
         items.push({
           assignment_id: assignmentId,
-          item_ref: `${day.day_number}_${q.number}`,
-          answer_type: 'mcq',
-          points: 1,
+          item_ref: `WP_${day.day_number}`,
+          answer_type: 'constructed',
+          points: 5,
           meta: {
             day: day.day_number,
-            question_number: q.number,
-            text: q.text,
-            choices: q.choices,
-            correct: q.correct,
-            hint: q.hint,
+            type: 'writing_prompt',
+            prompt: day.prompt,
+            structure: day.structure,
+            hints: day.hints,
           },
         });
       }
-    } else if (day.type === 'writing_prompt') {
+    }
+  }
+
+  // Path B: HTML manifest format — meta.questions is a flat array from detectQuestionsFromHTML
+  if (items.length === 0 && Array.isArray(meta.questions) && meta.questions.length > 0) {
+    for (let i = 0; i < meta.questions.length; i++) {
+      const q = meta.questions[i];
+      const qRef = q.q_ref || ('Q' + (i + 1));
       items.push({
         assignment_id: assignmentId,
-        item_ref: `WP_${day.day_number}`,
-        answer_type: 'constructed',
-        points: 5,
+        item_ref: qRef,
+        answer_type: q.answer_type || 'constructed',
+        points: (typeof q.points === 'number') ? q.points : 1,
+        goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
         meta: {
-          day: day.day_number,
-          type: 'writing_prompt',
-          prompt: day.prompt,
-          structure: day.structure,
-          hints: day.hints,
+          question_number: qRef,
+          text: q.label || '',
+          correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
         },
       });
     }
   }
+
   return items;
 }
 

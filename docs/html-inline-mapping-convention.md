@@ -216,3 +216,25 @@ These are mapped to the same item shape used throughout the rendering pipeline, 
 
 All existing TXT assignment reporting is unchanged — the `meta.days` path is always checked first and takes priority.
 
+---
+
+## Server-Side Backfill and Draft Issuance Parity
+
+### `admin-backfill-items` — Retroactive Backfill for HTML Assignments
+
+`netlify/functions/admin-backfill-items.js` can retroactively create `assignment_items` rows for HTML assignments that were created before the scoring pipeline integration (PR #824). The function's `buildItemsFromMeta()` now supports both metadata formats:
+
+- **Path A (TXT):** `meta.days[].questions[]` — the multi-day structured format.
+- **Path B (HTML manifest):** `meta.questions[]` (flat array from `detectQuestionsFromHTML`) — used when `meta.days` is absent or empty.
+
+To backfill all HTML assignments missing items, POST to `/.netlify/functions/admin-backfill-items` with an empty body (or `{ "assignment_id": "<id>" }` for a specific assignment). The function skips assignments that already have items unless `"force": true` is passed alongside a specific `assignment_id`.
+
+### `teacher-issue-draft` — HTML Manifest Item Creation (Step 5b-alt)
+
+`netlify/functions/teacher-issue-draft.js` Step 5b now handles two cases:
+
+- **Step 5b (TXT):** `if (parsedMeta && parsedMeta.days && parsedMeta.days.length > 0)` — existing TXT path, unchanged.
+- **Step 5b-alt (HTML manifest):** `else if (parsedMeta && Array.isArray(parsedMeta.questions) && parsedMeta.questions.length > 0)` — new path for HTML assignments whose `parsedMeta` has a flat `questions` array instead of `days`.
+
+When a teacher issues an HTML assignment through the draft flow, Step 5b-alt creates `assignment_items` and `assignment_item_mappings` rows using the same upsert pattern as the TXT path. This ensures HTML assignments issued via `teacher-issue-draft` have per-item scoring enabled from the moment they are issued.
+
