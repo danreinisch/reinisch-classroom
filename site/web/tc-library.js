@@ -1866,6 +1866,9 @@
     }
     row.appendChild(titleSection);
 
+    const btnGroup = document.createElement('div');
+    btnGroup.style.cssText = 'display:flex; align-items:center; gap:6px; flex-shrink:0;';
+
     if (assignment.active !== false) {
       const archiveBtn = document.createElement('button');
       archiveBtn.className = 'tc-btn';
@@ -1891,8 +1894,86 @@
           showToast('Failed to archive assignment', '#ef4444', '#fff');
         }
       });
-      row.appendChild(archiveBtn);
+      btnGroup.appendChild(archiveBtn);
+    } else {
+      const unarchiveBtn = document.createElement('button');
+      unarchiveBtn.className = 'tc-btn';
+      unarchiveBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0;';
+      unarchiveBtn.appendChild(createIcon('inbox', 12));
+      unarchiveBtn.appendChild(document.createTextNode(' Unarchive'));
+      unarchiveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const confirmed = await rcConfirm(
+          'Unarchive Assignment',
+          'Restore "' + (assignment.title || 'Untitled') + '" to active status?',
+          'Unarchive'
+        );
+        if (!confirmed) return;
+        try {
+          await db.updateAssignment(assignment.id, { active: true });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) assignmentsData[idx].active = true;
+          renderAssignmentsTab();
+          showToast('Assignment unarchived');
+        } catch (err) {
+          console.error('[tc-library] Failed to unarchive:', err);
+          showToast('Failed to unarchive assignment', '#ef4444', '#fff');
+        }
+      });
+      btnGroup.appendChild(unarchiveBtn);
     }
+
+    const reIssueBtn = document.createElement('button');
+    reIssueBtn.className = 'tc-btn';
+    reIssueBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0;';
+    reIssueBtn.appendChild(createIcon('refreshCw', 12));
+    reIssueBtn.appendChild(document.createTextNode(' Re-Issue'));
+    reIssueBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const confirmed = await rcConfirm(
+        'Re-Issue Assignment',
+        'This will create a new draft from "' + (assignment.title || '(Untitled)') + '" in your Work tab, ready to be edited and issued to a class.\n\nContinue?',
+        'Create Draft'
+      );
+      if (!confirmed) return;
+
+      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 5);
+
+      const newDraft = {
+        id: newId,
+        title: assignment.title || '(Untitled)',
+        className: assignment.series || '',
+        batchId: null,
+        assignment: {
+          kind: assignment.type || 'file',
+          text: assignment.meta?.page || '',
+        },
+        mapping: assignment.meta?.mapping || null,
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+        reissuedFrom: assignment.id,
+      };
+
+      try {
+        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
+        drafts.unshift(newDraft);
+        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
+      } catch (err) {
+        console.error('[tc-library] Failed to save re-issue draft:', err);
+        showToast('Could not save draft — storage may be full.', '#ef4444', '#fff');
+        return;
+      }
+
+      showToast('Draft created from finalized assignment — redirecting to Work tab…');
+      window.location.href = '/teacher/work/';
+    });
+    btnGroup.appendChild(reIssueBtn);
+
+    row.appendChild(btnGroup);
 
     const statsSection = document.createElement('div');
     statsSection.style.cssText = 'display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;';
