@@ -142,6 +142,7 @@
   const SVG_DL   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
   const SVG_DEL  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
   const SVG_RECALL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-4.95"></path></svg>';
+  const SVG_MANAGE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
 
   function makeDraftActionButtons(d) {
     const tdActions = document.createElement("td");
@@ -174,6 +175,12 @@
     }
 
     if (d.issuedAt) {
+      const btnManage = document.createElement("button");
+      btnManage.type = "button"; btnManage.className = "work-btn"; btnManage.style.marginLeft = "8px"; btnManage.title = "Manage students";
+      btnManage.innerHTML = SVG_MANAGE + " Manage"; // SAFETY: static SVG + static text
+      btnManage.addEventListener("click", () => handleManageDraft(d.id));
+      tdActions.appendChild(btnManage);
+
       const btnRecall = document.createElement("button");
       btnRecall.type = "button"; btnRecall.className = "work-btn danger"; btnRecall.style.marginLeft = "8px"; btnRecall.title = "Recall";
       btnRecall.innerHTML = SVG_RECALL + " Recall"; // SAFETY: static SVG + static text
@@ -1925,6 +1932,237 @@
       setTimeout(clearMsg, 5000);
       return false;
     }
+  }
+
+  // ========================================
+  // Manage Assignment — per-student modal
+  // ========================================
+
+  async function handleManageDraft(draftId) {
+    const drafts = readDrafts();
+    const draft = drafts.find(d => d.id === draftId);
+
+    if (!draft) {
+      setMsg("err", "Draft not found");
+      setTimeout(clearMsg, 3000);
+      return;
+    }
+
+    if (!draft.assignmentId) {
+      await rcAlert("No Assignment ID", "This draft has no tracked assignment ID. It may have been issued before assignment tracking was supported.");
+      return;
+    }
+
+    // Open the manage modal (it will load instances itself)
+    _openManageModal(draft);
+  }
+
+  function _openManageModal(draft) {
+    const backdropId = 'rcManageModalBackdrop_' + Date.now();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'rc-modal-backdrop';
+    backdrop.id = backdropId;
+
+    // Use a wider modal for the manage panel
+    backdrop.innerHTML = `
+      <div class="rc-modal rc-manage-modal" role="dialog" aria-modal="true" aria-labelledby="rcManageTitle" style="max-width:560px;width:95%;">
+        <div class="rc-modal-title" id="rcManageTitle">${escapeHtml(draft.title || 'Assignment')} — Manage Students</div>
+        <div id="rcManageSubtitle" style="font-size:12px;color:rgba(255,255,255,.5);margin:-8px 0 16px;">${escapeHtml(draft.className || '')}</div>
+        <div id="rcManageStudentList" style="margin-bottom:20px;">
+          <div style="color:rgba(255,255,255,.5);font-size:13px;">Loading students…</div>
+        </div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:16px 0;">
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:rgba(255,255,255,.85);">Add Student</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="rcManageAddCodeInput" type="text" maxlength="20" placeholder="Student code, e.g. S017"
+              style="flex:1;min-width:120px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#fff;font-size:13px;padding:7px 10px;outline:none;">
+            <button id="rcManageAddBtn" type="button" class="rc-modal-btn rc-modal-btn-primary" style="white-space:nowrap;">Issue to Student</button>
+          </div>
+          <div id="rcManageAddMsg" style="font-size:12px;margin-top:6px;min-height:16px;"></div>
+        </div>
+        <div class="rc-modal-actions" style="margin-top:20px;">
+          <button class="rc-modal-btn" id="rcManageCloseBtn">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const closeBtn = backdrop.querySelector('#rcManageCloseBtn');
+    const addBtn = backdrop.querySelector('#rcManageAddBtn');
+    const addInput = backdrop.querySelector('#rcManageAddCodeInput');
+    const addMsg = backdrop.querySelector('#rcManageAddMsg');
+
+    const close = () => backdrop.remove();
+
+    closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+    backdrop.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } });
+
+    // Load and render the current student list
+    const loadInstances = async () => {
+      const listEl = backdrop.querySelector('#rcManageStudentList');
+      if (!listEl) return;
+      listEl.innerHTML = '<div style="color:rgba(255,255,255,.5);font-size:13px;">Loading…</div>';
+
+      try {
+        const res = await fetch(`/.netlify/functions/teacher-assignment-instances?assignment_id=${encodeURIComponent(draft.assignmentId)}`, {
+          credentials: 'same-origin',
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (!data.ok) throw new Error(data.error || 'Failed to load students');
+
+        const instances = data.instances || [];
+        if (instances.length === 0) {
+          listEl.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:13px;font-style:italic;">No students currently have this assignment.</div>';
+          return;
+        }
+
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px;';
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = `<tr>
+          <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Student</th>
+          <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Status</th>
+          <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Assigned</th>
+          <th style="border-bottom:1px solid rgba(255,255,255,.1);"></th>
+        </tr>`;
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+
+        for (const inst of instances) {
+          const tr = document.createElement('tr');
+          tr.dataset.studentId = inst.student_id;
+          tr.dataset.instanceId = inst.instance_id;
+
+          const assignedDate = inst.assigned_at
+            ? new Date(inst.assigned_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            : '—';
+
+          tr.innerHTML = `
+            <td style="padding:6px 6px;vertical-align:middle;">
+              <span style="font-weight:600;">${escapeHtml(inst.student_code)}</span>
+              ${inst.student_name && inst.student_name !== inst.student_code ? `<span style="color:rgba(255,255,255,.45);margin-left:4px;font-size:12px;">${escapeHtml(inst.student_name)}</span>` : ''}
+            </td>
+            <td style="padding:6px 6px;vertical-align:middle;color:rgba(255,255,255,.65);">${escapeHtml(inst.status || 'Assigned')}</td>
+            <td style="padding:6px 6px;vertical-align:middle;color:rgba(255,255,255,.45);font-size:12px;">${escapeHtml(assignedDate)}</td>
+            <td style="padding:6px 6px;vertical-align:middle;text-align:right;">
+              <button type="button" class="rc-modal-btn rc-modal-btn-danger rc-manage-remove-btn" style="padding:4px 10px;font-size:12px;"
+                data-student-id="${escapeHtml(inst.student_id)}" data-student-code="${escapeHtml(inst.student_code)}">Remove</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        table.appendChild(tbody);
+        listEl.innerHTML = '';
+        listEl.appendChild(table);
+
+        // Wire up Remove buttons
+        listEl.querySelectorAll('.rc-manage-remove-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const studentId = btn.dataset.studentId;
+            const studentCode = btn.dataset.studentCode;
+            const confirmed = await rcConfirm(
+              'Remove Student',
+              `Remove ${escapeHtml(studentCode)} from this assignment? Their submission (if any) will also be deleted.`,
+              'Remove',
+              { danger: true }
+            );
+            if (!confirmed) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Removing…';
+
+            try {
+              const removeRes = await fetch('/.netlify/functions/teacher-recall-assignment', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assignment_id: draft.assignmentId, student_ids: [studentId] }),
+              });
+              if (!removeRes.ok) {
+                const err = await removeRes.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${removeRes.status}`);
+              }
+              const removeData = await removeRes.json();
+              if (!removeData.ok) throw new Error(removeData.error || 'Remove failed');
+
+              showToast(`✓ Removed ${studentCode} from assignment`);
+              // Reload the list
+              await loadInstances();
+            } catch (err) {
+              console.error('[tc-work] Remove student error:', err);
+              btn.disabled = false;
+              btn.textContent = 'Remove';
+              await rcAlert('Remove Failed', err.message || 'Could not remove student from assignment.');
+            }
+          });
+        });
+      } catch (err) {
+        console.error('[tc-work] Load instances error:', err);
+        listEl.innerHTML = `<div style="color:rgba(239,68,68,.8);font-size:13px;">Failed to load students: ${escapeHtml(err.message)}</div>`;
+      }
+    };
+
+    // Add student handler
+    addBtn.addEventListener('click', async () => {
+      const code = (addInput.value || '').trim().toUpperCase();
+      if (!code) {
+        addMsg.style.color = 'rgba(239,68,68,.8)';
+        addMsg.textContent = 'Enter a student code first.';
+        return;
+      }
+
+      addBtn.disabled = true;
+      addMsg.style.color = 'rgba(255,255,255,.5)';
+      addMsg.textContent = 'Issuing…';
+
+      try {
+        const issueRes = await fetch('/.netlify/functions/teacher-issue-to-student', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignment_id: draft.assignmentId, student_codes: [code] }),
+        });
+        if (!issueRes.ok) {
+          const err = await issueRes.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${issueRes.status}`);
+        }
+        const issueData = await issueRes.json();
+        if (!issueData.ok) throw new Error(issueData.error || 'Issue failed');
+
+        addInput.value = '';
+        if (issueData.issued_count === 0) {
+          addMsg.style.color = 'rgba(249,115,22,.85)';
+          addMsg.textContent = `${code} already has this assignment.`;
+        } else {
+          addMsg.style.color = 'rgba(34,197,94,.85)';
+          addMsg.textContent = `✓ Issued to ${code}`;
+          showToast(`✓ Issued assignment to ${code}`);
+        }
+        await loadInstances();
+      } catch (err) {
+        console.error('[tc-work] Add student error:', err);
+        addMsg.style.color = 'rgba(239,68,68,.8)';
+        addMsg.textContent = err.message || 'Failed to issue to student.';
+      } finally {
+        addBtn.disabled = false;
+      }
+    });
+
+    // Allow Enter key on the input to trigger add
+    addInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+    });
+
+    // Load instances immediately
+    loadInstances();
   }
 
   async function recallAllInBatch(batchId) {
