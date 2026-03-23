@@ -25,6 +25,15 @@
     ['paper', 'Paper']
   ];
 
+  // Sort options: [value, label]
+  const ASSIGNMENT_SORT_OPTIONS = [
+    ['newest', 'Newest First'],
+    ['oldest', 'Oldest First'],
+    ['titleAZ', 'Title A\u2013Z'],
+    ['titleZA', 'Title Z\u2013A'],
+    ['avgScore', 'Avg Score']
+  ];
+
   // ── SVG Icon System ───────────────────────────────────────────────────────────
 
   const ICON_PATHS = {
@@ -197,7 +206,8 @@
         assignments: {
           classFilter: filters.assignments.classFilter,
           searchQuery: filters.assignments.searchQuery,
-          typeFilter: filters.assignments.typeFilter
+          typeFilter: filters.assignments.typeFilter,
+          sortBy: filters.assignments.sortBy
         },
         lessons: {
           searchQuery: filters.lessons.searchQuery
@@ -231,6 +241,9 @@
         }
         if (typeof data.assignments.typeFilter === 'string') {
           filters.assignments.typeFilter = data.assignments.typeFilter;
+        }
+        if (typeof data.assignments.sortBy === 'string') {
+          filters.assignments.sortBy = data.assignments.sortBy;
         }
       }
 
@@ -283,7 +296,8 @@
     assignments: {
       classFilter: "All Classes",
       searchQuery: "",
-      typeFilter: "All"
+      typeFilter: "All",
+      sortBy: "newest"
     },
     lessons: {
       searchQuery: ""
@@ -1004,6 +1018,43 @@
       filtered = filtered.filter(a => a.type === filters.assignments.typeFilter);
     }
     return filtered;
+  }
+
+  function sortAssignments(list) {
+    const sortBy = filters.assignments.sortBy;
+    const sorted = [...list];
+    const dateOf = a => a.created_at ? new Date(a.created_at).getTime() : null;
+    if (sortBy === 'oldest') {
+      sorted.sort((a, b) => {
+        const da = dateOf(a), db = dateOf(b);
+        if (da === null && db === null) return 0;
+        if (da === null) return 1;
+        if (db === null) return -1;
+        return da - db;
+      });
+    } else if (sortBy === 'titleAZ') {
+      sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else if (sortBy === 'titleZA') {
+      sorted.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    } else if (sortBy === 'avgScore') {
+      sorted.sort((a, b) => {
+        const statsA = getAssignmentStats(a, instancesData, submissionsData);
+        const statsB = getAssignmentStats(b, instancesData, submissionsData);
+        const scoreA = statsA.avgScore != null ? statsA.avgScore : -1;
+        const scoreB = statsB.avgScore != null ? statsB.avgScore : -1;
+        return scoreB - scoreA;
+      });
+    } else {
+      // default: newest — items without dates sort to the end
+      sorted.sort((a, b) => {
+        const da = dateOf(a), db = dateOf(b);
+        if (da === null && db === null) return 0;
+        if (da === null) return 1;
+        if (db === null) return -1;
+        return db - da;
+      });
+    }
+    return sorted;
   }
 
   function updateActiveClassFilter() {
@@ -2063,9 +2114,9 @@
 
     // Pre-compute filtered + lane lists (shared by analytics section and lane rendering)
     const filtered = filterAssignments();
-    const upcomingList   = filtered.filter(a => computeLane(a, instancesData) === 'upcoming');
-    const currentList    = filtered.filter(a => computeLane(a, instancesData) === 'current');
-    const finalizedList  = filtered.filter(a => computeLane(a, instancesData) === 'finalized');
+    const upcomingList   = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+    const currentList    = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+    const finalizedList  = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'finalized'));
 
     // Analytics section (between KPI row and filter bar)
     container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
@@ -2114,6 +2165,20 @@
     });
     typeFilter.value = filters.assignments.typeFilter;
     filterBar.appendChild(typeFilter);
+
+    // Sort dropdown
+    const sortSelect = document.createElement('select');
+    sortSelect.id = 'assignmentSortBy';
+    sortSelect.className = 'tc-input';
+    sortSelect.style.cssText = 'padding:8px 12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+    ASSIGNMENT_SORT_OPTIONS.forEach(([val, label]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      sortSelect.appendChild(opt);
+    });
+    sortSelect.value = filters.assignments.sortBy;
+    filterBar.appendChild(sortSelect);
 
     // Clear filters button — only visible when filters are active
     const hasActiveFilters = Boolean(filters.assignments.searchQuery.trim()) || filters.assignments.typeFilter !== 'All';
@@ -2483,6 +2548,11 @@
     document.addEventListener('change', (e) => {
       if (e.target.id === 'assignmentTypeFilter') {
         filters.assignments.typeFilter = e.target.value;
+        renderAssignmentsTab();
+        saveFilters();
+      }
+      if (e.target.id === 'assignmentSortBy') {
+        filters.assignments.sortBy = e.target.value;
         renderAssignmentsTab();
         saveFilters();
       }

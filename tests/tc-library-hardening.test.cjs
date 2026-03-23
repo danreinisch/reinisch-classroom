@@ -136,7 +136,7 @@ function createIcon(name, size = 16) {
 
 function makeSaveFiltersContext(storage) {
   const filters = {
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', sortBy: 'newest' },
     lessons: { searchQuery: '' }
   };
   const collapsedLanes = new Set(['analytics']);
@@ -148,7 +148,8 @@ function makeSaveFiltersContext(storage) {
         assignments: {
           classFilter: filters.assignments.classFilter,
           searchQuery: filters.assignments.searchQuery,
-          typeFilter: filters.assignments.typeFilter
+          typeFilter: filters.assignments.typeFilter,
+          sortBy: filters.assignments.sortBy
         },
         lessons: { searchQuery: filters.lessons.searchQuery },
         collapsedLanes: [...collapsedLanes],
@@ -174,6 +175,7 @@ function makeSaveFiltersContext(storage) {
         if (typeof data.assignments.classFilter === 'string') filters.assignments.classFilter = data.assignments.classFilter;
         if (typeof data.assignments.searchQuery === 'string') filters.assignments.searchQuery = data.assignments.searchQuery;
         if (typeof data.assignments.typeFilter === 'string') filters.assignments.typeFilter = data.assignments.typeFilter;
+        if (typeof data.assignments.sortBy === 'string') filters.assignments.sortBy = data.assignments.sortBy;
       }
       if (data.lessons && typeof data.lessons === 'object') {
         if (typeof data.lessons.searchQuery === 'string') filters.lessons.searchQuery = data.lessons.searchQuery;
