@@ -1,7 +1,9 @@
 // Teacher recall assignment endpoint
 // POST /.netlify/functions/teacher-recall-assignment
 // Auth: Requires teacher session cookie
-// Body: { assignment_id, reason? }
+// Body: { assignment_id, student_ids?: string[], reason? }
+//   - Without student_ids: recalls from ALL students (existing behaviour)
+//   - With student_ids: recalls only from those specific students (partial recall)
 // Returns: { ok, recalled_instances, recalled_submissions }
 
 function getCurrentSchoolYear() {
@@ -65,7 +67,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id, reason } = parseResult.data;
+  const { assignment_id, reason, student_ids } = parseResult.data;
 
   if (!assignment_id) {
     console.log(`[teacher-recall-assignment] [${requestId}] Missing assignment_id`);
@@ -79,7 +81,22 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'assignment_id must be a positive integer' }, {}, requestId);
   }
 
-  console.log(`[teacher-recall-assignment] [${requestId}] Recalling assignment: ${assignmentIdStr}`);
+  // Validate optional student_ids — must be a non-empty array of UUID strings when provided
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isPartialRecall = Array.isArray(student_ids) && student_ids.length > 0;
+
+  if (student_ids !== undefined && student_ids !== null) {
+    if (!Array.isArray(student_ids) || student_ids.length === 0) {
+      return jsonResponse(event, 400, { ok: false, error: 'student_ids must be a non-empty array when provided' }, {}, requestId);
+    }
+    for (const sid of student_ids) {
+      if (typeof sid !== 'string' || !uuidPattern.test(sid)) {
+        return jsonResponse(event, 400, { ok: false, error: 'All student_ids must be valid UUID strings' }, {}, requestId);
+      }
+    }
+  }
+
+  console.log(`[teacher-recall-assignment] [${requestId}] Recalling assignment: ${assignmentIdStr}${isPartialRecall ? ` (partial: ${student_ids.length} student(s))` : ' (full recall)'}`);
 
   try {
     // Step 1: Fetch assignment metadata to preserve in recall_library before deletion
@@ -104,8 +121,13 @@ exports.handler = async (event) => {
       console.warn(`[teacher-recall-assignment] [${requestId}] Could not fetch assignment metadata: ${assignmentMetaResponse.status}`);
     }
 
-    // Step 2: Fetch assignment_instances for this assignment to get their IDs
-    const instancesQueryUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&assignment_id=eq.${assignmentIdStr}`;
+    // Step 2: Fetch assignment_instances to get their IDs
+    // For partial recall, filter by both assignment_id and the target student_ids
+    let instancesQueryUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&assignment_id=eq.${assignmentIdStr}`;
+    if (isPartialRecall) {
+      const quotedStudentIds = student_ids.map(id => `"${id}"`).join(',');
+      instancesQueryUrl += `&student_id=in.(${quotedStudentIds})`;
+    }
 
     console.log(`[teacher-recall-assignment] [${requestId}] Fetching assignment instances`);
 
@@ -135,7 +157,6 @@ exports.handler = async (event) => {
       const instanceIds = instanceRows.map(r => r.id);
 
       // Validate that all instance IDs are UUIDs before using them in the URL
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validInstanceIds = instanceIds.filter(id => typeof id === 'string' && uuidPattern.test(id));
 
       if (validInstanceIds.length !== instanceIds.length) {
@@ -143,7 +164,7 @@ exports.handler = async (event) => {
       }
 
       if (validInstanceIds.length > 0) {
-        // Step 2: Delete submissions for these instances (foreign key order: submissions first)
+        // Delete submissions for these instances (foreign key order: submissions first)
         const quotedIds = validInstanceIds.map(id => `"${id}"`).join(',');
         const deleteSubmissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?instance_id=in.(${quotedIds})`;
 
@@ -172,33 +193,51 @@ exports.handler = async (event) => {
       }
     }
 
-    // Step 3: Delete assignment_instances for this assignment
-    const deleteInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?assignment_id=eq.${assignmentIdStr}`;
-
-    console.log(`[teacher-recall-assignment] [${requestId}] Deleting assignment instances`);
-
-    const deleteInstancesResponse = await fetch(deleteInstancesUrl, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-      },
-    });
-
-    if (!deleteInstancesResponse.ok) {
-      const errorText = await deleteInstancesResponse.text();
-      console.error(`[teacher-recall-assignment] [${requestId}] Failed to delete instances: ${deleteInstancesResponse.status} - ${errorText}`);
-      throw new Error(`Failed to delete assignment instances: ${deleteInstancesResponse.status}`);
+    // Step 3: Delete the targeted assignment_instances
+    // For partial recall, scope deletion to the specific instance IDs already fetched
+    let deleteInstancesUrl;
+    if (isPartialRecall && instanceCount > 0) {
+      const validInstanceIds = instanceRows
+        .map(r => r.id)
+        .filter(id => typeof id === 'string' && uuidPattern.test(id));
+      const quotedInstanceIds = validInstanceIds.map(id => `"${id}"`).join(',');
+      deleteInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=in.(${quotedInstanceIds})`;
+    } else if (isPartialRecall && instanceCount === 0) {
+      // Nothing to delete — skip the DELETE call
+      deleteInstancesUrl = null;
+    } else {
+      deleteInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?assignment_id=eq.${assignmentIdStr}`;
     }
 
-    const deletedInstances = await deleteInstancesResponse.json().catch(() => []);
-    const recalled_instances = Array.isArray(deletedInstances) ? deletedInstances.length : 0;
+    let recalled_instances = 0;
+
+    if (deleteInstancesUrl) {
+      console.log(`[teacher-recall-assignment] [${requestId}] Deleting assignment instances`);
+
+      const deleteInstancesResponse = await fetch(deleteInstancesUrl, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+        },
+      });
+
+      if (!deleteInstancesResponse.ok) {
+        const errorText = await deleteInstancesResponse.text();
+        console.error(`[teacher-recall-assignment] [${requestId}] Failed to delete instances: ${deleteInstancesResponse.status} - ${errorText}`);
+        throw new Error(`Failed to delete assignment instances: ${deleteInstancesResponse.status}`);
+      }
+
+      const deletedInstances = await deleteInstancesResponse.json().catch(() => []);
+      recalled_instances = Array.isArray(deletedInstances) ? deletedInstances.length : 0;
+    }
 
     console.log(`[teacher-recall-assignment] [${requestId}] Deleted ${recalled_instances} instance(s)`);
 
     // Step 4: Insert a record into recall_library to preserve assignment metadata
+    // For partial recalls, note the recalled student IDs in the record
     if (assignmentMeta) {
       const recallRecord = {
         assignment_id: assignmentMeta.id,
@@ -213,6 +252,15 @@ exports.handler = async (event) => {
         reason: reason || null,
         created_at: new Date().toISOString(),
       };
+
+      // For partial recalls, annotate the meta with partial recall info
+      if (isPartialRecall) {
+        recallRecord.meta = {
+          ...(recallRecord.meta || {}),
+          partial_recall: true,
+          recalled_student_ids: student_ids,
+        };
+      }
 
       const insertRecallUrl = `${SUPABASE_URL}/rest/v1/recall_library`;
       const insertRecallResponse = await fetch(insertRecallUrl, {
