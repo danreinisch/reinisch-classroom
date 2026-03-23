@@ -121,6 +121,12 @@
       { tag: 'line', x1: '16', y1: '2', x2: '16', y2: '6' },
       { tag: 'line', x1: '8', y1: '2', x2: '8', y2: '6' },
       { tag: 'line', x1: '3', y1: '10', x2: '21', y2: '10' }
+    ],
+    users: [
+      { tag: 'path', d: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2' },
+      { tag: 'circle', cx: '9', cy: '7', r: '4' },
+      { tag: 'path', d: 'M23 21v-2a4 4 0 0 0-3-3.87' },
+      { tag: 'path', d: 'M16 3.13a4 4 0 0 1 0 7.75' }
     ]
   };
 
@@ -280,6 +286,7 @@
   let assignmentsData = [];
   let instancesData = [];
   let submissionsData = [];
+  let classEnrollmentsData = [];
   let lessonsData = null;
   let syncStatus = "loading";
 
@@ -469,7 +476,7 @@
       const remote = await isRemote();
       if (remote) {
         console.log("[tc-library] Fetching from Supabase...");
-        [assignmentsData, instancesData, submissionsData] = await Promise.all([
+        [assignmentsData, instancesData, submissionsData, classEnrollmentsData] = await Promise.all([
           db.listAssignments(),
           db.listAssignmentInstances().catch(err => {
             console.warn("[tc-library] Could not load instances:", err.message);
@@ -478,7 +485,11 @@
           db.listSubmissions().catch(err => {
             console.warn("[tc-library] Could not load submissions:", err.message);
             return [];
-          })
+          }),
+          db.listClassEnrollments ? db.listClassEnrollments().catch(err => {
+            console.warn("[tc-library] Could not load class enrollments:", err.message);
+            return [];
+          }) : Promise.resolve([])
         ]);
         syncStatus = "synced";
       } else {
@@ -1468,6 +1479,48 @@
 
   // ── Current / Active Lane ─────────────────────────────────────────────────────
 
+  /**
+   * Infer the class name for an assignment using classEnrollmentsData cross-reference,
+   * falling back to assignment.series (when it's not a URL).
+   * @param {Object} assignment
+   * @returns {string|null}
+   */
+  function inferClassName(assignment) {
+    // Strategy 1: cross-reference instances → classEnrollmentsData
+    const instances = instancesData.filter(i => i.assignment_id === assignment.id);
+    if (instances.length > 0) {
+      const classCounts = new Map();
+      for (const instance of instances) {
+        const enrollment = classEnrollmentsData.find(
+          e => e.student_code === instance.student_code && e.active !== false
+        );
+        if (enrollment && enrollment.class_name) {
+          classCounts.set(enrollment.class_name, (classCounts.get(enrollment.class_name) || 0) + 1);
+        }
+      }
+      if (classCounts.size > 0) {
+        return [...classCounts.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+      }
+    }
+    // Strategy 2: assignment.series when it is not a URL
+    if (assignment.series && !assignment.series.startsWith('http')) {
+      return assignment.series;
+    }
+    return null;
+  }
+
+  /**
+   * Create a styled class name badge span element.
+   * @param {string} className
+   * @returns {HTMLElement}
+   */
+  function createClassBadgeSpan(className) {
+    const span = document.createElement('span');
+    span.style.cssText = 'background:rgba(96,165,250,.15); color:#60a5fa; padding:2px 8px; border-radius:10px; font-size:12px; white-space:nowrap; flex-shrink:0;';
+    span.textContent = className;
+    return span;
+  }
+
   function renderCurrentLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
@@ -1513,6 +1566,17 @@
     headerRow.appendChild(titleEl);
     headerRow.appendChild(typePill);
     card.appendChild(headerRow);
+
+    const className = inferClassName(assignment);
+    if (className) {
+      const classEl = document.createElement('div');
+      classEl.style.cssText = 'margin-bottom:8px; display:inline-flex; align-items:center; gap:4px;';
+      const classIcon = createIcon('users', 12);
+      classIcon.style.cssText = 'flex-shrink:0; color:#60a5fa;';
+      classEl.appendChild(classIcon);
+      classEl.appendChild(createClassBadgeSpan(className));
+      card.appendChild(classEl);
+    }
 
     if (assignment.series) {
       const seriesEl = document.createElement('div');
@@ -1795,6 +1859,10 @@
       archivedBadge.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.40); padding:2px 8px; border-radius:8px; font-size:11px; white-space:nowrap; margin-left:8px;';
       archivedBadge.textContent = 'Archived';
       titleSection.appendChild(archivedBadge);
+    }
+    const finalizedClassName = inferClassName(assignment);
+    if (finalizedClassName) {
+      titleSection.appendChild(createClassBadgeSpan(finalizedClassName));
     }
     row.appendChild(titleSection);
 
