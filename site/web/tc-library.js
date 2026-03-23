@@ -1101,6 +1101,21 @@
     headerRow.appendChild(typePill);
     card.appendChild(headerRow);
 
+    const instances = instancesData.filter(i => i.assignment_id === assignment.id);
+    const instanceBadge = document.createElement('div');
+    instanceBadge.style.cssText = 'font-size:13px; margin-bottom:6px; display:inline-flex; align-items:center; gap:4px;';
+    const clipIcon = createIcon('clipboard', 13);
+    clipIcon.style.cssText = 'flex-shrink:0;';
+    instanceBadge.appendChild(clipIcon);
+    if (instances.length === 0) {
+      instanceBadge.style.color = 'rgba(251,191,36,.80)';
+      instanceBadge.appendChild(document.createTextNode('0 students \u00b7 Not yet issued'));
+    } else {
+      instanceBadge.style.color = 'rgba(255,255,255,.60)';
+      instanceBadge.appendChild(document.createTextNode(instances.length + ' student' + (instances.length === 1 ? '' : 's') + ' assigned'));
+    }
+    card.appendChild(instanceBadge);
+
     if (assignment.series) {
       const seriesEl = document.createElement('div');
       seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px; display:inline-flex; align-items:center; gap:4px;';
@@ -1109,6 +1124,25 @@
       seriesEl.appendChild(seriesIcon);
       seriesEl.appendChild(document.createTextNode(assignment.series));
       card.appendChild(seriesEl);
+    }
+
+    const dueDates = instances.map(i => i.due_at).filter(Boolean);
+    const nearestDue = dueDates.length > 0
+      ? new Date(Math.min(...dueDates.map(d => new Date(d).getTime())))
+      : null;
+    if (nearestDue) {
+      const dueEl = document.createElement('div');
+      dueEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px; display:inline-flex; align-items:center; gap:4px;';
+      const calIcon = createIcon('calendar', 13);
+      calIcon.style.cssText = 'flex-shrink:0;';
+      dueEl.appendChild(calIcon);
+      dueEl.appendChild(document.createTextNode('Due: ' + nearestDue.toLocaleDateString()));
+      card.appendChild(dueEl);
+    } else {
+      const noDueEl = document.createElement('div');
+      noDueEl.style.cssText = 'color:rgba(255,255,255,.35); font-size:13px; margin-bottom:8px;';
+      noDueEl.textContent = 'No due date set';
+      card.appendChild(noDueEl);
     }
 
     const dateEl = document.createElement('div');
