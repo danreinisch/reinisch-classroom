@@ -617,7 +617,7 @@
     });
   }
 
-  function _renderRecallCards(cardsArea, entries, filterBar) {
+  function _renderRecallCards(cardsArea, entries, _filterBar) {
     cardsArea.innerHTML = '';
 
     const query = _recallSearchQuery.toLowerCase();
@@ -2114,6 +2114,23 @@
     });
     typeFilter.value = filters.assignments.typeFilter;
     filterBar.appendChild(typeFilter);
+
+    // Clear filters button — only visible when filters are active
+    const hasActiveFilters = Boolean(filters.assignments.searchQuery.trim()) || filters.assignments.typeFilter !== 'All';
+    if (hasActiveFilters) {
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'tc-btn';
+      clearBtn.title = 'Clear filters';
+      clearBtn.style.opacity = '0.7';
+      clearBtn.textContent = '× Clear';
+      clearBtn.addEventListener('click', () => {
+        filters.assignments.searchQuery = '';
+        filters.assignments.typeFilter = 'All';
+        saveFilters();
+        renderAssignmentsTab();
+      });
+      filterBar.appendChild(clearBtn);
+    }
 
     container.appendChild(filterBar);
 
