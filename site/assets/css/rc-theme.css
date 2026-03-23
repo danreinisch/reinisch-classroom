@@ -177,7 +177,10 @@ body {
 
 /* ChromeOS fix: force dark backgrounds on select options site-wide.
    ChromeOS does not honor color-scheme:dark for native <option> elements,
-   causing them to render bright-white in dark themes. */
+   causing them to render bright-white in dark themes.
+   background-color (not shorthand) is used on select so existing gradient/image
+   backgrounds on custom-styled selects are not clobbered.
+   background shorthand is used on option to fully override any inherited transparency. */
 select,
 .rc-select {
   background-color: var(--rc-panel, #0f172a);
