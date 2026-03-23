@@ -240,7 +240,10 @@ test('20 MB is rejected', () => {
  */
 function computeLane(assignment, allInstances) {
   const instances = allInstances.filter(i => i.assignment_id === assignment.id);
-  if (instances.length === 0) return 'upcoming';
+  if (instances.length === 0) {
+    if (assignment.active === false) return 'finalized';
+    return 'upcoming';
+  }
   const allGraded = instances.every(i => i.status === 'Graded');
   if (allGraded && assignment.active === false) return 'finalized';
   const anyActive = instances.some(i =>
@@ -255,6 +258,10 @@ console.log('\n--- Lane computation ---');
 
 test('no instances → Upcoming', () => {
   assert.strictEqual(computeLane({ id: 'A1' }, []), 'upcoming');
+});
+
+test('no instances + active=false → Finalized (archived before issue)', () => {
+  assert.strictEqual(computeLane({ id: 'A1', active: false }, []), 'finalized');
 });
 
 test('all Graded + active=false → Finalized', () => {
