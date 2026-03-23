@@ -1,7 +1,9 @@
 // Teacher validate enrollments endpoint
 // POST /.netlify/functions/teacher-validate-enrollments
 // Auth: Requires teacher session cookie
-// Body: { pairs: [{ studentCode, className }] }
+// Body: { pairs: [{ studentCode, className }], classNames?: string[] }
+//   - pairs: required (may be empty when classNames is provided)
+//   - classNames: optional array of class names; returns enrolledStudentsByClass for those classes
 // Returns: { ok, results: [{ studentCode, className, enrolled, classFound }], enrolledStudentsByClass }
 
 const {
@@ -122,28 +124,44 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { pairs } = parseResult.data;
+  const { pairs, classNames } = parseResult.data;
 
-  if (!Array.isArray(pairs) || pairs.length === 0) {
-    return jsonResponse(event, 400, { ok: false, error: 'pairs must be a non-empty array' }, {}, requestId);
+  const hasPairs = Array.isArray(pairs) && pairs.length > 0;
+  const hasClassNames = Array.isArray(classNames) && classNames.length > 0;
+
+  if (!hasPairs && !hasClassNames) {
+    return jsonResponse(event, 400, { ok: false, error: 'pairs must be a non-empty array, or classNames must be provided' }, {}, requestId);
   }
 
-  if (pairs.length > 200) {
+  const safePairs = Array.isArray(pairs) ? pairs : [];
+
+  if (safePairs.length > 200) {
     return jsonResponse(event, 400, { ok: false, error: 'Too many pairs (max 200)' }, {}, requestId);
   }
 
   // Validate pair structure
-  for (const pair of pairs) {
+  for (const pair of safePairs) {
     if (!pair || typeof pair.studentCode !== 'string' || typeof pair.className !== 'string') {
       return jsonResponse(event, 400, { ok: false, error: 'Each pair must have studentCode and className strings' }, {}, requestId);
     }
   }
 
-  console.log(`[teacher-validate-enrollments] [${requestId}] Checking ${pairs.length} pairs across classes`);
+  if (hasClassNames) {
+    for (const cn of classNames) {
+      if (typeof cn !== 'string') {
+        return jsonResponse(event, 400, { ok: false, error: 'Each entry in classNames must be a string' }, {}, requestId);
+      }
+    }
+  }
+
+  console.log(`[teacher-validate-enrollments] [${requestId}] Checking ${safePairs.length} pairs across classes${hasClassNames ? ` + roster for [${classNames.join(', ')}]` : ''}`);
 
   try {
-    // Collect unique class names from pairs
-    const uniqueClassNames = [...new Set(pairs.map(p => p.className).filter(Boolean))];
+    // Collect unique class names from pairs and optional classNames array
+    const uniqueClassNames = [...new Set([
+      ...safePairs.map(p => p.className).filter(Boolean),
+      ...(hasClassNames ? classNames : []),
+    ])];
 
     // For each unique class name, look up the class and its enrolled student codes
     // enrolledByClass maps original className → string[] of enrolled student codes (or null if class not found)
@@ -183,7 +201,7 @@ exports.handler = async (event) => {
     }
 
     // Build per-pair results
-    const results = pairs.map(pair => {
+    const results = safePairs.map(pair => {
       const { studentCode, className } = pair;
       const codes = enrolledByClass[className];
       const classFound = codes !== null;
