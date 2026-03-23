@@ -1298,6 +1298,65 @@
   }
 
   /**
+   * Build synthetic assignment items from assignment.meta.
+   * Mirrors buildItemsFromMeta in tc-reporting.js / tc-review.js.
+   * Used by exportToDocx to resolve per-question detail for HTML assignments.
+   * @param {number|string} assignmentId
+   * @param {Object} meta - assignment.meta (may have .days[] or .questions[])
+   * @returns {Array} synthetic item objects with item_ref, meta, goal_codes, points
+   */
+  function buildItemsFromMeta(assignmentId, meta) {
+    const items = [];
+    if (!meta) return items;
+    if (Array.isArray(meta.days)) {
+      for (const day of meta.days) {
+        if (day.type === 'questions' && Array.isArray(day.questions)) {
+          for (const q of day.questions) {
+            const item_ref = `${day.day_number}_${q.number}`;
+            items.push({
+              id: `syn_${item_ref}`,
+              assignment_id: assignmentId,
+              item_ref,
+              answer_type: q.type || 'mcq',
+              points: q.points || 1,
+              meta: {
+                day: day.day_number,
+                question_number: q.number,
+                text: q.text,
+                choices: q.choices,
+                correct: q.correct,
+              },
+              goal_codes: q.goal_codes || [],
+              dese_codes: q.dese_codes || [],
+            });
+          }
+        }
+      }
+    }
+    // Fallback: HTML manifest format — meta.questions is a flat array from detectQuestionsFromHTML
+    if (items.length === 0 && Array.isArray(meta.questions) && meta.questions.length > 0) {
+      for (const [i, q] of meta.questions.entries()) {
+        const qRef = q.q_ref || (`Q${i + 1}`);
+        items.push({
+          id: `syn_${qRef}`,
+          assignment_id: assignmentId,
+          item_ref: qRef,
+          answer_type: q.answer_type || 'constructed',
+          points: (typeof q.points === 'number') ? q.points : 1,
+          meta: {
+            question_number: qRef,
+            text: q.label || '',
+            correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
+          },
+          goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
+          dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
+        });
+      }
+    }
+    return items;
+  }
+
+  /**
    * Export IEP goal progress report as DOCX file
    * Generates an HTML-based .docx file that Microsoft Word can open
    * Requires: dtSamplesModal with goalCode and studentCode in dataset
@@ -1410,10 +1469,48 @@
       const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
       const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
       const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
+
+      // Per-question detail for goal-linked items
+      const items = buildItemsFromMeta(sub.assignment_id, assignment ? assignment.meta : null)
+        .filter(item => Array.isArray(item.goal_codes) && item.goal_codes.includes(goalCode));
+      const rawAnswers = (sub.answers && typeof sub.answers === 'object' && !Array.isArray(sub.answers))
+        ? sub.answers : {};
+
+      let detailHtml = '';
+      if (items.length > 0) {
+        detailHtml = `
+      <table style="margin-left: 20px; margin-top: 4px; font-size: 10pt; border-collapse: collapse;">
+        <thead><tr>
+          <th style="text-align:left; padding:2px 6px; border:1px solid #ccc;">Q</th>
+          <th style="text-align:left; padding:2px 6px; border:1px solid #ccc;">Question</th>
+          <th style="text-align:left; padding:2px 6px; border:1px solid #ccc;">Student Answer</th>
+          <th style="text-align:left; padding:2px 6px; border:1px solid #ccc;">Correct Answer</th>
+          <th style="text-align:center; padding:2px 6px; border:1px solid #ccc;">Points</th>
+          <th style="text-align:center; padding:2px 6px; border:1px solid #ccc;">Result</th>
+        </tr></thead><tbody>`;
+        for (const item of items) {
+          const studentAns = rawAnswers[item.item_ref] !== undefined ? rawAnswers[item.item_ref] : '—';
+          const correctAns = item.meta && item.meta.correct !== undefined ? item.meta.correct : '—';
+          const max = item.points || 1;
+          const isCorrect = correctAns !== '—' && studentAns !== '—' && String(studentAns) === String(correctAns);
+          const earned = correctAns !== '—' && studentAns !== '—' ? (isCorrect ? max : 0) : '—';
+          const resultIcon = correctAns !== '—' && studentAns !== '—' ? (isCorrect ? '✓' : '✗') : '—';
+          detailHtml += `<tr>
+          <td style="padding:2px 6px; border:1px solid #ccc;">${escapeXml(String(item.item_ref))}</td>
+          <td style="padding:2px 6px; border:1px solid #ccc;">${escapeXml(item.meta && item.meta.text ? item.meta.text : '')}</td>
+          <td style="padding:2px 6px; border:1px solid #ccc;">${escapeXml(String(studentAns))}</td>
+          <td style="padding:2px 6px; border:1px solid #ccc;">${escapeXml(String(correctAns))}</td>
+          <td style="text-align:center; padding:2px 6px; border:1px solid #ccc;">${escapeXml(String(earned))}/${escapeXml(String(max))}</td>
+          <td style="text-align:center; padding:2px 6px; border:1px solid #ccc;">${resultIcon}</td>
+        </tr>`;
+        }
+        detailHtml += '</tbody></table>';
+      }
+
       return `
       <p><strong>• ${escapeXml(assignmentTitle)}</strong></p>
       <p style="margin-left: 20px;"><strong>Date Submitted:</strong> ${escapeXml(submittedDate)}</p>
-      <p style="margin-left: 20px;"><strong>Score:</strong> ${escapeXml(score)}</p>`;
+      <p style="margin-left: 20px;"><strong>Score:</strong> ${escapeXml(score)}</p>${detailHtml}`;
     }).join('')}
   
   <p style="margin-top: 30px;"><em>Generated on ${escapeXml(new Date().toLocaleString())}</em></p>

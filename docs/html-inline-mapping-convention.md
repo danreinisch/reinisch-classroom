@@ -319,3 +319,57 @@ tc-review.js finalizeSubmission() → triggerGoalProgressUpdates()
         → goal_progress rows (collected_by=teacher)
 ```
 
+---
+
+## DOCX IEP Progress Report Export — Per-Question Detail
+
+### What the DOCX export includes for HTML assignments
+
+The `exportToDocx()` function in `site/web/tc-data.js` generates an HTML-based `.docx` file that Microsoft Word can open. For HTML assignments with per-question data, the Work Samples section now includes a **per-question detail table** for each submission.
+
+### Per-question detail table format
+
+Each work sample entry renders:
+
+1. Assignment title, date submitted, overall score (existing)
+2. A detail table (when goal-linked items exist) with columns:
+
+| Column | Description |
+|---|---|
+| Q | Item reference (e.g. `Q1`, `1_1`) |
+| Question | Question text from `item.meta.text` |
+| Student Answer | Student's raw answer from `sub.answers[item_ref]` |
+| Correct Answer | Correct answer from `item.meta.correct` |
+| Points | Earned / max (e.g. `1/1` or `0/1`) |
+| Result | `✓` correct, `✗` incorrect, or `—` if unknown |
+
+### How items are filtered by goal code
+
+Only items whose `goal_codes` array includes the exported `goalCode` are rendered in the per-question table. This keeps the DOCX focused on evidence for the specific IEP goal being reported.
+
+### Data flow
+
+```
+exportToDocx()
+        ↓
+buildItemsFromMeta(assignment.id, assignment.meta)
+  → synthesizes items from meta.days[].questions[] (TXT/structured format)
+  → or meta.questions[] (HTML manifest flat array fallback)
+        ↓
+filter items: item.goal_codes.includes(goalCode)
+        ↓
+sub.answers[item.item_ref] → student answer (raw JSONB)
+item.meta.correct → correct answer
+        ↓
+Render per-question table row (escaped via escapeXml)
+        ↓
+DOCX downloaded as {student_code}_{goal_code}_progress_report.docx
+```
+
+### Graceful degradation
+
+- If `assignment.meta` has no `days` or `questions`, `buildItemsFromMeta` returns `[]` and the detail table is omitted
+- If no items match the `goalCode`, no table is rendered (backward compatible)
+- If `sub.answers` is missing or malformed, student answers show `—`
+- All user-generated content (question text, answers, item refs) is escaped via `escapeXml()`
+
