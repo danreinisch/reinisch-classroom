@@ -380,46 +380,6 @@ test('cross-month week shows both month names', () => {
   assert.strictEqual(getWeekLabel(d), 'Week of Mar 30 \u2013 Apr 3');
 });
 
-// ── Category Helper ───────────────────────────────────────────────────────────
-
-function getAssignmentCategory(assignment) {
-  const meta = assignment.meta;
-  if (meta && typeof meta === 'object' && meta.category) return meta.category;
-  if (meta && typeof meta === 'string') {
-    try {
-      const parsed = JSON.parse(meta);
-      if (parsed && parsed.category) return parsed.category;
-    } catch (_) { /* meta string is not valid JSON */ }
-  }
-  return 'Uncategorized';
-}
-
-console.log('\n--- Category extraction ---');
-
-test('object meta with category returns it', () => {
-  assert.strictEqual(getAssignmentCategory({ meta: { category: 'Writing' } }), 'Writing');
-});
-
-test('JSON string meta with category returns it', () => {
-  assert.strictEqual(getAssignmentCategory({ meta: '{"category":"Grammar"}' }), 'Grammar');
-});
-
-test('missing category returns Uncategorized', () => {
-  assert.strictEqual(getAssignmentCategory({ meta: { paper: true } }), 'Uncategorized');
-});
-
-test('null meta returns Uncategorized', () => {
-  assert.strictEqual(getAssignmentCategory({ meta: null }), 'Uncategorized');
-});
-
-test('no meta field returns Uncategorized', () => {
-  assert.strictEqual(getAssignmentCategory({}), 'Uncategorized');
-});
-
-test('malformed JSON string meta returns Uncategorized', () => {
-  assert.strictEqual(getAssignmentCategory({ meta: 'not-json' }), 'Uncategorized');
-});
-
 // ── updateAssignment local logic ──────────────────────────────────────────────
 
 /**
@@ -448,25 +408,6 @@ test('updates a scalar field on an existing assignment', () => {
   assert.strictEqual(arr[0].title, 'New Title');
 });
 
-test('merges meta rather than replacing it', () => {
-  const arr = [{ id: 'A1', title: 'Test', meta: { paper: true, category: 'Writing' } }];
-  const result = updateAssignmentLocal(arr, 'A1', { meta: { category: 'Grammar' } });
-  assert.strictEqual(result.meta.category, 'Grammar');
-  assert.strictEqual(result.meta.paper, true); // existing meta preserved
-});
-
-test('adds category to assignment with empty meta', () => {
-  const arr = [{ id: 'A2', title: 'No Cat', meta: {} }];
-  const result = updateAssignmentLocal(arr, 'A2', { meta: { category: 'Vocabulary' } });
-  assert.strictEqual(result.meta.category, 'Vocabulary');
-});
-
-test('clears category when set to null', () => {
-  const arr = [{ id: 'A3', title: 'Cat Test', meta: { category: 'Writing' } }];
-  const result = updateAssignmentLocal(arr, 'A3', { meta: { category: null } });
-  assert.strictEqual(result.meta.category, null);
-});
-
 test('throws when assignment id is not found', () => {
   const arr = [{ id: 'A1', title: 'Exists' }];
   assert.throws(() => updateAssignmentLocal(arr, 'MISSING', { title: 'X' }), /Assignment not found/);
@@ -474,11 +415,11 @@ test('throws when assignment id is not found', () => {
 
 test('preserves all other fields when updating meta', () => {
   const arr = [{ id: 'A5', title: 'Keep Me', type: 'file', meta: { foo: 'bar' } }];
-  updateAssignmentLocal(arr, 'A5', { meta: { category: 'Assessment' } });
+  updateAssignmentLocal(arr, 'A5', { meta: { notes: 'hello' } });
   assert.strictEqual(arr[0].title, 'Keep Me');
   assert.strictEqual(arr[0].type, 'file');
   assert.strictEqual(arr[0].meta.foo, 'bar');
-  assert.strictEqual(arr[0].meta.category, 'Assessment');
+  assert.strictEqual(arr[0].meta.notes, 'hello');
 });
 
 // ── relDate helper ────────────────────────────────────────────────────────────
@@ -576,163 +517,6 @@ test('730 days ago returns "2 years ago"', () => {
   assert.strictEqual(relDate(daysAgoISO(730)), '2 years ago');
 });
 
-// ── suggestCategory helper ────────────────────────────────────────────────────
-
-const CATEGORY_KEYWORDS = {
-  'Reading Comprehension': ['reading', 'comprehension', 'read', 'passage', 'story', 'novel', 'book', 'chapter', 'literature', 'literary'],
-  'Vocabulary':            ['vocabulary', 'vocab', 'word', 'words', 'spelling', 'definitions', 'glossary'],
-  'Writing':               ['writing', 'write', 'essay', 'paragraph', 'journal', 'narrative', 'prompt', 'composition'],
-  'Grammar':               ['grammar', 'punctuation', 'comma', 'sentence', 'syntax', 'capitalization', 'apostrophe', 'parts of speech'],
-  'Social Skills':         ['social', 'friendship', 'cooperation', 'teamwork', 'conflict', 'communication', 'emotion', 'empathy', 'behavior'],
-  'Daily Living':          ['daily living', 'cooking', 'hygiene', 'money', 'budget', 'time management', 'laundry', 'cleaning', 'safety', 'nutrition'],
-  'Community':             ['community', 'field trip', 'volunteer', 'civic', 'neighborhood', 'public', 'transportation'],
-  'Self-Advocacy':         ['self-advocacy', 'advocacy', 'self-determination', 'rights', 'accommodation', 'iep', 'transition', 'goal setting'],
-  'Recall Practice':       ['recall', 'retrieval', 'review', 'practice test', 'spaced practice', 'flashcard', 'retrieval practice'],
-  'Assessment':            ['assessment', 'quiz', 'test', 'exam', 'evaluation', 'benchmark', 'diagnostic', 'pre-test', 'post-test', 'final'],
-  'Other':                 []
-};
-
-/**
- * Mirrors suggestCategory() from tc-library.js for unit testing.
- */
-function suggestCategory(title) {
-  if (!title || typeof title !== 'string') return null;
-  const lower = title.toLowerCase();
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (cat === 'Other') continue;
-    for (const kw of keywords) {
-      if (lower.includes(kw)) return cat;
-    }
-  }
-  return null;
-}
-
-console.log('\n--- suggestCategory helper ---');
-
-test('null title returns null', () => {
-  assert.strictEqual(suggestCategory(null), null);
-});
-
-test('undefined title returns null', () => {
-  assert.strictEqual(suggestCategory(undefined), null);
-});
-
-test('empty string returns null', () => {
-  assert.strictEqual(suggestCategory(''), null);
-});
-
-test('non-string returns null', () => {
-  assert.strictEqual(suggestCategory(42), null);
-});
-
-test('no keyword match returns null', () => {
-  assert.strictEqual(suggestCategory('Tuesday Activity'), null);
-});
-
-test('Reading Comprehension keyword: "reading"', () => {
-  assert.strictEqual(suggestCategory('Reading Comprehension: Freak the Mighty'), 'Reading Comprehension');
-});
-
-test('Reading Comprehension keyword: "passage"', () => {
-  assert.strictEqual(suggestCategory('Passage Analysis: The Outsiders'), 'Reading Comprehension');
-});
-
-test('Vocabulary keyword: "vocabulary"', () => {
-  assert.strictEqual(suggestCategory('Vocabulary Quiz Ch. 12'), 'Vocabulary');
-});
-
-test('Vocabulary keyword: "spelling"', () => {
-  assert.strictEqual(suggestCategory('Weekly Spelling Test'), 'Vocabulary');
-});
-
-test('Writing keyword: "essay"', () => {
-  assert.strictEqual(suggestCategory('Persuasive Essay Draft'), 'Writing');
-});
-
-test('Writing keyword: "journal"', () => {
-  assert.strictEqual(suggestCategory('Journal Entry #5'), 'Writing');
-});
-
-test('Grammar keyword: "grammar"', () => {
-  assert.strictEqual(suggestCategory('Grammar Worksheet: Commas'), 'Grammar');
-});
-
-test('Grammar keyword: "comma"', () => {
-  assert.strictEqual(suggestCategory('Comma Rules Practice'), 'Grammar');
-});
-
-test('Social Skills keyword: "social"', () => {
-  assert.strictEqual(suggestCategory('Social Skills: Conflict Resolution'), 'Social Skills');
-});
-
-test('Social Skills keyword: "empathy"', () => {
-  assert.strictEqual(suggestCategory('Empathy and Emotions'), 'Social Skills');
-});
-
-test('Daily Living keyword: "cooking"', () => {
-  assert.strictEqual(suggestCategory('Cooking Lab: Scrambled Eggs'), 'Daily Living');
-});
-
-test('Daily Living keyword: "hygiene"', () => {
-  assert.strictEqual(suggestCategory('Personal Hygiene Checklist'), 'Daily Living');
-});
-
-test('Community keyword: "community"', () => {
-  assert.strictEqual(suggestCategory('Community Service Project'), 'Community');
-});
-
-test('Community keyword: "field trip"', () => {
-  assert.strictEqual(suggestCategory('Field Trip Reflection'), 'Community');
-});
-
-test('Self-Advocacy keyword: "iep"', () => {
-  assert.strictEqual(suggestCategory('IEP Goal Setting Activity'), 'Self-Advocacy');
-});
-
-test('Assessment keyword: "quiz"', () => {
-  assert.strictEqual(suggestCategory('Math Quiz'), 'Assessment');
-});
-
-test('Assessment keyword: "exam"', () => {
-  assert.strictEqual(suggestCategory('Final Exam'), 'Assessment');
-});
-
-test('Recall Practice keyword: "recall"', () => {
-  assert.strictEqual(suggestCategory('Unit 3 Recall Activity'), 'Recall Practice');
-});
-
-test('Recall Practice keyword: "retrieval"', () => {
-  assert.strictEqual(suggestCategory('Retrieval Practice Set'), 'Recall Practice');
-});
-
-test('Recall Practice keyword: "review"', () => {
-  assert.strictEqual(suggestCategory('Weekly Review Sheet'), 'Recall Practice');
-});
-
-test('Recall Practice keyword: "practice test"', () => {
-  assert.strictEqual(suggestCategory('Practice Test — Fractions'), 'Recall Practice');
-});
-
-test('Recall Practice keyword: "flashcard"', () => {
-  assert.strictEqual(suggestCategory('Flashcard Drill Activity'), 'Recall Practice');
-});
-
-test('case-insensitive matching', () => {
-  assert.strictEqual(suggestCategory('VOCABULARY QUIZ'), 'Vocabulary');
-  assert.strictEqual(suggestCategory('Grammar WORKSHEET'), 'Grammar');
-});
-
-test('Other category is never returned by suggestCategory (fallback)', () => {
-  // "other" has no keywords, so a title with no matches returns null not "Other"
-  assert.strictEqual(suggestCategory('Tuesday Activity'), null);
-});
-
-test('multiple keyword matches — first category in priority order wins', () => {
-  // "reading" matches Reading Comprehension (index 0)
-  // "assessment" matches Assessment (index 8)
-  // Reading Comprehension should win as it appears first
-  assert.strictEqual(suggestCategory('Reading Assessment'), 'Reading Comprehension');
-});
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);

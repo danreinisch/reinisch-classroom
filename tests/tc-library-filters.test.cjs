@@ -185,7 +185,7 @@ function injectStyles(doc) {
  */
 function makeFilterContext(storage) {
   const filters = {
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: '' }
   };
   const collapsedLanes = new Set(['analytics']);
@@ -197,8 +197,7 @@ function makeFilterContext(storage) {
         assignments: {
           classFilter: filters.assignments.classFilter,
           searchQuery: filters.assignments.searchQuery,
-          typeFilter: filters.assignments.typeFilter,
-          categoryFilter: filters.assignments.categoryFilter
+          typeFilter: filters.assignments.typeFilter
         },
         lessons: { searchQuery: filters.lessons.searchQuery },
         collapsedLanes: [...collapsedLanes],
@@ -221,7 +220,6 @@ function makeFilterContext(storage) {
         if (typeof data.assignments.classFilter === 'string') filters.assignments.classFilter = data.assignments.classFilter;
         if (typeof data.assignments.searchQuery === 'string') filters.assignments.searchQuery = data.assignments.searchQuery;
         if (typeof data.assignments.typeFilter === 'string') filters.assignments.typeFilter = data.assignments.typeFilter;
-        if (typeof data.assignments.categoryFilter === 'string') filters.assignments.categoryFilter = data.assignments.categoryFilter;
       }
       if (data.lessons && typeof data.lessons === 'object') {
         if (typeof data.lessons.searchQuery === 'string') filters.lessons.searchQuery = data.lessons.searchQuery;
@@ -290,14 +288,12 @@ test('save non-default values → load → classFilter restored', () => {
   ctx.filters.assignments.classFilter = 'ELA 101';
   ctx.filters.assignments.searchQuery = 'quiz';
   ctx.filters.assignments.typeFilter = 'paper';
-  ctx.filters.assignments.categoryFilter = 'Writing';
   ctx.saveFilters();
   const ctx2 = makeFilterContext(storage);
   ctx2.loadFilters();
   assert.strictEqual(ctx2.filters.assignments.classFilter, 'ELA 101');
   assert.strictEqual(ctx2.filters.assignments.searchQuery, 'quiz');
   assert.strictEqual(ctx2.filters.assignments.typeFilter, 'paper');
-  assert.strictEqual(ctx2.filters.assignments.categoryFilter, 'Writing');
 });
 
 test('save collapsed lanes → load → Set contents match', () => {
@@ -346,15 +342,6 @@ test('save then load produces same typeFilter', () => {
   assert.strictEqual(ctx2.filters.assignments.typeFilter, 'file');
 });
 
-test('save then load produces same categoryFilter', () => {
-  const storage = makeMockStorage();
-  const ctx = makeFilterContext(storage);
-  ctx.filters.assignments.categoryFilter = 'Grammar';
-  ctx.saveFilters();
-  const ctx2 = makeFilterContext(storage);
-  ctx2.loadFilters();
-  assert.strictEqual(ctx2.filters.assignments.categoryFilter, 'Grammar');
-});
 
 // ── Type Validation Rejection ─────────────────────────────────────────────────
 console.log('\n--- Type validation rejection ---');
@@ -362,7 +349,7 @@ console.log('\n--- Type validation rejection ---');
 test('classFilter as number → not applied, keeps default', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 42, searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 42, searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: '' },
     collapsedLanes: [],
     hierarchyExpandState: []
@@ -375,7 +362,7 @@ test('classFilter as number → not applied, keeps default', () => {
 test('collapsedLanes as string → not applied', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: '' },
     collapsedLanes: 'upcoming',
     hierarchyExpandState: []
@@ -389,7 +376,7 @@ test('collapsedLanes as string → not applied', () => {
 test('hierarchyExpandState entry missing boolean → entry is skipped', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: '' },
     collapsedLanes: [],
     hierarchyExpandState: [['node-1', 'yes'], ['node-2', true]]
@@ -427,7 +414,7 @@ test('invalid JSON in localStorage → does not crash', () => {
 test('searchQuery as number → not applied', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 'All Classes', searchQuery: 123, typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: 123, typeFilter: 'All' },
     lessons: { searchQuery: '' },
     collapsedLanes: [],
     hierarchyExpandState: []
@@ -440,7 +427,7 @@ test('searchQuery as number → not applied', () => {
 test('lessons searchQuery as number → not applied', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: 999 },
     collapsedLanes: [],
     hierarchyExpandState: []
@@ -486,7 +473,7 @@ test('localStorage returns empty string → loadFilters does not crash', () => {
 test('hierarchyExpandState entry with non-string key → entry is skipped', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: '' },
     collapsedLanes: [],
     hierarchyExpandState: [[42, true]]
@@ -499,7 +486,7 @@ test('hierarchyExpandState entry with non-string key → entry is skipped', () =
 test('collapsedLanes contains non-string items → only string items added', () => {
   const storage = makeMockStorage();
   storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
-    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', categoryFilter: 'All' },
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All' },
     lessons: { searchQuery: '' },
     collapsedLanes: ['upcoming', 42, null, 'finalized'],
     hierarchyExpandState: []
