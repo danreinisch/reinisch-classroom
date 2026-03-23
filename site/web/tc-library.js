@@ -780,7 +780,11 @@
    */
   function computeLane(assignment, allInstances) {
     const instances = allInstances.filter(i => i.assignment_id === assignment.id);
-    if (instances.length === 0) return 'upcoming';
+    if (instances.length === 0) {
+      // Archived assignments with no instances should be finalized, not upcoming
+      if (assignment.active === false) return 'finalized';
+      return 'upcoming';
+    }
     const allGraded = instances.every(i => i.status === 'Graded');
     // Check active===false first so explicitly archived assignments are always finalized
     // even before the anyActive check below (both paths with allGraded lead to 'finalized').
@@ -1197,6 +1201,35 @@
     issueBtn.style.cssText = 'flex:1; font-size:13px;';
     issueBtn.textContent = 'Issue to Class';
     btnRow.appendChild(issueBtn);
+
+    if (instances.length === 0) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'tc-btn';
+      deleteBtn.style.cssText = 'font-size:13px; color:#f87171; border-color:rgba(248,113,113,.3);';
+      deleteBtn.textContent = '🗑 Delete';
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const confirmed = await rcConfirm(
+          'Delete Assignment',
+          `Are you sure you want to delete "${assignment.title || 'Untitled'}"?\n\nThis assignment has never been issued to students. It will be archived and moved to Finalized.`,
+          'Delete',
+          { danger: true }
+        );
+        if (!confirmed) return;
+        try {
+          await db.updateAssignment(assignment.id, { active: false });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) assignmentsData[idx].active = false;
+          renderAssignmentsTab();
+          showToast('Assignment deleted');
+        } catch (err) {
+          console.error('[tc-library] Failed to delete assignment:', err);
+          showToast('Failed to delete assignment', '#ef4444', '#fff');
+        }
+      });
+      btnRow.appendChild(deleteBtn);
+    }
+
     card.appendChild(btnRow);
     return card;
   }
@@ -1524,7 +1557,18 @@
     const titleEl = document.createElement('div');
     titleEl.style.cssText = 'font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;';
     titleEl.textContent = assignment.title || 'Untitled';
-    titleSection.appendChild(titleEl);
+
+    if (assignment.active === false) {
+      const archivedBadge = document.createElement('span');
+      archivedBadge.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.40); padding:2px 8px; border-radius:8px; font-size:11px; white-space:nowrap; margin-left:8px;';
+      archivedBadge.textContent = 'Archived';
+      titleEl.style.display = 'inline';
+      titleSection.appendChild(titleEl);
+      titleSection.appendChild(archivedBadge);
+    } else {
+      titleSection.appendChild(titleEl);
+    }
+
     row.appendChild(titleSection);
 
     const statsSection = document.createElement('div');
@@ -1538,6 +1582,34 @@
     countEl.textContent = `${stats.studentCount} student${stats.studentCount !== 1 ? 's' : ''}`;
     statsSection.appendChild(countEl);
     row.appendChild(statsSection);
+
+    if (assignment.active !== false) {
+      const archiveBtn = document.createElement('button');
+      archiveBtn.className = 'tc-btn';
+      archiveBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0; color:rgba(255,255,255,.50);';
+      archiveBtn.textContent = '📦 Archive';
+      archiveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const confirmed = await rcConfirm(
+          'Archive Assignment',
+          `Archive "${assignment.title || 'Untitled'}"?\n\nThis will mark the assignment as archived. It will remain visible in the Finalized section for reference.`,
+          'Archive'
+        );
+        if (!confirmed) return;
+        try {
+          await db.updateAssignment(assignment.id, { active: false });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) assignmentsData[idx].active = false;
+          renderAssignmentsTab();
+          showToast('Assignment archived');
+        } catch (err) {
+          console.error('[tc-library] Failed to archive assignment:', err);
+          showToast('Failed to archive assignment', '#ef4444', '#fff');
+        }
+      });
+      row.appendChild(archiveBtn);
+    }
+
     return row;
   }
 
@@ -2434,18 +2506,87 @@
 
       const actionRow = document.createElement('div');
       actionRow.style.cssText = 'display: flex; gap: 12px;';
+      const lane = computeLane(assignment, instancesData);
+      const detailInstances = instancesData.filter(i => i.assignment_id === assignment.id);
+
       const issueBtn = document.createElement('button');
       issueBtn.className = 'tc-btn issue-detail-btn';
       issueBtn.dataset.id = assignment.id || '';
       issueBtn.style.cssText = 'flex: 1;';
       issueBtn.textContent = 'Issue to Class';
-      actionRow.appendChild(issueBtn);
-      card.appendChild(actionRow);
-
       issueBtn.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.id;
         window.location.href = `/teacher/work/?assignment=${encodeURIComponent(id)}`;
       });
+
+      // Only show Issue button for upcoming/current lanes
+      if (lane === 'upcoming' || lane === 'current') {
+        actionRow.appendChild(issueBtn);
+      }
+
+      // Context-aware archive/delete button
+      if (lane === 'upcoming' && detailInstances.length === 0) {
+        // Never-issued: show Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'tc-btn';
+        deleteBtn.style.cssText = 'font-size:14px; color:#f87171; border-color:rgba(248,113,113,.3);';
+        deleteBtn.textContent = '🗑 Delete';
+        deleteBtn.addEventListener('click', async () => {
+          const confirmed = await rcConfirm(
+            'Delete Assignment',
+            `Are you sure you want to delete "${assignment.title || 'Untitled'}"?\n\nThis assignment has never been issued to students. It will be archived and moved to Finalized.`,
+            'Delete',
+            { danger: true }
+          );
+          if (!confirmed) return;
+          try {
+            await db.updateAssignment(assignment.id, { active: false });
+            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+            if (idx !== -1) assignmentsData[idx].active = false;
+            closeModal();
+            renderAssignmentsTab();
+            showToast('Assignment deleted');
+          } catch (err) {
+            console.error('[tc-library] Failed to delete assignment:', err);
+            showToast('Failed to delete assignment', '#ef4444', '#fff');
+          }
+        });
+        actionRow.appendChild(deleteBtn);
+      } else if (lane === 'finalized' && assignment.active !== false) {
+        // Finalized but not yet archived: show Archive button
+        const archiveBtn = document.createElement('button');
+        archiveBtn.className = 'tc-btn';
+        archiveBtn.style.cssText = 'font-size:14px; color:rgba(255,255,255,.50);';
+        archiveBtn.textContent = '📦 Archive';
+        archiveBtn.addEventListener('click', async () => {
+          const confirmed = await rcConfirm(
+            'Archive Assignment',
+            `Archive "${assignment.title || 'Untitled'}"?\n\nThis will mark the assignment as archived. It will remain visible in the Finalized section for reference.`,
+            'Archive'
+          );
+          if (!confirmed) return;
+          try {
+            await db.updateAssignment(assignment.id, { active: false });
+            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+            if (idx !== -1) assignmentsData[idx].active = false;
+            closeModal();
+            renderAssignmentsTab();
+            showToast('Assignment archived');
+          } catch (err) {
+            console.error('[tc-library] Failed to archive assignment:', err);
+            showToast('Failed to archive assignment', '#ef4444', '#fff');
+          }
+        });
+        actionRow.appendChild(archiveBtn);
+      } else if (assignment.active === false) {
+        // Already archived: show disabled indicator
+        const archivedIndicator = document.createElement('span');
+        archivedIndicator.style.cssText = 'font-size:13px; color:rgba(255,255,255,.40); align-self:center;';
+        archivedIndicator.textContent = 'Archived \u2713';
+        actionRow.appendChild(archivedIndicator);
+      }
+
+      card.appendChild(actionRow);
     });
 
     closeBtn.addEventListener('click', closeModal);
