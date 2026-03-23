@@ -71,6 +71,7 @@ let fetchHandlers = {};
 // Captured request data available for assertions
 let capturedInstancePatch = null;
 let capturedSubAnswers = null;
+let capturedGoalProgressPosts = [];
 let submissionPostCalled = false;
 let submissionGetCalled = false;
 
@@ -87,6 +88,7 @@ function reset() {
   fetchHandlers = {};
   capturedInstancePatch = null;
   capturedSubAnswers = null;
+  capturedGoalProgressPosts = [];
   submissionPostCalled = false;
   submissionGetCalled = false;
 }
@@ -125,6 +127,17 @@ global.fetch = async (url, options) => {
   if (urlStr.includes('/assignment_items')) {
     const h = fetchHandlers.items;
     return h ? h(urlStr, options) : makeOkResponse([]);
+  }
+
+  if (urlStr.includes('/goals') && method === 'GET') {
+    const h = fetchHandlers.goals;
+    return h ? h(urlStr, options) : makeOkResponse([]);
+  }
+
+  if (basePath.endsWith('/goal_progress') && method === 'POST') {
+    if (options && options.body) capturedGoalProgressPosts.push(JSON.parse(options.body));
+    const h = fetchHandlers.goalProgressPost;
+    return h ? h(urlStr, options) : makeOkResponse(null, 201);
   }
 
   if (urlStr.includes('/submissions') && method === 'GET') {
@@ -582,6 +595,174 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(body.ok, true);
     assert.strictEqual(body.score_total, null, 'score_total should be null for auto-saves');
     assert(Array.isArray(body.results) && body.results.length === 0, 'results should be empty for auto-saves');
+  })();
+
+  // ── Group: Goal Progress Auto-Upsert ─────────────────────────────────────
+  console.log('\n--- Goal Progress Auto-Upsert ---');
+
+  await test('all-MCQ submission with goal_codes → goal_progress inserted', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 2, meta: { correct: 'A' }, goal_codes: ['MATH.1'] },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 2, meta: { correct: 'B' }, goal_codes: ['MATH.1'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-uuid-1', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'B' }, // both correct
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'One goal_progress entry should be inserted');
+    const gp = capturedGoalProgressPosts[0];
+    assert.strictEqual(gp.goal_id, 'goal-uuid-1', 'goal_id should be resolved from goals table');
+    assert.strictEqual(gp.student_id, 'student-uuid-1', 'student_id should be the student UUID');
+    assert.strictEqual(gp.value, 100, 'value should be 100% when all correct');
+    assert.strictEqual(gp.source, 'assignment', 'source should be assignment');
+    assert.strictEqual(gp.collected_by, 'auto', 'collected_by should be auto');
+    assert.strictEqual(gp.assignment_instance_id, 'instance-uuid-1', 'assignment_instance_id should be set');
+  })();
+
+  await test('partial score → goal_progress value reflects percentage', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 2, meta: { correct: 'A' }, goal_codes: ['READ.1'] },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 2, meta: { correct: 'B' }, goal_codes: ['READ.1'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-uuid-read', code: 'READ.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'C' }, // only first correct
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'One goal_progress entry should be inserted');
+    assert.strictEqual(capturedGoalProgressPosts[0].value, 50, 'value should be 50% when half correct');
+  })();
+
+  await test('multiple goal_codes → separate goal_progress entry per goal', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['MATH.1', 'READ.1'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([
+      { id: 'goal-math', code: 'MATH.1' },
+      { id: 'goal-read', code: 'READ.1' }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 2, 'Two goal_progress entries should be inserted (one per goal)');
+    const goalIds = capturedGoalProgressPosts.map(gp => gp.goal_id);
+    assert(goalIds.includes('goal-math'), 'MATH.1 goal_progress should be inserted');
+    assert(goalIds.includes('goal-read'), 'READ.1 goal_progress should be inserted');
+  })();
+
+  await test('assignment with constructed item → goal_progress NOT inserted', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['MATH.1'] },
+      { id: 'item-2', item_ref: 'writing-q1', answer_type: 'constructed', points: 5, meta: {}, goal_codes: [] }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      writing_response: 'My essay.',
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 0, 'No goal_progress should be inserted when constructed items present');
+  })();
+
+  await test('submit: false (auto-save) → goal_progress NOT inserted', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: false
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 0, 'No goal_progress for auto-saves');
+  })();
+
+  await test('items with no goal_codes → goal_progress NOT inserted', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: [] }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 0, 'No goal_progress when no goal_codes on items');
+  })();
+
+  await test('goal_progress insert failure → submission still succeeds (non-fatal)', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['MATH.1'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-uuid-1', code: 'MATH.1' }]);
+    fetchHandlers.goalProgressPost = () => makeOkResponse({ error: 'DB error' }, 500);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200, 'Submission should succeed even when goal_progress insert fails');
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.ok, true, 'Response body should be ok: true');
+  })();
+
+  await test('goal not found for student → skipped, submission still succeeds', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['NONEXISTENT.1'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([]); // no matching goal found
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200, 'Submission should succeed when goal not found');
+    assert.strictEqual(capturedGoalProgressPosts.length, 0, 'No goal_progress inserted when goal not found');
   })();
 
   console.log('\n✓ All student-submit-answer tests passed!');

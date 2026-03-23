@@ -275,7 +275,7 @@ exports.handler = async (event) => {
       const hasAnswers = Object.keys(cumulativeAnswers).length > 0;
       const hasWriting = writing_response && typeof writing_response === 'string' && writing_response.trim().length > 0;
       if (submissionId && (hasAnswers || hasWriting) && instance.assignment_id) {
-        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,points,meta`;
+        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,points,meta,goal_codes`;
         const itemsResponse = await fetch(itemsUrl, {
           method: 'GET',
           headers: {
@@ -388,6 +388,117 @@ exports.handler = async (event) => {
                   console.error(`[student-submit-answer] [${requestId}] score_auto update failed: ${scoreAutoResponse.status} - ${errText}`);
                 } else {
                   console.log(`[student-submit-answer] [${requestId}] Updated score_auto=${scoreAuto} score_total=${scoreTotal} for submission ${submissionId}`);
+
+                  // Step 8: Auto-upsert goal_progress if all items are auto-scoreable
+                  // (MCQ/boolean/multi only — no constructed items needing teacher review)
+                  try {
+                    const hasConstructed = items.some(i => i.answer_type === 'constructed');
+
+                    if (hasConstructed) {
+                      console.log(`[student-submit-answer] [${requestId}] Skipping auto goal progress — assignment has constructed items requiring teacher review`);
+                    } else {
+                      // Build goal rollups from items with goal_codes
+                      const goalRollups = {};
+
+                      for (const item of items) {
+                        const goalCodes = Array.isArray(item.goal_codes) ? item.goal_codes : [];
+                        if (goalCodes.length === 0) continue;
+
+                        const subAnswer = subAnswers.find(sa => sa.assignment_item_id === item.id);
+                        if (!subAnswer || subAnswer.earned_points == null) continue;
+
+                        const earned = Number(subAnswer.earned_points) || 0;
+                        const max = Number(subAnswer.max_points) || Number(item.points) || 0;
+
+                        for (const goalCode of goalCodes) {
+                          if (!goalRollups[goalCode]) {
+                            goalRollups[goalCode] = { earned: 0, max: 0 };
+                          }
+                          goalRollups[goalCode].earned += earned;
+                          goalRollups[goalCode].max += max;
+                        }
+                      }
+
+                      const uniqueGoalCodes = Object.keys(goalRollups);
+                      if (uniqueGoalCodes.length > 0) {
+                        console.log(`[student-submit-answer] [${requestId}] Auto-upserting goal progress for ${uniqueGoalCodes.length} goal(s)`);
+
+                        const today = new Date().toISOString().split('T')[0];
+                        const schoolYear = getCurrentSchoolYear();
+
+                        // Look up goal IDs for all unique goal codes in one query
+                        const goalCodesParam = uniqueGoalCodes.map(c => encodeURIComponent(c)).join(',');
+                        const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?student_id=eq.${encodeURIComponent(student.id)}&code=in.(${goalCodesParam})&select=id,code`;
+                        let goalIdMap = {};
+                        try {
+                          const goalsRes = await fetch(goalsUrl, {
+                            method: 'GET',
+                            headers: {
+                              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          if (goalsRes.ok) {
+                            const goalRows = await goalsRes.json();
+                            if (Array.isArray(goalRows)) {
+                              for (const g of goalRows) {
+                                goalIdMap[g.code] = g.id;
+                              }
+                            }
+                          } else {
+                            console.warn(`[student-submit-answer] [${requestId}] goals lookup failed: ${goalsRes.status}`);
+                          }
+                        } catch (goalsErr) {
+                          console.warn(`[student-submit-answer] [${requestId}] goals lookup error:`, goalsErr);
+                        }
+
+                        for (const [goalCode, rollup] of Object.entries(goalRollups)) {
+                          const goalId = goalIdMap[goalCode];
+                          if (!goalId) {
+                            console.warn(`[student-submit-answer] [${requestId}] Goal "${goalCode}" not found for student — skipping`);
+                            continue;
+                          }
+
+                          // Compute percentage, rounded to 2 decimal places (e.g. 66.67)
+                          const value = rollup.max > 0 ? Math.round((rollup.earned / rollup.max) * 10000) / 100 : 0;
+
+                          try {
+                            const gpRes = await fetch(`${SUPABASE_URL}/rest/v1/goal_progress`, {
+                              method: 'POST',
+                              headers: {
+                                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=minimal'
+                              },
+                              body: JSON.stringify({
+                                goal_id: goalId,
+                                student_id: student.id,
+                                date: today,
+                                value,
+                                source: 'assignment',
+                                collected_by: 'auto',
+                                assignment_instance_id: instance_id,
+                                school_year: schoolYear
+                              })
+                            });
+
+                            if (!gpRes.ok) {
+                              const errText = await gpRes.text();
+                              console.warn(`[student-submit-answer] [${requestId}] goal_progress insert failed for ${goalCode}: ${gpRes.status} - ${errText}`);
+                            } else {
+                              console.log(`[student-submit-answer] [${requestId}] goal_progress inserted: ${goalCode} = ${value}%`);
+                            }
+                          } catch (gpErr) {
+                            console.warn(`[student-submit-answer] [${requestId}] goal_progress error for ${goalCode}:`, gpErr);
+                          }
+                        }
+                      }
+                    }
+                  } catch (gpStepErr) {
+                    console.warn(`[student-submit-answer] [${requestId}] goal_progress step error (non-fatal):`, gpStepErr);
+                  }
                 }
               }
             }

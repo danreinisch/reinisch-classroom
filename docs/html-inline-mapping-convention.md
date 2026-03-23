@@ -238,3 +238,84 @@ To backfill all HTML assignments missing items, POST to `/.netlify/functions/adm
 
 When a teacher issues an HTML assignment through the draft flow, Step 5b-alt creates `assignment_items` and `assignment_item_mappings` rows using the same upsert pattern as the TXT path. This ensures HTML assignments issued via `teacher-issue-draft` have per-item scoring enabled from the moment they are issued.
 
+---
+
+## Goal Progress Auto-Upsert on Submission
+
+### Fully Auto-Scoreable HTML Assignments
+
+When a student submits a **fully auto-scoreable** HTML assignment (one where all `assignment_items` have an `answer_type` of `mcq`, `boolean`, or `multi` — no `constructed` items), `student-submit-answer.js` automatically writes `goal_progress` entries after computing the final score.
+
+This happens as **Step 8** of the submission flow, immediately after `score_auto` and `score_total` are patched onto the submission record.
+
+#### How it works
+
+1. **Check for constructed items** — if any item has `answer_type: 'constructed'`, the auto-upsert is skipped entirely (those assignments need teacher review via the Review Queue → `triggerGoalProgressUpdates()`).
+2. **Build goal rollups** — for each item with `goal_codes`, aggregate `earned_points` and `max_points` from the corresponding `submission_answers` row.
+3. **Look up goal IDs** — query the `goals` table for all unique goal codes, filtered by `student_id`, to resolve `goal_id` values. Goal codes that don't match an active IEP goal for this student are silently skipped (logged as a warning).
+4. **Insert `goal_progress` rows** — one row per goal code, with:
+   - `goal_id` — resolved from the `goals` table
+   - `student_id` — the submitting student's UUID
+   - `date` — today's date (`YYYY-MM-DD`)
+   - `value` — `(earned / max) * 100`, rounded to 2 decimal places
+   - `source: 'assignment'`
+   - `collected_by: 'auto'` — distinguishes auto-inserted entries from teacher-triggered ones (`'teacher'`)
+   - `assignment_instance_id` — links the progress entry back to the specific assignment instance
+   - `school_year` — current school year
+
+#### When auto-upsert runs vs. when it doesn't
+
+| Condition | Auto-upsert? | Reason |
+|---|---|---|
+| All items are MCQ/boolean/multi, `submit: true` | ✅ Yes | Fully auto-scoreable; no teacher review needed |
+| Any item has `answer_type: 'constructed'`, `submit: true` | ❌ No | Teacher must review and finalize via Review Queue |
+| `submit: false` (auto-save) | ❌ No | Not a final submission |
+| Items have no `goal_codes` | ❌ No (nothing to write) | No goal mapping present |
+| Goal code not found in `goals` table for this student | ❌ Skipped (warning logged) | Goal may have been removed or never assigned |
+
+#### Non-fatal behavior
+
+Goal progress insert failures are **non-fatal** — if the `goal_progress` REST call fails (network error, DB error, constraint violation), a warning is logged but the submission response is still `200 OK`. The assignment score and submission record are not affected.
+
+#### `collected_by` distinction
+
+| Value | Set by | When |
+|---|---|---|
+| `'auto'` | `student-submit-answer.js` Step 8 | Fully auto-scoreable HTML submission |
+| `'teacher'` | `tc-review.js` `triggerGoalProgressUpdates()` | Teacher manually finalizes in Review Queue |
+| `'system'` | SQL stored procedures | Legacy/backfill paths |
+
+This allows IEP reports and the Teacher Center to distinguish between machine-collected progress data and teacher-reviewed data.
+
+#### Updated data flow for fully auto-scoreable HTML assignments
+
+```
+Student submits HTML assignment (submit: true)
+        ↓
+student-submit-answer.js
+        ↓
+Step 1–5: Verify student/instance, save settings, update status → Submitted
+        ↓
+Step 6: Upsert submission record (submissions table)
+        ↓
+Step 7: Auto-score MCQ/boolean/multi answers → submission_answers rows
+        score_auto + score_total patched onto submission
+        ↓
+Step 8: (no constructed items) Build goal rollups from goal_codes
+        → Look up goal_id per code (filtered by student_id)
+        → INSERT goal_progress rows (source=assignment, collected_by=auto)
+        ↓
+tc-reporting.js / IEP Progress Reports show data immediately
+```
+
+Assignments with constructed-response items follow the existing TXT path:
+
+```
+Student submits → submission_answers saved (earned_points=null for constructed)
+        ↓
+Teacher opens Review Queue → grades constructed items
+        ↓
+tc-review.js finalizeSubmission() → triggerGoalProgressUpdates()
+        → goal_progress rows (collected_by=teacher)
+```
+
