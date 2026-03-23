@@ -296,6 +296,9 @@
   // Expand state for hierarchy nodes (nodeId → boolean)
   const hierarchyExpandState = new Map();
 
+  // Bulk selection state for the Upcoming lane
+  let selectedUpcoming = new Set();
+
   // ── Initialization ────────────────────────────────────────────────────────────
 
   async function init() {
@@ -1082,6 +1085,35 @@
 
   // ── Upcoming Lane ─────────────────────────────────────────────────────────────
 
+  /**
+   * Updates the Select All checkbox indeterminate state and shows/hides the
+   * bulk-action buttons without triggering a full tab re-render.
+   */
+  function refreshUpcomingBulkControls() {
+    const selectAllCb = document.getElementById('upcomingSelectAll');
+    if (!selectAllCb) return;
+
+    const allCardIds = Array.from(
+      document.querySelectorAll('#upcomingGrid .assignment-card')
+    ).map(c => c.dataset.id).filter(Boolean);
+
+    const count = selectedUpcoming.size;
+    const allSelected = allCardIds.length > 0 && allCardIds.every(id => selectedUpcoming.has(id));
+    const someSelected = allCardIds.some(id => selectedUpcoming.has(id));
+    selectAllCb.checked = allSelected;
+    selectAllCb.indeterminate = someSelected && !allSelected;
+
+    const countLabel = document.getElementById('upcomingSelectionCount');
+    if (countLabel) {
+      countLabel.textContent = count > 0 ? `${count} selected` : '';
+      countLabel.style.display = count > 0 ? '' : 'none';
+    }
+    const bulkDeleteBtn = document.getElementById('upcomingBulkDeleteBtn');
+    if (bulkDeleteBtn) bulkDeleteBtn.style.display = count > 0 ? '' : 'none';
+    const bulkArchiveBtn = document.getElementById('upcomingBulkArchiveBtn');
+    if (bulkArchiveBtn) bulkArchiveBtn.style.display = count > 0 ? '' : 'none';
+  }
+
   function renderUpcomingLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
@@ -1116,9 +1148,127 @@
       return empty;
     }
     const grid = document.createElement('div');
+    grid.id = 'upcomingGrid';
     grid.className = 'tc-lib-grid';
+
+    // ── Bulk controls row ─────────────────────────────────────────────────────
+    const container = document.createElement('div');
+
+    const controlsRow = document.createElement('div');
+    controlsRow.id = 'upcomingBulkControls';
+    controlsRow.style.cssText = [
+      'display:flex; align-items:center; gap:10px; flex-wrap:wrap;',
+      'padding:8px 4px 12px 4px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:12px;'
+    ].join('');
+
+    const selectAllLabel = document.createElement('label');
+    selectAllLabel.style.cssText = 'display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:rgba(255,255,255,.70); user-select:none;';
+
+    const selectAllCb = document.createElement('input');
+    selectAllCb.type = 'checkbox';
+    selectAllCb.id = 'upcomingSelectAll';
+    selectAllCb.style.cssText = 'cursor:pointer; width:15px; height:15px; accent-color:#60a5fa;';
+
+    selectAllCb.addEventListener('change', () => {
+      if (selectAllCb.checked) {
+        assignments.forEach(a => selectedUpcoming.add(a.id));
+      } else {
+        assignments.forEach(a => selectedUpcoming.delete(a.id));
+      }
+      grid.querySelectorAll('.assignment-card').forEach(c => {
+        const isSelected = selectedUpcoming.has(c.dataset.id);
+        c.style.outline = isSelected ? '2px solid #60a5fa' : '';
+        c.style.boxShadow = isSelected ? '0 0 0 2px rgba(96,165,250,.25)' : '';
+        const cb = c.querySelector('.upcoming-select-cb');
+        if (cb) cb.checked = isSelected;
+      });
+      refreshUpcomingBulkControls();
+    });
+
+    selectAllLabel.appendChild(selectAllCb);
+    selectAllLabel.appendChild(document.createTextNode('Select All'));
+    controlsRow.appendChild(selectAllLabel);
+
+    const countLabel = document.createElement('span');
+    countLabel.id = 'upcomingSelectionCount';
+    countLabel.style.cssText = 'font-size:13px; font-weight:600; color:#60a5fa; display:none;';
+    controlsRow.appendChild(countLabel);
+
+    /**
+     * Shared helper for bulk delete/archive — deactivates all selected assignments,
+     * clears selections, re-renders, and shows a toast.
+     * @param {string} actionLabel - human-readable label for the toast (e.g. "deleted")
+     * @param {string} logTag - tag for console.error on failure
+     */
+    async function executeBulkDeactivate(actionLabel, logTag) {
+      const ids = [...selectedUpcoming];
+      const count = ids.length;
+      if (count === 0) return;
+      try {
+        await Promise.all(ids.map(id => db.updateAssignment(id, { active: false })));
+        ids.forEach(id => {
+          const idx = assignmentsData.findIndex(a => a.id === id);
+          if (idx !== -1) assignmentsData[idx].active = false;
+        });
+        selectedUpcoming.clear();
+        renderAssignmentsTab();
+        showToast(count + ' assignment' + (count !== 1 ? 's' : '') + ' ' + actionLabel);
+      } catch (err) {
+        console.error('[tc-library] ' + logTag + ' failed:', err);
+        showToast('Bulk ' + logTag + ' failed', '#ef4444', '#fff');
+      }
+    }
+
+    const bulkDeleteBtn = document.createElement('button');
+    bulkDeleteBtn.id = 'upcomingBulkDeleteBtn';
+    bulkDeleteBtn.className = 'tc-btn';
+    bulkDeleteBtn.style.cssText = 'display:none; font-size:12px; padding:5px 12px; color:#f87171; border-color:rgba(248,113,113,.3);';
+    bulkDeleteBtn.appendChild(createIcon('x', 14));
+    bulkDeleteBtn.appendChild(document.createTextNode(' Delete Selected'));
+    bulkDeleteBtn.addEventListener('click', async () => {
+      const ids = [...selectedUpcoming];
+      const count = ids.length;
+      if (count === 0) return;
+      const confirmed = await rcConfirm(
+        'Bulk Delete',
+        'Delete ' + count + ' selected assignment' + (count !== 1 ? 's' : '') + '?\n\nThese assignments have never been issued to students. They will be archived.',
+        'Delete All',
+        { danger: true }
+      );
+      if (!confirmed) return;
+      await executeBulkDeactivate('deleted', 'bulk delete');
+    });
+    controlsRow.appendChild(bulkDeleteBtn);
+
+    const bulkArchiveBtn = document.createElement('button');
+    bulkArchiveBtn.id = 'upcomingBulkArchiveBtn';
+    bulkArchiveBtn.className = 'tc-btn';
+    bulkArchiveBtn.style.cssText = 'display:none; font-size:12px; padding:5px 12px;';
+    bulkArchiveBtn.appendChild(createIcon('inbox', 14));
+    bulkArchiveBtn.appendChild(document.createTextNode(' Archive Selected'));
+    bulkArchiveBtn.addEventListener('click', async () => {
+      const ids = [...selectedUpcoming];
+      const count = ids.length;
+      if (count === 0) return;
+      const confirmed = await rcConfirm(
+        'Bulk Archive',
+        'Archive ' + count + ' selected assignment' + (count !== 1 ? 's' : '') + '?\n\nThey will move to the Finalized section.',
+        'Archive All'
+      );
+      if (!confirmed) return;
+      await executeBulkDeactivate('archived', 'bulk archive');
+    });
+    controlsRow.appendChild(bulkArchiveBtn);
+
+    container.appendChild(controlsRow);
+
     assignments.forEach(a => grid.appendChild(renderUpcomingCard(a)));
-    return grid;
+    container.appendChild(grid);
+
+    // Sync initial toolbar state (e.g. after filter re-render with persisted selections)
+    refreshUpcomingBulkControls();
+
+    return container;
   }
 
   function renderUpcomingCard(assignment) {
@@ -1128,7 +1278,37 @@
     const card = document.createElement('div');
     card.className = 'tc-card assignment-card';
     card.dataset.id = assignment.id || '';
-    card.style.cssText = 'padding:20px; cursor:pointer;';
+    const isSelected = assignment.id != null && selectedUpcoming.has(assignment.id);
+    card.style.cssText = [
+      'padding:20px; cursor:pointer;',
+      isSelected ? 'outline:2px solid #60a5fa; box-shadow:0 0 0 2px rgba(96,165,250,.25);' : ''
+    ].join('');
+
+    // ── Individual selection checkbox ────────────────────────────────────────
+    const cbWrap = document.createElement('div');
+    cbWrap.style.cssText = 'display:flex; justify-content:flex-end; margin-bottom:6px;';
+    const selectCb = document.createElement('input');
+    selectCb.type = 'checkbox';
+    selectCb.className = 'upcoming-select-cb';
+    selectCb.checked = isSelected;
+    selectCb.disabled = assignment.id == null;
+    selectCb.setAttribute('aria-label', 'Select ' + (assignment.title || 'Untitled'));
+    selectCb.style.cssText = 'cursor:pointer; width:15px; height:15px; accent-color:#60a5fa;';
+    selectCb.addEventListener('change', () => {
+      if (assignment.id == null) return;
+      if (selectCb.checked) {
+        selectedUpcoming.add(assignment.id);
+        card.style.outline = '2px solid #60a5fa';
+        card.style.boxShadow = '0 0 0 2px rgba(96,165,250,.25)';
+      } else {
+        selectedUpcoming.delete(assignment.id);
+        card.style.outline = '';
+        card.style.boxShadow = '';
+      }
+      refreshUpcomingBulkControls();
+    });
+    cbWrap.appendChild(selectCb);
+    card.appendChild(cbWrap);
 
     const headerRow = document.createElement('div');
     headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;';
