@@ -2779,9 +2779,45 @@ function normalizeTaggedAssignmentText(input) {
       ? `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""} across ${classCount} classes.\n\n${groupedLines}`
       : `Detected ${sections.length} student section${sections.length !== 1 ? "s" : ""}.\n\n${groupedLines}`;
 
+    // Validate enrollments before asking teacher to confirm
+    let enrollmentWarning = "";
+    try {
+      const pairsToValidate = [];
+      const seenPairKeys = new Set();
+      for (const s of sections) {
+        if (!s.className) continue;
+        const pairKey = `${s.studentCode}|${s.className}`;
+        if (!seenPairKeys.has(pairKey)) {
+          seenPairKeys.add(pairKey);
+          pairsToValidate.push({ studentCode: s.studentCode, className: s.className });
+        }
+      }
+      if (pairsToValidate.length > 0) {
+        const valRes = await fetch("/.netlify/functions/teacher-validate-enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pairs: pairsToValidate }),
+        });
+        if (valRes.ok) {
+          const valData = await valRes.json();
+          if (valData.ok && Array.isArray(valData.results)) {
+            const notEnrolled = valData.results.filter((r) => !r.enrolled);
+            if (notEnrolled.length > 0) {
+              const warnDetails = notEnrolled
+                .map((r) => `  • ${r.studentCode} (${r.className}): not enrolled`)
+                .join("\n");
+              enrollmentWarning = `\n\n⚠️ Enrollment warnings:\n${warnDetails}`;
+            }
+          }
+        }
+      }
+    } catch (valErr) {
+      console.warn("Enrollment validation failed, proceeding without it:", valErr);
+    }
+
     const confirmed = await rcConfirm(
       "Split by Student",
-      `${summary}\n\nCreate one draft per student?`,
+      `${summary}${enrollmentWarning}\n\nCreate one draft per student?`,
       "Create Drafts"
     );
     if (!confirmed) return;
@@ -2983,6 +3019,9 @@ function normalizeTaggedAssignmentText(input) {
     const panel = document.getElementById("rcFilePreviewPanel");
     if (!panel) return;
 
+    // Local HTML escaper for safe template literal interpolation
+    const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
     // Clear previous content
     panel.innerHTML = "";
     panel.style.display = "none";
@@ -2994,7 +3033,7 @@ function normalizeTaggedAssignmentText(input) {
       panel.style.display = "block";
 
       const studentList = studentSections
-        .map((s) => `<strong>${s.studentCode}</strong>${s.className ? ` (${s.className})` : ""}`)
+        .map((s) => `<strong>${esc(s.studentCode)}</strong>${s.className ? ` (${esc(s.className)})` : ""}`)
         .join(", ");
 
       panel.innerHTML = `
@@ -3003,12 +3042,46 @@ function normalizeTaggedAssignmentText(input) {
             <span style="font-size: 20px;">🎓</span>
             <strong>Detected ${studentSections.length} individualized student assignment${studentSections.length !== 1 ? "s" : ""}</strong>
           </div>
-          <div style="font-size: 13px; margin-bottom: 8px;">Students: ${studentList}</div>
+          <div id="rcPreviewStudentList" style="font-size: 13px; margin-bottom: 8px;">Students: ${studentList}</div>
           <div class="work-subtle" style="font-size: 12px;">
             Click <strong>Split by Student</strong> to create one draft per student.
           </div>
         </div>
       `;
+
+      // Fire async enrollment validation and update status badges when results arrive
+      const previewPairs = studentSections
+        .filter((s) => s.className)
+        .map((s) => ({ studentCode: s.studentCode, className: s.className }));
+      if (previewPairs.length > 0) {
+        fetch("/.netlify/functions/teacher-validate-enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pairs: previewPairs }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (!data || !data.ok || !Array.isArray(data.results)) return;
+            const listEl = document.getElementById("rcPreviewStudentList");
+            if (!listEl) return;
+            const resultMap = {};
+            for (const r of data.results) {
+              resultMap[`${r.studentCode}|${r.className}`] = r;
+            }
+            const updatedList = studentSections
+              .map((s) => {
+                const nameHtml = `<strong>${esc(s.studentCode)}</strong>${s.className ? ` (${esc(s.className)})` : ""}`;
+                const r = resultMap[`${s.studentCode}|${s.className}`];
+                if (!r) return nameHtml;
+                return nameHtml + (r.enrolled ? " ✅" : " ⚠️");
+              })
+              .join(", ");
+            listEl.innerHTML = "Students: " + updatedList;
+          })
+          .catch((err) => {
+            console.warn("Enrollment validation for preview panel failed:", err);
+          });
+      }
 
       // Enable class dropdown (not used for student splits, but keep it accessible)
       const classSel = document.getElementById("draftClass");
