@@ -661,6 +661,8 @@
     const badgesRow = document.createElement('div');
     badgesRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; align-items:center;';
 
+    // Recall Library entries have a server-side `category` field (separate from the
+    // assignment category system that was removed). Display it here for browsing context.
     if (entry.category) {
       const catSpan = document.createElement('span');
       catSpan.style.cssText = 'background:rgba(148,163,184,.15);color:rgba(148,163,184,.80);padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;font-weight:500;display:inline-block;';
@@ -3992,6 +3994,7 @@
       return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
     });
     let rows = rangedInsts.length === 0
+      // parent: 3 cols (Title, Assigned, Status); admin: +Score +Paper = 5 cols
       ? `<tr><td colspan="${isParent ? 3 : 5}" style="color:#888;font-style:italic;">No assignments found.</td></tr>`
       : rangedInsts.map((inst) => {
           const a = assignsAll.find((x) => x.id === inst.assignment_id);

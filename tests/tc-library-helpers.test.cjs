@@ -414,6 +414,7 @@ test('throws when assignment id is not found', () => {
 });
 
 test('preserves all other fields when updating meta', () => {
+  // Verifies that updating one meta field (e.g. notes) does not clobber existing fields
   const arr = [{ id: 'A5', title: 'Keep Me', type: 'file', meta: { foo: 'bar' } }];
   updateAssignmentLocal(arr, 'A5', { meta: { notes: 'hello' } });
   assert.strictEqual(arr[0].title, 'Keep Me');

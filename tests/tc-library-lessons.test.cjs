@@ -191,11 +191,11 @@ test('detail modal title element has id="detailModalTitle"', () => {
 });
 
 
-test('smart suggest modal sets role="dialog"', () => {
-  // showSmartSuggestModal must set role dialog on overlay
+test('assignment detail modal sets role="dialog"', () => {
+  // showAssignmentDetail must set role dialog on overlay
   assert.ok(
     src.includes('setAttribute(\'role\', \'dialog\')'),
-    'Smart suggest modal missing role=dialog'
+    'Assignment detail modal missing role=dialog'
   );
 });
 
