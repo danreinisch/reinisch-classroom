@@ -780,7 +780,10 @@
    */
   function computeLane(assignment, allInstances) {
     const instances = allInstances.filter(i => i.assignment_id === assignment.id);
-    if (instances.length === 0) return 'upcoming';
+    if (instances.length === 0) {
+      if (assignment.active === false) return 'finalized';
+      return 'upcoming';
+    }
     const allGraded = instances.every(i => i.status === 'Graded');
     // Check active===false first so explicitly archived assignments are always finalized
     // even before the anyActive check below (both paths with allGraded lead to 'finalized').
@@ -1198,6 +1201,36 @@
     issueBtn.textContent = 'Issue to Class';
     btnRow.appendChild(issueBtn);
     card.appendChild(btnRow);
+
+    if (instances.length === 0) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'tc-btn';
+      deleteBtn.style.cssText = 'font-size:12px; padding:5px 12px; color:#f87171; border-color:rgba(248,113,113,.3); margin-top:8px;';
+      deleteBtn.appendChild(createIcon('x', 14));
+      deleteBtn.appendChild(document.createTextNode(' Delete'));
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const confirmed = await rcConfirm(
+          'Delete Assignment',
+          'Are you sure you want to delete "' + (assignment.title || 'Untitled') + '"?\n\nThis assignment has never been issued to students. It will be archived.',
+          'Delete',
+          { danger: true }
+        );
+        if (!confirmed) return;
+        try {
+          await db.updateAssignment(assignment.id, { active: false });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) assignmentsData[idx].active = false;
+          renderAssignmentsTab();
+          showToast('Assignment deleted');
+        } catch (err) {
+          console.error('[tc-library] Failed to delete assignment:', err);
+          showToast('Failed to delete assignment', '#ef4444', '#fff');
+        }
+      });
+      card.appendChild(deleteBtn);
+    }
+
     return card;
   }
 
@@ -1520,12 +1553,46 @@
     row.appendChild(icon);
 
     const titleSection = document.createElement('div');
-    titleSection.style.cssText = 'flex:1; min-width:0;';
+    titleSection.style.cssText = 'flex:1; min-width:0; display:flex; align-items:center; gap:6px;';
     const titleEl = document.createElement('div');
-    titleEl.style.cssText = 'font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;';
+    titleEl.style.cssText = 'font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
     titleEl.textContent = assignment.title || 'Untitled';
     titleSection.appendChild(titleEl);
+    if (assignment.active === false) {
+      const archivedBadge = document.createElement('span');
+      archivedBadge.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.40); padding:2px 8px; border-radius:8px; font-size:11px; white-space:nowrap; margin-left:8px;';
+      archivedBadge.textContent = 'Archived';
+      titleSection.appendChild(archivedBadge);
+    }
     row.appendChild(titleSection);
+
+    if (assignment.active !== false) {
+      const archiveBtn = document.createElement('button');
+      archiveBtn.className = 'tc-btn';
+      archiveBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0; color:rgba(255,255,255,.50);';
+      archiveBtn.appendChild(createIcon('inbox', 12));
+      archiveBtn.appendChild(document.createTextNode(' Archive'));
+      archiveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const confirmed = await rcConfirm(
+          'Archive Assignment',
+          'Archive "' + (assignment.title || 'Untitled') + '"?\n\nIt will remain visible in the Finalized section for reference.',
+          'Archive'
+        );
+        if (!confirmed) return;
+        try {
+          await db.updateAssignment(assignment.id, { active: false });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) assignmentsData[idx].active = false;
+          renderAssignmentsTab();
+          showToast('Assignment archived');
+        } catch (err) {
+          console.error('[tc-library] Failed to archive:', err);
+          showToast('Failed to archive assignment', '#ef4444', '#fff');
+        }
+      });
+      row.appendChild(archiveBtn);
+    }
 
     const statsSection = document.createElement('div');
     statsSection.style.cssText = 'display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;';
@@ -2440,6 +2507,70 @@
       issueBtn.style.cssText = 'flex: 1;';
       issueBtn.textContent = 'Issue to Class';
       actionRow.appendChild(issueBtn);
+
+      const detailInstances = instancesData.filter(i => i.assignment_id === assignment.id);
+      if (lane === 'upcoming' && detailInstances.length === 0) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'tc-btn';
+        deleteBtn.style.cssText = 'font-size:13px; color:#f87171; border-color:rgba(248,113,113,.3);';
+        deleteBtn.appendChild(createIcon('x', 14));
+        deleteBtn.appendChild(document.createTextNode(' Delete'));
+        deleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const confirmed = await rcConfirm(
+            'Delete Assignment',
+            'Are you sure you want to delete "' + (assignment.title || 'Untitled') + '"?\n\nThis assignment has never been issued to students. It will be archived.',
+            'Delete',
+            { danger: true }
+          );
+          if (!confirmed) return;
+          try {
+            await db.updateAssignment(assignment.id, { active: false });
+            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+            if (idx !== -1) assignmentsData[idx].active = false;
+            closeModal();
+            renderAssignmentsTab();
+            showToast('Assignment deleted');
+          } catch (err) {
+            console.error('[tc-library] Failed to delete assignment:', err);
+            showToast('Failed to delete assignment', '#ef4444', '#fff');
+          }
+        });
+        actionRow.appendChild(deleteBtn);
+      } else if (lane === 'finalized' && assignment.active !== false) {
+        const archiveBtn = document.createElement('button');
+        archiveBtn.className = 'tc-btn';
+        archiveBtn.style.cssText = 'font-size:13px; color:rgba(255,255,255,.50);';
+        archiveBtn.appendChild(createIcon('inbox', 14));
+        archiveBtn.appendChild(document.createTextNode(' Archive'));
+        archiveBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const confirmed = await rcConfirm(
+            'Archive Assignment',
+            'Archive "' + (assignment.title || 'Untitled') + '"?\n\nIt will remain visible in the Finalized section for reference.',
+            'Archive'
+          );
+          if (!confirmed) return;
+          try {
+            await db.updateAssignment(assignment.id, { active: false });
+            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+            if (idx !== -1) assignmentsData[idx].active = false;
+            closeModal();
+            renderAssignmentsTab();
+            showToast('Assignment archived');
+          } catch (err) {
+            console.error('[tc-library] Failed to archive:', err);
+            showToast('Failed to archive assignment', '#ef4444', '#fff');
+          }
+        });
+        actionRow.appendChild(archiveBtn);
+      } else if (assignment.active === false) {
+        const archivedIndicator = document.createElement('span');
+        archivedIndicator.style.cssText = 'font-size:13px; color:rgba(255,255,255,.40); display:inline-flex; align-items:center; padding:0 8px;';
+        archivedIndicator.textContent = 'Archived \u2713';
+        actionRow.appendChild(archivedIndicator);
+      }
+
       card.appendChild(actionRow);
 
       issueBtn.addEventListener('click', (e) => {
