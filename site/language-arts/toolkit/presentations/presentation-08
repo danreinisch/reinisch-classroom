@@ -325,6 +325,12 @@
             color: #64748b;
         }
 
+        /* ChromeOS select option dark background fix */
+        select option {
+            background: #0f172a;
+            color: #e8f1ec;
+        }
+
         ::-webkit-scrollbar {
             width: 10px;
         }
