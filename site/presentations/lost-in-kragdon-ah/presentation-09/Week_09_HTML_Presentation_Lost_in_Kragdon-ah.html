@@ -30,7 +30,7 @@
             overflow: hidden;
         }
 
-        .bg-image {
+        .bg-layer {
             position: absolute;
             top: 0;
             left: 0;
@@ -38,26 +38,18 @@
             height: 100%;
             background-size: cover;
             background-position: center;
-            opacity: 0;
-            transition: opacity 3s ease-in-out;
+            will-change: opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
 
-        .bg-image.active {
+        .bg-layer-a {
             opacity: 0.55;
         }
 
-        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
-        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
-        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
-        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
-        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
-        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
-        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
-        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
-        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
-        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
-        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
-        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+        .bg-layer-b {
+            opacity: 0;
+        }
 
         .container {
             max-width: 1200px;
@@ -68,9 +60,7 @@
         header {
             text-align: center;
             padding: 40px 20px;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.55);
             border-radius: 20px;
             margin-bottom: 30px;
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -96,8 +86,6 @@
 
         .theme-banner {
             background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             padding: 15px 30px;
             border-radius: 10px;
             margin-top: 20px;
@@ -112,9 +100,7 @@
         }
 
         nav {
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.55);
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 30px;
@@ -138,8 +124,6 @@
         .nav-btn {
             padding: 12px 24px;
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 25px;
             color: white;
@@ -179,9 +163,7 @@
 
         .slide {
             display: none;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.55);
             border-radius: 20px;
             padding: 40px;
             margin-bottom: 30px;
@@ -236,8 +218,6 @@
 
         .highlight {
             background: rgba(255, 215, 0, 0.10);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-left: 4px solid #ffd700;
             padding: 20px;
             margin: 20px 0;
@@ -246,8 +226,6 @@
 
         .key-fact {
             background: rgba(76, 175, 80, 0.15);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-left: 4px solid #4CAF50;
             padding: 20px;
             margin: 20px 0;
@@ -258,8 +236,6 @@
 
         .vocab-box {
             background: rgba(160, 210, 235, 0.10);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -274,8 +250,6 @@
 
         .grammar-box {
             background: rgba(155, 89, 182, 0.15);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -286,8 +260,6 @@
 
         .what-why-how {
             background: rgba(255, 152, 0, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -317,8 +289,6 @@
 
         .example-box {
             background: rgba(67, 233, 123, 0.10);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -329,8 +299,6 @@
 
         .rule-box {
             background: rgba(33, 150, 243, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -345,8 +313,6 @@
 
         .warning-box {
             background: rgba(244, 67, 54, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -357,8 +323,6 @@
 
         .practice-box {
             background: rgba(156, 39, 176, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -369,8 +333,6 @@
 
         .writing-prompt {
             background: rgba(255, 193, 7, 0.15);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 25px;
             margin: 20px 0;
@@ -381,8 +343,6 @@
 
         .writing-structure {
             background: rgba(0, 188, 212, 0.15);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -491,8 +451,6 @@
         .slide-nav button {
             padding: 12px 30px;
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 25px;
             color: white;
@@ -515,9 +473,7 @@
         footer {
             text-align: center;
             padding: 30px;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.55);
             border-radius: 20px;
             margin-top: 30px;
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -531,18 +487,8 @@
 </head>
 <body>
     <div class="bg-container">
-        <div class="bg-image active"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
+        <div class="bg-layer bg-layer-a" style="background-image: url('image1.jpg');"></div>
+        <div class="bg-layer bg-layer-b"></div>
     </div>
 
     <div class="container">
@@ -1322,13 +1268,48 @@
         const totalSlides = 31;
 
         let currentBg = 0;
-        const bgImages = document.querySelectorAll('.bg-image');
         const totalBgImages = 12;
-        
+        const bgImageUrls = [
+            'image1.jpg','image2.jpg','image3.jpg','image4.jpg',
+            'image5.jpg','image6.jpg','image7.jpg','image8.jpg',
+            'image9.jpg','image10.jpg','image11.jpg','image12.jpg'
+        ];
+        const layerA = document.querySelector('.bg-layer-a');
+        const layerB = document.querySelector('.bg-layer-b');
+        let activeLayer = layerA;
+        let hiddenLayer = layerB;
+
+        // Preload all images
+        bgImageUrls.forEach(url => { const img = new Image(); img.src = url; });
+
+        let rotating = false;
         function rotateBg() {
-            bgImages[currentBg].classList.remove('active');
+            if (rotating) return;
+            rotating = true;
             currentBg = (currentBg + 1) % totalBgImages;
-            bgImages[currentBg].classList.add('active');
+            // Clear transition on hidden layer so image swap is instant
+            hiddenLayer.style.transition = 'none';
+            hiddenLayer.style.opacity = '0';
+            hiddenLayer.style.backgroundImage = "url('" + bgImageUrls[currentBg] + "')";
+            // Double-rAF: ensure the browser has painted the new image at opacity 0
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    hiddenLayer.style.transition = 'opacity 2.5s ease-in-out';
+                    activeLayer.style.transition = 'opacity 2.5s ease-in-out';
+                    hiddenLayer.style.opacity = '0.55';
+                    activeLayer.style.opacity = '0';
+                    // Wait for fade to finish before swapping references
+                    hiddenLayer.addEventListener('transitionend', function handler() {
+                        hiddenLayer.removeEventListener('transitionend', handler);
+                        const temp = activeLayer;
+                        activeLayer = hiddenLayer;
+                        hiddenLayer = temp;
+                        // Strip transition from now-hidden layer to avoid GPU re-composite
+                        hiddenLayer.style.transition = 'none';
+                        rotating = false;
+                    });
+                });
+            });
         }
         
         setInterval(rotateBg, 8000);
