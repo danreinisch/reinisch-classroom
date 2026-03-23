@@ -373,3 +373,45 @@ DOCX downloaded as {student_code}_{goal_code}_progress_report.docx
 - If `sub.answers` is missing or malformed, student answers show `—`
 - All user-generated content (question text, answers, item refs) is escaped via `escapeXml()`
 
+---
+
+## Shared Module: Canonical `buildItemsFromMeta`
+
+To eliminate copy-drift risk, `buildItemsFromMeta` is defined in two canonical shared modules that all consumers import from:
+
+### Browser (ES module)
+
+**`site/web/shared-build-items.js`** (also mirrored byte-for-byte as **`web/shared-build-items.js`**)
+
+- Supports both Path A (`meta.days[].questions[]`) and Path B (`meta.questions[]`)
+- Accepts an optional `options` parameter: `{ idPrefix: 'syn_' }` (default `'syn_'`)
+- Exports: `export function buildItemsFromMeta(assignmentId, meta, options = {})`
+
+Consumer files that import from this module:
+- `site/web/tc-reporting.js` — `await import('/web/shared-build-items.js')`
+- `site/web/tc-review.js` — passes `{ idPrefix: SYNTHETIC_ID_PREFIX }` to get `synthetic_` prefixed IDs
+- `site/web/tc-library.js` — `await import('/web/shared-build-items.js')`
+- `site/web/tc-data.js` — `await import('/web/shared-build-items.js')`
+
+### Server (CommonJS)
+
+**`netlify/functions/_lib/build-items.js`**
+
+- Functionally equivalent to the browser version but without the `id`/`idPrefix` field
+- Does not include `dese_codes` in output (not a column on `assignment_items` table)
+- Exports: `module.exports = { buildItemsFromMeta }`
+
+Consumer files that require from this module:
+- `netlify/functions/admin-backfill-items.js`
+- `netlify/functions/teacher-issue-draft.js`
+- `tests/html-assignment-pipeline.test.cjs`
+- `tests/tc-data-docx-export.test.cjs`
+
+### Adding new question metadata fields
+
+When adding a new field to item metadata (e.g. a new question type or new annotation), update **both** canonical modules:
+1. `site/web/shared-build-items.js` (browser)
+2. `netlify/functions/_lib/build-items.js` (server)
+
+Then copy `site/web/shared-build-items.js` byte-for-byte to `web/shared-build-items.js` to keep them in sync.
+

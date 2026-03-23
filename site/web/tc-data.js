@@ -11,6 +11,7 @@
   const { parseGoalValue } = await import('/web/goal-utils.js');
   const { parseObservationNotes, formatObservationValue } = await import('/web/obs-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
+  const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
 
   const $ = (id) => document.getElementById(id);
 
@@ -1295,65 +1296,6 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
-  }
-
-  /**
-   * Build synthetic assignment items from assignment.meta.
-   * Mirrors buildItemsFromMeta in tc-reporting.js / tc-review.js.
-   * Used by exportToDocx to resolve per-question detail for HTML assignments.
-   * @param {number|string} assignmentId
-   * @param {Object} meta - assignment.meta (may have .days[] or .questions[])
-   * @returns {Array} synthetic item objects with item_ref, meta, goal_codes, points
-   */
-  function buildItemsFromMeta(assignmentId, meta) {
-    const items = [];
-    if (!meta) return items;
-    if (Array.isArray(meta.days)) {
-      for (const day of meta.days) {
-        if (day.type === 'questions' && Array.isArray(day.questions)) {
-          for (const q of day.questions) {
-            const item_ref = `${day.day_number}_${q.number}`;
-            items.push({
-              id: `syn_${item_ref}`,
-              assignment_id: assignmentId,
-              item_ref,
-              answer_type: q.type || 'mcq',
-              points: q.points || 1,
-              meta: {
-                day: day.day_number,
-                question_number: q.number,
-                text: q.text,
-                choices: q.choices,
-                correct: q.correct,
-              },
-              goal_codes: q.goal_codes || [],
-              dese_codes: q.dese_codes || [],
-            });
-          }
-        }
-      }
-    }
-    // Fallback: HTML manifest format — meta.questions is a flat array from detectQuestionsFromHTML
-    if (items.length === 0 && Array.isArray(meta.questions) && meta.questions.length > 0) {
-      for (const [i, q] of meta.questions.entries()) {
-        const qRef = q.q_ref || (`Q${i + 1}`);
-        items.push({
-          id: `syn_${qRef}`,
-          assignment_id: assignmentId,
-          item_ref: qRef,
-          answer_type: q.answer_type || 'constructed',
-          points: (typeof q.points === 'number') ? q.points : 1,
-          meta: {
-            question_number: qRef,
-            text: q.label || '',
-            correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
-          },
-          goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-          dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
-        });
-      }
-    }
-    return items;
   }
 
   /**

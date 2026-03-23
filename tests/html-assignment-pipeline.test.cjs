@@ -228,72 +228,9 @@ function manifestQuestionsToItems(questions) {
   return items;
 }
 
-// ── Inlined from netlify/functions/admin-backfill-items.js ───────────────────
+// ── Shared buildItemsFromMeta from canonical server module ────────────────────
 
-function buildItemsFromMeta(assignmentId, meta) {
-  const items = [];
-  if (!meta) return items;
-
-  // Path A: TXT structured format — meta.days[].questions[]
-  if (Array.isArray(meta.days)) {
-    for (const day of meta.days) {
-      if (day.type === 'questions' && Array.isArray(day.questions)) {
-        for (const q of day.questions) {
-          items.push({
-            assignment_id: assignmentId,
-            item_ref: `${day.day_number}_${q.number}`,
-            answer_type: 'mcq',
-            points: 1,
-            meta: {
-              day: day.day_number,
-              question_number: q.number,
-              text: q.text,
-              choices: q.choices,
-              correct: q.correct,
-              hint: q.hint,
-            },
-          });
-        }
-      } else if (day.type === 'writing_prompt') {
-        items.push({
-          assignment_id: assignmentId,
-          item_ref: `WP_${day.day_number}`,
-          answer_type: 'constructed',
-          points: 5,
-          meta: {
-            day: day.day_number,
-            type: 'writing_prompt',
-            prompt: day.prompt,
-            structure: day.structure,
-            hints: day.hints,
-          },
-        });
-      }
-    }
-  }
-
-  // Path B: HTML manifest format — meta.questions is a flat array
-  if (items.length === 0 && Array.isArray(meta.questions) && meta.questions.length > 0) {
-    for (let i = 0; i < meta.questions.length; i++) {
-      const q = meta.questions[i];
-      const qRef = q.q_ref || ('Q' + (i + 1));
-      items.push({
-        assignment_id: assignmentId,
-        item_ref: qRef,
-        answer_type: q.answer_type || 'constructed',
-        points: (typeof q.points === 'number') ? q.points : 1,
-        goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-        meta: {
-          question_number: qRef,
-          text: q.label || '',
-          correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
-        },
-      });
-    }
-  }
-
-  return items;
-}
+const { buildItemsFromMeta } = require('../netlify/functions/_lib/build-items');
 
 // ── Test suites ───────────────────────────────────────────────────────────────
 
