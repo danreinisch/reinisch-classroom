@@ -1709,8 +1709,11 @@
   /**
    * Handle issuing an assignment from a draft to all enrolled students in the draft's class
    * @param {string} draftId - The ID of the draft to issue
+   * @param {object} [options]
+   * @param {boolean} [options.skipConfirmation=false] - Skip the pre-issue confirmation dialog (used by batch operations)
    */
-  async function handleIssueDraft(draftId) {
+  async function handleIssueDraft(draftId, options) {
+    const skipConfirmation = options && options.skipConfirmation;
     const drafts = readDrafts();
     const draft = drafts.find(d => d.id === draftId);
     
@@ -1725,6 +1728,47 @@
       setMsg("err", "This draft has no class assigned. Please edit and select a class first.");
       setTimeout(clearMsg, 4000);
       return;
+    }
+
+    // Show pre-issue confirmation (unless called from a batch that already confirmed)
+    if (!skipConfirmation) {
+      let confirmed = false;
+
+      if (draft.studentCode) {
+        // Single-student draft: simple confirmation
+        confirmed = await rcConfirm(
+          "Issue Assignment",
+          `Issue "${draft.title}" to ${draft.studentCode} in ${draft.className}?`,
+          "Issue"
+        );
+      } else {
+        // Whole-class draft: fetch the roster first for a richer confirmation
+        let rosterMsg = `Issue "${draft.title}" to all enrolled students in ${draft.className}?`;
+        try {
+          setMsg("ok", `Fetching roster for ${draft.className}…`);
+          const rosterResp = await fetch('/.netlify/functions/teacher-validate-enrollments', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pairs: [], classNames: [draft.className] }),
+          });
+          clearMsg();
+          if (rosterResp.ok) {
+            const rosterData = await rosterResp.json();
+            const codes = rosterData.enrolledStudentsByClass && rosterData.enrolledStudentsByClass[draft.className];
+            if (Array.isArray(codes) && codes.length > 0) {
+              const sorted = codes.slice().sort();
+              rosterMsg = `Issue "${draft.title}" to ${draft.className}?\n\nStudents who will receive this assignment:\n• ${sorted.join(', ')}\n\n(${sorted.length} student${sorted.length !== 1 ? 's' : ''})`;
+            }
+          }
+        } catch (_e) {
+          clearMsg();
+          // Fall back to simple message already set in rosterMsg
+        }
+        confirmed = await rcConfirm("Issue Assignment", rosterMsg, "Issue");
+      }
+
+      if (!confirmed) return;
     }
 
     // Show progress message
@@ -1779,10 +1823,15 @@
       return;
     }
 
-    const studentList = pending.map(d => d.title).join(", ");
+    const draftLines = pending.map(d => {
+      if (d.studentCode) {
+        return `\u2022 "${d.title}" \u2192 ${d.studentCode} (${d.className})`;
+      }
+      return `\u2022 "${d.title}" \u2192 ${d.className} (all enrolled students)`;
+    }).join("\n");
     const confirmed = await rcConfirm(
       "Issue Batch",
-      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""}?\n\n${studentList}`,
+      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""}?\n\n${draftLines}`,
       "Issue All"
     );
     if (!confirmed) return;
@@ -1793,7 +1842,7 @@
     for (let i = 0; i < pending.length; i++) {
       const draft = pending[i];
       setMsg("ok", `Issuing ${i + 1} of ${pending.length}: "${draft.title}"…`);
-      await handleIssueDraft(draft.id);
+      await handleIssueDraft(draft.id, { skipConfirmation: true });
       // Check if issuedAt was set (handleIssueDraft handles its own errors)
       const refreshed = readDrafts().find(d => d.id === draft.id);
       if (refreshed && refreshed.issuedAt) {
@@ -2215,9 +2264,15 @@
       return;
     }
 
+    const draftLines = pending.map(d => {
+      if (d.studentCode) {
+        return `\u2022 "${d.title}" \u2192 ${d.studentCode} (${d.className})`;
+      }
+      return `\u2022 "${d.title}" \u2192 ${d.className} (all enrolled students)`;
+    }).join("\n");
     const confirmed = await rcConfirm(
       "Issue All Drafts",
-      `This will issue ${pending.length} draft${pending.length !== 1 ? "s" : ""} to their respective classes. Continue?`,
+      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""} to their respective classes?\n\n${draftLines}`,
       "Issue All"
     );
     if (!confirmed) return;
@@ -2228,7 +2283,7 @@
     for (let i = 0; i < pending.length; i++) {
       const draft = pending[i];
       setMsg("ok", `Issuing ${i + 1} of ${pending.length}: "${draft.title}"…`);
-      await handleIssueDraft(draft.id);
+      await handleIssueDraft(draft.id, { skipConfirmation: true });
       // Check if issuedAt was set (handleIssueDraft handles its own errors)
       const refreshed = readDrafts().find(d => d.id === draft.id);
       if (refreshed && refreshed.issuedAt) {
@@ -2268,7 +2323,7 @@
       if (!draft.className) continue;
 
       try {
-        await handleIssueDraft(draft.id);
+        await handleIssueDraft(draft.id, { skipConfirmation: true });
         autoIssuedCount++;
       } catch (err) {
         console.warn('[tc-work] Auto-issue failed for draft:', draft.id, err);
