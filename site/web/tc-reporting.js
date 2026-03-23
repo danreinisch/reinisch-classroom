@@ -17,6 +17,7 @@
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
   const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
   const { parseObservationNotes } = await import("/web/obs-utils.js");
+  const { buildItemsFromMeta } = await import("/web/shared-build-items.js");
 
   // Constants - keep in sync with other teacher pages
   const CANON_CLASSES = [
@@ -90,80 +91,6 @@
     const div = document.createElement("div");
     div.textContent = String(text);
     return div.innerHTML;
-  }
-
-  /**
-   * Build synthetic assignment items from assignment.meta.days[].questions[].
-   * Mirrors buildItemsFromMeta in tc-review.js / admin-backfill-items.js.
-   * Items get id = "syn_" + item_ref so they are distinguishable from DB rows.
-   */
-  function buildItemsFromMeta(assignmentId, meta) {
-    const items = [];
-    if (!meta || !Array.isArray(meta.days)) return items;
-    for (const day of meta.days) {
-      if (day.type === 'questions' && Array.isArray(day.questions)) {
-        for (const q of day.questions) {
-          const item_ref = `${day.day_number}_${q.number}`;
-          items.push({
-            id: `syn_${item_ref}`,
-            assignment_id: assignmentId,
-            item_ref,
-            answer_type: q.type || 'mcq',
-            points: q.points || 1,
-            meta: {
-              day: day.day_number,
-              question_number: q.number,
-              text: q.text,
-              choices: q.choices,
-              correct: q.correct,
-              hint: q.hint,
-            },
-            goal_codes: q.goal_codes || [],
-            dese_codes: q.dese_codes || [],
-          });
-        }
-      } else if (day.type === 'writing_prompt') {
-        const item_ref = `WP_${day.day_number}`;
-        items.push({
-          id: `syn_${item_ref}`,
-          assignment_id: assignmentId,
-          item_ref,
-          answer_type: 'constructed',
-          points: day.points || 5,
-          meta: {
-            day: day.day_number,
-            type: 'writing_prompt',
-            prompt: day.prompt,
-            structure: day.structure,
-          },
-          goal_codes: day.goal_codes || [],
-          dese_codes: day.dese_codes || [],
-        });
-      }
-    }
-    // Fallback: HTML manifest format — meta.questions is a flat array from detectQuestionsFromHTML
-    if (items.length === 0 && meta.questions && Array.isArray(meta.questions) && meta.questions.length > 0) {
-      for (var i = 0; i < meta.questions.length; i++) {
-        var q = meta.questions[i];
-        var qRef = q.q_ref || ('Q' + (i + 1));
-        items.push({
-          id: 'syn_' + qRef,
-          assignment_id: assignmentId,
-          item_ref: qRef,
-          answer_type: q.answer_type || 'constructed',
-          points: (typeof q.points === 'number') ? q.points : 1,
-          correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
-          meta: {
-            question_number: qRef,
-            text: q.label || '',
-            correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
-          },
-          goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-          dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
-        });
-      }
-    }
-    return items;
   }
 
   /**

@@ -45,57 +45,8 @@ function escapeXml(str) {
     .replace(/'/g, '&apos;');
 }
 
-// Mirror of buildItemsFromMeta from tc-data.js
-function buildItemsFromMeta(assignmentId, meta) {
-  const items = [];
-  if (!meta) return items;
-  if (Array.isArray(meta.days)) {
-    for (const day of meta.days) {
-      if (day.type === 'questions' && Array.isArray(day.questions)) {
-        for (const q of day.questions) {
-          const item_ref = `${day.day_number}_${q.number}`;
-          items.push({
-            id: `syn_${item_ref}`,
-            assignment_id: assignmentId,
-            item_ref,
-            answer_type: q.type || 'mcq',
-            points: q.points || 1,
-            meta: {
-              day: day.day_number,
-              question_number: q.number,
-              text: q.text,
-              choices: q.choices,
-              correct: q.correct,
-            },
-            goal_codes: q.goal_codes || [],
-            dese_codes: q.dese_codes || [],
-          });
-        }
-      }
-    }
-  }
-  // Fallback: HTML manifest format
-  if (items.length === 0 && Array.isArray(meta.questions) && meta.questions.length > 0) {
-    for (const [i, q] of meta.questions.entries()) {
-      const qRef = q.q_ref || (`Q${i + 1}`);
-      items.push({
-        id: `syn_${qRef}`,
-        assignment_id: assignmentId,
-        item_ref: qRef,
-        answer_type: q.answer_type || 'constructed',
-        points: (typeof q.points === 'number') ? q.points : 1,
-        meta: {
-          question_number: qRef,
-          text: q.label || '',
-          correct: (q.correct !== undefined && q.correct !== null) ? q.correct : undefined,
-        },
-        goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-        dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
-      });
-    }
-  }
-  return items;
-}
+// Canonical buildItemsFromMeta from shared server module
+const { buildItemsFromMeta } = require('../netlify/functions/_lib/build-items');
 
 // Helper: simulate the per-question detail rendering logic from exportToDocx
 function renderPerQuestionDetail(sub, assignment, goalCode) {
@@ -138,8 +89,8 @@ test('exportToDocx function is declared in tc-data.js', () => {
   assert.ok(src.includes('async function exportToDocx()'), 'exportToDocx must be declared');
 });
 
-test('buildItemsFromMeta helper is declared in tc-data.js', () => {
-  assert.ok(src.includes('function buildItemsFromMeta('), 'buildItemsFromMeta must be declared in tc-data.js');
+test('buildItemsFromMeta is imported from shared module in tc-data.js', () => {
+  assert.ok(src.includes('shared-build-items.js'), 'tc-data.js must import from shared-build-items.js');
 });
 
 test('DOCX output includes thead with Q/Question/Student Answer/Correct Answer/Points/Result columns', () => {
