@@ -440,6 +440,8 @@ exports.handler = async (event) => {
 
   console.log(`[teacher-issue-draft] [${requestId}] Issuing draft "${draft.title}" to class "${draft.className}"`);
 
+  const teacherUsername = authResult.user.username;
+
   try {
     // Resolve class name alias (for backward compatibility with old drafts)
     const resolvedClassName = CLASS_ALIASES[draft.className] || draft.className;
@@ -447,10 +449,44 @@ exports.handler = async (event) => {
       console.log(`[teacher-issue-draft] [${requestId}] Resolved alias "${draft.className}" → "${resolvedClassName}"`);
     }
 
-    // Step 1: Fetch class by name to get class ID
-    const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name&name=eq.${encodeURIComponent(resolvedClassName)}`;
-    
-    console.log(`[teacher-issue-draft] [${requestId}] Fetching class by name`);
+    // Step 1a: Look up teacher record by teacher_code to get teacher UUID for class scoping.
+    // The teacher's app_users username is expected to match their teacher.teacher_code.
+    let teacherUUID = null;
+    try {
+      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
+      const teacherLookupResponse = await fetch(teacherLookupUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (teacherLookupResponse.ok) {
+        const teacherRows = await teacherLookupResponse.json();
+        if (teacherRows.length > 0) {
+          teacherUUID = teacherRows[0].id;
+          console.log(`[teacher-issue-draft] [${requestId}] Resolved teacher UUID for "${teacherUsername}": ${teacherUUID}`);
+        } else {
+          console.warn(`[teacher-issue-draft] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; class lookup will not be teacher-scoped`);
+        }
+      } else {
+        console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; class lookup will not be teacher-scoped`);
+      }
+    } catch (teacherLookupErr) {
+      console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; class lookup will not be teacher-scoped`);
+    }
+
+    // Step 1b: Fetch class by name (scoped to teacher when possible) to get class ID.
+    // Include teacher_id in select so we can log ownership info.
+    let classesUrl;
+    if (teacherUUID) {
+      classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name,teacher_id&name=eq.${encodeURIComponent(resolvedClassName)}&teacher_id=eq.${encodeURIComponent(teacherUUID)}`;
+      console.log(`[teacher-issue-draft] [${requestId}] Fetching class by name scoped to teacher ${teacherUUID}`);
+    } else {
+      classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name,teacher_id&name=eq.${encodeURIComponent(resolvedClassName)}`;
+      console.log(`[teacher-issue-draft] [${requestId}] Fetching class by name (no teacher scope available)`);
+    }
     
     const classesResponse = await fetch(classesUrl, {
       method: 'GET',
@@ -467,6 +503,12 @@ exports.handler = async (event) => {
     }
 
     const classes = await classesResponse.json();
+
+    // Warn if multiple classes match (indicates ambiguous class names in the DB)
+    if (classes.length > 1) {
+      console.warn(`[teacher-issue-draft] [${requestId}] WARNING: ${classes.length} classes matched name "${resolvedClassName}" — picking first. Class IDs: ${classes.map(c => c.id).join(', ')}`);
+    }
+
     let targetClass = classes[0];
 
     if (!targetClass) {
@@ -501,7 +543,7 @@ exports.handler = async (event) => {
 
       console.log(`[teacher-issue-draft] [${requestId}] Auto-created class: ${targetClass.name} (ID: ${targetClass.id})`);
     } else {
-      console.log(`[teacher-issue-draft] [${requestId}] Found class: ${targetClass.name} (ID: ${targetClass.id})`);
+      console.log(`[teacher-issue-draft] [${requestId}] Found class: ${targetClass.name} (ID: ${targetClass.id}, teacher_id: ${targetClass.teacher_id || 'unset'})`);
     }
 
     // Step 2: Fetch enrollments for this class
@@ -933,15 +975,17 @@ exports.handler = async (event) => {
 
         // If the draft targets a specific student (e.g. from "Split by Student"),
         // filter to only that student to avoid issuing to the whole class.
+        // This is an explicit enrollment check: the student MUST be present in the
+        // enrolled students list for the resolved class.
         let targetStudents = students;
         if (draft.studentCode && typeof draft.studentCode === 'string') {
           const code = draft.studentCode.trim();
           targetStudents = students.filter(s => s.code === code);
           if (targetStudents.length === 0) {
-            console.error(`[teacher-issue-draft] [${requestId}] Student ${code} not found in class ${draft.className}`);
-            return jsonResponse(event, 404, { ok: false, error: `Student ${code} not found in class ${draft.className}` }, { 'Cache-Control': 'no-store' }, requestId);
+            console.error(`[teacher-issue-draft] [${requestId}] Student ${code} is not enrolled in class "${draft.className}" (resolved: "${resolvedClassName}", class ID: ${targetClass.id}). Enrolled student count: ${students.length}`);
+            return jsonResponse(event, 404, { ok: false, error: `Student ${code} is not enrolled in your ${draft.className} class. Check enrollment on the Students page.` }, { 'Cache-Control': 'no-store' }, requestId);
           }
-          console.log(`[teacher-issue-draft] [${requestId}] Filtered to target student: ${code}`);
+          console.log(`[teacher-issue-draft] [${requestId}] Enrollment check passed — filtered to target student: ${code}`);
         }
 
         // Step 8: Build instances to upsert
