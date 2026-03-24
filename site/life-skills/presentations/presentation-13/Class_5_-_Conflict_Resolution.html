@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 5 – Conflict Resolution</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-hover: #1c2330;
+    --border: #30363d;
+    --border-light: #3d444d;
+    --teal: #14b8a6;
+    --teal-bright: #2dd4bf;
+    --teal-glow: rgba(20, 184, 166, 0.12);
+    --teal-glow-strong: rgba(20, 184, 166, 0.25);
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #6e7681;
+    --accent-warm: #f97316;
+    --accent-red: #ef4444;
+    --accent-blue: #3b82f6;
+    --accent-purple: #a855f7;
+    --accent-yellow: #eab308;
+    --accent-green: #22c55e;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+    --shadow-glow: 0 0 30px rgba(20, 184, 166, 0.15);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: 'Outfit', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .icon-svg { width: 24px; height: 24px; flex-shrink: 0; }
+  .icon-svg-lg { width: 32px; height: 32px; flex-shrink: 0; }
+
+  .deck { position: relative; width: 100%; height: 100%; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 80px 80px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.55s ease, transform 0.55s ease;
+    transform: translateX(30px) scale(0.98);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0) scale(1);
+  }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .slide > * { position: relative; z-index: 1; }
+
+  .slide::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 256px;
+  }
+
+  .slide-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 24px;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .slide-title .teal { color: var(--teal); }
+
+  .slide-subtitle {
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .body-text {
+    font-size: 1.25rem;
+    line-height: 1.7;
+    color: var(--text);
+    max-width: 850px;
+  }
+  .body-text + .body-text { margin-top: 16px; }
+
+  /* ═══ SLIDE 1 ═══ */
+  .slide-1 { justify-content: center; align-items: center; text-align: center; }
+  .slide-1::before {
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 35%, rgba(20,184,166,0.07) 0%, transparent 70%),
+      radial-gradient(circle at 20% 80%, rgba(59,130,246,0.04) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(168,85,247,0.04) 0%, transparent 40%);
+  }
+  .slide-1 .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--teal-glow); border: 1px solid rgba(20,184,166,0.25);
+    border-radius: 100px; padding: 10px 28px;
+    font-size: 0.85rem; font-weight: 600; color: var(--teal);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 36px;
+    backdrop-filter: blur(8px);
+  }
+  .slide-1 .slide-title { font-size: 3.8rem; max-width: 820px; margin-bottom: 24px; letter-spacing: -0.03em; }
+  .slide-1 .slide-subtitle { font-size: 1.35rem; max-width: 620px; color: var(--text-muted); }
+  .title-decoration { width: 60px; height: 4px; background: linear-gradient(90deg, var(--teal), transparent); border-radius: 2px; margin: 24px auto 0; }
+
+  /* ═══ SLIDE 2 ═══ */
+  .slide-2::before {
+    background:
+      radial-gradient(circle at 85% 15%, rgba(239,68,68,0.05) 0%, transparent 45%),
+      radial-gradient(circle at 15% 85%, rgba(20,184,166,0.04) 0%, transparent 40%);
+  }
+  .slide-2 .content-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: start; margin-top: 8px; }
+  .slide-2 .text-block { display: flex; flex-direction: column; gap: 16px; }
+
+  .impact-cards { display: flex; flex-direction: column; gap: 14px; }
+  .impact-card {
+    display: flex; align-items: center; gap: 18px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 22px; box-shadow: var(--shadow-sm);
+    transition: all 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    cursor: pointer; user-select: none; overflow: hidden;
+  }
+  .impact-card:hover { border-color: var(--teal); background: var(--surface-hover); box-shadow: var(--shadow-md), var(--shadow-glow); transform: translateY(-2px); }
+  .impact-card:active { transform: translateY(0); transition-duration: 0.1s; }
+  .impact-card .icon-wrap {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: transform 0.3s;
+  }
+  .impact-card:hover .icon-wrap { transform: scale(1.1); }
+  .impact-card:nth-child(1) .icon-wrap { background: rgba(239,68,68,0.12); }
+  .impact-card:nth-child(2) .icon-wrap { background: rgba(234,179,8,0.12); }
+  .impact-card:nth-child(3) .icon-wrap { background: rgba(59,130,246,0.12); }
+  .impact-card .card-content { flex: 1; min-width: 0; }
+  .impact-card .label { font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+  .impact-card .expand-hint { font-size: 0.75rem; color: var(--text-dim); font-weight: 400; opacity: 0; transition: opacity 0.3s; }
+  .impact-card:hover .expand-hint { opacity: 1; }
+  .impact-card .description {
+    max-height: 0; overflow: hidden; opacity: 0; margin-top: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+    font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;
+  }
+  .impact-card.expanded .description { max-height: 100px; opacity: 1; margin-top: 10px; }
+  .impact-card.expanded { border-color: var(--teal); background: var(--surface-hover); }
+
+  /* ═══ SLIDE 3 ═══ */
+  .slide-3 { align-items: center; }
+  .slide-3::before {
+    background:
+      radial-gradient(circle at 50% 80%, rgba(168,85,247,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 20% 20%, rgba(20,184,166,0.04) 0%, transparent 40%);
+  }
+  .pyramid-container { display: flex; gap: 48px; align-items: center; margin-top: 20px; width: 100%; max-width: 1000px; }
+  .pyramid-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%; }
+  .pyramid-step {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 0.88rem; color: #fff;
+    transition: all 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    cursor: pointer; user-select: none; position: relative; box-shadow: var(--shadow-sm);
+  }
+  .pyramid-step:hover { transform: scale(1.04); box-shadow: var(--shadow-md); z-index: 2; }
+  .pyramid-step:active { transform: scale(1.01); }
+  .pyr-7 { width: 32%; background: linear-gradient(135deg, #991b1b, #dc2626); }
+  .pyr-6 { width: 39%; background: linear-gradient(135deg, #c2410c, #ea580c); }
+  .pyr-5 { width: 46%; background: linear-gradient(135deg, #b45309, #d97706); }
+  .pyr-4 { width: 53%; background: linear-gradient(135deg, #a16207, #ca8a04); }
+  .pyr-3 { width: 60%; background: linear-gradient(135deg, #4d7c0f, #65a30d); }
+  .pyr-2 { width: 67%; background: linear-gradient(135deg, #0f766e, #14b8a6); }
+  .pyr-1 { width: 74%; background: linear-gradient(135deg, #1e40af, #3b82f6); }
+  .pyramid-step .pyr-tooltip {
+    position: absolute; right: calc(100% + 14px); top: 50%;
+    transform: translateY(-50%) translateX(8px);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; font-size: 0.82rem; font-weight: 400; color: var(--text-muted);
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: all 0.25s ease; box-shadow: var(--shadow-md); z-index: 10;
+  }
+  .pyramid-step .pyr-tooltip::after {
+    content: ''; position: absolute; right: -6px; top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 10px; height: 10px; background: var(--surface);
+    border-right: 1px solid var(--border); border-top: 1px solid var(--border);
+  }
+  .pyramid-step:hover .pyr-tooltip { opacity: 1; transform: translateY(-50%) translateX(0); }
+  .pyramid-credit { font-size: 0.78rem; color: var(--text-dim); margin-top: 14px; font-style: italic; text-align: center; }
+  .pyr-arrow-label { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-right: 16px; }
+  .pyr-arrow-label .arrow-line {
+    width: 2px; height: 160px;
+    background: linear-gradient(to top, var(--accent-blue), var(--accent-red));
+    border-radius: 1px; position: relative;
+  }
+  .pyr-arrow-label .arrow-line::before {
+    content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-bottom: 8px solid var(--accent-red);
+  }
+  .pyr-arrow-label span {
+    font-size: 0.7rem; font-weight: 600; color: var(--text-dim);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+  }
+
+  /* ═══ SLIDE 4 ═══ */
+  .slide-4 { align-items: center; justify-content: center; }
+  .slide-4::before {
+    background:
+      radial-gradient(circle at 30% 50%, rgba(20,184,166,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 70% 30%, rgba(168,85,247,0.04) 0%, transparent 40%);
+  }
+  .slide-4 .quote-block { max-width: 780px; text-align: center; }
+  .slide-4 .quote-text { font-size: 2.2rem; font-weight: 600; line-height: 1.5; color: var(--text); letter-spacing: -0.01em; }
+  .slide-4 .quote-text .num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 2.6rem; }
+  .slide-4 .quote-text .num-small { color: var(--text-muted); }
+  .slide-4 .quote-text .num-big { color: var(--teal-bright); }
+  .stat-visual { display: flex; gap: 4px; margin: 32px auto; width: 500px; max-width: 100%; height: 12px; border-radius: 6px; overflow: hidden; }
+  .stat-visual .bar-opinion { width: 10%; background: var(--text-muted); border-radius: 6px 0 0 6px; }
+  .stat-visual .bar-tone { width: 90%; background: linear-gradient(90deg, var(--teal), var(--teal-bright)); border-radius: 0 6px 6px 0; }
+  .stat-labels { display: flex; justify-content: space-between; width: 500px; max-width: 100%; margin: 0 auto; font-size: 0.85rem; color: var(--text-dim); font-weight: 500; }
+  .talking-svg-wrap { margin-top: 36px; display: flex; justify-content: center; }
+
+  /* ═══ SLIDE 5 ═══ */
+  .slide-5::before {
+    background:
+      radial-gradient(circle at 10% 80%, rgba(34,197,94,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 90% 20%, rgba(20,184,166,0.04) 0%, transparent 40%);
+  }
+  .slide-5 .two-col { display: grid; grid-template-columns: 1fr 1.3fr; gap: 48px; align-items: start; margin-top: 8px; }
+  .slide-5 .left-panel { display: flex; flex-direction: column; justify-content: center; }
+  .rules-list-v2 { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .rule-item {
+    display: flex; align-items: flex-start; gap: 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; box-shadow: var(--shadow-sm);
+    transition: all 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    cursor: pointer; user-select: none;
+  }
+  .rule-item:hover { border-color: var(--teal); transform: translateX(4px); box-shadow: var(--shadow-md), var(--shadow-glow); background: var(--surface-hover); }
+  .rule-item:active { transform: translateX(2px); }
+  .rule-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; color: var(--teal);
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; background: var(--teal-glow); border-radius: 8px; margin-top: 1px;
+  }
+  .rule-item p { font-size: 1rem; line-height: 1.5; color: var(--text); }
+
+  /* ═══ SLIDE 6 ═══ */
+  .slide-6 { align-items: center; }
+  .slide-6::before {
+    background:
+      radial-gradient(circle at 50% 30%, rgba(20,184,166,0.07) 0%, transparent 55%),
+      radial-gradient(circle at 80% 80%, rgba(59,130,246,0.04) 0%, transparent 40%);
+  }
+  .slide-6 .layout-split { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; align-items: center; width: 100%; max-width: 960px; margin-top: 16px; }
+  .i-statement-card {
+    background: var(--surface); border: 2px solid var(--teal); border-radius: 18px;
+    padding: 36px 40px; font-size: 1.45rem; font-weight: 500; line-height: 2;
+    box-shadow: var(--shadow-md), var(--shadow-glow); color: var(--teal-bright);
+  }
+  .i-statement-card .blank {
+    display: inline-block; border-bottom: 3px solid var(--accent-yellow);
+    min-width: 100px; margin: 0 4px; color: var(--accent-yellow); font-weight: 600;
+  }
+  .example-box {
+    background: rgba(20,184,166,0.05); border: 1px solid rgba(20,184,166,0.18);
+    border-radius: 12px; padding: 20px 24px; box-shadow: var(--shadow-sm);
+  }
+  .example-box .ex-label { font-size: 0.75rem; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; }
+  .example-box p { font-size: 1rem; line-height: 1.65; color: var(--text-muted); }
+  .example-box p strong { color: var(--text); font-weight: 600; }
+
+  /* ═══ SLIDE 7 ═══ */
+  .slide-7::before {
+    background:
+      radial-gradient(circle at 80% 20%, rgba(249,115,22,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 20% 80%, rgba(20,184,166,0.04) 0%, transparent 40%);
+  }
+  .scenarios { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; max-width: 920px; }
+  .scenario-card {
+    display: flex; gap: 20px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 28px; box-shadow: var(--shadow-sm);
+    transition: all 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    cursor: pointer; user-select: none;
+  }
+  .scenario-card:hover { border-color: var(--accent-warm); background: var(--surface-hover); box-shadow: var(--shadow-md), 0 0 25px rgba(249,115,22,0.1); transform: translateX(4px); }
+  .scenario-card:active { transform: translateX(2px); }
+  .scenario-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700;
+    color: var(--bg); background: var(--accent-warm);
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .scenario-card .sc-content { flex: 1; }
+  .scenario-card .sc-title { font-size: 0.8rem; font-weight: 700; color: var(--accent-warm); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .scenario-card p { font-size: 1.05rem; line-height: 1.6; color: var(--text); }
+  .scenario-prompt {
+    margin-top: 20px; padding: 16px 22px;
+    background: rgba(249,115,22,0.06); border: 1px solid rgba(249,115,22,0.15); border-radius: 12px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .scenario-prompt p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.5; font-style: italic; }
+
+  /* ═══ SLIDE 8 ═══ */
+  .slide-8::before { background: radial-gradient(circle at 50% 50%, rgba(59,130,246,0.05) 0%, transparent 50%); }
+  .slide-8 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; align-items: start; }
+  .rules-numbered { list-style: none; display: flex; flex-direction: column; gap: 10px; counter-reset: tower-rule; }
+  .rules-numbered li {
+    counter-increment: tower-rule;
+    display: flex; gap: 14px; align-items: flex-start;
+    font-size: 1rem; line-height: 1.55; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; transition: all 0.3s; box-shadow: var(--shadow-sm);
+  }
+  .rules-numbered li:hover { border-color: var(--border-light); transform: translateX(3px); }
+  .rules-numbered li::before {
+    content: counter(tower-rule);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700;
+    color: var(--accent-blue); background: rgba(59,130,246,0.1);
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .materials-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px 32px; box-shadow: var(--shadow-sm); }
+  .materials-box h3 { font-size: 0.85rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 18px; }
+  .mat-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 1.05rem; transition: padding-left 0.3s; }
+  .mat-row:hover { padding-left: 6px; }
+  .mat-row:last-child { border-bottom: none; }
+  .mat-row .mat-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mat-row:nth-child(1) .mat-icon-wrap { background: rgba(59,130,246,0.1); }
+  .mat-row:nth-child(2) .mat-icon-wrap { background: rgba(168,85,247,0.1); }
+  .mat-row:nth-child(3) .mat-icon-wrap { background: rgba(20,184,166,0.1); }
+
+  /* ═══ NAV ═══ */
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 56px;
+    background: rgba(13,17,23,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    z-index: 100; padding: 0 24px;
+  }
+  .nav-btn {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s;
+  }
+  .nav-btn:hover { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
+  .nav-btn:active { transform: scale(0.95); }
+  .nav-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  .slide-dots { display: flex; gap: 7px; }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--border);
+    cursor: pointer; transition: all 0.3s;
+  }
+  .dot.active { background: var(--teal); transform: scale(1.35); box-shadow: 0 0 8px rgba(20,184,166,0.4); }
+  .dot:hover { background: rgba(20,184,166,0.6); }
+  .slide-counter { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-dim); min-width: 50px; text-align: center; }
+
+  /* ═══ ANIMATIONS ═══ */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .slide.active .anim { animation: fadeInUp 0.55s cubic-bezier(0.25,0.46,0.45,0.94) forwards; opacity: 0; }
+  .slide.active .d1 { animation-delay: 0.08s; }
+  .slide.active .d2 { animation-delay: 0.16s; }
+  .slide.active .d3 { animation-delay: 0.24s; }
+  .slide.active .d4 { animation-delay: 0.32s; }
+  .slide.active .d5 { animation-delay: 0.40s; }
+  .slide.active .d6 { animation-delay: 0.48s; }
+  .slide.active .d7 { animation-delay: 0.56s; }
+  .slide.active .d8 { animation-delay: 0.64s; }
+  .slide.active .d9 { animation-delay: 0.72s; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 40px 28px 76px; }
+    .slide-1 .slide-title { font-size: 2.4rem; }
+    .slide-title { font-size: 2rem; }
+    .slide-2 .content-grid, .slide-5 .two-col, .slide-6 .layout-split, .slide-8 .two-col { grid-template-columns: 1fr; }
+    .pyramid-container { flex-direction: column; }
+    .pyr-arrow-label { display: none; }
+    .slide-4 .quote-text { font-size: 1.5rem; }
+    .slide-4 .quote-text .num { font-size: 1.8rem; }
+    .i-statement-card { font-size: 1.15rem; padding: 24px 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- SLIDE 1 -->
+  <div class="slide slide-1 active" data-slide="1">
+    <div class="badge anim d1">
+      <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Job Club
+    </div>
+    <h1 class="slide-title anim d2">Conflict in the <span class="teal">Workplace</span><br>(and classroom)</h1>
+    <p class="slide-subtitle anim d3">How to Dialogue through Successful Conflict Resolution</p>
+    <div class="title-decoration anim d4"></div>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide slide-2" data-slide="2">
+    <h1 class="slide-title anim d1">What is <span class="teal">conflict</span>?</h1>
+    <div class="content-grid">
+      <div class="text-block">
+        <p class="body-text anim d2">A disagreement between two or more people.</p>
+        <p class="body-text anim d3">Conflict is a normal occurrence and part of any workplace.</p>
+        <p class="body-text anim d4" style="color:var(--text-muted); margin-top:12px;">The results of conflict may include:</p>
+      </div>
+      <div class="impact-cards">
+        <div class="impact-card anim d4" onclick="toggleCard(this)">
+          <div class="icon-wrap">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/><line x1="12" y1="3" x2="12" y2="21" opacity="0.4"/></svg>
+          </div>
+          <div class="card-content">
+            <div class="label">Lowering team morale <span class="expand-hint">tap to learn more</span></div>
+            <div class="description">When conflict goes unresolved, it creates tension that spreads across the team, making people feel uncomfortable and disengaged at work.</div>
+          </div>
+        </div>
+        <div class="impact-card anim d5" onclick="toggleCard(this)">
+          <div class="icon-wrap">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="card-content">
+            <div class="label">Decreased productivity <span class="expand-hint">tap to learn more</span></div>
+            <div class="description">People spend energy avoiding or worrying about conflict instead of focusing on their tasks, which slows everything down.</div>
+          </div>
+        </div>
+        <div class="impact-card anim d6" onclick="toggleCard(this)">
+          <div class="icon-wrap">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </div>
+          <div class="card-content">
+            <div class="label">Increase in absenteeism <span class="expand-hint">tap to learn more</span></div>
+            <div class="description">Workers may start calling out or avoiding work altogether to escape the stressful environment caused by ongoing conflict.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3 -->
+  <div class="slide slide-3" data-slide="3">
+    <h1 class="slide-title anim d1" style="text-align:center;">How does it <span class="teal">happen</span>?</h1>
+    <p class="slide-subtitle anim d2" style="text-align:center;">The 7 Steps of Conflict Escalation</p>
+    <div class="pyramid-container">
+      <div class="pyr-arrow-label anim d3">
+        <div class="arrow-line"></div>
+        <span>Escalation</span>
+      </div>
+      <div class="pyramid-wrapper" style="flex:1;">
+        <div class="pyramid-step pyr-7 anim d8">Polarization<span class="pyr-tooltip">"Let's get away from here"</span></div>
+        <div class="pyramid-step pyr-6 anim d7">Open Hostility<span class="pyr-tooltip">"The end justifies the means"</span></div>
+        <div class="pyramid-step pyr-5 anim d6">Enemy Images<span class="pyr-tooltip">"They're just no good"</span></div>
+        <div class="pyramid-step pyr-4 anim d5">Dialogue is Abandoned<span class="pyr-tooltip">"What's the use"</span></div>
+        <div class="pyramid-step pyr-3 anim d4">The Problem Expands<span class="pyr-tooltip">"This is not the first time, do you remember when..."</span></div>
+        <div class="pyramid-step pyr-2 anim d3">Personification<span class="pyr-tooltip">"It's your fault"</span></div>
+        <div class="pyramid-step pyr-1 anim d2">Disagreement<span class="pyr-tooltip">"We see things differently"</span></div>
+      </div>
+    </div>
+    <p class="pyramid-credit anim d9">The Danish Centre for Conflict Resolution</p>
+  </div>
+
+  <!-- SLIDE 4 -->
+  <div class="slide slide-4" data-slide="4">
+    <div class="quote-block">
+      <p class="quote-text anim d1">
+        <span class="num num-small">10%</span> of conflict is due to difference in opinion and
+        <span class="num num-big">90%</span> is due to delivery and tone of voice.
+      </p>
+      <div class="stat-visual anim d2">
+        <div class="bar-opinion"></div>
+        <div class="bar-tone"></div>
+      </div>
+      <div class="stat-labels anim d3">
+        <span>Difference in opinion</span>
+        <span>Delivery &amp; tone of voice</span>
+      </div>
+      <div class="talking-svg-wrap anim d4">
+        <svg width="180" height="120" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="55" cy="50" r="22" fill="var(--teal)" opacity="0.2" stroke="var(--teal)" stroke-width="1.5"/>
+          <circle cx="55" cy="42" r="8" fill="var(--teal)" opacity="0.5"/>
+          <path d="M40 70 Q40 58 55 58 Q70 58 70 70" stroke="var(--teal)" stroke-width="1.5" fill="var(--teal)" opacity="0.3"/>
+          <circle cx="125" cy="50" r="22" fill="var(--accent-purple)" opacity="0.2" stroke="var(--accent-purple)" stroke-width="1.5"/>
+          <circle cx="125" cy="42" r="8" fill="var(--accent-purple)" opacity="0.5"/>
+          <path d="M110 70 Q110 58 125 58 Q140 58 140 70" stroke="var(--accent-purple)" stroke-width="1.5" fill="var(--accent-purple)" opacity="0.3"/>
+          <path d="M72 38 Q90 30 108 38" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <path d="M72 48 Q90 40 108 48" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <path d="M72 58 Q90 50 108 58" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <text x="90" y="105" text-anchor="middle" fill="var(--text-dim)" font-size="10" font-family="Outfit">It's not what you say — it's how you say it</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5 -->
+  <div class="slide slide-5" data-slide="5">
+    <h1 class="slide-title anim d1">How to <span class="teal">Resolve</span> Conflict</h1>
+    <div class="two-col">
+      <div class="left-panel anim d2">
+        <svg width="220" height="200" viewBox="0 0 220 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.8;">
+          <rect x="10" y="10" width="90" height="180" rx="10" fill="var(--teal)" opacity="0.06" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="120" y="10" width="90" height="180" rx="10" fill="var(--accent-green)" opacity="0.06" stroke="var(--accent-green)" stroke-width="1"/>
+          <circle cx="55" cy="60" r="20" fill="var(--teal)" opacity="0.12"/>
+          <circle cx="55" cy="52" r="7" fill="var(--teal)" opacity="0.4"/>
+          <path d="M43 73 Q43 64 55 64 Q67 64 67 73" fill="var(--teal)" opacity="0.25"/>
+          <circle cx="165" cy="60" r="20" fill="var(--accent-green)" opacity="0.12"/>
+          <circle cx="165" cy="52" r="7" fill="var(--accent-green)" opacity="0.4"/>
+          <path d="M153 73 Q153 64 165 64 Q177 64 177 73" fill="var(--accent-green)" opacity="0.25"/>
+          <path d="M80 110 Q110 90 140 110" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>
+          <circle cx="110" cy="100" r="5" fill="var(--teal)" opacity="0.25"/>
+          <text x="55" y="120" text-anchor="middle" fill="var(--teal)" font-size="9" font-family="Outfit" font-weight="600" opacity="0.6">Person A</text>
+          <text x="165" y="120" text-anchor="middle" fill="var(--accent-green)" font-size="9" font-family="Outfit" font-weight="600" opacity="0.6">Person B</text>
+          <line x1="55" y1="140" x2="55" y2="155" stroke="var(--teal)" stroke-width="1" opacity="0.3"/>
+          <line x1="165" y1="140" x2="165" y2="155" stroke="var(--accent-green)" stroke-width="1" opacity="0.3"/>
+          <path d="M55 155 Q110 175 165 155" stroke="var(--teal-bright)" stroke-width="1.5" fill="none" opacity="0.4"/>
+          <text x="110" y="180" text-anchor="middle" fill="var(--text-dim)" font-size="10" font-family="Outfit">Resolution</text>
+        </svg>
+      </div>
+      <div>
+        <p class="anim d2" style="font-weight:700; font-size:1.15rem; margin-bottom:14px; color:var(--text);">Conflict Resolution Rules</p>
+        <div class="rules-list-v2">
+          <div class="rule-item anim d3"><div class="rule-num">1</div><p>Agree to resolve the conflict.</p></div>
+          <div class="rule-item anim d4"><div class="rule-num">2</div><p>Take turns talking and do not interrupt.</p></div>
+          <div class="rule-item anim d5"><div class="rule-num">3</div><p>No name calling.</p></div>
+          <div class="rule-item anim d6"><div class="rule-num">4</div><p>Be truthful about what is bothering you, and state it clearly.</p></div>
+          <div class="rule-item anim d7"><div class="rule-num">5</div><p>Listen to the other person, and be sure you understand, how they understand the problem.</p></div>
+          <div class="rule-item anim d8"><div class="rule-num">6</div><p>Be willing to compromise.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6 -->
+  <div class="slide slide-6" data-slide="6">
+    <h1 class="slide-title anim d1" style="text-align:center;">Resolving conflict with <span class="teal">"I" statements</span></h1>
+    <div class="layout-split">
+      <div class="i-statement-card anim d2">
+        I feel <span class="blank">_____</span> when you <span class="blank">_____</span>. Can you please <span class="blank">_____</span> then I/we can <span class="blank">_____</span>.
+      </div>
+      <div>
+        <div class="example-box anim d3">
+          <div class="ex-label">Example</div>
+          <p>I feel <strong>hurt</strong> when you <strong>ignore me</strong>. Can you please <strong>acknowledge me when I speak to you</strong>, then we can <strong>get along better</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7 -->
+  <div class="slide slide-7" data-slide="7">
+    <h1 class="slide-title anim d1">Role Play <span class="teal">Scenarios</span></h1>
+    <div class="scenarios">
+      <div class="scenario-card anim d2">
+        <div class="scenario-num">1</div>
+        <div class="sc-content">
+          <div class="sc-title">Scenario 1</div>
+          <p>You put a soda in the work room refrigerator and someone steals it and drinks it. You are now confronting the person whom you suspect.</p>
+        </div>
+      </div>
+      <div class="scenario-card anim d3">
+        <div class="scenario-num">2</div>
+        <div class="sc-content">
+          <div class="sc-title">Scenario 2</div>
+          <p>Someone is spreading gossip about you at work by saying that you are lazy and take naps in your car when you are supposed to be working. You decide to confront that person.</p>
+        </div>
+      </div>
+      <div class="scenario-card anim d4">
+        <div class="scenario-num">3</div>
+        <div class="sc-content">
+          <div class="sc-title">Scenario 3</div>
+          <p>Your co-worker parks too close to your car and leaves a dent in your door. How do you discuss this with them?</p>
+        </div>
+      </div>
+    </div>
+    <div class="scenario-prompt anim d5">
+      <svg class="icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warm)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p>How would you respond or react? What would you say to that person? How can you diffuse the situation without causing a bigger conflict?</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 8 -->
+  <div class="slide slide-8" data-slide="8">
+    <h1 class="slide-title anim d1">Tower <span class="teal">Challenge</span>:</h1>
+    <p class="body-text anim d2">The goal of the exercise is to have your team build the tallest freestanding tower with 3x5 cards.</p>
+    <div class="two-col">
+      <div>
+        <p class="anim d3" style="font-weight:700; font-size:1rem; margin-bottom:12px; color:var(--text);">Rules:</p>
+        <ol class="rules-numbered">
+          <li class="anim d3">You will be given 5 minutes to plan and build your tower.</li>
+          <li class="anim d4">You will have 7 minutes for the actual construction of the tower.</li>
+          <li class="anim d5">While you plan, you may not damage the cards in any way, but you may talk to your team.</li>
+          <li class="anim d6">While you build the tower, you may not speak to each other.</li>
+        </ol>
+      </div>
+      <div class="materials-box anim d5">
+        <h3>Details</h3>
+        <div class="mat-row">
+          <div class="mat-icon-wrap">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 7h20"/></svg>
+          </div>
+          <span>Materials: 50 3x5 cards (or deck of playing cards).</span>
+        </div>
+        <div class="mat-row">
+          <div class="mat-icon-wrap">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <span>Group Size: 4-6 people</span>
+        </div>
+        <div class="mat-row">
+          <div class="mat-icon-wrap">
+            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <span>5 min planning + 7 min building</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NAV -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" aria-label="Previous slide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="slide-dots" id="dots"></div>
+  <span class="slide-counter" id="counter">1 / 8</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Next slide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsContainer = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  const totalSlides = slides.length;
+  let currentSlide = 0;
+
+  for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotsContainer.appendChild(dot);
+  }
+
+  function goTo(n) {
+    slides[currentSlide].classList.remove('active');
+    dotsContainer.children[currentSlide].classList.remove('active');
+    currentSlide = ((n % totalSlides) + totalSlides) % totalSlides;
+    slides[currentSlide].classList.add('active');
+    dotsContainer.children[currentSlide].classList.add('active');
+    counter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', () => goTo(currentSlide - 1));
+  document.getElementById('nextBtn').addEventListener('click', () => goTo(currentSlide + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(currentSlide + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(currentSlide - 1); }
+    if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    if (e.key === 'End') { e.preventDefault(); goTo(totalSlides - 1); }
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].screenX;
+    if (Math.abs(diff) > 50) { diff > 0 ? goTo(currentSlide + 1) : goTo(currentSlide - 1); }
+  });
+
+  function toggleCard(el) {
+    const wasExpanded = el.classList.contains('expanded');
+    el.parentElement.querySelectorAll('.impact-card').forEach(c => c.classList.remove('expanded'));
+    if (!wasExpanded) el.classList.add('expanded');
+  }
+</script>
+</body>
+</html>
