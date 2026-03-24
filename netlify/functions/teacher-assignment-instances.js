@@ -60,6 +60,90 @@ exports.handler = async (event) => {
   console.log(`[teacher-assignment-instances] [${requestId}] Fetching instances for assignment: ${assignmentIdStr}`);
 
   try {
+    // Step 0: Fetch assignment row to verify it exists and retrieve series for ownership check
+    const assignmentLookupUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,series&id=eq.${assignmentIdStr}&limit=1`;
+    const assignmentLookupResponse = await fetch(assignmentLookupUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!assignmentLookupResponse.ok) {
+      throw new Error(`Failed to verify assignment: ${assignmentLookupResponse.status}`);
+    }
+    const assignmentLookupRows = await assignmentLookupResponse.json();
+    if (!Array.isArray(assignmentLookupRows) || assignmentLookupRows.length === 0) {
+      return jsonResponse(event, 404, { ok: false, error: `Assignment ${assignmentIdStr} not found` }, { 'Cache-Control': 'no-store' }, requestId);
+    }
+
+    const assignmentRow = assignmentLookupRows[0];
+    console.log(`[teacher-assignment-instances] [${requestId}] Assignment found: id=${assignmentRow.id}, series="${assignmentRow.series}"`);
+
+    // Step 0b: Verify the assignment's class belongs to the authenticated teacher
+    const teacherUsername = authResult.user.username;
+    let teacherUUID = null;
+    try {
+      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
+      const teacherLookupResponse = await fetch(teacherLookupUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (teacherLookupResponse.ok) {
+        const teacherRows = await teacherLookupResponse.json();
+        if (teacherRows.length > 0) {
+          teacherUUID = teacherRows[0].id;
+          console.log(`[teacher-assignment-instances] [${requestId}] Resolved teacher UUID for "${teacherUsername}": ${teacherUUID}`);
+        } else {
+          console.warn(`[teacher-assignment-instances] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; ownership check will be unscoped`);
+        }
+      } else {
+        console.warn(`[teacher-assignment-instances] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; ownership check will be unscoped`);
+      }
+    } catch (teacherLookupErr) {
+      console.warn(`[teacher-assignment-instances] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; ownership check will be unscoped`);
+    }
+
+    const assignmentSeries = assignmentRow.series;
+    if (assignmentSeries) {
+      let ownershipUrl;
+      if (teacherUUID) {
+        ownershipUrl = `${SUPABASE_URL}/rest/v1/classes?select=id&name=eq.${encodeURIComponent(assignmentSeries)}&teacher_id=eq.${encodeURIComponent(teacherUUID)}&limit=1`;
+        console.log(`[teacher-assignment-instances] [${requestId}] Checking ownership: class "${assignmentSeries}" for teacher ${teacherUUID}`);
+      } else {
+        ownershipUrl = `${SUPABASE_URL}/rest/v1/classes?select=id&name=eq.${encodeURIComponent(assignmentSeries)}&limit=1`;
+        console.log(`[teacher-assignment-instances] [${requestId}] Checking ownership (unscoped): class "${assignmentSeries}"`);
+      }
+
+      const ownershipResponse = await fetch(ownershipUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (ownershipResponse.ok) {
+        const ownershipRows = await ownershipResponse.json();
+        if (!Array.isArray(ownershipRows) || ownershipRows.length === 0) {
+          console.warn(`[teacher-assignment-instances] [${requestId}] Ownership check failed: class "${assignmentSeries}" not found for this teacher`);
+          return jsonResponse(event, 403, { ok: false, error: 'Assignment does not belong to your class' }, { 'Cache-Control': 'no-store' }, requestId);
+        }
+        console.log(`[teacher-assignment-instances] [${requestId}] Ownership verified: class "${assignmentSeries}" belongs to this teacher`);
+      } else {
+        console.warn(`[teacher-assignment-instances] [${requestId}] Ownership check query failed: ${ownershipResponse.status}; proceeding`);
+      }
+    } else {
+      console.warn(`[teacher-assignment-instances] [${requestId}] Assignment has no series; skipping ownership check`);
+    }
+
     // Fetch instances joined with student info
     const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,status,assigned_at,students(code,name)&assignment_id=eq.${assignmentIdStr}&order=students(code).asc`;
 

@@ -121,6 +121,68 @@ exports.handler = async (event) => {
       console.warn(`[teacher-recall-assignment] [${requestId}] Could not fetch assignment metadata: ${assignmentMetaResponse.status}`);
     }
 
+    // Step 1b: Verify the assignment's class belongs to the authenticated teacher
+    const teacherUsername = authResult.user.username;
+    let teacherUUID = null;
+    try {
+      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
+      const teacherLookupResponse = await fetch(teacherLookupUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (teacherLookupResponse.ok) {
+        const teacherRows = await teacherLookupResponse.json();
+        if (teacherRows.length > 0) {
+          teacherUUID = teacherRows[0].id;
+          console.log(`[teacher-recall-assignment] [${requestId}] Resolved teacher UUID for "${teacherUsername}": ${teacherUUID}`);
+        } else {
+          console.warn(`[teacher-recall-assignment] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; ownership check will be unscoped`);
+        }
+      } else {
+        console.warn(`[teacher-recall-assignment] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; ownership check will be unscoped`);
+      }
+    } catch (teacherLookupErr) {
+      console.warn(`[teacher-recall-assignment] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; ownership check will be unscoped`);
+    }
+
+    const assignmentSeries = assignmentMeta ? assignmentMeta.series : null;
+    if (assignmentSeries) {
+      let ownershipUrl;
+      if (teacherUUID) {
+        ownershipUrl = `${SUPABASE_URL}/rest/v1/classes?select=id&name=eq.${encodeURIComponent(assignmentSeries)}&teacher_id=eq.${encodeURIComponent(teacherUUID)}&limit=1`;
+        console.log(`[teacher-recall-assignment] [${requestId}] Checking ownership: class "${assignmentSeries}" for teacher ${teacherUUID}`);
+      } else {
+        ownershipUrl = `${SUPABASE_URL}/rest/v1/classes?select=id&name=eq.${encodeURIComponent(assignmentSeries)}&limit=1`;
+        console.log(`[teacher-recall-assignment] [${requestId}] Checking ownership (unscoped): class "${assignmentSeries}"`);
+      }
+
+      const ownershipResponse = await fetch(ownershipUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (ownershipResponse.ok) {
+        const ownershipRows = await ownershipResponse.json();
+        if (!Array.isArray(ownershipRows) || ownershipRows.length === 0) {
+          console.warn(`[teacher-recall-assignment] [${requestId}] Ownership check failed: class "${assignmentSeries}" not found for this teacher`);
+          return jsonResponse(event, 403, { ok: false, error: 'Assignment does not belong to your class' }, { 'Cache-Control': 'no-store' }, requestId);
+        }
+        console.log(`[teacher-recall-assignment] [${requestId}] Ownership verified: class "${assignmentSeries}" belongs to this teacher`);
+      } else {
+        console.warn(`[teacher-recall-assignment] [${requestId}] Ownership check query failed: ${ownershipResponse.status}; proceeding`);
+      }
+    } else {
+      console.warn(`[teacher-recall-assignment] [${requestId}] Assignment has no series; skipping ownership check`);
+    }
+
     // Step 2: Fetch assignment_instances to get their IDs
     // For partial recall, filter by both assignment_id and the target student_ids
     let instancesQueryUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&assignment_id=eq.${assignmentIdStr}`;
