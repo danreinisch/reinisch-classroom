@@ -1544,6 +1544,21 @@
       });
     });
   }
+  /**
+   * Determine the number of paragraphs for a writing prompt day.
+   * Priority: instance override > day-level config > default (1)
+   */
+  function getWritingParagraphCount(dayData, instance) {
+    const writingConfig = instance.settings?.writing_config;
+    if (writingConfig?.paragraph_count) {
+      return writingConfig.paragraph_count;
+    }
+    if (dayData.paragraph_count) {
+      return dayData.paragraph_count;
+    }
+    return 1;
+  }
+
   function renderWritingPromptDay(container, dayData, instance) {
     // Graceful fallback if writing prompt data is missing or empty
     if (!dayData.prompt && (!dayData.structure || dayData.structure.length === 0)) {
@@ -1559,7 +1574,8 @@
 
     const isReadOnly = assignmentViewerState.isReadOnly;
     const isGraded = assignmentViewerState.isGraded;
-    
+    const paragraphCount = getWritingParagraphCount(dayData, instance);
+
     const structureHtml = dayData.structure && dayData.structure.length > 0 ? `
       <div class="st-writing-structure">
         <h4>Writing Structure:</h4>
@@ -1649,11 +1665,10 @@
     const builderTipsHtml = dayData.structure && dayData.structure.length > 0 ? 
       dayData.structure.map(item => `<div class="st-builder-tip">${escapeHtml(item)}</div>`).join('') : '';
     
-    // Builder UI
-    const builderHtml = !isReadOnly ? `
-      <div class="st-writing-builder" id="writingBuilder">
-        ${builderTipsHtml}
-        
+    // Builder UI — dynamically generate sections based on paragraphCount
+    let builderParagraphSectionsHtml = '';
+    if (paragraphCount <= 1) {
+      builderParagraphSectionsHtml = `
         <!-- Topic Sentence Section -->
         <div class="st-builder-section" data-section="topic">
           <div class="st-builder-section-header">
@@ -1753,7 +1768,121 @@
             placeholder="Restate your main point and summarize why it matters..."></textarea>
           <div class="st-builder-feedback" id="builderConclusionFeedback"></div>
         </div>
-        
+      `;
+    } else {
+      for (let p = 1; p <= paragraphCount; p++) {
+        builderParagraphSectionsHtml += `
+          <div class="st-builder-paragraph-section">
+            <div class="st-builder-paragraph-header">Paragraph ${p}</div>
+
+            <!-- Topic Sentence -->
+            <div class="st-builder-section" data-section="topic">
+              <div class="st-builder-section-header">
+                <span>Topic Sentence</span>
+                <span class="st-builder-word-count" id="builderTopicCount_p${p}">0 words</span>
+              </div>
+              <textarea
+                class="st-builder-textarea"
+                id="builderTopicSentence_p${p}"
+                placeholder="Write your main claim or thesis statement here..."></textarea>
+              <div class="st-builder-feedback" id="builderTopicFeedback_p${p}"></div>
+            </div>
+
+            <!-- Supporting Detail 1 -->
+            <div class="st-builder-section" data-section="detail">
+              <div class="st-builder-section-header">
+                <span>Supporting Detail 1</span>
+                <span class="st-builder-word-count" id="builderDetail1Count_p${p}">0 words</span>
+              </div>
+              <select class="st-builder-select" id="builderTransition1_p${p}">
+                <option value="">Choose a transition...</option>
+                <option value="First,">First,</option>
+                <option value="To begin with,">To begin with,</option>
+                <option value="For instance,">For instance,</option>
+                <option value="For example,">For example,</option>
+                <option value="One reason is that">One reason is that</option>
+              </select>
+              <textarea
+                class="st-builder-textarea"
+                id="builderDetail1_p${p}"
+                placeholder="Provide evidence or an example that supports your topic sentence..."></textarea>
+              <div class="st-builder-feedback" id="builderDetail1Feedback_p${p}"></div>
+            </div>
+
+            <!-- Supporting Detail 2 -->
+            <div class="st-builder-section" data-section="detail">
+              <div class="st-builder-section-header">
+                <span>Supporting Detail 2</span>
+                <span class="st-builder-word-count" id="builderDetail2Count_p${p}">0 words</span>
+              </div>
+              <select class="st-builder-select" id="builderTransition2_p${p}">
+                <option value="">Choose a transition...</option>
+                <option value="Additionally,">Additionally,</option>
+                <option value="Furthermore,">Furthermore,</option>
+                <option value="Moreover,">Moreover,</option>
+                <option value="Another reason is">Another reason is</option>
+                <option value="In addition,">In addition,</option>
+                <option value="Also,">Also,</option>
+              </select>
+              <textarea
+                class="st-builder-textarea"
+                id="builderDetail2_p${p}"
+                placeholder="Provide a second piece of evidence or example..."></textarea>
+              <div class="st-builder-feedback" id="builderDetail2Feedback_p${p}"></div>
+            </div>
+
+            <!-- Add Detail 3 Button -->
+            <button class="st-builder-add-detail-btn" id="builderAddDetail3Btn_p${p}">+ Add Third Detail (Optional)</button>
+
+            <!-- Supporting Detail 3 (Hidden by default) -->
+            <div class="st-builder-section" data-section="detail" id="builderDetail3Section_p${p}" style="display: none;">
+              <div class="st-builder-section-header">
+                <span>Supporting Detail 3 (Optional)</span>
+                <span class="st-builder-word-count" id="builderDetail3Count_p${p}">0 words</span>
+              </div>
+              <select class="st-builder-select" id="builderTransition3_p${p}">
+                <option value="">Choose a transition...</option>
+                <option value="Finally,">Finally,</option>
+                <option value="Lastly,">Lastly,</option>
+                <option value="Most importantly,">Most importantly,</option>
+                <option value="The most significant">The most significant</option>
+              </select>
+              <textarea
+                class="st-builder-textarea"
+                id="builderDetail3_p${p}"
+                placeholder="Provide a third piece of evidence or example (optional)..."></textarea>
+              <div class="st-builder-feedback" id="builderDetail3Feedback_p${p}"></div>
+            </div>
+
+            <!-- Conclusion -->
+            <div class="st-builder-section" data-section="conclusion">
+              <div class="st-builder-section-header">
+                <span>Conclusion</span>
+                <span class="st-builder-word-count" id="builderConclusionCount_p${p}">0 words</span>
+              </div>
+              <select class="st-builder-select" id="builderTransitionConc_p${p}">
+                <option value="">Choose a transition...</option>
+                <option value="In conclusion,">In conclusion,</option>
+                <option value="To summarize,">To summarize,</option>
+                <option value="Overall,">Overall,</option>
+                <option value="Therefore,">Therefore,</option>
+                <option value="Ultimately,">Ultimately,</option>
+              </select>
+              <textarea
+                class="st-builder-textarea"
+                id="builderConclusion_p${p}"
+                placeholder="Restate your main point and summarize why it matters..."></textarea>
+              <div class="st-builder-feedback" id="builderConclusionFeedback_p${p}"></div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    const builderHtml = !isReadOnly ? `
+      <div class="st-writing-builder" id="writingBuilder" data-paragraph-count="${paragraphCount}">
+        ${builderTipsHtml}
+        ${builderParagraphSectionsHtml}
         <!-- Builder Actions -->
         <div class="st-builder-actions">
           <button class="st-builder-transfer-btn" id="builderTransferBtn">Transfer to Response ↓</button>
@@ -1803,60 +1932,112 @@
     
     // Attach builder event handlers
     if (!isReadOnly) {
-      // Word count and validation for topic sentence
-      const topicInput = container.querySelector('#builderTopicSentence');
-      if (topicInput) {
-        const handler = () => {
-          updateBuilderWordCount('builderTopicSentence', 'builderTopicCount');
-          validateTopicSentence();
-        };
-        topicInput.addEventListener('input', handler);
-      }
-      
-      // Word count and validation for detail 1
-      const detail1Input = container.querySelector('#builderDetail1');
-      if (detail1Input) {
-        const handler = () => {
-          updateBuilderWordCount('builderDetail1', 'builderDetail1Count');
-          validateSupportingDetail('builderDetail1', 'builderDetail1Feedback');
-        };
-        detail1Input.addEventListener('input', handler);
-      }
-      
-      // Word count and validation for detail 2
-      const detail2Input = container.querySelector('#builderDetail2');
-      if (detail2Input) {
-        const handler = () => {
-          updateBuilderWordCount('builderDetail2', 'builderDetail2Count');
-          validateSupportingDetail('builderDetail2', 'builderDetail2Feedback');
-        };
-        detail2Input.addEventListener('input', handler);
-      }
-      
-      // Word count and validation for detail 3
-      const detail3Input = container.querySelector('#builderDetail3');
-      if (detail3Input) {
-        const handler = () => {
-          updateBuilderWordCount('builderDetail3', 'builderDetail3Count');
-          validateSupportingDetail('builderDetail3', 'builderDetail3Feedback');
-        };
-        detail3Input.addEventListener('input', handler);
-      }
-      
-      // Word count and validation for conclusion
-      const conclusionInput = container.querySelector('#builderConclusion');
-      if (conclusionInput) {
-        const handler = () => {
-          updateBuilderWordCount('builderConclusion', 'builderConclusionCount');
-          validateConclusion();
-        };
-        conclusionInput.addEventListener('input', handler);
-      }
-      
-      // Add detail 3 button
-      const addDetail3Btn = container.querySelector('#builderAddDetail3Btn');
-      if (addDetail3Btn) {
-        addDetail3Btn.addEventListener('click', toggleDetail3);
+      if (paragraphCount <= 1) {
+        // Single-paragraph event handlers (original behavior)
+        const topicInput = container.querySelector('#builderTopicSentence');
+        if (topicInput) {
+          const handler = () => {
+            updateBuilderWordCount('builderTopicSentence', 'builderTopicCount');
+            validateTopicSentence();
+          };
+          topicInput.addEventListener('input', handler);
+        }
+        
+        // Word count and validation for detail 1
+        const detail1Input = container.querySelector('#builderDetail1');
+        if (detail1Input) {
+          const handler = () => {
+            updateBuilderWordCount('builderDetail1', 'builderDetail1Count');
+            validateSupportingDetail('builderDetail1', 'builderDetail1Feedback');
+          };
+          detail1Input.addEventListener('input', handler);
+        }
+        
+        // Word count and validation for detail 2
+        const detail2Input = container.querySelector('#builderDetail2');
+        if (detail2Input) {
+          const handler = () => {
+            updateBuilderWordCount('builderDetail2', 'builderDetail2Count');
+            validateSupportingDetail('builderDetail2', 'builderDetail2Feedback');
+          };
+          detail2Input.addEventListener('input', handler);
+        }
+        
+        // Word count and validation for detail 3
+        const detail3Input = container.querySelector('#builderDetail3');
+        if (detail3Input) {
+          const handler = () => {
+            updateBuilderWordCount('builderDetail3', 'builderDetail3Count');
+            validateSupportingDetail('builderDetail3', 'builderDetail3Feedback');
+          };
+          detail3Input.addEventListener('input', handler);
+        }
+        
+        // Word count and validation for conclusion
+        const conclusionInput = container.querySelector('#builderConclusion');
+        if (conclusionInput) {
+          const handler = () => {
+            updateBuilderWordCount('builderConclusion', 'builderConclusionCount');
+            validateConclusion();
+          };
+          conclusionInput.addEventListener('input', handler);
+        }
+        
+        // Add detail 3 button
+        const addDetail3Btn = container.querySelector('#builderAddDetail3Btn');
+        if (addDetail3Btn) {
+          addDetail3Btn.addEventListener('click', toggleDetail3);
+        }
+      } else {
+        // Multi-paragraph event handlers — iterate over all paragraph sections
+        for (let p = 1; p <= paragraphCount; p++) {
+          const pSuffix = `_p${p}`;
+
+          const topicInput = container.querySelector(`#builderTopicSentence${pSuffix}`);
+          if (topicInput) {
+            topicInput.addEventListener('input', () => {
+              updateBuilderWordCount(`builderTopicSentence_p${p}`, `builderTopicCount_p${p}`);
+              validateTopicSentence(`builderTopicSentence_p${p}`, `builderTopicFeedback_p${p}`);
+            });
+          }
+
+          const detail1Input = container.querySelector(`#builderDetail1${pSuffix}`);
+          if (detail1Input) {
+            detail1Input.addEventListener('input', () => {
+              updateBuilderWordCount(`builderDetail1_p${p}`, `builderDetail1Count_p${p}`);
+              validateSupportingDetail(`builderDetail1_p${p}`, `builderDetail1Feedback_p${p}`, `builderTopicSentence_p${p}`);
+            });
+          }
+
+          const detail2Input = container.querySelector(`#builderDetail2${pSuffix}`);
+          if (detail2Input) {
+            detail2Input.addEventListener('input', () => {
+              updateBuilderWordCount(`builderDetail2_p${p}`, `builderDetail2Count_p${p}`);
+              validateSupportingDetail(`builderDetail2_p${p}`, `builderDetail2Feedback_p${p}`, `builderTopicSentence_p${p}`);
+            });
+          }
+
+          const detail3Input = container.querySelector(`#builderDetail3${pSuffix}`);
+          if (detail3Input) {
+            detail3Input.addEventListener('input', () => {
+              updateBuilderWordCount(`builderDetail3_p${p}`, `builderDetail3Count_p${p}`);
+              validateSupportingDetail(`builderDetail3_p${p}`, `builderDetail3Feedback_p${p}`, `builderTopicSentence_p${p}`);
+            });
+          }
+
+          const conclusionInput = container.querySelector(`#builderConclusion${pSuffix}`);
+          if (conclusionInput) {
+            conclusionInput.addEventListener('input', () => {
+              updateBuilderWordCount(`builderConclusion_p${p}`, `builderConclusionCount_p${p}`);
+              validateConclusion(`builderConclusion_p${p}`, `builderConclusionFeedback_p${p}`, `builderTopicSentence_p${p}`);
+            });
+          }
+
+          const addDetail3Btn = container.querySelector(`#builderAddDetail3Btn${pSuffix}`);
+          if (addDetail3Btn) {
+            addDetail3Btn.addEventListener('click', () => toggleDetail3(`_p${p}`));
+          }
+        }
       }
       
       // Transfer button
@@ -2086,9 +2267,9 @@
     countElement.textContent = `${wordCount} words`;
   }
   
-  function validateTopicSentence() {
-    const input = document.getElementById('builderTopicSentence');
-    const feedback = document.getElementById('builderTopicFeedback');
+  function validateTopicSentence(topicId = 'builderTopicSentence', feedbackId = 'builderTopicFeedback') {
+    const input = document.getElementById(topicId);
+    const feedback = document.getElementById(feedbackId);
     if (!input || !feedback) return;
     
     const text = input.value.trim();
@@ -2140,10 +2321,10 @@
     feedback.innerHTML = messages.join('');
   }
   
-  function validateSupportingDetail(detailId, feedbackId) {
+  function validateSupportingDetail(detailId, feedbackId, topicId = 'builderTopicSentence') {
     const detail = document.getElementById(detailId);
     const feedback = document.getElementById(feedbackId);
-    const topicSentence = document.getElementById('builderTopicSentence');
+    const topicSentence = document.getElementById(topicId);
     if (!detail || !feedback) return;
     
     const text = detail.value.trim();
@@ -2179,10 +2360,10 @@
     feedback.innerHTML = messages.join('');
   }
   
-  function validateConclusion() {
-    const conclusion = document.getElementById('builderConclusion');
-    const feedback = document.getElementById('builderConclusionFeedback');
-    const topicSentence = document.getElementById('builderTopicSentence');
+  function validateConclusion(conclusionId = 'builderConclusion', feedbackId = 'builderConclusionFeedback', topicId = 'builderTopicSentence') {
+    const conclusion = document.getElementById(conclusionId);
+    const feedback = document.getElementById(feedbackId);
+    const topicSentence = document.getElementById(topicId);
     if (!conclusion || !feedback) return;
     
     const text = conclusion.value.trim();
@@ -2240,40 +2421,83 @@
   }
   
   function transferBuilderToResponse() {
-    const topic = document.getElementById('builderTopicSentence');
-    const detail1 = document.getElementById('builderDetail1');
-    const detail2 = document.getElementById('builderDetail2');
-    const detail3 = document.getElementById('builderDetail3');
-    const conclusion = document.getElementById('builderConclusion');
-    
-    const transition1 = document.getElementById('builderTransition1');
-    const transition2 = document.getElementById('builderTransition2');
-    const transition3 = document.getElementById('builderTransition3');
-    const transitionConc = document.getElementById('builderTransitionConc');
-    
+    const builder = document.getElementById('writingBuilder');
     const mainTextarea = document.getElementById('writingResponse');
     if (!mainTextarea) return;
-    
+
+    const paragraphCount = builder ? parseInt(builder.dataset.paragraphCount || '1', 10) : 1;
     let response = '';
-    if (topic && topic.value.trim()) response += `${topic.value.trim()} `;
-    if (detail1 && detail1.value.trim()) {
-      const trans1 = transition1 ? transition1.value : '';
-      response += `${trans1 ? trans1 + ' ' : ''}${detail1.value.trim()} `;
+
+    if (paragraphCount <= 1) {
+      // Single-paragraph (original behavior)
+      const topic = document.getElementById('builderTopicSentence');
+      const detail1 = document.getElementById('builderDetail1');
+      const detail2 = document.getElementById('builderDetail2');
+      const detail3 = document.getElementById('builderDetail3');
+      const conclusion = document.getElementById('builderConclusion');
+
+      const transition1 = document.getElementById('builderTransition1');
+      const transition2 = document.getElementById('builderTransition2');
+      const transition3 = document.getElementById('builderTransition3');
+      const transitionConc = document.getElementById('builderTransitionConc');
+
+      if (topic && topic.value.trim()) response += `${topic.value.trim()} `;
+      if (detail1 && detail1.value.trim()) {
+        const trans1 = transition1 ? transition1.value : '';
+        response += `${trans1 ? trans1 + ' ' : ''}${detail1.value.trim()} `;
+      }
+      if (detail2 && detail2.value.trim()) {
+        const trans2 = transition2 ? transition2.value : '';
+        response += `${trans2 ? trans2 + ' ' : ''}${detail2.value.trim()} `;
+      }
+      if (detail3 && detail3.value.trim()) {
+        const trans3 = transition3 ? transition3.value : '';
+        response += `${trans3 ? trans3 + ' ' : ''}${detail3.value.trim()} `;
+      }
+      if (conclusion && conclusion.value.trim()) {
+        const transC = transitionConc ? transitionConc.value : '';
+        response += `${transC ? transC + ' ' : ''}${conclusion.value.trim()}`;
+      }
+      response = response.trim();
+    } else {
+      // Multi-paragraph: build each paragraph and join with double newline
+      const paragraphs = [];
+      for (let p = 1; p <= paragraphCount; p++) {
+        let para = '';
+        const topic = document.getElementById(`builderTopicSentence_p${p}`);
+        const detail1 = document.getElementById(`builderDetail1_p${p}`);
+        const detail2 = document.getElementById(`builderDetail2_p${p}`);
+        const detail3 = document.getElementById(`builderDetail3_p${p}`);
+        const conclusion = document.getElementById(`builderConclusion_p${p}`);
+
+        const transition1 = document.getElementById(`builderTransition1_p${p}`);
+        const transition2 = document.getElementById(`builderTransition2_p${p}`);
+        const transition3 = document.getElementById(`builderTransition3_p${p}`);
+        const transitionConc = document.getElementById(`builderTransitionConc_p${p}`);
+
+        if (topic && topic.value.trim()) para += `${topic.value.trim()} `;
+        if (detail1 && detail1.value.trim()) {
+          const trans1 = transition1 ? transition1.value : '';
+          para += `${trans1 ? trans1 + ' ' : ''}${detail1.value.trim()} `;
+        }
+        if (detail2 && detail2.value.trim()) {
+          const trans2 = transition2 ? transition2.value : '';
+          para += `${trans2 ? trans2 + ' ' : ''}${detail2.value.trim()} `;
+        }
+        if (detail3 && detail3.value.trim()) {
+          const trans3 = transition3 ? transition3.value : '';
+          para += `${trans3 ? trans3 + ' ' : ''}${detail3.value.trim()} `;
+        }
+        if (conclusion && conclusion.value.trim()) {
+          const transC = transitionConc ? transitionConc.value : '';
+          para += `${transC ? transC + ' ' : ''}${conclusion.value.trim()}`;
+        }
+        if (para.trim()) paragraphs.push(para.trim());
+      }
+      response = paragraphs.join('\n\n');
     }
-    if (detail2 && detail2.value.trim()) {
-      const trans2 = transition2 ? transition2.value : '';
-      response += `${trans2 ? trans2 + ' ' : ''}${detail2.value.trim()} `;
-    }
-    if (detail3 && detail3.value.trim()) {
-      const trans3 = transition3 ? transition3.value : '';
-      response += `${trans3 ? trans3 + ' ' : ''}${detail3.value.trim()} `;
-    }
-    if (conclusion && conclusion.value.trim()) {
-      const transC = transitionConc ? transitionConc.value : '';
-      response += `${transC ? transC + ' ' : ''}${conclusion.value.trim()}`;
-    }
-    
-    mainTextarea.value = response.trim();
+
+    mainTextarea.value = response;
     
     // Show success message briefly
     const transferBtn = document.getElementById('builderTransferBtn');
@@ -2291,34 +2515,79 @@
   async function clearBuilder() {
     if (!await rcConfirm('Clear Builder', 'Are you sure you want to clear all builder content?', 'Clear', { danger: true })) return;
     
-    const fields = ['builderTopicSentence', 'builderDetail1', 'builderDetail2', 'builderDetail3', 'builderConclusion'];
-    fields.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    
-    const selects = ['builderTransition1', 'builderTransition2', 'builderTransition3', 'builderTransitionConc'];
-    selects.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    
-    const feedbacks = ['builderTopicFeedback', 'builderDetail1Feedback', 'builderDetail2Feedback', 'builderDetail3Feedback', 'builderConclusionFeedback'];
-    feedbacks.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = '';
-    });
-    
-    const counts = ['builderTopicCount', 'builderDetail1Count', 'builderDetail2Count', 'builderDetail3Count', 'builderConclusionCount'];
-    counts.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '0 words';
-    });
+    const builder = document.getElementById('writingBuilder');
+    const paragraphCount = builder ? parseInt(builder.dataset.paragraphCount || '1', 10) : 1;
+
+    if (paragraphCount <= 1) {
+      // Single-paragraph (original behavior)
+      const fields = ['builderTopicSentence', 'builderDetail1', 'builderDetail2', 'builderDetail3', 'builderConclusion'];
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      
+      const selects = ['builderTransition1', 'builderTransition2', 'builderTransition3', 'builderTransitionConc'];
+      selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      
+      const feedbacks = ['builderTopicFeedback', 'builderDetail1Feedback', 'builderDetail2Feedback', 'builderDetail3Feedback', 'builderConclusionFeedback'];
+      feedbacks.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      
+      const counts = ['builderTopicCount', 'builderDetail1Count', 'builderDetail2Count', 'builderDetail3Count', 'builderConclusionCount'];
+      counts.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0 words';
+      });
+
+      // Reset optional detail 3 to hidden
+      const detail3Section = document.getElementById('builderDetail3Section');
+      if (detail3Section) detail3Section.style.display = 'none';
+      const addDetail3Btn = document.getElementById('builderAddDetail3Btn');
+      if (addDetail3Btn) addDetail3Btn.style.display = '';
+    } else {
+      // Multi-paragraph: iterate over all paragraph sections
+      for (let p = 1; p <= paragraphCount; p++) {
+        const fields = [`builderTopicSentence_p${p}`, `builderDetail1_p${p}`, `builderDetail2_p${p}`, `builderDetail3_p${p}`, `builderConclusion_p${p}`];
+        fields.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+
+        const selects = [`builderTransition1_p${p}`, `builderTransition2_p${p}`, `builderTransition3_p${p}`, `builderTransitionConc_p${p}`];
+        selects.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+
+        const feedbacks = [`builderTopicFeedback_p${p}`, `builderDetail1Feedback_p${p}`, `builderDetail2Feedback_p${p}`, `builderDetail3Feedback_p${p}`, `builderConclusionFeedback_p${p}`];
+        feedbacks.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = '';
+        });
+
+        const counts = [`builderTopicCount_p${p}`, `builderDetail1Count_p${p}`, `builderDetail2Count_p${p}`, `builderDetail3Count_p${p}`, `builderConclusionCount_p${p}`];
+        counts.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = '0 words';
+        });
+
+        // Reset optional detail 3 to hidden
+        const detail3Section = document.getElementById(`builderDetail3Section_p${p}`);
+        if (detail3Section) detail3Section.style.display = 'none';
+        const addDetail3Btn = document.getElementById(`builderAddDetail3Btn_p${p}`);
+        if (addDetail3Btn) addDetail3Btn.style.display = '';
+      }
+    }
   }
   
-  function toggleDetail3() {
-    const detail3Section = document.getElementById('builderDetail3Section');
-    const addBtn = document.getElementById('builderAddDetail3Btn');
+  function toggleDetail3(suffix = '') {
+    const detail3Section = document.getElementById(`builderDetail3Section${suffix}`);
+    const addBtn = document.getElementById(`builderAddDetail3Btn${suffix}`);
     if (!detail3Section || !addBtn) return;
     
     if (detail3Section.style.display === 'none' || !detail3Section.style.display) {
