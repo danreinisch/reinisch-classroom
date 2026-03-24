@@ -3691,8 +3691,44 @@
       }, 3000);
     }
 
+
+    /**
+     * Scan a student's IEP goals for written expression paragraph requirements.
+     * Only scans goals in writing-related goal areas to avoid false positives.
+     * Returns the detected paragraph count (e.g. 2) or null if no match.
+     * @param {Array} goals - Array of goal objects with desc and optional goal_area
+     * @returns {number|null}
+     */
+    function detectParagraphCountFromGoals(goals) {
+      const WRITING_AREAS = ['written expression', 'writing', 'written language'];
+      const patterns = [
+        /writ(?:e|ing)\s+(\d+)\s+paragraph/i,
+        /(\d+)\s+paragraph/i,
+        /multi[- ]?paragraph/i,
+        /multiple\s+paragraph/i,
+      ];
+      for (const goal of goals) {
+        // Filter to writing-related goal areas only (if goal_area is available)
+        const area = (goal.goal_area || '').toLowerCase();
+        if (area && !WRITING_AREAS.some(wa => area.includes(wa))) continue;
+        const text = goal.desc || goal.goal_text || '';
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          if (match) {
+            if (match[1]) {
+              const count = parseInt(match[1], 10);
+              if (count >= 2 && count <= 5) return count;
+            }
+            // "multi-paragraph" or "multiple paragraphs" without a number defaults to 2
+            return 2;
+          }
+        }
+      }
+      return null;
+    }
+
     // Render a per-student override row using DOM API (no innerHTML with dynamic data)
-    function renderPerStudentRow(container, studentCode, studentLabel, existingVal) {
+    function renderPerStudentRow(container, studentCode, studentLabel, existingVal, iepSuggestedVal) {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px';
       row.dataset.studentCode = studentCode;
@@ -3702,6 +3738,13 @@
       labelEl.textContent = studentLabel;
       row.appendChild(labelEl);
 
+      // IEP indicator badge (shown when value was auto-suggested from IEP goals)
+      const iepBadge = document.createElement('span');
+      iepBadge.style.cssText = 'font-size:10px;background:rgba(139,92,246,0.18);color:#a78bfa;border:1px solid rgba(139,92,246,0.35);border-radius:4px;padding:1px 5px;white-space:nowrap';
+      iepBadge.title = 'Paragraph count auto-suggested from IEP goal';
+      iepBadge.style.display = 'none';
+      row.appendChild(iepBadge);
+
       const inp = document.createElement('input');
       inp.type = 'number';
       inp.min = '1';
@@ -3709,13 +3752,23 @@
       inp.placeholder = 'default';
       inp.style.cssText = 'width:70px';
       inp.dataset.studentCode = studentCode;
-      if (existingVal) inp.value = String(existingVal);
+
+      // Determine initial value: existing (teacher-set) takes priority; fall back to IEP suggestion
+      const initVal = existingVal || (iepSuggestedVal != null ? String(iepSuggestedVal) : '');
+      if (initVal) {
+        inp.value = initVal;
+        if (!existingVal && iepSuggestedVal != null) {
+          inp.dataset.iepSuggested = 'true';
+          iepBadge.textContent = 'IEP: ' + iepSuggestedVal + '\u00b6';
+          iepBadge.style.display = '';
+        }
+      }
       row.appendChild(inp);
 
       const badge = document.createElement('span');
       badge.className = 'badge';
-      badge.style.display = existingVal ? '' : 'none';
-      badge.textContent = existingVal ? existingVal + '¶' : '';
+      badge.style.display = initVal ? '' : 'none';
+      badge.textContent = initVal ? initVal + '¶' : '';
       row.appendChild(badge);
 
       inp.addEventListener('input', () => {
@@ -3726,6 +3779,9 @@
         } else {
           badge.style.display = 'none';
         }
+        // Teacher manually changed the value — clear the IEP-suggested marker
+        delete inp.dataset.iepSuggested;
+        iepBadge.style.display = 'none';
       });
 
       container.appendChild(row);
@@ -3736,21 +3792,30 @@
       const container = qs('#perStudentConfigRows');
       if (!container || qs('#perStudentConfigSection')?.style.display === 'none') return;
 
-      // Capture existing values by student code before clearing
+      // Capture existing values by student code before clearing.
+      // IEP-suggested values (data-iep-suggested="true") are intentionally NOT preserved here
+      // because they will be re-detected fresh for each student on re-render.
+      // Only teacher-set values are preserved to survive selection changes.
       const existing = {};
       container.querySelectorAll('[data-student-code]').forEach(row => {
         const inp = row.querySelector('input[type="number"]');
-        if (inp && inp.value.trim() !== '') existing[row.dataset.studentCode] = inp.value;
+        // Only preserve value if it was explicitly set by teacher (not just IEP-suggested)
+        if (inp && inp.value.trim() !== '' && !inp.dataset.iepSuggested) {
+          existing[row.dataset.studentCode] = inp.value;
+        }
       });
 
       // Clear using textContent (no innerHTML) 
       container.textContent = '';
 
+      const goalsMap = localStore.get('iepGoals', {});
       const selectedOptions = Array.from(qs('#issueStudentsSelect').selectedOptions);
       selectedOptions.forEach(opt => {
         const code = opt.value;
         const label = opt.textContent || code;
-        renderPerStudentRow(container, code, label, existing[code] || '');
+        const studentGoals = goalsMap[code] || [];
+        const iepSuggested = !existing[code] ? detectParagraphCountFromGoals(studentGoals) : null;
+        renderPerStudentRow(container, code, label, existing[code] || '', iepSuggested);
       });
 
       if (selectedOptions.length === 0) {
@@ -6490,7 +6555,7 @@
           for (const rg of remoteGoals) {
             const goals = localGoalsMap[rg.student_code] || [];
             const idx = goals.findIndex(g => g.code === rg.code);
-            const goal = { code: rg.code, desc: rg.desc, target: rg.target, status: rg.status, id: rg.id };
+            const goal = { code: rg.code, desc: rg.desc, target: rg.target, status: rg.status, id: rg.id, goal_area: rg.goal_area || null };
             if (idx >= 0) {
               goals[idx] = { ...goals[idx], ...goal };
             } else {
@@ -6520,7 +6585,8 @@
               desc: rg.desc,
               target: rg.target,
               status: rg.status,
-              id: rg.id
+              id: rg.id,
+              goal_area: rg.goal_area || null
             });
           }
           localStore.set('iepGoals', goalsMap);
