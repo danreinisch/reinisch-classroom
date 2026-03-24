@@ -42,10 +42,16 @@
       }
 
       .st-form-group label {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 4px;
         font-size: 14px;
         margin-bottom: 8px;
         opacity: 0.9;
+      }
+
+      .st-form-group label svg {
+        flex-shrink: 0;
       }
 
       .st-form-group select,
@@ -91,6 +97,14 @@
         font-size: 14px;
         cursor: pointer;
         font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .st-btn svg {
+        flex-shrink: 0;
       }
 
       .st-btn:hover {
@@ -898,11 +912,17 @@
       }
 
       .st-assignment-status {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         padding: 4px 10px;
         border-radius: 12px;
         font-size: 12px;
         font-weight: 500;
+      }
+
+      .st-assignment-status svg {
+        flex-shrink: 0;
       }
 
       .st-assignment-status.pending {
@@ -1647,6 +1667,13 @@
         font-weight: 500;
         opacity: 0.8;
         transition: background 0.2s ease, opacity 0.15s ease, border-color 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .st-tab-link svg {
+        flex-shrink: 0;
       }
 
       .st-tab-link:hover {
@@ -1755,6 +1782,13 @@
         color: rgba(255, 255, 255, 0.8);
         transition: all 0.2s;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .st-status-tab svg {
+        flex-shrink: 0;
       }
 
       .st-status-tab:hover {
@@ -1807,6 +1841,13 @@
       .st-assignment-card h3 {
         margin: 0 0 8px 0;
         font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .st-assignment-card h3 svg {
+        flex-shrink: 0;
       }
 
       .st-assignment-card .assignment-meta {
@@ -1818,11 +1859,17 @@
       }
 
       .st-assignment-status {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         padding: 4px 10px;
         border-radius: 12px;
         font-size: 12px;
         font-weight: 500;
+      }
+
+      .st-assignment-status svg {
+        flex-shrink: 0;
       }
 
       .st-assignment-status.in-progress,
@@ -2599,6 +2646,13 @@
             <a href="#" data-tab="goals"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></span><span class="tc-label">Goals</span></a>
             <a href="#" data-tab="settings"><span class="tc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span><span class="tc-label">Settings</span></a>
           </nav>
+          <!-- Profile Card (shown after login) -->
+          <div id="profileCard" class="st-profile-card" style="display: none;">
+            <div class="st-profile-avatar" id="profileAvatar"></div>
+            <div class="st-profile-name" id="profileName">Student</div>
+            <div class="st-profile-code" id="profileCode"></div>
+            <div class="st-profile-class" id="profileClass"></div>
+          </div>
         </aside>
 
         <main class="tc-main">
@@ -2615,7 +2669,7 @@
               <!-- Quick Login Form -->
               <form id="studentLoginForm">
                 <div class="st-form-group">
-                  <label for="studentCodeSelect">Select Your Code</label>
+                  <label for="studentCodeSelect"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg> Select Your Code</label>
                   <select id="studentCodeSelect" required>
                     <option value="">Choose your student code...</option>
                   </select>
@@ -2690,11 +2744,11 @@
           <div id="studentDashboardView" class="hidden">
             <!-- Tab Navigation -->
             <nav class="st-tab-nav" id="studentTabNav">
-              <button class="st-tab-link active" data-tab="dashboard">Dashboard</button>
-              <button class="st-tab-link" data-tab="assignments">Assignments</button>
-              <button class="st-tab-link" data-tab="grades">Grades</button>
-              <button class="st-tab-link" data-tab="goals">Goals</button>
-              <button class="st-tab-link" data-tab="settings">Settings</button>
+              <button class="st-tab-link active" data-tab="dashboard"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard</button>
+              <button class="st-tab-link" data-tab="assignments"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Assignments</button>
+              <button class="st-tab-link" data-tab="grades"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Grades</button>
+              <button class="st-tab-link" data-tab="goals"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> Goals</button>
+              <button class="st-tab-link" data-tab="settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Settings</button>
             </nav>
             <!-- Tab: Dashboard -->
             <div id="tabDashboard" class="st-tab-panel active">
@@ -2812,11 +2866,11 @@
                   </select>
                 </div>
                 <div class="st-status-tabs" id="assignmentStatusTabs">
-                  <button class="st-status-tab active" data-status="all">All</button>
-                  <button class="st-status-tab" data-status="in-progress">In Progress</button>
-                  <button class="st-status-tab" data-status="submitted">Submitted</button>
-                  <button class="st-status-tab" data-status="overdue">Overdue</button>
-                  <button class="st-status-tab" data-status="completed">Completed</button>
+                  <button class="st-status-tab active" data-status="all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> All</button>
+                  <button class="st-status-tab" data-status="in-progress"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> In Progress</button>
+                  <button class="st-status-tab" data-status="submitted"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg> Submitted</button>
+                  <button class="st-status-tab" data-status="overdue"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> Overdue</button>
+                  <button class="st-status-tab" data-status="completed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Completed</button>
                 </div>
                 <div id="assignmentsContent"><p style="opacity:0.7;">Loading your assignments...</p></div>
               </div>

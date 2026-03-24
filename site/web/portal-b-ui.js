@@ -2,6 +2,9 @@
 // Portal B Student Dashboard JavaScript
 // Handles assignment grouping, grades, resubmissions, toasts, and UI interactions
 
+/** Book-open SVG icon for class subheaders — static markup, no user data */
+const BOOK_OPEN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
+
 /**
  * Convert a numeric percentage to a letter grade
  * @param {number} pct - Score percentage (0-100)
@@ -159,7 +162,15 @@ function renderSection(sectionId, assignments, assignmentMap, qs, helpers, featu
     if (hasMultipleClasses && className) {
       const subheader = document.createElement('h3');
       subheader.className = 'st-class-subheader';
-      subheader.textContent = className;
+      subheader.style.display = 'flex';
+      subheader.style.alignItems = 'center';
+      subheader.style.gap = '6px';
+      // Static SVG — no user data interpolated
+      const iconSpan = document.createElement('span');
+      iconSpan.innerHTML = BOOK_OPEN_SVG;
+      iconSpan.style.flexShrink = '0';
+      subheader.appendChild(iconSpan);
+      subheader.appendChild(document.createTextNode(className));
       container.appendChild(subheader);
     }
     for (const item of items) {
@@ -197,7 +208,15 @@ function renderAllSection(assignments, assignmentMap, qs, helpers, feature) {
     if (hasMultipleClasses && className) {
       const subheader = document.createElement('h3');
       subheader.className = 'st-class-subheader';
-      subheader.textContent = className;
+      subheader.style.display = 'flex';
+      subheader.style.alignItems = 'center';
+      subheader.style.gap = '6px';
+      // Static SVG — no user data interpolated
+      const iconSpan = document.createElement('span');
+      iconSpan.innerHTML = BOOK_OPEN_SVG;
+      iconSpan.style.flexShrink = '0';
+      subheader.appendChild(iconSpan);
+      subheader.appendChild(document.createTextNode(className));
       container.appendChild(subheader);
     }
     for (const item of items) {
