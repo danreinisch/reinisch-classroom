@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 5 – Conflict Resolution</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface-hover: #1c2330;
+    --border: #30363d; --border-light: #3d444d;
+    --teal: #14b8a6; --teal-bright: #2dd4bf;
+    --teal-glow: rgba(20,184,166,0.12);
+    --text: #e6edf3; --text-muted: #8b949e; --text-dim: #6e7681;
+    --accent-warm: #f97316; --accent-red: #ef4444; --accent-blue: #3b82f6;
+    --accent-purple: #a855f7; --accent-yellow: #eab308; --accent-green: #22c55e;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.3); --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: 'Outfit', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+  .icon-svg { width: 24px; height: 24px; flex-shrink: 0; }
+  .icon-svg-lg { width: 32px; height: 32px; flex-shrink: 0; }
+
+  /* ═══ DECK — opacity-only transitions, no transform ═══ */
+  .deck { position: relative; width: 100%; height: 100%; }
+  .slide {
+    position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+    padding: 48px 72px 72px; opacity: 0; pointer-events: none;
+    transition: opacity 0.45s ease;
+    overflow-y: auto; overflow-x: hidden;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  /* Ambient gradients — static, no pseudo-element filters */
+  .slide::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .slide > * { position: relative; z-index: 1; }
+
+  /* ═══ TYPOGRAPHY ═══ */
+  .slide-title { font-size: 2.8rem; font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -0.02em; }
+  .slide-title .teal { color: var(--teal); }
+  .slide-subtitle { font-size: 1.12rem; font-weight: 400; color: var(--text-muted); margin-bottom: 28px; line-height: 1.6; }
+  .body-text { font-size: 1.2rem; line-height: 1.7; max-width: 850px; }
+  .body-text + .body-text { margin-top: 14px; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 1
+     ═══════════════════════════════════════════ */
+  .slide-1 { justify-content: center; align-items: center; text-align: center; }
+  .slide-1::before {
+    background: radial-gradient(ellipse 70% 50% at 50% 35%, rgba(20,184,166,0.07) 0%, transparent 70%),
+      radial-gradient(circle at 20% 80%, rgba(59,130,246,0.04) 0%, transparent 40%);
+  }
+  .slide-1 .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--teal-glow); border: 1px solid rgba(20,184,166,0.25);
+    border-radius: 100px; padding: 10px 28px; font-size: 0.85rem; font-weight: 600;
+    color: var(--teal); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 36px;
+  }
+  .slide-1 .slide-title { font-size: 3.6rem; max-width: 820px; margin-bottom: 24px; letter-spacing: -0.03em; }
+  .slide-1 .slide-subtitle { font-size: 1.3rem; max-width: 620px; }
+  .title-deco { width: 60px; height: 4px; background: linear-gradient(90deg, var(--teal), transparent); border-radius: 2px; margin: 24px auto 0; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 2
+     ═══════════════════════════════════════════ */
+  .slide-2::before {
+    background: radial-gradient(circle at 85% 15%, rgba(239,68,68,0.05) 0%, transparent 45%);
+  }
+  .slide-2 .content-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 44px; align-items: start; margin-top: 4px; }
+  .slide-2 .text-block { display: flex; flex-direction: column; gap: 14px; }
+  .impact-cards { display: flex; flex-direction: column; gap: 12px; }
+  .impact-card {
+    display: flex; align-items: center; gap: 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.3s, background-color 0.3s;
+    cursor: pointer; user-select: none; overflow: hidden;
+  }
+  .impact-card:hover { border-color: var(--teal); background: var(--surface-hover); }
+  .impact-card .icon-wrap {
+    width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0;
+  }
+  .impact-card:nth-child(1) .icon-wrap { background: rgba(239,68,68,0.12); }
+  .impact-card:nth-child(2) .icon-wrap { background: rgba(234,179,8,0.12); }
+  .impact-card:nth-child(3) .icon-wrap { background: rgba(59,130,246,0.12); }
+  .impact-card .card-content { flex: 1; min-width: 0; }
+  .impact-card .label { font-size: 1.02rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+  .impact-card .expand-hint { font-size: 0.72rem; color: var(--text-dim); font-weight: 400; opacity: 0; transition: opacity 0.3s; }
+  .impact-card:hover .expand-hint { opacity: 1; }
+  .impact-card .description {
+    max-height: 0; overflow: hidden; opacity: 0; margin-top: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease, margin-top 0.3s ease;
+    font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;
+  }
+  .impact-card.expanded .description { max-height: 120px; opacity: 1; margin-top: 10px; }
+  .impact-card.expanded { border-color: var(--teal); background: var(--surface-hover); }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 3
+     ═══════════════════════════════════════════ */
+  .slide-3 { align-items: center; }
+  .slide-3::before {
+    background: radial-gradient(circle at 50% 80%, rgba(168,85,247,0.05) 0%, transparent 50%);
+  }
+  .pyramid-container { display: flex; gap: 40px; align-items: center; margin-top: 16px; width: 100%; max-width: 960px; }
+  .pyramid-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%; }
+  .pyramid-step {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 11px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; color: #fff;
+    transition: opacity 0.3s, box-shadow 0.3s;
+    cursor: pointer; user-select: none; position: relative; box-shadow: var(--shadow-sm);
+  }
+  .pyramid-step.pyr-active { box-shadow: var(--shadow-md); opacity: 1; z-index: 2; outline: 3px solid rgba(255,255,255,0.3); outline-offset: 2px; }
+  .pyramid-step:not(.pyr-active):hover { opacity: 0.85; }
+  .pyr-7 { width: 32%; background: linear-gradient(135deg, #991b1b, #dc2626); }
+  .pyr-6 { width: 39%; background: linear-gradient(135deg, #c2410c, #ea580c); }
+  .pyr-5 { width: 46%; background: linear-gradient(135deg, #b45309, #d97706); }
+  .pyr-4 { width: 53%; background: linear-gradient(135deg, #a16207, #ca8a04); }
+  .pyr-3 { width: 60%; background: linear-gradient(135deg, #4d7c0f, #65a30d); }
+  .pyr-2 { width: 67%; background: linear-gradient(135deg, #0f766e, #14b8a6); }
+  .pyr-1 { width: 74%; background: linear-gradient(135deg, #1e40af, #3b82f6); }
+  .pyr-detail-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 24px; min-width: 280px; max-width: 320px; box-shadow: var(--shadow-md);
+    transition: opacity 0.3s; flex-shrink: 0;
+  }
+  .pyr-detail-panel.hidden { opacity: 0.3; }
+  .pyr-detail-panel .pyr-d-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+  .pyr-detail-panel .pyr-d-quote { font-size: 0.95rem; color: var(--text-muted); font-style: italic; line-height: 1.5; }
+  .pyr-detail-panel .pyr-d-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 10px; }
+  .pyramid-credit { font-size: 0.75rem; color: var(--text-dim); margin-top: 12px; font-style: italic; text-align: center; }
+  .pyr-arrow-label { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-right: 12px; }
+  .pyr-arrow-label .arrow-line {
+    width: 2px; height: 140px; background: linear-gradient(to top, var(--accent-blue), var(--accent-red));
+    border-radius: 1px; position: relative;
+  }
+  .pyr-arrow-label .arrow-line::before {
+    content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid var(--accent-red);
+  }
+  .pyr-arrow-label span {
+    font-size: 0.65rem; font-weight: 600; color: var(--text-dim); letter-spacing: 0.08em;
+    text-transform: uppercase; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+  }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 4
+     ═══════════════════════════════════════════ */
+  .slide-4 { align-items: center; justify-content: center; }
+  .slide-4::before {
+    background: radial-gradient(circle at 30% 50%, rgba(20,184,166,0.06) 0%, transparent 50%);
+  }
+  .slide-4 .quote-block { max-width: 780px; text-align: center; }
+  .slide-4 .quote-text { font-size: 2.1rem; font-weight: 600; line-height: 1.5; }
+  .slide-4 .quote-text .num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 2.5rem; }
+  .slide-4 .quote-text .num-small { color: var(--text-muted); }
+  .slide-4 .quote-text .num-big { color: var(--teal-bright); }
+  .stat-visual { display: flex; gap: 4px; margin: 28px auto; width: 480px; max-width: 100%; height: 12px; border-radius: 6px; overflow: hidden; }
+  .stat-visual .bar-opinion { width: 10%; background: var(--text-muted); border-radius: 6px 0 0 6px; }
+  .stat-visual .bar-tone { width: 90%; background: linear-gradient(90deg, var(--teal), var(--teal-bright)); border-radius: 0 6px 6px 0; }
+  .stat-labels { display: flex; justify-content: space-between; width: 480px; max-width: 100%; margin: 0 auto; font-size: 0.82rem; color: var(--text-dim); font-weight: 500; }
+  .talking-svg-wrap { margin-top: 32px; display: flex; justify-content: center; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 5
+     ═══════════════════════════════════════════ */
+  .slide-5::before {
+    background: radial-gradient(circle at 10% 80%, rgba(34,197,94,0.05) 0%, transparent 50%);
+  }
+  .slide-5 .two-col { display: grid; grid-template-columns: 0.8fr 1.4fr; gap: 40px; align-items: start; margin-top: 4px; }
+  .slide-5 .left-panel { display: flex; flex-direction: column; justify-content: center; }
+  .rules-list-v2 { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .rule-item {
+    display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0; box-shadow: var(--shadow-sm);
+    transition: border-color 0.3s, background-color 0.3s;
+    cursor: pointer; user-select: none; overflow: hidden;
+  }
+  .rule-item:hover { border-color: var(--teal); background: var(--surface-hover); }
+  .rule-item.expanded { border-color: var(--teal); background: var(--surface-hover); }
+  .rule-header { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+  .rule-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700; color: var(--teal);
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; background: var(--teal-glow); border-radius: 8px;
+  }
+  .rule-header p { font-size: 0.97rem; line-height: 1.45; flex: 1; }
+  .rule-chevron {
+    width: 18px; height: 18px; flex-shrink: 0; transition: transform 0.3s;
+    color: var(--text-dim);
+  }
+  .rule-item.expanded .rule-chevron { transform: rotate(180deg); color: var(--teal); }
+  .rule-detail {
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+    padding: 0 18px 0 60px; font-size: 0.88rem; color: var(--text-muted); line-height: 1.55;
+  }
+  .rule-item.expanded .rule-detail {
+    max-height: 150px; opacity: 1; padding: 0 18px 16px 60px;
+    border-top: 1px solid var(--border); padding-top: 12px;
+  }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 6
+     ═══════════════════════════════════════════ */
+  .slide-6 { align-items: center; }
+  .slide-6::before {
+    background: radial-gradient(circle at 50% 30%, rgba(20,184,166,0.07) 0%, transparent 55%);
+  }
+  .i-statement-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px 36px; font-size: 1.35rem; font-weight: 500; line-height: 2.2;
+    box-shadow: var(--shadow-md); color: var(--text); max-width: 740px; width: 100%;
+  }
+  .editable-blank {
+    display: inline-block; min-width: 90px; padding: 2px 10px;
+    border-bottom: 3px solid var(--teal); color: var(--teal-bright); font-weight: 600;
+    outline: none; cursor: text; background: transparent;
+    font-family: 'Outfit', sans-serif; font-size: inherit; border-radius: 0;
+    caret-color: var(--teal-bright);
+    transition: border-bottom-color 0.3s, background-color 0.3s;
+  }
+  .editable-blank:empty::before {
+    content: attr(data-placeholder); color: var(--text-dim); font-weight: 400; font-style: italic;
+  }
+  .editable-blank:focus {
+    border-bottom-color: var(--teal-bright); background: rgba(20,184,166,0.06);
+    border-radius: 4px 4px 0 0;
+  }
+  .editable-blank:not(:empty) { background: rgba(20,184,166,0.06); border-radius: 4px 4px 0 0; }
+  .i-card-hint { font-size: 0.78rem; color: var(--text-dim); margin-top: 12px; text-align: center; }
+  .example-box {
+    background: rgba(20,184,166,0.05); border: 1px solid rgba(20,184,166,0.18);
+    border-radius: 12px; padding: 18px 22px; box-shadow: var(--shadow-sm); margin-top: 20px;
+    max-width: 740px; width: 100%;
+  }
+  .example-box .ex-label { font-size: 0.72rem; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
+  .example-box p { font-size: 0.95rem; line-height: 1.6; color: var(--text-muted); }
+  .example-box p strong { color: var(--text); font-weight: 600; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 7
+     ═══════════════════════════════════════════ */
+  .slide-7::before {
+    background: radial-gradient(circle at 80% 20%, rgba(249,115,22,0.05) 0%, transparent 50%);
+  }
+  .scenarios { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; max-width: 920px; }
+  .scenario-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.3s, background-color 0.3s;
+    cursor: pointer; user-select: none; overflow: hidden;
+  }
+  .scenario-card:hover { border-color: var(--accent-warm); background: var(--surface-hover); }
+  .scenario-card.sc-expanded { border-color: var(--accent-warm); background: var(--surface-hover); }
+  .sc-header { display: flex; gap: 18px; align-items: flex-start; padding: 18px 24px; }
+  .scenario-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+    color: var(--bg); background: var(--accent-warm);
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sc-body { flex: 1; }
+  .sc-body .sc-title { font-size: 0.75rem; font-weight: 700; color: var(--accent-warm); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .sc-body p { font-size: 1rem; line-height: 1.55; }
+  .sc-response-area {
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+    padding: 0 24px;
+  }
+  .scenario-card.sc-expanded .sc-response-area {
+    max-height: 200px; opacity: 1; padding: 14px 24px 18px;
+    border-top: 1px solid var(--border);
+  }
+  .sc-response-label { font-size: 0.72rem; font-weight: 700; color: var(--accent-warm); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .sc-response-input {
+    width: 100%; min-height: 48px; background: rgba(249,115,22,0.04); border: 1px solid rgba(249,115,22,0.15);
+    border-radius: 10px; padding: 12px 16px; font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+    color: var(--text); resize: vertical; outline: none; line-height: 1.5;
+    transition: border-color 0.3s;
+  }
+  .sc-response-input::placeholder { color: var(--text-dim); font-style: italic; }
+  .sc-response-input:focus { border-color: var(--accent-warm); }
+  .scenario-prompt {
+    margin-top: 16px; padding: 14px 20px;
+    background: rgba(249,115,22,0.05); border: 1px solid rgba(249,115,22,0.12); border-radius: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .scenario-prompt p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; font-style: italic; }
+
+  /* ═══════════════════════════════════════════
+     SLIDE 8
+     ═══════════════════════════════════════════ */
+  .slide-8::before { background: radial-gradient(circle at 50% 50%, rgba(59,130,246,0.05) 0%, transparent 50%); }
+  .slide-8 .three-col { display: grid; grid-template-columns: 1.2fr 0.9fr 0.9fr; gap: 24px; margin-top: 16px; align-items: start; }
+  .rules-numbered { list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: tr; }
+  .rules-numbered li {
+    counter-increment: tr; display: flex; gap: 12px; align-items: flex-start;
+    font-size: 0.95rem; line-height: 1.5; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px; box-shadow: var(--shadow-sm);
+    transition: border-color 0.3s;
+  }
+  .rules-numbered li:hover { border-color: var(--border-light); }
+  .rules-numbered li::before {
+    content: counter(tr); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700;
+    color: var(--accent-blue); background: rgba(59,130,246,0.1);
+    width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .materials-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; box-shadow: var(--shadow-sm); }
+  .materials-box h3 { font-size: 0.78rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
+  .mat-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+  .mat-row:last-child { border-bottom: none; }
+  .mat-row .mat-icon-wrap { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mat-row:nth-child(1) .mat-icon-wrap { background: rgba(59,130,246,0.1); }
+  .mat-row:nth-child(2) .mat-icon-wrap { background: rgba(168,85,247,0.1); }
+  .mat-row:nth-child(3) .mat-icon-wrap { background: rgba(20,184,166,0.1); }
+
+  /* Timer */
+  .timer-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 24px; box-shadow: var(--shadow-sm); text-align: center;
+  }
+  .timer-box h3 { font-size: 0.78rem; font-weight: 700; color: var(--accent-green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .timer-mode-btns { display: flex; gap: 6px; margin-bottom: 16px; }
+  .timer-mode-btn {
+    flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: border-color 0.25s, background-color 0.25s, color 0.25s;
+  }
+  .timer-mode-btn.active { background: var(--accent-green); color: var(--bg); border-color: var(--accent-green); }
+  .timer-mode-btn:not(.active):hover { border-color: var(--accent-green); color: var(--accent-green); }
+  .timer-display {
+    font-family: 'JetBrains Mono', monospace; font-size: 3.2rem; font-weight: 700;
+    color: var(--text); margin: 8px 0 16px; letter-spacing: 0.05em;
+    transition: color 0.3s;
+  }
+  .timer-display.warning { color: var(--accent-warm); }
+  .timer-display.danger { color: var(--accent-red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .timer-progress { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+  .timer-progress-bar {
+    height: 100%; background: var(--accent-green); border-radius: 3px;
+    transition: width 1s linear, background-color 0.3s;
+    width: 100%;
+  }
+  .timer-progress-bar.warning { background: var(--accent-warm); }
+  .timer-progress-bar.danger { background: var(--accent-red); }
+  .timer-ctrl-btns { display: flex; gap: 8px; }
+  .timer-ctrl-btn {
+    flex: 1; padding: 10px 0; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    transition: background-color 0.25s, color 0.25s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .timer-ctrl-btn.start { border-color: var(--accent-green); color: var(--accent-green); }
+  .timer-ctrl-btn.start:hover { background: var(--accent-green); color: var(--bg); }
+  .timer-ctrl-btn.pause { border-color: var(--accent-warm); color: var(--accent-warm); }
+  .timer-ctrl-btn.pause:hover { background: var(--accent-warm); color: var(--bg); }
+  .timer-ctrl-btn.reset:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* ═══════════════════════════════════════════
+     NAVIGATION — no backdrop-filter
+     ═══════════════════════════════════════════ */
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 54px;
+    background: #0d1117; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; gap: 16px; z-index: 100; padding: 0 20px;
+  }
+  .nav-btn {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: border-color 0.25s, color 0.25s, background-color 0.25s;
+  }
+  .nav-btn:hover { background: var(--teal-glow); border-color: var(--teal); color: var(--teal); }
+  .nav-btn svg { width: 15px; height: 15px; fill: currentColor; }
+  .slide-dots { display: flex; gap: 6px; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--border); cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .dot.active { background: var(--teal); }
+  .dot:hover { background: rgba(20,184,166,0.6); }
+  .slide-counter { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-dim); min-width: 44px; text-align: center; }
+  .slide-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ═══ ANIMATIONS — simple opacity-only entrance ═══ */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .slide.active .anim { animation: fadeIn 0.4s ease forwards; opacity: 0; }
+  .slide.active .d1 { animation-delay: 0.06s; } .slide.active .d2 { animation-delay: 0.12s; }
+  .slide.active .d3 { animation-delay: 0.18s; } .slide.active .d4 { animation-delay: 0.24s; }
+  .slide.active .d5 { animation-delay: 0.30s; } .slide.active .d6 { animation-delay: 0.36s; }
+  .slide.active .d7 { animation-delay: 0.42s; } .slide.active .d8 { animation-delay: 0.48s; }
+  .slide.active .d9 { animation-delay: 0.54s; }
+
+  @media (max-width: 960px) {
+    .slide { padding: 36px 24px 68px; }
+    .slide-1 .slide-title { font-size: 2.4rem; }
+    .slide-title { font-size: 2rem; }
+    .slide-2 .content-grid, .slide-5 .two-col, .slide-8 .three-col { grid-template-columns: 1fr; }
+    .pyramid-container { flex-direction: column; }
+    .pyr-arrow-label { display: none; }
+    .pyr-detail-panel { min-width: unset; max-width: 100%; }
+    .slide-4 .quote-text { font-size: 1.5rem; }
+    .slide-4 .quote-text .num { font-size: 1.8rem; }
+    .i-statement-card { font-size: 1.1rem; padding: 24px 28px; }
+    .slide-label { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- SLIDE 1 -->
+  <div class="slide slide-1 active" data-slide="1" data-label="Title">
+    <div class="badge anim d1">
+      <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Job Club
+    </div>
+    <h1 class="slide-title anim d2">Conflict in the <span class="teal">Workplace</span><br>(and classroom)</h1>
+    <p class="slide-subtitle anim d3">How to Dialogue through Successful Conflict Resolution</p>
+    <div class="title-deco anim d4"></div>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide slide-2" data-slide="2" data-label="What is Conflict?">
+    <h1 class="slide-title anim d1">What is <span class="teal">conflict</span>?</h1>
+    <div class="content-grid">
+      <div class="text-block">
+        <p class="body-text anim d2">A disagreement between two or more people.</p>
+        <p class="body-text anim d3">Conflict is a normal occurrence and part of any workplace.</p>
+        <p class="body-text anim d4" style="color:var(--text-muted); margin-top:8px;">The results of conflict may include:</p>
+      </div>
+      <div class="impact-cards">
+        <div class="impact-card anim d4" onclick="toggleExpand(this)">
+          <div class="icon-wrap"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/><line x1="12" y1="3" x2="12" y2="21" opacity="0.4"/></svg></div>
+          <div class="card-content">
+            <div class="label">Lowering team morale <span class="expand-hint">tap for more</span></div>
+            <div class="description">When conflict goes unresolved, it creates tension that spreads across the team, making people feel uncomfortable and disengaged at work.</div>
+          </div>
+        </div>
+        <div class="impact-card anim d5" onclick="toggleExpand(this)">
+          <div class="icon-wrap"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="card-content">
+            <div class="label">Decreased productivity <span class="expand-hint">tap for more</span></div>
+            <div class="description">People spend energy avoiding or worrying about conflict instead of focusing on their tasks, which slows everything down.</div>
+          </div>
+        </div>
+        <div class="impact-card anim d6" onclick="toggleExpand(this)">
+          <div class="icon-wrap"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+          <div class="card-content">
+            <div class="label">Increase in absenteeism <span class="expand-hint">tap for more</span></div>
+            <div class="description">Workers may start calling out or avoiding work altogether to escape the stressful environment caused by ongoing conflict.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3 -->
+  <div class="slide slide-3" data-slide="3" data-label="Escalation">
+    <h1 class="slide-title anim d1" style="text-align:center;">How does it <span class="teal">happen</span>?</h1>
+    <p class="slide-subtitle anim d2" style="text-align:center;">The 7 Steps of Conflict Escalation</p>
+    <div class="pyramid-container">
+      <div class="pyr-arrow-label anim d3"><div class="arrow-line"></div><span>Escalation</span></div>
+      <div class="pyramid-wrapper" style="flex:1;" id="pyramid">
+        <div class="pyramid-step pyr-7 anim d8" data-pyr="6" onclick="selectPyr(this)">Polarization</div>
+        <div class="pyramid-step pyr-6 anim d7" data-pyr="5" onclick="selectPyr(this)">Open Hostility</div>
+        <div class="pyramid-step pyr-5 anim d6" data-pyr="4" onclick="selectPyr(this)">Enemy Images</div>
+        <div class="pyramid-step pyr-4 anim d5" data-pyr="3" onclick="selectPyr(this)">Dialogue is Abandoned</div>
+        <div class="pyramid-step pyr-3 anim d4" data-pyr="2" onclick="selectPyr(this)">The Problem Expands</div>
+        <div class="pyramid-step pyr-2 anim d3" data-pyr="1" onclick="selectPyr(this)">Personification</div>
+        <div class="pyramid-step pyr-1 anim d2" data-pyr="0" onclick="selectPyr(this)">Disagreement</div>
+      </div>
+      <div class="pyr-detail-panel hidden anim d4" id="pyrDetail">
+        <div class="pyr-d-title" id="pyrTitle">Tap a level</div>
+        <div class="pyr-d-quote" id="pyrQuote">Select any step on the pyramid to learn more about that stage of conflict.</div>
+        <div class="pyr-d-hint" id="pyrHint"></div>
+      </div>
+    </div>
+    <p class="pyramid-credit anim d9">The Danish Centre for Conflict Resolution</p>
+  </div>
+
+  <!-- SLIDE 4 -->
+  <div class="slide slide-4" data-slide="4" data-label="10% vs 90%">
+    <div class="quote-block">
+      <p class="quote-text anim d1"><span class="num num-small">10%</span> of conflict is due to difference in opinion and <span class="num num-big">90%</span> is due to delivery and tone of voice.</p>
+      <div class="stat-visual anim d2"><div class="bar-opinion"></div><div class="bar-tone"></div></div>
+      <div class="stat-labels anim d3"><span>Difference in opinion</span><span>Delivery &amp; tone of voice</span></div>
+      <div class="talking-svg-wrap anim d4">
+        <svg width="180" height="110" viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="55" cy="45" r="22" fill="var(--teal)" opacity="0.15" stroke="var(--teal)" stroke-width="1.5"/>
+          <circle cx="55" cy="37" r="8" fill="var(--teal)" opacity="0.4"/>
+          <path d="M40 65 Q40 53 55 53 Q70 53 70 65" fill="var(--teal)" opacity="0.2"/>
+          <circle cx="125" cy="45" r="22" fill="var(--accent-purple)" opacity="0.15" stroke="var(--accent-purple)" stroke-width="1.5"/>
+          <circle cx="125" cy="37" r="8" fill="var(--accent-purple)" opacity="0.4"/>
+          <path d="M110 65 Q110 53 125 53 Q140 53 140 65" fill="var(--accent-purple)" opacity="0.2"/>
+          <path d="M72 33 Q90 25 108 33" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <path d="M72 43 Q90 35 108 43" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <path d="M72 53 Q90 45 108 53" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <text x="90" y="98" text-anchor="middle" fill="var(--text-dim)" font-size="10" font-family="Outfit">It's not what you say — it's how you say it</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5 -->
+  <div class="slide slide-5" data-slide="5" data-label="Resolution Rules">
+    <h1 class="slide-title anim d1">How to <span class="teal">Resolve</span> Conflict</h1>
+    <div class="two-col">
+      <div class="left-panel anim d2">
+        <svg width="200" height="190" viewBox="0 0 200 190" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.75;">
+          <rect x="8" y="8" width="84" height="170" rx="10" fill="var(--teal)" opacity="0.06" stroke="var(--teal)" stroke-width="1"/>
+          <rect x="108" y="8" width="84" height="170" rx="10" fill="var(--accent-green)" opacity="0.06" stroke="var(--accent-green)" stroke-width="1"/>
+          <circle cx="50" cy="55" r="18" fill="var(--teal)" opacity="0.1"/><circle cx="50" cy="48" r="6" fill="var(--teal)" opacity="0.35"/>
+          <path d="M39 67 Q39 59 50 59 Q61 59 61 67" fill="var(--teal)" opacity="0.2"/>
+          <circle cx="150" cy="55" r="18" fill="var(--accent-green)" opacity="0.1"/><circle cx="150" cy="48" r="6" fill="var(--accent-green)" opacity="0.35"/>
+          <path d="M139 67 Q139 59 150 59 Q161 59 161 67" fill="var(--accent-green)" opacity="0.2"/>
+          <path d="M72 100 Q100 82 128 100" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>
+          <circle cx="100" cy="91" r="4" fill="var(--teal)" opacity="0.2"/>
+          <text x="50" y="110" text-anchor="middle" fill="var(--teal)" font-size="8" font-family="Outfit" font-weight="600" opacity="0.5">Person A</text>
+          <text x="150" y="110" text-anchor="middle" fill="var(--accent-green)" font-size="8" font-family="Outfit" font-weight="600" opacity="0.5">Person B</text>
+          <path d="M50 140 Q100 165 150 140" stroke="var(--teal-bright)" stroke-width="1.5" fill="none" opacity="0.35"/>
+          <text x="100" y="172" text-anchor="middle" fill="var(--text-dim)" font-size="10" font-family="Outfit">Resolution</text>
+        </svg>
+      </div>
+      <div>
+        <p class="anim d2" style="font-weight:700; font-size:1.1rem; margin-bottom:12px;">Conflict Resolution Rules</p>
+        <div class="rules-list-v2" id="rulesList">
+          <div class="rule-item anim d3" onclick="toggleRule(this)">
+            <div class="rule-header"><div class="rule-num">1</div><p>Agree to resolve the conflict.</p><svg class="rule-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="rule-detail">Both people have to want to fix things. If one person doesn't care, it's almost impossible to make progress. This first step is about making a commitment to work through it together.</div>
+          </div>
+          <div class="rule-item anim d4" onclick="toggleRule(this)">
+            <div class="rule-header"><div class="rule-num">2</div><p>Take turns talking and do not interrupt.</p><svg class="rule-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="rule-detail">Everyone deserves to be heard. When you interrupt, it shows you're thinking about your response instead of actually listening. Let the other person finish before you speak.</div>
+          </div>
+          <div class="rule-item anim d5" onclick="toggleRule(this)">
+            <div class="rule-header"><div class="rule-num">3</div><p>No name calling.</p><svg class="rule-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="rule-detail">The moment you start calling someone names, you've turned the disagreement into a personal attack. Focus on the problem, not the person.</div>
+          </div>
+          <div class="rule-item anim d6" onclick="toggleRule(this)">
+            <div class="rule-header"><div class="rule-num">4</div><p>Be truthful about what is bothering you, and state it clearly.</p><svg class="rule-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="rule-detail">Don't hint around or expect the other person to read your mind. Say exactly what's bothering you in plain, honest language.</div>
+          </div>
+          <div class="rule-item anim d7" onclick="toggleRule(this)">
+            <div class="rule-header"><div class="rule-num">5</div><p>Listen to the other person, and be sure you understand, how they understand the problem.</p><svg class="rule-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="rule-detail">You might see the situation completely differently than the other person. Really try to understand their side — not just hear the words, but understand their point of view.</div>
+          </div>
+          <div class="rule-item anim d8" onclick="toggleRule(this)">
+            <div class="rule-header"><div class="rule-num">6</div><p>Be willing to compromise.</p><svg class="rule-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="rule-detail">You're probably not going to get 100% of what you want. Finding a middle ground that both people can live with is the whole point of conflict resolution.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6 -->
+  <div class="slide slide-6" data-slide="6" data-label="I Statements">
+    <h1 class="slide-title anim d1" style="text-align:center;">Resolving conflict with <span class="teal">"I" statements</span></h1>
+    <div class="i-statement-card anim d2" style="margin: 0 auto;">
+      I feel <span class="editable-blank" contenteditable="true" data-placeholder="_____"></span> when you <span class="editable-blank" contenteditable="true" data-placeholder="_____"></span>. Can you please <span class="editable-blank" contenteditable="true" data-placeholder="_____"></span> then I/we can <span class="editable-blank" contenteditable="true" data-placeholder="_____"></span>.
+    </div>
+    <p class="i-card-hint anim d3">Click on any blank to type your own words</p>
+    <div class="example-box anim d4" style="margin: 16px auto 0;">
+      <div class="ex-label">Example</div>
+      <p>I feel <strong>hurt</strong> when you <strong>ignore me</strong>. Can you please <strong>acknowledge me when I speak to you</strong>, then we can <strong>get along better</strong>.</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 7 -->
+  <div class="slide slide-7" data-slide="7" data-label="Role Play">
+    <h1 class="slide-title anim d1">Role Play <span class="teal">Scenarios</span></h1>
+    <div class="scenarios">
+      <div class="scenario-card anim d2" onclick="toggleScenario(this)">
+        <div class="sc-header">
+          <div class="scenario-num">1</div>
+          <div class="sc-body"><div class="sc-title">Scenario 1</div><p>You put a soda in the work room refrigerator and someone steals it and drinks it. You are now confronting the person whom you suspect.</p></div>
+        </div>
+        <div class="sc-response-area">
+          <div class="sc-response-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Your Response</div>
+          <textarea class="sc-response-input" placeholder="What would you say? How would you use an 'I' statement here?" onclick="event.stopPropagation()"></textarea>
+        </div>
+      </div>
+      <div class="scenario-card anim d3" onclick="toggleScenario(this)">
+        <div class="sc-header">
+          <div class="scenario-num">2</div>
+          <div class="sc-body"><div class="sc-title">Scenario 2</div><p>Someone is spreading gossip about you at work by saying that you are lazy and take naps in your car when you are supposed to be working. You decide to confront that person.</p></div>
+        </div>
+        <div class="sc-response-area">
+          <div class="sc-response-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Your Response</div>
+          <textarea class="sc-response-input" placeholder="What would you say? How would you keep your cool?" onclick="event.stopPropagation()"></textarea>
+        </div>
+      </div>
+      <div class="scenario-card anim d4" onclick="toggleScenario(this)">
+        <div class="sc-header">
+          <div class="scenario-num">3</div>
+          <div class="sc-body"><div class="sc-title">Scenario 3</div><p>Your co-worker parks too close to your car and leaves a dent in your door. How do you discuss this with them?</p></div>
+        </div>
+        <div class="sc-response-area">
+          <div class="sc-response-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Your Response</div>
+          <textarea class="sc-response-input" placeholder="How would you bring this up without making it a bigger conflict?" onclick="event.stopPropagation()"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="scenario-prompt anim d5">
+      <svg class="icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warm)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p>How would you respond or react? What would you say to that person? How can you diffuse the situation without causing a bigger conflict?</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 8 -->
+  <div class="slide slide-8" data-slide="8" data-label="Tower Challenge">
+    <h1 class="slide-title anim d1">Tower <span class="teal">Challenge</span>:</h1>
+    <p class="body-text anim d2" style="font-size:1.1rem;">The goal of the exercise is to have your team build the tallest freestanding tower with 3x5 cards.</p>
+    <div class="three-col">
+      <div>
+        <p class="anim d3" style="font-weight:700; font-size:0.95rem; margin-bottom:10px;">Rules:</p>
+        <ol class="rules-numbered">
+          <li class="anim d3">You will be given 5 minutes to plan and build your tower.</li>
+          <li class="anim d4">You will have 7 minutes for the actual construction of the tower.</li>
+          <li class="anim d5">While you plan, you may not damage the cards in any way, but you may talk to your team.</li>
+          <li class="anim d6">While you build the tower, you may not speak to each other.</li>
+        </ol>
+      </div>
+      <div class="materials-box anim d5">
+        <h3>Details</h3>
+        <div class="mat-row">
+          <div class="mat-icon-wrap"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 7h20"/></svg></div>
+          <span>Materials: 50 3x5 cards (or deck of playing cards).</span>
+        </div>
+        <div class="mat-row">
+          <div class="mat-icon-wrap"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <span>Group Size: 4-6 people</span>
+        </div>
+        <div class="mat-row">
+          <div class="mat-icon-wrap"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <span>5 min planning + 7 min building</span>
+        </div>
+      </div>
+      <div class="timer-box anim d6">
+        <h3>Activity Timer</h3>
+        <div class="timer-mode-btns">
+          <button class="timer-mode-btn active" onclick="setTimerMode('plan')">Plan (5:00)</button>
+          <button class="timer-mode-btn" onclick="setTimerMode('build')">Build (7:00)</button>
+        </div>
+        <div class="timer-display" id="timerDisplay">5:00</div>
+        <div class="timer-progress"><div class="timer-progress-bar" id="timerBar"></div></div>
+        <div class="timer-ctrl-btns">
+          <button class="timer-ctrl-btn start" id="timerStartBtn" onclick="startTimer()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Start
+          </button>
+          <button class="timer-ctrl-btn reset" onclick="resetTimer()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NAV -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" aria-label="Previous slide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="slide-dots" id="dots"></div>
+  <span class="slide-label" id="slideLabel">Title</span>
+  <span class="slide-counter" id="counter">1 / 8</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Next slide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+</div>
+
+<script>
+  /* ═══ NAV ═══ */
+  var slides = document.querySelectorAll('.slide');
+  var dotsC = document.getElementById('dots');
+  var counter = document.getElementById('counter');
+  var slideLabel = document.getElementById('slideLabel');
+  var total = slides.length;
+  var cur = 0;
+  for (var i = 0; i < total; i++) {
+    var d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    (function(idx) { d.addEventListener('click', function() { goTo(idx); }); })(i);
+    dotsC.appendChild(d);
+  }
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    dotsC.children[cur].classList.remove('active');
+    cur = ((n % total) + total) % total;
+    slides[cur].classList.add('active');
+    dotsC.children[cur].classList.add('active');
+    counter.textContent = (cur + 1) + ' / ' + total;
+    slideLabel.textContent = slides[cur].getAttribute('data-label') || '';
+  }
+  document.getElementById('prevBtn').addEventListener('click', function() { goTo(cur - 1); });
+  document.getElementById('nextBtn').addEventListener('click', function() { goTo(cur + 1); });
+  document.addEventListener('keydown', function(e) {
+    if (document.activeElement.isContentEditable || document.activeElement.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(cur + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(cur - 1); }
+  });
+  var tx = 0;
+  document.addEventListener('touchstart', function(e) { tx = e.changedTouches[0].screenX; }, { passive: true });
+  document.addEventListener('touchend', function(e) { var d = tx - e.changedTouches[0].screenX; if (Math.abs(d) > 50) { d > 0 ? goTo(cur + 1) : goTo(cur - 1); } });
+
+  /* ═══ EXPAND (Slide 2) ═══ */
+  function toggleExpand(el) {
+    var was = el.classList.contains('expanded');
+    var cards = el.parentElement.querySelectorAll('.impact-card');
+    for (var i = 0; i < cards.length; i++) cards[i].classList.remove('expanded');
+    if (!was) el.classList.add('expanded');
+  }
+
+  /* ═══ PYRAMID (Slide 3) ═══ */
+  var pyrData = [
+    { title: 'Disagreement', quote: '\u201cWe see things differently\u201d', hint: 'This is where every conflict starts. Two people simply see a situation differently. It\u2019s normal and doesn\u2019t have to go further.' },
+    { title: 'Personification', quote: '\u201cIt\u2019s your fault\u201d', hint: 'The problem shifts from the issue to the person. Instead of \u201cwe disagree,\u201d it becomes \u201cyou are the problem.\u201d' },
+    { title: 'The Problem Expands', quote: '\u201cThis is not the first time, do you remember when...\u201d', hint: 'Old issues get dragged in. The original problem grows as past grievances pile on.' },
+    { title: 'Dialogue is Abandoned', quote: '\u201cWhat\u2019s the use\u201d', hint: 'People stop talking to each other. Communication breaks down and assumptions take over.' },
+    { title: 'Enemy Images', quote: '\u201cThey\u2019re just no good\u201d', hint: 'The other person is now seen as \u201cthe enemy.\u201d Empathy disappears and stereotypes take over.' },
+    { title: 'Open Hostility', quote: '\u201cThe end justifies the means\u201d', hint: 'Actions become aggressive. People feel justified in hostile behavior because the other person \u201cdeserves it.\u201d' },
+    { title: 'Polarization', quote: '\u201cLet\u2019s get away from here\u201d', hint: 'Total breakdown. People separate entirely. Reconciliation becomes extremely difficult at this stage.' }
+  ];
+  function selectPyr(el) {
+    var steps = document.querySelectorAll('.pyramid-step');
+    for (var i = 0; i < steps.length; i++) steps[i].classList.remove('pyr-active');
+    el.classList.add('pyr-active');
+    var idx = parseInt(el.getAttribute('data-pyr'));
+    var d = pyrData[idx];
+    document.getElementById('pyrDetail').classList.remove('hidden');
+    document.getElementById('pyrTitle').textContent = d.title;
+    document.getElementById('pyrQuote').textContent = d.quote;
+    document.getElementById('pyrHint').textContent = d.hint;
+  }
+
+  /* ═══ RULES (Slide 5) ═══ */
+  function toggleRule(el) {
+    var was = el.classList.contains('expanded');
+    var items = document.querySelectorAll('.rule-item');
+    for (var i = 0; i < items.length; i++) items[i].classList.remove('expanded');
+    if (!was) el.classList.add('expanded');
+  }
+
+  /* ═══ SCENARIOS (Slide 7) ═══ */
+  function toggleScenario(el) {
+    var was = el.classList.contains('sc-expanded');
+    var cards = document.querySelectorAll('.scenario-card');
+    for (var i = 0; i < cards.length; i++) cards[i].classList.remove('sc-expanded');
+    if (!was) el.classList.add('sc-expanded');
+  }
+
+  /* ═══ TIMER (Slide 8) ═══ */
+  var timerMode = 'plan', timerTotal = 300, timerLeft = 300, timerInterval = null, timerRunning = false;
+  var timerDisplay = document.getElementById('timerDisplay');
+  var timerBar = document.getElementById('timerBar');
+  var startBtn = document.getElementById('timerStartBtn');
+
+  function formatTime(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function setTimerMode(mode) {
+    clearInterval(timerInterval); timerRunning = false;
+    timerMode = mode;
+    timerTotal = mode === 'plan' ? 300 : 420;
+    timerLeft = timerTotal;
+    var btns = document.querySelectorAll('.timer-mode-btn');
+    btns[0].classList.toggle('active', mode === 'plan');
+    btns[1].classList.toggle('active', mode === 'build');
+    updateTimerUI();
+    startBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Start';
+    startBtn.className = 'timer-ctrl-btn start';
+  }
+  function updateTimerUI() {
+    timerDisplay.textContent = formatTime(timerLeft);
+    var pct = (timerLeft / timerTotal) * 100;
+    timerBar.style.width = pct + '%';
+    timerDisplay.className = 'timer-display' + (pct <= 10 ? ' danger' : pct <= 25 ? ' warning' : '');
+    timerBar.className = 'timer-progress-bar' + (pct <= 10 ? ' danger' : pct <= 25 ? ' warning' : '');
+  }
+  function startTimer() {
+    if (timerRunning) {
+      clearInterval(timerInterval); timerRunning = false;
+      startBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Resume';
+      startBtn.className = 'timer-ctrl-btn start';
+      return;
+    }
+    timerRunning = true;
+    startBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause';
+    startBtn.className = 'timer-ctrl-btn pause';
+    timerInterval = setInterval(function() {
+      timerLeft--;
+      if (timerLeft <= 0) { timerLeft = 0; clearInterval(timerInterval); timerRunning = false; startBtn.innerHTML = 'Done!'; startBtn.className = 'timer-ctrl-btn reset'; }
+      updateTimerUI();
+    }, 1000);
+  }
+  function resetTimer() { setTimerMode(timerMode); }
+
+  /* ═══ EDITABLE BLANKS (Slide 6) ═══ */
+  var blanks = document.querySelectorAll('.editable-blank');
+  for (var b = 0; b < blanks.length; b++) {
+    blanks[b].addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+    blanks[b].addEventListener('paste', function(e) {
+      e.preventDefault();
+      var t = (e.clipboardData || window.clipboardData).getData('text/plain').replace(/\n/g, ' ');
+      document.execCommand('insertText', false, t);
+    });
+  }
+</script>
+</body>
+</html>
