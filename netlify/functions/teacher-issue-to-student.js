@@ -60,7 +60,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id, student_codes, due_at, settings: rawSettings } = parseResult.data;
+  const { assignment_id, student_codes, due_at, settings: rawSettings, per_student_settings: rawPerStudentSettings } = parseResult.data;
 
   let settings = {};
   if (rawSettings === undefined || rawSettings === null) {
@@ -69,6 +69,33 @@ exports.handler = async (event) => {
     settings = rawSettings;
   } else {
     return jsonResponse(event, 400, { ok: false, error: 'settings must be an object if provided' }, {}, requestId);
+  }
+
+  // Validate per_student_settings if provided
+  let perStudentSettings = null;
+  if (rawPerStudentSettings !== undefined && rawPerStudentSettings !== null) {
+    if (typeof rawPerStudentSettings !== 'object' || Array.isArray(rawPerStudentSettings)) {
+      return jsonResponse(event, 400, { ok: false, error: 'per_student_settings must be a plain object' }, {}, requestId);
+    }
+    perStudentSettings = {};
+    for (const [code, overrides] of Object.entries(rawPerStudentSettings)) {
+      if (typeof overrides !== 'object' || overrides === null || Array.isArray(overrides)) {
+        return jsonResponse(event, 400, { ok: false, error: `per_student_settings["${code}"] must be a plain object` }, {}, requestId);
+      }
+      const perStudentEntry = { ...overrides };
+      if (perStudentEntry.writing_config != null) {
+        if (typeof perStudentEntry.writing_config !== 'object' || Array.isArray(perStudentEntry.writing_config)) {
+          return jsonResponse(event, 400, { ok: false, error: `per_student_settings["${code}"].writing_config must be a plain object` }, {}, requestId);
+        }
+        if (perStudentEntry.writing_config.paragraph_count != null) {
+          let pc = parseInt(perStudentEntry.writing_config.paragraph_count, 10);
+          if (isNaN(pc)) pc = 1;
+          pc = Math.min(5, Math.max(1, pc));
+          perStudentEntry.writing_config = { ...perStudentEntry.writing_config, paragraph_count: pc };
+        }
+      }
+      perStudentSettings[code] = perStudentEntry;
+    }
   }
 
   // Validate assignment_id
@@ -233,7 +260,9 @@ exports.handler = async (event) => {
       student_id: student.id,
       assigned_at: todayUtc,
       status: 'Assigned',
-      settings: settings || {},
+      settings: (perStudentSettings && perStudentSettings[student.code])
+        ? { ...settings, ...perStudentSettings[student.code] }
+        : settings,
       ...(due_at ? { due_at } : {}),
     }));
 

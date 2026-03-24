@@ -998,6 +998,15 @@
               <input id="issueParagraphCount" type="number" min="1" max="5" value="1" style="width:80px;margin-left:8px" />
             </label>
             <div class="subtle" style="margin-top:4px;font-size:12px">Set to 2+ for students whose IEP goals require multi-paragraph writing (e.g., S001.11.3)</div>
+            
+            <!-- Advanced: Per-Student Writing Config -->
+            <div style="margin-top:10px">
+              <button type="button" class="btn small" id="btnTogglePerStudentConfig" style="font-size:12px">▶ Advanced: Per-Student Writing Config</button>
+              <div id="perStudentConfigSection" style="display:none;margin-top:8px">
+                <div class="subtle" style="font-size:12px;margin-bottom:6px">Override paragraph count for individual students. Leave blank to use the assignment default above.</div>
+                <div id="perStudentConfigRows" style="display:flex;flex-direction:column;gap:6px"></div>
+              </div>
+            </div>
           </div>
           
           <div style="margin-top:12px">
@@ -1025,11 +1034,12 @@
                   <th>Status</th>
                   <th>Assigned</th>
                   <th>Due</th>
+                  <th>Settings</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="6" class="subtle">No instances yet</td></tr>
+                <tr><td colspan="7" class="subtle">No instances yet</td></tr>
               </tbody>
             </table>
           </div>
@@ -3598,7 +3608,7 @@
       const assignment = ASSIGNMENTS_CACHE.find(a => String(a.id) === String(assignmentId));
       const assignmentTitle = assignment ? assignment.title : 'Assignment';
       
-      // Read writing config
+      // Read base writing config
       let paragraphCountValue = parseInt(qs('#issueParagraphCount')?.value || '1', 10);
       if (isNaN(paragraphCountValue)) paragraphCountValue = 1;
       paragraphCountValue = Math.min(Math.max(paragraphCountValue, 1), 5);
@@ -3606,40 +3616,71 @@
         ? { writing_config: { paragraph_count: paragraphCountValue } }
         : {};
       
+      // Collect per-student overrides from the DOM (built via DOM API — no innerHTML risk)
+      const perStudentRows = qs('#perStudentConfigRows');
+      const per_student_settings = {};
+      if (perStudentRows) {
+        perStudentRows.querySelectorAll('[data-student-code]').forEach(row => {
+          const code = row.dataset.studentCode;
+          const inp = row.querySelector('input[type="number"]');
+          if (inp && inp.value.trim() !== '') {
+            let pc = parseInt(inp.value, 10);
+            if (!isNaN(pc)) {
+              pc = Math.min(5, Math.max(1, pc));
+              per_student_settings[code] = { writing_config: { paragraph_count: pc } };
+            }
+          }
+        });
+      }
+      
       // Show progress
       const progressDiv = qs('#issueProgress');
       const progressText = qs('#issueProgressText');
       progressDiv.style.display = 'block';
       progressText.textContent = `Issuing to ${studentCodes.length} student(s)...`;
       
-      let issued = 0;
-      let failed = 0;
-      
-      for (const studentCode of studentCodes) {
-        try {
-          const student = STUDENTS.find(s => s.code === studentCode);
-          // Convert ID to number only if it's actually numeric (for Supabase)
-          const aid = /^\d+$/.test(assignmentId) ? parseInt(assignmentId, 10) : assignmentId;
-          await db.upsertAssignmentInstance({
-            assignment_id: aid,
-            student_code: studentCode,
-            student_name: student ? student.name : studentCode,
-            due_at: dueDate,
-            status: 'Assigned',
-            settings: writingSettings
-          });
-          issued++;
-          progressText.textContent = `Issued ${issued} of ${studentCodes.length}...`;
-        } catch (err) {
-          console.error(`Failed to issue to ${studentCode}:`, err);
-          failed++;
+      // Map student codes to UUIDs
+      const studentIds = studentCodes
+        .map(code => (STUDENTS.find(s => s.code === code) || {}).id)
+        .filter(Boolean);
+
+      const aid = /^\d+$/.test(assignmentId) ? parseInt(assignmentId, 10) : assignmentId;
+
+      try {
+        const body = {
+          assignment_id: aid,
+          student_ids: studentIds,
+          due_at: dueDate,
+          settings: writingSettings,
+        };
+        if (Object.keys(per_student_settings).length > 0) {
+          body.per_student_settings = per_student_settings;
         }
+
+        const resp = await fetch('/.netlify/functions/teacher-issue-assignment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const requestId = resp.headers.get('X-Request-Id') || '';
+        const data = await resp.json();
+
+        if (!resp.ok || !data.ok) {
+          const errMsg = data.error || 'Unknown error';
+          progressText.textContent = `Error: ${errMsg}${requestId ? ` (Req: ${requestId})` : ''}`;
+          addNotif(`Failed to issue "${assignmentTitle}": ${errMsg}`, { type: 'error' });
+          return;
+        }
+
+        const issued = data.inserted_count ?? studentIds.length;
+        const skipped = data.skipped_count ?? 0;
+        progressText.textContent = `Complete: ${issued} issued${skipped > 0 ? `, ${skipped} skipped` : ''}`;
+        addNotif(`Issued "${assignmentTitle}" to ${issued} student(s)`, { count: issued });
+      } catch (err) {
+        console.error('Failed to issue assignment:', err);
+        progressText.textContent = `Error: ${err.message}`;
+        addNotif('Failed to issue assignment: ' + err.message, { type: 'error' });
       }
-      
-      progressText.textContent = `Complete: ${issued} issued${failed > 0 ? `, ${failed} failed` : ''}`;
-      
-      // Add notification
-      addNotif(`Issued "${assignmentTitle}" to ${issued} student(s)`, { count: issued });
       
       // Refresh instances table
       await renderInstancesTable();
@@ -3649,17 +3690,102 @@
         progressDiv.style.display = 'none';
       }, 3000);
     }
+
+    // Render a per-student override row using DOM API (no innerHTML with dynamic data)
+    function renderPerStudentRow(container, studentCode, studentLabel, existingVal) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px';
+      row.dataset.studentCode = studentCode;
+
+      const labelEl = document.createElement('span');
+      labelEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      labelEl.textContent = studentLabel;
+      row.appendChild(labelEl);
+
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.min = '1';
+      inp.max = '5';
+      inp.placeholder = 'default';
+      inp.style.cssText = 'width:70px';
+      inp.dataset.studentCode = studentCode;
+      if (existingVal) inp.value = String(existingVal);
+      row.appendChild(inp);
+
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.style.display = existingVal ? '' : 'none';
+      badge.textContent = existingVal ? existingVal + '¶' : '';
+      row.appendChild(badge);
+
+      inp.addEventListener('input', () => {
+        const v = parseInt(inp.value, 10);
+        if (!isNaN(v) && v >= 1 && v <= 5) {
+          badge.textContent = v + '¶';
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
+      });
+
+      container.appendChild(row);
+    }
+
+    // Refresh per-student rows based on current selection
+    function refreshPerStudentRows() {
+      const container = qs('#perStudentConfigRows');
+      if (!container || qs('#perStudentConfigSection')?.style.display === 'none') return;
+
+      // Capture existing values by student code before clearing
+      const existing = {};
+      container.querySelectorAll('[data-student-code]').forEach(row => {
+        const inp = row.querySelector('input[type="number"]');
+        if (inp && inp.value.trim() !== '') existing[row.dataset.studentCode] = inp.value;
+      });
+
+      // Clear using textContent (no innerHTML) 
+      container.textContent = '';
+
+      const selectedOptions = Array.from(qs('#issueStudentsSelect').selectedOptions);
+      selectedOptions.forEach(opt => {
+        const code = opt.value;
+        const label = opt.textContent || code;
+        renderPerStudentRow(container, code, label, existing[code] || '');
+      });
+
+      if (selectedOptions.length === 0) {
+        const hint = document.createElement('div');
+        hint.className = 'subtle';
+        hint.style.fontSize = '12px';
+        hint.textContent = 'Select students above to set per-student overrides.';
+        container.appendChild(hint);
+      }
+    }
     
-    // Render instances table
+    // Render instances table using DOM API
     async function renderInstancesTable() {
       const tbody = qs('#instancesTable tbody');
       try {
         const instances = await db.listAssignmentInstances();
         
+        // Clear existing rows safely
+        tbody.textContent = '';
+
         if (!instances || instances.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="subtle">No instances yet</td></tr>';
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 7;
+          td.className = 'subtle';
+          td.textContent = 'No instances yet';
+          tr.appendChild(td);
+          tbody.appendChild(tr);
           // Also update simulator instance select
-          qs('#simInstanceSelect').innerHTML = '<option value="">-- No instances available --</option>';
+          const simSelectEmpty = qs('#simInstanceSelect');
+          simSelectEmpty.textContent = '';
+          const noInstOpt = document.createElement('option');
+          noInstOpt.value = '';
+          noInstOpt.textContent = '-- No instances available --';
+          simSelectEmpty.appendChild(noInstOpt);
           return;
         }
         
@@ -3668,48 +3794,188 @@
           ASSIGNMENTS_CACHE = await db.listAssignments();
         }
         const assignmentMap = {};
-        ASSIGNMENTS_CACHE.forEach(a => {
-          assignmentMap[a.id] = a.title;
-        });
+        ASSIGNMENTS_CACHE.forEach(a => { assignmentMap[a.id] = a.title; });
         
-        const rows = instances.map(inst => {
-          const assignmentTitle = assignmentMap[inst.assignment_id] || `ID: ${inst.assignment_id}`;
+        instances.forEach(inst => {
+          const assignmentTitle = assignmentMap[inst.assignment_id] || ('ID: ' + inst.assignment_id);
           const assigned = inst.assigned_at ? new Date(inst.assigned_at).toLocaleDateString() : '—';
           const due = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
-          return `<tr data-instance-id="${inst.id}">
-            <td>${inst.student_code}</td>
-            <td>${assignmentTitle}</td>
-            <td><span class="badge">${inst.status || 'Assigned'}</span></td>
-            <td class="subtle">${assigned}</td>
-            <td class="subtle">${due}</td>
-            <td><button class="btn small" data-action="simulate" data-id="${inst.id}">Simulate</button></td>
-          </tr>`;
-        });
-        
-        tbody.innerHTML = rows.join('');
-        
-        // Populate simulator instance dropdown
-        const simSelect = qs('#simInstanceSelect');
-        simSelect.innerHTML = '<option value="">-- Select an instance --</option>' +
-          instances.map(inst => {
-            const title = assignmentMap[inst.assignment_id] || `ID: ${inst.assignment_id}`;
-            return `<option value="${inst.id}">${inst.student_code} - ${title}</option>`;
-          }).join('');
-        
-        // Bind simulate buttons
-        tbody.querySelectorAll('button[data-action="simulate"]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const instanceId = btn.dataset.id;
-            qs('#simInstanceSelect').value = instanceId;
-            // Scroll to simulator
+          const pc = inst.settings?.writing_config?.paragraph_count;
+
+          const tr = document.createElement('tr');
+          tr.dataset.instanceId = inst.id;
+
+          const tdCode = document.createElement('td');
+          tdCode.textContent = inst.student_code || '';
+          tr.appendChild(tdCode);
+
+          const tdAssign = document.createElement('td');
+          tdAssign.textContent = assignmentTitle;
+          tr.appendChild(tdAssign);
+
+          const tdStatus = document.createElement('td');
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = inst.status || 'Assigned';
+          tdStatus.appendChild(badge);
+          tr.appendChild(tdStatus);
+
+          const tdAssigned = document.createElement('td');
+          tdAssigned.className = 'subtle';
+          tdAssigned.textContent = assigned;
+          tr.appendChild(tdAssigned);
+
+          const tdDue = document.createElement('td');
+          tdDue.className = 'subtle';
+          tdDue.textContent = due;
+          tr.appendChild(tdDue);
+
+          const tdSettings = document.createElement('td');
+          if (pc != null) {
+            const pcBadge = document.createElement('span');
+            pcBadge.className = 'badge';
+            pcBadge.textContent = pc + '¶';
+            tdSettings.appendChild(pcBadge);
+          } else {
+            tdSettings.className = 'subtle';
+            tdSettings.textContent = '—';
+          }
+          tr.appendChild(tdSettings);
+
+          const tdActions = document.createElement('td');
+          tdActions.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap';
+
+          const simBtn = document.createElement('button');
+          simBtn.className = 'btn small';
+          simBtn.dataset.action = 'simulate';
+          simBtn.dataset.id = inst.id;
+          simBtn.textContent = 'Simulate';
+          simBtn.addEventListener('click', () => {
+            qs('#simInstanceSelect').value = inst.id;
             qs('#simInstanceSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
           });
+          tdActions.appendChild(simBtn);
+
+          const reconfigBtn = document.createElement('button');
+          reconfigBtn.className = 'btn small';
+          reconfigBtn.dataset.action = 'reconfigure';
+          reconfigBtn.dataset.id = inst.id;
+          reconfigBtn.textContent = 'Reconfigure';
+          reconfigBtn.addEventListener('click', () => openReconfigureEditor(tr, inst, tdSettings));
+          tdActions.appendChild(reconfigBtn);
+
+          tr.appendChild(tdActions);
+          tbody.appendChild(tr);
+        });
+
+        // Populate simulator instance dropdown
+        const simSelect = qs('#simInstanceSelect');
+        simSelect.textContent = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '-- Select an instance --';
+        simSelect.appendChild(defaultOpt);
+        instances.forEach(inst => {
+          const title = assignmentMap[inst.assignment_id] || ('ID: ' + inst.assignment_id);
+          const opt = document.createElement('option');
+          opt.value = inst.id;
+          opt.textContent = (inst.student_code || '') + ' - ' + title;
+          simSelect.appendChild(opt);
         });
         
       } catch (err) {
         console.error('Failed to load instances:', err);
-        tbody.innerHTML = '<tr><td colspan="6" class="subtle">Error loading instances</td></tr>';
+        tbody.textContent = '';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 7;
+        td.className = 'subtle';
+        td.textContent = 'Error loading instances';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
       }
+    }
+
+    // Open an inline reconfigure editor for an instance row
+    function openReconfigureEditor(tr, inst, tdSettings) {
+      // Prevent opening multiple editors
+      if (tr.querySelector('.reconfigure-editor')) return;
+
+      const currentPc = inst.settings?.writing_config?.paragraph_count || 1;
+
+      const editorRow = document.createElement('tr');
+      editorRow.className = 'reconfigure-editor';
+
+      const editorCell = document.createElement('td');
+      editorCell.colSpan = 7;
+      editorCell.style.cssText = 'padding:8px;background:rgba(255,255,255,.06);border-top:1px solid var(--line)';
+
+      const label = document.createElement('span');
+      label.style.cssText = 'font-size:13px;margin-right:8px';
+      label.textContent = 'Paragraphs: ';
+      editorCell.appendChild(label);
+
+      const pcInput = document.createElement('input');
+      pcInput.type = 'number';
+      pcInput.min = '1';
+      pcInput.max = '5';
+      pcInput.value = String(currentPc);
+      pcInput.style.cssText = 'width:70px;margin-right:8px';
+      editorCell.appendChild(pcInput);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'btn small primary';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', async () => {
+        let newPc = parseInt(pcInput.value, 10);
+        if (isNaN(newPc)) newPc = 1;
+        newPc = Math.min(5, Math.max(1, newPc));
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+          const resp = await fetch('/.netlify/functions/teacher-issue-assignment', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instance_id: inst.id,
+              settings_patch: { writing_config: { paragraph_count: newPc } },
+            }),
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to save');
+
+          // Update the settings cell display
+          tdSettings.textContent = '';
+          const pcBadge = document.createElement('span');
+          pcBadge.className = 'badge';
+          pcBadge.textContent = newPc + '¶';
+          tdSettings.appendChild(pcBadge);
+
+          // Update in-memory inst so re-open shows correct value
+          inst.settings = data.instance?.settings || { writing_config: { paragraph_count: newPc } };
+
+          editorRow.remove();
+          addNotif('Instance settings updated', { type: 'success' });
+        } catch (err) {
+          console.error('Reconfigure failed:', err);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+          addNotif('Failed to reconfigure: ' + err.message, { type: 'error' });
+        }
+      });
+      editorCell.appendChild(saveBtn);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn small';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.marginLeft = '4px';
+      cancelBtn.addEventListener('click', () => editorRow.remove());
+      editorCell.appendChild(cancelBtn);
+
+      editorRow.appendChild(editorCell);
+      tr.insertAdjacentElement('afterend', editorRow);
     }
     
     // Populate classes select
@@ -4257,7 +4523,21 @@
       await renderInstancesTable();
       
       // Listen for student selection changes
-      qs('#issueStudentsSelect')?.addEventListener('change', updateSelectedStudentsList);
+      qs('#issueStudentsSelect')?.addEventListener('change', () => {
+        updateSelectedStudentsList();
+        refreshPerStudentRows();
+      });
+
+      // Toggle per-student config section
+      qs('#btnTogglePerStudentConfig')?.addEventListener('click', () => {
+        const section = qs('#perStudentConfigSection');
+        const btn = qs('#btnTogglePerStudentConfig');
+        if (!section) return;
+        const isVisible = section.style.display !== 'none';
+        section.style.display = isVisible ? 'none' : 'block';
+        btn.textContent = (isVisible ? '▶' : '▼') + ' Advanced: Per-Student Writing Config';
+        if (!isVisible) refreshPerStudentRows();
+      });
       
       // Initialize form section visibility
       const type = qs('#aType').value;

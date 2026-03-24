@@ -50,6 +50,25 @@ function getCurrentSchoolYear() {
 }
 
 /**
+ * One-level deep merge for settings objects.
+ * For each key in patch: if both existing and patch values are plain objects, merge them.
+ * Otherwise, the patch value wins outright.
+ * This preserves nested properties like writing_config.other_prop that are not in the patch.
+ */
+function mergeSettingsObjects(existing, patch) {
+  const result = { ...(existing || {}) };
+  for (const [key, val] of Object.entries(patch || {})) {
+    if (val !== null && typeof val === 'object' && !Array.isArray(val) &&
+        typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])) {
+      result[key] = { ...result[key], ...val };
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
+/**
  * Mapping from DB class codes to UI canonical class names
  * Some classes have multiple sections (SC/S1) which are represented as separate UI tabs
  */
@@ -281,6 +300,14 @@ const local = {
     else arr.push(instance);
     store.set('assignmentInstances', arr);
     return instance;
+  },
+  async patchAssignmentInstance(instanceId, settingsPatch) {
+    const arr = store.get('assignmentInstances', []);
+    const i = arr.findIndex(ai => ai.id === instanceId);
+    if (i < 0) throw new Error('Instance not found');
+    arr[i].settings = mergeSettingsObjects(arr[i].settings || {}, settingsPatch);
+    store.set('assignmentInstances', arr);
+    return arr[i];
   },
   async addSubmission(payload) {
     const submissions = store.get('submissions', []);
@@ -1443,6 +1470,26 @@ const remote = {
       .single();
     if (error) throw error;
     return instanceRow;
+  },
+  async patchAssignmentInstance(instanceId, settingsPatch) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    // Fetch existing settings, merge, then update
+    const { data: existing, error: e1 } = await supabase
+      .from('assignment_instances')
+      .select('id,settings')
+      .eq('id', instanceId)
+      .single();
+    if (e1) throw e1;
+    const merged = mergeSettingsObjects(existing.settings || {}, settingsPatch);
+    const { data: updated, error: e2 } = await supabase
+      .from('assignment_instances')
+      .update({ settings: merged })
+      .eq('id', instanceId)
+      .select()
+      .single();
+    if (e2) throw e2;
+    return updated;
   },
   
   async addSubmission(payload) {
