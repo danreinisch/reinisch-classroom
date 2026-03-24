@@ -19,10 +19,11 @@ const localStore = {
   set: (k, v) => localStorage.setItem(NS + k, JSON.stringify(v))
 };
 
-/**
- * Check if Supabase is available
- */
-async function isSupabaseAvailable() {
+// Simple counter for generating collision-free local IDs
+let _localIdCounter = 0;
+function localId() {
+  return Date.now() * 1000 + (++_localIdCounter % 1000);
+}
   const supabase = await getSupabase();
   return supabase && typeof supabase.from === 'function';
 }
@@ -143,6 +144,9 @@ export async function upsertSubPlan(plan) {
           notes: plan.notes || null,
           published: plan.published || false,
           created_by: plan.created_by || 'teacher',
+          plan_mode: plan.plan_mode || 'subject',
+          sub_feedback: plan.sub_feedback || null,
+          emergency_acknowledged: plan.emergency_acknowledged || false,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'plan_date'
@@ -180,7 +184,7 @@ function upsertLocalSubPlan(plan) {
   const updatedPlan = {
     ...existingPlan,
     ...plan,
-    id: existingPlan.id || Date.now(),
+    id: existingPlan.id || localId(),
     updated_at: new Date().toISOString(),
     created_at: existingPlan.created_at || new Date().toISOString()
   };
@@ -302,6 +306,352 @@ function deleteLocalSubPlan(planDate) {
   if (plans[planDate]) {
     delete plans[planDate];
     localStore.set('plans', plans);
+    return true;
+  }
+  return false;
+}
+
+// ============================================================================
+// Sub Plan Periods
+// ============================================================================
+
+/**
+ * List periods for a given sub plan
+ * @param {number} planId - The sub_plans.id
+ * @returns {Promise<Array>} Array of period objects, sorted by sort_order
+ */
+export async function listSubPlanPeriods(planId) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
+    try {
+      const { data, error } = await supabase
+        .from('sub_plan_periods')
+        .select('*')
+        .eq('plan_id', planId)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.warn('[sub-plans] Supabase error listing periods, falling back to local:', error.message);
+        return listLocalSubPlanPeriods(planId);
+      }
+
+      console.log('[sub-plans] Remote periods fetched for plan:', planId);
+      localStore.set(`periods_${planId}`, data);
+      return data;
+    } catch (err) {
+      console.warn('[sub-plans] Network error listing periods, falling back to local:', err.message);
+      return listLocalSubPlanPeriods(planId);
+    }
+  } else {
+    console.log('[sub-plans] Supabase not configured, using local storage');
+    return listLocalSubPlanPeriods(planId);
+  }
+}
+
+/**
+ * List periods for a plan from local storage
+ */
+function listLocalSubPlanPeriods(planId) {
+  const periods = localStore.get(`periods_${planId}`, []);
+  return [...periods].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+}
+
+/**
+ * Upsert periods for a sub plan (bulk — replaces all periods for that plan)
+ * @param {number} planId - The sub_plans.id
+ * @param {Array} periods - Array of period objects
+ * @returns {Promise<Array>} Saved periods
+ */
+export async function upsertSubPlanPeriods(planId, periods) {
+  const records = periods.map((p, i) => ({
+    plan_id: planId,
+    period_hour: p.period_hour,
+    subject: p.subject || null,
+    instructions: p.instructions || null,
+    presentations: p.presentations || [],
+    materials: p.materials || null,
+    completed: p.completed || false,
+    sub_note: p.sub_note || null,
+    sort_order: p.sort_order !== undefined ? p.sort_order : i,
+    updated_at: new Date().toISOString()
+  }));
+
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
+    try {
+      const { data, error } = await supabase
+        .from('sub_plan_periods')
+        .upsert(records, { onConflict: 'plan_id,period_hour' })
+        .select();
+
+      if (error) {
+        console.warn('[sub-plans] Supabase error upserting periods, falling back to local:', error.message);
+        return upsertLocalSubPlanPeriods(planId, records);
+      }
+
+      console.log('[sub-plans] Remote periods saved for plan:', planId);
+      localStore.set(`periods_${planId}`, data);
+      return data;
+    } catch (err) {
+      console.warn('[sub-plans] Network error upserting periods, falling back to local:', err.message);
+      return upsertLocalSubPlanPeriods(planId, records);
+    }
+  } else {
+    console.log('[sub-plans] Supabase not configured, using local storage');
+    return upsertLocalSubPlanPeriods(planId, records);
+  }
+}
+
+/**
+ * Upsert periods in local storage (replaces all periods for the plan)
+ */
+function upsertLocalSubPlanPeriods(planId, records) {
+  const existing = localStore.get(`periods_${planId}`, []);
+  const existingMap = {};
+  existing.forEach(p => { existingMap[p.period_hour] = p; });
+
+  const updated = records.map(r => ({
+    ...existingMap[r.period_hour],
+    ...r,
+    id: (existingMap[r.period_hour] && existingMap[r.period_hour].id) || localId(),
+    created_at: (existingMap[r.period_hour] && existingMap[r.period_hour].created_at) || new Date().toISOString()
+  }));
+
+  localStore.set(`periods_${planId}`, updated);
+  return updated;
+}
+
+/**
+ * Update a single period (for checklist toggle or sub note)
+ * @param {number} periodId - The sub_plan_periods.id
+ * @param {Object} updates - Fields to update (e.g., { completed: true } or { sub_note: "..." })
+ * @returns {Promise<Object>} Updated period
+ */
+export async function updateSubPlanPeriod(periodId, updates) {
+  const payload = { ...updates, updated_at: new Date().toISOString() };
+
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
+    try {
+      const { data, error } = await supabase
+        .from('sub_plan_periods')
+        .update(payload)
+        .eq('id', periodId)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('[sub-plans] Supabase error updating period, falling back to local:', error.message);
+        return updateLocalSubPlanPeriod(periodId, payload);
+      }
+
+      console.log('[sub-plans] Remote period updated:', periodId);
+      // Refresh local cache for the plan
+      if (data && data.plan_id) {
+        const cached = localStore.get(`periods_${data.plan_id}`, []);
+        const idx = cached.findIndex(p => p.id === periodId);
+        if (idx !== -1) {
+          cached[idx] = data;
+          localStore.set(`periods_${data.plan_id}`, cached);
+        }
+      }
+      return data;
+    } catch (err) {
+      console.warn('[sub-plans] Network error updating period, falling back to local:', err.message);
+      return updateLocalSubPlanPeriod(periodId, payload);
+    }
+  } else {
+    console.log('[sub-plans] Supabase not configured, using local storage');
+    return updateLocalSubPlanPeriod(periodId, payload);
+  }
+}
+
+/**
+ * Update a single period in local storage by id (searches across all plan caches)
+ */
+function updateLocalSubPlanPeriod(periodId, updates) {
+  // Search all period caches in local storage for the matching period
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(NS + 'periods_')) {
+      try {
+        const periods = JSON.parse(localStorage.getItem(key)) || [];
+        const idx = periods.findIndex(p => p.id === periodId);
+        if (idx !== -1) {
+          periods[idx] = { ...periods[idx], ...updates };
+          localStorage.setItem(key, JSON.stringify(periods));
+          return periods[idx];
+        }
+      } catch {
+        // skip malformed entries
+      }
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// Sub Plan Templates
+// ============================================================================
+
+/**
+ * List all sub plan templates
+ * @returns {Promise<Array>} Array of template objects
+ */
+export async function listSubPlanTemplates() {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
+    try {
+      const { data, error } = await supabase
+        .from('sub_plan_templates')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.warn('[sub-plans] Supabase error listing templates, falling back to local:', error.message);
+        return listLocalSubPlanTemplates();
+      }
+
+      console.log('[sub-plans] Remote templates fetched, count:', data.length);
+      localStore.set('templates', data);
+      return data;
+    } catch (err) {
+      console.warn('[sub-plans] Network error listing templates, falling back to local:', err.message);
+      return listLocalSubPlanTemplates();
+    }
+  } else {
+    console.log('[sub-plans] Supabase not configured, using local storage');
+    return listLocalSubPlanTemplates();
+  }
+}
+
+/**
+ * List templates from local storage
+ */
+function listLocalSubPlanTemplates() {
+  const templates = localStore.get('templates', []);
+  return [...templates].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+/**
+ * Upsert (create or update) a template
+ * @param {Object} template - Template object
+ * @returns {Promise<Object>} Saved template
+ */
+export async function upsertSubPlanTemplate(template) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
+    try {
+      const record = {
+        name: template.name,
+        day_of_week: template.day_of_week !== undefined ? template.day_of_week : null,
+        plan_mode: template.plan_mode || 'subject',
+        periods_data: template.periods_data || null,
+        subject_data: template.subject_data || null,
+        created_by: template.created_by || 'teacher',
+        updated_at: new Date().toISOString()
+      };
+      if (template.id) {
+        record.id = template.id;
+      }
+
+      const { data, error } = await supabase
+        .from('sub_plan_templates')
+        .upsert(record)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('[sub-plans] Supabase error upserting template, falling back to local:', error.message);
+        return upsertLocalSubPlanTemplate(template);
+      }
+
+      console.log('[sub-plans] Remote template saved:', data.id);
+      // Update local cache
+      const templates = localStore.get('templates', []);
+      const idx = templates.findIndex(t => t.id === data.id);
+      if (idx !== -1) {
+        templates[idx] = data;
+      } else {
+        templates.push(data);
+      }
+      localStore.set('templates', templates);
+      return data;
+    } catch (err) {
+      console.warn('[sub-plans] Network error upserting template, falling back to local:', err.message);
+      return upsertLocalSubPlanTemplate(template);
+    }
+  } else {
+    console.log('[sub-plans] Supabase not configured, using local storage');
+    return upsertLocalSubPlanTemplate(template);
+  }
+}
+
+/**
+ * Upsert a template in local storage
+ */
+function upsertLocalSubPlanTemplate(template) {
+  const templates = localStore.get('templates', []);
+  const existingIdx = template.id ? templates.findIndex(t => t.id === template.id) : -1;
+
+  const saved = {
+    ...template,
+    id: template.id || localId(),
+    updated_at: new Date().toISOString(),
+    created_at: (existingIdx !== -1 && templates[existingIdx].created_at) || new Date().toISOString()
+  };
+
+  if (existingIdx !== -1) {
+    templates[existingIdx] = saved;
+  } else {
+    templates.push(saved);
+  }
+
+  localStore.set('templates', templates);
+  return saved;
+}
+
+/**
+ * Delete a template
+ * @param {number} templateId - The template id
+ * @returns {Promise<boolean>} Success
+ */
+export async function deleteSubPlanTemplate(templateId) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
+    try {
+      const { error } = await supabase
+        .from('sub_plan_templates')
+        .delete()
+        .eq('id', templateId);
+
+      if (error) {
+        console.warn('[sub-plans] Supabase error deleting template, falling back to local:', error.message);
+        return deleteLocalSubPlanTemplate(templateId);
+      }
+
+      console.log('[sub-plans] Remote template deleted:', templateId);
+      deleteLocalSubPlanTemplate(templateId);
+      return true;
+    } catch (err) {
+      console.warn('[sub-plans] Network error deleting template, falling back to local:', err.message);
+      return deleteLocalSubPlanTemplate(templateId);
+    }
+  } else {
+    console.log('[sub-plans] Supabase not configured, using local storage');
+    return deleteLocalSubPlanTemplate(templateId);
+  }
+}
+
+/**
+ * Delete a template from local storage
+ */
+function deleteLocalSubPlanTemplate(templateId) {
+  const templates = localStore.get('templates', []);
+  const idx = templates.findIndex(t => t.id === templateId);
+  if (idx !== -1) {
+    templates.splice(idx, 1);
+    localStore.set('templates', templates);
     return true;
   }
   return false;
