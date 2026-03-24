@@ -477,6 +477,15 @@ exports.handler = async (event) => {
       console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; class lookup will not be teacher-scoped`);
     }
 
+    // For split-by-student drafts, teacher scoping is required to prevent cross-teacher issues.
+    if ((!teacherUUID || teacherUUID.trim() === '') && draft.studentCode) {
+      console.error(`[teacher-issue-draft] [${requestId}] Cannot issue split-by-student draft without teacher UUID. studentCode="${draft.studentCode}"`);
+      return jsonResponse(event, 403, {
+        ok: false,
+        error: 'Unable to verify teacher identity for per-student issue. Please try again or contact support.',
+      }, { 'Cache-Control': 'no-store' }, requestId);
+    }
+
     // Step 1b: Fetch class by name (scoped to teacher when possible) to get class ID.
     // Include teacher_id in select so we can log ownership info.
     let classesUrl;
@@ -504,16 +513,20 @@ exports.handler = async (event) => {
 
     const classes = await classesResponse.json();
 
-    // Warn if multiple classes match (indicates ambiguous class names in the DB)
+    // Return 409 if multiple classes match (ambiguous class names in the DB)
     if (classes.length > 1) {
-      console.warn(`[teacher-issue-draft] [${requestId}] WARNING: ${classes.length} classes matched name "${resolvedClassName}" — picking first. Class IDs: ${classes.map(c => c.id).join(', ')}`);
+      console.error(`[teacher-issue-draft] [${requestId}] Ambiguous: ${classes.length} classes matched name "${resolvedClassName}". Class IDs: ${classes.map(c => c.id).join(', ')}`);
+      return jsonResponse(event, 409, {
+        ok: false,
+        error: `Multiple classes match "${resolvedClassName}". Please contact support to resolve the ambiguity.`,
+      }, { 'Cache-Control': 'no-store' }, requestId);
     }
 
     let targetClass = classes[0];
 
     if (!targetClass) {
       // Auto-create the class if it doesn't exist
-      console.log(`[teacher-issue-draft] [${requestId}] Class "${resolvedClassName}" not found, auto-creating...`);
+      console.log(`[teacher-issue-draft] [${requestId}] Class "${resolvedClassName}" not found, auto-creating${teacherUUID ? ` with teacher_id: ${teacherUUID}` : ''}...`);
       
       const createClassUrl = `${SUPABASE_URL}/rest/v1/classes`;
       const createClassResponse = await fetch(createClassUrl, {
@@ -524,7 +537,10 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ name: resolvedClassName })
+        body: JSON.stringify({
+          name: resolvedClassName,
+          ...(teacherUUID ? { teacher_id: teacherUUID } : {}),
+        })
       });
 
       if (!createClassResponse.ok) {
