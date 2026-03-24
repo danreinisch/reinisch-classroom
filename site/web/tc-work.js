@@ -1024,6 +1024,10 @@
     if ($("scoringConstructed")) $("scoringConstructed").value = sd.constructed != null ? sd.constructed : 5;
     if ($("scoringMulti")) $("scoringMulti").value = sd.multi != null ? sd.multi : 1;
 
+    // Populate writing config
+    const wc = d.writingConfig || {};
+    if ($("draftParagraphCount")) $("draftParagraphCount").value = wc.paragraph_count != null ? wc.paragraph_count : 1;
+
     // Scroll form into view
     const form = $("workDraftForm");
     if (form) {
@@ -1305,6 +1309,10 @@
       draft.updatedAt = nowISO();
       draft.meta = Object.assign({}, draft.meta || {}, { scoring_defaults: scoringDefaults, total_possible: totalPossible });
 
+      // Update writing config
+      const paragraphCount = parseInt(($("draftParagraphCount") || {}).value || '1', 10);
+      draft.writingConfig = (paragraphCount > 1) ? { paragraph_count: paragraphCount } : {};
+
       // Handle assignment updates
       const hasNewAssignmentFile = assignmentFile && assignmentFile.size > 0;
       const hasAssignmentLink = assignmentLink.length > 0;
@@ -1419,6 +1427,10 @@
       autoRelease,
       createdAt: nowISO(),
       meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
+      writingConfig: (() => {
+        const pc = parseInt(($("draftParagraphCount") || {}).value || '1', 10);
+        return (pc > 1) ? { paragraph_count: pc } : {};
+      })(),
       assignment: { kind: null, name: null, link: null, text: null },
       mapping: {
         kind: mappingFile ? "file" : "auto",

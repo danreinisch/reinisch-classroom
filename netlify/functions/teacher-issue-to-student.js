@@ -1,7 +1,7 @@
 // Teacher issue-to-student endpoint
 // POST /.netlify/functions/teacher-issue-to-student
 // Auth: Requires teacher session cookie
-// Body: { assignment_id, student_codes: ["S017", "S019"], due_at? }
+// Body: { assignment_id, student_codes: ["S017", "S019"], due_at?, settings? }
 // Creates assignment_instances for the named students on an existing assignment.
 // Uses ON CONFLICT DO NOTHING so repeated calls are safe.
 // Returns: { ok, issued_count }
@@ -60,7 +60,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id, student_codes, due_at } = parseResult.data;
+  const { assignment_id, student_codes, due_at, settings } = parseResult.data;
 
   // Validate assignment_id
   if (!assignment_id) {
@@ -224,7 +224,7 @@ exports.handler = async (event) => {
       student_id: student.id,
       assigned_at: todayUtc,
       status: 'Assigned',
-      settings: {},
+      settings: settings || {},
       ...(due_at ? { due_at } : {}),
     }));
 
