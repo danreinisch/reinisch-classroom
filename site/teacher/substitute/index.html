@@ -149,12 +149,225 @@
       background: rgba(239, 68, 68, 0.08);
     }
 
+    /* ── Mode toggle ─────────────────────────────────────────────────── */
+    .sub-mode-toggle {
+      display: flex;
+      gap: 0;
+      border-radius: var(--rc-radius);
+      overflow: hidden;
+      border: 1px solid var(--rc-border-strong);
+      width: fit-content;
+    }
+    .sub-mode-btn {
+      padding: 8px 20px;
+      border: none;
+      background: transparent;
+      color: var(--rc-ink-dim);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+    .sub-mode-btn + .sub-mode-btn {
+      border-left: 1px solid var(--rc-border-strong);
+    }
+    .sub-mode-btn.active {
+      background: rgba(99, 102, 241, 0.25);
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .sub-mode-btn:hover:not(.active) {
+      background: var(--rc-glass-hover);
+    }
+
+    /* ── Template bar ────────────────────────────────────────────────── */
+    .sub-template-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: var(--rc-radius);
+      border: 1px solid var(--rc-glass-border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .sub-template-select {
+      padding: 7px 10px;
+      border-radius: var(--rc-radius);
+      border: 1px solid var(--rc-border-strong);
+      background: rgba(0, 0, 0, 0.18);
+      color: inherit;
+      flex: 1;
+      min-width: 160px;
+      max-width: 300px;
+      font-size: 13px;
+    }
+    .sub-day-hint {
+      font-size: 12px;
+      color: rgba(234, 179, 8, 0.9);
+      padding: 4px 8px;
+      border-radius: var(--rc-radius);
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.25);
+      display: none;
+    }
+    .sub-day-hint.visible {
+      display: inline-block;
+    }
+
+    /* ── Date row ────────────────────────────────────────────────────── */
+    .sub-date-row {
+      align-items: flex-end;
+      gap: 12px;
+    }
+    .sub-date-row .sub-field {
+      flex: 1;
+      min-width: 150px;
+      margin-bottom: 0;
+    }
+    .sub-date-row .sub-field.checkbox-field {
+      padding-bottom: 10px;
+    }
+
+    /* ── Publish row ─────────────────────────────────────────────────── */
+    .sub-publish-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 4px;
+      padding-top: 10px;
+      border-top: 1px solid var(--rc-glass-border);
+    }
+    .sub-publish-row .sub-field {
+      margin-bottom: 0;
+    }
+    .sub-publish-row .sub-field:not(.checkbox-field) {
+      min-width: 200px;
+    }
+
+    /* ── Per-period rows ─────────────────────────────────────────────── */
+    .sub-period-row {
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 12px;
+      padding: 0;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      overflow: hidden;
+    }
+    .sub-period-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      padding: 10px 12px;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .sub-period-header:hover {
+      background: var(--rc-glass-hover);
+    }
+    .sub-period-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sub-period-label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .sub-period-time {
+      font-size: 11px;
+      color: var(--rc-ink-dim);
+    }
+    .sub-period-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: rgba(99, 102, 241, 0.9);
+    }
+    .sub-period-badge.planning {
+      background: rgba(234, 179, 8, 0.1);
+      border-color: rgba(234, 179, 8, 0.3);
+      color: rgba(234, 179, 8, 0.9);
+    }
+    .sub-period-chevron {
+      width: 16px;
+      height: 16px;
+      color: var(--rc-ink-dim);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .sub-period-chevron.collapsed {
+      transform: rotate(-90deg);
+    }
+    .sub-period-body {
+      padding: 0 12px 12px;
+    }
+    .sub-period-body.collapsed {
+      display: none;
+    }
+    .sub-period-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 12px;
+    }
+
+    /* ── Mode badges in table ────────────────────────────────────────── */
+    .sub-mode-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .sub-mode-badge.period {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: rgba(99, 102, 241, 0.9);
+    }
+    .sub-mode-badge.subject {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: rgba(34, 197, 94, 0.85);
+    }
+
+    /* ── Preview overlay ─────────────────────────────────────────────── */
+    .sub-preview-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 9000;
+      overflow-y: auto;
+      padding: 20px;
+      box-sizing: border-box;
+      justify-content: center;
+    }
+    .sub-preview-overlay.open {
+      display: flex;
+    }
+    .sub-preview-box {
+      background: rgba(18, 18, 22, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 720px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      align-self: flex-start;
+    }
+
     /* Mobile (< 768px) */
     @media (max-width: 767px) {
       .sub-card { padding: 12px; }
       .sub-actions { gap: 8px; }
       .sub-btn { padding: 8px 10px; }
       .sub-tablewrap { font-size: 13px; }
+      .sub-period-grid { grid-template-columns: 1fr; }
+      .sub-date-row { flex-direction: column; }
     }
 
     /* Tablet / Chromebook portrait (768px–1023px) */
@@ -317,47 +530,116 @@
           <div class="sub-row">
             <h2 style="margin: 0" id="subFormTitle">Create Plan</h2>
             <div class="sub-actions">
+              <button class="sub-btn" type="button" id="btnPreview">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Preview
+              </button>
               <button class="sub-btn primary" type="submit" form="subPlanForm" id="btnSavePlan">Save Plan</button>
               <button class="sub-btn" type="button" id="btnClearForm">Clear Form</button>
               <button class="sub-btn" type="button" id="btnCancelEdit" style="display:none">Cancel Edit</button>
             </div>
           </div>
+
+          <!-- Mode Toggle -->
+          <div style="margin-top:14px">
+            <div class="sub-mode-toggle" role="group" aria-label="Plan mode">
+              <button class="sub-mode-btn active" id="btnModeSubject" type="button" data-mode="subject">Subject-Based</button>
+              <button class="sub-mode-btn" id="btnModePeriod" type="button" data-mode="period">Per-Period</button>
+            </div>
+          </div>
+
+          <!-- Template Picker -->
+          <div class="sub-template-bar" style="margin-top:10px">
+            <select id="subTemplateSelect" class="sub-template-select" aria-label="Template">
+              <option value="">— No Template —</option>
+            </select>
+            <button class="sub-btn sub-btn-sm" type="button" id="btnLoadTemplate">Load</button>
+            <button class="sub-btn sub-btn-sm" type="button" id="btnSaveTemplate">Save as Template</button>
+            <button class="sub-btn sub-btn-sm danger" type="button" id="btnDeleteTemplate" style="display:none">Delete Template</button>
+            <span id="subTemplateDayHint" class="sub-day-hint" aria-live="polite"></span>
+          </div>
+
           <form id="subPlanForm" style="margin-top:14px">
-            <div class="sub-field">
-              <label for="subDate">Plan Date *</label>
-              <input type="date" id="subDate" name="subDate" required />
+            <!-- Date row -->
+            <div class="sub-row sub-date-row" style="margin-bottom:14px">
+              <div class="sub-field">
+                <label for="subDate">Plan Date *</label>
+                <input type="date" id="subDate" name="subDate" required />
+              </div>
+              <div class="sub-field checkbox-field">
+                <input type="checkbox" id="subMultiDay" name="subMultiDay" />
+                <label for="subMultiDay">Multi-day absence</label>
+              </div>
+              <div class="sub-field" id="subEndDateWrap" style="display:none">
+                <label for="subEndDate">End Date</label>
+                <input type="date" id="subEndDate" name="subEndDate" />
+              </div>
             </div>
-            <div class="sub-field">
-              <label for="subLaLesson">LA Lesson</label>
-              <input type="text" id="subLaLesson" name="subLaLesson" />
+
+            <!-- Subject-Based fields -->
+            <div id="subSubjectFields">
+              <div class="sub-field">
+                <label for="subLaLesson">LA Lesson</label>
+                <input type="text" id="subLaLesson" name="subLaLesson" />
+              </div>
+              <div class="sub-field">
+                <label for="subLaBook">LA Book</label>
+                <input type="text" id="subLaBook" name="subLaBook" />
+              </div>
+              <div class="sub-field">
+                <label for="subLaPresentations">LA Presentations (one per line)</label>
+                <textarea id="subLaPresentations" name="subLaPresentations"></textarea>
+              </div>
+              <div class="sub-field">
+                <label for="subLifeSkillsTopic">Life Skills Topic</label>
+                <input type="text" id="subLifeSkillsTopic" name="subLifeSkillsTopic" />
+              </div>
+              <div class="sub-field">
+                <label for="subLifeSkillsPresentations">Life Skills Presentations (one per line)</label>
+                <textarea id="subLifeSkillsPresentations" name="subLifeSkillsPresentations"></textarea>
+              </div>
+              <div class="sub-field">
+                <label for="subNotes">Notes</label>
+                <textarea id="subNotes" name="subNotes"></textarea>
+              </div>
             </div>
-            <div class="sub-field">
-              <label for="subLaBook">LA Book</label>
-              <input type="text" id="subLaBook" name="subLaBook" />
+
+            <!-- Per-Period fields -->
+            <div id="subPeriodFields" style="display:none">
+              <div id="subPeriodRows"></div>
             </div>
-            <div class="sub-field">
-              <label for="subLaPresentations">LA Presentations</label>
-              <textarea id="subLaPresentations" name="subLaPresentations"></textarea>
+
+            <!-- Publish section -->
+            <div class="sub-publish-row">
+              <div class="sub-field checkbox-field">
+                <input type="checkbox" id="subPublished" name="subPublished" />
+                <label for="subPublished">Published</label>
+              </div>
+              <div class="sub-field checkbox-field">
+                <input type="checkbox" id="subSchedulePublish" name="subSchedulePublish" />
+                <label for="subSchedulePublish">Schedule Publish</label>
+              </div>
+              <div class="sub-field" id="subSchedulePublishTimeWrap" style="display:none">
+                <label for="subSchedulePublishTime">Publish At</label>
+                <input type="datetime-local" id="subSchedulePublishTime" name="subSchedulePublishTime" />
+              </div>
             </div>
-            <div class="sub-field">
-              <label for="subLifeSkillsTopic">Life Skills Topic</label>
-              <input type="text" id="subLifeSkillsTopic" name="subLifeSkillsTopic" />
-            </div>
-            <div class="sub-field">
-              <label for="subLifeSkillsPresentations">Life Skills Presentations</label>
-              <textarea id="subLifeSkillsPresentations" name="subLifeSkillsPresentations"></textarea>
-            </div>
-            <div class="sub-field">
-              <label for="subNotes">Notes</label>
-              <textarea id="subNotes" name="subNotes"></textarea>
-            </div>
-            <div class="sub-field checkbox-field">
-              <input type="checkbox" id="subPublished" name="subPublished" />
-              <label for="subPublished">Published</label>
-            </div>
+
             <div id="subMsg" style="display:none"></div>
           </form>
         </section>
+
+        <!-- Preview overlay -->
+        <div id="subPreviewOverlay" class="sub-preview-overlay" role="dialog" aria-modal="true" aria-label="Plan Preview">
+          <div class="sub-preview-box" tabindex="-1">
+            <div class="sub-row" style="margin-bottom:14px">
+              <h3 style="margin:0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Plan Preview
+              </h3>
+              <button class="sub-btn sub-btn-sm" type="button" id="btnClosePreview">Close</button>
+            </div>
+            <div id="subPreviewContent"></div>
+          </div>
+        </div>
 
         <!-- All Plans Table -->
         <section class="sub-card" style="margin-top:16px" aria-label="All substitute plans">
@@ -367,7 +649,7 @@
             <table class="sub-table" id="subPlansTable" style="display:none">
               <thead>
                 <tr>
-                  <th>Date</th><th>LA Lesson</th><th>Life Skills</th><th>Status</th><th>Actions</th>
+                  <th>Date</th><th>Mode</th><th>Summary</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="subPlansTbody"></tbody>
