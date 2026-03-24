@@ -1006,25 +1006,42 @@ exports.handler = async (event) => {
 
         // Step 8: Build instances to upsert
         const writingConfig = draft.writingConfig;
-        let instanceSettings = {};
+        let baseInstanceSettings = {};
         if (writingConfig && writingConfig.paragraph_count != null) {
           const parsedCount = parseInt(writingConfig.paragraph_count, 10);
           if (!Number.isNaN(parsedCount)) {
             const clampedCount = Math.min(5, Math.max(1, parsedCount));
             if (clampedCount > 1) {
-              instanceSettings = { writing_config: { paragraph_count: clampedCount } };
+              baseInstanceSettings = { writing_config: { paragraph_count: clampedCount } };
             }
           }
         }
-        const instances = targetStudents.map(student => ({
-          assignment_id: assignmentId,
-          student_id: student.id,
-          assigned_at: new Date().toISOString().substring(0, 10),
-          due_at: dueAt || null,
-          status: 'Assigned',
-          settings: instanceSettings,
-          school_year: getCurrentSchoolYear(),
-        }));
+
+        // Per-student writing config overrides from draft (e.g. { S001: { paragraph_count: 2 } })
+        const perStudentWritingConfig = (typeof draft.perStudentWritingConfig === 'object' && draft.perStudentWritingConfig !== null && !Array.isArray(draft.perStudentWritingConfig))
+          ? draft.perStudentWritingConfig
+          : null;
+
+        const instances = targetStudents.map(student => {
+          let instanceSettings = baseInstanceSettings;
+          if (perStudentWritingConfig && perStudentWritingConfig[student.code] != null) {
+            const rawPc = parseInt(perStudentWritingConfig[student.code], 10);
+            if (!Number.isNaN(rawPc)) {
+              const clampedPc = Math.min(5, Math.max(1, rawPc));
+              const perStudentWC = { writing_config: { paragraph_count: clampedPc } };
+              instanceSettings = { ...baseInstanceSettings, ...perStudentWC };
+            }
+          }
+          return {
+            assignment_id: assignmentId,
+            student_id: student.id,
+            assigned_at: new Date().toISOString().substring(0, 10),
+            due_at: dueAt || null,
+            status: 'Assigned',
+            settings: instanceSettings,
+            school_year: getCurrentSchoolYear(),
+          };
+        });
 
         // Use upsert with resolution=merge-duplicates for idempotency
         const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;

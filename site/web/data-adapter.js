@@ -282,6 +282,14 @@ const local = {
     store.set('assignmentInstances', arr);
     return instance;
   },
+  async patchAssignmentInstance(instanceId, settingsPatch) {
+    const arr = store.get('assignmentInstances', []);
+    const i = arr.findIndex(ai => ai.id === instanceId);
+    if (i < 0) throw new Error('Instance not found');
+    arr[i].settings = { ...(arr[i].settings || {}), ...settingsPatch };
+    store.set('assignmentInstances', arr);
+    return arr[i];
+  },
   async addSubmission(payload) {
     const submissions = store.get('submissions', []);
     const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
@@ -1443,6 +1451,26 @@ const remote = {
       .single();
     if (error) throw error;
     return instanceRow;
+  },
+  async patchAssignmentInstance(instanceId, settingsPatch) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    // Fetch existing settings, merge, then update
+    const { data: existing, error: e1 } = await supabase
+      .from('assignment_instances')
+      .select('id,settings')
+      .eq('id', instanceId)
+      .single();
+    if (e1) throw e1;
+    const merged = { ...(existing.settings || {}), ...settingsPatch };
+    const { data: updated, error: e2 } = await supabase
+      .from('assignment_instances')
+      .update({ settings: merged })
+      .eq('id', instanceId)
+      .select()
+      .single();
+    if (e2) throw e2;
+    return updated;
   },
   
   async addSubmission(payload) {
