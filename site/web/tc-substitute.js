@@ -264,7 +264,7 @@
   });
 
   $("btnSaveTemplate")?.addEventListener("click", async () => {
-    const name = prompt("Template name:");
+    const name = await rcPrompt("Save Template", "Enter a name for this template:", "e.g. Normal Day");
     if (!name?.trim()) return;
     const template = {
       name: name.trim(),
@@ -327,6 +327,7 @@
   });
 
   $("subSchedulePublish")?.addEventListener("change", function () {
+    // TODO Phase 5: Read subSchedulePublish + subSchedulePublishTime and store as scheduled_publish_at on the plan
     const wrap = $("subSchedulePublishTimeWrap");
     if (wrap) wrap.style.display = this.checked ? "" : "none";
   });
@@ -477,6 +478,7 @@
       plan.life_skills_presentations = $("subLifeSkillsPresentations")?.value?.trim() || "";
       plan.notes = $("subNotes")?.value?.trim() || null;
     }
+    // TODO Phase 5: Read subSchedulePublish + subSchedulePublishTime and store as scheduled_publish_at on the plan
     const savedPlan = await upsertSubPlan(plan);
     if (mode === "period" && savedPlan?.id) {
       await upsertSubPlanPeriods(savedPlan.id, getPeriodFormData());
