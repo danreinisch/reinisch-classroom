@@ -1551,13 +1551,14 @@
   function getWritingParagraphCount(dayData, instance) {
     const writingConfig = instance.settings?.writing_config;
     let count = 1;
-    if (writingConfig?.paragraph_count) {
+    if (writingConfig?.paragraph_count != null) {
       count = parseInt(writingConfig.paragraph_count, 10);
-    } else if (dayData.paragraph_count) {
+    } else if (dayData.paragraph_count != null) {
       count = parseInt(dayData.paragraph_count, 10);
     }
-    if (isNaN(count) || count < 1) return 1;
-    return Math.min(count, 5);
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > 5) count = 5;
+    return count;
   }
 
   function renderWritingPromptDay(container, dayData, instance) {

@@ -1310,7 +1310,9 @@
       draft.meta = Object.assign({}, draft.meta || {}, { scoring_defaults: scoringDefaults, total_possible: totalPossible });
 
       // Update writing config
-      const paragraphCount = parseInt(($("draftParagraphCount") || {}).value || '1', 10);
+      let paragraphCount = parseInt(($("draftParagraphCount") || {}).value || '1', 10);
+      if (isNaN(paragraphCount) || paragraphCount < 1) paragraphCount = 1;
+      if (paragraphCount > 5) paragraphCount = 5;
       draft.writingConfig = (paragraphCount > 1) ? { paragraph_count: paragraphCount } : {};
 
       // Handle assignment updates
@@ -1428,7 +1430,9 @@
       createdAt: nowISO(),
       meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
       writingConfig: (() => {
-        const pc = parseInt(($("draftParagraphCount") || {}).value || '1', 10);
+        let pc = parseInt(($("draftParagraphCount") || {}).value || '1', 10);
+        if (isNaN(pc) || pc < 1) pc = 1;
+        if (pc > 5) pc = 5;
         return (pc > 1) ? { paragraph_count: pc } : {};
       })(),
       assignment: { kind: null, name: null, link: null, text: null },
