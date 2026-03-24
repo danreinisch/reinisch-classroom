@@ -6,6 +6,70 @@
   const SHOW_ISSUED_KEY = "rc_tc_work_show_issued_v1";
   const MAX_TEXT_BYTES = 800_000; // keep localStorage safe-ish
 
+  /** Namespace prefix used by the unified data adapter's localStore */
+  const RC_NS = 'rc_unified_';
+
+  /**
+   * Scan a student's IEP goals for written expression paragraph requirements.
+   * Only scans goals in writing-related goal areas to avoid false positives.
+   * Returns the detected paragraph count (e.g. 2) or null if no match.
+   * @param {Array} goals
+   * @returns {number|null}
+   */
+  function detectParagraphCountFromGoals(goals) {
+    const WRITING_AREAS = ['written expression', 'writing', 'written language'];
+    const patterns = [
+      /writ(?:e|ing)\s+(\d+)\s+paragraph/i,
+      /(\d+)\s+paragraph/i,
+      /multi[- ]?paragraph/i,
+      /multiple\s+paragraph/i,
+    ];
+    for (const goal of goals) {
+      const area = (goal.goal_area || '').toLowerCase();
+      if (area && !WRITING_AREAS.some(wa => area.includes(wa))) continue;
+      const text = goal.desc || goal.goal_text || '';
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) {
+          if (match[1]) {
+            const count = parseInt(match[1], 10);
+            if (count >= 2 && count <= 5) return count;
+          }
+          return 2;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Build a perStudentWritingConfig map from local IEP goals data.
+   * For each student whose detected paragraph count exceeds the draft's base count,
+   * include an entry so the backend will apply the IEP-driven override.
+   * Only includes entries where the IEP count is strictly higher than the draft default,
+   * since a count ≤ base is already satisfied by the base setting.
+   * @param {number} baseParagraphCount - Draft's configured paragraph count (default 1)
+   * @returns {Object} Map of studentCode -> paragraph count (may be empty)
+   */
+  function buildIepPerStudentWritingConfig(baseParagraphCount) {
+    let goalsMap;
+    try {
+      goalsMap = JSON.parse(localStorage.getItem(RC_NS + 'iepGoals') || '{}');
+    } catch (_) {
+      return {};
+    }
+    if (!goalsMap || typeof goalsMap !== 'object') return {};
+    const result = {};
+    for (const [studentCode, goals] of Object.entries(goalsMap)) {
+      if (!Array.isArray(goals)) continue;
+      const detected = detectParagraphCountFromGoals(goals);
+      if (detected != null && detected > baseParagraphCount) {
+        result[studentCode] = detected;
+      }
+    }
+    return result;
+  }
+
   function loadBatchCollapsed() {
     try {
       const raw = localStorage.getItem(BATCH_COLLAPSED_KEY);
@@ -1791,12 +1855,28 @@
     setMsg("ok", `Preparing to issue "${draft.title}" to ${className}...`);
 
     try {
+      // Build IEP-aware per-student writing config overrides.
+      // For students whose IEP goals indicate a higher paragraph count than the draft default,
+      // we include a per-student override so the backend sets the correct instance settings.
+      const basePc = (draft.writingConfig && draft.writingConfig.paragraph_count) || 1;
+      const iepOverrides = buildIepPerStudentWritingConfig(basePc);
+
+      // Merge draft-level perStudentWritingConfig (if any) with IEP-detected overrides.
+      // Draft-level values take priority (teacher-set > IEP-suggested).
+      const draftPerStudent = (typeof draft.perStudentWritingConfig === 'object' && draft.perStudentWritingConfig !== null && !Array.isArray(draft.perStudentWritingConfig))
+        ? draft.perStudentWritingConfig
+        : {};
+      const mergedPerStudent = Object.assign({}, iepOverrides, draftPerStudent);
+      const draftToSend = Object.keys(mergedPerStudent).length > 0
+        ? Object.assign({}, draft, { perStudentWritingConfig: mergedPerStudent })
+        : draft;
+
       // Call server-side endpoint to handle all Supabase operations
       const response = await fetch('/.netlify/functions/teacher-issue-draft', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft })
+        body: JSON.stringify({ draft: draftToSend })
       });
 
       if (!response.ok) {
