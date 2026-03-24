@@ -11,6 +11,11 @@
 
   console.log('[tc-observation] Initializing observation engine');
 
+  // ─── Configuration ────────────────────────────────────────────────────────
+  // How many seconds before period end to trigger the observation popup.
+  // 600 = 10 minutes, giving a wider window than the original 5 minutes.
+  const POPUP_TRIGGER_SECONDS = 600;
+
   // ─── SVG Icon Constants ───────────────────────────────────────────────────
   const OBS_MET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
   const OBS_NOT_MET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
@@ -18,6 +23,7 @@
   const OBS_NOT_APPLICABLE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
   const OBS_CLOCK_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
   const OBS_CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+  const OBS_CLIPBOARD_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>';
 
   // ─── Inject Styles ────────────────────────────────────────────────────────
   const styleEl = document.createElement('style');
@@ -80,6 +86,10 @@
   .obs-response-row { flex-direction: column; }
   .obs-tally-input { width: 50px; }
 }
+/* Notification icon in topbar */
+.obs-notif-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; opacity: 0.75; transition: opacity 0.2s; }
+.obs-notif-btn:hover { opacity: 1; }
+.obs-notif-badge { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none; }
 `;
   document.head.appendChild(styleEl);
 
@@ -121,6 +131,10 @@
   const shownPopups = new Set(); // "YYYY-MM-DD|Period Label"
   let activeOverlay = null;
   let countdownInterval = null;
+  let activePopupPeriodLabel = null; // period label of the currently open popup
+  let lastInClassPeriodLabel = null; // tracks period transitions for missed-popup detection
+  const missedPeriods = [];          // [{key, date, periodLabel, goals}]
+  let notifIconEl = null;            // notification icon DOM element
 
   // ─── localStorage Queue ───────────────────────────────────────────────────
   const QUEUE_KEY = 'rc_obs_pending';
@@ -201,6 +215,11 @@
       allStudents = students || [];
       allEnrollments = enrollments || [];
       schedule = sched;
+      console.log(
+        '[tc-observation] loadData: loaded', allGoals.length, 'observation goals,',
+        allStudents.length, 'students,',
+        'schedule:', schedule ? `${(schedule.periods || []).length} periods` : 'none'
+      );
     } catch (err) {
       console.warn('[tc-observation] Data load error:', err.message);
     }
@@ -312,6 +331,14 @@
     const notes = buildObservationNotes(category, responseData, noteText);
     const date = todayStr();
 
+    console.log(
+      '[tc-observation] saveObservation: goal=', goal.code,
+      'student=', goal.student_code,
+      'category=', category,
+      'value=', value,
+      'period=', periodLabel
+    );
+
     const savedAt = new Date().toISOString();
     const queueEntry = {
       student_code: goal.student_code,
@@ -340,12 +367,13 @@
         notes
       });
       markSynced(savedAt, goal.student_code, goal.code);
+      console.log('[tc-observation] Supabase save succeeded: goal=', goal.code, 'student=', goal.student_code);
       if (saveIndicatorEl) {
         saveIndicatorEl.textContent = 'Auto-saved ✓';
         saveIndicatorEl.className = 'obs-save-indicator';
       }
     } catch (err) {
-      console.warn('[tc-observation] Supabase save failed:', err.message);
+      console.warn('[tc-observation] Supabase save failed — queued locally:', err.message);
       if (saveIndicatorEl) {
         saveIndicatorEl.textContent = 'Saved locally — will sync when connected';
         saveIndicatorEl.className = 'obs-save-indicator offline';
@@ -1023,7 +1051,10 @@
     const date = todayStr();
     const popupKey = `${date}|${periodLabel}`;
 
-    if (shownPopups.has(popupKey)) return;
+    if (shownPopups.has(popupKey)) {
+      console.log('[tc-observation] showPopup: suppressed (already shown this session) —', periodLabel);
+      return;
+    }
     shownPopups.add(popupKey);
 
     // Find goals for this period
@@ -1032,13 +1063,26 @@
       return Array.isArray(cfg?.class_periods) && cfg.class_periods.includes(periodLabel);
     });
 
-    if (goalsForPeriod.length === 0) return;
+    if (goalsForPeriod.length === 0) {
+      console.log('[tc-observation] showPopup: no observation goals for period —', periodLabel);
+      return;
+    }
 
     // Check if ALL goals already have data; if so, don't show
     const allRecorded = goalsForPeriod.every(g =>
       isAlreadyRecorded(g.student_code, g.code, date, periodLabel)
     );
-    if (allRecorded) return;
+    if (allRecorded) {
+      console.log('[tc-observation] showPopup: suppressed (all goals already recorded) —', periodLabel);
+      return;
+    }
+
+    console.log(
+      '[tc-observation] showPopup: opening popup for', periodLabel,
+      '—', goalsForPeriod.length, 'goals,', fmtSeconds(remainingSeconds), 'remaining'
+    );
+
+    activePopupPeriodLabel = periodLabel;
 
     // Build student map
     const studentsMap = new Map(allStudents.map(s => [s.code, s]));
@@ -1094,6 +1138,11 @@
   }
 
   function closePopup() {
+    console.log('[tc-observation] closePopup: popup dismissed for period —', activePopupPeriodLabel || '(unknown)');
+
+    const closedPeriodLabel = activePopupPeriodLabel;
+    activePopupPeriodLabel = null;
+
     if (countdownInterval) {
       clearInterval(countdownInterval);
       countdownInterval = null;
@@ -1102,28 +1151,210 @@
       activeOverlay.remove();
       activeOverlay = null;
     }
+
+    // After closing, check whether any goals for this period remain unrecorded
+    if (closedPeriodLabel) {
+      const date = todayStr();
+      const unrecordedGoals = allGoals.filter(g => {
+        const cfg = g.observation_config;
+        return Array.isArray(cfg?.class_periods) &&
+               cfg.class_periods.includes(closedPeriodLabel) &&
+               !isAlreadyRecorded(g.student_code, g.code, date, closedPeriodLabel);
+      });
+      if (unrecordedGoals.length > 0) {
+        console.log(
+          '[tc-observation] closePopup:', unrecordedGoals.length,
+          'goals still unrecorded for', closedPeriodLabel, '— adding to missed list'
+        );
+        addMissedPeriod(date, closedPeriodLabel, unrecordedGoals);
+      } else {
+        // All recorded — remove from missed list in case it was there
+        removeMissedPeriod(`${date}|${closedPeriodLabel}`);
+      }
+    }
   }
 
   // ─── Timer Engine ─────────────────────────────────────────────────────────
   async function checkPeriod() {
-    if (!schedule) return;
-    if (!allGoals.length) return;
+    if (!schedule) {
+      console.log('[tc-observation] checkPeriod: no schedule loaded yet');
+      return;
+    }
+    if (!allGoals.length) {
+      console.log('[tc-observation] checkPeriod: no observation goals configured');
+      return;
+    }
 
     const now = new Date();
     const periodInfo = getCurrentPeriod(schedule, now);
 
+    // Detect period-end transitions: if we were in a period and now we're not,
+    // check whether there are unrecorded goals for that period.
+    if (lastInClassPeriodLabel && periodInfo.status !== 'in-class') {
+      const endedLabel = lastInClassPeriodLabel;
+      lastInClassPeriodLabel = null;
+      const date = todayStr();
+      const unrecordedGoals = allGoals.filter(g => {
+        const cfg = g.observation_config;
+        return Array.isArray(cfg?.class_periods) &&
+               cfg.class_periods.includes(endedLabel) &&
+               !isAlreadyRecorded(g.student_code, g.code, date, endedLabel);
+      });
+      if (unrecordedGoals.length > 0) {
+        console.log(
+          '[tc-observation] checkPeriod: period ended with', unrecordedGoals.length,
+          'unrecorded goals for', endedLabel, '— adding to missed list'
+        );
+        addMissedPeriod(date, endedLabel, unrecordedGoals);
+      }
+    }
+
+    console.log(
+      '[tc-observation] checkPeriod: status=', periodInfo.status,
+      periodInfo.status === 'in-class'
+        ? `remaining=${fmtSeconds(periodInfo.remainingSeconds)} period="${periodInfo.period.label}"`
+        : ''
+    );
+
     if (periodInfo.status !== 'in-class') return;
-    if (periodInfo.remainingSeconds > 300) return;
+
+    lastInClassPeriodLabel = periodInfo.period.label;
+
+    if (periodInfo.remainingSeconds > POPUP_TRIGGER_SECONDS) return;
 
     // Don't show a new popup if one is already open
-    if (activeOverlay) return;
+    if (activeOverlay) {
+      console.log('[tc-observation] checkPeriod: overlay already open — suppressing');
+      return;
+    }
 
     showPopup(periodInfo);
+  }
+
+  // ─── Missed Period Tracking ───────────────────────────────────────────────
+
+  function addMissedPeriod(date, periodLabel, goals) {
+    const key = `${date}|${periodLabel}`;
+    const existing = missedPeriods.findIndex(m => m.key === key);
+    if (existing < 0) {
+      missedPeriods.push({ key, date, periodLabel, goals });
+    } else {
+      missedPeriods[existing].goals = goals; // refresh with current unrecorded list
+    }
+    updateNotifBadge();
+  }
+
+  function removeMissedPeriod(key) {
+    const idx = missedPeriods.findIndex(m => m.key === key);
+    if (idx >= 0) {
+      missedPeriods.splice(idx, 1);
+      updateNotifBadge();
+    }
+  }
+
+  function updateNotifBadge() {
+    if (!notifIconEl) return;
+    const count = missedPeriods.length;
+    const badge = notifIconEl.querySelector('.obs-notif-badge');
+    if (count === 0) {
+      notifIconEl.style.display = 'none';
+      if (badge) badge.style.display = 'none';
+    } else {
+      notifIconEl.style.display = '';
+      if (badge) {
+        badge.textContent = String(count);
+        badge.style.display = '';
+      }
+    }
+    console.log('[tc-observation] updateNotifBadge: pending missed periods =', count);
+  }
+
+  // ─── Missed Period Popup ──────────────────────────────────────────────────
+
+  function showMissedPopup(missed) {
+    if (activeOverlay) return; // Don't open if a popup is already visible
+
+    const { periodLabel, goals } = missed;
+    console.log('[tc-observation] showMissedPopup:', periodLabel, '—', goals.length, 'goals');
+
+    activePopupPeriodLabel = periodLabel;
+
+    const studentsMap = new Map(allStudents.map(s => [s.code, s]));
+
+    const overlay = document.createElement('div');
+    overlay.className = 'obs-overlay';
+    overlay.setAttribute('role', 'presentation');
+
+    buildPopupContent(periodLabel, goals, studentsMap, overlay);
+    document.body.appendChild(overlay);
+    activeOverlay = overlay;
+
+    // Focus the modal for keyboard accessibility
+    const modal = overlay.querySelector('.obs-modal');
+    if (modal) modal.focus();
+
+    // Update title to show period ended (no live countdown needed)
+    const titleEl = overlay.querySelector('#obs-modal-title');
+    const countdownEl = overlay.querySelector('#obs-countdown');
+    if (titleEl) {
+      titleEl.textContent = '';
+      titleEl.appendChild(document.createTextNode(periodLabel + ' — '));
+      const endedSpan = document.createElement('span');
+      endedSpan.style.cssText = 'color:rgba(255,255,255,0.5);font-weight:400;';
+      endedSpan.textContent = 'period ended — finish recording';
+      titleEl.appendChild(endedSpan);
+    }
+    if (countdownEl) countdownEl.style.display = 'none';
+  }
+
+  // ─── Notification Icon ────────────────────────────────────────────────────
+
+  function injectNotifIcon() {
+    const topbar = document.querySelector('.tc-topbar');
+    if (!topbar) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'tc-btn obs-notif-btn';
+    btn.setAttribute('aria-label', 'Pending observation entries');
+    btn.title = 'Pending observation entries';
+    btn.style.display = 'none'; // Hidden until there are missed periods
+    btn.innerHTML = OBS_CLIPBOARD_SVG + '<span class="obs-notif-badge" style="display:none;"></span>';
+
+    btn.addEventListener('click', () => {
+      if (missedPeriods.length === 0) return;
+      // Open the most recently missed period
+      showMissedPopup(missedPeriods[missedPeriods.length - 1]);
+    });
+
+    notifIconEl = btn;
+
+    const tryInsert = () => {
+      const signOutBtn = topbar.querySelector('.tc-btn[aria-label="Sign out"]');
+      if (signOutBtn) {
+        // Transfer auto-margin so the notif icon starts the right-aligned group
+        signOutBtn.style.marginLeft = '';
+        btn.style.marginLeft = 'auto';
+        topbar.insertBefore(btn, signOutBtn);
+        return true;
+      }
+      return false;
+    };
+
+    if (!tryInsert()) {
+      // Sign Out button not yet added by teacher-shell.js; watch for it
+      const observer = new MutationObserver(() => {
+        if (tryInsert()) observer.disconnect();
+      });
+      observer.observe(topbar, { childList: true });
+    }
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   await loadData();
   await syncQueue();
+
+  // Inject the notification icon into the topbar
+  injectNotifIcon();
 
   // Start timer loop (check every 30 seconds)
   const _checkInterval = setInterval(checkPeriod, 30_000);
@@ -1146,5 +1377,5 @@
     closePopup();
   };
 
-  console.log('[tc-observation] Engine ready, watching', allGoals.length, 'observational goals');
+  console.log('[tc-observation] Engine ready, watching', allGoals.length, 'observational goals, trigger window:', POPUP_TRIGGER_SECONDS, 'seconds');
 })();
