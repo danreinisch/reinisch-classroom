@@ -24,6 +24,11 @@ let _localIdCounter = 0;
 function localId() {
   return Date.now() * 1000 + (++_localIdCounter % 1000);
 }
+
+/**
+ * Check if Supabase client is available
+ */
+async function isSupabaseAvailable() {
   const supabase = await getSupabase();
   return supabase && typeof supabase.from === 'function';
 }
