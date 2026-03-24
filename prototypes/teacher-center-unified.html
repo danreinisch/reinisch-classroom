@@ -3599,8 +3599,10 @@
       const assignmentTitle = assignment ? assignment.title : 'Assignment';
       
       // Read writing config
-      const paragraphCountValue = parseInt(qs('#issueParagraphCount')?.value || '1', 10);
-      const writingSettings = (!isNaN(paragraphCountValue) && paragraphCountValue > 1)
+      let paragraphCountValue = parseInt(qs('#issueParagraphCount')?.value || '1', 10);
+      if (isNaN(paragraphCountValue)) paragraphCountValue = 1;
+      paragraphCountValue = Math.min(Math.max(paragraphCountValue, 1), 5);
+      const writingSettings = (paragraphCountValue > 1)
         ? { writing_config: { paragraph_count: paragraphCountValue } }
         : {};
       

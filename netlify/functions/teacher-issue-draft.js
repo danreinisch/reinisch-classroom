@@ -1006,9 +1006,16 @@ exports.handler = async (event) => {
 
         // Step 8: Build instances to upsert
         const writingConfig = draft.writingConfig;
-        const instanceSettings = (writingConfig && writingConfig.paragraph_count > 1)
-          ? { writing_config: { paragraph_count: parseInt(writingConfig.paragraph_count, 10) } }
-          : {};
+        let instanceSettings = {};
+        if (writingConfig && writingConfig.paragraph_count != null) {
+          const parsedCount = parseInt(writingConfig.paragraph_count, 10);
+          if (!Number.isNaN(parsedCount)) {
+            const clampedCount = Math.min(5, Math.max(1, parsedCount));
+            if (clampedCount > 1) {
+              instanceSettings = { writing_config: { paragraph_count: clampedCount } };
+            }
+          }
+        }
         const instances = targetStudents.map(student => ({
           assignment_id: assignmentId,
           student_id: student.id,

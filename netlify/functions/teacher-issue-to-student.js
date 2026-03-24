@@ -60,7 +60,16 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id, student_codes, due_at, settings } = parseResult.data;
+  const { assignment_id, student_codes, due_at, settings: rawSettings } = parseResult.data;
+
+  let settings = {};
+  if (rawSettings === undefined || rawSettings === null) {
+    settings = {};
+  } else if (typeof rawSettings === 'object' && !Array.isArray(rawSettings)) {
+    settings = rawSettings;
+  } else {
+    return jsonResponse(event, 400, { ok: false, error: 'settings must be an object if provided' }, {}, requestId);
+  }
 
   // Validate assignment_id
   if (!assignment_id) {
