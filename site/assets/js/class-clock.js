@@ -1,13 +1,11 @@
 (function () {
   'use strict';
 
-  // Skip on teacher/admin/substitute pages
+  // Skip on teacher/admin pages
   var path = location.pathname;
   if (
     path.startsWith('/teacher/') ||
-    path.startsWith('/admin/') ||
-    path.startsWith('/substitute/') ||
-    path.startsWith('/sub/')
+    path.startsWith('/admin/')
   ) {
     return;
   }
