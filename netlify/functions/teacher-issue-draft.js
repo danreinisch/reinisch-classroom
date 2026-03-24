@@ -1016,15 +1016,41 @@ exports.handler = async (event) => {
             }
           }
         }
-        const instances = targetStudents.map(student => ({
-          assignment_id: assignmentId,
-          student_id: student.id,
-          assigned_at: new Date().toISOString().substring(0, 10),
-          due_at: dueAt || null,
-          status: 'Assigned',
-          settings: instanceSettings,
-          school_year: getCurrentSchoolYear(),
-        }));
+
+        // Build per-student settings overrides from draft.perStudentWritingConfig
+        // Format: { "S001": { paragraph_count: 2 }, ... }
+        const perStudentWritingConfig = (draft.perStudentWritingConfig &&
+          typeof draft.perStudentWritingConfig === 'object' &&
+          !Array.isArray(draft.perStudentWritingConfig))
+          ? draft.perStudentWritingConfig
+          : {};
+
+        const instances = targetStudents.map(student => {
+          const perStudentOverride = perStudentWritingConfig[student.code];
+          let studentSettings = instanceSettings;
+          if (perStudentOverride && typeof perStudentOverride === 'object' && !Array.isArray(perStudentOverride)) {
+            const parsedPerCount = parseInt(perStudentOverride.paragraph_count, 10);
+            if (!Number.isNaN(parsedPerCount)) {
+              const clampedPerCount = Math.min(5, Math.max(1, parsedPerCount));
+              studentSettings = Object.assign({}, instanceSettings, {
+                writing_config: Object.assign(
+                  {},
+                  instanceSettings.writing_config || {},
+                  { paragraph_count: clampedPerCount }
+                ),
+              });
+            }
+          }
+          return {
+            assignment_id: assignmentId,
+            student_id: student.id,
+            assigned_at: new Date().toISOString().substring(0, 10),
+            due_at: dueAt || null,
+            status: 'Assigned',
+            settings: studentSettings,
+            school_year: getCurrentSchoolYear(),
+          };
+        });
 
         // Use upsert with resolution=merge-duplicates for idempotency
         const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;

@@ -60,7 +60,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id, student_codes, due_at, settings: rawSettings } = parseResult.data;
+  const { assignment_id, student_codes, due_at, settings: rawSettings, per_student_settings: rawPerStudentSettings } = parseResult.data;
 
   let settings = {};
   if (rawSettings === undefined || rawSettings === null) {
@@ -69,6 +69,34 @@ exports.handler = async (event) => {
     settings = rawSettings;
   } else {
     return jsonResponse(event, 400, { ok: false, error: 'settings must be an object if provided' }, {}, requestId);
+  }
+
+  // Validate and normalize per_student_settings (keyed by student code)
+  const validatedPerStudentSettings = {};
+  if (rawPerStudentSettings !== null && rawPerStudentSettings !== undefined) {
+    if (typeof rawPerStudentSettings !== 'object' || Array.isArray(rawPerStudentSettings)) {
+      return jsonResponse(event, 400, { ok: false, error: 'per_student_settings must be a plain object' }, {}, requestId);
+    }
+    for (const [key, val] of Object.entries(rawPerStudentSettings)) {
+      if (typeof val !== 'object' || val === null || Array.isArray(val)) {
+        return jsonResponse(event, 400, { ok: false, error: `per_student_settings["${key}"] must be a plain object` }, {}, requestId);
+      }
+      const override = Object.assign({}, val);
+      if (override.writing_config && override.writing_config.paragraph_count != null) {
+        const parsedCount = parseInt(override.writing_config.paragraph_count, 10);
+        if (!isNaN(parsedCount)) {
+          override.writing_config = Object.assign({}, override.writing_config, {
+            paragraph_count: Math.min(5, Math.max(1, parsedCount)),
+          });
+        } else {
+          const wc = Object.assign({}, override.writing_config);
+          delete wc.paragraph_count;
+          override.writing_config = wc;
+        }
+      }
+      // Normalize key to uppercase to match student code convention
+      validatedPerStudentSettings[key.trim().toUpperCase()] = override;
+    }
   }
 
   // Validate assignment_id
@@ -217,9 +245,7 @@ exports.handler = async (event) => {
 
     console.log(`[teacher-issue-to-student] [${requestId}] Found ${students.length} student(s)`);
 
-    // Step 3: Build instance rows and upsert with ON CONFLICT DO NOTHING
-    // Build a UTC date string (YYYY-MM-DD) for assigned_at — using UTC avoids
-    // timezone-shift issues when running in a Node.js Lambda environment.
+    // Step 3: Build instance rows — apply per-student settings overrides if provided
     const todayUtc = (() => {
       const d = new Date();
       const y = d.getUTCFullYear();
@@ -228,14 +254,21 @@ exports.handler = async (event) => {
       return `${y}-${m}-${day}`;
     })();
 
-    const instances = students.map(student => ({
-      assignment_id: parseInt(assignmentIdStr, 10),
-      student_id: student.id,
-      assigned_at: todayUtc,
-      status: 'Assigned',
-      settings: settings || {},
-      ...(due_at ? { due_at } : {}),
-    }));
+    const baseSettings = settings || {};
+    const instances = students.map(student => {
+      const perStudentOverride = validatedPerStudentSettings[student.code];
+      const instanceSettings = perStudentOverride
+        ? Object.assign({}, baseSettings, perStudentOverride)
+        : baseSettings;
+      return {
+        assignment_id: parseInt(assignmentIdStr, 10),
+        student_id: student.id,
+        assigned_at: todayUtc,
+        status: 'Assigned',
+        settings: instanceSettings,
+        ...(due_at ? { due_at } : {}),
+      };
+    });
 
     const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
     const upsertResponse = await fetch(instancesUrl, {

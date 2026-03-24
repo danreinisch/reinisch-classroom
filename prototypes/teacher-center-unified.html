@@ -1000,6 +1000,17 @@
             <div class="subtle" style="margin-top:4px;font-size:12px">Set to 2+ for students whose IEP goals require multi-paragraph writing (e.g., S001.11.3)</div>
           </div>
           
+          <details style="margin-top:8px" id="perStudentWritingConfigDetails">
+            <summary style="cursor:pointer;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);font-weight:700;font-size:13px;list-style:none;display:flex;align-items:center;gap:6px">
+              <span style="opacity:.6;font-size:11px">▶</span>
+              Advanced: Per-Student Writing Config
+            </summary>
+            <div style="margin-top:6px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+              <div class="subtle" style="font-size:12px;margin-bottom:8px">Override paragraph count for individual students. Leave blank to use the class-wide setting above.</div>
+              <div id="perStudentWritingConfigTable"><span class="subtle" style="font-size:13px">Select students above to configure per-student overrides.</span></div>
+            </div>
+          </details>
+          
           <div style="margin-top:12px">
             <button class="btn primary" id="btnIssueAssignment">Issue to Selected Students</button>
           </div>
@@ -1025,13 +1036,34 @@
                   <th>Status</th>
                   <th>Assigned</th>
                   <th>Due</th>
+                  <th>Writing</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="6" class="subtle">No instances yet</td></tr>
+                <tr><td colspan="7" class="subtle">No instances yet</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Reconfigure Instance Modal (hidden by default) -->
+        <div id="reconfigureModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center">
+          <div style="background:var(--surface,#1e1e2e);border:1px solid var(--line,rgba(255,255,255,.1));border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+            <div style="font-weight:800;font-size:16px;margin-bottom:12px">Reconfigure Writing Settings</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.55);margin-bottom:12px">
+              Updating instance: <span id="reconfigureInstanceId" style="font-family:monospace;font-size:11px"></span><br>
+              Student: <strong id="reconfigureStudentCode"></strong>
+            </div>
+            <label style="font-size:13px;display:block;margin-bottom:12px">Paragraphs per writing prompt
+              <input id="reconfigureParagraphCount" type="number" min="1" max="5" value="1" style="width:80px;margin-left:8px" />
+              <span class="subtle" style="font-size:12px;margin-left:8px">(1–5)</span>
+            </label>
+            <div id="reconfigureMsg" style="font-size:13px;margin-bottom:8px;display:none"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn small" id="btnReconfigureCancel">Cancel</button>
+              <button class="btn small primary" id="btnReconfigureSave">Save</button>
+            </div>
           </div>
         </div>
         
@@ -3606,6 +3638,17 @@
         ? { writing_config: { paragraph_count: paragraphCountValue } }
         : {};
       
+      // Collect per-student paragraph count overrides from the Advanced section
+      const perStudentWritingSettings = {};
+      qs('#perStudentWritingConfigTable')?.querySelectorAll('input[data-student-code]').forEach(input => {
+        const code = input.dataset.studentCode;
+        const val = parseInt(input.value, 10);
+        if (!isNaN(val) && val >= 1) {
+          const clamped = Math.min(Math.max(val, 1), 5);
+          perStudentWritingSettings[code] = { writing_config: { paragraph_count: clamped } };
+        }
+      });
+      
       // Show progress
       const progressDiv = qs('#issueProgress');
       const progressText = qs('#issueProgressText');
@@ -3620,13 +3663,18 @@
           const student = STUDENTS.find(s => s.code === studentCode);
           // Convert ID to number only if it's actually numeric (for Supabase)
           const aid = /^\d+$/.test(assignmentId) ? parseInt(assignmentId, 10) : assignmentId;
+          // Merge per-student override (if any) on top of class-wide settings
+          const perOverride = perStudentWritingSettings[studentCode];
+          const instanceSettings = perOverride
+            ? Object.assign({}, writingSettings, perOverride)
+            : writingSettings;
           await db.upsertAssignmentInstance({
             assignment_id: aid,
             student_code: studentCode,
             student_name: student ? student.name : studentCode,
             due_at: dueDate,
             status: 'Assigned',
-            settings: writingSettings
+            settings: instanceSettings
           });
           issued++;
           progressText.textContent = `Issued ${issued} of ${studentCodes.length}...`;
@@ -3657,7 +3705,7 @@
         const instances = await db.listAssignmentInstances();
         
         if (!instances || instances.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="subtle">No instances yet</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="subtle">No instances yet</td></tr>';
           // Also update simulator instance select
           qs('#simInstanceSelect').innerHTML = '<option value="">-- No instances available --</option>';
           return;
@@ -3672,17 +3720,26 @@
           assignmentMap[a.id] = a.title;
         });
         
+        const escH = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
         const rows = instances.map(inst => {
           const assignmentTitle = assignmentMap[inst.assignment_id] || `ID: ${inst.assignment_id}`;
           const assigned = inst.assigned_at ? new Date(inst.assigned_at).toLocaleDateString() : '—';
           const due = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
-          return `<tr data-instance-id="${inst.id}">
-            <td>${inst.student_code}</td>
-            <td>${assignmentTitle}</td>
-            <td><span class="badge">${inst.status || 'Assigned'}</span></td>
-            <td class="subtle">${assigned}</td>
-            <td class="subtle">${due}</td>
-            <td><button class="btn small" data-action="simulate" data-id="${inst.id}">Simulate</button></td>
+          const paraCount = inst.settings?.writing_config?.paragraph_count;
+          const writingBadge = paraCount > 1
+            ? `<span class="badge" style="background:rgba(99,102,241,.25);color:#a5b4fc">${escH(paraCount)}¶</span>`
+            : '<span class="subtle" style="font-size:12px">default</span>';
+          return `<tr data-instance-id="${escH(inst.id)}">
+            <td>${escH(inst.student_code)}</td>
+            <td>${escH(assignmentTitle)}</td>
+            <td><span class="badge">${escH(inst.status || 'Assigned')}</span></td>
+            <td class="subtle">${escH(assigned)}</td>
+            <td class="subtle">${escH(due)}</td>
+            <td>${writingBadge}</td>
+            <td style="white-space:nowrap">
+              <button class="btn small" data-action="simulate" data-id="${escH(inst.id)}" style="margin-right:4px">Simulate</button>
+              <button class="btn small" data-action="reconfigure" data-id="${escH(inst.id)}" data-student-code="${escH(inst.student_code)}" data-para-count="${paraCount != null ? escH(String(paraCount)) : '1'}">Reconfigure</button>
+            </td>
           </tr>`;
         });
         
@@ -3705,10 +3762,17 @@
             qs('#simInstanceSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
           });
         });
+
+        // Bind reconfigure buttons
+        tbody.querySelectorAll('button[data-action="reconfigure"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            openReconfigureModal(btn.dataset.id, btn.dataset.studentCode, parseInt(btn.dataset.paraCount, 10) || 1);
+          });
+        });
         
       } catch (err) {
         console.error('Failed to load instances:', err);
-        tbody.innerHTML = '<tr><td colspan="6" class="subtle">Error loading instances</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="subtle">Error loading instances</td></tr>';
       }
     }
     
@@ -3728,6 +3792,119 @@
         console.error('Failed to load classes:', err);
         qs('#issueClassesSelect').innerHTML = '<option value="">-- Error loading classes --</option>';
       }
+    }
+
+    // Refresh the per-student writing config table in the Advanced section
+    function refreshPerStudentWritingConfigTable() {
+      const container = qs('#perStudentWritingConfigTable');
+      if (!container) return;
+      const select = qs('#issueStudentsSelect');
+      if (!select) return;
+
+      const selected = Array.from(select.selectedOptions);
+      if (selected.length === 0) {
+        container.innerHTML = '<span class="subtle" style="font-size:13px">Select students above to configure per-student overrides.</span>';
+        return;
+      }
+
+      // Preserve existing values when re-rendering
+      const existingValues = {};
+      container.querySelectorAll('input[data-student-code]').forEach(inp => {
+        existingValues[inp.dataset.studentCode] = inp.value;
+      });
+
+      const rows = selected.map(opt => {
+        const code = opt.value;
+        const label = opt.textContent;
+        const existingVal = existingValues[code] || '';
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
+          <label style="flex-shrink:0;display:flex;align-items:center;gap:4px">
+            <span class="subtle" style="font-size:12px">¶:</span>
+            <input type="number" min="1" max="5" placeholder="default"
+              data-student-code="${code}"
+              value="${existingVal}"
+              style="width:60px;padding:2px 6px;font-size:12px"
+              title="Paragraph count override for ${code} (leave blank to use assignment default)" />
+          </label>
+          <span class="per-student-badge badge" data-student-code="${code}" style="display:${existingVal ? 'inline' : 'none'};background:rgba(99,102,241,.25);color:#a5b4fc;font-size:11px">${existingVal ? existingVal + '¶' : ''}</span>
+        </div>`;
+      }).join('');
+      container.innerHTML = rows;
+
+      // Wire up inputs to update badges
+      container.querySelectorAll('input[data-student-code]').forEach(input => {
+        input.addEventListener('input', () => {
+          const code = input.dataset.studentCode;
+          const badge = container.querySelector(`.per-student-badge[data-student-code="${code}"]`);
+          const val = parseInt(input.value, 10);
+          if (badge) {
+            if (!isNaN(val) && val >= 1 && val <= 5) {
+              badge.textContent = val + '¶';
+              badge.style.display = 'inline';
+            } else {
+              badge.textContent = '';
+              badge.style.display = 'none';
+            }
+          }
+        });
+      });
+    }
+
+    // Open the Reconfigure modal for a specific instance
+    function openReconfigureModal(instanceId, studentCode, currentParaCount) {
+      const modal = qs('#reconfigureModal');
+      if (!modal) return;
+      qs('#reconfigureInstanceId').textContent = instanceId;
+      qs('#reconfigureStudentCode').textContent = studentCode;
+      qs('#reconfigureParagraphCount').value = currentParaCount || 1;
+      const msgEl = qs('#reconfigureMsg');
+      msgEl.style.display = 'none';
+      msgEl.textContent = '';
+      modal.style.display = 'flex';
+      qs('#reconfigureParagraphCount').focus();
+
+      const close = () => { modal.style.display = 'none'; };
+      qs('#btnReconfigureCancel').onclick = close;
+      modal.onclick = (e) => { if (e.target === modal) close(); };
+
+      qs('#btnReconfigureSave').onclick = async () => {
+        let paraVal = parseInt(qs('#reconfigureParagraphCount').value, 10);
+        if (isNaN(paraVal) || paraVal < 1) paraVal = 1;
+        if (paraVal > 5) paraVal = 5;
+
+        const saveBtn = qs('#btnReconfigureSave');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        msgEl.style.display = 'none';
+
+        try {
+          const resp = await fetch('/.netlify/functions/teacher-issue-assignment', {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instance_id: instanceId,
+              settings_patch: { writing_config: { paragraph_count: paraVal } }
+            })
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.ok) {
+            throw new Error(data.error || `HTTP ${resp.status}`);
+          }
+          addNotif(`Updated ${studentCode}: ${paraVal} paragraph(s)`, { type: 'success' });
+          close();
+          await renderInstancesTable();
+        } catch (err) {
+          console.error('Reconfigure failed:', err);
+          msgEl.style.color = '#f87171';
+          msgEl.textContent = err.message || 'Failed to save.';
+          msgEl.style.display = 'block';
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+        }
+      };
     }
     
     // Helper: Get selected values from a multiple select element
@@ -3753,6 +3930,9 @@
         qs('#selectedStudentsContent').innerHTML = names.join(', ') + 
           (count > 10 ? ` <em>(and ${count - 10} more)</em>` : '');
       }
+
+      // Also refresh the per-student writing config table in the Advanced section
+      refreshPerStudentWritingConfigTable();
     }
     
     // Get students for selected classes (resolves enrollments)

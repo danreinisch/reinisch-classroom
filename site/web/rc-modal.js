@@ -201,6 +201,65 @@
     });
   }
 
+  /**
+   * Show a styled prompt modal. Returns a Promise<string|null>.
+   * @param {string} title - Modal title
+   * @param {string} message - Modal message
+   * @param {string} [defaultValue=''] - Default input value
+   * @returns {Promise<string|null>} Input value if confirmed, null if cancelled
+   */
+  function rcPrompt(title, message, defaultValue = '') {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'rc-modal-backdrop';
+      backdrop.innerHTML = `
+        <div class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="rc-modal-title">
+          <div class="rc-modal-title" id="rc-modal-title">${escapeHtml(title)}</div>
+          <div class="rc-modal-message">${escapeHtml(message)}</div>
+          <div style="margin-bottom:20px">
+            <input id="rc-modal-prompt-input" type="text"
+              style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:rgba(255,255,255,.9);font-size:14px;font-family:inherit;"
+              value="${escapeHtml(defaultValue)}" autocomplete="off" />
+          </div>
+          <div class="rc-modal-actions">
+            <button class="rc-modal-btn" id="rc-modal-cancel-btn">Cancel</button>
+            <button class="rc-modal-btn rc-modal-btn-primary" id="rc-modal-ok-btn">OK</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+
+      const input = backdrop.querySelector('#rc-modal-prompt-input');
+      const okBtn = backdrop.querySelector('#rc-modal-ok-btn');
+      const cancelBtn = backdrop.querySelector('#rc-modal-cancel-btn');
+      input.focus();
+      input.select();
+
+      const cleanup = (result) => {
+        backdrop.remove();
+        resolve(result);
+      };
+
+      okBtn.addEventListener('click', () => cleanup(input.value));
+      cancelBtn.addEventListener('click', () => cleanup(null));
+
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) cleanup(null);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          cleanup(input.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cleanup(null);
+        }
+      });
+    });
+  }
+
   window.rcAlert = rcAlert;
   window.rcConfirm = rcConfirm;
+  window.rcPrompt = rcPrompt;
 })();

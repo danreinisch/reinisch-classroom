@@ -1,8 +1,13 @@
 // Teacher issue assignment endpoint
 // POST /.netlify/functions/teacher-issue-assignment
 // Auth: Requires teacher session cookie
-// Body: { assignment_id, student_ids[], due_at?, settings? }
+// Body: { assignment_id, student_ids[], due_at?, settings?, per_student_settings? }
 // Returns: { ok, inserted_count, skipped_count, instances[] }
+//
+// PATCH /.netlify/functions/teacher-issue-assignment
+// Auth: Requires teacher session cookie
+// Body: { instance_id, settings_patch }
+// Returns: { ok, instance }
 const {
   generateRequestId,
   jsonResponse,
@@ -24,10 +29,10 @@ exports.handler = async (event) => {
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return handleCorsPreFlight(event, ['POST', 'OPTIONS'], ['Content-Type']);
+    return handleCorsPreFlight(event, ['POST', 'PATCH', 'OPTIONS'], ['Content-Type']);
   }
   
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'PATCH') {
     console.log(`[teacher-issue-assignment] [${requestId}] Method not allowed: ${event.httpMethod}`);
     return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
   }
@@ -80,7 +85,97 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { assignment_id, student_ids, due_at, settings } = parseResult.data;
+  // -----------------------------------------------------------------------
+  // PATCH — Reconfigure settings on an already-issued instance
+  // -----------------------------------------------------------------------
+  if (event.httpMethod === 'PATCH') {
+    const { instance_id, settings_patch } = parseResult.data;
+    const uuidRegexPatch = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!instance_id || typeof instance_id !== 'string' || !uuidRegexPatch.test(instance_id)) {
+      return jsonResponse(event, 400, { ok: false, error: 'instance_id must be a valid UUID' }, {}, requestId);
+    }
+
+    if (!settings_patch || typeof settings_patch !== 'object' || Array.isArray(settings_patch)) {
+      return jsonResponse(event, 400, { ok: false, error: 'settings_patch must be a plain object' }, {}, requestId);
+    }
+
+    // Clamp paragraph_count in settings_patch if present
+    if (settings_patch.writing_config && settings_patch.writing_config.paragraph_count != null) {
+      const parsed = parseInt(settings_patch.writing_config.paragraph_count, 10);
+      if (!isNaN(parsed)) {
+        settings_patch.writing_config.paragraph_count = Math.min(5, Math.max(1, parsed));
+      } else {
+        delete settings_patch.writing_config.paragraph_count;
+      }
+    }
+
+    try {
+      // Fetch current instance settings
+      const fetchUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,settings&id=eq.${encodeURIComponent(instance_id)}&limit=1`;
+      const fetchResponse = await fetch(fetchUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!fetchResponse.ok) {
+        throw new Error(`Failed to fetch instance: ${fetchResponse.status}`);
+      }
+      const fetchRows = await fetchResponse.json();
+      if (!Array.isArray(fetchRows) || fetchRows.length === 0) {
+        return jsonResponse(event, 404, { ok: false, error: 'Instance not found' }, { 'Cache-Control': 'no-store' }, requestId);
+      }
+
+      const existingSettings = fetchRows[0].settings || {};
+
+      // Deep-merge settings_patch into existing settings
+      const mergedSettings = Object.assign({}, existingSettings);
+      for (const [key, val] of Object.entries(settings_patch)) {
+        if (val !== null && typeof val === 'object' && !Array.isArray(val) &&
+            mergedSettings[key] !== null && typeof mergedSettings[key] === 'object' && !Array.isArray(mergedSettings[key])) {
+          mergedSettings[key] = Object.assign({}, mergedSettings[key], val);
+        } else {
+          mergedSettings[key] = val;
+        }
+      }
+
+      // PATCH the instance
+      const patchUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=eq.${encodeURIComponent(instance_id)}`;
+      const patchResponse = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({ settings: mergedSettings }),
+      });
+
+      if (!patchResponse.ok) {
+        const errorText = await patchResponse.text();
+        throw new Error(`Failed to patch instance: ${patchResponse.status} - ${errorText}`);
+      }
+
+      const patchedRows = await patchResponse.json();
+      const instance = Array.isArray(patchedRows) ? patchedRows[0] : patchedRows;
+
+      console.log(`[teacher-issue-assignment] [${requestId}] Reconfigured instance ${instance_id}`);
+      return jsonResponse(event, 200, { ok: true, instance }, { 'Cache-Control': 'no-store' }, requestId);
+    } catch (err) {
+      console.error(`[teacher-issue-assignment] [${requestId}] PATCH error:`, err);
+      return jsonResponse(event, 500, { ok: false, error: err.message || 'Failed to reconfigure instance' }, { 'Cache-Control': 'no-store' }, requestId);
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // POST — Issue assignment to students
+  // -----------------------------------------------------------------------
+  const { assignment_id, student_ids, due_at, settings, per_student_settings } = parseResult.data;
 
   // Validate assignment_id
   if (!assignment_id) {
@@ -131,6 +226,34 @@ exports.handler = async (event) => {
     }
   }
 
+  // Validate per_student_settings if provided (must be a plain object of plain objects)
+  const validatedPerStudentSettings = {};
+  if (per_student_settings !== null && per_student_settings !== undefined) {
+    if (typeof per_student_settings !== 'object' || Array.isArray(per_student_settings)) {
+      return jsonResponse(event, 400, { ok: false, error: 'per_student_settings must be a plain object' }, {}, requestId);
+    }
+    for (const [key, val] of Object.entries(per_student_settings)) {
+      if (typeof val !== 'object' || val === null || Array.isArray(val)) {
+        return jsonResponse(event, 400, { ok: false, error: `per_student_settings["${key}"] must be a plain object` }, {}, requestId);
+      }
+      // Clamp paragraph_count if present
+      const override = Object.assign({}, val);
+      if (override.writing_config && override.writing_config.paragraph_count != null) {
+        const parsedCount = parseInt(override.writing_config.paragraph_count, 10);
+        if (!isNaN(parsedCount)) {
+          override.writing_config = Object.assign({}, override.writing_config, {
+            paragraph_count: Math.min(5, Math.max(1, parsedCount)),
+          });
+        } else {
+          const wc = Object.assign({}, override.writing_config);
+          delete wc.paragraph_count;
+          override.writing_config = wc;
+        }
+      }
+      validatedPerStudentSettings[key] = override;
+    }
+  }
+
   console.log(`[teacher-issue-assignment] [${requestId}] Issuing assignment ${assignment_id} to ${student_ids.length} students`);
 
   try {
@@ -162,17 +285,24 @@ exports.handler = async (event) => {
 
     console.log(`[teacher-issue-assignment] [${requestId}] Found ${students.length} students`);
 
-    // Build instances to upsert
-    const instances = students.map(student => ({
-      assignment_id: assignment_id,
-      student_id: student.id,
-      student_code: student.code,
-      student_name: student.name || student.code,
-      assigned_at: new Date().toISOString(),
-      due_at: due_at || null,
-      status: 'Assigned',
-      settings: settings || {},
-    }));
+    // Build instances to upsert — apply per-student settings overrides if provided
+    const baseSettings = settings || {};
+    const instances = students.map(student => {
+      const perStudentOverride = validatedPerStudentSettings[student.id];
+      const instanceSettings = perStudentOverride
+        ? Object.assign({}, baseSettings, perStudentOverride)
+        : baseSettings;
+      return {
+        assignment_id: assignment_id,
+        student_id: student.id,
+        student_code: student.code,
+        student_name: student.name || student.code,
+        assigned_at: new Date().toISOString(),
+        due_at: due_at || null,
+        status: 'Assigned',
+        settings: instanceSettings,
+      };
+    });
 
     // Use upsert with resolution=merge-duplicates for idempotency
     // This will update existing records or insert new ones based on unique constraint

@@ -2094,6 +2094,7 @@
           <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Student</th>
           <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Status</th>
           <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Assigned</th>
+          <th style="text-align:left;padding:4px 6px;color:rgba(255,255,255,.5);font-weight:600;font-size:11px;border-bottom:1px solid rgba(255,255,255,.1);">Writing</th>
           <th style="border-bottom:1px solid rgba(255,255,255,.1);"></th>
         </tr>`;
         table.appendChild(thead);
@@ -2109,6 +2110,11 @@
             ? new Date(inst.assigned_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
             : '—';
 
+          const paraCount = inst.settings?.writing_config?.paragraph_count;
+          const writingBadge = paraCount > 1
+            ? `<span style="background:rgba(99,102,241,.2);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:11px;">${escapeHtml(String(paraCount))}¶</span>`
+            : `<span style="color:rgba(255,255,255,.35);font-size:12px;">default</span>`;
+
           tr.innerHTML = `
             <td style="padding:6px 6px;vertical-align:middle;">
               <span style="font-weight:600;">${escapeHtml(inst.student_code)}</span>
@@ -2116,7 +2122,10 @@
             </td>
             <td style="padding:6px 6px;vertical-align:middle;color:rgba(255,255,255,.65);">${escapeHtml(inst.status || 'Assigned')}</td>
             <td style="padding:6px 6px;vertical-align:middle;color:rgba(255,255,255,.45);font-size:12px;">${escapeHtml(assignedDate)}</td>
-            <td style="padding:6px 6px;vertical-align:middle;text-align:right;">
+            <td style="padding:6px 6px;vertical-align:middle;">${writingBadge}</td>
+            <td style="padding:6px 6px;vertical-align:middle;text-align:right;white-space:nowrap;">
+              <button type="button" class="rc-modal-btn rc-manage-reconfigure-btn" style="padding:4px 10px;font-size:12px;margin-right:4px;"
+                data-instance-id="${escapeHtml(inst.instance_id)}" data-student-code="${escapeHtml(inst.student_code)}" data-para-count="${paraCount != null ? escapeHtml(String(paraCount)) : '1'}">Reconfigure</button>
               <button type="button" class="rc-modal-btn rc-modal-btn-danger rc-manage-remove-btn" style="padding:4px 10px;font-size:12px;"
                 data-student-id="${escapeHtml(inst.student_id)}" data-student-code="${escapeHtml(inst.student_code)}">Remove</button>
             </td>
@@ -2127,6 +2136,55 @@
         table.appendChild(tbody);
         listEl.innerHTML = '';
         listEl.appendChild(table);
+
+        // Wire up Reconfigure buttons
+        listEl.querySelectorAll('.rc-manage-reconfigure-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const instanceId = btn.dataset.instanceId;
+            const studentCode = btn.dataset.studentCode;
+            const currentCount = parseInt(btn.dataset.paraCount, 10) || 1;
+
+            const newCountStr = await rcPrompt(
+              `Reconfigure Writing: ${studentCode}`,
+              `Set paragraph count for ${studentCode} (1–5). Current: ${currentCount}`,
+              String(currentCount)
+            );
+            if (newCountStr === null) return; // cancelled
+
+            let newCount = parseInt(newCountStr, 10);
+            if (isNaN(newCount) || newCount < 1) newCount = 1;
+            if (newCount > 5) newCount = 5;
+
+            btn.disabled = true;
+            btn.textContent = 'Saving…';
+
+            try {
+              const patchRes = await fetch('/.netlify/functions/teacher-issue-assignment', {
+                method: 'PATCH',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  instance_id: instanceId,
+                  settings_patch: { writing_config: { paragraph_count: newCount } },
+                }),
+              });
+              if (!patchRes.ok) {
+                const err = await patchRes.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${patchRes.status}`);
+              }
+              const patchData = await patchRes.json();
+              if (!patchData.ok) throw new Error(patchData.error || 'Reconfigure failed');
+
+              showToast(`✓ Updated ${studentCode}: ${newCount} paragraph(s)`);
+              await loadInstances();
+            } catch (err) {
+              console.error('[tc-work] Reconfigure error:', err);
+              btn.disabled = false;
+              btn.textContent = 'Reconfigure';
+              await rcAlert('Reconfigure Failed', err.message || 'Could not update instance settings.');
+            }
+          });
+        });
 
         // Wire up Remove buttons
         listEl.querySelectorAll('.rc-manage-remove-btn').forEach(btn => {

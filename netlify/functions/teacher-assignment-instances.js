@@ -145,7 +145,7 @@ exports.handler = async (event) => {
     }
 
     // Fetch instances joined with student info
-    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,status,assigned_at,students(code,name)&assignment_id=eq.${assignmentIdStr}&order=students(code).asc`;
+    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,status,assigned_at,settings,students(code,name)&assignment_id=eq.${assignmentIdStr}&order=students(code).asc`;
 
     const instancesResponse = await fetch(instancesUrl, {
       method: 'GET',
@@ -171,6 +171,7 @@ exports.handler = async (event) => {
       student_name: row.students?.name || row.students?.code || '',
       status: row.status || 'Assigned',
       assigned_at: row.assigned_at || null,
+      settings: row.settings || {},
     }));
 
     // Sort by student_code for consistent display
