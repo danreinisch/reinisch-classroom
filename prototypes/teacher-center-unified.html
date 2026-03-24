@@ -3780,7 +3780,12 @@
           tr.appendChild(td);
           tbody.appendChild(tr);
           // Also update simulator instance select
-          qs('#simInstanceSelect').innerHTML = '<option value="">-- No instances available --</option>';
+          const simSelectEmpty = qs('#simInstanceSelect');
+          simSelectEmpty.textContent = '';
+          const noInstOpt = document.createElement('option');
+          noInstOpt.value = '';
+          noInstOpt.textContent = '-- No instances available --';
+          simSelectEmpty.appendChild(noInstOpt);
           return;
         }
         
@@ -3865,7 +3870,11 @@
 
         // Populate simulator instance dropdown
         const simSelect = qs('#simInstanceSelect');
-        simSelect.innerHTML = '<option value="">-- Select an instance --</option>';
+        simSelect.textContent = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '-- Select an instance --';
+        simSelect.appendChild(defaultOpt);
         instances.forEach(inst => {
           const title = assignmentMap[inst.assignment_id] || ('ID: ' + inst.assignment_id);
           const opt = document.createElement('option');

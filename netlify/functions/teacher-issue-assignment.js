@@ -321,9 +321,18 @@ async function handleReconfigure(event, body, requestId) {
       return jsonResponse(event, 404, { ok: false, error: 'Instance not found' }, { 'Cache-Control': 'no-store' }, requestId);
     }
 
-    // Deep-merge: existing settings + patch
+    // Deep-merge: existing settings + patch (one-level deep to preserve nested props)
     const existing = rows[0];
-    const mergedSettings = { ...(existing.settings || {}), ...patch };
+    const existingSettings = existing.settings || {};
+    const mergedSettings = { ...existingSettings };
+    for (const [key, val] of Object.entries(patch)) {
+      if (val !== null && typeof val === 'object' && !Array.isArray(val) &&
+          typeof mergedSettings[key] === 'object' && mergedSettings[key] !== null && !Array.isArray(mergedSettings[key])) {
+        mergedSettings[key] = { ...mergedSettings[key], ...val };
+      } else {
+        mergedSettings[key] = val;
+      }
+    }
 
     // PATCH the instance
     const patchUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=eq.${instance_id}`;

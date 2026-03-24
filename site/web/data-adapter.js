@@ -50,6 +50,25 @@ function getCurrentSchoolYear() {
 }
 
 /**
+ * One-level deep merge for settings objects.
+ * For each key in patch: if both existing and patch values are plain objects, merge them.
+ * Otherwise, the patch value wins outright.
+ * This preserves nested properties like writing_config.other_prop that are not in the patch.
+ */
+function mergeSettingsObjects(existing, patch) {
+  const result = { ...(existing || {}) };
+  for (const [key, val] of Object.entries(patch || {})) {
+    if (val !== null && typeof val === 'object' && !Array.isArray(val) &&
+        typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])) {
+      result[key] = { ...result[key], ...val };
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
+/**
  * Mapping from DB class codes to UI canonical class names
  * Some classes have multiple sections (SC/S1) which are represented as separate UI tabs
  */
@@ -286,7 +305,7 @@ const local = {
     const arr = store.get('assignmentInstances', []);
     const i = arr.findIndex(ai => ai.id === instanceId);
     if (i < 0) throw new Error('Instance not found');
-    arr[i].settings = { ...(arr[i].settings || {}), ...settingsPatch };
+    arr[i].settings = mergeSettingsObjects(arr[i].settings || {}, settingsPatch);
     store.set('assignmentInstances', arr);
     return arr[i];
   },
@@ -1462,7 +1481,7 @@ const remote = {
       .eq('id', instanceId)
       .single();
     if (e1) throw e1;
-    const merged = { ...(existing.settings || {}), ...settingsPatch };
+    const merged = mergeSettingsObjects(existing.settings || {}, settingsPatch);
     const { data: updated, error: e2 } = await supabase
       .from('assignment_instances')
       .update({ settings: merged })
