@@ -1550,13 +1550,14 @@
    */
   function getWritingParagraphCount(dayData, instance) {
     const writingConfig = instance.settings?.writing_config;
+    let count = 1;
     if (writingConfig?.paragraph_count) {
-      return writingConfig.paragraph_count;
+      count = parseInt(writingConfig.paragraph_count, 10);
+    } else if (dayData.paragraph_count) {
+      count = parseInt(dayData.paragraph_count, 10);
     }
-    if (dayData.paragraph_count) {
-      return dayData.paragraph_count;
-    }
-    return 1;
+    if (isNaN(count) || count < 1) return 1;
+    return Math.min(count, 5);
   }
 
   function renderWritingPromptDay(container, dayData, instance) {
@@ -1986,7 +1987,7 @@
         // Add detail 3 button
         const addDetail3Btn = container.querySelector('#builderAddDetail3Btn');
         if (addDetail3Btn) {
-          addDetail3Btn.addEventListener('click', toggleDetail3);
+          addDetail3Btn.addEventListener('click', () => toggleDetail3());
         }
       } else {
         // Multi-paragraph event handlers — iterate over all paragraph sections

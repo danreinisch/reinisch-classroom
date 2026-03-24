@@ -1005,13 +1005,17 @@ exports.handler = async (event) => {
         }
 
         // Step 8: Build instances to upsert
+        const writingConfig = draft.writingConfig;
+        const instanceSettings = (writingConfig && writingConfig.paragraph_count > 1)
+          ? { writing_config: { paragraph_count: parseInt(writingConfig.paragraph_count, 10) } }
+          : {};
         const instances = targetStudents.map(student => ({
           assignment_id: assignmentId,
           student_id: student.id,
           assigned_at: new Date().toISOString().substring(0, 10),
           due_at: dueAt || null,
           status: 'Assigned',
-          settings: {},
+          settings: instanceSettings,
           school_year: getCurrentSchoolYear(),
         }));
 

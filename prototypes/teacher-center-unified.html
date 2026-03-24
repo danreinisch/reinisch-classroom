@@ -992,6 +992,14 @@
             <input id="issueDueDate" type="date" />
           </label>
           
+          <div style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+            <div style="font-weight:700;font-size:13px;margin-bottom:8px">Writing Configuration</div>
+            <label style="font-size:13px">Paragraphs per writing prompt
+              <input id="issueParagraphCount" type="number" min="1" max="5" value="1" style="width:80px;margin-left:8px" />
+            </label>
+            <div class="subtle" style="margin-top:4px;font-size:12px">Set to 2+ for students whose IEP goals require multi-paragraph writing (e.g., S001.11.3)</div>
+          </div>
+          
           <div style="margin-top:12px">
             <button class="btn primary" id="btnIssueAssignment">Issue to Selected Students</button>
           </div>
@@ -3590,6 +3598,12 @@
       const assignment = ASSIGNMENTS_CACHE.find(a => String(a.id) === String(assignmentId));
       const assignmentTitle = assignment ? assignment.title : 'Assignment';
       
+      // Read writing config
+      const paragraphCountValue = parseInt(qs('#issueParagraphCount')?.value || '1', 10);
+      const writingSettings = (!isNaN(paragraphCountValue) && paragraphCountValue > 1)
+        ? { writing_config: { paragraph_count: paragraphCountValue } }
+        : {};
+      
       // Show progress
       const progressDiv = qs('#issueProgress');
       const progressText = qs('#issueProgressText');
@@ -3610,7 +3624,7 @@
             student_name: student ? student.name : studentCode,
             due_at: dueDate,
             status: 'Assigned',
-            settings: {}
+            settings: writingSettings
           });
           issued++;
           progressText.textContent = `Issued ${issued} of ${studentCodes.length}...`;

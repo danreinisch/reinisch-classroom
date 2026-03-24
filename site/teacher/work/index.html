@@ -617,6 +617,18 @@ JSON:
               <!-- File preview panel (populated dynamically after file upload) -->
               <div id="rcFilePreviewPanel" style="margin-top: 16px; display: none"></div>
 
+              <!-- Writing Configuration -->
+              <div class="work-field" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rc-glass-border);">
+                <label style="font-weight: 600; font-size: 13px;">Writing Configuration</label>
+                <div class="work-grid" style="margin-top: 8px; grid-template-columns: repeat(2, 1fr);">
+                  <div class="work-field">
+                    <label for="draftParagraphCount">Paragraphs per writing prompt</label>
+                    <input id="draftParagraphCount" name="paragraphCount" type="number" min="1" max="5" value="1" style="width: 100%;" />
+                    <div class="tc-subtle" style="font-size: 12px; margin-top: 4px;">Set to 2+ for students whose IEP goals require multi-paragraph writing (e.g., S001.11.3)</div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Scoring Configuration -->
               <div class="work-field" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rc-glass-border);">
                 <label style="font-weight: 600; font-size: 13px;">Scoring Configuration</label>
