@@ -1026,8 +1026,8 @@
           <td class="st-goals-cell">
             <span class="st-goals-badge">${studentGoals.length}</span>
           </td>
-          <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
-          <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
+          <td class="st-date-${escapeHtml(iepUrgency)}">${escapeHtml(iepDue)}${iepWarning}</td>
+          <td class="st-date-${escapeHtml(evalUrgency)}">${escapeHtml(evalDue)}${evalWarning}</td>
           <td>${getStudentDataStatus(student.code)}</td>
         </tr>
       `;
@@ -1099,8 +1099,8 @@
           <h1 class="st-detail-title">${escapeHtml(student.code)}</h1>
           <div class="st-detail-meta">
             <span>👤 ${escapeHtml(student.primary_case_manager || 'N/A')}</span>
-            <span class="st-date-${getDateUrgency(student.iep_due)}">📋 IEP: ${student.iep_due ? formatDate(student.iep_due) : 'N/A'}</span>
-            <span class="st-date-${getDateUrgency(student.eval_due)}">📝 Eval: ${student.eval_due ? formatDate(student.eval_due) : 'N/A'}</span>
+            <span class="st-date-${escapeHtml(getDateUrgency(student.iep_due))}">📋 IEP: ${student.iep_due ? escapeHtml(formatDate(student.iep_due)) : 'N/A'}</span>
+            <span class="st-date-${escapeHtml(getDateUrgency(student.eval_due))}">📝 Eval: ${student.eval_due ? escapeHtml(formatDate(student.eval_due)) : 'N/A'}</span>
             ${statusBadge}
           </div>
         </div>
@@ -1910,6 +1910,7 @@
             <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
             <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
             <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
+            <option value="Percent" ${goal.measurement_type === 'Percent' ? 'selected' : ''}>Percent</option>
             <option value="Other" ${goal.measurement_type === 'Other' ? 'selected' : ''}>Other</option>
             <option value="Observation" ${goal.measurement_type === 'Observation' ? 'selected' : ''}>Observation</option>
           </select>
@@ -2676,8 +2677,13 @@
     if (!goal) return;
 
     // Collect form values
-    const dataDate = card.querySelector('[name="data_date"]').value;
-    const dataNotes = card.querySelector('[name="data_notes"]').value;
+    const dataDate = card.querySelector('[name="data_date"]')?.value;
+    const dataNotes = card.querySelector('[name="data_notes"]')?.value || '';
+
+    if (!dataDate) {
+      await rcAlert('Validation', 'Please enter a date');
+      return;
+    }
     
     // Calculate value based on measurement type
     let calculatedValue = 0;
@@ -2685,8 +2691,8 @@
     
     try {
       if (goal.measurement_type === 'Accuracy') {
-        const correct = parseFloat(card.querySelector('[name="correct"]').value);
-        const total = parseFloat(card.querySelector('[name="total"]').value);
+        const correct = parseFloat(card.querySelector('[name="correct"]')?.value);
+        const total = parseFloat(card.querySelector('[name="total"]')?.value);
         if (isNaN(correct) || isNaN(total) || total === 0) {
           await rcAlert('Validation', 'Please enter valid correct and total values');
           return;
@@ -2694,8 +2700,8 @@
         calculatedValue = (correct / total) * 100;
         notes = `${correct}/${total} = ${calculatedValue.toFixed(1)}%${notes ? '. ' + notes : ''}`;
       } else if (goal.measurement_type === 'Frequency') {
-        const count = parseFloat(card.querySelector('[name="count"]').value);
-        const timePeriod = card.querySelector('[name="time_period"]').value;
+        const count = parseFloat(card.querySelector('[name="count"]')?.value);
+        const timePeriod = card.querySelector('[name="time_period"]')?.value || '';
         if (isNaN(count)) {
           await rcAlert('Validation', 'Please enter a valid count');
           return;
@@ -2703,13 +2709,13 @@
         calculatedValue = count;
         notes = `${count} (${timePeriod})${notes ? '. ' + notes : ''}`;
       } else if (goal.measurement_type === 'Duration') {
-        const minutes = parseFloat(card.querySelector('[name="minutes"]').value) || 0;
-        const seconds = parseFloat(card.querySelector('[name="seconds"]').value) || 0;
+        const minutes = parseFloat(card.querySelector('[name="minutes"]')?.value) || 0;
+        const seconds = parseFloat(card.querySelector('[name="seconds"]')?.value) || 0;
         calculatedValue = minutes + (seconds / 60);
         notes = `${minutes}m ${seconds}s${notes ? '. ' + notes : ''}`;
       } else if (goal.measurement_type === 'Rate') {
-        const count = parseFloat(card.querySelector('[name="count"]').value);
-        const minutes = parseFloat(card.querySelector('[name="minutes"]').value);
+        const count = parseFloat(card.querySelector('[name="count"]')?.value);
+        const minutes = parseFloat(card.querySelector('[name="minutes"]')?.value);
         if (isNaN(count) || isNaN(minutes) || minutes === 0) {
           await rcAlert('Validation', 'Please enter valid count and minutes values');
           return;
@@ -2776,7 +2782,7 @@
           calculatedValue = value;
         }
       } else {
-        const value = parseFloat(card.querySelector('[name="value"]').value);
+        const value = parseFloat(card.querySelector('[name="value"]')?.value);
         if (isNaN(value)) {
           await rcAlert('Validation', 'Please enter a valid value');
           return;
