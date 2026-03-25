@@ -2195,6 +2195,21 @@
         submission.feedback = feedback;
       }
 
+      // Trigger goal progress updates when all items have been scored.
+      // Only fire when every constructed item has earned_points recorded; auto-scored
+      // items are always scored, so this guards against partial grading states.
+      const allConstructedScored = constructedItems.length === 0 || constructedItems.every(item => {
+        const answer = answers.find(a => a.item_id === item.id);
+        return answer && answer.earned_points != null;
+      });
+      if (allConstructedScored) {
+        try {
+          await triggerGoalProgressUpdates(submission, items, answers);
+        } catch (gpErr) {
+          console.warn('[tc-review] Goal progress update failed (non-fatal):', gpErr);
+        }
+      }
+
       showToast('Grade saved!', '#22c55e', '#0b1220');
       expandedSubmissions.add(submissionId);
       await render();
