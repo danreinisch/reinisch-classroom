@@ -1646,7 +1646,7 @@
     const submitButtonHtml = isReadOnly ? `
       <div class="st-submitted-message">${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}</div>
     ` : (isLastDay ? `
-      <button class="st-submit-btn" id="submitWritingBtn">Submit Response</button>
+      <button class="st-submit-btn" id="submitWritingBtn">Submit Assignment</button>
     ` : '');
 
     const bottomDayTabsHtml = (!isLastDay && days.length > 1) ? `
@@ -2103,21 +2103,45 @@
         // Remove any previous error message
         const errorMsg = container.querySelector('.st-writing-error');
         if (errorMsg) errorMsg.remove();
-        
+
+        if (!await rcConfirm('Submit Assignment', "Are you sure? You won't be able to change your response.", 'Submit', { danger: true })) {
+          return;
+        }
+
         this.disabled = true;
         this.textContent = 'Submitting...';
         
         try {
-          await saveWritingResponseToServer(instance, response);
-          
-          // Feature 1: Clear saved answers after successful submit
+          const submitResult = await saveWritingResponseToServer(instance, response);
+
+          // Clear saved answers after successful submit
           clearSavedAnswers(instance.id);
-          
+
+          // Future-proof: check retry eligibility (mirrors MCQ flow)
+          // Writing prompts are typically teacher-scored, so score_total
+          // will usually be null here, but this handles the case where
+          // auto-scoring metadata is returned.
+          const scoreTotal = submitResult?.score_total;
+          const hasAutoScore = scoreTotal !== null && scoreTotal !== undefined;
+          if (hasAutoScore && scoreTotal <= 60 && isRetryFeatureEnabled()) {
+            const wantRetry = await rcConfirm(
+              'Try Again?',
+              `You scored ${Math.round(scoreTotal)}%. Would you like to retry?`,
+              'Retry'
+            );
+            if (wantRetry) {
+              assignmentViewerState.isRetryMode = true;
+              renderWritingPromptDay(container, dayData, instance);
+              showToast('Retry mode active — you can edit your response.', 'info');
+              return;
+            }
+          }
+
           this.textContent = '✓ Submitted!';
           setTimeout(() => {
-            this.textContent = 'Submit Response';
-            this.disabled = false;
-          }, 2000);
+            assignmentViewerState.isReadOnly = true;
+            renderWritingPromptDay(container, dayData, instance);
+          }, 1000);
         } catch (err) {
           console.error(LOG_PREFIX, 'Failed to submit writing response:', err);
           // Show inline error instead of alert
@@ -2129,7 +2153,7 @@
             this.parentElement.insertBefore(errorMsg, this.nextSibling);
           }
           errorMsg.textContent = 'Failed to submit response. Please try again.';
-          this.textContent = 'Submit Response';
+          this.textContent = 'Submit Assignment';
           this.disabled = false;
         }
       });
@@ -2251,8 +2275,9 @@
     if (!response.ok) {
       throw new Error(`Submit failed: ${response.status}`);
     }
-    
+    const data = await response.json();
     console.log(LOG_PREFIX, 'Writing response submitted successfully');
+    return data;
   }
   
   /**
