@@ -1201,11 +1201,11 @@
         </div>
         <div class="st-form-group">
           <label class="st-form-label">IEP Due Date</label>
-          <input type="date" id="edit-iep-due-${escapeHtml(student.code)}" class="st-form-input" value="${student.iep_due || ''}" />
+          <input type="date" id="edit-iep-due-${escapeHtml(student.code)}" class="st-form-input" value="${escapeHtml(student.iep_due || '')}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Eval Due Date</label>
-          <input type="date" id="edit-eval-due-${escapeHtml(student.code)}" class="st-form-input" value="${student.eval_due || ''}" />
+          <input type="date" id="edit-eval-due-${escapeHtml(student.code)}" class="st-form-input" value="${escapeHtml(student.eval_due || '')}" />
         </div>
         <button class="st-btn st-btn-primary" id="save-student-info-btn-${escapeHtml(student.code)}">Save Changes</button>
       </div>
@@ -3498,8 +3498,8 @@
           
           <h3 style="font-size:16px;margin:16px 0 8px 0;">DATE CHANGES:</h3>
           <div style="font-size:14px;margin-bottom:16px;">
-            <div>IEP Due: ${student.iep_due ? formatDate(student.iep_due) : 'Not set'} → ${formatDate(iepWizardData.iepDue)}</div>
-            <div>Eval Due: ${student.eval_due ? formatDate(student.eval_due) : 'Not set'} → ${iepWizardData.evalDue ? formatDate(iepWizardData.evalDue) : 'Not set'}</div>
+            <div>IEP Due: ${student.iep_due ? escapeHtml(formatDate(student.iep_due)) : 'Not set'} → ${escapeHtml(formatDate(iepWizardData.iepDue))}</div>
+            <div>Eval Due: ${student.eval_due ? escapeHtml(formatDate(student.eval_due)) : 'Not set'} → ${iepWizardData.evalDue ? escapeHtml(formatDate(iepWizardData.evalDue)) : 'Not set'}</div>
           </div>
           
           ${goalsToArchive.length > 0 ? `
@@ -4223,10 +4223,10 @@
     const newStudentsHtml = newStudents.map(student => {
       const dateParts = [];
       if (student.iep_due) {
-        dateParts.push(`IEP: ${formatDate(student.iep_due)}`);
+        dateParts.push(`IEP: ${escapeHtml(formatDate(student.iep_due))}`);
       }
       if (student.eval_due) {
-        dateParts.push(`Eval: ${formatDate(student.eval_due)}`);
+        dateParts.push(`Eval: ${escapeHtml(formatDate(student.eval_due))}`);
       }
       const dateText = dateParts.length > 0 ? `📅 ${dateParts.join(' · ')}` : '';
       
