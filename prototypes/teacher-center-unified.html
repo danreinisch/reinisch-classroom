@@ -3701,9 +3701,13 @@
      */
     function detectParagraphCountFromGoals(goals) {
       const WRITING_AREAS = ['written expression', 'writing', 'written language'];
+      const WORD_TO_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+      const WORD_PATTERN = '(?:one|two|three|four|five)';
       const patterns = [
         /writ(?:e|ing)\s+(\d+)\s+paragraph/i,
+        new RegExp('writ(?:e|ing)\\s+(' + WORD_PATTERN + ')\\s+paragraph', 'i'),
         /(\d+)\s+paragraph/i,
+        new RegExp('(' + WORD_PATTERN + ')\\s+paragraph', 'i'),
         /multi[- ]?paragraph/i,
         /multiple\s+paragraph/i,
       ];
@@ -3716,8 +3720,11 @@
           const match = text.match(pattern);
           if (match) {
             if (match[1]) {
-              const count = parseInt(match[1], 10);
+              const raw = match[1].toLowerCase();
+              const count = WORD_TO_NUM[raw] ?? parseInt(raw, 10);
               if (count >= 2 && count <= 5) return count;
+              // Out-of-range number — skip this pattern, try the next one
+              continue;
             }
             // "multi-paragraph" or "multiple paragraphs" without a number defaults to 2
             return 2;
