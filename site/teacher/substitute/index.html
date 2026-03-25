@@ -93,6 +93,13 @@
     .sub-btn.danger:hover {
       background: rgba(239, 68, 68, 0.22);
     }
+    .sub-btn.sub-btn-publish {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+    .sub-btn.sub-btn-publish:hover {
+      background: rgba(34, 197, 94, 0.22);
+    }
     .sub-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -226,23 +233,6 @@
     }
     .sub-date-row .sub-field.checkbox-field {
       padding-bottom: 10px;
-    }
-
-    /* ── Publish row ─────────────────────────────────────────────────── */
-    .sub-publish-row {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-top: 4px;
-      padding-top: 10px;
-      border-top: 1px solid var(--rc-glass-border);
-    }
-    .sub-publish-row .sub-field {
-      margin-bottom: 0;
-    }
-    .sub-publish-row .sub-field:not(.checkbox-field) {
-      min-width: 200px;
     }
 
     /* ── Per-period rows ─────────────────────────────────────────────── */
@@ -534,6 +524,8 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Preview
               </button>
               <button class="sub-btn primary" type="submit" form="subPlanForm" id="btnSavePlan">Save Plan</button>
+              <button class="sub-btn sub-btn-publish" type="button" id="btnPublishPlan" style="display:none">Publish</button>
+              <button class="sub-btn sub-btn-publish" type="button" id="btnUnpublishPlan" style="display:none">Unpublish</button>
               <button class="sub-btn" type="button" id="btnClearForm">Clear Form</button>
               <button class="sub-btn" type="button" id="btnCancelEdit" style="display:none">Cancel Edit</button>
             </div>
@@ -606,22 +598,6 @@
             <!-- Per-Period fields -->
             <div id="subPeriodFields" style="display:none">
               <div id="subPeriodRows"></div>
-            </div>
-
-            <!-- Publish section -->
-            <div class="sub-publish-row">
-              <div class="sub-field checkbox-field">
-                <input type="checkbox" id="subPublished" name="subPublished" />
-                <label for="subPublished">Published</label>
-              </div>
-              <div class="sub-field checkbox-field">
-                <input type="checkbox" id="subSchedulePublish" name="subSchedulePublish" />
-                <label for="subSchedulePublish">Schedule Publish</label>
-              </div>
-              <div class="sub-field" id="subSchedulePublishTimeWrap" style="display:none">
-                <label for="subSchedulePublishTime">Publish At</label>
-                <input type="datetime-local" id="subSchedulePublishTime" name="subSchedulePublishTime" />
-              </div>
             </div>
 
             <div id="subMsg" style="display:none"></div>

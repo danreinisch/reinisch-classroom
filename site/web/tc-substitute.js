@@ -326,11 +326,6 @@
     if (wrap) wrap.style.display = this.checked ? "" : "none";
   });
 
-  $("subSchedulePublish")?.addEventListener("change", function () {
-    const wrap = $("subSchedulePublishTimeWrap");
-    if (wrap) wrap.style.display = this.checked ? "" : "none";
-  });
-
   // ─── Plans list ─────────────────────────────────────────────────────────────
 
   async function loadPlans() {
@@ -406,7 +401,7 @@
       renderPeriodRows(periods);
     }
 
-    const pub = $("subPublished"); if (pub) pub.checked = !!plan.published;
+    updatePublishButtons(plan.published);
     updateDayHint();
   }
 
@@ -417,10 +412,16 @@
     if (form) form.reset();
     const d = $("subDate"); if (d) d.value = getTodayStr();
     const endWrap = $("subEndDateWrap"); if (endWrap) endWrap.style.display = "none";
-    const schedWrap = $("subSchedulePublishTimeWrap"); if (schedWrap) schedWrap.style.display = "none";
     setFormTitle("create");
     setMode("subject");
     showMsg("", "");
+  }
+
+  function updatePublishButtons(isPublished) {
+    const pub = $("btnPublishPlan");
+    const unpub = $("btnUnpublishPlan");
+    if (pub) pub.style.display = (editingDate && !isPublished) ? "" : "none";
+    if (unpub) unpub.style.display = (editingDate && !!isPublished) ? "" : "none";
   }
 
   function setFormTitle(mode) {
@@ -428,6 +429,7 @@
     const title = $("subFormTitle"); if (title) title.textContent = isEdit ? "Edit Plan" : "Create Plan";
     const save = $("btnSavePlan"); if (save) save.textContent = isEdit ? "Update Plan" : "Save Plan";
     const cancel = $("btnCancelEdit"); if (cancel) cancel.style.display = isEdit ? "" : "none";
+    if (!isEdit) updatePublishButtons(false);
   }
 
   function loadPlanForDate(dateStr) {
@@ -466,7 +468,7 @@
     const plan = {
       plan_date: planDate,
       plan_mode: mode,
-      published: !!$("subPublished")?.checked,
+      published: false,
       created_by: "teacher"
     };
     if (mode === "subject") {
@@ -488,7 +490,7 @@
     const plan = {
       plan_date: planDate,
       plan_mode: tmpl.plan_mode || currentMode,
-      published: !!$("subPublished")?.checked,
+      published: false,
       created_by: "teacher"
     };
     if (plan.plan_mode === "subject" && tmpl.subject_data) {
@@ -518,9 +520,12 @@
       } else {
         showMsg("Saving…", "");
         await saveSinglePlan(planDate, currentMode);
-        showMsg("Plan saved.", "ok");
-        clearForm();
         await loadPlans();
+        editingDate = planDate;
+        editingPlanId = (allPlans.find(p => p.plan_date === planDate) || {}).id || null;
+        setFormTitle("edit");
+        updatePublishButtons(false);
+        showMsg("Plan saved as draft. Click Publish when ready.", "ok");
       }
     } catch (err) {
       console.error("[tc-substitute] Save failed:", err);
@@ -598,6 +603,47 @@
     showMsg("", "");
     $("subPlanForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  async function publishPlan() {
+    if (!editingDate) { showMsg("Save the plan first before publishing.", "err"); return; }
+    const plan = allPlans.find(p => p.plan_date === editingDate);
+    if (!plan) { showMsg("Plan not found. Save it first.", "err"); return; }
+    const btn = $("btnPublishPlan");
+    if (btn) btn.disabled = true;
+    try {
+      await upsertSubPlan({ ...plan, published: true });
+      await loadPlans();
+      showMsg("Plan published! It's now visible on the substitute page.", "ok");
+      updatePublishButtons(true);
+    } catch (err) {
+      console.error("[tc-substitute] Publish failed:", err);
+      showMsg("Error publishing plan: " + err.message, "err");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function unpublishPlan() {
+    if (!editingDate) return;
+    const plan = allPlans.find(p => p.plan_date === editingDate);
+    if (!plan) return;
+    const btn = $("btnUnpublishPlan");
+    if (btn) btn.disabled = true;
+    try {
+      await upsertSubPlan({ ...plan, published: false });
+      await loadPlans();
+      showMsg("Plan unpublished.", "ok");
+      updatePublishButtons(false);
+    } catch (err) {
+      console.error("[tc-substitute] Unpublish failed:", err);
+      showMsg("Error unpublishing plan: " + err.message, "err");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  $("btnPublishPlan")?.addEventListener("click", publishPlan);
+  $("btnUnpublishPlan")?.addEventListener("click", unpublishPlan);
 
   window.tcSubToggle = async function (planDate, currentPublished) {
     const plan = allPlans.find(p => p.plan_date === planDate);
