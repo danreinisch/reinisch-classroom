@@ -135,9 +135,43 @@
   let lastInClassPeriodLabel = null; // tracks period transitions for missed-popup detection
   const missedPeriods = [];          // [{key, date, periodLabel, goals}]
   let notifIconEl = null;            // notification icon DOM element
+  let missedPopupAutoCloseTimer = null; // auto-close timer for missed-period popups (Issue 5)
+  let missedPopupDoneObs = null;        // MutationObserver watching done button (Issue 5)
 
   // ─── localStorage Queue ───────────────────────────────────────────────────
   const QUEUE_KEY = 'rc_obs_pending';
+
+  // ─── sessionStorage — Missed Periods Persistence ─────────────────────────
+  const MISSED_PERIODS_KEY = 'rc_obs_missed_periods';
+
+  function readMissedPeriodsFromStorage() {
+    try {
+      return JSON.parse(sessionStorage.getItem(MISSED_PERIODS_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function writeMissedPeriodsToStorage() {
+    try {
+      sessionStorage.setItem(MISSED_PERIODS_KEY, JSON.stringify(missedPeriods));
+    } catch (err) {
+      console.warn('[tc-observation] sessionStorage write failed:', err.message);
+    }
+  }
+
+  // ─── Time Helper ──────────────────────────────────────────────────────────
+  // Converts an "HH:MM" time string to total seconds since midnight.
+  // Returns 0 for any invalid input so callers can safely guard with !endSecs.
+  function parseTimeToSeconds(hhmm) {
+    if (!hhmm) return 0;
+    const parts = String(hhmm).split(':');
+    if (parts.length !== 2) return 0;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return 0;
+    return h * 3600 + m * 60;
+  }
 
   function readQueue() {
     try {
@@ -1141,7 +1175,17 @@
     console.log('[tc-observation] closePopup: popup dismissed for period —', activePopupPeriodLabel || '(unknown)');
 
     const closedPeriodLabel = activePopupPeriodLabel;
-    activePopupPeriodLabel = null;
+
+    // Issue 5: Cancel any pending auto-close timer and disconnect the done-button observer
+    // so they don't fire after the popup has already been closed manually.
+    if (missedPopupAutoCloseTimer) {
+      clearTimeout(missedPopupAutoCloseTimer);
+      missedPopupAutoCloseTimer = null;
+    }
+    if (missedPopupDoneObs) {
+      missedPopupDoneObs.disconnect();
+      missedPopupDoneObs = null;
+    }
 
     if (countdownInterval) {
       clearInterval(countdownInterval);
@@ -1152,26 +1196,48 @@
       activeOverlay = null;
     }
 
-    // After closing, check whether any goals for this period remain unrecorded
+    // Issue 1: After removing the overlay, check if the closed period is a missed-period
+    // entry. If so, remove it from the missed list and update the badge. This enables
+    // cycling — the teacher opens one missed period, closes it (recorded or not), and the
+    // badge decrements so the next click shows the next oldest missed period.
     if (closedPeriodLabel) {
       const date = todayStr();
-      const unrecordedGoals = allGoals.filter(g => {
-        const cfg = g.observation_config;
-        return Array.isArray(cfg?.class_periods) &&
-               cfg.class_periods.includes(closedPeriodLabel) &&
-               !isAlreadyRecorded(g.student_code, g.code, date, closedPeriodLabel);
-      });
-      if (unrecordedGoals.length > 0) {
+      const missedKey = `${date}|${closedPeriodLabel}`;
+      const wasMissed = missedPeriods.some(m => m.key === missedKey);
+
+      if (wasMissed) {
+        // Missed-period popup was closed — remove it from the notification list.
+        // The goals data has already been saved (or is still pending); removing from the
+        // list just dismisses the notification so the teacher can cycle to the next one.
         console.log(
-          '[tc-observation] closePopup:', unrecordedGoals.length,
-          'goals still unrecorded for', closedPeriodLabel, '— adding to missed list'
+          '[tc-observation] closePopup: removing missed period', closedPeriodLabel,
+          'from notification list'
         );
-        addMissedPeriod(date, closedPeriodLabel, unrecordedGoals);
+        removeMissedPeriod(missedKey);
       } else {
-        // All recorded — remove from missed list in case it was there
-        removeMissedPeriod(`${date}|${closedPeriodLabel}`);
+        // Regular (live) popup close — check if any goals are still unrecorded and add
+        // them to the missed list so the teacher can come back via the notification icon.
+        const unrecordedGoals = allGoals.filter(g => {
+          const cfg = g.observation_config;
+          return Array.isArray(cfg?.class_periods) &&
+                 cfg.class_periods.includes(closedPeriodLabel) &&
+                 !isAlreadyRecorded(g.student_code, g.code, date, closedPeriodLabel);
+        });
+        if (unrecordedGoals.length > 0) {
+          console.log(
+            '[tc-observation] closePopup:', unrecordedGoals.length,
+            'goals still unrecorded for', closedPeriodLabel, '— adding to missed list'
+          );
+          addMissedPeriod(date, closedPeriodLabel, unrecordedGoals);
+        } else {
+          // All recorded — remove from missed list in case it was there
+          removeMissedPeriod(missedKey);
+        }
       }
     }
+
+    // Issue 1: Reset activePopupPeriodLabel at the end (after all missed-period logic)
+    activePopupPeriodLabel = null;
   }
 
   // ─── Timer Engine ─────────────────────────────────────────────────────────
@@ -1241,6 +1307,7 @@
     } else {
       missedPeriods[existing].goals = goals; // refresh with current unrecorded list
     }
+    writeMissedPeriodsToStorage(); // Issue 2: persist across navigations
     updateNotifBadge();
   }
 
@@ -1248,6 +1315,7 @@
     const idx = missedPeriods.findIndex(m => m.key === key);
     if (idx >= 0) {
       missedPeriods.splice(idx, 1);
+      writeMissedPeriodsToStorage(); // Issue 2: persist across navigations
       updateNotifBadge();
     }
   }
@@ -1305,6 +1373,45 @@
       titleEl.appendChild(endedSpan);
     }
     if (countdownEl) countdownEl.style.display = 'none';
+
+    // Issue 5: Auto-close this missed-period popup when all goals are recorded.
+    // Watch the "Done" button — when it becomes visible, all goals are recorded.
+    // Show the existing "All goals recorded" indicator (already in the footer) and
+    // automatically close after ~1.5 s so the badge decrements and the teacher can
+    // cycle to the next missed period.
+    //
+    // buildPopupContent() controls the done button exclusively via style.display
+    // ('none' = hidden, '' = visible), so checking style.display !== 'none' is correct.
+    const doneBtn = overlay.querySelector('.obs-done-btn');
+    if (doneBtn) {
+      const scheduleAutoClose = () => {
+        if (missedPopupAutoCloseTimer) return; // Already scheduled
+        console.log('[tc-observation] showMissedPopup: all goals recorded — auto-closing in 1.5s');
+        missedPopupAutoCloseTimer = setTimeout(() => {
+          missedPopupAutoCloseTimer = null;
+          closePopup();
+        }, 1500);
+      };
+
+      // Check immediately in case all goals were already recorded before the popup opened
+      if (doneBtn.style.display !== 'none') {
+        scheduleAutoClose();
+      } else {
+        // Watch for the done button becoming visible (triggered by updateCompletion).
+        // The observer reference is stored so closePopup() can disconnect it if the
+        // teacher manually dismisses before all goals are recorded.
+        missedPopupDoneObs = new MutationObserver(() => {
+          if (doneBtn.style.display !== 'none') {
+            if (missedPopupDoneObs) {
+              missedPopupDoneObs.disconnect();
+              missedPopupDoneObs = null;
+            }
+            scheduleAutoClose();
+          }
+        });
+        missedPopupDoneObs.observe(doneBtn, { attributes: true, attributeFilter: ['style'] });
+      }
+    }
   }
 
   // ─── Notification Icon ────────────────────────────────────────────────────
@@ -1349,12 +1456,83 @@
     }
   }
 
+  // ─── Missed Period Init Scan ──────────────────────────────────────────────
+  // Issue 4: On init, scan today's schedule for periods that have already ended
+  // but have unrecorded observation goals. This handles the case where the teacher
+  // was away for an entire period — the notification icon will appear immediately.
+
+  function scanForMissedPeriodsOnInit() {
+    if (!schedule || !allGoals.length) {
+      console.log('[tc-observation] scanMissed: skipped — no schedule or goals loaded');
+      return;
+    }
+
+    const { periods, schoolDays } = schedule;
+    if (!Array.isArray(periods) || periods.length === 0) return;
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    if (Array.isArray(schoolDays) && !schoolDays.includes(dayOfWeek)) {
+      console.log('[tc-observation] scanMissed: not a school day — skipping');
+      return;
+    }
+
+    const nowSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const date = todayStr();
+    let foundCount = 0;
+
+    for (const period of periods) {
+      const endSecs = parseTimeToSeconds(period.end);
+      if (!endSecs || nowSecs < endSecs) continue; // Period hasn't ended yet
+
+      const key = `${date}|${period.label}`;
+      if (missedPeriods.some(m => m.key === key)) continue; // Already in list (from sessionStorage)
+
+      const unrecordedGoals = allGoals.filter(g => {
+        const cfg = g.observation_config;
+        return Array.isArray(cfg?.class_periods) &&
+               cfg.class_periods.includes(period.label) &&
+               !isAlreadyRecorded(g.student_code, g.code, date, period.label);
+      });
+
+      if (unrecordedGoals.length > 0) {
+        console.log(
+          '[tc-observation] scanMissed: period', period.label,
+          'ended with', unrecordedGoals.length, 'unrecorded goals — adding to missed list'
+        );
+        addMissedPeriod(date, period.label, unrecordedGoals);
+        foundCount++;
+      }
+    }
+
+    if (foundCount > 0) {
+      console.log('[tc-observation] scanMissed: added', foundCount, 'missed period(s) to notification list');
+    } else {
+      console.log('[tc-observation] scanMissed: no new missed periods found');
+    }
+  }
+
   // ─── Init ─────────────────────────────────────────────────────────────────
   await loadData();
   await syncQueue();
 
   // Inject the notification icon into the topbar
   injectNotifIcon();
+
+  // Issue 2: Hydrate missed periods from sessionStorage so the notification icon
+  // survives full page navigations within the same browser session.
+  const _storedMissed = readMissedPeriodsFromStorage();
+  if (_storedMissed.length > 0) {
+    console.log('[tc-observation] Init: restored', _storedMissed.length, 'missed period(s) from sessionStorage');
+    for (const entry of _storedMissed) {
+      missedPeriods.push(entry);
+    }
+    updateNotifBadge(); // Show the badge immediately for restored entries
+  }
+
+  // Issue 4: Scan for periods that already ended today with unrecorded goals.
+  // Must run after data is loaded and sessionStorage is hydrated (to avoid duplicates).
+  scanForMissedPeriodsOnInit();
 
   // Start timer loop (check every 30 seconds)
   const _checkInterval = setInterval(checkPeriod, 30_000);
