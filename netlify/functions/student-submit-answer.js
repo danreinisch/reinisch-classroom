@@ -288,6 +288,46 @@ exports.handler = async (event) => {
         if (itemsResponse.ok) {
           const items = await itemsResponse.json();
           if (items && items.length > 0) {
+            // Enrich items with goal_codes from assignment_item_mappings.
+            // Since PR #703 the authoritative goal_codes live in assignment_item_mappings;
+            // the assignment_items.goal_codes column is often [] or null for newer assignments.
+            try {
+              const itemIds = items.map(i => i.id).filter(id => id != null).join(',');
+              if (itemIds) {
+                const mappingsUrl = `${SUPABASE_URL}/rest/v1/assignment_item_mappings?item_id=in.(${itemIds})&select=item_id,goal_codes,dese_codes`;
+                const mappingsResponse = await fetch(mappingsUrl, {
+                  method: 'GET',
+                  headers: {
+                    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                if (mappingsResponse.ok) {
+                  const mappings = await mappingsResponse.json();
+                  if (Array.isArray(mappings)) {
+                    const mappingsByItemId = {};
+                    mappings.forEach(m => { mappingsByItemId[m.item_id] = m; });
+                    items.forEach(item => {
+                      const mapping = mappingsByItemId[item.id];
+                      if (mapping) {
+                        if (!item.goal_codes || item.goal_codes.length === 0) {
+                          item.goal_codes = mapping.goal_codes || [];
+                        }
+                        if (!item.dese_codes || item.dese_codes.length === 0) {
+                          item.dese_codes = mapping.dese_codes || [];
+                        }
+                      }
+                    });
+                  }
+                } else {
+                  console.warn(`[student-submit-answer] [${requestId}] assignment_item_mappings lookup failed: ${mappingsResponse.status}`);
+                }
+              }
+            } catch (mappingsErr) {
+              console.warn(`[student-submit-answer] [${requestId}] Failed to enrich items with mappings (non-fatal):`, mappingsErr);
+            }
+
             // Build item_ref lookup map
             const itemMap = {};
             for (const item of items) {

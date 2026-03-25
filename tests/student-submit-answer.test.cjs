@@ -124,6 +124,13 @@ global.fetch = async (url, options) => {
     return h ? h(urlStr, options) : makeOkResponse([{}]);
   }
 
+  // assignment_item_mappings must be checked BEFORE assignment_items because
+  // '/assignment_item_mappings' contains the substring '/assignment_items'.
+  if (urlStr.includes('/assignment_item_mappings')) {
+    const h = fetchHandlers.itemMappings;
+    return h ? h(urlStr, options) : makeOkResponse([]);
+  }
+
   if (urlStr.includes('/assignment_items')) {
     const h = fetchHandlers.items;
     return h ? h(urlStr, options) : makeOkResponse([]);
@@ -763,6 +770,108 @@ console.log('Running student-submit-answer function unit tests...\n');
     const response = await handler(event);
     assert.strictEqual(response.statusCode, 200, 'Submission should succeed when goal not found');
     assert.strictEqual(capturedGoalProgressPosts.length, 0, 'No goal_progress inserted when goal not found');
+  })();
+
+  // ── Group: assignment_item_mappings enrichment ────────────────────────────
+  console.log('\n--- assignment_item_mappings Enrichment ---');
+
+  await test('goal_codes from mappings (empty on items) → goal_progress inserted', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Items have goal_codes: [] (pre-PR #703 style — authoritative codes in mappings)
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 2, meta: { correct: 'A' }, goal_codes: [] },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 2, meta: { correct: 'B' }, goal_codes: [] }
+    ]);
+    // Mappings carry the real goal_codes
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: [] },
+      { item_id: 'item-2', goal_codes: ['MATH.1'], dese_codes: [] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-uuid-1', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'B' }, // both correct
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should be inserted when goal_codes come from mappings');
+    assert.strictEqual(capturedGoalProgressPosts[0].value, 100, 'value should be 100% when all correct');
+    assert.strictEqual(capturedGoalProgressPosts[0].collected_by, 'auto');
+  })();
+
+  await test('goal_codes on items take precedence over mappings', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Item already has a goal_code
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['READ.1'] }
+    ]);
+    // Mapping has a different code — should NOT override the existing one
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: [] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-read', code: 'READ.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should use existing item goal_code');
+    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-read', 'READ.1 (from items) should take precedence over MATH.1 (from mappings)');
+  })();
+
+  await test('mappings lookup failure is non-fatal — items without goal_codes still produce no progress', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Items have no goal_codes, mappings call fails
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: [] }
+    ]);
+    fetchHandlers.itemMappings = () => makeOkResponse({ error: 'DB error' }, 500);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200, 'Submission should succeed even when mappings lookup fails');
+    assert.strictEqual(capturedGoalProgressPosts.length, 0, 'No goal_progress when enrichment fails and items have no goal_codes');
+  })();
+
+  await test('partial mapping coverage — only mapped items contribute to rollup', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 2, meta: { correct: 'A' }, goal_codes: [] },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 2, meta: { correct: 'B' }, goal_codes: [] }
+    ]);
+    // Only item-1 is in mappings
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: [] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-math', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'X' }, // q1 correct, q2 wrong
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1);
+    // Only item-1 (2 pts earned out of 2 pts) contributes to MATH.1 rollup
+    assert.strictEqual(capturedGoalProgressPosts[0].value, 100, 'value should be 100% based on item-1 only');
   })();
 
   console.log('\n✓ All student-submit-answer tests passed!');
