@@ -272,6 +272,20 @@
 <body>
 <script src="/web/rc-modal.js"></script>
 <script>
+  // Graceful fallback: if rc-modal.js failed to load (ad blocker, offline, etc.),
+  // define rcConfirm/rcAlert using browser-native dialogs so submissions still work.
+  if (typeof rcConfirm === 'undefined') {
+    window.rcConfirm = function(title, message, _confirmLabel, _options) {
+      return Promise.resolve(confirm(message));
+    };
+  }
+  if (typeof rcAlert === 'undefined') {
+    window.rcAlert = function(title, message) {
+      alert(message);
+      return Promise.resolve();
+    };
+  }
+
   // ── Supabase config ──────────────────────────────────────────────
   const SUPABASE_URL = 'https://yrcvsotxnelnlcagblbe.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyY3Zzb3R4bmVsbmxjYWdibGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5ODc4NjgsImV4cCI6MjA3NDU2Mzg2OH0.BzlqqvrPTddM5K_dbxCkcNlHgqEIEiOaTX6fkFKimlI';
