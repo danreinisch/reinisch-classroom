@@ -68,7 +68,7 @@
     template: localStorage.getItem('rc_report_template') || 'iep-progress' 
   };
   let tab2State = { studentCode: null };
-  let tab3State = { classFilter: "All Classes", compareQuarters: false };
+  let tab3State = { classFilter: "All Classes", compareQuarters: false, typeFilter: "All Types" };
   let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
   let tab5State = { quarter: getCurrentQuarter() };
   let tab6State = {
@@ -292,6 +292,39 @@
     if (score >= 80) return "rgba(34,197,94,0.8)";
     if (score >= 60) return "rgba(234,179,8,0.8)";
     return "rgba(239,68,68,0.8)";
+  }
+
+  /**
+   * Infer a display label for an assignment's type.
+   * - 'html' + meta.questions  → 'HTML'
+   * - 'html' + meta.days       → 'TXT'
+   * - 'html' (neither)         → 'File'
+   * - 'link' | 'google_form'   → 'Link'
+   * - null / undefined         → null (caller renders '—')
+   * @param {Object} assignment
+   * @returns {string|null}
+   */
+  function getAssignmentTypeLabel(assignment) {
+    const t = assignment?.type;
+    if (t === 'html') {
+      if (assignment.meta?.questions) return 'HTML';
+      if (assignment.meta?.days) return 'TXT';
+      return 'File';
+    }
+    if (t === 'link' || t === 'google_form') return 'Link';
+    return null;
+  }
+
+  /**
+   * Return a colored badge <span> for the assignment type, or '—' if unknown.
+   * @param {Object} assignment
+   * @returns {string}
+   */
+  function getAssignmentTypeBadgeHtml(assignment) {
+    const label = getAssignmentTypeLabel(assignment);
+    if (!label) return '—';
+    const cls = label.toLowerCase(); // 'html' | 'txt' | 'link' | 'file'
+    return `<span class="rp-badge rp-badge-${cls}">${label}</span>`;
   }
 
   /**
@@ -2225,7 +2258,7 @@ ${narrative}`;
     `;
 
     // Assignment performance table
-    html += renderAssignmentPerformanceTable(tab3State.classFilter);
+    html += renderAssignmentPerformanceTable(tab3State.classFilter, tab3State.typeFilter);
 
     // Student performance table
     html += renderStudentPerformanceTable(filteredStudents, quarterRange);
@@ -2263,6 +2296,14 @@ ${narrative}`;
       });
     }
 
+    const typeFilterSelect = $("rpTypeFilter");
+    if (typeFilterSelect) {
+      typeFilterSelect.addEventListener("change", (e) => {
+        tab3State.typeFilter = e.target.value;
+        renderTab3();
+      });
+    }
+
     const btnExportCSV = $("btnExportClassCSV");
     if (btnExportCSV) {
       btnExportCSV.addEventListener("click", () => exportClassPerformanceCSV());
@@ -2280,15 +2321,40 @@ ${narrative}`;
   /**
    * Render assignment performance table
    */
-  function renderAssignmentPerformanceTable(classFilter) {
+  function renderAssignmentPerformanceTable(classFilter, typeFilter) {
     // Filter assignments by class if needed
     let relevantAssignments = assignmentsData;
     if (classFilter !== "All Classes") {
       relevantAssignments = assignmentsData.filter((a) => a.class_id === classFilter);
     }
 
-    if (relevantAssignments.length === 0) {
+    // Filter by type if specified
+    const activeTypeFilter = typeFilter || 'All Types';
+    if (activeTypeFilter !== 'All Types') {
+      relevantAssignments = relevantAssignments.filter(
+        (a) => getAssignmentTypeLabel(a) === activeTypeFilter
+      );
+    }
+
+    if (relevantAssignments.length === 0 && assignmentsData.length === 0) {
       return '<h3>Assignment Performance</h3><div class="rp-empty">No assignments found.</div>';
+    }
+
+    const typeFilterHtml = `
+      <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <label for="rpTypeFilter" style="font-size:13px; font-weight:600; color:#334155;">Filter by type:</label>
+        <select id="rpTypeFilter" style="padding:4px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; background:#fff; color:#111;">
+          <option value="All Types"${activeTypeFilter === 'All Types' ? ' selected' : ''}>All Types</option>
+          <option value="HTML"${activeTypeFilter === 'HTML' ? ' selected' : ''}>HTML</option>
+          <option value="TXT"${activeTypeFilter === 'TXT' ? ' selected' : ''}>TXT</option>
+          <option value="Link"${activeTypeFilter === 'Link' ? ' selected' : ''}>Link</option>
+          <option value="File"${activeTypeFilter === 'File' ? ' selected' : ''}>File</option>
+        </select>
+        ${relevantAssignments.length !== assignmentsData.length ? `<span style="font-size:12px; color:#64748b;">Showing ${relevantAssignments.length} of ${assignmentsData.length}</span>` : ''}
+      </div>`;
+
+    if (relevantAssignments.length === 0) {
+      return `<h3>Assignment Performance</h3>${typeFilterHtml}<div class="rp-empty">No assignments match the current filter.</div>`;
     }
 
     const assignmentStats = relevantAssignments
@@ -2308,6 +2374,7 @@ ${narrative}`;
 
         return {
           title: assignment.title || `Assignment ${assignment.id}`,
+          typeBadge: getAssignmentTypeBadgeHtml(assignment),
           avgScore,
           completionRate,
           highest,
@@ -2322,6 +2389,7 @@ ${narrative}`;
         (stat) => `
       <tr>
         <td>${escapeHtml(stat.title)}</td>
+        <td>${stat.typeBadge}</td>
         <td style="color: ${scoreColor(stat.avgScore)}">${stat.avgScore != null ? stat.avgScore.toFixed(1) + "%" : "—"}</td>
         <td>${stat.completionRate}%</td>
         <td>${stat.highest != null ? stat.highest + "%" : "—"}</td>
@@ -2334,12 +2402,14 @@ ${narrative}`;
 
     return `
       <h3>Assignment Performance</h3>
+      ${typeFilterHtml}
       <div class="rp-table-container">
         <table class="rp-table rp-sortable">
           <caption>Assignment Performance</caption>
           <thead>
             <tr>
               <th>Assignment Title</th>
+              <th>Type</th>
               <th>Avg Score</th>
               <th>Completion Rate</th>
               <th>Highest</th>
@@ -3881,6 +3951,11 @@ ${narrative}`;
     .rp-ev-stats-title { font-weight: 700; margin-bottom: 8px; color: #111; font-size: 13px; }
     .rp-ev-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 5px; font-size: 12px; color: #111; }
     .rp-empty { color: #888; font-style: italic; padding: 8px 0; font-size: 12px; }
+    .rp-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .rp-badge-html { background: #e3f2fd; color: #1565c0; }
+    .rp-badge-txt { background: #f3e5f5; color: #7b1fa2; }
+    .rp-badge-link { background: #e8f5e9; color: #2e7d32; }
+    .rp-badge-file { background: #fff3e0; color: #e65100; }
     .rp-ev-doc-footer { margin-top: 28px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 11px; color: #666; }
     @media print {
       @page { margin: 1.5cm 2cm; }
@@ -4184,7 +4259,7 @@ ${narrative}`;
         );
         const title = escapeHtml(assignment?.title || `Assignment ${inst.assignment_id}`);
         const category = escapeHtml(assignment?.category || '—');
-        const type = escapeHtml(assignment?.type || '—');
+        const typeBadge = getAssignmentTypeBadgeHtml(assignment);
         const score = submission?.score_total ?? submission?.score;
         const status = submission ? (score != null ? 'Graded' : 'Submitted') : 'Pending';
         const scoreDisplay = score != null ? `${score}%` : '—';
@@ -4195,7 +4270,7 @@ ${narrative}`;
           : '—';
         return `<tr>
           <td>${title}</td>
-          ${isParent ? '' : `<td>${type}</td>`}
+          ${isParent ? '' : `<td>${typeBadge}</td>`}
           <td>${category}</td>
           <td>${assignedDate}</td>
           <td>${escapeHtml(status)}</td>

@@ -415,3 +415,58 @@ When adding a new field to item metadata (e.g. a new question type or new annota
 
 Then copy `site/web/shared-build-items.js` byte-for-byte to `web/shared-build-items.js` to keep them in sync.
 
+---
+
+## Assignment Type Badge Display
+
+The `assignments.type` column (enum: `'html'`, `'google_form'`) is used in the UI to show teachers which format each assignment uses. Because the raw DB value doesn't always distinguish HTML manifests from plain-text (TXT) file uploads, the UI infers a _display label_ from the combination of `type` and `meta`.
+
+### Label inference logic
+
+| `assignment.type` | `assignment.meta` condition | Display label |
+|---|---|---|
+| `'html'` | `meta.questions` exists (HTML manifest) | **HTML** |
+| `'html'` | `meta.days` exists (TXT-based) | **TXT** |
+| `'html'` | neither `questions` nor `days` | **File** |
+| `'link'` or `'google_form'` | any | **Link** |
+| `null` / `undefined` | any | — |
+
+### Helper functions (tc-reporting.js)
+
+Two helper functions implement this logic in `site/web/tc-reporting.js`:
+
+```js
+// Returns the string label or null if the type is unknown
+function getAssignmentTypeLabel(assignment) { ... }
+
+// Returns the full badge <span> HTML, or '—' for unknown types
+function getAssignmentTypeBadgeHtml(assignment) { ... }
+```
+
+### Badge CSS classes
+
+Badge pills use `rp-badge` as the base class plus a variant class:
+
+```css
+.rp-badge         { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.rp-badge-html    { background: #e3f2fd; color: #1565c0; }
+.rp-badge-txt     { background: #f3e5f5; color: #7b1fa2; }
+.rp-badge-link    { background: #e8f5e9; color: #2e7d32; }
+.rp-badge-file    { background: #fff3e0; color: #e65100; }
+```
+
+These styles live in the `<style>` block of the evidence report template returned by `generateEvidenceReport()` in `tc-reporting.js`.
+
+### Surfaces that show the badge
+
+| Surface | File | Implementation |
+|---|---|---|
+| Assignment Performance table (Tab 3) | `tc-reporting.js` | `renderAssignmentPerformanceTable()` — "Type" column + filter dropdown |
+| Evidence ZIP assignments page | `tc-reporting.js` | `buildEvidenceAssignmentsHtml()` — replaces raw type string |
+| Library assignment cards | `tc-library.js` | `renderCurrentCard()` + `renderFinalizedEntry()` — type pill label |
+
+### Type filter dropdown (Tab 3)
+
+The Assignment Performance table has a "Filter by type" `<select>` dropdown (`id="rpTypeFilter"`) that filters `relevantAssignments` to show only the selected type. The current selection is stored in `tab3State.typeFilter` (default: `"All Types"`). Changing the dropdown calls `renderTab3()` to re-render the section.
+
+

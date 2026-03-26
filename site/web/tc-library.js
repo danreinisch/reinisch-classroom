@@ -799,6 +799,29 @@
     return card;
   }
 
+  // ── Assignment Type Helpers ───────────────────────────────────────────────────
+
+  /**
+   * Infer a display label for an assignment's type.
+   * - 'html' + meta.questions  → 'HTML'
+   * - 'html' + meta.days       → 'TXT'
+   * - 'html' (neither)         → 'File'
+   * - 'link' | 'google_form'   → 'Link'
+   * - null / undefined         → null
+   * @param {Object} assignment
+   * @returns {string|null}
+   */
+  function getAssignmentTypeLabel(assignment) {
+    const t = assignment?.type;
+    if (t === 'html') {
+      if (assignment.meta?.questions) return 'HTML';
+      if (assignment.meta?.days) return 'TXT';
+      return 'File';
+    }
+    if (t === 'link' || t === 'google_form') return 'Link';
+    return null;
+  }
+
   // ── Lane Computation ──────────────────────────────────────────────────────────
 
   /**
@@ -1381,7 +1404,7 @@
     titleEl.textContent = assignment.title || 'Untitled';
     const typePill = document.createElement('span');
     typePill.style.cssText = 'background:rgba(96,165,250,.20);color:#60a5fa;padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;flex-shrink:0;';
-    typePill.textContent = assignment.type || 'file';
+    typePill.textContent = getAssignmentTypeLabel(assignment) || (assignment.type || 'file');
     headerRow.appendChild(titleEl);
     headerRow.appendChild(typePill);
     card.appendChild(headerRow);
@@ -1562,7 +1585,7 @@
     titleEl.textContent = assignment.title || 'Untitled';
     const typePill = document.createElement('span');
     typePill.style.cssText = 'background:rgba(96,165,250,.20);color:#60a5fa;padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;flex-shrink:0;';
-    typePill.textContent = assignment.type || 'file';
+    typePill.textContent = getAssignmentTypeLabel(assignment) || (assignment.type || 'file');
     headerRow.appendChild(titleEl);
     headerRow.appendChild(typePill);
     card.appendChild(headerRow);
