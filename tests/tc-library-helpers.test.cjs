@@ -244,13 +244,14 @@ function computeLane(assignment, allInstances) {
     if (assignment.active === false) return 'finalized';
     return 'upcoming';
   }
-  const allGraded = instances.every(i => i.status === 'Graded');
-  if (allGraded && assignment.active === false) return 'finalized';
+  // Per-assignment: if the teacher marked the assignment inactive, it's finalized
+  if (assignment.active === false) return 'finalized';
   const anyActive = instances.some(i =>
     ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
   );
   if (anyActive) return 'current';
-  if (allGraded) return 'finalized';
+  const allTerminal = instances.every(i => i.status === 'Graded' || i.status === 'Reviewed');
+  if (allTerminal) return 'finalized';
   return 'upcoming';
 }
 
@@ -300,6 +301,106 @@ test('any Submitted → Current', () => {
 test('instances for different assignment are ignored', () => {
   const inst = [{ assignment_id: 'A2', status: 'Graded' }];
   assert.strictEqual(computeLane({ id: 'A1' }, inst), 'upcoming');
+});
+
+test('active=false with mixed instance statuses → Finalized (per-assignment)', () => {
+  const inst = [
+    { assignment_id: 'A1', status: 'Assigned' },
+    { assignment_id: 'A1', status: 'In Progress' },
+    { assignment_id: 'A1', status: 'Reviewed' }
+  ];
+  assert.strictEqual(computeLane({ id: 'A1', active: false }, inst), 'finalized');
+});
+
+test('all Reviewed → Finalized', () => {
+  const inst = [
+    { assignment_id: 'A1', status: 'Reviewed' },
+    { assignment_id: 'A1', status: 'Reviewed' }
+  ];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'finalized');
+});
+
+test('mix of Graded and Reviewed → Finalized', () => {
+  const inst = [
+    { assignment_id: 'A1', status: 'Graded' },
+    { assignment_id: 'A1', status: 'Reviewed' }
+  ];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'finalized');
+});
+
+test('Reviewed with active instances → Current', () => {
+  const inst = [
+    { assignment_id: 'A1', status: 'Reviewed' },
+    { assignment_id: 'A1', status: 'Assigned' }
+  ];
+  assert.strictEqual(computeLane({ id: 'A1' }, inst), 'current');
+});
+
+// ── Assignment Stats ──────────────────────────────────────────────────────────
+
+/**
+ * Mirrors getAssignmentStats() from tc-library.js for unit testing.
+ */
+function getAssignmentStats(assignment, allInstances, allSubmissions) {
+  const instances = allInstances.filter(i => i.assignment_id === assignment.id);
+  const instanceIds = new Set(instances.map(i => i.id));
+  const subs = allSubmissions.filter(s => {
+    if (s.assignment_instances) return instanceIds.has(s.assignment_instances.id);
+    return instanceIds.has(s.instance_id);
+  });
+  const scores = subs
+    .map(s => s.score_total)
+    .filter(s => s != null && !isNaN(Number(s)))
+    .map(Number);
+  const avgScore = scores.length > 0
+    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    : null;
+  const gradedCount = instances.filter(i => i.status === 'Graded' || i.status === 'Reviewed').length;
+  const submittedCount = instances.filter(i => i.status === 'Submitted').length;
+  return { avgScore, studentCount: instances.length, gradedCount, submittedCount, scores };
+}
+
+console.log('\n--- Assignment stats ---');
+
+test('gradedCount includes Graded instances', () => {
+  const instances = [{ id: 'I1', assignment_id: 'A1', status: 'Graded' }];
+  const { gradedCount } = getAssignmentStats({ id: 'A1' }, instances, []);
+  assert.strictEqual(gradedCount, 1);
+});
+
+test('gradedCount includes Reviewed instances', () => {
+  const instances = [{ id: 'I1', assignment_id: 'A1', status: 'Reviewed' }];
+  const { gradedCount } = getAssignmentStats({ id: 'A1' }, instances, []);
+  assert.strictEqual(gradedCount, 1);
+});
+
+test('gradedCount includes both Graded and Reviewed', () => {
+  const instances = [
+    { id: 'I1', assignment_id: 'A1', status: 'Graded' },
+    { id: 'I2', assignment_id: 'A1', status: 'Reviewed' },
+    { id: 'I3', assignment_id: 'A1', status: 'Submitted' }
+  ];
+  const { gradedCount } = getAssignmentStats({ id: 'A1' }, instances, []);
+  assert.strictEqual(gradedCount, 2);
+});
+
+test('avgScore is computed from submissions with score_total', () => {
+  const instances = [
+    { id: 'I1', assignment_id: 'A1', status: 'Reviewed' },
+    { id: 'I2', assignment_id: 'A1', status: 'Reviewed' }
+  ];
+  const subs = [
+    { instance_id: 'I1', score_total: 90 },
+    { instance_id: 'I2', score_total: 80 }
+  ];
+  const { avgScore } = getAssignmentStats({ id: 'A1' }, instances, subs);
+  assert.strictEqual(avgScore, 85);
+});
+
+test('avgScore is null when no scored submissions', () => {
+  const instances = [{ id: 'I1', assignment_id: 'A1', status: 'Reviewed' }];
+  const { avgScore } = getAssignmentStats({ id: 'A1' }, instances, []);
+  assert.strictEqual(avgScore, null);
 });
 
 // ── School Year ───────────────────────────────────────────────────────────────
