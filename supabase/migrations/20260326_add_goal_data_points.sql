@@ -7,7 +7,7 @@ create table if not exists public.goal_data_points (
   goal_id uuid not null references public.goals(id) on delete cascade,
   student_id uuid not null references public.students(id) on delete cascade,
   assignment_instance_id uuid references public.assignment_instances(id) on delete set null,
-  item_id uuid references public.assignment_items(id) on delete set null,
+  item_id bigint references public.assignment_items(id) on delete set null,
   question_text text,
   choices jsonb,
   student_answer text,

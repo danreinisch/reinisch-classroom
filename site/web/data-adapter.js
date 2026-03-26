@@ -2181,7 +2181,19 @@ const remote = {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      // Gracefully handle the case where the goal_data_points table doesn't
+      // exist yet (PostgREST returns PGRST204 or a "Could not find the table"
+      // message). Return an empty array so callers don't crash.
+      if (
+        error.code === 'PGRST204' ||
+        (error.message && error.message.includes('Could not find the table'))
+      ) {
+        console.warn('[goal-data-points] goal_data_points table not found — returning empty array. Run the migration to create it.');
+        return [];
+      }
+      throw error;
+    }
 
     return data || [];
   },
