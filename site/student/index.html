@@ -914,15 +914,26 @@
       /* ====================================================================
          Dot-grid chart (per-question IEP data points)
          ==================================================================== */
+      .st-dot-grid-wrap {
+        margin: 14px 0 6px;
+        padding: 12px 14px 10px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--rc-glass-border, rgba(255,255,255,0.10));
+        border-radius: 10px;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
       .st-dot-grid-container {
-        margin: 14px 0 4px;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        margin-top: 8px;
       }
       .st-dot-grid-summary {
-        font-size: 12px;
-        color: var(--muted, rgba(255,255,255,0.5));
-        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink, #f1f5f9);
+        margin-bottom: 2px;
+        letter-spacing: 0.01em;
       }
       .st-dot-grid-svg {
         display: block;
@@ -930,7 +941,7 @@
         overflow: visible;
       }
       .st-dot-grid-row-label {
-        fill: var(--muted, rgba(255,255,255,0.45));
+        fill: var(--ink, rgba(255,255,255,0.75));
         font-size: 10px;
       }
       .st-dot-correct {
@@ -938,25 +949,37 @@
         stroke: rgba(0,0,0,0.3);
         stroke-width: 1;
         cursor: pointer;
-        transition: filter 0.15s, r 0.1s;
+        transition: filter 0.15s;
       }
       .st-dot-incorrect {
         fill: #f87171;
         stroke: rgba(0,0,0,0.3);
         stroke-width: 1;
         cursor: pointer;
-        transition: filter 0.15s, r 0.1s;
+        transition: filter 0.15s;
       }
       .st-dot-correct:hover,
       .st-dot-correct:focus-visible,
       .st-dot-incorrect:hover,
       .st-dot-incorrect:focus-visible {
-        filter: drop-shadow(0 0 5px currentColor);
+        filter: drop-shadow(0 0 6px currentColor);
         outline: none;
       }
       .st-dot-separator {
         stroke: var(--rc-glass-border, rgba(255,255,255,0.10));
         stroke-width: 1;
+      }
+      .st-dot-grid-legend {
+        display: flex;
+        gap: 14px;
+        margin-top: 8px;
+        font-size: 11px;
+        color: var(--muted, rgba(255,255,255,0.55));
+      }
+      .st-dot-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
       }
 
       /* Glass popup */

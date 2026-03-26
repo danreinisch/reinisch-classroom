@@ -198,7 +198,7 @@
         const cx = LABEL_W + qIdx * DOT_GAP + DOT_R + 2;
         const dotFill = pt.is_correct === true ? '#22c55e' : '#f87171';
         const dotLabel = `Q${qIdx + 1}: ${pt.is_correct === true ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
-        const dpAttr = escapeHtml(JSON.stringify({
+        const dpAttr = encodeURIComponent(JSON.stringify({
           qNum: qIdx + 1,
           question_text: pt.question_text || null,
           choices: pt.choices || null,
@@ -4969,7 +4969,7 @@
     container.addEventListener('mouseover', e => {
       const dot = e.target.closest('circle[data-dp]');
       if (!dot) return;
-      try { showPopup(dot, JSON.parse(dot.getAttribute('data-dp'))); } catch (_) { /* ignore */ }
+      try { showPopup(dot, JSON.parse(decodeURIComponent(dot.getAttribute('data-dp')))); } catch (_) { /* ignore */ }
     });
     container.addEventListener('mouseout', e => {
       const dot = e.target.closest('circle[data-dp]');
@@ -4980,7 +4980,7 @@
     container.addEventListener('focusin', e => {
       const dot = e.target.closest('circle[data-dp]');
       if (!dot) return;
-      try { showPopup(dot, JSON.parse(dot.getAttribute('data-dp'))); } catch (_) { /* ignore */ }
+      try { showPopup(dot, JSON.parse(decodeURIComponent(dot.getAttribute('data-dp')))); } catch (_) { /* ignore */ }
     });
     container.addEventListener('focusout', e => {
       const dot = e.target.closest('circle[data-dp]');
@@ -4993,7 +4993,7 @@
         if (parseFloat(popup.style.opacity || '0') > 0) {
           hidePopup(true);
         } else {
-          try { showPopup(dot, JSON.parse(dot.getAttribute('data-dp'))); } catch (_) { /* ignore */ }
+          try { showPopup(dot, JSON.parse(decodeURIComponent(dot.getAttribute('data-dp')))); } catch (_) { /* ignore */ }
         }
         e.stopPropagation();
         return;

@@ -656,8 +656,8 @@
         const cx = LABEL_W + qIdx * DOT_GAP + DOT_R + 2;
         const dotClass = pt.is_correct === true ? 'st-dot-correct' : 'st-dot-incorrect';
         const dotLabel = `Q${qIdx + 1}: ${pt.is_correct === true ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
-        // Store data as JSON in data attributes for the popup
-        const dataAttr = `data-dp='${escapeHtml(JSON.stringify({
+        // Store data as URI-encoded JSON so it round-trips through getAttribute() safely
+        const dataAttr = `data-dp='${encodeURIComponent(JSON.stringify({
           qNum: qIdx + 1,
           question_text: pt.question_text || null,
           choices: pt.choices || null,
@@ -673,11 +673,17 @@
     }
 
     const svgHtml = `
-      <div class="st-dot-grid-summary">${escapeHtml(summaryText)}</div>
-      <div class="st-dot-grid-container">
-        <svg class="st-dot-grid-svg" id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="Dot grid chart: ${escapeHtml(summaryText)}">
-          ${dotsSvg}
-        </svg>
+      <div class="st-dot-grid-wrap">
+        <div class="st-dot-grid-summary">${escapeHtml(summaryText)}</div>
+        <div class="st-dot-grid-container">
+          <svg class="st-dot-grid-svg" id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="Dot grid chart: ${escapeHtml(summaryText)}">
+            ${dotsSvg}
+          </svg>
+        </div>
+        <div class="st-dot-grid-legend" aria-hidden="true">
+          <span class="st-dot-legend-item st-dot-legend-correct"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#22c55e"/></svg> Correct</span>
+          <span class="st-dot-legend-item st-dot-legend-incorrect"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#f87171"/></svg> Incorrect</span>
+        </div>
       </div>`;
 
     return { html: svgHtml, hasData: true };
@@ -1085,7 +1091,7 @@
       const raw = dot.getAttribute('data-dp');
       if (!raw) return;
       try {
-        const dpData = JSON.parse(raw);
+        const dpData = JSON.parse(decodeURIComponent(raw));
         showPopup(dot, dpData);
       } catch (_) { /* ignore */ }
     });
@@ -1104,7 +1110,7 @@
       const raw = dot.getAttribute('data-dp');
       if (!raw) return;
       try {
-        const dpData = JSON.parse(raw);
+        const dpData = JSON.parse(decodeURIComponent(raw));
         showPopup(dot, dpData);
       } catch (_) { /* ignore */ }
     });
@@ -1125,7 +1131,7 @@
           const raw = dot.getAttribute('data-dp');
           if (raw) {
             try {
-              const dpData = JSON.parse(raw);
+              const dpData = JSON.parse(decodeURIComponent(raw));
               showPopup(dot, dpData);
             } catch (_) { /* ignore */ }
           }
