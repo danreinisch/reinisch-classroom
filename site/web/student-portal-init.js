@@ -236,6 +236,10 @@
   // Constants for goal rendering
   const MAX_DESC_LENGTH = 120; // Max characters before truncating description
   const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
+
+  // Dot-grid chart icon paths (24×24 viewBox) — check-circle and x-circle
+  const DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
+  const DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
   
   /**
    * Map a goal area to a color category for the left border
@@ -636,9 +640,9 @@
 
     const idBase = `dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
 
-    // Inline SVG icon paths (24×24 viewBox, scaled to 14×14 via nested <svg>)
-    const CHECK_PATHS = `<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>`;
-    const X_PATHS = `<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>`;
+    // Inline SVG icon paths — use module-level constants
+    const CHECK_PATHS = DOT_CHECK_PATHS;
+    const X_PATHS = DOT_X_PATHS;
 
     let dotsSvg = '';
     let rowIdx = 0;
@@ -1041,8 +1045,8 @@
         innerHtml += `<ul class="st-dot-popup-choices">${choiceItems}</ul>`;
       } else if (!questionText) {
         const statusIcon = isCorrect
-          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`
-          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;"><circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
+          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_CHECK_PATHS}</svg>`
+          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_X_PATHS}</svg>`;
         innerHtml += `<div class="st-dot-popup-no-detail">${statusIcon}${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
       }
 

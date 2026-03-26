@@ -92,6 +92,14 @@
   const OBS_HIST_ALERT = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
   const OBS_HIST_LIST  = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
 
+  // Progress data toggle button icons (View Data / Hide Data)
+  const SVG_VIEW_DATA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>';
+  const SVG_HIDE_DATA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+
+  // Dot-grid chart icon paths (24×24 viewBox) — check-circle and x-circle
+  const DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
+  const DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
+
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
   const CLASS_CODE_TO_CANONICAL_NAMES = {
@@ -182,10 +190,6 @@
 
     const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
 
-    // Inline SVG icon paths (24×24 viewBox, rendered at 14×14 via nested <svg>)
-    const CHECK_PATHS = `<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>`;
-    const X_PATHS = `<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>`;
-
     let dotsSvg = '';
     sortedGroups.forEach((group, rowIdx) => {
       const y = PAD_TOP + rowIdx * ROW_H + ROW_H / 2;
@@ -202,7 +206,7 @@
         const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
         const isCorrect = pt.is_correct === true;
         const iconColor = isCorrect ? '#22c55e' : '#f87171';
-        const iconPaths = isCorrect ? CHECK_PATHS : X_PATHS;
+        const iconPaths = isCorrect ? DOT_CHECK_PATHS : DOT_X_PATHS;
         const dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
         // Use double quotes for data-dp: encodeURIComponent output never contains double quotes
         const dpVal = encodeURIComponent(JSON.stringify({
@@ -226,8 +230,8 @@
     });
 
     // Legend with same SVG icons
-    const legendCheckSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CHECK_PATHS}</svg>`;
-    const legendXSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${X_PATHS}</svg>`;
+    const legendCheckSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`;
+    const legendXSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
 
     const html = `
       <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px;">${escapeHtml(summaryText)}</div>
@@ -1685,7 +1689,7 @@
             <tbody>${rows}</tbody>
           </table>
         </div>`;
-      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>View Data</button>`;
+      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;">${SVG_VIEW_DATA}View Data</button>`;
     }
 
     // Empty state for observation goals with no data
@@ -2239,11 +2243,9 @@
             panel.setAttribute('aria-hidden', String(!nowExpanded));
             progressToggleBtn.setAttribute('aria-expanded', String(nowExpanded));
             // Update button label with SVG icon — use innerHTML since we need SVG markup
-            const viewIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
-            const hideIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="18" y1="6" x2="6" y2="18"/></svg>`;
             progressToggleBtn.innerHTML = nowExpanded
-              ? `${hideIcon}Hide Data`
-              : `${viewIcon}View Data`;
+              ? `${SVG_HIDE_DATA}Hide Data`
+              : `${SVG_VIEW_DATA}View Data`;
 
             // Lazily inject the dot-grid chart when panel is first expanded
             if (nowExpanded && !panel.dataset.dpLoaded) {
@@ -4958,8 +4960,8 @@
         inner += `<div style="margin-bottom:10px;">${items}</div>`;
       } else if (!dpData.question_text) {
         const statusIcon = isCorr
-          ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`
-          : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
+          ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_CHECK_PATHS}</svg>`
+          : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_X_PATHS}</svg>`;
         inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${statusIcon}${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
       }
       if (dateLabel) {
