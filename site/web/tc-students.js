@@ -1591,6 +1591,7 @@
     const statusEmoji = dataStatus.status === 'ok' ? SVG_STATUS_OK : dataStatus.status === 'warning' ? SVG_STATUS_WARN : SVG_STATUS_BAD;
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
+    const statusCountId = `tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
 
     // Build collapsible progress detail section for this quarter
     const progressDetailId = `tc-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
@@ -1724,7 +1725,7 @@
           <div class="st-goal-data-status">
             <div class="st-data-status-item">
               <span>${statusEmoji}</span>
-              <span>${statusText}</span>
+              <span id="${statusCountId}">${statusText}</span>
             </div>
             <div class="st-data-status-item">
               <span>📅</span>
@@ -2230,6 +2231,23 @@
                       dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
                       dotWrapper.innerHTML = dotHtml;
                       panel.insertBefore(dotWrapper, panel.firstChild);
+                    }
+
+                    // Update the status count with per-question data points (where available)
+                    if (dataPoints && dataPoints.length > 0) {
+                      try {
+                        const qRange = getQuarterDateRange(getCurrentQuarter());
+                        const dpThisQ = qRange
+                          ? dataPoints.filter(dp => { const d = new Date(dp.date); return d >= qRange.start && d <= qRange.end; })
+                          : dataPoints;
+                        if (dpThisQ.length > 0) {
+                          const statusEl = document.getElementById(`tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`);
+                          if (statusEl) {
+                            const n = dpThisQ.length;
+                            statusEl.textContent = `${n} data ${n === 1 ? 'point' : 'points'} this quarter`;
+                          }
+                        }
+                      } catch (_qe) { /* leave existing text unchanged */ }
                     }
                   } catch (dpErr) {
                     console.warn('[tc-students] Could not load goal data points:', dpErr);

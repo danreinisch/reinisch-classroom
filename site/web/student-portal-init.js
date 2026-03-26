@@ -745,12 +745,36 @@
       lastDate = formatDate(sortedEntries[0].date);
     }
     
-    const statusSvg = thisQuarterEntries.length > 0
+    // Count per-question data points for this quarter (from goal_data_points)
+    const goalDataPointsAll = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
+    let thisQuarterDataPoints = [];
+    if (quarterUtils) {
+      try {
+        const currentQ = quarterUtils.getCurrentQuarter();
+        const range = quarterUtils.getQuarterDateRange(currentQ);
+        if (range) {
+          thisQuarterDataPoints = goalDataPointsAll.filter(dp => {
+            const d = new Date(dp.date);
+            return d >= range.start && d <= range.end;
+          });
+        }
+      } catch (e) { /* fallback below */ }
+    }
+    if (thisQuarterDataPoints.length === 0 && !quarterUtils) {
+      const now = new Date();
+      const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
+      thisQuarterDataPoints = goalDataPointsAll.filter(dp => new Date(dp.date) >= quarterStart);
+    }
+
+    const dpCount = thisQuarterDataPoints.length;
+    const statusSvg = (dpCount > 0 || thisQuarterEntries.length > 0)
       ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>'
       : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
-    const statusText = thisQuarterEntries.length > 0 
-      ? `${thisQuarterEntries.length} data ${thisQuarterEntries.length === 1 ? 'point' : 'points'} this quarter`
-      : 'No data this quarter';
+    const statusText = dpCount > 0
+      ? `${dpCount} data ${dpCount === 1 ? 'point' : 'points'} this quarter`
+      : (thisQuarterEntries.length > 0
+          ? `${thisQuarterEntries.length} data ${thisQuarterEntries.length === 1 ? 'point' : 'points'} this quarter`
+          : 'No data this quarter');
     
     // Measurement badge: show map-pin SVG + text, or hide if no measurement type
     const measurementBadgeHtml = goal.measurement_type
