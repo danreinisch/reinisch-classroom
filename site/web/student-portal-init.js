@@ -1109,8 +1109,11 @@
         e.stopPropagation();
         return;
       }
-      // Click outside popup dismisses it
-      if (!popup.contains(e.target)) {
+      // Click outside popup dismisses it — but only when the popup is actually
+      // visible. Skipping this when the popup is hidden ensures that clicks on
+      // interactive elements like the progress toggle buttons are not consumed
+      // by this handler, allowing them to propagate to their delegated handlers.
+      if (popup.classList.contains('visible') && !popup.contains(e.target)) {
         hidePopup(true);
       }
     });
