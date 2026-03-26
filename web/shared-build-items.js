@@ -1,4 +1,23 @@
 /**
+ * Extracts [IG: ...] → goalCodes and [MLS: ...] → deseCodes from a hint string.
+ * @param {string} hint
+ * @returns {{ goalCodes: string[], deseCodes: string[] }}
+ */
+export function extractCodesFromHint(hint) {
+  const goalCodes = [];
+  const deseCodes = [];
+  if (!hint || typeof hint !== 'string') return { goalCodes, deseCodes };
+
+  const igMatches = hint.matchAll(/\[IG:\s*([^\]]+)\]/g);
+  for (const m of igMatches) goalCodes.push(m[1].trim());
+
+  const mlsMatches = hint.matchAll(/\[MLS:\s*([^\]]+)\]/g);
+  for (const m of mlsMatches) deseCodes.push(m[1].trim());
+
+  return { goalCodes, deseCodes };
+}
+
+/**
  * Canonical implementation of buildItemsFromMeta.
  * Builds synthetic assignment_items from assignment metadata.
  *
@@ -23,6 +42,7 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
       if (day.type === 'questions' && Array.isArray(day.questions)) {
         for (const q of day.questions) {
           const item_ref = `${day.day_number}_${q.number}`;
+          const { goalCodes, deseCodes } = extractCodesFromHint(q.hint);
           items.push({
             id: `${idPrefix}${item_ref}`,
             assignment_id: assignmentId,
@@ -37,12 +57,18 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
               correct: q.correct,
               hint: q.hint,
             },
-            goal_codes: q.goal_codes || [],
-            dese_codes: q.dese_codes || [],
+            goal_codes: q.goal_codes || goalCodes,
+            dese_codes: q.dese_codes || deseCodes,
           });
         }
       } else if (day.type === 'writing_prompt') {
         const item_ref = `WP_${day.day_number}`;
+        const wpCodes = (day.hints || []).reduce((acc, h) => {
+          const { goalCodes, deseCodes } = extractCodesFromHint(h);
+          acc.goalCodes.push(...goalCodes);
+          acc.deseCodes.push(...deseCodes);
+          return acc;
+        }, { goalCodes: [], deseCodes: [] });
         items.push({
           id: `${idPrefix}${item_ref}`,
           assignment_id: assignmentId,
@@ -56,8 +82,8 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
             structure: day.structure,
             hints: day.hints,
           },
-          goal_codes: day.goal_codes || [],
-          dese_codes: day.dese_codes || [],
+          goal_codes: day.goal_codes || wpCodes.goalCodes,
+          dese_codes: day.dese_codes || wpCodes.deseCodes,
         });
       }
     }

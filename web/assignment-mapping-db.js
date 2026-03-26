@@ -31,6 +31,8 @@ export async function insertAssignmentItems(supabase, assignmentId, items) {
       item_ref: item.ref,
       answer_type: item.answer_type,
       points: item.points,
+      goal_codes: item.goal_codes || [],
+      dese_codes: item.dese_codes || [],
       meta: {
         correct: item.correct,
         scoring: item.scoring || {},
@@ -282,11 +284,8 @@ export async function insertGoalProgress(supabase, submissionId, studentId, assi
       date: new Date().toISOString().split('T')[0],  // Today's date
       value: rollup.percent_correct,
       source: 'assignment',
-      assignment_instance_id: assignmentInstanceId,
       collected_by: 'system',
       school_year: getCurrentSchoolYear(),
-      // We need to look up goal_id by goal_code
-      // For Phase 1, we'll store goal_code in meta and handle in a separate query
       meta: { goal_code: rollup.goal_code }
     }));
     
@@ -325,7 +324,6 @@ export async function insertGoalProgress(supabase, submissionId, studentId, assi
           date: rec.date,
           value: rec.value,
           source: rec.source,
-          assignment_instance_id: rec.assignment_instance_id,
           collected_by: rec.collected_by,
           school_year: rec.school_year
         };
