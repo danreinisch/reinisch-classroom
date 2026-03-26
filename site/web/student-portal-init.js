@@ -236,6 +236,10 @@
   // Constants for goal rendering
   const MAX_DESC_LENGTH = 120; // Max characters before truncating description
   const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
+
+  // Dot-grid chart icon paths (24×24 viewBox) — check-circle and x-circle
+  const DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
+  const DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
   
   /**
    * Map a goal area to a color category for the left border
@@ -623,18 +627,22 @@
     const assignmentCount = sortedGroups.length;
     const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
 
-    // Layout constants
-    const DOT_R = 7;
-    const DOT_GAP = 20;
-    const ROW_H = 38;
+    // Layout constants (larger spacing for better readability)
+    const ICON_R = 7;   // half of 14px icon = 7
+    const DOT_GAP = 24; // increased from 20 for breathing room
+    const ROW_H = 44;   // increased from 38
     const LABEL_W = 56;
-    const PAD_RIGHT = 12;
-    const PAD_TOP = 6;
+    const PAD_RIGHT = 14;
+    const PAD_TOP = 8;
     const MAX_DOTS_PER_ROW = Math.max(...sortedGroups.map(g => g.points.length));
     const chartW = LABEL_W + (MAX_DOTS_PER_ROW * DOT_GAP) + PAD_RIGHT;
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
 
     const idBase = `dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+
+    // Inline SVG icon paths — use module-level constants
+    const CHECK_PATHS = DOT_CHECK_PATHS;
+    const X_PATHS = DOT_X_PATHS;
 
     let dotsSvg = '';
     let rowIdx = 0;
@@ -651,13 +659,16 @@
       // Date label
       dotsSvg += `<text class="st-dot-grid-row-label" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
 
-      // Dots for each question in this group
+      // Icon dots for each question in this group
       group.points.forEach((pt, qIdx) => {
-        const cx = LABEL_W + qIdx * DOT_GAP + DOT_R + 2;
-        const dotClass = pt.is_correct === true ? 'st-dot-correct' : 'st-dot-incorrect';
-        const dotLabel = `Q${qIdx + 1}: ${pt.is_correct === true ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
-        // Store data as URI-encoded JSON so it round-trips through getAttribute() safely
-        const dataAttr = `data-dp='${encodeURIComponent(JSON.stringify({
+        const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
+        const isCorrect = pt.is_correct === true;
+        const dotClass = isCorrect ? 'st-dot-correct' : 'st-dot-incorrect';
+        const iconColor = isCorrect ? '#22c55e' : '#f87171';
+        const iconPaths = isCorrect ? CHECK_PATHS : X_PATHS;
+        const dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
+        // Use double quotes for data-dp: encodeURIComponent output never contains double quotes
+        const dpVal = encodeURIComponent(JSON.stringify({
           qNum: qIdx + 1,
           question_text: pt.question_text || null,
           choices: pt.choices || null,
@@ -665,12 +676,24 @@
           correct_answer: pt.correct_answer || null,
           is_correct: pt.is_correct,
           date: pt.date,
-        }))}'`;
-        dotsSvg += `<circle class="${dotClass}" cx="${cx}" cy="${y}" r="${DOT_R}" role="button" tabindex="0" aria-label="${dotLabel}" ${dataAttr}><title>${dotLabel}</title></circle>`;
+        }));
+        // Use <g> with nested <svg> for the icon — more reliable than transform+scale.
+        // A transparent 24×24 <rect> provides a larger touch target.
+        dotsSvg += `<g class="${dotClass}" data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
+          `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
+          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
+          `${iconPaths}` +
+          `</svg>` +
+          `<title>${dotLabel}</title>` +
+          `</g>`;
       });
 
       rowIdx++;
     }
+
+    // Legend uses same SVG icon style
+    const legendCheckSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CHECK_PATHS}</svg>`;
+    const legendXSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${X_PATHS}</svg>`;
 
     const svgHtml = `
       <div class="st-dot-grid-wrap">
@@ -681,8 +704,8 @@
           </svg>
         </div>
         <div class="st-dot-grid-legend" aria-hidden="true">
-          <span class="st-dot-legend-item st-dot-legend-correct"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#22c55e"/></svg> Correct</span>
-          <span class="st-dot-legend-item st-dot-legend-incorrect"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#f87171"/></svg> Incorrect</span>
+          <span class="st-dot-legend-item st-dot-legend-correct">${legendCheckSvg} Correct</span>
+          <span class="st-dot-legend-item st-dot-legend-incorrect">${legendXSvg} Incorrect</span>
         </div>
       </div>`;
 
@@ -803,45 +826,12 @@
     // Build progress detail section (if there are entries to show)
     const progressDetailId = `st-goal-progress-${(goal.code ?? goal.id).replace(/[^a-z0-9]/gi, '_')}`;
     let progressDetailHtml = '';
-    let progressTowardTargetHtml = '';
+    // Note: progressTowardTargetHtml intentionally omitted — the dot-grid chart
+    // replaces the "You're at X% → Target Y%" bar.
     if (progressEntries.length > 0) {
       const sortedForDisplay = [...progressEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
       const latestEntry = sortedForDisplay[0];
       const latestVal = formatProgressValue(latestEntry.value, goal.measurement_type);
-      const latestNumeric = parseFloat(latestEntry.value);
-
-      // Build friendly "progress toward target" visual (Item 3)
-      const targetNumeric = goal.target ? parseFloat(goal.target) : NaN;
-      if (!isNaN(targetNumeric) && targetNumeric > 0 && !isNaN(latestNumeric)) {
-        const pct = Math.min(100, Math.max(0, Math.round((latestNumeric / targetNumeric) * 100)));
-        // Trend indicator: compare newest vs oldest of last 3 entries (non-overlapping)
-        // Threshold of 2 points avoids noise from minor measurement variation
-        const TREND_THRESHOLD = 2;
-        let trendHtml = '';
-        if (sortedForDisplay.length >= 3) {
-          const newestVal = parseFloat(sortedForDisplay[0].value);
-          const oldestOfRecent = parseFloat(sortedForDisplay[2].value);
-          if (newestVal > oldestOfRecent + TREND_THRESHOLD) {
-            trendHtml = `<span class="st-progress-trend st-progress-trend--up">↑ Improving</span>`;
-          } else if (newestVal < oldestOfRecent - TREND_THRESHOLD) {
-            trendHtml = `<span class="st-progress-trend st-progress-trend--down">↓ Needs work</span>`;
-          } else {
-            trendHtml = `<span class="st-progress-trend st-progress-trend--steady">→ Steady</span>`;
-          }
-        }
-        const barColor = pct >= 100 ? '#22c55e' : pct >= 75 ? '#86efac' : pct >= 50 ? '#fbbf24' : '#f87171';
-        progressTowardTargetHtml = `
-          <div class="st-progress-toward-target">
-            <div class="st-progress-toward-text">
-              <span>You're at <strong>${escapeHtml(latestVal)}</strong> → Target: <strong>${escapeHtml(goal.target)}</strong></span>
-              ${trendHtml}
-            </div>
-            <div class="st-progress-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct}% toward goal">
-              <div class="st-progress-bar-fill" style="width:${pct}%;background:${barColor};"></div>
-            </div>
-            <div class="st-progress-bar-pct">${pct}% toward goal</div>
-          </div>`;
-      }
 
       const allRows = sortedForDisplay.map(e => {
         const val = formatProgressValue(e.value, goal.measurement_type);
@@ -927,7 +917,6 @@
           </div>
           ${toggleBtn ? `<div class="st-data-status-item st-data-status-item--toggle">${toggleBtn}</div>` : ''}
         </div>
-        ${progressTowardTargetHtml}
         ${progressDetailHtml}
       </div>
     `;
@@ -972,15 +961,18 @@
           console.warn('[student-portal] Progress panel not found for id:', targetId);
           return;
         }
-        const isExpanded = !panel.hidden;
-        panel.hidden = isExpanded;
-        panel.style.display = isExpanded ? 'none' : '';
-        panel.setAttribute('aria-hidden', String(isExpanded));
-        toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+        // Use aria-expanded as the source of truth — it is always set on render
+        // and stays in sync regardless of how panel.hidden was last set.
+        const wasExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        const nowExpanded = !wasExpanded;
+        panel.hidden = !nowExpanded;
+        panel.style.display = nowExpanded ? '' : 'none';
+        panel.setAttribute('aria-hidden', String(!nowExpanded));
+        toggleBtn.setAttribute('aria-expanded', String(nowExpanded));
         const svgEl = toggleBtn.querySelector('svg');
-        if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
+        if (svgEl) svgEl.style.transform = nowExpanded ? 'rotate(180deg)' : '';
         const labelEl = toggleBtn.querySelector('.st-goal-progress-toggle-label');
-        if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
+        if (labelEl) labelEl.textContent = nowExpanded ? 'Hide Progress' : 'View Progress';
       }
     }
 
@@ -1052,7 +1044,10 @@
 
         innerHtml += `<ul class="st-dot-popup-choices">${choiceItems}</ul>`;
       } else if (!questionText) {
-        innerHtml += `<div class="st-dot-popup-no-detail">${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+        const statusIcon = isCorrect
+          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_CHECK_PATHS}</svg>`
+          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_X_PATHS}</svg>`;
+        innerHtml += `<div class="st-dot-popup-no-detail">${statusIcon}${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
       }
 
       if (dateLabel) {
@@ -1084,9 +1079,19 @@
       }
     }
 
-    // Delegated mouseover/focus on dot circles
+    // Helper: find the nearest [data-dp] ancestor/self, also checking e.target directly
+    // for SVG elements where .closest() with class selectors may be unreliable.
+    function findDotTarget(el) {
+      if (!el) return null;
+      // Direct check first (SVG <g> or inner <rect>/<svg> whose parent carries data-dp)
+      if (el.hasAttribute && el.hasAttribute('data-dp')) return el;
+      // Walk up via closest — attribute selectors are more reliable than class selectors for SVG
+      return el.closest ? el.closest('[data-dp]') : null;
+    }
+
+    // Delegated mouseover/focus on dot icon groups
     document.addEventListener('mouseover', e => {
-      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       const raw = dot.getAttribute('data-dp');
       if (!raw) return;
@@ -1097,7 +1102,7 @@
     });
 
     document.addEventListener('mouseout', e => {
-      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       // Only hide if not moving into popup
       if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
@@ -1105,7 +1110,7 @@
     });
 
     document.addEventListener('focusin', e => {
-      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       const raw = dot.getAttribute('data-dp');
       if (!raw) return;
@@ -1116,14 +1121,14 @@
     });
 
     document.addEventListener('focusout', e => {
-      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       hidePopup(false);
     });
 
     // Click on dot: toggle popup (mobile tap support)
     document.addEventListener('click', e => {
-      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      const dot = findDotTarget(e.target);
       if (dot) {
         if (popup.classList.contains('visible')) {
           hidePopup(true);

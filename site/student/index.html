@@ -944,25 +944,20 @@
         fill: var(--ink, rgba(255,255,255,0.75));
         font-size: 10px;
       }
-      .st-dot-correct {
-        fill: #22c55e;
-        stroke: rgba(0,0,0,0.3);
-        stroke-width: 1;
-        cursor: pointer;
-        transition: filter 0.15s;
-      }
+      /* Dot icon groups — now <g> elements containing nested SVG icons */
+      .st-dot-correct,
       .st-dot-incorrect {
-        fill: #f87171;
-        stroke: rgba(0,0,0,0.3);
-        stroke-width: 1;
         cursor: pointer;
         transition: filter 0.15s;
       }
       .st-dot-correct:hover,
-      .st-dot-correct:focus-visible,
+      .st-dot-correct:focus-visible {
+        filter: drop-shadow(0 0 6px #22c55e);
+        outline: none;
+      }
       .st-dot-incorrect:hover,
       .st-dot-incorrect:focus-visible {
-        filter: drop-shadow(0 0 6px currentColor);
+        filter: drop-shadow(0 0 6px #f87171);
         outline: none;
       }
       .st-dot-separator {
