@@ -534,6 +534,65 @@ exports.handler = async (event) => {
                             console.warn(`[student-submit-answer] [${requestId}] goal_progress error for ${goalCode}:`, gpErr);
                           }
                         }
+
+                        // Insert per-question data points into goal_data_points (supplementary detail)
+                        const dataPointRows = [];
+                        for (const item of items) {
+                          const goalCodes = Array.isArray(item.goal_codes) ? item.goal_codes : [];
+                          if (goalCodes.length === 0) continue;
+
+                          const subAnswer = subAnswers.find(sa => sa.assignment_item_id === item.id);
+                          if (!subAnswer || subAnswer.earned_points == null) continue;
+
+                          const studentAnswerVal = subAnswer.raw_answer?.value != null ? String(subAnswer.raw_answer.value) : null;
+                          const correctAnswerVal = item.meta?.correct != null ? String(item.meta.correct) : null;
+                          const isCorr = subAnswer.is_correct;
+                          const questionText = item.meta?.text || null;
+                          const choices = Array.isArray(item.meta?.choices) ? item.meta.choices : null;
+
+                          for (const goalCode of goalCodes) {
+                            const goalId = goalIdMap[goalCode];
+                            if (!goalId) continue;
+                            dataPointRows.push({
+                              goal_id: goalId,
+                              student_id: student.id,
+                              assignment_instance_id: instance_id,
+                              item_id: item.id,
+                              question_text: questionText,
+                              choices: choices || null,
+                              student_answer: studentAnswerVal,
+                              correct_answer: correctAnswerVal,
+                              is_correct: isCorr,
+                              date: today,
+                              source: 'assignment',
+                              school_year: schoolYear
+                            });
+                          }
+                        }
+
+                        if (dataPointRows.length > 0) {
+                          try {
+                            const dpRes = await fetch(`${SUPABASE_URL}/rest/v1/goal_data_points`, {
+                              method: 'POST',
+                              headers: {
+                                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=minimal'
+                              },
+                              body: JSON.stringify(dataPointRows)
+                            });
+
+                            if (!dpRes.ok) {
+                              const errText = await dpRes.text();
+                              console.warn(`[student-submit-answer] [${requestId}] goal_data_points insert failed: ${dpRes.status} - ${errText}`);
+                            } else {
+                              console.log(`[student-submit-answer] [${requestId}] goal_data_points inserted: ${dataPointRows.length} row(s)`);
+                            }
+                          } catch (dpErr) {
+                            console.warn(`[student-submit-answer] [${requestId}] goal_data_points error (non-fatal):`, dpErr);
+                          }
+                        }
                       }
                     }
                   } catch (gpStepErr) {

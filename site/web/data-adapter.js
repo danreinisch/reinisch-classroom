@@ -604,6 +604,16 @@ const local = {
     return filtered;
   },
 
+  // ============================================================================
+  // Goal Data Points (Local fallback — returns empty; data captured server-side)
+  // ============================================================================
+  async listGoalDataPoints({ studentId, goalId } = {}) {
+    console.log('[goal-data-points] listGoalDataPoints (local mode)', { studentId, goalId });
+    // Per-question data points are only captured via the Netlify function against
+    // the remote database. Return empty array in local (demo) mode.
+    return [];
+  },
+
   async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
     console.log('[goal-progress] listGoalQuarterAverages (local mode)', { goalIds, studentIds, year });
     const progressArr = store.get('goalProgress', []);
@@ -2140,6 +2150,40 @@ const remote = {
     if (error) throw error;
     
     return data;
+  },
+
+  // ============================================================================
+  // Goal Data Points (Remote)
+  // ============================================================================
+
+  /**
+   * List per-question goal data points for a student (and optionally a specific goal).
+   * @param {Object} opts
+   * @param {string} opts.studentId - UUID of the student
+   * @param {string} [opts.goalId]  - UUID of the goal (optional filter)
+   * @returns {Array} data point rows
+   */
+  async listGoalDataPoints({ studentId, goalId } = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    console.log('[goal-data-points] listGoalDataPoints (remote)', { studentId, goalId });
+
+    let query = supabase
+      .from('goal_data_points')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('date', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (goalId) {
+      query = query.eq('goal_id', goalId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return data || [];
   },
 
   // ============================================================================

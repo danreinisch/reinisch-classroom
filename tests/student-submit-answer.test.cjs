@@ -72,6 +72,7 @@ let fetchHandlers = {};
 let capturedInstancePatch = null;
 let capturedSubAnswers = null;
 let capturedGoalProgressPosts = [];
+let capturedGoalDataPointsPosts = [];
 let submissionPostCalled = false;
 let submissionGetCalled = false;
 
@@ -89,6 +90,7 @@ function reset() {
   capturedInstancePatch = null;
   capturedSubAnswers = null;
   capturedGoalProgressPosts = [];
+  capturedGoalDataPointsPosts = [];
   submissionPostCalled = false;
   submissionGetCalled = false;
 }
@@ -144,6 +146,16 @@ global.fetch = async (url, options) => {
   if (basePath.endsWith('/goal_progress') && method === 'POST') {
     if (options && options.body) capturedGoalProgressPosts.push(JSON.parse(options.body));
     const h = fetchHandlers.goalProgressPost;
+    return h ? h(urlStr, options) : makeOkResponse(null, 201);
+  }
+
+  if (basePath.endsWith('/goal_data_points') && method === 'POST') {
+    if (options && options.body) {
+      const rows = JSON.parse(options.body);
+      if (Array.isArray(rows)) capturedGoalDataPointsPosts.push(...rows);
+      else capturedGoalDataPointsPosts.push(rows);
+    }
+    const h = fetchHandlers.goalDataPointsPost;
     return h ? h(urlStr, options) : makeOkResponse(null, 201);
   }
 
@@ -872,6 +884,64 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(capturedGoalProgressPosts.length, 1);
     // Only item-1 (2 pts earned out of 2 pts) contributes to MATH.1 rollup
     assert.strictEqual(capturedGoalProgressPosts[0].value, 100, 'value should be 100% based on item-1 only');
+  })();
+
+  // ─── Per-question data points tests ───────────────────────────────────────
+
+  await test('per-question data points are inserted for each goal-linked item', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1,
+        meta: { correct: 'A', text: 'What is 2+2?', choices: ['A) 4', 'B) 3'] },
+        goal_codes: ['MATH.1'] },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 1,
+        meta: { correct: 'B', text: 'What color is the sky?', choices: ['A) Red', 'B) Blue'] },
+        goal_codes: ['MATH.1'] }
+    ]);
+    fetchHandlers.itemMappings = () => makeOkResponse([]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-math', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'A' }, // q1 correct, q2 wrong
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'one rollup progress entry');
+    assert.strictEqual(capturedGoalDataPointsPosts.length, 2, 'two per-question data points');
+    const dp1 = capturedGoalDataPointsPosts.find(dp => dp.student_answer === 'A' && dp.correct_answer === 'A');
+    const dp2 = capturedGoalDataPointsPosts.find(dp => dp.student_answer === 'A' && dp.correct_answer === 'B');
+    assert.ok(dp1, 'data point for q1 found');
+    assert.ok(dp2, 'data point for q2 found');
+    assert.strictEqual(dp1.is_correct, true, 'q1 is_correct should be true');
+    assert.strictEqual(dp2.is_correct, false, 'q2 is_correct should be false');
+    assert.strictEqual(dp1.question_text, 'What is 2+2?', 'q1 question_text stored');
+    assert.ok(Array.isArray(dp1.choices), 'q1 choices stored as native array');
+    assert.strictEqual(dp1.choices[0], 'A) 4', 'q1 first choice matches');
+    assert.strictEqual(dp1.goal_id, 'goal-math', 'q1 linked to correct goal');
+  })();
+
+  await test('goal_data_points not inserted when no goal-linked items', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1,
+        meta: { correct: 'A' }, goal_codes: [] }
+    ]);
+    fetchHandlers.itemMappings = () => makeOkResponse([]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalDataPointsPosts.length, 0, 'no data points for items without goal codes');
   })();
 
   console.log('\n✓ All student-submit-answer tests passed!');

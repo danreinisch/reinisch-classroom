@@ -587,9 +587,106 @@
   }
 
   /**
+   * Build an inline SVG dot-grid chart for per-question goal data points.
+   * Groups data points by assignment_instance_id (one row per assignment/date).
+   * Each dot represents one question — green = correct, red = incorrect.
+   *
+   * @param {Array} dataPoints  - rows from goal_data_points table for this goal
+   * @param {string} goalId     - goal UUID (used as id prefix for aria/interaction)
+   * @returns {{ html: string, hasData: boolean }}
+   */
+  function buildDotGridChart(dataPoints, goalId) {
+    if (!dataPoints || dataPoints.length === 0) {
+      return { html: '', hasData: false };
+    }
+
+    // Group by instance (assignment_instance_id or date as fallback)
+    const groups = new Map();
+    for (const pt of dataPoints) {
+      const key = pt.assignment_instance_id || pt.date;
+      if (!groups.has(key)) {
+        groups.set(key, { key, date: pt.date, points: [] });
+      }
+      groups.get(key).points.push(pt);
+    }
+
+    // Sort groups by date ascending
+    const sortedGroups = [...groups.values()].sort((a, b) => {
+      const da = new Date(a.date), db = new Date(b.date);
+      return da - db;
+    });
+
+    // Compute summary stats
+    const total = dataPoints.length;
+    const correct = dataPoints.filter(p => p.is_correct === true).length;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const assignmentCount = sortedGroups.length;
+    const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
+
+    // Layout constants
+    const DOT_R = 7;
+    const DOT_GAP = 20;
+    const ROW_H = 38;
+    const LABEL_W = 56;
+    const PAD_RIGHT = 12;
+    const PAD_TOP = 6;
+    const MAX_DOTS_PER_ROW = Math.max(...sortedGroups.map(g => g.points.length));
+    const chartW = LABEL_W + (MAX_DOTS_PER_ROW * DOT_GAP) + PAD_RIGHT;
+    const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
+
+    const idBase = `dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+
+    let dotsSvg = '';
+    let rowIdx = 0;
+    for (const group of sortedGroups) {
+      const y = PAD_TOP + rowIdx * ROW_H + ROW_H / 2;
+      const dateLabel = formatDate(group.date);
+
+      // Separator line (except first row)
+      if (rowIdx > 0) {
+        const sepY = PAD_TOP + rowIdx * ROW_H;
+        dotsSvg += `<line class="st-dot-separator" x1="0" y1="${sepY}" x2="${chartW}" y2="${sepY}" />`;
+      }
+
+      // Date label
+      dotsSvg += `<text class="st-dot-grid-row-label" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
+
+      // Dots for each question in this group
+      group.points.forEach((pt, qIdx) => {
+        const cx = LABEL_W + qIdx * DOT_GAP + DOT_R + 2;
+        const dotClass = pt.is_correct === true ? 'st-dot-correct' : 'st-dot-incorrect';
+        const dotLabel = `Q${qIdx + 1}: ${pt.is_correct === true ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
+        // Store data as JSON in data attributes for the popup
+        const dataAttr = `data-dp='${escapeHtml(JSON.stringify({
+          qNum: qIdx + 1,
+          question_text: pt.question_text || null,
+          choices: pt.choices || null,
+          student_answer: pt.student_answer || null,
+          correct_answer: pt.correct_answer || null,
+          is_correct: pt.is_correct,
+          date: pt.date,
+        }))}'`;
+        dotsSvg += `<circle class="${dotClass}" cx="${cx}" cy="${y}" r="${DOT_R}" role="button" tabindex="0" aria-label="${dotLabel}" ${dataAttr}><title>${dotLabel}</title></circle>`;
+      });
+
+      rowIdx++;
+    }
+
+    const svgHtml = `
+      <div class="st-dot-grid-summary">${escapeHtml(summaryText)}</div>
+      <div class="st-dot-grid-container">
+        <svg class="st-dot-grid-svg" id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="Dot grid chart: ${escapeHtml(summaryText)}">
+          ${dotsSvg}
+        </svg>
+      </div>`;
+
+    return { html: svgHtml, hasData: true };
+  }
+
+  /**
    * Render a single goal card
    */
-  function renderGoalCard(goal, progressMap) {
+  function renderGoalCard(goal, progressMap, dataPointsMap) {
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
     // Clean up any "Baseline: XX%" text that leaked into the description field
     let fullDesc = (goal.desc || goal.goal_text || '(No goal description provided)').replace(/\s*Baseline:?\s*\d+%?\s*$/i, '').trim();
@@ -736,6 +833,10 @@
           </div>`
         : '';
 
+      // Dot grid chart (per-question data points)
+      const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
+      const { html: dotGridHtml, hasData: hasDotGrid } = buildDotGridChart(goalDataPoints, goal.id);
+
       // Progress detail panel — expanded by default (Item 2)
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}">
@@ -744,6 +845,7 @@
             <span class="st-goal-latest-num">${escapeHtml(latestVal)}</span>
           </div>
           ${qAvgHtml}
+          ${hasDotGrid ? dotGridHtml : ''}
           <div class="st-goal-chart-container" aria-hidden="true">
             ${chartHtml}
           </div>
@@ -864,6 +966,162 @@
     if (attached) {
       state.goalClickHandlersAttached = true;
     }
+  }
+
+  /**
+   * Set up the glass popup for dot-grid chart dots.
+   * Creates a singleton popup element and attaches delegated listeners to the
+   * document so that it works across goal cards and after re-renders.
+   * Called once on DOMContentLoaded. Uses data-dp attribute on each dot circle.
+   */
+  function setupDotGridPopup() {
+    // Create singleton popup element
+    const popup = document.createElement('div');
+    popup.className = 'st-dot-popup';
+    popup.setAttribute('role', 'tooltip');
+    popup.setAttribute('aria-live', 'polite');
+    document.body.appendChild(popup);
+
+    let hideTimer = null;
+
+    function showPopup(dot, dpData) {
+      clearTimeout(hideTimer);
+
+      const qNum = dpData.qNum || '?';
+      const questionText = dpData.question_text || null;
+      const choices = Array.isArray(dpData.choices) ? dpData.choices : null;
+      const studentAnswer = dpData.student_answer || null;
+      const correctAnswer = dpData.correct_answer || null;
+      const isCorrect = dpData.is_correct;
+      const dateLabel = dpData.date ? formatDate(dpData.date) : '';
+
+      let innerHtml = `<div class="st-dot-popup-title">Question ${escapeHtml(String(qNum))}</div>`;
+
+      if (questionText) {
+        innerHtml += `<div class="st-dot-popup-question">${escapeHtml(questionText)}</div>`;
+      }
+
+      if (choices && choices.length > 0) {
+        const studentAnswerUpper = studentAnswer ? String(studentAnswer).trim().toUpperCase() : null;
+        const correctAnswerUpper = correctAnswer ? String(correctAnswer).trim().toUpperCase() : null;
+
+        const choiceItems = choices.map(choice => {
+          const choiceText = String(choice);
+          // Detect the leading key — support "A)" / "A." / "A " formats
+          const keyMatch = choiceText.match(/^([A-Za-z])[).\s]/);
+          const choiceKey = keyMatch ? keyMatch[1].toUpperCase() : null;
+
+          let cls = '';
+          if (choiceKey && choiceKey === correctAnswerUpper) {
+            cls = 'choice-correct';
+          } else if (choiceKey && choiceKey === studentAnswerUpper && !isCorrect) {
+            cls = 'choice-wrong';
+          }
+          return `<li class="${cls}">${escapeHtml(choiceText)}</li>`;
+        }).join('');
+
+        innerHtml += `<ul class="st-dot-popup-choices">${choiceItems}</ul>`;
+      } else if (!questionText) {
+        innerHtml += `<div class="st-dot-popup-no-detail">${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+      }
+
+      if (dateLabel) {
+        innerHtml += `<div class="st-dot-popup-meta">${escapeHtml(dateLabel)}</div>`;
+      }
+
+      popup.innerHTML = innerHtml;
+      popup.classList.add('visible');
+
+      // Position near the dot
+      const dotRect = dot.getBoundingClientRect();
+      const popupW = 280;
+      const leftRaw = dotRect.left + dotRect.width / 2 - popupW / 2;
+      const left = Math.max(8, Math.min(leftRaw, window.innerWidth - popupW - 8));
+      const topAbove = dotRect.top - 8;
+      const popupEstH = popup.offsetHeight || 160;
+      const top = topAbove - popupEstH < 4 ? dotRect.bottom + 8 : topAbove - popupEstH;
+
+      popup.style.left = `${left}px`;
+      popup.style.top = `${Math.max(4, top)}px`;
+    }
+
+    function hidePopup(immediate) {
+      clearTimeout(hideTimer);
+      if (immediate) {
+        popup.classList.remove('visible');
+      } else {
+        hideTimer = setTimeout(() => popup.classList.remove('visible'), 200);
+      }
+    }
+
+    // Delegated mouseover/focus on dot circles
+    document.addEventListener('mouseover', e => {
+      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      if (!dot) return;
+      const raw = dot.getAttribute('data-dp');
+      if (!raw) return;
+      try {
+        const dpData = JSON.parse(raw);
+        showPopup(dot, dpData);
+      } catch (_) { /* ignore */ }
+    });
+
+    document.addEventListener('mouseout', e => {
+      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      if (!dot) return;
+      // Only hide if not moving into popup
+      if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
+      hidePopup(false);
+    });
+
+    document.addEventListener('focusin', e => {
+      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      if (!dot) return;
+      const raw = dot.getAttribute('data-dp');
+      if (!raw) return;
+      try {
+        const dpData = JSON.parse(raw);
+        showPopup(dot, dpData);
+      } catch (_) { /* ignore */ }
+    });
+
+    document.addEventListener('focusout', e => {
+      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      if (!dot) return;
+      hidePopup(false);
+    });
+
+    // Click on dot: toggle popup (mobile tap support)
+    document.addEventListener('click', e => {
+      const dot = e.target.closest('.st-dot-correct, .st-dot-incorrect');
+      if (dot) {
+        if (popup.classList.contains('visible')) {
+          hidePopup(true);
+        } else {
+          const raw = dot.getAttribute('data-dp');
+          if (raw) {
+            try {
+              const dpData = JSON.parse(raw);
+              showPopup(dot, dpData);
+            } catch (_) { /* ignore */ }
+          }
+        }
+        e.stopPropagation();
+        return;
+      }
+      // Click outside popup dismisses it
+      if (!popup.contains(e.target)) {
+        hidePopup(true);
+      }
+    });
+
+    // Dismiss on Escape key
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') hidePopup(true);
+    });
+
+    popup.addEventListener('mouseleave', () => hidePopup(false));
+    popup.addEventListener('mouseenter', () => clearTimeout(hideTimer));
   }
 
   // ============================================================================
@@ -2730,6 +2988,9 @@
       // Initialize guardrails
       initNetworkGuardrails();
       
+      // Set up dot-grid glass popup (singleton, document-level delegation)
+      setupDotGridPopup();
+
       // Initialize quality-of-life features
       initThemeToggle();
       initFontSizeControls();
@@ -3779,6 +4040,27 @@
         // Continue without progress data
       }
 
+      // Fetch per-question data points for the dot grid chart
+      let dataPointsMap = new Map();
+      try {
+        const dpUrl = `/.netlify/functions/student-goal-data-points?code=${encodeURIComponent(studentCode)}`;
+        const dpResponse = await fetch(dpUrl);
+        if (dpResponse.ok) {
+          const dpData = await dpResponse.json();
+          if (dpData.ok && dpData.data_points && dpData.data_points.length > 0) {
+            dpData.data_points.forEach(pt => {
+              if (!dataPointsMap.has(pt.goal_id)) {
+                dataPointsMap.set(pt.goal_id, []);
+              }
+              dataPointsMap.get(pt.goal_id).push(pt);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(LOG_PREFIX, 'Failed to load goal data points:', err);
+        // Continue without data points — dot grid will be omitted
+      }
+
       // Load quarter-utils for school-year quarter date ranges (lazy, once)
       if (!quarterUtils) {
         try {
@@ -3802,7 +4084,7 @@
           </div>
         `;
       } else {
-        goalsContainer.innerHTML = activeGoals.map(goal => renderGoalCard(goal, progressMap)).join('');
+        goalsContainer.innerHTML = activeGoals.map(goal => renderGoalCard(goal, progressMap, dataPointsMap)).join('');
       }
       
       // Render goals snapshot for dashboard (max 3)
@@ -3811,7 +4093,7 @@
         if (snapshot.length === 0) {
           dashGoalsSnapshot.innerHTML = '<p style="opacity:0.7;">No goals yet</p>';
         } else {
-          dashGoalsSnapshot.innerHTML = snapshot.map(goal => renderGoalCard(goal, progressMap)).join('');
+          dashGoalsSnapshot.innerHTML = snapshot.map(goal => renderGoalCard(goal, progressMap, dataPointsMap)).join('');
         }
       }
       
