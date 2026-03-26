@@ -137,6 +137,91 @@
 
   // formatObservationProgressEntry is now provided by obs-utils.js (imported as formatObservationValue)
 
+  /**
+   * Build an inline SVG dot-grid chart for per-question goal data points.
+   * Groups data points by assignment_instance_id (one row per assignment/date).
+   * Each dot represents one question — green = correct, red = incorrect.
+   * Shared logic mirroring buildDotGridChart in student-portal-init.js.
+   *
+   * @param {Array}  dataPoints  rows from goal_data_points table for this goal
+   * @param {string} goalId      goal UUID (used as id prefix)
+   * @returns {{ html: string, hasData: boolean }}
+   */
+  function buildTcDotGridChart(dataPoints, goalId) {
+    if (!dataPoints || dataPoints.length === 0) {
+      return { html: '', hasData: false };
+    }
+
+    // Group by instance (assignment_instance_id or date as fallback)
+    const groups = new Map();
+    for (const pt of dataPoints) {
+      const key = pt.assignment_instance_id || pt.date;
+      if (!groups.has(key)) {
+        groups.set(key, { key, date: pt.date, points: [] });
+      }
+      groups.get(key).points.push(pt);
+    }
+
+    const sortedGroups = [...groups.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const total = dataPoints.length;
+    const correct = dataPoints.filter(p => p.is_correct === true).length;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const assignmentCount = sortedGroups.length;
+    const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
+
+    const DOT_R = 7;
+    const DOT_GAP = 20;
+    const ROW_H = 38;
+    const LABEL_W = 56;
+    const PAD_RIGHT = 12;
+    const PAD_TOP = 6;
+    const MAX_DOTS = Math.max(...sortedGroups.map(g => g.points.length));
+    const chartW = LABEL_W + (MAX_DOTS * DOT_GAP) + PAD_RIGHT;
+    const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
+
+    const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+
+    let dotsSvg = '';
+    sortedGroups.forEach((group, rowIdx) => {
+      const y = PAD_TOP + rowIdx * ROW_H + ROW_H / 2;
+      const dateLabel = formatDate(group.date);
+
+      if (rowIdx > 0) {
+        const sepY = PAD_TOP + rowIdx * ROW_H;
+        dotsSvg += `<line stroke="rgba(255,255,255,0.08)" stroke-width="1" x1="0" y1="${sepY}" x2="${chartW}" y2="${sepY}" />`;
+      }
+
+      dotsSvg += `<text fill="rgba(255,255,255,0.45)" font-size="10" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
+
+      group.points.forEach((pt, qIdx) => {
+        const cx = LABEL_W + qIdx * DOT_GAP + DOT_R + 2;
+        const dotFill = pt.is_correct === true ? '#22c55e' : '#f87171';
+        const dotLabel = `Q${qIdx + 1}: ${pt.is_correct === true ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
+        const dpAttr = escapeHtml(JSON.stringify({
+          qNum: qIdx + 1,
+          question_text: pt.question_text || null,
+          choices: pt.choices || null,
+          student_answer: pt.student_answer || null,
+          correct_answer: pt.correct_answer || null,
+          is_correct: pt.is_correct,
+          date: pt.date,
+        }));
+        dotsSvg += `<circle fill="${dotFill}" stroke="rgba(0,0,0,0.3)" stroke-width="1" cx="${cx}" cy="${y}" r="${DOT_R}" role="button" tabindex="0" aria-label="${dotLabel}" data-dp='${dpAttr}' style="cursor:pointer;"><title>${dotLabel}</title></circle>`;
+      });
+    });
+
+    const html = `
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px;">${escapeHtml(summaryText)}</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <svg id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="${escapeHtml('Dot grid chart: ' + summaryText)}" style="display:block;min-width:200px;overflow:visible;">
+          ${dotsSvg}
+        </svg>
+      </div>`;
+
+    return { html, hasData: true };
+  }
+
   function abbreviateClass(fullName) {
     return CLASS_ABBREVIATIONS[fullName] || fullName;
   }
@@ -1577,7 +1662,7 @@
             <tbody>${rows}</tbody>
           </table>
         </div>`;
-      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" aria-expanded="false" style="margin-left:auto;">📈 View Data</button>`;
+      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;">📈 View Data</button>`;
     }
 
     // Empty state for observation goals with no data
@@ -2129,6 +2214,30 @@
             panel.setAttribute('aria-hidden', String(isExpanded));
             progressToggleBtn.setAttribute('aria-expanded', String(!isExpanded));
             progressToggleBtn.textContent = isExpanded ? '📈 View Data' : '📉 Hide Data';
+
+            // Lazily inject the dot-grid chart when panel is first expanded
+            if (!isExpanded && !panel.dataset.dpLoaded) {
+              const goalId = progressToggleBtn.dataset.goalId;
+              const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
+              if (goal) {
+                const student = allStudents.find(s => s.code === goal.student_code);
+                if (student && student.id) {
+                  try {
+                    const dataPoints = await db.listGoalDataPoints({ studentId: student.id, goalId: goal.id });
+                    const { html: dotHtml, hasData } = buildTcDotGridChart(dataPoints, goal.id);
+                    if (hasData) {
+                      const dotWrapper = document.createElement('div');
+                      dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
+                      dotWrapper.innerHTML = dotHtml;
+                      panel.insertBefore(dotWrapper, panel.firstChild);
+                    }
+                  } catch (dpErr) {
+                    console.warn('[tc-students] Could not load goal data points:', dpErr);
+                  }
+                }
+              }
+              panel.dataset.dpLoaded = 'true';
+            }
           }
           e.stopPropagation();
           return;
@@ -4757,6 +4866,128 @@
   }
 
   /**
+   * Set up the glassmorphic popup for dot-grid chart circles in the Teacher Center.
+   * Uses delegated listeners on the document so it works across dynamically rendered cards.
+   */
+  function setupTcDotGridPopup() {
+    const popup = document.createElement('div');
+    popup.style.cssText = [
+      'position:fixed', 'z-index:9999', 'max-width:320px', 'min-width:220px',
+      'padding:14px 16px', 'border-radius:14px',
+      'background:rgba(15,23,42,0.88)', 'backdrop-filter:blur(16px) saturate(1.5)',
+      '-webkit-backdrop-filter:blur(16px) saturate(1.5)',
+      'border:1px solid rgba(255,255,255,0.14)',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+      'pointer-events:none', 'opacity:0', 'transform:translateY(4px)',
+      'transition:opacity 0.15s ease,transform 0.15s ease',
+      'font-size:13px', 'color:#f1f5f9', 'line-height:1.5',
+    ].join(';');
+    popup.setAttribute('role', 'tooltip');
+    document.body.appendChild(popup);
+
+    let hideTimer = null;
+
+    function showPopup(dot, dpData) {
+      clearTimeout(hideTimer);
+      const qNum = dpData.qNum || '?';
+      const choices = Array.isArray(dpData.choices) ? dpData.choices : null;
+      const studentAnswerUpper = dpData.student_answer ? String(dpData.student_answer).trim().toUpperCase() : null;
+      const correctAnswerUpper = dpData.correct_answer ? String(dpData.correct_answer).trim().toUpperCase() : null;
+      const isCorr = dpData.is_correct;
+      const dateLabel = dpData.date ? formatDate(dpData.date) : '';
+
+      let inner = `<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-bottom:6px;">Question ${escapeHtml(String(qNum))}</div>`;
+      if (dpData.question_text) {
+        inner += `<div style="font-weight:600;font-size:13px;margin-bottom:10px;line-height:1.4;">${escapeHtml(dpData.question_text)}</div>`;
+      }
+      if (choices && choices.length > 0) {
+        const items = choices.map(choice => {
+          const key = String(choice).match(/^([A-Za-z])[).\s]/)?.[1]?.toUpperCase() || null;
+          let style = 'color:rgba(255,255,255,0.55)';
+          if (key && key === correctAnswerUpper) style = 'color:#22c55e;font-weight:600';
+          else if (key && key === studentAnswerUpper && !isCorr) style = 'color:#f87171;font-weight:600';
+          return `<div style="padding:1px 0;font-size:12px;${style}">${escapeHtml(String(choice))}</div>`;
+        }).join('');
+        inner += `<div style="margin-bottom:10px;">${items}</div>`;
+      } else if (!dpData.question_text) {
+        inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+      }
+      if (dateLabel) {
+        inner += `<div style="font-size:11px;opacity:.45;border-top:1px solid rgba(255,255,255,0.08);padding-top:7px;margin-top:4px;">${escapeHtml(dateLabel)}</div>`;
+      }
+      popup.innerHTML = inner;
+      popup.style.opacity = '1';
+      popup.style.transform = 'translateY(0)';
+      popup.style.pointerEvents = 'auto';
+
+      const rect = dot.getBoundingClientRect();
+      const pw = 280;
+      const left = Math.max(8, Math.min(rect.left + rect.width / 2 - pw / 2, window.innerWidth - pw - 8));
+      const estH = popup.offsetHeight || 160;
+      const topAbove = rect.top - estH;
+      const top = topAbove < 4 ? rect.bottom + 8 : topAbove;
+      popup.style.left = `${left}px`;
+      popup.style.top = `${Math.max(4, top)}px`;
+    }
+
+    function hidePopup(immediate) {
+      clearTimeout(hideTimer);
+      if (immediate) {
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(4px)';
+        popup.style.pointerEvents = 'none';
+      } else {
+        hideTimer = setTimeout(() => {
+          popup.style.opacity = '0';
+          popup.style.transform = 'translateY(4px)';
+          popup.style.pointerEvents = 'none';
+        }, 200);
+      }
+    }
+
+    // TC page uses its own namespace so we listen on its container rather than the full document
+    const container = document.body;
+
+    container.addEventListener('mouseover', e => {
+      const dot = e.target.closest('circle[data-dp]');
+      if (!dot) return;
+      try { showPopup(dot, JSON.parse(dot.getAttribute('data-dp'))); } catch (_) { /* ignore */ }
+    });
+    container.addEventListener('mouseout', e => {
+      const dot = e.target.closest('circle[data-dp]');
+      if (!dot) return;
+      if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
+      hidePopup(false);
+    });
+    container.addEventListener('focusin', e => {
+      const dot = e.target.closest('circle[data-dp]');
+      if (!dot) return;
+      try { showPopup(dot, JSON.parse(dot.getAttribute('data-dp'))); } catch (_) { /* ignore */ }
+    });
+    container.addEventListener('focusout', e => {
+      const dot = e.target.closest('circle[data-dp]');
+      if (!dot) return;
+      hidePopup(false);
+    });
+    container.addEventListener('click', e => {
+      const dot = e.target.closest('circle[data-dp]');
+      if (dot) {
+        if (parseFloat(popup.style.opacity || '0') > 0) {
+          hidePopup(true);
+        } else {
+          try { showPopup(dot, JSON.parse(dot.getAttribute('data-dp'))); } catch (_) { /* ignore */ }
+        }
+        e.stopPropagation();
+        return;
+      }
+      if (!popup.contains(e.target)) hidePopup(true);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hidePopup(true); });
+    popup.addEventListener('mouseleave', () => hidePopup(false));
+    popup.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+  }
+
+  /**
    * Inject the "Bulk Obs Config" toolbar button into the Students page toolbar.
    * The button is inserted before the "Add Student" button.
    */
@@ -5408,6 +5639,7 @@
     renderClassFilterOptions();
     renderGoalAreaFilterOptions();
     setupEventHandlers();
+    setupTcDotGridPopup();
     injectBulkObsConfigButton();
     loadData();
   }
