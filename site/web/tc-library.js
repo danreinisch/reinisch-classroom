@@ -836,15 +836,14 @@
       if (assignment.active === false) return 'finalized';
       return 'upcoming';
     }
-    const allGraded = instances.every(i => i.status === 'Graded');
-    // Check active===false first so explicitly archived assignments are always finalized
-    // even before the anyActive check below (both paths with allGraded lead to 'finalized').
-    if (allGraded && assignment.active === false) return 'finalized';
+    // Per-assignment: if the teacher marked the assignment inactive, it's finalized
+    if (assignment.active === false) return 'finalized';
     const anyActive = instances.some(i =>
       ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
     );
     if (anyActive) return 'current';
-    if (allGraded) return 'finalized';
+    const allTerminal = instances.every(i => i.status === 'Graded' || i.status === 'Reviewed');
+    if (allTerminal) return 'finalized';
     return 'upcoming';
   }
 
@@ -865,7 +864,7 @@
     const avgScore = scores.length > 0
       ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
       : null;
-    const gradedCount = instances.filter(i => i.status === 'Graded').length;
+    const gradedCount = instances.filter(i => i.status === 'Graded' || i.status === 'Reviewed').length;
     const submittedCount = instances.filter(i => i.status === 'Submitted').length;
     return { avgScore, studentCount: instances.length, gradedCount, submittedCount, scores };
   }
