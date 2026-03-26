@@ -1,8 +1,26 @@
 /**
+ * Extracts [IG: ...] → goalCodes and [MLS: ...] → deseCodes from a hint string.
+ * @param {string} hint
+ * @returns {{ goalCodes: string[], deseCodes: string[] }}
+ */
+function extractCodesFromHint(hint) {
+  const goalCodes = [];
+  const deseCodes = [];
+  if (!hint || typeof hint !== 'string') return { goalCodes, deseCodes };
+
+  const igMatches = hint.matchAll(/\[IG:\s*([^\]]+)\]/g);
+  for (const m of igMatches) goalCodes.push(m[1].trim());
+
+  const mlsMatches = hint.matchAll(/\[MLS:\s*([^\]]+)\]/g);
+  for (const m of mlsMatches) deseCodes.push(m[1].trim());
+
+  return { goalCodes, deseCodes };
+}
+
+/**
  * Canonical server-side buildItemsFromMeta.
  * Builds assignment_items rows from a parsed meta object.
  * Supports meta.days[] (TXT) and meta.questions[] (HTML manifest) formats.
- * dese_codes are not included in the output (not a column on assignment_items).
  */
 function buildItemsFromMeta(assignmentId, meta) {
   const items = [];
@@ -13,12 +31,14 @@ function buildItemsFromMeta(assignmentId, meta) {
     for (const day of meta.days) {
       if (day.type === 'questions' && Array.isArray(day.questions)) {
         for (const q of day.questions) {
+          const { goalCodes, deseCodes } = extractCodesFromHint(q.hint);
           items.push({
             assignment_id: assignmentId,
             item_ref: `${day.day_number}_${q.number}`,
             answer_type: q.type || 'mcq',
             points: q.points || 1,
-            goal_codes: q.goal_codes || [],
+            goal_codes: q.goal_codes || goalCodes,
+            dese_codes: q.dese_codes || deseCodes,
             meta: {
               day: day.day_number,
               question_number: q.number,
@@ -30,12 +50,19 @@ function buildItemsFromMeta(assignmentId, meta) {
           });
         }
       } else if (day.type === 'writing_prompt') {
+        const wpCodes = (day.hints || []).reduce((acc, h) => {
+          const { goalCodes, deseCodes } = extractCodesFromHint(h);
+          acc.goalCodes.push(...goalCodes);
+          acc.deseCodes.push(...deseCodes);
+          return acc;
+        }, { goalCodes: [], deseCodes: [] });
         items.push({
           assignment_id: assignmentId,
           item_ref: `WP_${day.day_number}`,
           answer_type: 'constructed',
           points: day.points || 5,
-          goal_codes: day.goal_codes || [],
+          goal_codes: day.goal_codes || wpCodes.goalCodes,
+          dese_codes: day.dese_codes || wpCodes.deseCodes,
           meta: {
             day: day.day_number,
             type: 'writing_prompt',
@@ -71,4 +98,4 @@ function buildItemsFromMeta(assignmentId, meta) {
   return items;
 }
 
-module.exports = { buildItemsFromMeta };
+module.exports = { buildItemsFromMeta, extractCodesFromHint };
