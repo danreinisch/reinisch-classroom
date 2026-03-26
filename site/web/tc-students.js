@@ -170,17 +170,21 @@
     const assignmentCount = sortedGroups.length;
     const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
 
-    const DOT_R = 7;
-    const DOT_GAP = 20;
-    const ROW_H = 38;
+    const ICON_R = 7;   // half of 14px icon
+    const DOT_GAP = 24; // increased from 20
+    const ROW_H = 44;   // increased from 38
     const LABEL_W = 56;
-    const PAD_RIGHT = 12;
-    const PAD_TOP = 6;
+    const PAD_RIGHT = 14;
+    const PAD_TOP = 8;
     const MAX_DOTS = Math.max(...sortedGroups.map(g => g.points.length));
     const chartW = LABEL_W + (MAX_DOTS * DOT_GAP) + PAD_RIGHT;
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
 
     const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+
+    // Inline SVG icon paths (24×24 viewBox, rendered at 14×14 via nested <svg>)
+    const CHECK_PATHS = `<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>`;
+    const X_PATHS = `<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>`;
 
     let dotsSvg = '';
     sortedGroups.forEach((group, rowIdx) => {
@@ -195,10 +199,13 @@
       dotsSvg += `<text fill="rgba(255,255,255,0.45)" font-size="10" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
 
       group.points.forEach((pt, qIdx) => {
-        const cx = LABEL_W + qIdx * DOT_GAP + DOT_R + 2;
-        const dotFill = pt.is_correct === true ? '#22c55e' : '#f87171';
-        const dotLabel = `Q${qIdx + 1}: ${pt.is_correct === true ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
-        const dpAttr = encodeURIComponent(JSON.stringify({
+        const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
+        const isCorrect = pt.is_correct === true;
+        const iconColor = isCorrect ? '#22c55e' : '#f87171';
+        const iconPaths = isCorrect ? CHECK_PATHS : X_PATHS;
+        const dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
+        // Use double quotes for data-dp: encodeURIComponent output never contains double quotes
+        const dpVal = encodeURIComponent(JSON.stringify({
           qNum: qIdx + 1,
           question_text: pt.question_text || null,
           choices: pt.choices || null,
@@ -207,9 +214,20 @@
           is_correct: pt.is_correct,
           date: pt.date,
         }));
-        dotsSvg += `<circle fill="${dotFill}" stroke="rgba(0,0,0,0.3)" stroke-width="1" cx="${cx}" cy="${y}" r="${DOT_R}" role="button" tabindex="0" aria-label="${dotLabel}" data-dp='${dpAttr}' style="cursor:pointer;"><title>${dotLabel}</title></circle>`;
+        // <g> with nested <svg> icon — transparent <rect> provides larger touch target
+        dotsSvg += `<g data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
+          `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
+          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
+          `${iconPaths}` +
+          `</svg>` +
+          `<title>${dotLabel}</title>` +
+          `</g>`;
       });
     });
+
+    // Legend with same SVG icons
+    const legendCheckSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CHECK_PATHS}</svg>`;
+    const legendXSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${X_PATHS}</svg>`;
 
     const html = `
       <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px;">${escapeHtml(summaryText)}</div>
@@ -217,6 +235,10 @@
         <svg id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="${escapeHtml('Dot grid chart: ' + summaryText)}" style="display:block;min-width:200px;overflow:visible;">
           ${dotsSvg}
         </svg>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.55);">
+        <span style="display:inline-flex;align-items:center;gap:4px;">${legendCheckSvg} Correct</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;">${legendXSvg} Incorrect</span>
       </div>`;
 
     return { html, hasData: true };
@@ -1663,7 +1685,7 @@
             <tbody>${rows}</tbody>
           </table>
         </div>`;
-      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;">📈 View Data</button>`;
+      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>View Data</button>`;
     }
 
     // Empty state for observation goals with no data
@@ -2210,14 +2232,21 @@
           const targetId = progressToggleBtn.dataset.progressId;
           const panel = document.getElementById(targetId);
           if (panel) {
-            const isExpanded = !panel.hidden;
-            panel.hidden = isExpanded;
-            panel.setAttribute('aria-hidden', String(isExpanded));
-            progressToggleBtn.setAttribute('aria-expanded', String(!isExpanded));
-            progressToggleBtn.textContent = isExpanded ? '📈 View Data' : '📉 Hide Data';
+            // Use aria-expanded as source of truth for consistent toggle state
+            const wasExpanded = progressToggleBtn.getAttribute('aria-expanded') === 'true';
+            const nowExpanded = !wasExpanded;
+            panel.hidden = !nowExpanded;
+            panel.setAttribute('aria-hidden', String(!nowExpanded));
+            progressToggleBtn.setAttribute('aria-expanded', String(nowExpanded));
+            // Update button label with SVG icon — use innerHTML since we need SVG markup
+            const viewIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+            const hideIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="18" y1="6" x2="6" y2="18"/></svg>`;
+            progressToggleBtn.innerHTML = nowExpanded
+              ? `${hideIcon}Hide Data`
+              : `${viewIcon}View Data`;
 
             // Lazily inject the dot-grid chart when panel is first expanded
-            if (!isExpanded && !panel.dataset.dpLoaded) {
+            if (nowExpanded && !panel.dataset.dpLoaded) {
               const goalId = progressToggleBtn.dataset.goalId;
               const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
               if (goal) {
@@ -4928,7 +4957,10 @@
         }).join('');
         inner += `<div style="margin-bottom:10px;">${items}</div>`;
       } else if (!dpData.question_text) {
-        inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+        const statusIcon = isCorr
+          ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`
+          : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>`;
+        inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${statusIcon}${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
       }
       if (dateLabel) {
         inner += `<div style="font-size:11px;opacity:.45;border-top:1px solid rgba(255,255,255,0.08);padding-top:7px;margin-top:4px;">${escapeHtml(dateLabel)}</div>`;
@@ -4966,29 +4998,36 @@
     // TC page uses its own namespace so we listen on its container rather than the full document
     const container = document.body;
 
+    // Helper: find nearest [data-dp] element from target, checking direct and ancestor
+    function findDotTarget(el) {
+      if (!el) return null;
+      if (el.hasAttribute && el.hasAttribute('data-dp')) return el;
+      return el.closest ? el.closest('[data-dp]') : null;
+    }
+
     container.addEventListener('mouseover', e => {
-      const dot = e.target.closest('circle[data-dp]');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       try { showPopup(dot, JSON.parse(decodeURIComponent(dot.getAttribute('data-dp')))); } catch (_) { /* ignore */ }
     });
     container.addEventListener('mouseout', e => {
-      const dot = e.target.closest('circle[data-dp]');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
       hidePopup(false);
     });
     container.addEventListener('focusin', e => {
-      const dot = e.target.closest('circle[data-dp]');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       try { showPopup(dot, JSON.parse(decodeURIComponent(dot.getAttribute('data-dp')))); } catch (_) { /* ignore */ }
     });
     container.addEventListener('focusout', e => {
-      const dot = e.target.closest('circle[data-dp]');
+      const dot = findDotTarget(e.target);
       if (!dot) return;
       hidePopup(false);
     });
     container.addEventListener('click', e => {
-      const dot = e.target.closest('circle[data-dp]');
+      const dot = findDotTarget(e.target);
       if (dot) {
         if (parseFloat(popup.style.opacity || '0') > 0) {
           hidePopup(true);
