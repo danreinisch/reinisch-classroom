@@ -5016,7 +5016,15 @@
       popup.style.transform = 'translateY(0)';
       popup.style.pointerEvents = 'auto';
 
-      const rect = dot.getBoundingClientRect();
+      let rect = dot.getBoundingClientRect();
+      // Fallback: SVG <g> elements may return a zero-size rect in some browsers;
+      // use the <rect> child's bounding rect instead.
+      if (rect.width === 0 && rect.height === 0) {
+        const rectChild = dot.querySelector('rect');
+        if (rectChild) rect = rectChild.getBoundingClientRect();
+      }
+      // If still zero-size, we have no reliable position — abort positioning.
+      if (rect.width === 0 && rect.height === 0) return;
       const pw = 280;
       const left = Math.max(8, Math.min(rect.left + rect.width / 2 - pw / 2, window.innerWidth - pw - 8));
       const estH = popup.offsetHeight || 160;
