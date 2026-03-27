@@ -2280,12 +2280,13 @@
                         }
                       } catch (_qe) { /* leave existing text unchanged */ }
                     }
+                    // Mark as loaded only on success so a network failure allows retry
+                    panel.dataset.dpLoaded = 'true';
                   } catch (dpErr) {
                     console.warn('[tc-students] Could not load goal data points:', dpErr);
                   }
                 }
               }
-              panel.dataset.dpLoaded = 'true';
             }
           }
           e.stopPropagation();
@@ -5000,11 +5001,17 @@
     // TC page uses its own namespace so we listen on its container rather than the full document
     const container = document.body;
 
-    // Helper: find nearest [data-dp] element from target, checking direct and ancestor
+    // Helper: find nearest [data-dp] element from target.
+    // Uses a manual parentNode loop rather than .closest() because SVG elements
+    // (e.g. <rect>, <path>, nested <svg>) may not support .closest() on older
+    // browsers or in some SVG rendering contexts.
     function findDotTarget(el) {
-      if (!el) return null;
-      if (el.hasAttribute && el.hasAttribute('data-dp')) return el;
-      return el.closest ? el.closest('[data-dp]') : null;
+      let node = el;
+      while (node && node !== document.body) {
+        if (node.getAttribute && node.getAttribute('data-dp')) return node;
+        node = node.parentNode;
+      }
+      return null;
     }
 
     container.addEventListener('mouseover', e => {
@@ -5015,6 +5022,8 @@
     container.addEventListener('mouseout', e => {
       const dot = findDotTarget(e.target);
       if (!dot) return;
+      // If moving between child elements of the same dot (e.g. <g> → <rect>), don't hide
+      if (e.relatedTarget && dot.contains(e.relatedTarget)) return;
       if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
       hidePopup(false);
     });

@@ -1079,14 +1079,17 @@
       }
     }
 
-    // Helper: find the nearest [data-dp] ancestor/self, also checking e.target directly
-    // for SVG elements where .closest() with class selectors may be unreliable.
+    // Helper: find the nearest [data-dp] ancestor/self.
+    // Uses a manual parentNode loop rather than .closest() because SVG elements
+    // (e.g. <rect>, <path>, nested <svg>) may not support .closest() on older
+    // browsers or in some SVG rendering contexts.
     function findDotTarget(el) {
-      if (!el) return null;
-      // Direct check first (SVG <g> or inner <rect>/<svg> whose parent carries data-dp)
-      if (el.hasAttribute && el.hasAttribute('data-dp')) return el;
-      // Walk up via closest — attribute selectors are more reliable than class selectors for SVG
-      return el.closest ? el.closest('[data-dp]') : null;
+      let node = el;
+      while (node && node !== document.body) {
+        if (node.getAttribute && node.getAttribute('data-dp')) return node;
+        node = node.parentNode;
+      }
+      return null;
     }
 
     // Delegated mouseover/focus on dot icon groups
@@ -1104,6 +1107,8 @@
     document.addEventListener('mouseout', e => {
       const dot = findDotTarget(e.target);
       if (!dot) return;
+      // If moving between child elements of the same dot (e.g. <g> → <rect>), don't hide
+      if (e.relatedTarget && dot.contains(e.relatedTarget)) return;
       // Only hide if not moving into popup
       if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
       hidePopup(false);
