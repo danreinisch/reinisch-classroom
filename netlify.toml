@@ -43,6 +43,12 @@
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate"
 
+# Cache-Control for JS files in /web/: always revalidate to pick up new deploys
+[[headers]]
+  for = "/web/*.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
 # Admin not configured page: prevent caching and search indexing
 [[headers]]
   for = "/admin-not-configured/*"
