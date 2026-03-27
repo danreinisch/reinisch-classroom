@@ -1058,7 +1058,15 @@
       popup.classList.add('visible');
 
       // Position near the dot
-      const dotRect = dot.getBoundingClientRect();
+      let dotRect = dot.getBoundingClientRect();
+      // Fallback: SVG <g> elements may return a zero-size rect in some browsers;
+      // use the <rect> child's bounding rect instead.
+      if (dotRect.width === 0 && dotRect.height === 0) {
+        const rectChild = dot.querySelector('rect');
+        if (rectChild) dotRect = rectChild.getBoundingClientRect();
+      }
+      // If still zero-size, we have no reliable position — abort positioning.
+      if (dotRect.width === 0 && dotRect.height === 0) return;
       const popupW = 280;
       const leftRaw = dotRect.left + dotRect.width / 2 - popupW / 2;
       const left = Math.max(8, Math.min(leftRaw, window.innerWidth - popupW - 8));
