@@ -1582,6 +1582,32 @@
         cursor: not-allowed;
       }
 
+      /* Fill-in-blank text answer */
+      .st-text-answer {
+        width: 100%;
+        padding: 14px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: inherit;
+        font-size: 15px;
+        font-family: inherit;
+        line-height: 1.6;
+        resize: vertical;
+        box-sizing: border-box;
+      }
+
+      .st-text-answer:focus {
+        outline: none;
+        border-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      .st-text-answer:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
       /* Writing Builder Styles */
       .st-builder-toggle-btn {
         background: rgba(59, 130, 246, 0.12);
@@ -2534,7 +2560,8 @@
         color: var(--ink);
       }
       [data-theme="light"] .st-writing-textarea,
-      [data-theme="light"] .st-builder-textarea {
+      [data-theme="light"] .st-builder-textarea,
+      [data-theme="light"] .st-text-answer {
         background: #f3f4f6;
         border-color: var(--border);
         color: var(--ink);
@@ -2639,6 +2666,7 @@
         }
         
         .st-choice { background: #f5f5f5 !important; border-color: #ccc !important; }
+        .st-text-answer { background: #f5f5f5 !important; border-color: #ccc !important; }
         .st-hint-content { display: block !important; }
       }
 

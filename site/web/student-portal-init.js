@@ -1616,6 +1616,11 @@
         `;
       }).join('');
 
+      // Fill-in-blank: questions with no predefined choices render a textarea
+      const answerInputHtml = choices.length === 0
+        ? `<textarea class="st-text-answer" data-question-id="${questionId}" rows="2" placeholder="Type your answer here..." aria-label="Answer for question ${q.number}"${(isReadOnly || isLocked) ? ' disabled' : ''}>${escapeHtml(savedAnswer || '')}</textarea>`
+        : `<div class="st-choices">${choicesHtml}</div>`;
+
       const retryLockedBadge = isLocked ? `<div class="st-retry-correct-badge">✓ Correct</div>` : '';
       
       const hintHtml = q.hint ? `
@@ -1635,9 +1640,7 @@
             ${escapeHtml(q.text)}
             <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud" aria-label="Read question ${q.number} aloud">🔊</button>
           </div>
-          <div class="st-choices">
-            ${choicesHtml}
-          </div>
+          ${answerInputHtml}
           ${hintHtml}
         </div>
       `;
@@ -1747,6 +1750,23 @@
       });
     }
     
+    // Attach fill-in-blank text answer handlers
+    const fillInSaveTimeouts = new Map();
+    container.querySelectorAll('.st-text-answer').forEach(textarea => {
+      if (textarea.disabled) return;
+      textarea.addEventListener('input', function() {
+        const qId = this.getAttribute('data-question-id');
+        const value = this.value;
+        assignmentViewerState.answers.set(qId, value);
+        clearTimeout(fillInSaveTimeouts.get(qId));
+        fillInSaveTimeouts.set(qId, setTimeout(() => {
+          saveAnswer(instance.id, qId, value);
+          updateViewerProgress(instance);
+          saveAnswersToServer(instance);
+        }, AUTO_SAVE_DEBOUNCE_MS));
+      });
+    });
+
     // Attach hint handlers
     container.querySelectorAll('.st-hint-btn').forEach(btn => {
       btn.addEventListener('click', function() {
