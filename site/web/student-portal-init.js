@@ -857,6 +857,10 @@
       // Dot grid chart (per-question data points)
       const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
       const { html: dotGridHtml, hasData: hasDotGrid } = buildDotGridChart(goalDataPoints, goal.id);
+      // When per-question dot-grid data exists, show it instead of the legacy line chart
+      const chartSectionHtml = hasDotGrid
+        ? dotGridHtml
+        : `<div class="st-goal-chart-container" aria-hidden="true">${chartHtml}</div>`;
 
       // Progress detail panel — expanded by default (Item 2)
       progressDetailHtml = `
@@ -866,10 +870,7 @@
             <span class="st-goal-latest-num">${escapeHtml(latestVal)}</span>
           </div>
           ${qAvgHtml}
-          ${hasDotGrid ? dotGridHtml : ''}
-          <div class="st-goal-chart-container" aria-hidden="true">
-            ${chartHtml}
-          </div>
+          ${chartSectionHtml}
           <table class="st-progress-table" aria-label="All progress data (${sortedForDisplay.length} ${sortedForDisplay.length === 1 ? 'entry' : 'entries'})">
             <thead><tr><th>Date</th><th>Value</th></tr></thead>
             <tbody>${allRows}</tbody>
