@@ -173,11 +173,13 @@
           if (isFillInBlank) {
             // Fill-in-blank: compute keyword match result and show with partial credit info
             const minKeywords = item.meta?.min_keywords ?? item.scoring?.min_keywords ?? item.meta?.scoring?.min_keywords ?? 1;
-            const answerLower = studentText.toLowerCase();
+            const caseSensitive = item.meta?.case_sensitive === true || item.scoring?.case_sensitive === true || item.meta?.scoring?.case_sensitive === true;
+            const answerForMatch = caseSensitive ? studentText : studentText.toLowerCase();
             let foundCount = 0;
             const foundList = [];
             for (const kw of fibKeywords) {
-              if (answerLower.includes(String(kw).toLowerCase())) {
+              const kwForMatch = caseSensitive ? String(kw) : String(kw).toLowerCase();
+              if (answerForMatch.includes(kwForMatch)) {
                 foundCount++;
                 foundList.push(kw);
               }
