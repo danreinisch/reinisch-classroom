@@ -25,7 +25,7 @@ function manifestQuestionsToItems(questions) {
       correct: (q.correct !== undefined && q.correct !== null) ? q.correct : null,
       dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
       goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-      scoring: {},
+      scoring: q.scoring || {},
       notes: q.label || ''
     });
   }
@@ -180,6 +180,36 @@ console.log('--- summarizeItems ---');
   assert.strictEqual(summary.has_goals, false);
   assert.strictEqual(summary.coverage, 0);
   console.log('  ✓ summarizeItems handles empty array correctly');
+  passed++;
+}
+
+// Test 7: scoring is passed through from q.scoring when present
+{
+  const questions = [{
+    q_ref: 'Q5',
+    label: 'Fill in blank',
+    skill_tags: [],
+    points: 1,
+    default_goal_codes: ['MATH.1'],
+    dese_codes: ['MA.8.EE.1'],
+    correct: ['slope', 'intercept'],
+    answer_type: 'constructed',
+    scoring: { keywords: ['slope', 'intercept'], min_keywords: 2 },
+    per_student_overrides: {}
+  }];
+  const items = manifestQuestionsToItems(questions);
+  assert.deepStrictEqual(items[0].scoring, { keywords: ['slope', 'intercept'], min_keywords: 2 });
+  assert.deepStrictEqual(items[0].correct, ['slope', 'intercept']);
+  console.log('  ✓ scoring is passed through from q.scoring when present');
+  passed++;
+}
+
+// Test 8: scoring defaults to {} when q.scoring is absent
+{
+  const questions = [{ q_ref: 'Q1', answer_type: 'mcq', correct: 'B', points: 1, default_goal_codes: [], label: 'Q1' }];
+  const items = manifestQuestionsToItems(questions);
+  assert.deepStrictEqual(items[0].scoring, {});
+  console.log('  ✓ scoring defaults to {} when q.scoring is absent');
   passed++;
 }
 

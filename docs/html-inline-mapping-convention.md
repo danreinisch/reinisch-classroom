@@ -2,7 +2,7 @@
 
 This document describes how to annotate HTML assignments so that Reinisch Classroom can automatically detect questions, extract answer keys, map DESE standards, and link IEP goal codes — without requiring a separate sidecar manifest file.
 
-The convention uses six standard HTML `data-*` attributes (`data-qref`, `data-points`, `data-correct`, `data-answer-type`, `data-dese`, `data-goal`) that can be placed on any element.
+The convention uses eight standard HTML `data-*` attributes (`data-qref`, `data-points`, `data-correct`, `data-answer-type`, `data-dese`, `data-goal`, `data-scoring-keywords`, `data-scoring-min`) that can be placed on any element.
 
 ---
 
@@ -16,6 +16,8 @@ The convention uses six standard HTML `data-*` attributes (`data-qref`, `data-po
 | `data-answer-type` | No | Explicit answer type override: `mcq`, `multi`, `boolean`, or `constructed`. |
 | `data-dese` | No | Semicolon-separated DESE/standards codes (e.g. `MA.8.EE.1;MA.8.EE.2`). |
 | `data-goal` | No | Semicolon-separated IEP goal codes (e.g. `MATH.1;READ.2`). |
+| `data-scoring-keywords` | No | Semicolon-separated keywords for auto-scoring constructed items (e.g. `slope;intercept;linear`). |
+| `data-scoring-min` | No | Minimum number of keywords the student must include to earn credit. Defaults to `1`. |
 
 ---
 
@@ -31,6 +33,37 @@ When `data-answer-type` is not specified, the answer type is inferred from `data
 | Any other string (e.g. `B`) | `mcq` | `string` |
 
 If `data-answer-type` is provided and valid (`mcq`, `multi`, `boolean`, `constructed`), that type is used directly and `data-correct` is still parsed using the same rules to normalize the `correct` value.
+
+**Special case — explicit `constructed` with a non-empty `data-correct`:** When `data-answer-type="constructed"` is set and `data-correct` contains a non-empty, non-dash value, the value is treated as a single keyword for auto-scoring. The `correct` field is stored as `[value]` (an array) and `scoring` is set to `{ keywords: [value], min_keywords: 1 }`. This is a shorthand for single-keyword fill-in-the-blank questions:
+
+```html
+<!-- Both of these are equivalent fill-in-the-blank with keyword "photosynthesis" -->
+<div data-qref="Q1" data-answer-type="constructed" data-correct="photosynthesis">...</div>
+<div data-qref="Q1" data-answer-type="constructed" data-correct="-" data-scoring-keywords="photosynthesis">...</div>
+```
+
+## Keyword Scoring for Fill-in-the-Blank Questions
+
+Use `data-scoring-keywords` and `data-scoring-min` on `constructed` items to enable auto-grading:
+
+```html
+<!-- Student must include at least 2 of: slope, intercept, linear -->
+<div data-qref="Q5"
+     data-answer-type="constructed"
+     data-correct="-"
+     data-scoring-keywords="slope;intercept;linear"
+     data-scoring-min="2"
+     data-dese="MA.8.EE.1"
+     data-goal="MATH.1">
+  <p>5. In your own words, describe the slope of a line.</p>
+  <textarea name="Q5"></textarea>
+</div>
+```
+
+- Keywords are matched **case-insensitively** anywhere in the student's answer text
+- `data-scoring-min` defaults to `1` if omitted
+- Constructed items **without** `data-scoring-keywords` are left unscored and require teacher review
+- Goal progress is updated automatically when all constructed items on an assignment have keywords configured
 
 ---
 

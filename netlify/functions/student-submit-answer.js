@@ -349,6 +349,24 @@ exports.handler = async (event) => {
                   isCorrect = String(studentAnswer).trim().toUpperCase() === String(item.meta.correct).trim().toUpperCase();
                   maxPoints = item.points != null ? Number(item.points) : 1;
                   earnedPoints = isCorrect ? maxPoints : 0;
+                } else if (item.answer_type === 'constructed') {
+                  // Attempt keyword-based auto-scoring for constructed items
+                  const scoringKeywords = (item.meta && item.meta.scoring && Array.isArray(item.meta.scoring.keywords) && item.meta.scoring.keywords.length > 0)
+                    ? item.meta.scoring.keywords
+                    : (item.meta && Array.isArray(item.meta.correct) ? item.meta.correct : null);
+                  if (scoringKeywords && scoringKeywords.length > 0) {
+                    const minKeywords = (item.meta && item.meta.scoring && item.meta.scoring.min_keywords != null)
+                      ? Number(item.meta.scoring.min_keywords)
+                      : 1;
+                    const answerLower = String(studentAnswer).toLowerCase();
+                    let foundCount = 0;
+                    for (const kw of scoringKeywords) {
+                      if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
+                    }
+                    isCorrect = foundCount >= minKeywords;
+                    maxPoints = item.points != null ? Number(item.points) : 1;
+                    earnedPoints = isCorrect ? maxPoints : 0;
+                  }
                 }
 
                 subAnswers.push({
@@ -368,18 +386,41 @@ exports.handler = async (event) => {
               }
             }
 
-            // Add writing response as a constructed submission_answer (requires teacher scoring)
+            // Add writing response as a constructed submission_answer
             if (hasWriting) {
               const constructedItem = items.find(i => i.answer_type === 'constructed');
               if (constructedItem) {
+                const maxPts = constructedItem.points != null ? Number(constructedItem.points) : 5;
+                let writingIsCorrect = null;
+                let writingEarned = null;
+                let writingScored = null;
+
+                // Attempt keyword-based auto-scoring if keywords are configured
+                const writingKeywords = (constructedItem.meta && constructedItem.meta.scoring && Array.isArray(constructedItem.meta.scoring.keywords) && constructedItem.meta.scoring.keywords.length > 0)
+                  ? constructedItem.meta.scoring.keywords
+                  : (constructedItem.meta && Array.isArray(constructedItem.meta.correct) ? constructedItem.meta.correct : null);
+                if (writingKeywords && writingKeywords.length > 0) {
+                  const writingMin = (constructedItem.meta && constructedItem.meta.scoring && constructedItem.meta.scoring.min_keywords != null)
+                    ? Number(constructedItem.meta.scoring.min_keywords)
+                    : 1;
+                  const writingLower = String(writing_response).toLowerCase();
+                  let writingFound = 0;
+                  for (const kw of writingKeywords) {
+                    if (writingLower.includes(String(kw).toLowerCase())) writingFound++;
+                  }
+                  writingIsCorrect = writingFound >= writingMin;
+                  writingEarned = writingIsCorrect ? maxPts : 0;
+                  writingScored = new Date().toISOString();
+                }
+
                 subAnswers.push({
                   submission_id: submissionId,
                   assignment_item_id: constructedItem.id,
                   raw_answer: { value: writing_response },
-                  is_correct: null,
-                  earned_points: null,
-                  max_points: constructedItem.points != null ? Number(constructedItem.points) : 5, // default 5 pts for writing prompts without explicit points
-                  scored_at: null
+                  is_correct: writingIsCorrect,
+                  earned_points: writingEarned,
+                  max_points: maxPts,
+                  scored_at: writingScored
                 });
                 console.log(`[student-submit-answer] [${requestId}] Added writing response submission_answer for item ${constructedItem.item_ref}`);
               } else {
@@ -430,11 +471,16 @@ exports.handler = async (event) => {
                   console.log(`[student-submit-answer] [${requestId}] Updated score_auto=${scoreAuto} score_total=${scoreTotal} for submission ${submissionId}`);
 
                   // Step 8: Auto-upsert goal_progress if all items are auto-scoreable
-                  // (MCQ/boolean/multi only — no constructed items needing teacher review)
+                  // Skip only if there are constructed items that are NOT auto-scoreable (no keywords)
                   try {
-                    const hasConstructed = items.some(i => i.answer_type === 'constructed');
+                    const hasUnscoredConstructed = items.some(i => {
+                      if (i.answer_type !== 'constructed') return false;
+                      const hasKeywords = (i.meta && i.meta.scoring && Array.isArray(i.meta.scoring.keywords) && i.meta.scoring.keywords.length > 0)
+                        || (i.meta && Array.isArray(i.meta.correct));
+                      return !hasKeywords;
+                    });
 
-                    if (hasConstructed) {
+                    if (hasUnscoredConstructed) {
                       console.log(`[student-submit-answer] [${requestId}] Skipping auto goal progress — assignment has constructed items requiring teacher review`);
                     } else {
                       // Build goal rollups from items with goal_codes

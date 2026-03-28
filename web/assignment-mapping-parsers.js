@@ -3,10 +3,12 @@
 
 /**
  * Parse TXT mapping format (pipe-delimited)
- * Format: #question_ref|points|correct|dese_codes|goal_codes|notes
+ * Format: #question_ref|points|correct|dese_codes|goal_codes|notes[|keywords]
  * - Lines starting with # are comments
  * - Semicolon-separated codes (e.g., "MA.8.EE.1;MA.8.EE.2")
  * - Empty fields allowed (use empty string or dash)
+ * - Optional 7th field: semicolon-separated keywords for constructed items
+ *   e.g. "slope;intercept;linear;min:2" — min:N sets min_keywords threshold
  * 
  * @param {string} txtContent - Raw TXT content
  * @returns {Object} Parsed manifest with items array
@@ -41,6 +43,7 @@ export function parseTxtMapping(txtContent) {
     }
     
     let [ref, points, correct, deseCodes, goalCodes, notes] = parts;
+    const keywordsRaw = parts.length >= 7 ? parts[6] : '';
     
     // Remove leading # from ref if present
     ref = ref.replace(/^#+/, '').trim();
@@ -108,6 +111,29 @@ export function parseTxtMapping(txtContent) {
       correctValue = correctValue.toLowerCase() === 'true';
     }
     
+    // Parse optional keywords field (7th field) for constructed items
+    let scoring = {};
+    if (keywordsRaw && answerType === 'constructed') {
+      const keywordParts = keywordsRaw.split(';').map(k => k.trim()).filter(k => k.length > 0);
+      let minKeywords = 1;
+      const keywords = [];
+      for (const part of keywordParts) {
+        const minMatch = part.match(/^min:(\d+)$/i);
+        if (minMatch) {
+          minKeywords = parseInt(minMatch[1], 10);
+        } else {
+          keywords.push(part);
+        }
+      }
+      if (keywords.length > 0) {
+        scoring = { keywords, min_keywords: minKeywords };
+        // Set correct to the keywords array as well, providing a fallback for scoreConstructed()
+        // which checks item.correct when item.scoring.keywords is absent. Both fields intentionally
+        // carry the same data so the item is scoreable via either the client-side or server-side path.
+        correctValue = keywords;
+      }
+    }
+    
     items.push({
       ref,
       answer_type: answerType,
@@ -115,6 +141,7 @@ export function parseTxtMapping(txtContent) {
       correct: correctValue,
       dese_codes: deseArray,
       goal_codes: goalArray,
+      scoring,
       notes: notes || ''
     });
   }

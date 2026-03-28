@@ -35,7 +35,7 @@ export function manifestQuestionsToItems(questions) {
       correct: (q.correct !== undefined && q.correct !== null) ? q.correct : null,
       dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
       goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-      scoring: {},
+      scoring: q.scoring || {},
       notes: q.label || ''
     });
   }
