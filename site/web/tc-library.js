@@ -4066,10 +4066,12 @@
           if (isFillInBlank) {
             // Fill-in-blank: compute keyword match result and show with ✓/✗
             const minKeywords = item.meta?.min_keywords ?? item.scoring?.min_keywords ?? item.meta?.scoring?.min_keywords ?? 1;
-            const answerLower = studentText.toLowerCase();
+            const caseSensitive = item.meta?.case_sensitive === true || item.scoring?.case_sensitive === true || item.meta?.scoring?.case_sensitive === true;
+            const answerForMatch = caseSensitive ? studentText : studentText.toLowerCase();
             let foundCount = 0;
             for (const kw of fibKeywords) {
-              if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
+              const kwForMatch = caseSensitive ? String(kw) : String(kw).toLowerCase();
+              if (answerForMatch.includes(kwForMatch)) foundCount++;
             }
             const fibCorrect = foundCount >= minKeywords;
             gradableCount++;
