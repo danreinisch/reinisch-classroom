@@ -57,7 +57,14 @@ function parseTxtMapping(txtContent) {
 
     let scoring = {};
     if (keywordsRaw && answerType === 'constructed') {
-      const keywordParts = keywordsRaw.split(';').map(k => k.trim()).filter(k => k.length > 0);
+      let keywordsStr = keywordsRaw;
+      const caseMatch = keywordsStr.match(/;?\s*case:(true|false)/i);
+      let caseSensitive = false;
+      if (caseMatch) {
+        caseSensitive = caseMatch[1].toLowerCase() === 'true';
+        keywordsStr = keywordsStr.replace(/;?\s*case:(true|false)/i, '');
+      }
+      const keywordParts = keywordsStr.split(';').map(k => k.trim()).filter(k => k.length > 0);
       let minKeywords = 1;
       const keywords = [];
       for (const part of keywordParts) {
@@ -69,7 +76,11 @@ function parseTxtMapping(txtContent) {
         }
       }
       if (keywords.length > 0) {
-        scoring = { keywords, min_keywords: minKeywords };
+        scoring = {
+          keywords,
+          min_keywords: minKeywords,
+          ...(caseSensitive ? { case_sensitive: true } : {}),
+        };
         correctValue = keywords;
       }
     }
@@ -181,6 +192,81 @@ console.log('--- parseTxtMapping: mixed 6 and 7 field lines ---');
   assert.strictEqual(byRef['Q5'].scoring.min_keywords, 1);
 
   console.log('  ✓ Mixed 6-field and 7-field lines in same file parse correctly');
+  passed++;
+}
+
+console.log('--- parseTxtMapping: case:true/false keyword directive ---');
+
+{
+  const txt = 'Q1|2|-|MA.8.EE.1|MATH.1|Fill in blank|DNA;RNA;case:true';
+  const result = parseTxtMapping(txt);
+  assert.strictEqual(result.valid, true);
+  const item = result.items[0];
+  assert.strictEqual(item.scoring.case_sensitive, true, 'case:true sets case_sensitive to true');
+  assert.deepStrictEqual(item.scoring.keywords, ['DNA', 'RNA'], 'keywords extracted without case: directive');
+  assert.strictEqual(item.scoring.min_keywords, 1, 'min_keywords defaults to 1');
+  console.log('  ✓ case:true sets scoring.case_sensitive === true and removes directive from keyword list');
+  passed++;
+}
+
+{
+  const txt = 'Q1|2|-|MA.8.EE.1|MATH.1|Fill in blank|DNA;RNA;case:false';
+  const result = parseTxtMapping(txt);
+  assert.strictEqual(result.valid, true);
+  const item = result.items[0];
+  assert.ok(!item.scoring.case_sensitive, 'case:false does not set case_sensitive');
+  assert.deepStrictEqual(item.scoring.keywords, ['DNA', 'RNA'], 'keywords extracted without case: directive');
+  console.log('  ✓ case:false does not set case_sensitive and removes directive from keyword list');
+  passed++;
+}
+
+{
+  // case: directive appears before min:N
+  const txt = 'Q1|3|-|MA.8.EE.1|MATH.1|Fill in blank|photosynthesis;chlorophyll;case:true;min:2';
+  const result = parseTxtMapping(txt);
+  assert.strictEqual(result.valid, true);
+  const item = result.items[0];
+  assert.strictEqual(item.scoring.case_sensitive, true, 'case:true parsed when before min:N');
+  assert.strictEqual(item.scoring.min_keywords, 2, 'min:N parsed when after case:');
+  assert.deepStrictEqual(item.scoring.keywords, ['photosynthesis', 'chlorophyll'], 'keywords correct');
+  console.log('  ✓ case: directive before min:N: both parsed correctly');
+  passed++;
+}
+
+{
+  // case: directive appears after min:N
+  const txt = 'Q1|3|-|MA.8.EE.1|MATH.1|Fill in blank|photosynthesis;chlorophyll;min:2;case:true';
+  const result = parseTxtMapping(txt);
+  assert.strictEqual(result.valid, true);
+  const item = result.items[0];
+  assert.strictEqual(item.scoring.case_sensitive, true, 'case:true parsed when after min:N');
+  assert.strictEqual(item.scoring.min_keywords, 2, 'min:N parsed when before case:');
+  assert.deepStrictEqual(item.scoring.keywords, ['photosynthesis', 'chlorophyll'], 'keywords correct');
+  console.log('  ✓ case: directive after min:N: both parsed correctly');
+  passed++;
+}
+
+{
+  // case: is case-insensitive itself (e.g. Case:True)
+  const txt = 'Q1|1|-|MA.8.EE.1|MATH.1|Fill in blank|ATP;ADP;Case:True';
+  const result = parseTxtMapping(txt);
+  assert.strictEqual(result.valid, true);
+  const item = result.items[0];
+  assert.strictEqual(item.scoring.case_sensitive, true, 'Case:True (mixed case) sets case_sensitive');
+  assert.deepStrictEqual(item.scoring.keywords, ['ATP', 'ADP']);
+  console.log('  ✓ Case:True (mixed case directive) is parsed correctly');
+  passed++;
+}
+
+{
+  // No case: directive → case_sensitive absent
+  const txt = 'Q1|1|-|MA.8.EE.1|MATH.1|Fill in blank|mitosis;meiosis';
+  const result = parseTxtMapping(txt);
+  assert.strictEqual(result.valid, true);
+  const item = result.items[0];
+  assert.ok(!('case_sensitive' in item.scoring), 'case_sensitive absent when no case: directive');
+  assert.deepStrictEqual(item.scoring.keywords, ['mitosis', 'meiosis']);
+  console.log('  ✓ No case: directive → case_sensitive absent from scoring object');
   passed++;
 }
 

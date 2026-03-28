@@ -944,5 +944,208 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(capturedGoalDataPointsPosts.length, 0, 'no data points for items without goal codes');
   })();
 
+  // ── Group: Constructed keyword auto-scoring with case_sensitive ───────────
+  console.log('\n--- Constructed Keyword Scoring: case_sensitive ---');
+
+  await test('constructed item with case_sensitive:true → case matters for scoring', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 4,
+        meta: { scoring: { keywords: ['DNA', 'RNA'], min_keywords: 1, case_sensitive: true } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'The cell contains dna and rna.' }, // lowercase — should NOT match when case_sensitive
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, false, 'Lowercase match should fail when case_sensitive: true');
+    assert.strictEqual(answer.earned_points, 0, 'No points when keywords not matched case-sensitively');
+  })();
+
+  await test('constructed item with case_sensitive:true → uppercase keywords match correctly', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 4,
+        meta: { scoring: { keywords: ['DNA', 'RNA'], min_keywords: 1, case_sensitive: true } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'The cell contains DNA and RNA.' }, // exact case — should match
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, true, 'Exact-case keywords should match when case_sensitive: true');
+    assert.strictEqual(answer.earned_points, 4, 'Full points when all keywords matched');
+  })();
+
+  await test('constructed item with case_sensitive:false → case-insensitive match succeeds', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 4,
+        meta: { scoring: { keywords: ['photosynthesis', 'chlorophyll'], min_keywords: 1, case_sensitive: false } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'PHOTOSYNTHESIS uses CHLOROPHYLL to capture light.' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, true, 'Uppercase answer should match lowercase keywords when case_sensitive: false');
+    assert.strictEqual(answer.earned_points, 4, 'Full points when all keywords matched case-insensitively');
+  })();
+
+  await test('constructed item without case_sensitive → defaults to case-insensitive', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 3,
+        meta: { scoring: { keywords: ['mitosis', 'meiosis'], min_keywords: 1 } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'Cells divide by MITOSIS.' }, // uppercase keyword
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, true, 'Should match case-insensitively when case_sensitive is absent');
+  })();
+
+  await test('partial credit earned_points is ratio-based (case_sensitive: true)', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 6,
+        meta: { scoring: { keywords: ['DNA', 'RNA', 'ATP'], min_keywords: 1, case_sensitive: true } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'DNA is important.' }, // only 1 of 3 keywords (exact case)
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, true, 'min_keywords=1 met with one matching keyword');
+    assert.strictEqual(answer.earned_points, 2, 'Partial credit: 1/3 of 6 pts = 2 pts');
+  })();
+
+  await test('partial credit earned_points is ratio-based (case_sensitive: false)', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 6,
+        meta: { scoring: { keywords: ['slope', 'intercept', 'linear'], min_keywords: 2, case_sensitive: false } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'The SLOPE and INTERCEPT define the line.' }, // 2 of 3 keywords
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, true, 'min_keywords=2 met with 2 matching keywords');
+    assert.strictEqual(answer.earned_points, 4, 'Partial credit: 2/3 of 6 pts = 4 pts');
+  })();
+
+  await test('is_correct false when matched count < min_keywords (case_sensitive: true)', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 4,
+        meta: { scoring: { keywords: ['DNA', 'RNA', 'ATP'], min_keywords: 2, case_sensitive: true } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'DNA carries genetic information.' }, // only 1 of 3 (case-sensitive), need 2
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, false, 'is_correct false when foundCount < min_keywords');
+    // 1 out of 3 keywords found → earned = 6*(1/3) but points=4 → 4*(1/3) ≈ 1.33
+    assert.ok(answer.earned_points > 0, 'Still earns partial credit even if not is_correct');
+  })();
+
+  await test('is_correct false when matched count < min_keywords (case_sensitive: false)', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q1', answer_type: 'constructed', points: 6,
+        meta: { scoring: { keywords: ['slope', 'intercept', 'linear'], min_keywords: 2, case_sensitive: false } },
+        goal_codes: []
+      }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'The slope of the function.' }, // only 1 keyword, need 2
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length > 0);
+    const answer = capturedSubAnswers[0];
+    assert.strictEqual(answer.is_correct, false, 'is_correct false when foundCount < min_keywords');
+    assert.strictEqual(answer.earned_points, 2, 'Partial credit: 1/3 of 6 pts = 2 pts');
+  })();
+
   console.log('\n✓ All student-submit-answer tests passed!');
 })();
