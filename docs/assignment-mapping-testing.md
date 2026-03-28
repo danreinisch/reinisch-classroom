@@ -237,7 +237,7 @@ scoreItem({answer_type: 'multi', correct: ['A', 'B', 'C'], points: 2}, ['C', 'B'
 // Should return: is_correct = true
 
 scoreItem({answer_type: 'multi', correct: ['A', 'B', 'C'], points: 2}, ['A', 'B'])
-// Should return: is_correct = false (partial credit not in Phase 1)
+// Should return: is_correct = false (partial credit based on correct_hits ratio)
 ```
 
 **Boolean:**
@@ -262,10 +262,13 @@ const item = {
 };
 
 scoreItem(item, 'The slope determines how steep the line is and the intercept is where it crosses.')
-// Should return: is_correct = true (2/3 keywords found)
+// Should return: is_correct = true, earned_points = 2.00 (2/3 keywords × 3pts)
+
+scoreItem(item, 'The slope is steep.')
+// Should return: is_correct = false, earned_points = 1.00 (1/3 keywords — partial credit)
 
 scoreItem(item, 'The graph goes up.')
-// Should return: is_correct = false (0 keywords)
+// Should return: is_correct = false, earned_points = 0.00 (0 keywords found)
 ```
 
 ## Performance Benchmarks

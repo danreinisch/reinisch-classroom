@@ -363,9 +363,10 @@ exports.handler = async (event) => {
                     for (const kw of scoringKeywords) {
                       if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
                     }
+                    const ratio = scoringKeywords.length > 0 ? Math.min(1, foundCount / scoringKeywords.length) : 0;
                     isCorrect = foundCount >= minKeywords;
                     maxPoints = item.points != null ? Number(item.points) : 1;
-                    earnedPoints = isCorrect ? maxPoints : 0;
+                    earnedPoints = Math.round(maxPoints * ratio * 100) / 100;
                   }
                 }
 
@@ -408,8 +409,9 @@ exports.handler = async (event) => {
                   for (const kw of writingKeywords) {
                     if (writingLower.includes(String(kw).toLowerCase())) writingFound++;
                   }
+                  const writingRatio = writingKeywords.length > 0 ? Math.min(1, writingFound / writingKeywords.length) : 0;
                   writingIsCorrect = writingFound >= writingMin;
-                  writingEarned = writingIsCorrect ? maxPts : 0;
+                  writingEarned = Math.round(maxPts * writingRatio * 100) / 100;
                   writingScored = new Date().toISOString();
                 }
 
