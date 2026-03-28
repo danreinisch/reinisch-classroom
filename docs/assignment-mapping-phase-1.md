@@ -15,8 +15,10 @@ TXT mapping files use a simple pipe-delimited format:
 ### Format Specification
 
 ```
-#question_ref|points|correct|dese_codes|goal_codes|notes
+#question_ref|points|correct|dese_codes|goal_codes|notes[|keywords]
 ```
+
+The 7th `keywords` field is **optional** — existing 6-field files continue to work without any changes.
 
 ### Field Descriptions
 
@@ -32,7 +34,7 @@ TXT mapping files use a simple pipe-delimited format:
    - For MCQ: single value (e.g., `A`, `Option 1`)
    - For Multi-select: semicolon-separated values (e.g., `A;B;C`)
    - For Boolean: `true` or `false` (case-insensitive)
-   - For Constructed: empty or `-` (uses keyword-based scoring)
+   - For Constructed: empty or `-` (uses keyword-based scoring from the 7th field)
 
 4. **dese_codes**: DESE standard codes (semicolon-separated)
    - Format: `MA.8.EE.1;MA.8.EE.2`
@@ -44,6 +46,13 @@ TXT mapping files use a simple pipe-delimited format:
 
 6. **notes**: Optional notes/description
    - Free text field
+
+7. **keywords** *(optional, constructed items only)*: Semicolon-separated keywords for auto-scoring
+   - Only applied when the answer type resolves to `constructed` (i.e., the `correct` field is empty or `-`)
+   - Keywords are matched case-insensitively anywhere in the student's answer
+   - Include `min:N` (e.g., `min:2`) to require the student to include at least N keywords; defaults to `min:1`
+   - Example: `slope;intercept;linear;min:2` — student must include at least 2 of the 3 keywords
+   - When keywords are configured, the item is auto-scored server-side; goal progress is updated immediately
 
 ### Example TXT Mapping File
 
@@ -62,14 +71,17 @@ Q4|2|A;C;D|MA.8.EE.3|MATH.2|Select all expressions that simplify correctly
 # Boolean question
 Q5|1|true|MA.8.G.1|MATH.4|True/false: All squares are rectangles
 
-# Constructed response (keyword-based)
-Q6|3|-|MA.8.EE.4;MA.8.F.2|MATH.1;MATH.5|Explain the relationship between slope and y-intercept
+# Constructed response — auto-scored with keywords (student must include at least 2)
+Q6|3|-|MA.8.EE.4;MA.8.F.2|MATH.1;MATH.5|Explain slope and y-intercept|slope;y-intercept;rate;min:2
+
+# Constructed response — no keywords (requires teacher review)
+Q7|3|-|MA.8.EE.4|MATH.5|Open-ended written response
 
 # Question with no goal mapping
-Q7|1|D|MA.8.NS.1|-|Number sense warm-up
+Q8|1|D|MA.8.NS.1|-|Number sense warm-up
 
 # Question with no DESE mapping
-Q8|1|B|-|SOCIAL.1|Collaboration question
+Q9|1|B|-|SOCIAL.1|Collaboration question
 ```
 
 ### Comments

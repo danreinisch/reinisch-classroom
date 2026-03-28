@@ -73,6 +73,20 @@ function detectQuestionsFromHTML(htmlContent) {
       var dese_codes = parseCodeArray(el.getAttribute('data-dese'));
       var default_goal_codes = parseCodeArray(el.getAttribute('data-goal'));
 
+      // Parse optional keyword scoring attributes
+      var scoringKeywordsRaw = el.getAttribute('data-scoring-keywords');
+      var scoringMinRaw = el.getAttribute('data-scoring-min');
+      var scoring;
+      if (scoringKeywordsRaw) {
+        var scoringKeywords = scoringKeywordsRaw.split(';').map(function (k) { return k.trim(); }).filter(function (k) { return k.length > 0; });
+        var scoringMin = scoringMinRaw ? (parseInt(scoringMinRaw, 10) || 1) : 1;
+        scoring = scoringKeywords.length > 0 ? { keywords: scoringKeywords, min_keywords: scoringMin } : undefined;
+      } else if (answer_type === 'constructed' && correct && !Array.isArray(correct) && correct !== '-') {
+        // Explicit constructed type with a non-empty data-correct value: treat as keyword
+        scoring = { keywords: [correct], min_keywords: 1 };
+        correct = [correct];
+      }
+
       questions.push({
         q_ref: q_ref,
         label: label,
@@ -82,6 +96,7 @@ function detectQuestionsFromHTML(htmlContent) {
         dese_codes: dese_codes,
         correct: correct,
         answer_type: answer_type,
+        scoring: scoring || undefined,
         per_student_overrides: {}
       });
     });
@@ -221,7 +236,7 @@ function manifestQuestionsToItems(questions) {
       correct: (q.correct !== undefined && q.correct !== null) ? q.correct : null,
       dese_codes: Array.isArray(q.dese_codes) ? q.dese_codes : [],
       goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
-      scoring: {},
+      scoring: q.scoring || {},
       notes: q.label || ''
     });
   }
@@ -603,6 +618,72 @@ describe('buildItemsFromMeta() — Path B (meta.questions)', () => {
     assert.deepEqual(items[0].goal_codes, ['IEP.GOAL.1', 'IEP.GOAL.2']);
   });
 });
+
+describe('detectQuestionsFromHTML() — data-scoring-keywords', () => {
+  it('detects scoring keywords from data-scoring-keywords attribute', () => {
+    const html = `<html><body>
+      <div data-qref="Q5" data-answer-type="constructed" data-correct="-" data-scoring-keywords="slope;intercept;linear" data-scoring-min="2">
+        Fill in the blank question about slope.
+      </div>
+    </body></html>`;
+    const qs = detectQuestionsFromHTML(html);
+    assert.equal(qs.length, 1);
+    assert.equal(qs[0].q_ref, 'Q5');
+    assert.equal(qs[0].answer_type, 'constructed');
+    assert.ok(qs[0].scoring, 'scoring should be populated');
+    assert.deepEqual(qs[0].scoring.keywords, ['slope', 'intercept', 'linear']);
+    assert.equal(qs[0].scoring.min_keywords, 2);
+  });
+
+  it('defaults min_keywords to 1 when data-scoring-min is absent', () => {
+    const html = `<html><body>
+      <div data-qref="Q1" data-answer-type="constructed" data-correct="-" data-scoring-keywords="photosynthesis;chlorophyll">
+        Fill in the blank.
+      </div>
+    </body></html>`;
+    const qs = detectQuestionsFromHTML(html);
+    assert.equal(qs[0].scoring.min_keywords, 1);
+    assert.deepEqual(qs[0].scoring.keywords, ['photosynthesis', 'chlorophyll']);
+  });
+
+  it('explicit constructed + non-empty data-correct stores as keyword array', () => {
+    const html = `<html><body>
+      <div data-qref="Q1" data-answer-type="constructed" data-correct="photosynthesis">
+        The process by which plants make food is called ___.
+      </div>
+    </body></html>`;
+    const qs = detectQuestionsFromHTML(html);
+    assert.equal(qs[0].answer_type, 'constructed');
+    assert.deepEqual(qs[0].correct, ['photosynthesis']);
+    assert.ok(qs[0].scoring, 'scoring should be populated');
+    assert.deepEqual(qs[0].scoring.keywords, ['photosynthesis']);
+    assert.equal(qs[0].scoring.min_keywords, 1);
+  });
+});
+
+describe('manifestQuestionsToItems() — scoring passthrough', () => {
+  it('passes through q.scoring when present', () => {
+    const html = `<html><body>
+      <div data-qref="Q5" data-answer-type="constructed" data-correct="-" data-scoring-keywords="slope;intercept" data-scoring-min="2">
+        Fill in the blank.
+      </div>
+    </body></html>`;
+    const questions = detectQuestionsFromHTML(html);
+    const items = manifestQuestionsToItems(questions);
+    assert.equal(items.length, 1);
+    assert.deepEqual(items[0].scoring, { keywords: ['slope', 'intercept'], min_keywords: 2 });
+  });
+
+  it('scoring is empty object when q.scoring is absent', () => {
+    const html = `<html><body>
+      <p data-qref="Q1" data-correct="B">MCQ question here</p>
+    </body></html>`;
+    const questions = detectQuestionsFromHTML(html);
+    const items = manifestQuestionsToItems(questions);
+    assert.deepEqual(items[0].scoring, {});
+  });
+});
+
 
 describe('Full pipeline integration', () => {
   it('detect → bridge and detect → buildItemsFromMeta produce structurally equivalent items', () => {

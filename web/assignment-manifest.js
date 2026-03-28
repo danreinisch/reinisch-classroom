@@ -127,6 +127,20 @@ export function detectQuestionsFromHTML(htmlContent) {
       var dese_codes = parseCodeArray(el.getAttribute('data-dese'));
       var default_goal_codes = parseCodeArray(el.getAttribute('data-goal'));
 
+      // Parse optional keyword scoring attributes
+      var scoringKeywordsRaw = el.getAttribute('data-scoring-keywords');
+      var scoringMinRaw = el.getAttribute('data-scoring-min');
+      var scoring;
+      if (scoringKeywordsRaw) {
+        var scoringKeywords = scoringKeywordsRaw.split(';').map(function (k) { return k.trim(); }).filter(function (k) { return k.length > 0; });
+        var scoringMin = scoringMinRaw ? (parseInt(scoringMinRaw, 10) || 1) : 1;
+        scoring = scoringKeywords.length > 0 ? { keywords: scoringKeywords, min_keywords: scoringMin } : undefined;
+      } else if (answer_type === 'constructed' && correct && !Array.isArray(correct) && correct !== '-') {
+        // Explicit constructed type with a non-empty data-correct value: treat as keyword
+        scoring = { keywords: [correct], min_keywords: 1 };
+        correct = [correct];
+      }
+
       questions.push({
         q_ref: q_ref,
         label: label,
@@ -136,6 +150,7 @@ export function detectQuestionsFromHTML(htmlContent) {
         dese_codes: dese_codes,
         correct: correct,
         answer_type: answer_type,
+        scoring: scoring || undefined,
         per_student_overrides: {}
       });
     });
