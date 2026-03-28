@@ -1038,8 +1038,9 @@
           let choiceKey;
           let choiceText;
           if (typeof choice === 'object' && choice !== null) {
-            choiceKey = choice.key ? String(choice.key).toUpperCase() : null;
-            choiceText = `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`;
+            choiceKey = choice.key ? String(choice.key).toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
+            const displayKey = choice.key || (idx < 26 ? String.fromCharCode(65 + idx) : '');
+            choiceText = `${displayKey ? displayKey + ') ' : ''}${choice.text || choice.label || choice.value || ''}`;
           } else {
             const str = String(choice);
             const letterMatch = str.match(/^([A-Za-z])[).\s]/);
