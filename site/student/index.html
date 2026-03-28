@@ -916,20 +916,28 @@
          ==================================================================== */
       .st-dot-grid-wrap {
         margin: 14px 0 6px;
-        padding: 12px 14px 10px;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid var(--rc-glass-border, rgba(255,255,255,0.10));
-        border-radius: 10px;
+        padding: 14px 16px 12px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--rc-glass-border, rgba(255,255,255,0.12));
+        border-radius: 12px;
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
+      }
+      .st-dot-grid-header {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted, rgba(255,255,255,0.45));
+        margin-bottom: 3px;
       }
       .st-dot-grid-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        margin-top: 8px;
+        margin-top: 10px;
       }
       .st-dot-grid-summary {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
         color: var(--ink, #f1f5f9);
         margin-bottom: 2px;
@@ -942,7 +950,7 @@
       }
       .st-dot-grid-row-label {
         fill: var(--ink, rgba(255,255,255,0.75));
-        font-size: 10px;
+        font-size: 11px;
       }
       /* Dot icon groups — now <g> elements containing nested SVG icons */
       .st-dot-correct,
@@ -967,14 +975,14 @@
       .st-dot-grid-legend {
         display: flex;
         gap: 14px;
-        margin-top: 8px;
-        font-size: 11px;
+        margin-top: 10px;
+        font-size: 12px;
         color: var(--muted, rgba(255,255,255,0.55));
       }
       .st-dot-legend-item {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
       }
 
       /* Glass popup */
@@ -3090,6 +3098,6 @@
 
     <script defer src="/web/student-shell.js?v=898"></script>
     <script src="/web/rc-modal.js?v=898"></script>
-    <script defer src="/web/student-portal-init.js?v=898"></script>
+    <script defer src="/web/student-portal-init.js?v=902"></script>
   </body>
 </html>
