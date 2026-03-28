@@ -156,17 +156,20 @@ function scoreMulti(correctAnswer, studentAnswer) {
  * - earned_points is always proportional to ratio (not all-or-nothing)
  */
 function scoreConstructed(item, studentAnswer) {
-  const answerText = String(studentAnswer).toLowerCase();
+  const caseSensitive = item.scoring?.case_sensitive === true;
+  const answerText = caseSensitive
+    ? String(studentAnswer)
+    : String(studentAnswer).toLowerCase();
   
   // Get keywords from scoring config or default to item.correct if array
   let keywords = [];
   let minKeywords = 2;
   
   if (item.scoring && item.scoring.keywords) {
-    keywords = item.scoring.keywords.map(k => String(k).toLowerCase());
+    keywords = item.scoring.keywords.map(k => String(k));
     minKeywords = item.scoring.min_keywords || minKeywords;
   } else if (Array.isArray(item.correct)) {
-    keywords = item.correct.map(k => String(k).toLowerCase());
+    keywords = item.correct.map(k => String(k));
   }
   
   // If no keywords configured, cannot score
@@ -188,7 +191,8 @@ function scoreConstructed(item, studentAnswer) {
   const foundKeywords = [];
   
   for (const keyword of keywords) {
-    if (answerText.includes(keyword)) {
+    const kw = caseSensitive ? keyword : keyword.toLowerCase();
+    if (answerText.includes(kw)) {
       foundCount++;
       foundKeywords.push(keyword);
     }

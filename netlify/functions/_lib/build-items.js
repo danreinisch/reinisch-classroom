@@ -44,6 +44,7 @@ function buildItemsFromMeta(assignmentId, meta) {
               scoring: {
                 keywords: q.keywords || [],
                 min_keywords: q.min_keywords || 2,
+                ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
               },
             } : {}),
             meta: {
@@ -54,8 +55,11 @@ function buildItemsFromMeta(assignmentId, meta) {
               correct: isFillInBlank ? null : q.correct,
               hint: q.hint,
               ...(isFillInBlank ? {
-                keywords: q.keywords || [],
-                min_keywords: q.min_keywords || 2,
+                scoring: {
+                  keywords: q.keywords || [],
+                  min_keywords: q.min_keywords || 2,
+                  ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
+                },
               } : {}),
             },
           });

@@ -54,6 +54,7 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
               scoring: {
                 keywords: q.keywords || [],
                 min_keywords: q.min_keywords || 2,
+                ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
               },
             } : {}),
             meta: {
@@ -66,6 +67,7 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
               ...(isFillInBlank ? {
                 keywords: q.keywords || [],
                 min_keywords: q.min_keywords || 2,
+                ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
               } : {}),
             },
             goal_codes: q.goal_codes || goalCodes,

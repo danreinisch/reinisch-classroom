@@ -358,10 +358,12 @@ exports.handler = async (event) => {
                     const minKeywords = (item.meta && item.meta.scoring && item.meta.scoring.min_keywords != null)
                       ? Number(item.meta.scoring.min_keywords)
                       : 1;
-                    const answerLower = String(studentAnswer).toLowerCase();
+                    const caseSensitive = item.meta && item.meta.scoring && item.meta.scoring.case_sensitive === true;
+                    const answerText = caseSensitive ? String(studentAnswer) : String(studentAnswer).toLowerCase();
                     let foundCount = 0;
                     for (const kw of scoringKeywords) {
-                      if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
+                      const kwText = caseSensitive ? String(kw) : String(kw).toLowerCase();
+                      if (answerText.includes(kwText)) foundCount++;
                     }
                     const ratio = scoringKeywords.length > 0 ? Math.min(1, foundCount / scoringKeywords.length) : 0;
                     isCorrect = foundCount >= minKeywords;
@@ -404,10 +406,12 @@ exports.handler = async (event) => {
                   const writingMin = (constructedItem.meta && constructedItem.meta.scoring && constructedItem.meta.scoring.min_keywords != null)
                     ? Number(constructedItem.meta.scoring.min_keywords)
                     : 1;
-                  const writingLower = String(writing_response).toLowerCase();
+                  const writingCaseSensitive = constructedItem.meta && constructedItem.meta.scoring && constructedItem.meta.scoring.case_sensitive === true;
+                  const writingText = writingCaseSensitive ? String(writing_response) : String(writing_response).toLowerCase();
                   let writingFound = 0;
                   for (const kw of writingKeywords) {
-                    if (writingLower.includes(String(kw).toLowerCase())) writingFound++;
+                    const kwText = writingCaseSensitive ? String(kw) : String(kw).toLowerCase();
+                    if (writingText.includes(kwText)) writingFound++;
                   }
                   const writingRatio = writingKeywords.length > 0 ? Math.min(1, writingFound / writingKeywords.length) : 0;
                   writingIsCorrect = writingFound >= writingMin;
