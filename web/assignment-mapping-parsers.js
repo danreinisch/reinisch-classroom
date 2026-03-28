@@ -127,7 +127,9 @@ export function parseTxtMapping(txtContent) {
       }
       if (keywords.length > 0) {
         scoring = { keywords, min_keywords: minKeywords };
-        // Also set correct to the keywords array for the fallback path in scoreConstructed()
+        // Set correct to the keywords array as well, providing a fallback for scoreConstructed()
+        // which checks item.correct when item.scoring.keywords is absent. Both fields intentionally
+        // carry the same data so the item is scoreable via either the client-side or server-side path.
         correctValue = keywords;
       }
     }

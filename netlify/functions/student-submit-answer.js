@@ -353,7 +353,7 @@ exports.handler = async (event) => {
                   // Attempt keyword-based auto-scoring for constructed items
                   const scoringKeywords = (item.meta && item.meta.scoring && Array.isArray(item.meta.scoring.keywords) && item.meta.scoring.keywords.length > 0)
                     ? item.meta.scoring.keywords
-                    : (Array.isArray(item.meta && item.meta.correct) ? item.meta.correct : null);
+                    : (item.meta && Array.isArray(item.meta.correct) ? item.meta.correct : null);
                   if (scoringKeywords && scoringKeywords.length > 0) {
                     const minKeywords = (item.meta && item.meta.scoring && item.meta.scoring.min_keywords != null)
                       ? Number(item.meta.scoring.min_keywords)
@@ -398,7 +398,7 @@ exports.handler = async (event) => {
                 // Attempt keyword-based auto-scoring if keywords are configured
                 const writingKeywords = (constructedItem.meta && constructedItem.meta.scoring && Array.isArray(constructedItem.meta.scoring.keywords) && constructedItem.meta.scoring.keywords.length > 0)
                   ? constructedItem.meta.scoring.keywords
-                  : (Array.isArray(constructedItem.meta && constructedItem.meta.correct) ? constructedItem.meta.correct : null);
+                  : (constructedItem.meta && Array.isArray(constructedItem.meta.correct) ? constructedItem.meta.correct : null);
                 if (writingKeywords && writingKeywords.length > 0) {
                   const writingMin = (constructedItem.meta && constructedItem.meta.scoring && constructedItem.meta.scoring.min_keywords != null)
                     ? Number(constructedItem.meta.scoring.min_keywords)
@@ -476,7 +476,7 @@ exports.handler = async (event) => {
                     const hasUnscoredConstructed = items.some(i => {
                       if (i.answer_type !== 'constructed') return false;
                       const hasKeywords = (i.meta && i.meta.scoring && Array.isArray(i.meta.scoring.keywords) && i.meta.scoring.keywords.length > 0)
-                        || Array.isArray(i.meta && i.meta.correct);
+                        || (i.meta && Array.isArray(i.meta.correct));
                       return !hasKeywords;
                     });
 
