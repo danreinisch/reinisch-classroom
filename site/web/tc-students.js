@@ -5006,6 +5006,14 @@
           let style = 'color:rgba(255,255,255,0.55)';
           if (key && key === correctAnswerUpper) style = 'color:#22c55e;font-weight:600';
           else if (key && key === studentAnswerUpper && !isCorr) style = 'color:#f87171;font-weight:600';
+          if (style === 'color:rgba(255,255,255,0.55)') {
+            // Full-text fallback: compare the entire choice text against student_answer/correct_answer
+            const choiceTextUpper = typeof choice === 'object' && choice !== null
+              ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
+              : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
+            if (choiceTextUpper && choiceTextUpper === correctAnswerUpper) style = 'color:#22c55e;font-weight:600';
+            else if (choiceTextUpper && choiceTextUpper === studentAnswerUpper && !isCorr) style = 'color:#f87171;font-weight:600';
+          }
           return `<div style="padding:2px 0;font-size:12px;${style}">${escapeHtml(choiceText)}</div>`;
         }).join('');
         inner += `<div style="margin-bottom:10px;">${items}</div>`;

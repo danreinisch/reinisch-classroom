@@ -1044,6 +1044,17 @@
           } else if (choiceKey && choiceKey === studentAnswerUpper && !isCorrect) {
             cls = 'choice-wrong';
           }
+          if (!cls) {
+            // Full-text fallback: compare the entire choice text against student_answer/correct_answer
+            const choiceTextUpper = typeof choice === 'object' && choice !== null
+              ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
+              : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
+            if (choiceTextUpper && choiceTextUpper === correctAnswerUpper) {
+              cls = 'choice-correct';
+            } else if (choiceTextUpper && choiceTextUpper === studentAnswerUpper && !isCorrect) {
+              cls = 'choice-wrong';
+            }
+          }
           return `<li class="${cls}">${escapeHtml(choiceText)}</li>`;
         }).join('');
 
