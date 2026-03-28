@@ -43,19 +43,30 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
         for (const q of day.questions) {
           const item_ref = `${day.day_number}_${q.number}`;
           const { goalCodes, deseCodes } = extractCodesFromHint(q.hint);
+          const isFillInBlank = q.type === 'fill_in_blank';
           items.push({
             id: `${idPrefix}${item_ref}`,
             assignment_id: assignmentId,
             item_ref,
-            answer_type: q.type || 'mcq',
+            answer_type: isFillInBlank ? 'constructed' : (q.type || 'mcq'),
             points: q.points || 1,
+            ...(isFillInBlank ? {
+              scoring: {
+                keywords: q.keywords || [],
+                min_keywords: q.min_keywords || 2,
+              },
+            } : {}),
             meta: {
               day: day.day_number,
               question_number: q.number,
               text: q.text,
               choices: q.choices,
-              correct: q.correct,
+              correct: isFillInBlank ? null : q.correct,
               hint: q.hint,
+              ...(isFillInBlank ? {
+                keywords: q.keywords || [],
+                min_keywords: q.min_keywords || 2,
+              } : {}),
             },
             goal_codes: q.goal_codes || goalCodes,
             dese_codes: q.dese_codes || deseCodes,

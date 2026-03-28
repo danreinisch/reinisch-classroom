@@ -250,10 +250,32 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Hint
+        // Check for Hint:
         const hintMatch = trimmed.match(/^Hint:\s*(.*)$/i);
         if (hintMatch) {
           currentQuestion.hint = hintMatch[1].trim();
+          continue;
+        }
+
+        // Check for Keywords: line (fill-in-the-blank question)
+        const keywordsMatch = trimmed.match(/^Keywords:\s*(.+)$/i);
+        if (keywordsMatch) {
+          const parts = keywordsMatch[1].trim().split(';').map(p => p.trim()).filter(Boolean);
+          let minKeywords = 2;
+          const keywords = [];
+          for (const part of parts) {
+            const minMatch = part.match(/^min:(\d+)$/i);
+            if (minMatch) {
+              minKeywords = parseInt(minMatch[1], 10);
+            } else {
+              keywords.push(part);
+            }
+          }
+          currentQuestion.type = 'fill_in_blank';
+          currentQuestion.choices = [];
+          currentQuestion.correct = '';
+          currentQuestion.keywords = keywords;
+          currentQuestion.min_keywords = minKeywords;
           continue;
         }
 
@@ -714,3 +736,107 @@ Example start: "Alex agrees to hunt the dandra-ta because he needs to cross the 
 });
 
 console.log('\n✅ All tests passed!');
+
+test('Parse fill-in-the-blank question with Keywords line mixed with MCQ', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: What is the capital of France?
+A) London
+B) Paris
+C) Berlin
+Correct Answer: B
+
+Question 2: Explain the relationship between slope and y-intercept.
+Keywords: slope;intercept;linear;min:2`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse fill-in-the-blank mixed with MCQ');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
+
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'multiple_choice', 'Q1 should be multiple_choice');
+  assert.strictEqual(q1.choices.length, 3, 'Q1 should have 3 choices');
+  assert.strictEqual(q1.correct, 'B', 'Q1 correct should be B');
+
+  const q2 = result.days[0].questions[1];
+  assert.strictEqual(q2.type, 'fill_in_blank', 'Q2 should be fill_in_blank');
+  assert.strictEqual(q2.choices.length, 0, 'Q2 should have 0 choices');
+  assert.strictEqual(q2.correct, '', 'Q2 correct should be empty');
+  assert.deepStrictEqual(q2.keywords, ['slope', 'intercept', 'linear'], 'Q2 keywords should be parsed');
+  assert.strictEqual(q2.min_keywords, 2, 'Q2 min_keywords should be 2');
+});
+
+test('Parse fill-in-the-blank question with default min_keywords', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: Name two parts of a cell.
+Keywords: nucleus;membrane;mitochondria`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse fill-in-the-blank with default min_keywords');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'fill_in_blank', 'Q1 should be fill_in_blank');
+  assert.deepStrictEqual(q1.keywords, ['nucleus', 'membrane', 'mitochondria'], 'Q1 keywords should be parsed');
+  assert.strictEqual(q1.min_keywords, 2, 'Q1 min_keywords should default to 2');
+});
+
+test('Parse fill-in-the-blank with Q1: short format and min:3', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Q1: Describe photosynthesis.
+Keywords: sunlight;water;carbon dioxide;oxygen;min:3`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse Q1: fill-in-the-blank');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'fill_in_blank', 'Q1 should be fill_in_blank');
+  assert.deepStrictEqual(q1.keywords, ['sunlight', 'water', 'carbon dioxide', 'oxygen'], 'Q1 keywords should be parsed');
+  assert.strictEqual(q1.min_keywords, 3, 'Q1 min_keywords should be 3');
+});
+
+test('Parse mixed MCQ and fill-in-the-blank across multiple days', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Q1: Who wrote Hamlet?
+A) Dickens
+B) Shakespeare
+C) Austen
+Answer: B
+
+DAY 2 QUESTIONS
+
+Q1: Describe two themes in Hamlet.
+Keywords: revenge;betrayal;mortality;min:2
+
+Q2: Where does Hamlet take place?
+A) Denmark
+B) England
+C) France
+Answer: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse mixed MCQ and fill-in-the-blank across days');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 days');
+
+  const day1q1 = result.days[0].questions[0];
+  assert.strictEqual(day1q1.type, 'multiple_choice', 'Day 1 Q1 should be multiple_choice');
+  assert.strictEqual(day1q1.correct, 'B', 'Day 1 Q1 correct should be B');
+
+  const day2q1 = result.days[1].questions[0];
+  assert.strictEqual(day2q1.type, 'fill_in_blank', 'Day 2 Q1 should be fill_in_blank');
+  assert.deepStrictEqual(day2q1.keywords, ['revenge', 'betrayal', 'mortality'], 'Day 2 Q1 keywords');
+  assert.strictEqual(day2q1.min_keywords, 2, 'Day 2 Q1 min_keywords should be 2');
+
+  const day2q2 = result.days[1].questions[1];
+  assert.strictEqual(day2q2.type, 'multiple_choice', 'Day 2 Q2 should be multiple_choice');
+  assert.strictEqual(day2q2.correct, 'A', 'Day 2 Q2 correct should be A');
+});

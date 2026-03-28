@@ -300,6 +300,28 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
+        // Check for Keywords: line (fill-in-the-blank question)
+        const keywordsMatch = trimmed.match(/^Keywords:\s*(.+)$/i);
+        if (keywordsMatch) {
+          const parts = keywordsMatch[1].trim().split(';').map(p => p.trim()).filter(Boolean);
+          let minKeywords = 2;
+          const keywords = [];
+          for (const part of parts) {
+            const minMatch = part.match(/^min:(\d+)$/i);
+            if (minMatch) {
+              minKeywords = parseInt(minMatch[1], 10);
+            } else {
+              keywords.push(part);
+            }
+          }
+          currentQuestion.type = 'fill_in_blank';
+          currentQuestion.choices = [];
+          currentQuestion.correct = '';
+          currentQuestion.keywords = keywords;
+          currentQuestion.min_keywords = minKeywords;
+          continue;
+        }
+
         // If we're in question section and it's not a special line, append to question text
         if (currentSection === 'question' && !choiceMatch && !correctMatch && !hintMatch) {
           if (currentQuestion.text) {
