@@ -958,7 +958,11 @@
         || e.target.closest('button[data-progress-id]');
       if (toggleBtn) {
         const targetId = toggleBtn.dataset.progressId;
-        const panel = document.getElementById(targetId);
+        // Scope lookup to the parent goal card to avoid matching duplicate IDs
+        // that exist when the same goal is rendered in both #tabGoals and #tabDashboard.
+        const card = toggleBtn.closest('.st-goal-card');
+        const panel = (card ? card.querySelector('.st-goal-progress-detail') : null)
+          || document.getElementById(targetId);
         if (!panel) {
           console.warn('[student-portal] Progress panel not found for id:', targetId);
           return;
@@ -1049,6 +1053,18 @@
             cls = 'choice-correct';
           } else if (choiceKey && choiceKey === studentAnswerUpper && !isCorrect) {
             cls = 'choice-wrong';
+          }
+          // Full-text fallback: correct_answer/student_answer may be stored as full text
+          // (e.g. "Guile", "Resent") rather than letter keys ("A", "B").
+          if (!cls) {
+            const choiceTextUpper = typeof choice === 'object' && choice !== null
+              ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
+              : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
+            if (choiceTextUpper && choiceTextUpper === correctAnswerUpper) {
+              cls = 'choice-correct';
+            } else if (choiceTextUpper && choiceTextUpper === studentAnswerUpper && !isCorrect) {
+              cls = 'choice-wrong';
+            }
           }
           return `<li class="${cls}">${escapeHtml(choiceText)}</li>`;
         }).join('');
