@@ -1029,31 +1029,26 @@
         const studentAnswerUpper = studentAnswer ? String(studentAnswer).trim().toUpperCase() : null;
         const correctAnswerUpper = correctAnswer ? String(correctAnswer).trim().toUpperCase() : null;
 
-        const choiceItems = choices.map(choice => {
+        const choiceItems = choices.map((choice, idx) => {
           // Handle object choices from JSONB (e.g. {key: 'A', text: '...'}) or plain strings
-          const choiceKey = typeof choice === 'object' && choice !== null
-            ? (choice.key ? String(choice.key).toUpperCase() : null)
-            : (String(choice).match(/^([A-Za-z])[).\s]/)?.[1]?.toUpperCase() || null);
-          const choiceText = typeof choice === 'object' && choice !== null
-            ? `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`
-            : String(choice);
+          let choiceKey;
+          let choiceText;
+          if (typeof choice === 'object' && choice !== null) {
+            choiceKey = choice.key ? String(choice.key).toUpperCase() : null;
+            choiceText = `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`;
+          } else {
+            const str = String(choice);
+            const letterMatch = str.match(/^([A-Za-z])[).\s]/);
+            // Plain-text choices without letter prefix: derive key from array index (0→A, 1→B, …)
+            choiceKey = letterMatch ? letterMatch[1].toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
+            choiceText = str;
+          }
 
           let cls = '';
           if (choiceKey && choiceKey === correctAnswerUpper) {
             cls = 'choice-correct';
           } else if (choiceKey && choiceKey === studentAnswerUpper && !isCorrect) {
             cls = 'choice-wrong';
-          }
-          if (!cls) {
-            // Full-text fallback: compare the entire choice text against student_answer/correct_answer
-            const choiceTextUpper = typeof choice === 'object' && choice !== null
-              ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
-              : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
-            if (choiceTextUpper && choiceTextUpper === correctAnswerUpper) {
-              cls = 'choice-correct';
-            } else if (choiceTextUpper && choiceTextUpper === studentAnswerUpper && !isCorrect) {
-              cls = 'choice-wrong';
-            }
           }
           return `<li class="${cls}">${escapeHtml(choiceText)}</li>`;
         }).join('');

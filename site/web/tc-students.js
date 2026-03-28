@@ -4995,25 +4995,23 @@
         inner += `<div style="font-weight:600;font-size:13px;margin-bottom:10px;line-height:1.4;">${escapeHtml(dpData.question_text)}</div>`;
       }
       if (choices && choices.length > 0) {
-        const items = choices.map(choice => {
+        const items = choices.map((choice, idx) => {
           // Handle object choices from JSONB (e.g. {key: 'A', text: '...'}) or plain strings
-          const key = typeof choice === 'object' && choice !== null
-            ? (choice.key ? String(choice.key).toUpperCase() : null)
-            : (String(choice).match(/^([A-Za-z])[).\s]/)?.[1]?.toUpperCase() || null);
-          const choiceText = typeof choice === 'object' && choice !== null
-            ? `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`
-            : String(choice);
+          let key;
+          let choiceText;
+          if (typeof choice === 'object' && choice !== null) {
+            key = choice.key ? String(choice.key).toUpperCase() : null;
+            choiceText = `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`;
+          } else {
+            const str = String(choice);
+            const letterMatch = str.match(/^([A-Za-z])[).\s]/);
+            // Plain-text choices without letter prefix: derive key from array index (0→A, 1→B, …)
+            key = letterMatch ? letterMatch[1].toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
+            choiceText = str;
+          }
           let style = 'color:rgba(255,255,255,0.55)';
           if (key && key === correctAnswerUpper) style = 'color:#22c55e;font-weight:600';
           else if (key && key === studentAnswerUpper && !isCorr) style = 'color:#f87171;font-weight:600';
-          if (style === 'color:rgba(255,255,255,0.55)') {
-            // Full-text fallback: compare the entire choice text against student_answer/correct_answer
-            const choiceTextUpper = typeof choice === 'object' && choice !== null
-              ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
-              : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
-            if (choiceTextUpper && choiceTextUpper === correctAnswerUpper) style = 'color:#22c55e;font-weight:600';
-            else if (choiceTextUpper && choiceTextUpper === studentAnswerUpper && !isCorr) style = 'color:#f87171;font-weight:600';
-          }
           return `<div style="padding:2px 0;font-size:12px;${style}">${escapeHtml(choiceText)}</div>`;
         }).join('');
         inner += `<div style="margin-bottom:10px;">${items}</div>`;
