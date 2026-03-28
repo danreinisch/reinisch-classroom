@@ -234,6 +234,38 @@ Alternatively, you can upload a separate mapping file (TXT or JSON) when creatin
    - A student who finds 1 of 3 keywords earns 1/3 of the points even though `is_correct = false`
    - Keywords from `scoring.keywords` array
    - Configurable threshold via `scoring.min_keywords`
+   - Optional case sensitivity via `scoring.case_sensitive` (default: `false`)
+
+### Case-Sensitive Keyword Matching
+
+By default, keyword matching is **case-insensitive** (`"dna"` matches `"DNA"`). To require exact
+capitalization, set `case_sensitive: true`. This is useful for subjects where case matters (e.g.,
+biology: `"DNA"` ≠ `"dna"`, chemistry: `"pH"` ≠ `"PH"`).
+
+**DAY format (`Keywords:` line):**
+```
+Keywords: DNA;RNA;min:1;case:true
+```
+
+**Pipe-delimited TXT (7th keywords field):**
+```
+Q1|1|constructed|MA.8.EE.1|MATH.1|Identify the molecules|DNA;RNA;min:1;case:true
+```
+
+**JSON manifest:**
+```json
+{
+  "scoring": {
+    "keywords": ["DNA", "RNA"],
+    "min_keywords": 1,
+    "case_sensitive": true
+  }
+}
+```
+
+- `case:true` and `case:false` are parsed and **removed** from the keyword list (they are not keywords).
+- `min:N` and `case:true/false` can appear in any order within the semicolon-separated list.
+- The default (`false`) means no breaking change — existing assignments are unaffected.
 
 ### Goal and Standard Rollups
 

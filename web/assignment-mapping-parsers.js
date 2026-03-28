@@ -114,7 +114,14 @@ export function parseTxtMapping(txtContent) {
     // Parse optional keywords field (7th field) for constructed items
     let scoring = {};
     if (keywordsRaw && answerType === 'constructed') {
-      const keywordParts = keywordsRaw.split(';').map(k => k.trim()).filter(k => k.length > 0);
+      let keywordsStr = keywordsRaw;
+      const caseMatch = keywordsStr.match(/;?\s*case:(true|false)/i);
+      let caseSensitive = false;
+      if (caseMatch) {
+        caseSensitive = caseMatch[1].toLowerCase() === 'true';
+        keywordsStr = keywordsStr.replace(/;?\s*case:(true|false)/i, '');
+      }
+      const keywordParts = keywordsStr.split(';').map(k => k.trim()).filter(k => k.length > 0);
       let minKeywords = 1;
       const keywords = [];
       for (const part of keywordParts) {
@@ -126,7 +133,11 @@ export function parseTxtMapping(txtContent) {
         }
       }
       if (keywords.length > 0) {
-        scoring = { keywords, min_keywords: minKeywords };
+        scoring = {
+          keywords,
+          min_keywords: minKeywords,
+          ...(caseSensitive ? { case_sensitive: true } : {}),
+        };
         // Set correct to the keywords array as well, providing a fallback for scoreConstructed()
         // which checks item.correct when item.scoring.keywords is absent. Both fields intentionally
         // carry the same data so the item is scoreable via either the client-side or server-side path.

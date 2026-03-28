@@ -303,7 +303,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         // Check for Keywords: line (fill-in-the-blank question)
         const keywordsMatch = trimmed.match(/^Keywords:\s*(.+)$/i);
         if (keywordsMatch) {
-          const parts = keywordsMatch[1].trim().split(';').map(p => p.trim()).filter(Boolean);
+          let keywordsStr = keywordsMatch[1].trim();
+          const caseMatch = keywordsStr.match(/;?\s*case:(true|false)/i);
+          let caseSensitive = false;
+          if (caseMatch) {
+            caseSensitive = caseMatch[1].toLowerCase() === 'true';
+            keywordsStr = keywordsStr.replace(/;?\s*case:(true|false)/i, '');
+          }
+          const parts = keywordsStr.split(';').map(p => p.trim()).filter(Boolean);
           let minKeywords = 2;
           const keywords = [];
           for (const part of parts) {
@@ -319,6 +326,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           currentQuestion.correct = '';
           currentQuestion.keywords = keywords;
           currentQuestion.min_keywords = minKeywords;
+          currentQuestion.case_sensitive = caseSensitive;
           continue;
         }
 

@@ -260,7 +260,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         // Check for Keywords: line (fill-in-the-blank question)
         const keywordsMatch = trimmed.match(/^Keywords:\s*(.+)$/i);
         if (keywordsMatch) {
-          const parts = keywordsMatch[1].trim().split(';').map(p => p.trim()).filter(Boolean);
+          let keywordsStr = keywordsMatch[1].trim();
+          const caseMatch = keywordsStr.match(/;?\s*case:(true|false)/i);
+          let caseSensitive = false;
+          if (caseMatch) {
+            caseSensitive = caseMatch[1].toLowerCase() === 'true';
+            keywordsStr = keywordsStr.replace(/;?\s*case:(true|false)/i, '');
+          }
+          const parts = keywordsStr.split(';').map(p => p.trim()).filter(Boolean);
           let minKeywords = 2;
           const keywords = [];
           for (const part of parts) {
@@ -276,6 +283,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           currentQuestion.correct = '';
           currentQuestion.keywords = keywords;
           currentQuestion.min_keywords = minKeywords;
+          currentQuestion.case_sensitive = caseSensitive;
           continue;
         }
 
@@ -839,4 +847,68 @@ Answer: A`;
   const day2q2 = result.days[1].questions[1];
   assert.strictEqual(day2q2.type, 'multiple_choice', 'Day 2 Q2 should be multiple_choice');
   assert.strictEqual(day2q2.correct, 'A', 'Day 2 Q2 correct should be A');
+});
+
+// ── case:true / case:false parsing tests ─────────────────────────────────────
+
+test('Parse Keywords with case:true sets case_sensitive=true and removes it from keywords', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: Name the molecule.
+Keywords: DNA;RNA;min:1;case:true`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse successfully');
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'fill_in_blank', 'Should be fill_in_blank');
+  assert.deepStrictEqual(q1.keywords, ['DNA', 'RNA'], 'keywords should not contain case:true');
+  assert.strictEqual(q1.min_keywords, 1, 'min_keywords should be 1');
+  assert.strictEqual(q1.case_sensitive, true, 'case_sensitive should be true');
+});
+
+test('Parse Keywords without case flag defaults case_sensitive to false', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: Describe the graph.
+Keywords: slope;intercept;min:2`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse successfully');
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'fill_in_blank', 'Should be fill_in_blank');
+  assert.deepStrictEqual(q1.keywords, ['slope', 'intercept'], 'keywords should be correct');
+  assert.strictEqual(q1.min_keywords, 2, 'min_keywords should be 2');
+  assert.strictEqual(q1.case_sensitive, false, 'case_sensitive should default to false');
+});
+
+test('Parse Keywords with case:false sets case_sensitive=false and removes it from keywords', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: Identify the acids.
+Keywords: pH;acid;base;case:false`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse successfully');
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'fill_in_blank', 'Should be fill_in_blank');
+  assert.deepStrictEqual(q1.keywords, ['pH', 'acid', 'base'], 'keywords should not contain case:false');
+  assert.strictEqual(q1.case_sensitive, false, 'case_sensitive should be false');
+});
+
+test('Parse Keywords with case:true before min: still parses correctly', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: Define the concept.
+Keywords: DNA;RNA;case:true;min:2`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse successfully');
+  const q1 = result.days[0].questions[0];
+  assert.deepStrictEqual(q1.keywords, ['DNA', 'RNA'], 'keywords should be DNA and RNA only');
+  assert.strictEqual(q1.min_keywords, 2, 'min_keywords should be 2');
+  assert.strictEqual(q1.case_sensitive, true, 'case_sensitive should be true');
 });
