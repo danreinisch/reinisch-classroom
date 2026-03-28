@@ -124,7 +124,7 @@
         const ref = item.item_ref;
         const studentAns = rawAnswers[ref];
         const correctAns = item.meta?.correct ?? item.correct;
-        const isCorrect = correctAns !== undefined && studentAns !== undefined && String(studentAns) === String(correctAns);
+        const isCorrect = correctAns !== undefined && correctAns !== null && studentAns !== undefined && String(studentAns) === String(correctAns);
         if (item.answer_type !== 'constructed' && correctAns !== undefined && studentAns !== undefined) {
           gradableCount++;
           if (isCorrect) correctCount++;
@@ -162,11 +162,46 @@
         ].filter(Boolean).join(' ');
 
         if (item.answer_type === 'constructed') {
-          // Writing prompt
-          const prompt = item.meta?.prompt || '';
+          // Distinguish fill-in-blank (keyword-auto-scored) from true writing prompts
+          const fibKeywords = item.meta?.keywords || item.scoring?.keywords || item.meta?.scoring?.keywords || [];
+          const isFillInBlank = fibKeywords.length > 0;
+
           let studentText = '';
           if (typeof studentAns === 'string') studentText = studentAns;
           else if (studentAns && typeof studentAns === 'object') studentText = studentAns.value || JSON.stringify(studentAns);
+
+          if (isFillInBlank) {
+            // Fill-in-blank: compute keyword match result and show with ✓/✗
+            const minKeywords = item.meta?.min_keywords ?? item.scoring?.min_keywords ?? item.meta?.scoring?.min_keywords ?? 1;
+            const answerLower = studentText.toLowerCase();
+            let foundCount = 0;
+            for (const kw of fibKeywords) {
+              if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
+            }
+            const fibCorrect = foundCount >= minKeywords;
+            gradableCount++;
+            if (fibCorrect) correctCount++;
+            const ref2 = item.item_ref;
+            const day2 = item.meta?.day || '';
+            const qNum2 = item.meta?.question_number || ref2;
+            const questionText2 = item.meta?.text || '';
+            return `<div class="rp-ev-q-card">
+              <div class="rp-ev-q-header">
+                <span class="rp-ev-q-label">Q${qNum2}${day2 ? ` (Day ${day2})` : ''}</span>
+                ${badgesHtml ? `<div class="rp-ev-q-badges">${badgesHtml}</div>` : ''}
+              </div>
+              ${questionText2 ? `<div class="rp-ev-q-text">${escapeHtml(questionText2)}</div>` : ''}
+              <div class="rp-ev-q-choices">
+                <div class="rp-ev-choice ${fibCorrect ? 'rp-ev-choice-correct' : 'rp-ev-choice-wrong'}">
+                  ${studentText ? escapeHtml(studentText) : '<em>No response</em>'}
+                  <span class="rp-ev-choice-mark">${fibCorrect ? ' ✓' : ' ✗'}</span>
+                </div>
+              </div>
+            </div>`;
+          }
+
+          // True writing prompt (no keywords)
+          const prompt = item.meta?.prompt || '';
           const score = submission.score_manual ?? submission.score_total ?? submission.score;
           const teacherNote = submission.teacher_note || '';
           return `<div class="rp-ev-q-card">

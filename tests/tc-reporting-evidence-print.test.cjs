@@ -264,7 +264,7 @@ test('buildRichAnswerDetailHtml helper exists in tc-reporting.js', () => {
 
 test('buildRichAnswerDetailHtml shows question text, choices, correct answer, and DESE/IEP badges', () => {
   const fnIdx = rpSrc.indexOf('function buildRichAnswerDetailHtml(');
-  const fn = rpSrc.slice(fnIdx, fnIdx + 8000);
+  const fn = rpSrc.slice(fnIdx, fnIdx + 11000);
   assert.ok(fn.includes('rp-ev-q-card'), 'should include question card class');
   assert.ok(fn.includes('rp-ev-badge-dese'), 'should include DESE badge');
   assert.ok(fn.includes('rp-ev-badge-goal'), 'should include IEP goal badge');
@@ -318,7 +318,7 @@ test('answer detail shown for both modes; answer keys hidden in parent mode via 
   // The isParent flag suppresses answer keys (correct answers, raw scores) inside the helper.
   // FERPA: goalsData is pre-filtered to the current student before being passed in.
   const fnIdx = rpSrc.indexOf('function buildRichAnswerDetailHtml(');
-  const fn = rpSrc.slice(fnIdx, fnIdx + 6000);
+  const fn = rpSrc.slice(fnIdx, fnIdx + 7000);
   assert.ok(
     fn.includes('!isParent'),
     'buildRichAnswerDetailHtml should use !isParent to suppress answer keys in parent mode'

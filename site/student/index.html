@@ -1056,6 +1056,17 @@
         opacity: 0.65;
         font-style: italic;
       }
+      /* Fill-in-blank student answer in dot popup */
+      .st-dot-popup-fib-answer {
+        font-size: 13px;
+        font-style: italic;
+        color: var(--ink, #f1f5f9);
+        background: rgba(255,255,255,0.06);
+        border-radius: 6px;
+        padding: 4px 8px;
+        margin-bottom: 6px;
+        word-break: break-word;
+      }
 
       .st-assignment-status {
         display: inline-flex;
@@ -1390,6 +1401,26 @@
         margin-bottom: 20px;
         font-size: 14px;
         color: #93c5fd;
+      }
+
+      /* Fill-in-blank auto-score feedback badge (shown when isReadOnly + scoring result available) */
+      .st-fib-feedback {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 2px 10px;
+      }
+      .st-fib-correct {
+        color: #86efac;
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+      }
+      .st-fib-incorrect {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.35);
       }
 
       .st-choice input[type="radio"] {

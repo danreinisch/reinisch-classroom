@@ -1048,6 +1048,13 @@
         }).join('');
 
         innerHtml += `<ul class="st-dot-popup-choices">${choiceItems}</ul>`;
+      } else if (studentAnswer !== null && studentAnswer !== undefined) {
+        // Fill-in-blank: show the student's typed answer with correct/incorrect indicator
+        const statusIcon = isCorrect
+          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_CHECK_PATHS}</svg>`
+          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_X_PATHS}</svg>`;
+        innerHtml += `<div class="st-dot-popup-fib-answer">${escapeHtml(String(studentAnswer))}</div>`;
+        innerHtml += `<div class="st-dot-popup-no-detail">${statusIcon}${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
       } else if (!questionText) {
         const statusIcon = isCorrect
           ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_CHECK_PATHS}</svg>`
@@ -1192,6 +1199,7 @@
     answers: new Map(),
     isRetryMode: false,
     retryLockedQuestionIds: new Set(),
+    scoringResults: [],
   };
   
   // Constants
@@ -1328,6 +1336,7 @@
     assignmentViewerState.currentQuestionIndex = 0;
     assignmentViewerState.answers = new Map();
     assignmentViewerState.currentDay = 0;
+    assignmentViewerState.scoringResults = [];
     
     // Check if assignment is submitted or graded (read-only mode)
     const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded' || instance.status === 'Reviewed';
@@ -1597,6 +1606,7 @@
     const isGraded = assignmentViewerState.isGraded;
     const isRetryMode = assignmentViewerState.isRetryMode;
     const retryLockedIds = assignmentViewerState.retryLockedQuestionIds || new Set();
+    const scoringResults = assignmentViewerState.scoringResults || [];
     
     const questionsHtml = questions.map((q) => {
       const questionId = `${dayData.day_number}_${q.number}`;
@@ -1621,10 +1631,18 @@
         `;
       }).join('');
 
-      // Fill-in-blank: questions with no predefined choices render a textarea
-      const answerInputHtml = choices.length === 0
-        ? `<textarea class="st-text-answer" data-question-id="${questionId}" rows="2" placeholder="Type your answer here..." aria-label="Answer for question ${q.number}"${(isReadOnly || isLocked) ? ' disabled' : ''}>${escapeHtml(savedAnswer || '')}</textarea>`
-        : `<div class="st-choices">${choicesHtml}</div>`;
+      // Fill-in-blank: questions with no predefined choices render a textarea.
+      // When in read-only mode and scoring results are available, show ✓/✗ feedback.
+      let answerInputHtml;
+      if (choices.length === 0) {
+        const scoringResult = scoringResults.find(r => r.item_ref === questionId);
+        const feedbackHtml = (isReadOnly || isLocked) && scoringResult != null
+          ? `<div class="st-fib-feedback ${scoringResult.is_correct ? 'st-fib-correct' : 'st-fib-incorrect'}">${scoringResult.is_correct ? '✓ Correct' : '✗ Incorrect'}</div>`
+          : '';
+        answerInputHtml = `<textarea class="st-text-answer" data-question-id="${questionId}" rows="2" placeholder="Type your answer here..." aria-label="Answer for question ${q.number}"${(isReadOnly || isLocked) ? ' disabled' : ''}>${escapeHtml(savedAnswer || '')}</textarea>${feedbackHtml}`;
+      } else {
+        answerInputHtml = `<div class="st-choices">${choicesHtml}</div>`;
+      }
 
       const retryLockedBadge = isLocked ? `<div class="st-retry-correct-badge">✓ Correct</div>` : '';
       
@@ -1854,6 +1872,8 @@
         clearSavedAnswers(instance.id);
         assignmentViewerState.isRetryMode = false;
         assignmentViewerState.retryLockedQuestionIds = new Set();
+        // Store scoring results so fill-in-blank textareas can show ✓/✗ feedback
+        assignmentViewerState.scoringResults = submitResult.results || [];
         this.textContent = '✓ Submitted!';
         setTimeout(() => {
           assignmentViewerState.isReadOnly = true;
