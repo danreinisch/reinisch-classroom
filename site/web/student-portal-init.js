@@ -628,12 +628,12 @@
     const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
 
     // Layout constants (larger spacing for better readability)
-    const ICON_R = 7;   // half of 14px icon = 7
-    const DOT_GAP = 24; // increased from 20 for breathing room
-    const ROW_H = 44;   // increased from 38
-    const LABEL_W = 56;
-    const PAD_RIGHT = 14;
-    const PAD_TOP = 8;
+    const ICON_R = 9;   // icon radius — 18px icons give clearer touch targets
+    const DOT_GAP = 30; // breathing room between dots
+    const ROW_H = 52;   // taller rows for readability
+    const LABEL_W = 64;
+    const PAD_RIGHT = 16;
+    const PAD_TOP = 10;
     const MAX_DOTS_PER_ROW = Math.max(...sortedGroups.map(g => g.points.length));
     const chartW = LABEL_W + (MAX_DOTS_PER_ROW * DOT_GAP) + PAD_RIGHT;
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
@@ -681,7 +681,7 @@
         // A transparent 24×24 <rect> provides a larger touch target.
         dotsSvg += `<g class="${dotClass}" data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
           `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
-          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
+          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
           `${iconPaths}` +
           `</svg>` +
           `<title>${dotLabel}</title>` +
@@ -692,14 +692,15 @@
     }
 
     // Legend uses same SVG icon style
-    const legendCheckSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CHECK_PATHS}</svg>`;
-    const legendXSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${X_PATHS}</svg>`;
+    const legendCheckSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CHECK_PATHS}</svg>`;
+    const legendXSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${X_PATHS}</svg>`;
 
     const svgHtml = `
       <div class="st-dot-grid-wrap">
+        <div class="st-dot-grid-header">Per-Question Results</div>
         <div class="st-dot-grid-summary">${escapeHtml(summaryText)}</div>
         <div class="st-dot-grid-container">
-          <svg class="st-dot-grid-svg" id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="Dot grid chart: ${escapeHtml(summaryText)}">
+          <svg class="st-dot-grid-svg" id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 480)}" height="${chartH}" role="img" aria-label="Dot grid chart: ${escapeHtml(summaryText)}">
             ${dotsSvg}
           </svg>
         </div>
@@ -1028,10 +1029,13 @@
         const correctAnswerUpper = correctAnswer ? String(correctAnswer).trim().toUpperCase() : null;
 
         const choiceItems = choices.map(choice => {
-          const choiceText = String(choice);
-          // Detect the leading key — support "A)" / "A." / "A " formats
-          const keyMatch = choiceText.match(/^([A-Za-z])[).\s]/);
-          const choiceKey = keyMatch ? keyMatch[1].toUpperCase() : null;
+          // Handle object choices from JSONB (e.g. {key: 'A', text: '...'}) or plain strings
+          const choiceKey = typeof choice === 'object' && choice !== null
+            ? (choice.key ? String(choice.key).toUpperCase() : null)
+            : (String(choice).match(/^([A-Za-z])[).\s]/)?.[1]?.toUpperCase() || null);
+          const choiceText = typeof choice === 'object' && choice !== null
+            ? `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`
+            : String(choice);
 
           let cls = '';
           if (choiceKey && choiceKey === correctAnswerUpper) {

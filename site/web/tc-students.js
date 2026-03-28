@@ -178,12 +178,12 @@
     const assignmentCount = sortedGroups.length;
     const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
 
-    const ICON_R = 7;   // half of 14px icon
-    const DOT_GAP = 24; // increased from 20
-    const ROW_H = 44;   // increased from 38
-    const LABEL_W = 56;
-    const PAD_RIGHT = 14;
-    const PAD_TOP = 8;
+    const ICON_R = 9;   // icon radius — 18px icons give clearer touch targets
+    const DOT_GAP = 30; // breathing room between dots
+    const ROW_H = 52;   // taller rows for readability
+    const LABEL_W = 64;
+    const PAD_RIGHT = 16;
+    const PAD_TOP = 10;
     const MAX_DOTS = Math.max(...sortedGroups.map(g => g.points.length));
     const chartW = LABEL_W + (MAX_DOTS * DOT_GAP) + PAD_RIGHT;
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
@@ -200,7 +200,7 @@
         dotsSvg += `<line stroke="rgba(255,255,255,0.08)" stroke-width="1" x1="0" y1="${sepY}" x2="${chartW}" y2="${sepY}" />`;
       }
 
-      dotsSvg += `<text fill="rgba(255,255,255,0.45)" font-size="10" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
+      dotsSvg += `<text fill="rgba(255,255,255,0.55)" font-size="11" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
 
       group.points.forEach((pt, qIdx) => {
         const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
@@ -221,7 +221,7 @@
         // <g> with nested <svg> icon — transparent <rect> provides larger touch target
         dotsSvg += `<g data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
           `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
-          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
+          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
           `${iconPaths}` +
           `</svg>` +
           `<title>${dotLabel}</title>` +
@@ -230,19 +230,20 @@
     });
 
     // Legend with same SVG icons
-    const legendCheckSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`;
-    const legendXSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
+    const legendCheckSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`;
+    const legendXSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
 
     const html = `
-      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px;">${escapeHtml(summaryText)}</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.45);margin-bottom:4px;">Per-Question Results</div>
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:8px;">${escapeHtml(summaryText)}</div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <svg id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 420)}" height="${chartH}" role="img" aria-label="${escapeHtml('Dot grid chart: ' + summaryText)}" style="display:block;min-width:200px;overflow:visible;">
+        <svg id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 480)}" height="${chartH}" role="img" aria-label="${escapeHtml('Dot grid chart: ' + summaryText)}" style="display:block;min-width:200px;overflow:visible;">
           ${dotsSvg}
         </svg>
       </div>
-      <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.55);">
-        <span style="display:inline-flex;align-items:center;gap:4px;">${legendCheckSvg} Correct</span>
-        <span style="display:inline-flex;align-items:center;gap:4px;">${legendXSvg} Incorrect</span>
+      <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.55);">
+        <span style="display:inline-flex;align-items:center;gap:5px;">${legendCheckSvg} Correct</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;">${legendXSvg} Incorrect</span>
       </div>`;
 
     return { html, hasData: true };
@@ -4995,11 +4996,17 @@
       }
       if (choices && choices.length > 0) {
         const items = choices.map(choice => {
-          const key = String(choice).match(/^([A-Za-z])[).\s]/)?.[1]?.toUpperCase() || null;
+          // Handle object choices from JSONB (e.g. {key: 'A', text: '...'}) or plain strings
+          const key = typeof choice === 'object' && choice !== null
+            ? (choice.key ? String(choice.key).toUpperCase() : null)
+            : (String(choice).match(/^([A-Za-z])[).\s]/)?.[1]?.toUpperCase() || null);
+          const choiceText = typeof choice === 'object' && choice !== null
+            ? `${choice.key ? choice.key + ') ' : ''}${choice.text || choice.label || choice.value || ''}`
+            : String(choice);
           let style = 'color:rgba(255,255,255,0.55)';
           if (key && key === correctAnswerUpper) style = 'color:#22c55e;font-weight:600';
           else if (key && key === studentAnswerUpper && !isCorr) style = 'color:#f87171;font-weight:600';
-          return `<div style="padding:1px 0;font-size:12px;${style}">${escapeHtml(String(choice))}</div>`;
+          return `<div style="padding:2px 0;font-size:12px;${style}">${escapeHtml(choiceText)}</div>`;
         }).join('');
         inner += `<div style="margin-bottom:10px;">${items}</div>`;
       } else if (!dpData.question_text) {
