@@ -228,9 +228,10 @@ Alternatively, you can upload a separate mapping file (TXT or JSON) when creatin
 1. **MCQ**: Case-insensitive exact match
 2. **Boolean**: Accepts variations (true/t/1/yes vs false/f/0/no)
 3. **Multi-select**: Order-agnostic set equality (all-or-nothing, no partial credit)
-4. **Constructed**: Keyword-based
-   - Full credit if student answer contains >= N keywords (default 2)
-   - Zero credit otherwise
+4. **Constructed**: Keyword-based with partial credit
+   - `earned_points` is always proportional: `foundCount / total_keywords × maxPoints`
+   - `is_correct` gates on `>= min_keywords` threshold (for goal progress binary tracking)
+   - A student who finds 1 of 3 keywords earns 1/3 of the points even though `is_correct = false`
    - Keywords from `scoring.keywords` array
    - Configurable threshold via `scoring.min_keywords`
 

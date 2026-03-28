@@ -47,9 +47,12 @@ export function scoreItem(item, studentAnswer) {
       
     case 'constructed': {
       const constructedResult = scoreConstructed(item, studentAnswer);
-      isCorrect = constructedResult.is_correct;
-      detail = { ...detail, ...constructedResult.detail, type: 'constructed' };
-      break;
+      return {
+        is_correct: constructedResult.is_correct,
+        earned_points: Math.round(maxPoints * constructedResult.ratio * 100) / 100,
+        max_points: maxPoints,
+        detail: { type: 'constructed', ...constructedResult.detail }
+      };
     }
       
     default:
@@ -146,10 +149,11 @@ function scoreMulti(correctAnswer, studentAnswer) {
 
 /**
  * Score Constructed Response
- * Phase 1: Basic keyword-based scoring
+ * Keyword-based scoring with partial credit:
  * - Extract keywords from scoring config (or item.correct if array)
- * - Check if student answer contains >= N keywords (default 2)
- * - Full credit if threshold met, zero otherwise
+ * - ratio = foundCount / total_keywords (capped at 1.0)
+ * - is_correct gates on >= min_keywords threshold (for goal progress tracking)
+ * - earned_points is always proportional to ratio (not all-or-nothing)
  */
 function scoreConstructed(item, studentAnswer) {
   const answerText = String(studentAnswer).toLowerCase();
@@ -169,10 +173,12 @@ function scoreConstructed(item, studentAnswer) {
   if (keywords.length === 0) {
     return {
       is_correct: false,
+      ratio: 0,
       detail: {
         reason: 'no_keywords_configured',
         keywords_found: 0,
-        keywords_required: minKeywords
+        keywords_required: minKeywords,
+        ratio: 0
       }
     };
   }
@@ -188,15 +194,18 @@ function scoreConstructed(item, studentAnswer) {
     }
   }
   
+  const ratio = keywords.length > 0 ? Math.min(1, foundCount / keywords.length) : 0;
   const isCorrect = foundCount >= minKeywords;
   
   return {
     is_correct: isCorrect,
+    ratio,
     detail: {
       keywords_found: foundCount,
       keywords_required: minKeywords,
       total_keywords: keywords.length,
-      found_list: foundKeywords
+      found_list: foundKeywords,
+      ratio
     }
   };
 }

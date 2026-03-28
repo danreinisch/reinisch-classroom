@@ -171,20 +171,26 @@
           else if (studentAns && typeof studentAns === 'object') studentText = studentAns.value || JSON.stringify(studentAns);
 
           if (isFillInBlank) {
-            // Fill-in-blank: compute keyword match result and show with ✓/✗
+            // Fill-in-blank: compute keyword match result and show with partial credit info
             const minKeywords = item.meta?.min_keywords ?? item.scoring?.min_keywords ?? item.meta?.scoring?.min_keywords ?? 1;
             const answerLower = studentText.toLowerCase();
             let foundCount = 0;
+            const foundList = [];
             for (const kw of fibKeywords) {
-              if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
+              if (answerLower.includes(String(kw).toLowerCase())) {
+                foundCount++;
+                foundList.push(kw);
+              }
             }
             const fibCorrect = foundCount >= minKeywords;
+            const fibRatio = fibKeywords.length > 0 ? Math.round((foundCount / fibKeywords.length) * 100) : 0;
             gradableCount++;
             if (fibCorrect) correctCount++;
             const ref2 = item.item_ref;
             const day2 = item.meta?.day || '';
             const qNum2 = item.meta?.question_number || ref2;
             const questionText2 = item.meta?.text || '';
+            const keywordSummary = `Keywords: ${foundCount}/${fibKeywords.length} found (${fibRatio}%)${foundList.length > 0 ? ' — ' + foundList.map(k => escapeHtml(String(k))).join(', ') : ''}`;
             return `<div class="rp-ev-q-card">
               <div class="rp-ev-q-header">
                 <span class="rp-ev-q-label">Q${qNum2}${day2 ? ` (Day ${day2})` : ''}</span>
@@ -196,6 +202,7 @@
                   ${studentText ? escapeHtml(studentText) : '<em>No response</em>'}
                   <span class="rp-ev-choice-mark">${fibCorrect ? ' ✓' : ' ✗'}</span>
                 </div>
+                <div class="rp-ev-keyword-summary">${keywordSummary}</div>
               </div>
             </div>`;
           }

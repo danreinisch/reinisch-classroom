@@ -543,6 +543,10 @@
    * fill-in-blank constructed item that the server already scored
    * (earned_points != null in submission_answers).
    *
+   * Note: With partial credit, earned_points may be 0 (zero keywords found)
+   * which is still "auto-scored". The check `earned_points != null` correctly
+   * handles this since 0 != null is true.
+   *
    * @param {Object} item    - Assignment item from assignmentItemsCache
    * @param {Array}  answers - submission_answers rows for this submission
    */
