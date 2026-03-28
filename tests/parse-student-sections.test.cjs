@@ -17,29 +17,51 @@ function parseStudentSections(text) {
   while (i < lines.length) {
     if (!isSep(lines[i])) { i++; continue; }
 
-    // Look for "Assignment: SXXX" on the very next non-blank line
-    let j = i + 1;
-    while (j < lines.length && lines[j].trim() === '') j++;
-    if (j >= lines.length) { i++; continue; }
-
-    const assignMatch = lines[j].trim().match(/^Assignment\s*:\s*(\S+)/i);
-    if (!assignMatch) { i++; continue; }
-
-    const studentCode = assignMatch[1].trim();
-
-    // Look for "Class: ..." on the following line(s)
-    let cls = '';
-    for (let k = j + 1; k < Math.min(j + 5, lines.length); k++) {
-      const clsMatch = lines[k].trim().match(/^Class\s*:\s*(.+)/i);
-      if (clsMatch) { cls = clsMatch[1].trim(); break; }
-    }
-
     // Find the separator that closes the header block (separates header from content)
     let sepEnd = -1;
     for (let k = i + 1; k < lines.length; k++) {
       if (isSep(lines[k])) { sepEnd = k; break; }
     }
     if (sepEnd === -1) { i++; continue; }
+
+    // Scan all lines in the header block for "Assignment: SXXX" or "Student: SXXX [| Class: ...]"
+    let studentCode = null;
+    let cls = '';
+    for (let k = i + 1; k < sepEnd; k++) {
+      const line = lines[k].trim();
+      if (!line) continue;
+
+      const assignMatch = line.match(/^Assignment\s*:\s*(\S+)/i);
+      if (assignMatch) {
+        studentCode = assignMatch[1].trim();
+        // Look for "Class: ..." on following lines within the header block
+        for (let m = k + 1; m < sepEnd; m++) {
+          const clsMatch = lines[m].trim().match(/^Class\s*:\s*(.+)/i);
+          if (clsMatch) { cls = clsMatch[1].trim(); break; }
+        }
+        break;
+      }
+
+      // (\S+) stops at the first whitespace; the full `line` is reused below to
+      // extract the "| Class: ..." portion that follows the student code.
+      const studentMatch = line.match(/^Student\s*:\s*(\S+)/i);
+      if (studentMatch) {
+        studentCode = studentMatch[1].trim();
+        // Try "| Class: ..." on the same line first
+        const clsSameLine = line.match(/\|\s*Class\s*:\s*(.+)/i);
+        if (clsSameLine) {
+          cls = clsSameLine[1].trim();
+        } else {
+          // Fall back to a separate "Class: ..." line within the header block
+          for (let m = k + 1; m < sepEnd; m++) {
+            const clsMatch = lines[m].trim().match(/^Class\s*:\s*(.+)/i);
+            if (clsMatch) { cls = clsMatch[1].trim(); break; }
+          }
+        }
+        break;
+      }
+    }
+    if (!studentCode) { i++; continue; }
 
     // Find the separator that ends the content block (start of next student section)
     let bodyEnd = lines.length;
@@ -224,6 +246,80 @@ test('Parser advances past body (i = bodyEnd), not just past header sep', () => 
   assert.strictEqual(sections[0].studentCode, 'S023');
   assert.strictEqual(sections[1].studentCode, 'S024');
   assert.ok(sections[1].body.includes('Q1. Body content here.'));
+});
+
+test('Week 10 style: Student/Class on same line separated by pipe, multi-line header', () => {
+  const input = [
+    '================================================================================',
+    'WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)',
+    'ELA Theme: Sentence Structure & Transitions',
+    'Student: S001 | Class: Language Arts 3 SC',
+    'IEP Goal Codes: S001.11.1, S001.11.2, S001.11.3-1',
+    '================================================================================',
+    'Q1. What is the main idea?',
+    'A) Adventure',
+    'B) Friendship',
+    '================================================================================',
+    'WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)',
+    'ELA Theme: Sentence Structure & Transitions',
+    'Student: S002 | Class: Language Arts 4 SC',
+    'IEP Goal Codes: S002.11.1, S002.11.2',
+    '================================================================================',
+    'Q1. What is the theme?',
+    'A) Courage',
+    'B) Loyalty',
+  ].join('\n');
+
+  const sections = parseStudentSections(input);
+  assert.strictEqual(sections.length, 2, `Expected 2 sections, got ${sections.length}`);
+  assert.strictEqual(sections[0].studentCode, 'S001');
+  assert.strictEqual(sections[0].className, 'Language Arts 3 SC');
+  assert.ok(sections[0].body.includes('Q1. What is the main idea?'), 'S001 body should contain Q1');
+  assert.strictEqual(sections[1].studentCode, 'S002');
+  assert.strictEqual(sections[1].className, 'Language Arts 4 SC');
+  assert.ok(sections[1].body.includes('Q1. What is the theme?'), 'S002 body should contain Q1');
+});
+
+test('Mixed Assignment: and Student: formats in same file', () => {
+  const input = [
+    '================================================================================',
+    'Assignment: S010',
+    'Class: Life Skills Language Arts SC',
+    '================================================================================',
+    'Q1. Old format question.',
+    '================================================================================',
+    'WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)',
+    'ELA Theme: Sentence Structure & Transitions',
+    'Student: S011 | Class: Language Arts 3 SC',
+    'IEP Goal Codes: S011.11.1',
+    '================================================================================',
+    'Q1. New format question.',
+  ].join('\n');
+
+  const sections = parseStudentSections(input);
+  assert.strictEqual(sections.length, 2, `Expected 2 sections, got ${sections.length}`);
+  assert.strictEqual(sections[0].studentCode, 'S010');
+  assert.strictEqual(sections[0].className, 'Life Skills Language Arts SC');
+  assert.ok(sections[0].body.includes('Q1. Old format question.'));
+  assert.strictEqual(sections[1].studentCode, 'S011');
+  assert.strictEqual(sections[1].className, 'Language Arts 3 SC');
+  assert.ok(sections[1].body.includes('Q1. New format question.'));
+});
+
+test('Student: format with Class: on a separate line (no pipe)', () => {
+  const input = [
+    '================================================================================',
+    'Student: S030',
+    'Class: Consumer Math SC',
+    '================================================================================',
+    'Q1. Calculate the total.',
+  ].join('\n');
+
+  const sections = parseStudentSections(input);
+  assert.strictEqual(sections.length, 1);
+  assert.strictEqual(sections[0].studentCode, 'S030');
+  assert.strictEqual(sections[0].className, 'Consumer Math SC');
+  assert.ok(sections[0].body.includes('Q1. Calculate the total.'));
 });
 
 // ── Results ───────────────────────────────────────────────────────────────────
