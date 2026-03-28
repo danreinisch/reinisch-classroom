@@ -4016,7 +4016,7 @@
         const ref = item.item_ref;
         const studentAns = rawAnswers[ref];
         const correctAns = item.meta?.correct ?? item.correct;
-        const isCorrect = correctAns !== undefined && studentAns !== undefined && String(studentAns) === String(correctAns);
+        const isCorrect = correctAns !== undefined && correctAns !== null && studentAns !== undefined && String(studentAns) === String(correctAns);
         if (item.answer_type !== 'constructed' && correctAns !== undefined && studentAns !== undefined) {
           gradableCount++;
           if (isCorrect) correctCount++;
@@ -4055,10 +4055,48 @@
         ].filter(Boolean).join(' ');
 
         if (item.answer_type === 'constructed') {
-          const prompt = item.meta?.prompt || '';
+          // Distinguish fill-in-blank (keyword-auto-scored) from true writing prompts
+          const fibKeywords = item.meta?.keywords || item.scoring?.keywords || item.meta?.scoring?.keywords || [];
+          const isFillInBlank = fibKeywords.length > 0;
+
           let studentText = '';
           if (typeof studentAns === 'string') studentText = studentAns;
           else if (studentAns && typeof studentAns === 'object') studentText = studentAns.value || JSON.stringify(studentAns);
+
+          if (isFillInBlank) {
+            // Fill-in-blank: compute keyword match result and show with ✓/✗
+            const minKeywords = item.meta?.min_keywords ?? item.scoring?.min_keywords ?? item.meta?.scoring?.min_keywords ?? 1;
+            const answerLower = studentText.toLowerCase();
+            let foundCount = 0;
+            for (const kw of fibKeywords) {
+              if (answerLower.includes(String(kw).toLowerCase())) foundCount++;
+            }
+            const fibCorrect = foundCount >= minKeywords;
+            gradableCount++;
+            if (fibCorrect) correctCount++;
+            const day2 = item.meta?.day || '';
+            const qNum2 = item.meta?.question_number || ref;
+            const questionText2 = item.meta?.text || '';
+            const correctBg = darkTheme ? 'rgba(34,197,94,.2)' : '#dcfce7';
+            const correctColor = darkTheme ? '#86efac' : '#166534';
+            const wrongBg = darkTheme ? 'rgba(239,68,68,.2)' : '#fee2e2';
+            const wrongColor = darkTheme ? '#fca5a5' : '#991b1b';
+            const rowBg = fibCorrect ? correctBg : wrongBg;
+            const rowColor = fibCorrect ? correctColor : wrongColor;
+            return `<div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+              <div style="font-weight:600;font-size:13px;color:${labelColor};margin-bottom:4px;">Q${qNum2}${day2 ? ` (Day ${day2})` : ''}${badgesHtml ? ` &nbsp; ${badgesHtml}` : ''}</div>
+              ${questionText2 ? `<div style="font-size:13px;font-style:italic;color:${textColor};margin-bottom:6px;">${esc(questionText2)}</div>` : ''}
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <div style="padding:3px 8px;border-radius:4px;background:${rowBg};color:${rowColor};font-size:13px;font-weight:600;">
+                  ${studentText ? esc(studentText) : '<em style="font-weight:400;opacity:.6;">No response</em>'}
+                  <span style="margin-left:6px;font-weight:700;">${fibCorrect ? '✓' : '✗'}</span>
+                </div>
+              </div>
+            </div>`;
+          }
+
+          // True writing prompt (no keywords)
+          const prompt = item.meta?.prompt || '';
           const score = submission.score_manual ?? submission.score_total ?? submission.score;
           return `<div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
             <div style="font-weight:600;font-size:13px;color:${labelColor};margin-bottom:4px;">Writing Prompt (Day ${item.meta?.day || ref})${badgesHtml ? ` &nbsp; ${badgesHtml}` : ''}</div>

@@ -538,6 +538,26 @@
   }
 
   /**
+   * Returns true if an item should be treated as auto-scored —
+   * either it is an objective MCQ/boolean/multi item, or it is a
+   * fill-in-blank constructed item that the server already scored
+   * (earned_points != null in submission_answers).
+   *
+   * @param {Object} item    - Assignment item from assignmentItemsCache
+   * @param {Array}  answers - submission_answers rows for this submission
+   */
+  function isAutoScoredItem(item, answers) {
+    if (item.answer_type === 'mcq' || item.answer_type === 'boolean' || item.answer_type === 'multi') {
+      return true;
+    }
+    if (item.answer_type === 'constructed') {
+      const answer = answers.find(a => a.item_id === item.id);
+      return answer != null && answer.earned_points != null;
+    }
+    return false;
+  }
+
+  /**
    * Reconstruct virtual answer objects from raw submission.answers JSONB for display.
    * Used when submission_answers rows are absent (backfill not yet run).
    * Returns display-only answer objects — NOT cached in submissionAnswersCache.
@@ -640,7 +660,7 @@
     const queue = buildReviewQueue();
     const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
 
-    // Count finalizable: all constructed items scored but not yet reviewed
+    // Count finalizable: all constructed items scored (manually or via keyword auto-score) but not yet reviewed
     let finalizableCount = 0;
     for (const submission of unreviewed) {
       const assignmentId = resolveAssignmentId(submission);
@@ -649,10 +669,9 @@
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
       if (constructedItems.length === 0) continue; // MCQ-only handled by autoFinalize
       const answers = submissionAnswersCache[submission.id] || [];
-      const allScored = constructedItems.every(item => {
-        const answer = answers.find(a => a.item_id === item.id);
-        return answer && answer.earned_points != null;
-      });
+      // A constructed item counts as scored if it is auto-scored (earned_points != null),
+      // whether by the keyword engine or by a teacher rubric.
+      const allScored = constructedItems.every(item => isAutoScoredItem(item, answers));
       if (allScored) finalizableCount++;
     }
 
@@ -789,14 +808,11 @@
           scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
         } else {
         const constructedItems = items.filter(i => i.answer_type === 'constructed');
-        const hasUnscored = constructedItems.some(item => {
-          const answer = answers.find(a => a.item_id === item.id);
-          return !answer || answer.earned_points == null;
-        });
+        const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
         if (hasUnscored) {
           scorePreview = `<span class="rv-score-preview" style="font-size:13px;font-family:monospace;opacity:0.75;">___/${totalMax} — ___%</span>`;
         } else {
-          const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
+          const autoItems = items.filter(i => isAutoScoredItem(i, answers));
           let autoEarned = 0;
           if (answers && answers.length > 0) {
             // Best: use submissionAnswersCache (loaded when expanded)
@@ -806,7 +822,8 @@
             }, 0);
           } else if (submission.answers && typeof submission.answers === 'object' && Object.keys(submission.answers).length > 0) {
             // Fallback: recompute from submission.answers JSONB (raw MCQ answers)
-            autoEarned = autoItems.reduce((sum, item) => {
+            const mcqItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
+            autoEarned = mcqItems.reduce((sum, item) => {
               const itemRef = item.item_ref || item.ref;
               if (!itemRef) return sum;
               const studentAnswer = submission.answers[itemRef];
@@ -822,6 +839,7 @@
             autoEarned = Number(submission.score_auto) || 0;
           }
           const manualEarned = constructedItems.reduce((sum, item) => {
+            if (isAutoScoredItem(item, answers)) return sum;
             const ans = answers.find(a => a.item_id === item.id);
             return sum + (Number(ans?.earned_points) || 0);
           }, 0);
@@ -912,14 +930,11 @@
       });
     }
     
-    // Separate auto-graded and constructed items
-    const autoGradedItems = items.filter(item => 
-      item.answer_type === 'mcq' || 
-      item.answer_type === 'boolean' || 
-      item.answer_type === 'multi'
-    );
-    
-    const constructedItems = items.filter(item => item.answer_type === 'constructed');
+    // Separate auto-graded and constructed items.
+    // Fill-in-blank (constructed) items that were keyword-auto-scored by the server
+    // already have earned_points populated — treat those as auto-graded too.
+    const autoGradedItems = items.filter(item => isAutoScoredItem(item, displayAnswers));
+    const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, displayAnswers));
     
     // Calculate stats
     let autoCorrect = 0;
@@ -1447,10 +1462,8 @@
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
-      const allScored = constructedItems.every(item => {
-        const answer = answers.find(a => a.item_id === item.id);
-        return answer && answer.earned_points != null;
-      });
+      // A constructed item counts as scored if keyword-auto-scored or teacher-scored
+      const allScored = constructedItems.every(item => isAutoScoredItem(item, answers));
       if (allScored) finalizable.push(submission);
     }
 
@@ -1465,19 +1478,20 @@
         try {
           const items = assignmentItemsCache[submission.assignment_id] || [];
           const answers = submissionAnswersCache[submission.id] || [];
-          const constructedItems = items.filter(item => item.answer_type === 'constructed');
-          let scoreManual = 0;
-          constructedItems.forEach(item => {
-            const answer = answers.find(a => a.item_id === item.id);
-            if (answer) scoreManual += Number(answer.earned_points) || 0;
-          });
+          // Keyword-auto-scored fill-in-blank items count toward scoreAuto, not scoreManual
           const scoreAuto = answers.length > 0
-            ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+            ? items.filter(i => isAutoScoredItem(i, answers))
                 .reduce((sum, item) => {
                   const ans = answers.find(a => a.item_id === item.id);
                   return sum + (Number(ans?.earned_points) || 0);
                 }, 0)
             : (Number(submission.score_auto) || 0);
+          let scoreManual = 0;
+          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers))
+            .forEach(item => {
+              const answer = answers.find(a => a.item_id === item.id);
+              if (answer) scoreManual += Number(answer.earned_points) || 0;
+            });
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
@@ -1535,10 +1549,8 @@
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
       if (constructedItems.length > 0) {
         const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
-        const hasUnscored = constructedItems.some(item => {
-          const answer = answers.find(a => a.item_id === item.id);
-          return !answer || answer.earned_points == null;
-        });
+        // Only skip if there are truly unscored constructed items (not keyword-auto-scored)
+        const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
         if (hasUnscored) {
           skipped.push(submission);
           continue;
@@ -1564,20 +1576,21 @@
           const answers = submissionAnswersCache[submission.id] || [];
           const assignmentId = resolveAssignmentId(submission);
           const items = assignmentItemsCache[assignmentId] || [];
+          // Keyword-auto-scored fill-in-blank items count toward scoreAuto, not scoreManual
           const scoreAuto = answers.length > 0
-            ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+            ? items.filter(i => isAutoScoredItem(i, answers))
                 .reduce((sum, item) => {
                   const ans = answers.find(a => a.item_id === item.id);
                   return sum + (Number(ans?.earned_points) || 0);
                 }, 0)
             : (Number(submission.score_auto) || 0);
-          const constructedItems = items.filter(item => item.answer_type === 'constructed');
           let scoreManual = 0;
-          constructedItems.forEach(item => {
+          const manualConstructed = items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers));
+          manualConstructed.forEach(item => {
             const answer = answers.find(a => a.item_id === item.id);
             if (answer) scoreManual += Number(answer.earned_points) || 0;
           });
-          if (constructedItems.length === 0) scoreManual = Number(submission.score_manual) || 0;
+          if (items.filter(i => i.answer_type === 'constructed').length === 0) scoreManual = Number(submission.score_manual) || 0;
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
@@ -1765,20 +1778,19 @@
       const items = await getAssignmentItemsForAssignment(assignmentId);
       const answers = await getSubmissionAnswers(submissionId);
       
-      // Calculate manual score
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      // Calculate manual score — only true writing-prompt items (not keyword-auto-scored fill-in-blank)
       let scoreManual = 0;
-      constructedItems.forEach(item => {
-        const answer = answers.find(a => a.item_id === item.id);
-        if (answer) {
-          scoreManual += Number(answer.earned_points) || 0;
-        }
-      });
+      items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers))
+        .forEach(item => {
+          const answer = answers.find(a => a.item_id === item.id);
+          if (answer) {
+            scoreManual += Number(answer.earned_points) || 0;
+          }
+        });
       
-      // Get auto score from submission_answers rows (canonical earned_points values)
-      const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
+      // Get auto score: objective items + keyword-auto-scored fill-in-blank items
       let scoreAuto = 0;
-      for (const item of autoItems) {
+      for (const item of items.filter(i => isAutoScoredItem(i, answers))) {
         const ans = answers.find(a => a.item_id === item.id);
         scoreAuto += (Number(ans?.earned_points) || 0);
       }
@@ -2000,13 +2012,19 @@
       const items = await getAssignmentItemsForAssignment(assignmentId);
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
 
-      // Only auto-finalize if there are zero constructed items and at least one item
-      if (items.length === 0 || constructedItems.length > 0) continue;
+      if (items.length === 0) continue;
+
+      // For assignments with constructed items, only auto-finalize if ALL are keyword-auto-scored
+      if (constructedItems.length > 0) {
+        const preAnswers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
+        if (constructedItems.some(item => !isAutoScoredItem(item, preAnswers))) continue;
+      }
 
       try {
         const answers = await getSubmissionAnswers(submission.id);
+        // All items are auto-scored (MCQ or keyword fill-in-blank); scoreManual stays 0
         const scoreAuto = answers.length > 0
-          ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+          ? items.filter(i => isAutoScoredItem(i, answers))
               .reduce((sum, item) => {
                 const ans = answers.find(a => a.item_id === item.id);
                 return sum + (Number(ans?.earned_points) || 0);
@@ -2147,7 +2165,8 @@
     const gradedAt = new Date().toISOString();
     const gradedBy = localStorage.getItem('rc_teacher_name') || '';
 
-    // Compute score_manual from per-item constructed-response answers
+    // Compute score_manual from per-item constructed-response answers.
+    // Keyword-auto-scored fill-in-blank items (earned_points already set) count toward scoreAuto.
     const submission = submissionsData.find(s => s.id === submissionId);
     if (!submission) return;
     const items = assignmentItemsCache[resolveAssignmentId(submission)] || [];
@@ -2155,15 +2174,15 @@
     const constructedItems = items.filter(item => item.answer_type === 'constructed');
     let scoreManual = 0;
     constructedItems.forEach(item => {
+      if (isAutoScoredItem(item, answers)) return; // keyword-auto-scored — goes to scoreAuto
       const answer = answers.find(a => a.item_id === item.id);
       if (answer && answer.earned_points != null) {
         scoreManual += Number(answer.earned_points) || 0;
       }
     });
 
-    const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
     const scoreAuto = answers.length > 0
-      ? autoItems.reduce((sum, item) => {
+      ? items.filter(i => isAutoScoredItem(i, answers)).reduce((sum, item) => {
           const ans = answers.find(a => a.item_id === item.id);
           return sum + (Number(ans?.earned_points) || 0);
         }, 0)
@@ -2196,12 +2215,9 @@
       }
 
       // Trigger goal progress updates when all items have been scored.
-      // Only fire when every constructed item has earned_points recorded; auto-scored
-      // items are always scored, so this guards against partial grading states.
-      const allConstructedScored = constructedItems.length === 0 || constructedItems.every(item => {
-        const answer = answers.find(a => a.item_id === item.id);
-        return answer && answer.earned_points != null;
-      });
+      // isAutoScoredItem covers both keyword-auto-scored fill-in-blank and
+      // teacher-scored writing prompts (earned_points != null).
+      const allConstructedScored = constructedItems.every(item => isAutoScoredItem(item, answers));
       if (allConstructedScored) {
         try {
           await triggerGoalProgressUpdates(submission, items, answers);
