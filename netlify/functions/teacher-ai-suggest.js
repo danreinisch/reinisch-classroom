@@ -46,7 +46,7 @@ function buildPrompt({ student_response, rubric_tiers, max_points, item_label, g
   }
 
   prompt += `\nStudent Response:\n"${student_response}"\n`;
-  prompt += `\nRespond in JSON only: { "suggested_score": <number 0-${max_points}>, "suggested_note": "<brief constructive feedback for student, 1-2 sentences>", "rationale": "<brief internal reasoning for the score, 1 sentence>" }`;
+  prompt += `\nRespond in JSON only: { "suggested_score": <number 0-${max_points}>, "suggested_note": "<3-4 sentences of constructive feedback focused specifically on the student's written response to this question. Comment on what the student demonstrated, what could be improved, and any specific guidance. Do not comment on the overall assignment — overall feedback is handled separately by the teacher.>", "rationale": "<brief internal reasoning for the score, 1 sentence>" }`;
 
   return prompt;
 }
@@ -134,7 +134,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         temperature: 0.3,
-        max_tokens: 300,
+        max_tokens: 500,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },

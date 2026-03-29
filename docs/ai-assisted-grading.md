@@ -5,10 +5,26 @@
 The AI-Assisted Grading Suggestions feature helps teachers score constructed-response items on the
 Review page. When a teacher clicks **✨ Suggest Grade** on a response card, the system sends the
 student's written answer and the item's rubric to an AI model, which returns a suggested score and
-a brief feedback note. The teacher reviews both fields, edits them as needed, and clicks **Save
-Grade** as normal.
+a feedback note focused specifically on that written response. The teacher reviews both fields,
+edits them as needed, and clicks **Save Grade** as normal.
 
 **Key design principle:** The AI suggestion never auto-saves. Teachers always have the final word.
+
+### Two-Layer Feedback Model
+
+The Review page supports two separate feedback layers:
+
+1. **Per-item Teacher Note** — on each constructed-response card, populated by the AI's
+   `suggested_note`. This note is focused specifically on the student's written response to that
+   question: what was demonstrated, what could be improved, and any specific guidance. It is
+   3–4 sentences and does not address the overall assignment.
+
+2. **Overall Assignment Feedback** — in the Grade section at the bottom of the page, written by
+   the teacher after all items have been scored. This is where holistic comments about the full
+   assignment belong.
+
+The AI only fills the per-item Teacher Note. Overall assignment feedback is always written by the
+teacher.
 
 The button is only shown for **constructed-response** items (fill-in-blank / written response). It
 does not appear on MCQ, boolean, or multi-select items, which are scored automatically.
@@ -107,8 +123,8 @@ details.
 | Model | `gpt-4o-mini` |
 | Temperature | `0.3` (for consistent scoring) |
 | Avg input tokens / request | ~400–600 |
-| Avg output tokens / request | ~150 |
-| Cost per suggestion | ~$0.0001 |
+| Avg output tokens / request | ~250 |
+| Cost per suggestion | ~$0.0002 |
 | 16 items × 25 students | ~$0.04 per full class assignment |
 | Monthly estimate (4 assignments) | ~$0.16 / month |
 
@@ -155,7 +171,7 @@ Cost is essentially negligible on an existing OpenAI subscription.
 {
   "ok": true,
   "suggested_score": 4,
-  "suggested_note": "Good explanation of slope. Consider adding y-intercept.",
+  "suggested_note": "You correctly identified the rise-over-run relationship to find the slope. Your explanation shows solid understanding of how the slope value affects the steepness of the line. To strengthen your response, consider also explaining what the y-intercept represents and where it appears in the equation. Adding that connection would make your answer complete.",
   "rationale": "Student correctly identifies rise-over-run but omits intercept."
 }
 ```
