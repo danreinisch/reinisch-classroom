@@ -79,12 +79,35 @@ function parseBooleanRpcResponse(data) {
   return Boolean(data);
 }
 
+/**
+ * Look up the single active teacher record and return its UUID.
+ * This deployment runs a single teacher, so querying by active=eq.true is correct.
+ * Using active=eq.true avoids depending on teacher_code matching the login username
+ * (teacher_code is auto-generated as TEACHER001, TEACHER002 etc. by a DB trigger,
+ * and has no relationship to the app_users.username used for login).
+ * @returns {Promise<string|null>} teacher UUID, or null if not found or on error
+ */
+async function lookupActiveTeacherId() {
+  try {
+    const res = await rest('/rest/v1/teacher?select=id&active=eq.true&limit=1', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return (Array.isArray(rows) && rows.length > 0) ? rows[0].id : null;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = { 
   rest, 
   jsonRes, 
   rpc, 
   parseBooleanRpcResponse,
   getSupabaseConfig,
+  lookupActiveTeacherId,
   SUPABASE_URL, 
   SUPABASE_SERVICE_ROLE_KEY 
 };

@@ -7,7 +7,7 @@
 console.log('[teacher-login] Module loaded successfully');
 
 const { sign, teacherCookie } = require('./_lib/auth');
-const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
+const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, lookupActiveTeacherId } = require('./_lib/supa');
 const {
   generateRequestId,
   jsonResponse,
@@ -218,30 +218,11 @@ async function handleTeacherLogin(event) {
     }
     
     // Credentials valid - look up teacher UUID to embed in JWT for split-by-student issuance
-    let teacherId = null;
-    try {
-      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(user.username)}&limit=1`;
-      const teacherLookupResponse = await fetch(teacherLookupUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (teacherLookupResponse.ok) {
-        const teacherRows = await teacherLookupResponse.json();
-        if (teacherRows.length > 0) {
-          teacherId = teacherRows[0].id;
-          console.log(`[teacher-login] [${requestId}] Resolved teacher UUID for "${user.username}": ${teacherId}`);
-        } else {
-          console.warn(`[teacher-login] [${requestId}] No teacher record found for teacher_code="${user.username}"; teacherId will not be embedded in JWT`);
-        }
-      } else {
-        console.warn(`[teacher-login] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; teacherId will not be embedded in JWT`);
-      }
-    } catch (teacherLookupErr) {
-      console.warn(`[teacher-login] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; teacherId will not be embedded in JWT`);
+    const teacherId = await lookupActiveTeacherId();
+    if (teacherId) {
+      console.log(`[teacher-login] [${requestId}] Resolved active teacher UUID: ${teacherId}`);
+    } else {
+      console.warn(`[teacher-login] [${requestId}] No active teacher record found; teacherId will not be embedded in JWT`);
     }
 
     // Create session token with teacherId (may be null if no teacher record found)

@@ -21,7 +21,7 @@ const {
 } = require('./_lib/http');
 
 const { requireTeacher } = require('./_lib/auth');
-const { getSupabaseConfig } = require('./_lib/supa');
+const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
 
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
@@ -122,31 +122,11 @@ exports.handler = async (event) => {
     }
 
     // Step 1b: Verify the assignment's class belongs to the authenticated teacher
-    const teacherUsername = authResult.user.username;
-    let teacherUUID = null;
-    try {
-      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
-      const teacherLookupResponse = await fetch(teacherLookupUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (teacherLookupResponse.ok) {
-        const teacherRows = await teacherLookupResponse.json();
-        if (teacherRows.length > 0) {
-          teacherUUID = teacherRows[0].id;
-          console.log(`[teacher-recall-assignment] [${requestId}] Resolved teacher UUID for "${teacherUsername}": ${teacherUUID}`);
-        } else {
-          console.warn(`[teacher-recall-assignment] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; ownership check will be unscoped`);
-        }
-      } else {
-        console.warn(`[teacher-recall-assignment] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; ownership check will be unscoped`);
-      }
-    } catch (teacherLookupErr) {
-      console.warn(`[teacher-recall-assignment] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; ownership check will be unscoped`);
+    const teacherUUID = await lookupActiveTeacherId();
+    if (teacherUUID) {
+      console.log(`[teacher-recall-assignment] [${requestId}] Resolved active teacher UUID: ${teacherUUID}`);
+    } else {
+      console.warn(`[teacher-recall-assignment] [${requestId}] No active teacher record found; ownership check will be unscoped`);
     }
 
     const assignmentSeries = assignmentMeta ? assignmentMeta.series : null;
