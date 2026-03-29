@@ -10,7 +10,8 @@
   },
   "globals": {
     "rcAlert": "readonly",
-    "rcConfirm": "readonly"
+    "rcConfirm": "readonly",
+    "rcParseStudentSections": "readonly"
   },
   "rules": {
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
