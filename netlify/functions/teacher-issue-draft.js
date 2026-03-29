@@ -479,32 +479,37 @@ exports.handler = async (event) => {
       console.log(`[teacher-issue-draft] [${requestId}] Resolved alias "${draft.className}" → "${resolvedClassName}"`);
     }
 
-    // Step 1a: Look up teacher record by teacher_code to get teacher UUID for class scoping.
-    // The teacher's app_users username is expected to match their teacher.teacher_code.
-    let teacherUUID = null;
-    try {
-      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
-      const teacherLookupResponse = await fetch(teacherLookupUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (teacherLookupResponse.ok) {
-        const teacherRows = await teacherLookupResponse.json();
-        if (teacherRows.length > 0) {
-          teacherUUID = teacherRows[0].id;
-          console.log(`[teacher-issue-draft] [${requestId}] Resolved teacher UUID for "${teacherUsername}": ${teacherUUID}`);
+    // Step 1a: Resolve teacher UUID for class scoping and split-by-student validation.
+    // First, try to read teacherId from the JWT payload (embedded at login time).
+    // Fall back to a runtime lookup for sessions created before this change.
+    let teacherUUID = authResult.user.teacherId || null;
+    if (teacherUUID) {
+      console.log(`[teacher-issue-draft] [${requestId}] Using teacher UUID from JWT for "${teacherUsername}": ${teacherUUID}`);
+    } else {
+      try {
+        const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
+        const teacherLookupResponse = await fetch(teacherLookupUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (teacherLookupResponse.ok) {
+          const teacherRows = await teacherLookupResponse.json();
+          if (teacherRows.length > 0) {
+            teacherUUID = teacherRows[0].id;
+            console.log(`[teacher-issue-draft] [${requestId}] Resolved teacher UUID for "${teacherUsername}" via runtime lookup: ${teacherUUID}`);
+          } else {
+            console.warn(`[teacher-issue-draft] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; class lookup will not be teacher-scoped`);
+          }
         } else {
-          console.warn(`[teacher-issue-draft] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; class lookup will not be teacher-scoped`);
+          console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; class lookup will not be teacher-scoped`);
         }
-      } else {
-        console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; class lookup will not be teacher-scoped`);
+      } catch (teacherLookupErr) {
+        console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; class lookup will not be teacher-scoped`);
       }
-    } catch (teacherLookupErr) {
-      console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; class lookup will not be teacher-scoped`);
     }
 
     // For split-by-student drafts, teacher scoping is required to prevent cross-teacher issues.
@@ -512,7 +517,7 @@ exports.handler = async (event) => {
       console.error(`[teacher-issue-draft] [${requestId}] Cannot issue split-by-student draft without teacher UUID. studentCode="${draft.studentCode}"`);
       return jsonResponse(event, 403, {
         ok: false,
-        error: 'Unable to verify teacher identity for per-student issue. Please try again or contact support.',
+        error: `No teacher record found for username '${teacherUsername}'. Your login session may be outdated — try logging out and back in. If the problem persists, contact admin to verify your teacher record exists.`,
       }, { 'Cache-Control': 'no-store' }, requestId);
     }
 
