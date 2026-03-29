@@ -760,8 +760,21 @@
   // Extract a "Week N" label and numeric week from a draft title, or null if no match
   function inferWeekFromDraft(draft) {
     const title = draft.title || "";
-    const m = title.match(/^Week\s*(\d+)\b/i);
-    return m ? { label: `Week ${m[1]}`, num: parseInt(m[1], 10) } : null;
+
+    // Pattern 1: "Week N" anywhere in string (most explicit)
+    let m = title.match(/\bWeek\s*(\d+)\b/i);
+    if (m) return { num: parseInt(m[1], 10), label: `Week ${m[1]}` };
+
+    // Pattern 2: "Wk N" or "Wk. N" (common abbreviation)
+    m = title.match(/\bWk\.?\s*(\d+)\b/i);
+    if (m) return { num: parseInt(m[1], 10), label: `Week ${m[1]}` };
+
+    // Pattern 3: "W9:" or "W12 " (single letter W followed by number, then delimiter or end)
+    // Note: use [\s:,-] NOT [\s:,\-] to avoid ESLint no-useless-escape error
+    m = title.match(/\bW(\d+)(?=[\s:,-]|$)/i);
+    if (m) return { num: parseInt(m[1], 10), label: `Week ${m[1]}` };
+
+    return null;
   }
 
   // Build groups from a drafts array, ordered numerically by week number parsed from titles
