@@ -590,7 +590,8 @@
     }
 
     const now = new Date();
-    const missingSubmissions = [];
+    // Map: studentCode → { studentName, studentCode, submissions: [{ assignmentTitle, daysOverdue }] }
+    const missingByStudent = new Map();
     for (const inst of instances) {
       if (!inst.due_at) continue;
       const studentRecord = studentMap.get(inst.student_code);
@@ -602,14 +603,19 @@
       const student = studentMap.get(inst.student_code);
       const assignment = assignmentMap.get(inst.assignment_id);
       const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-      missingSubmissions.push({
-        studentName: student?.name || inst.student_code || 'Unknown',
-        studentCode: student?.code || inst.student_code || '—',
+      const studentCode = student?.code || inst.student_code || '—';
+      const studentName = student?.name || inst.student_code || 'Unknown';
+      if (!missingByStudent.has(studentCode)) {
+        missingByStudent.set(studentCode, { studentName, studentCode, submissions: [] });
+      }
+      missingByStudent.get(studentCode).submissions.push({
         assignmentTitle: assignment?.title || 'Assignment',
         daysOverdue,
       });
     }
-    missingSubmissions.sort((a, b) => b.daysOverdue - a.daysOverdue);
+    // Sort by submission count descending (most missing first)
+    const missingSubmissions = Array.from(missingByStudent.values())
+      .sort((a, b) => b.submissions.length - a.submissions.length);
 
     // ── Render ─────────────────────────────────────────────────────────────
     const hasItems = iepDeadlines.length > 0 || unreviewed.length > 0 || dataCollectionOverdue.length > 0 || missingSubmissions.length > 0;
@@ -628,7 +634,7 @@
     if (iepDeadlines.length > 0) summaryParts.push(`📅 ${iepDeadlines.length} IEP/eval deadline${iepDeadlines.length !== 1 ? 's' : ''}`);
     if (unreviewed.length > 0) summaryParts.push(`⚠️ ${unreviewed.length} unreviewed`);
     if (dataCollectionOverdue.length > 0) summaryParts.push(`📋 ${dataCollectionOverdue.length} students need data`);
-    if (missingSubmissions.length > 0) summaryParts.push(`📭 ${missingSubmissions.length} missing submission${missingSubmissions.length !== 1 ? 's' : ''}`);
+    if (missingSubmissions.length > 0) summaryParts.push(`📭 ${missingSubmissions.length} student${missingSubmissions.length !== 1 ? 's' : ''} with missing submissions`);
 
     let html = `<div class="ov-summary">${summaryParts.join(' · ')}</div>`;
     html += '<div class="ov-list-body">';
@@ -742,25 +748,27 @@
       html += '</div>';
     }
 
-    // Missing submissions
+    // Missing submissions (grouped by student)
     if (missingSubmissions.length > 0) {
       const prevSections = iepDeadlines.length + unreviewed.length + dataCollectionOverdue.length;
       html += `<div class="ov-section-header"${prevSections > 0 ? ' style="margin-top:12px;"' : ''}><span>Missing Submissions</span><span class="ov-count-badge ov-badge-red">${missingSubmissions.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
-      html += cappedSection(missingSubmissions, (item) => `
+      html += cappedSection(missingSubmissions, (item) => {
+        const maxDays = Math.max(...item.submissions.map(s => s.daysOverdue));
+        const assignmentBadges = item.submissions.map(s => `<span class="ov-badge">${s.assignmentTitle}</span>`).join('');
+        return `
         <a href="/teacher/work/" class="ov-row-card ov-row-card--red" style="border-left: 3px solid #ef4444;">
           <span class="ov-status-dot ov-dot-red"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
               <span class="ov-student-name">${item.studentName}</span>
               <span class="ov-student-code">${item.studentCode}</span>
-              <span class="ov-row-meta" style="margin-left:auto;">${item.daysOverdue}d overdue</span>
+              <span class="ov-row-meta" style="margin-left:auto;">${item.submissions.length} missing · up to ${maxDays}d overdue</span>
             </div>
-            <div class="ov-row-secondary">
-              <span class="ov-badge">${item.assignmentTitle}</span>
-            </div>
+            <div class="ov-row-secondary">${assignmentBadges}</div>
           </div>
-        </a>`);
+        </a>`;
+      });
       html += '</div>';
     }
 
@@ -1334,10 +1342,18 @@
       return;
     }
 
-    let html = "<div>";
+    // Filter buttons
+    let html = `<div class="ov-feed-filters">
+      <button class="ov-feed-filter active" data-filter="all">All</button>
+      <button class="ov-feed-filter" data-filter="submission">Submissions</button>
+      <button class="ov-feed-filter" data-filter="progress">Progress</button>
+      <button class="ov-feed-filter" data-filter="assignment">Assignments</button>
+    </div>`;
+
+    html += "<div class='ov-feed-list'>";
     for (const event of recentEvents) {
       html += `
-        <div class="activity-item">
+        <div class="activity-item" data-type="${event.type}">
           <div class="activity-icon">${event.icon}</div>
           <div class="activity-text">${event.text}</div>
           <div class="activity-time">${getRelativeTime(event.date)}</div>
@@ -1345,8 +1361,26 @@
       `;
     }
     html += "</div>";
+    html += `<div class="ov-feed-empty" style="display:none;">${SVG_CHECK} No matching activity</div>`;
 
     contentEl.innerHTML = html;
+
+    // Filter delegation
+    const filterBtns = contentEl.querySelectorAll('.ov-feed-filter');
+    const activityItems = contentEl.querySelectorAll('.activity-item');
+    const feedEmptyEl = contentEl.querySelector('.ov-feed-empty');
+    contentEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ov-feed-filter');
+      if (!btn) return;
+      const filter = btn.dataset.filter;
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activityItems.forEach(item => {
+        item.style.display = (filter === 'all' || item.dataset.type === filter) ? '' : 'none';
+      });
+      const anyVisible = Array.from(activityItems).some(item => item.style.display !== 'none');
+      if (feedEmptyEl) feedEmptyEl.style.display = anyVisible ? 'none' : '';
+    });
   }
 
   // ─── Initialize ────────────────────────────────────────────────────────────
