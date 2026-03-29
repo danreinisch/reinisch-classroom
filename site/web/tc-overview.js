@@ -368,52 +368,136 @@
   }
 
   /**
-   * Render Overdue Items Panel (uses pre-fetched data bundle)
+   * Render Action Required Panel (uses pre-fetched data bundle)
    */
   function renderOverdueItems({ instances, submissions, students, goals, progress, assignments }) {
     const contentEl = $("ovOverdueContent");
     if (!contentEl) return;
 
+    const SECTION_CAP = 5; // max items shown before "Show all" toggle
+
     const assignmentMap = new Map(assignments.map((a) => [a.id, a]));
     const studentMap = new Map(students.map((s) => [s.code, s]));
+    const instanceMap = new Map(instances.map((i) => [i.id, i]));
 
-    // Unreviewed submissions
-    const unreviewed = submissions.filter((s) => s.review_status === "pending");
-
-    // Missing progress data for current quarter
-    const currentQuarter = getCurrentQuarter();
-    const quarterRange = getQuarterDateRange(currentQuarter);
-    const missingProgress = [];
-
-    if (quarterRange) {
-      const activeStudents = students.filter((s) => s.active !== false);
-      for (const student of activeStudents) {
-        const studentGoals = goals.filter(
-          (g) => g.student_code === student.code && isGoalActive(g)
-        );
-        for (const goal of studentGoals) {
-          const hasProgressThisQuarter = progress.some(
-            (p) =>
-              p.student_code === student.code &&
-              p.goal_code === goal.code &&
-              new Date(p.date) >= quarterRange.start &&
-              new Date(p.date) <= quarterRange.end
-          );
-          if (!hasProgressThisQuarter) {
-            missingProgress.push({
-              student: student.name,
-              studentCode: student.code,
-              goalCode: goal.code,
-              goalArea: goal.goal_area || '',
-            });
-          }
+    // ── 1. Unreviewed Submissions ──────────────────────────────────────────
+    // Fix undefined bug: resolve student_code via instance if direct lookup fails
+    const unreviewed = submissions
+      .filter((s) => s.review_status === "pending")
+      .map((sub) => {
+        let studentCode = sub.student_code;
+        if (!studentCode || !studentMap.has(studentCode)) {
+          const inst = instanceMap.get(sub.assignment_instance_id);
+          if (inst) studentCode = inst.student_code || studentCode;
         }
+        const student = studentMap.get(studentCode);
+        const inst = instanceMap.get(sub.assignment_instance_id);
+        const assignment = inst ? assignmentMap.get(inst.assignment_id) : null;
+        return {
+          studentName: student?.name || studentCode || 'Unknown',
+          studentCode: student?.code || studentCode || '—',
+          assignmentTitle: assignment?.title || 'Assignment',
+          submittedAt: sub.submitted_at ? new Date(sub.submitted_at) : null,
+        };
+      });
+
+    // ── 2. Data Collection Overdue ─────────────────────────────────────────
+    // Flag goals whose most recent data collection is older than 14 school days.
+    // Group results by student so one row covers all overdue goals for that student.
+    const OVERDUE_SCHOOL_DAYS = 14;
+    const schoolDayNums = [1, 2, 3, 4, 5]; // Mon–Fri; schedule.schoolDays not available here
+
+    // Compute the date that is OVERDUE_SCHOOL_DAYS school days ago
+    function nSchoolDaysAgo(n) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      let counted = 0;
+      while (counted < n) {
+        d.setDate(d.getDate() - 1);
+        if (schoolDayNums.includes(d.getDay())) counted++;
+      }
+      return d;
+    }
+
+    const overdueThreshold = nSchoolDaysAgo(OVERDUE_SCHOOL_DAYS);
+
+    // Map: studentCode → { studentName, studentCode, goals: [{ goalCode, goalArea, lastDate }] }
+    const overdueByStudent = new Map();
+
+    const activeStudents = students.filter((s) => s.active !== false);
+    for (const student of activeStudents) {
+      const studentGoals = goals.filter(
+        (g) => g.student_code === student.code && isGoalActive(g)
+      );
+      for (const goal of studentGoals) {
+        // Determine overdue threshold: use goal.collection_frequency if available
+        let thresholdDate = overdueThreshold;
+        if (goal.collection_frequency && typeof goal.collection_frequency === 'number') {
+          thresholdDate = nSchoolDaysAgo(goal.collection_frequency);
+        }
+        const thresholdStr = formatDateYMD(thresholdDate);
+
+        const recentEntries = progress.filter(
+          (p) => p.student_code === student.code && p.goal_code === goal.code
+        );
+        recentEntries.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const lastDate = recentEntries.length > 0 ? recentEntries[0].date : null;
+
+        const isOverdue = !lastDate || lastDate < thresholdStr;
+        if (!isOverdue) continue;
+
+        if (!overdueByStudent.has(student.code)) {
+          overdueByStudent.set(student.code, {
+            studentName: student.name,
+            studentCode: student.code,
+            goals: [],
+          });
+        }
+        overdueByStudent.get(student.code).goals.push({
+          goalCode: goal.code,
+          goalArea: goal.goal_area || '',
+          lastDate,
+        });
       }
     }
 
-    const hasOverdue = unreviewed.length > 0 || missingProgress.length > 0;
+    const dataCollectionOverdue = Array.from(overdueByStudent.values())
+      .sort((a, b) => b.goals.length - a.goals.length); // most overdue goals first
 
-    if (!hasOverdue) {
+    // ── 3. Missing Submissions (past-due instances with no submission) ──────
+    const submissionsByInstance = new Map();
+    for (const sub of submissions) {
+      const iid = sub.assignment_instance_id;
+      if (iid) {
+        if (!submissionsByInstance.has(iid)) submissionsByInstance.set(iid, []);
+        submissionsByInstance.get(iid).push(sub);
+      }
+    }
+
+    const now = new Date();
+    const missingSubmissions = [];
+    for (const inst of instances) {
+      if (!inst.due_at) continue;
+      const dueDate = new Date(inst.due_at);
+      if (dueDate >= now) continue; // not yet overdue
+      const hasSub = submissionsByInstance.has(inst.id) && submissionsByInstance.get(inst.id).length > 0;
+      if (hasSub) continue;
+      const student = studentMap.get(inst.student_code);
+      const assignment = assignmentMap.get(inst.assignment_id);
+      const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+      missingSubmissions.push({
+        studentName: student?.name || inst.student_code || 'Unknown',
+        studentCode: student?.code || inst.student_code || '—',
+        assignmentTitle: assignment?.title || 'Assignment',
+        daysOverdue,
+      });
+    }
+    missingSubmissions.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    const hasItems = unreviewed.length > 0 || dataCollectionOverdue.length > 0 || missingSubmissions.length > 0;
+
+    if (!hasItems) {
       contentEl.innerHTML = `<div class="ov-card-empty">${SVG_CHECK} All caught up!</div>`;
       $("ovOverdueCard").classList.remove("alert-red");
       $("ovOverdueCard").classList.add("alert-green");
@@ -421,116 +505,186 @@
     }
 
     $("ovOverdueCard").classList.add("alert-red");
+    $("ovOverdueCard").classList.remove("alert-green");
 
-    // Summary header
     const summaryParts = [];
     if (unreviewed.length > 0) summaryParts.push(`⚠️ ${unreviewed.length} unreviewed`);
-    if (missingProgress.length > 0) summaryParts.push(`${missingProgress.length} goals missing progress`);
+    if (dataCollectionOverdue.length > 0) summaryParts.push(`📋 ${dataCollectionOverdue.length} students need data`);
+    if (missingSubmissions.length > 0) summaryParts.push(`📭 ${missingSubmissions.length} missing submission${missingSubmissions.length !== 1 ? 's' : ''}`);
 
     let html = `<div class="ov-summary">${summaryParts.join(' · ')}</div>`;
     html += '<div class="ov-list-body">';
 
+    // Helper: render a capped section with Show all toggle
+    let toggleIdx = 0;
+    function cappedSection(items, renderItem) {
+      if (items.length === 0) return '';
+      const toggleId = `ovToggle${++toggleIdx}`;
+      const visible = items.slice(0, SECTION_CAP);
+      const hidden = items.slice(SECTION_CAP);
+      let s = '';
+      for (const item of visible) s += renderItem(item);
+      if (hidden.length > 0) {
+        s += `<div id="${toggleId}_hidden" style="display:none;">`;
+        for (const item of hidden) s += renderItem(item);
+        s += `</div>`;
+        s += `<div style="margin-top:6px;"><button class="ov-show-all-btn" data-toggle-target="${toggleId}_hidden" data-toggle-label="Show all ${items.length}">Show all ${items.length}</button></div>`;
+      }
+      return s;
+    }
+
+    // Unreviewed submissions
     if (unreviewed.length > 0) {
       html += `<div class="ov-section-header"><span>Unreviewed Submissions</span><span class="ov-count-badge ov-badge-red">${unreviewed.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
-      for (const sub of unreviewed) {
-        const student = studentMap.get(sub.student_code);
-        const instance = instances.find((i) => i.id === sub.assignment_instance_id);
-        const assignment = instance ? assignmentMap.get(instance.assignment_id) : null;
-        const submittedDate = new Date(sub.submitted_at);
-        const studentName = student?.name || sub.student_code;
-        const studentCode = student?.code || sub.student_code;
-        html += `
+      html += cappedSection(unreviewed, (sub) => `
         <div class="ov-row-card ov-row-card--red">
           <span class="ov-status-dot ov-dot-red"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
-              <span class="ov-student-name">${studentName}</span>
-              <span class="ov-student-code">${studentCode}</span>
+              <span class="ov-student-name">${sub.studentName}</span>
+              <span class="ov-student-code">${sub.studentCode}</span>
             </div>
             <div class="ov-row-secondary">
-              <span class="ov-badge">${assignment?.title || 'Assignment'}</span>
-              <span class="ov-row-meta">${getRelativeTime(submittedDate)}</span>
+              <span class="ov-badge">${sub.assignmentTitle}</span>
+              ${sub.submittedAt ? `<span class="ov-row-meta">${getRelativeTime(sub.submittedAt)}</span>` : ''}
             </div>
           </div>
-        </div>`;
-      }
+        </div>`);
       html += '</div>';
     }
 
-    if (missingProgress.length > 0) {
-      html += `<div class="ov-section-header" style="${unreviewed.length > 0 ? 'margin-top: 12px;' : ''}"><span>Goals Without Progress This Quarter</span><span class="ov-count-badge ov-badge-amber">${missingProgress.length}</span></div>`;
+    // Data collection overdue — grouped by student
+    if (dataCollectionOverdue.length > 0) {
+      html += `<div class="ov-section-header"${unreviewed.length > 0 ? ' style="margin-top:12px;"' : ''}><span>Data Collection Overdue</span><span class="ov-count-badge ov-badge-amber">${dataCollectionOverdue.length} student${dataCollectionOverdue.length !== 1 ? 's' : ''}</span></div>`;
       html += '<div class="ov-scroll-body">';
-      for (const item of missingProgress) {
-        html += `
-        <div class="ov-row-card ov-row-card--amber">
+      html += cappedSection(dataCollectionOverdue, (item) => {
+        const goalBadges = item.goals.map(g =>
+          `<span class="ov-badge" title="${g.goalArea || g.goalCode}">${g.goalCode}</span>`
+        ).join(' ');
+        return `
+        <div class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
           <span class="ov-status-dot ov-dot-amber"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
-              <span class="ov-student-name">${item.student}</span>
+              <span class="ov-student-name">${item.studentName}</span>
               <span class="ov-student-code">${item.studentCode}</span>
+              <span class="ov-row-meta" style="margin-left:auto;">${item.goals.length} goal${item.goals.length !== 1 ? 's' : ''} overdue</span>
             </div>
-            <div class="ov-row-secondary">
-              <span class="ov-badge">${item.goalCode}</span>
-              ${item.goalArea ? `<span class="ov-badge ov-badge-area">${item.goalArea}</span>` : ''}
-            </div>
+            <div class="ov-row-secondary">${goalBadges}</div>
           </div>
         </div>`;
-      }
+      });
+      html += '</div>';
+    }
+
+    // Missing submissions
+    if (missingSubmissions.length > 0) {
+      const prevSections = unreviewed.length + dataCollectionOverdue.length;
+      html += `<div class="ov-section-header"${prevSections > 0 ? ' style="margin-top:12px;"' : ''}><span>Missing Submissions</span><span class="ov-count-badge ov-badge-red">${missingSubmissions.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      html += cappedSection(missingSubmissions, (item) => `
+        <div class="ov-row-card ov-row-card--red" style="border-left: 3px solid #ef4444;">
+          <span class="ov-status-dot ov-dot-red"></span>
+          <div class="ov-row-body">
+            <div class="ov-row-primary">
+              <span class="ov-student-name">${item.studentName}</span>
+              <span class="ov-student-code">${item.studentCode}</span>
+              <span class="ov-row-meta" style="margin-left:auto;">${item.daysOverdue}d overdue</span>
+            </div>
+            <div class="ov-row-secondary">
+              <span class="ov-badge">${item.assignmentTitle}</span>
+            </div>
+          </div>
+        </div>`);
       html += '</div>';
     }
 
     html += '</div>';
     contentEl.innerHTML = html;
-  }
 
-  /**
-   * Render At-Risk Students Panel (uses pre-fetched data bundle)
-   */
+    // Attach toggle handlers via delegation
+    contentEl.querySelectorAll('button[data-toggle-target]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.toggleTarget);
+        if (!target) return;
+        if (target.style.display === 'none') {
+          target.style.display = '';
+          btn.textContent = 'Show less';
+        } else {
+          target.style.display = 'none';
+          btn.textContent = btn.dataset.toggleLabel;
+        }
+      });
+    });
+  }
   function renderAtRiskStudents({ students, goals, progress }) {
     const contentEl = $("ovAtRiskContent");
     if (!contentEl) return;
 
-    // Thresholds for at-risk classification and near-mastery callout
-    const STALLED_THRESHOLD = 5;       // ≤5% above baseline counts as "stalled"
-    const NEAR_MASTERY_THRESHOLD = 5;  // within 5% of mastery counts as "near mastery"
-    const BAR_PADDING = 1.1;           // 10% padding above max value for progress bar scale
+    const SECTION_CAP = 5;          // max student rows shown before "Show all" toggle
+    const BAR_PADDING = 1.1;        // 10% padding above max value for progress bar scale
+    const TREND_WINDOW = 30;        // analyse data from last 30 days
+    const STALLED_BAND = 5;         // last 3+ points within ≤5% range = stalled
+    const NO_DATA_CAP = 5;          // max "No Data" entries shown inline
 
-    const regressing = [];
-    const stalled = [];
-    const nearMastery = [];
+    const trendCutoff = new Date();
+    trendCutoff.setDate(trendCutoff.getDate() - TREND_WINDOW);
+    const trendCutoffStr = formatDateYMD(trendCutoff);
+
+    // Maps: studentCode → { studentName, studentCode, regressingGoals[], stalledGoals[] }
+    const alertByStudent = new Map();
+    const noDataStudentCodes = new Set();
+
+    function ensureStudentEntry(student) {
+      if (!alertByStudent.has(student.code)) {
+        alertByStudent.set(student.code, {
+          studentName: student.name,
+          studentCode: student.code,
+          regressingGoals: [],
+          stalledGoals: [],
+          goalItems: {},
+        });
+      }
+      return alertByStudent.get(student.code);
+    }
 
     for (const student of students.filter((s) => s.active !== false)) {
       const studentGoals = goals.filter(
         (g) => g.student_code === student.code && isGoalActive(g)
       );
+      if (studentGoals.length === 0) continue;
+
+      let hasAnyData = false;
+
       for (const goal of studentGoals) {
-        const goalProgress = progress.filter(
+        const allGoalProgress = progress.filter(
           (p) => p.student_code === student.code && p.goal_code === goal.code
         );
-        if (goalProgress.length === 0) continue;
+        if (allGoalProgress.length > 0) hasAnyData = true;
 
-        // Sort by date to get most recent
-        goalProgress.sort((a, b) => new Date(b.date) - new Date(a.date));
-        const recent = goalProgress[0];
+        // Time-scope to last 30 days
+        const recentProgress = allGoalProgress
+          .filter((p) => p.date && p.date >= trendCutoffStr)
+          .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-        // Observation goals need category-aware at-risk logic
+        if (recentProgress.length === 0) continue;
+
+        // ── Observation goals ─────────────────────────────────────────────
         if (goal.measurement_type === 'Observation') {
           const obsConfig = goal.observation_config || {};
           const category = obsConfig.category || '';
 
           if (category === 'session_outcome') {
-            // At-risk if met count in recent window is below target
-            const window5 = goalProgress.slice(0, 5);
+            const window5 = recentProgress.slice(0, 5);
             const metCount = window5.filter(e => {
               const notes = e.notes || '';
               return notes.includes('[obs:session_outcome:met]');
             }).length;
             const targetSessions = parseGoalValue(goal.mastery || goal.target) ?? 3;
             if (metCount < targetSessions * 0.5) {
+              const entry = ensureStudentEntry(student);
               const item = {
-                studentCode: student.code,
-                studentName: student.name,
                 goalCode: goal.code,
                 goalArea: goal.goal_area || '',
                 current: metCount,
@@ -540,23 +694,22 @@
                 masteryRaw: goal.mastery || goal.target || null,
                 currentRaw: `${metCount}/${window5.length} sessions met`,
               };
-              stalled.push(item);
+              entry.stalledGoals.push(goal.code);
+              entry.goalItems[goal.code] = { item, severity: 'amber' };
             }
             continue;
           }
 
           if (category === 'prompt_count') {
-            // At-risk if average prompt count exceeds target max
-            const recentValues = goalProgress.slice(0, 5).map(e => parseFloat(e.value)).filter(v => !isNaN(v));
+            const recentValues = recentProgress.slice(0, 5).map(e => parseFloat(e.value)).filter(v => !isNaN(v));
             if (recentValues.length === 0) continue;
             const avgPrompts = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
             const targetMax = obsConfig.target_max_prompts != null
               ? obsConfig.target_max_prompts
               : (parseGoalValue(goal.mastery || goal.target) ?? 2);
             if (avgPrompts > targetMax * 1.5) {
+              const entry = ensureStudentEntry(student);
               const item = {
-                studentCode: student.code,
-                studentName: student.name,
                 goalCode: goal.code,
                 goalArea: goal.goal_area || '',
                 current: Math.round(avgPrompts * 10) / 10,
@@ -566,24 +719,25 @@
                 masteryRaw: goal.mastery || goal.target || null,
                 currentRaw: `Avg ${avgPrompts.toFixed(1)} prompts (target: ${targetMax})`,
               };
-              stalled.push(item);
+              entry.stalledGoals.push(goal.code);
+              entry.goalItems[goal.code] = { item, severity: 'amber' };
             }
             continue;
           }
-
-          // For tally and behavior_checklist: their values are stored as 0-100 percentages
-          // — fall through to standard percentage comparison below.
         }
 
+        // ── Numeric percentage goals ───────────────────────────────────────
         const baselineNum = parseGoalValue(goal.baseline);
         const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
-        const currentNum = recent.value != null ? parseFloat(recent.value) : null;
+        const values = recentProgress
+          .map(p => p.value != null ? parseFloat(p.value) : null)
+          .filter(v => v != null);
 
-        if (currentNum == null || baselineNum == null) continue;
+        if (values.length === 0 || baselineNum == null) continue;
+
+        const currentNum = values[0];
 
         const item = {
-          studentCode: student.code,
-          studentName: student.name,
           goalCode: goal.code,
           goalArea: goal.goal_area || '',
           current: Math.round(currentNum * 10) / 10,
@@ -591,43 +745,77 @@
           mastery: masteryNum != null ? Math.round(masteryNum * 10) / 10 : null,
           baselineRaw: goal.baseline,
           masteryRaw: goal.mastery || goal.target || null,
-          currentRaw: recent.value,
+          currentRaw: recentProgress[0].value,
         };
 
-        // Near mastery: within threshold of mastery and not yet there
-        if (masteryNum != null && currentNum >= masteryNum - NEAR_MASTERY_THRESHOLD && currentNum < masteryNum) {
-          nearMastery.push(item);
+        // Trend: check last 3 data points for consistent decline
+        const last3 = values.slice(0, 3);
+        let isRegressing = false;
+        let isStalled = false;
+
+        if (currentNum < baselineNum) {
+          // Current is below baseline — always regressing
+          isRegressing = true;
+        } else if (last3.length >= 2) {
+          // Check if every consecutive pair shows a decline
+          const allDecline = last3.every((v, i) => i === 0 || v < last3[i - 1]);
+          if (allDecline) isRegressing = true;
         }
 
-        // Regressing: current < baseline (going backward)
-        if (currentNum < baselineNum) {
-          regressing.push(item);
+        if (!isRegressing) {
+          if (last3.length >= 3) {
+            const rangeSpan = Math.max(...last3) - Math.min(...last3);
+            if (rangeSpan <= STALLED_BAND) isStalled = true;
+          } else if (currentNum <= baselineNum + STALLED_BAND) {
+            isStalled = true;
+          }
         }
-        // Stalled: at or just above baseline (no meaningful growth)
-        else if (currentNum <= baselineNum + STALLED_THRESHOLD) {
-          stalled.push(item);
+
+        if (isRegressing) {
+          const entry = ensureStudentEntry(student);
+          entry.regressingGoals.push(goal.code);
+          entry.goalItems[goal.code] = { item, severity: 'red' };
+        } else if (isStalled) {
+          const entry = ensureStudentEntry(student);
+          entry.stalledGoals.push(goal.code);
+          entry.goalItems[goal.code] = { item, severity: 'amber' };
         }
+      }
+
+      // No Data: student has active goals but zero progress data ever
+      if (!hasAnyData && studentGoals.length > 0) {
+        noDataStudentCodes.add(student.code);
       }
     }
 
-    const atRiskCount = regressing.length + stalled.length;
+    // Sort: regressing first, then more goals first
+    const alertStudents = Array.from(alertByStudent.values()).sort((a, b) => {
+      const aScore = a.regressingGoals.length * 10 + a.stalledGoals.length;
+      const bScore = b.regressingGoals.length * 10 + b.stalledGoals.length;
+      return bScore - aScore;
+    });
 
-    if (atRiskCount === 0 && nearMastery.length === 0) {
+    const noDataStudents = students.filter(s => noDataStudentCodes.has(s.code));
+
+    const hasAlerts = alertStudents.length > 0 || noDataStudents.length > 0;
+
+    if (!hasAlerts) {
       contentEl.innerHTML = `<div class="ov-card-empty">${SVG_CHECK} All students progressing above baseline</div>`;
       $("ovAtRiskCard").classList.remove("alert-amber");
       $("ovAtRiskCard").classList.add("alert-green");
       return;
     }
 
-    if (atRiskCount > 0) {
-      $("ovAtRiskCard").classList.add("alert-amber");
-    }
+    $("ovAtRiskCard").classList.add("alert-amber");
+    $("ovAtRiskCard").classList.remove("alert-green");
 
-    // Summary header
+    const totalRegressing = alertStudents.filter(s => s.regressingGoals.length > 0).length;
+    const totalStalled = alertStudents.filter(s => s.stalledGoals.length > 0 && s.regressingGoals.length === 0).length;
+
     const summaryParts = [];
-    if (regressing.length > 0) summaryParts.push(`🔴 ${regressing.length} regressing`);
-    if (stalled.length > 0) summaryParts.push(`🟡 ${stalled.length} stalled`);
-    if (nearMastery.length > 0) summaryParts.push(`🎉 ${nearMastery.length} near mastery`);
+    if (totalRegressing > 0) summaryParts.push(`🔴 ${totalRegressing} regressing`);
+    if (totalStalled > 0) summaryParts.push(`🟡 ${totalStalled} stalled`);
+    if (noDataStudents.length > 0) summaryParts.push(`⚫ ${noDataStudents.length} no data`);
 
     let html = `<div class="ov-summary">${summaryParts.join(' · ')}</div>`;
     html += '<div class="ov-list-body">';
@@ -646,60 +834,145 @@
         </div>`;
     }
 
-    function buildAtRiskRow(item, severity) {
-      const cardClass = severity === 'red' ? 'ov-row-card--red' : severity === 'green' ? 'ov-row-card--green' : 'ov-row-card--amber';
-      const dotClass = severity === 'red' ? 'ov-dot-red' : severity === 'green' ? 'ov-dot-green' : 'ov-dot-amber';
-      const fillClass = severity === 'red' ? 'ov-fill-red' : severity === 'green' ? 'ov-fill-green' : 'ov-fill-amber';
-      const metaText = item.masteryRaw
-        ? `${item.currentRaw} current · baseline: ${item.baselineRaw} · mastery: ${item.masteryRaw}`
-        : `${item.currentRaw} current · baseline: ${item.baselineRaw}`;
+    // Render a student row with expandable goal details
+    let detailIdx = 0;
+    function buildStudentAlertRow(entry) {
+      const regressCount = entry.regressingGoals.length;
+      const stalledCount = entry.stalledGoals.length;
+      const dominantSeverity = regressCount > 0 ? 'red' : 'amber';
+      const cardClass = dominantSeverity === 'red' ? 'ov-row-card--red' : 'ov-row-card--amber';
+      const dotClass = dominantSeverity === 'red' ? 'ov-dot-red' : 'ov-dot-amber';
+      const borderColor = dominantSeverity === 'red' ? '#ef4444' : '#f59e0b';
+
+      const metaParts = [];
+      if (regressCount > 0) metaParts.push(`${regressCount} regressing`);
+      if (stalledCount > 0) metaParts.push(`${stalledCount} stalled`);
+
+      const allGoalCodes = [...entry.regressingGoals, ...entry.stalledGoals];
+      const goalBadges = allGoalCodes.map(gc => `<span class="ov-badge">${gc}</span>`).join(' ');
+
+      const detailId = `ovAlertDetail${++detailIdx}`;
+      const hasDetails = Object.keys(entry.goalItems).length > 0;
+
+      let detailHtml = '';
+      if (hasDetails) {
+        detailHtml = `<div id="${detailId}" style="display:none; margin-top:6px; padding-left:4px;">`;
+        for (const goalCode of allGoalCodes) {
+          const gi = entry.goalItems[goalCode];
+          if (!gi) continue;
+          const fillClass = gi.severity === 'red' ? 'ov-fill-red' : 'ov-fill-amber';
+          const metaText = gi.item.masteryRaw
+            ? `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw} · mastery: ${gi.item.masteryRaw}`
+            : `${gi.item.currentRaw} current · baseline: ${gi.item.baselineRaw}`;
+          detailHtml += `
+            <div style="margin-bottom:6px; padding:4px 0; border-top:1px solid rgba(0,0,0,0.06);">
+              <div class="ov-row-secondary" style="margin-bottom:4px;">
+                <span class="ov-badge">${gi.item.goalCode}</span>
+                ${gi.item.goalArea ? `<span class="ov-badge ov-badge-area">${gi.item.goalArea}</span>` : ''}
+              </div>
+              ${buildProgressBar(gi.item, fillClass)}
+              <div class="ov-row-meta">${metaText}</div>
+            </div>`;
+        }
+        detailHtml += '</div>';
+      }
+
+      const toggleBtn = hasDetails ? `<button class="ov-show-all-btn" style="margin-top:4px;" data-toggle-target="${detailId}" data-toggle-label="▼ Show details" data-toggle-open-label="▲ Hide details">▼ Show details</button>` : '';
+
       return `
-      <div class="ov-row-card ${cardClass}">
+      <div class="ov-row-card ${cardClass}" style="border-left: 3px solid ${borderColor};">
         <span class="ov-status-dot ${dotClass}"></span>
         <div class="ov-row-body">
           <div class="ov-row-primary">
-            <span class="ov-student-name">${item.studentName}</span>
-            <span class="ov-student-code">${item.studentCode}</span>
+            <span class="ov-student-name">${entry.studentName}</span>
+            <span class="ov-student-code">${entry.studentCode}</span>
+            <span class="ov-row-meta" style="margin-left:auto;">${metaParts.join(' · ')}</span>
           </div>
-          <div class="ov-row-secondary">
-            <span class="ov-badge">${item.goalCode}</span>
-            ${item.goalArea ? `<span class="ov-badge ov-badge-area">${item.goalArea}</span>` : ''}
-          </div>
-          ${buildProgressBar(item, fillClass)}
-          <div class="ov-row-meta">${metaText}</div>
+          <div class="ov-row-secondary">${goalBadges}</div>
+          ${detailHtml}
+          ${toggleBtn}
         </div>
       </div>`;
     }
 
-    if (regressing.length > 0) {
-      html += `<div class="ov-section-header"><span>Regressing</span><span class="ov-count-badge ov-badge-red">${regressing.length}</span></div>`;
-      html += '<div class="ov-scroll-body">';
-      for (const item of regressing) {
-        html += buildAtRiskRow(item, 'red');
+    // Helper: Show-all toggle for student rows
+    let saIdx = 0;
+    function cappedStudentSection(items, renderFn) {
+      if (items.length === 0) return '';
+      const saId = `ovSA${++saIdx}`;
+      const visible = items.slice(0, SECTION_CAP);
+      const hidden = items.slice(SECTION_CAP);
+      let s = '';
+      for (const item of visible) s += renderFn(item);
+      if (hidden.length > 0) {
+        s += `<div id="${saId}_hidden" style="display:none;">`;
+        for (const item of hidden) s += renderFn(item);
+        s += `</div>`;
+        s += `<div style="margin-top:6px;"><button class="ov-show-all-btn" data-toggle-target="${saId}_hidden" data-toggle-label="Show all ${items.length}">Show all ${items.length}</button></div>`;
       }
+      return s;
+    }
+
+    // Regressing students
+    const regressingStudents = alertStudents.filter(s => s.regressingGoals.length > 0);
+    if (regressingStudents.length > 0) {
+      html += `<div class="ov-section-header"><span>Regressing</span><span class="ov-count-badge ov-badge-red">${regressingStudents.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      html += cappedStudentSection(regressingStudents, buildStudentAlertRow);
       html += '</div>';
     }
 
-    if (stalled.length > 0) {
-      html += `<div class="ov-section-header"${regressing.length > 0 ? ' style="margin-top: 12px;"' : ''}><span>Stalled</span><span class="ov-count-badge ov-badge-amber">${stalled.length}</span></div>`;
+    // Stalled students (stalled but not regressing)
+    const stalledStudents = alertStudents.filter(s => s.stalledGoals.length > 0 && s.regressingGoals.length === 0);
+    if (stalledStudents.length > 0) {
+      html += `<div class="ov-section-header"${regressingStudents.length > 0 ? ' style="margin-top:12px;"' : ''}><span>Stalled</span><span class="ov-count-badge ov-badge-amber">${stalledStudents.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
-      for (const item of stalled) {
-        html += buildAtRiskRow(item, 'amber');
-      }
+      html += cappedStudentSection(stalledStudents, buildStudentAlertRow);
       html += '</div>';
     }
 
-    if (nearMastery.length > 0) {
-      html += `<div class="ov-section-header ov-section-header--success"${atRiskCount > 0 ? ' style="margin-top: 12px;"' : ''}><span>🎉 Near Mastery</span><span class="ov-count-badge ov-badge-green">${nearMastery.length}</span></div>`;
+    // No Data students
+    if (noDataStudents.length > 0) {
+      const prevCount = regressingStudents.length + stalledStudents.length;
+      html += `<div class="ov-section-header"${prevCount > 0 ? ' style="margin-top:12px;"' : ''}><span>No Data Collected</span><span class="ov-count-badge" style="background:#6b7280;color:#fff;">${noDataStudents.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
-      for (const item of nearMastery) {
-        html += buildAtRiskRow(item, 'green');
+      const shown = noDataStudents.slice(0, NO_DATA_CAP);
+      for (const s of shown) {
+        html += `
+        <div class="ov-row-card" style="border-left: 3px solid #6b7280;">
+          <span class="ov-status-dot" style="background:#9ca3af;"></span>
+          <div class="ov-row-body">
+            <div class="ov-row-primary">
+              <span class="ov-student-name">${s.name}</span>
+              <span class="ov-student-code">${s.code}</span>
+            </div>
+            <div class="ov-row-secondary"><span class="ov-row-meta">No progress data recorded</span></div>
+          </div>
+        </div>`;
+      }
+      if (noDataStudents.length > NO_DATA_CAP) {
+        html += `<div class="ov-row-meta" style="padding:6px 4px;">…and ${noDataStudents.length - NO_DATA_CAP} more</div>`;
       }
       html += '</div>';
     }
 
     html += '</div>';
     contentEl.innerHTML = html;
+
+    // Attach toggle handlers via delegation (avoids inline onclick)
+    contentEl.querySelectorAll('button[data-toggle-target]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.toggleTarget);
+        if (!target) return;
+        if (target.style.display === 'none') {
+          target.style.display = '';
+          btn.textContent = btn.dataset.toggleOpenLabel || 'Show less';
+        } else {
+          target.style.display = 'none';
+          btn.textContent = btn.dataset.toggleLabel;
+        }
+      });
+    });
   }
 
   /**
