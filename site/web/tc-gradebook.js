@@ -146,6 +146,8 @@
   let currentClassFilter = "All Classes";
   let currentQuarterFilter = "";
   let studentSearchTerm = "";
+  let missingWorkPairs = new Set(); // stores "studentCode::draftId" strings
+  let showOnlyMissingStudents = false;
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -304,6 +306,14 @@
         const code = (s.code || "").toLowerCase();
         return name.includes(term) || code.includes(term);
       });
+    }
+
+    if (showOnlyMissingStudents && missingWorkPairs.size > 0) {
+      const missingStudentCodes = new Set();
+      for (const pair of missingWorkPairs) {
+        missingStudentCodes.add(pair.split("::")[0]);
+      }
+      students = students.filter(s => missingStudentCodes.has(s.code));
     }
 
     return students;
@@ -877,6 +887,10 @@
     const td = document.createElement("td");
     td.className = "gb-score-cell editable";
 
+    if (missingWorkPairs.has(`${studentCode}::${draft.id}`)) {
+      td.classList.add("gb-missing-highlight");
+    }
+
     let currentScore = null;
     const studentScores = scoreMap.get(studentCode);
     if (studentScores && studentScores.has(draft.id)) {
@@ -1122,6 +1136,10 @@
             if (colorClass) tdGroupSummary.classList.add(colorClass);
           } else {
             tdGroupSummary.textContent = "—";
+          }
+          const hasMissing = group.drafts.some(d => missingWorkPairs.has(`${student.code}::${d.id}`));
+          if (hasMissing) {
+            tdGroupSummary.classList.add("gb-missing-highlight");
           }
           tr.appendChild(tdGroupSummary);
         } else {
@@ -2314,6 +2332,7 @@
       missing.push({
         studentCode: student?.code || instance.student_code,
         studentName: student?.name || instance.student_code,
+        draftId: instance.assignment_id,
         assignmentTitle: draft?.title || 'Assignment',
         dueDate: dueDate,
         daysOverdue: daysOverdue
@@ -2322,6 +2341,16 @@
 
     // Update badge
     badgeEl.textContent = `${missing.length} missing`;
+
+    // Populate missingWorkPairs for highlight/filter
+    missingWorkPairs.clear();
+    for (const item of missing) {
+      missingWorkPairs.add(`${item.studentCode}::${item.draftId}`);
+    }
+    // Re-render to apply highlights (only meaningful when panel is open)
+    if (missingWorkPairs.size > 0 || showOnlyMissingStudents) {
+      renderGradebook();
+    }
 
     if (missing.length === 0) {
       // SAFETY: static markup, no user data
@@ -2382,6 +2411,20 @@
 
     // Replace container contents with the safe table
     while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+
+    const filterLabel = document.createElement("label");
+    filterLabel.className = "gb-missing-filter-label";
+    const filterCheckbox = document.createElement("input");
+    filterCheckbox.type = "checkbox";
+    filterCheckbox.checked = showOnlyMissingStudents;
+    filterCheckbox.addEventListener("change", () => {
+      showOnlyMissingStudents = filterCheckbox.checked;
+      renderGradebook();
+    });
+    filterLabel.appendChild(filterCheckbox);
+    filterLabel.appendChild(document.createTextNode("Show only students with missing work"));
+    contentEl.appendChild(filterLabel);
+
     contentEl.appendChild(table);
   }
 
@@ -2420,6 +2463,9 @@
     } else {
       panel.style.display = "none";
       btn.classList.remove("primary");
+      missingWorkPairs.clear();
+      showOnlyMissingStudents = false;
+      renderGradebook();
     }
   }
 
