@@ -864,18 +864,18 @@
         nameEl.textContent = group.displayName;
         th.appendChild(nameEl);
 
-        const listEl = document.createElement("div");
-        listEl.className = "gb-group-header-titles";
-        for (const draft of group.drafts) {
-          const titleSpan = document.createElement("div");
-          titleSpan.className = "gb-group-header-title-item";
-          const fullTitle = draft.title || "(untitled)";
-          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-          titleSpan.textContent = (fullTitle.length > 15 ? fullTitle.substring(0, 15) + "…" : fullTitle) + (dateStr ? ` ${dateStr}` : "");
-          titleSpan.title = fullTitle;
-          listEl.appendChild(titleSpan);
-        }
-        th.appendChild(listEl);
+        // Compact assignment count instead of full title list
+        const countEl = document.createElement("div");
+        countEl.className = "gb-group-header-count";
+        countEl.textContent = `${group.drafts.length} assignment${group.drafts.length !== 1 ? 's' : ''}`;
+        th.appendChild(countEl);
+
+        // Set tooltip with full assignment list for hover reference
+        th.title = group.drafts.map(d => {
+          const t = d.title || "(untitled)";
+          const dateStr = formatShortDate(d.dueAt || d.due_at || d.createdAt || d.created_at);
+          return t + (dateStr ? ` (${dateStr})` : "");
+        }).join("\n");
 
         const expandEl = document.createElement("div");
         expandEl.className = "gb-group-expand-btn";
