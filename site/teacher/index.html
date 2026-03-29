@@ -408,6 +408,30 @@
       padding: 0;
     }
     .ov-show-all-btn:hover { opacity: 1; }
+    .ov-feed-filters {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .ov-feed-filter {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--rc-glass-border);
+      background: transparent;
+      color: var(--rc-ink-dim);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .ov-feed-filter:hover {
+      background: var(--rc-glass-hover);
+    }
+    .ov-feed-filter.active {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: rgba(147, 197, 253, 0.9);
+    }
   </style>
 </head>
 <body>
