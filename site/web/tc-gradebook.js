@@ -879,6 +879,13 @@
       : buildGroupsFromDrafts(drafts);
     const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
 
+    // Warn about assignments missing total_possible metadata
+    const missingTotalPossible = allDraftsFlat.filter(d => !d.meta || !d.meta.total_possible);
+    if (missingTotalPossible.length > 0) {
+      console.warn(`[gradebook] ${missingTotalPossible.length} assignment(s) missing total_possible:`,
+        missingTotalPossible.map(d => d.title || d.id));
+    }
+
     // Show an informational banner when no groupings could be inferred
     const noGroupsBannerEl = $("gbNoGroupsBanner");
     if (noGroupsBannerEl) {
@@ -1046,9 +1053,27 @@
             avgLine.textContent = `${groupAvg}%`;
             tdGroupSummary.appendChild(avgLine);
 
+            const studentScores = scoreMap.get(student.code);
+            let earnedSum = 0, possibleSum = 0;
+            for (const draft of group.drafts) {
+              const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              if (studentScores && studentScores.has(draft.id) && tp) {
+                const s = studentScores.get(draft.id);
+                if (typeof s === "number") {
+                  earnedSum += calculateEarnedPoints(s, tp);
+                  possibleSum += tp;
+                }
+              }
+            }
             const countLine = document.createElement("div");
             countLine.className = "gb-score-pts-line";
-            countLine.textContent = `${done}/${group.drafts.length}`;
+            if (possibleSum > 0) {
+              countLine.textContent = `${earnedSum}/${possibleSum}`;
+              countLine.title = "Earned points / Possible points";
+            } else {
+              countLine.textContent = `${done}/${group.drafts.length} graded`;
+              countLine.title = "Assignments graded / Total assignments";
+            }
             tdGroupSummary.appendChild(countLine);
 
             const colorClass = scoreColorClass(groupAvg);
