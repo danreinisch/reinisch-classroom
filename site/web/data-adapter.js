@@ -1257,6 +1257,7 @@ const remote = {
     // Flatten to include student_code at top level
     return (data || []).map(g => ({
       id: g.id,
+      student_id: g.student_id,
       student_code: g.students.code,
       code: g.code,
       desc: g.desc,

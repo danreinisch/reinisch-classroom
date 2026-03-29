@@ -1214,6 +1214,7 @@
   async function batchUpdateGoalDataCounts(container, studentGoals) {
     const toggleBtns = container.querySelectorAll('.tc-progress-toggle-btn[data-goal-id]');
     if (!toggleBtns.length) return;
+    console.log(`[tc-students] batchUpdateGoalDataCounts: checking ${toggleBtns.length} goal(s)`);
 
     const qRange = (() => { try { return getQuarterDateRange(getCurrentQuarter()); } catch (_) { return null; } })();
 
@@ -1222,9 +1223,13 @@
       const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
       if (!goal) return;
       const studentId = goal.student_id || allStudents.find(s => s.code === goal.student_code)?.id;
-      if (!studentId) return;
+      if (!studentId) {
+        console.warn(`[tc-students] batchUpdateGoalDataCounts: could not resolve student_id for goal ${goal.code} (${goal.id})`);
+        return;
+      }
       try {
         const dataPoints = await db.listGoalDataPoints({ studentId, goalId: goal.id });
+        console.log(`[tc-students] batchUpdateGoalDataCounts: goal ${goal.code} → ${(dataPoints || []).length} data point(s)`, { studentId, goalId: goal.id });
         if (!dataPoints || dataPoints.length === 0) return;
         const dpThisQ = qRange
           ? dataPoints.filter(dp => { const d = new Date(dp.date); return d >= qRange.start && d <= qRange.end; })
@@ -1235,7 +1240,9 @@
           const n = dpThisQ.length;
           statusEl.textContent = `${n} data ${n === 1 ? 'point' : 'points'} this quarter`;
         }
-      } catch (_) { /* silently ignore — leave existing count text unchanged */ }
+      } catch (err) {
+        console.warn(`[tc-students] batchUpdateGoalDataCounts: error for goal ${goal.code}:`, err);
+      }
     }));
   }
 
@@ -1795,6 +1802,9 @@
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
           <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${avgDisplay}</div>
+          <table style="border-collapse:collapse;width:100%;">
+            <tbody>${rows}</tbody>
+          </table>
         </div>`;
       progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;">${SVG_VIEW_DATA}View Data</button>`;
     }
