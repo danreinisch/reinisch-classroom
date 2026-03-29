@@ -3,6 +3,11 @@
 // class has teacher_id=null), the code falls back to a name-only query and uses that
 // class instead of trying (and failing) to auto-create one.
 // Run with: node tests/teacher-issue-draft-class-fallback.test.cjs
+//
+// NOTE: The login endpoint (teacher-login.js) now fails hard (HTTP 500) when the
+// teacher UUID lookup fails or returns 0 rows. This means all JWTs in production
+// will have a valid teacherId — the null-teacherId path in teacher-issue-draft.js
+// is only reachable for sessions created before this hardening was deployed.
 
 'use strict';
 
