@@ -95,6 +95,36 @@
   let realtimeChannel = null; // eslint-disable-line no-unused-vars
   let finalizingInProgress = false;
 
+  // Cache for IEP goals loaded for AI suggest, keyed by studentId
+  let _reviewGoalsCache = null; // { studentId: string, goals: Array }
+
+  async function ensureGoalsLoaded(studentId) {
+    if (_reviewGoalsCache && _reviewGoalsCache.studentId === studentId) {
+      return _reviewGoalsCache.goals;
+    }
+    if (!SUPABASE_URL_CACHED || !SUPABASE_KEY_CACHED) return [];
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL_CACHED}/rest/v1/goals?student_id=eq.${encodeURIComponent(studentId)}&select=code,description,area,skill_area,desc`,
+        {
+          headers: {
+            'apikey': SUPABASE_KEY_CACHED,
+            'Authorization': `Bearer ${SUPABASE_KEY_CACHED}`,
+            'Accept': 'application/json',
+          }
+        }
+      );
+      if (res.ok) {
+        const goals = await res.json();
+        _reviewGoalsCache = { studentId, goals: Array.isArray(goals) ? goals : [] };
+        return _reviewGoalsCache.goals;
+      }
+    } catch (err) {
+      console.warn('[tc-review] Failed to fetch goals for AI suggest:', err);
+    }
+    return [];
+  }
+
   // Load data from Supabase or localStorage
   async function loadData() {
     try {
@@ -1657,7 +1687,22 @@
     const maxPoints = (item && item.points) || 5;
     const itemLabel = item ? (item.item_ref || item.ref || '') : '';
     const goalCodes = (item && item.goal_codes) || [];
-    const goalDescriptions = []; // Goal descriptions will be enriched from goalsData in a future update
+    let goalDescriptions = [];
+
+    if (goalCodes.length > 0) {
+      const studentObj = studentsData.find(s => s.code === instance?.student_code);
+      const studentId = studentObj?.id;
+      if (studentId) {
+        const goals = await ensureGoalsLoaded(studentId);
+        goalDescriptions = goalCodes.map(code => {
+          const goal = goals.find(g => g.code === code);
+          if (!goal) return '';
+          const desc = goal.description || goal.desc || '';
+          const area = goal.area || goal.skill_area || '';
+          return area ? `${area} — ${desc}` : desc;
+        }).filter(Boolean);
+      }
+    }
 
     const rubricTiers = generateRubricTiers(maxPoints);
 
