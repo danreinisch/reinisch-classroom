@@ -2338,11 +2338,12 @@
                     const dataPoints = await db.listGoalDataPoints({ studentId, goalId: goal.id });
                     console.log(`[tc-students] dot-grid: loaded ${(dataPoints || []).length} data point(s) for goal ${goal.id}`, { studentId, goalId: goal.id, studentCode: goal.student_code });
                     const { html: dotHtml, hasData } = buildTcDotGridChart(dataPoints, goal.id);
+                    console.log(`[tc-students] dot-grid: hasData=${hasData}, ${(dataPoints || []).length} point(s), firstElementChild=${panel.firstElementChild?.tagName ?? 'null'}`);
                     if (hasData) {
                       const dotWrapper = document.createElement('div');
                       dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
                       dotWrapper.innerHTML = dotHtml;
-                      panel.insertBefore(dotWrapper, panel.firstElementChild || null);
+                      panel.prepend(dotWrapper);
                     }
 
                     // Update the status count with per-question data points (where available)
@@ -2362,7 +2363,7 @@
                       } catch (_qe) { /* leave existing text unchanged */ }
                     }
                     // Mark as loaded only on success so a network failure allows retry
-                    panel.dataset.dpLoaded = 'true';
+                    panel.dataset.dpLoaded = '1';
                   } catch (dpErr) {
                     console.warn('[tc-students] Could not load goal data points:', dpErr);
                   }

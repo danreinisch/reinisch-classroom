@@ -897,6 +897,10 @@
         : `<div class="st-goal-chart-container" aria-hidden="true">${chartHtml}</div>`;
 
       // Progress detail panel — expanded by default (Item 2)
+      const progressTableHtml = hasDotGrid ? '' : `
+          <table class="st-progress-table" aria-label="All progress data (${sortedForDisplay.length} ${sortedForDisplay.length === 1 ? 'entry' : 'entries'})">
+            <tbody>${allRows}</tbody>
+          </table>`;
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}">
           <div class="st-goal-latest-value" aria-label="Latest progress value: ${escapeHtml(latestVal)}">
@@ -905,9 +909,7 @@
           </div>
           ${qAvgHtml}
           ${chartSectionHtml}
-          <table class="st-progress-table" aria-label="All progress data (${sortedForDisplay.length} ${sortedForDisplay.length === 1 ? 'entry' : 'entries'})">
-            <tbody>${allRows}</tbody>
-          </table>
+          ${progressTableHtml}
         </div>`;
     }
 
