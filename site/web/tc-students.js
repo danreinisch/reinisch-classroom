@@ -2328,13 +2328,15 @@
               if (!goal) {
                 console.warn('[tc-students] dot-grid: goal not found in allGoals for id:', goalId, '— allGoals.length:', allGoals.length);
               } else {
-                const student = allStudents.find(s => s.code === goal.student_code);
-                if (!student || !student.id) {
-                  console.warn('[tc-students] dot-grid: student not found for goal.student_code:', goal.student_code);
+                // Prefer goal.student_id (direct FK on the goals row) for reliability;
+                // fall back to looking up by student_code in allStudents.
+                const studentId = goal.student_id || allStudents.find(s => s.code === goal.student_code)?.id;
+                if (!studentId) {
+                  console.warn('[tc-students] dot-grid: could not resolve student_id for goal', goal.id, '(student_code:', goal.student_code, ')');
                 } else {
                   try {
-                    const dataPoints = await db.listGoalDataPoints({ studentId: student.id, goalId: goal.id });
-                    console.log('[tc-students] dot-grid: loaded', (dataPoints || []).length, 'data point(s) for goal', goal.id);
+                    const dataPoints = await db.listGoalDataPoints({ studentId, goalId: goal.id });
+                    console.log(`[tc-students] dot-grid: loaded ${(dataPoints || []).length} data point(s) for goal ${goal.id}`, { studentId, goalId: goal.id, studentCode: goal.student_code });
                     const { html: dotHtml, hasData } = buildTcDotGridChart(dataPoints, goal.id);
                     if (hasData) {
                       const dotWrapper = document.createElement('div');
