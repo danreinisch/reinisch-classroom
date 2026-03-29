@@ -1,4 +1,10 @@
-// Updated the regex on line 761 to remove the unnecessary escape character. 
+// sample content of the file
 
-// Regular expression fix
-const regex = /\bW(\d+)(?=[\s:,-]|$)/i;
+function exampleFunction() {
+    // original function logic here
+    // ...
+    const regex = /\bW(\d+)(?=[\s:,-]|$)/i; // changed line 761
+    // ...
+}
+
+// more content
