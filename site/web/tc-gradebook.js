@@ -145,6 +145,7 @@
   // State
   let currentClassFilter = "All Classes";
   let currentQuarterFilter = "";
+  let studentSearchTerm = "";
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -282,19 +283,30 @@
 
   // Filter students by selected class
   function getFilteredStudents() {
+    let students;
     if (currentClassFilter === "All Classes") {
-      return studentsData;
+      students = studentsData;
+    } else {
+      // Filter by class using enrollments with class_name
+      const enrolledCodes = classEnrollmentsData
+        .filter((e) => e.class_name === currentClassFilter && e.active !== false)
+        .map((e) => e.student_code);
+      
+      // Get students who are enrolled in the selected class
+      students = studentsData.filter((s) => enrolledCodes.includes(s.code));
     }
-    
-    // Filter by class using enrollments with class_name
-    const enrolledCodes = classEnrollmentsData
-      .filter((e) => e.class_name === currentClassFilter && e.active !== false)
-      .map((e) => e.student_code);
-    
-    // Get students who are enrolled in the selected class
-    const byEnrollment = studentsData.filter((s) => enrolledCodes.includes(s.code));
-    
-    return byEnrollment;
+
+    // Filter by search term (name or code, case-insensitive)
+    if (studentSearchTerm) {
+      const term = studentSearchTerm.toLowerCase();
+      students = students.filter((s) => {
+        const name = (s.name || "").toLowerCase();
+        const code = (s.code || "").toLowerCase();
+        return name.includes(term) || code.includes(term);
+      });
+    }
+
+    return students;
   }
 
   // Sort drafts array based on currentSort preference
@@ -1314,6 +1326,12 @@
     const selectGroupMode = $("gbGroupModeSelect");
     if (selectGroupMode) {
       selectGroupMode.value = groupMode;
+    }
+
+    // Sync search input value
+    const searchEl = $("gbStudentSearch");
+    if (searchEl && searchEl.value !== studentSearchTerm) {
+      searchEl.value = studentSearchTerm;
     }
 
     // Apply/remove compact class on table wrapper
@@ -3135,6 +3153,28 @@
     if (sortSelect) {
       sortSelect.value = currentSort;
       sortSelect.addEventListener("change", () => setSort(sortSelect.value));
+    }
+
+    // Wire student search input
+    const studentSearch = $("gbStudentSearch");
+    if (studentSearch) {
+      let searchDebounceTimer = null;
+      studentSearch.addEventListener("input", () => {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+          studentSearchTerm = studentSearch.value.trim();
+          renderGradebook();
+        }, 200);
+      });
+      // Escape key clears the search
+      studentSearch.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          clearTimeout(searchDebounceTimer);
+          studentSearch.value = "";
+          studentSearchTerm = "";
+          renderGradebook();
+        }
+      });
     }
     
     // Setup realtime subscription if using Supabase
