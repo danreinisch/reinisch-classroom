@@ -114,6 +114,9 @@
   let currentSort = "date";
   // groupMode: "individual" (flat), "class" (by CANON_CLASSES), "week" (by Week N from title)
   let groupMode = "class";
+  // Column sort state: null | "student" | draftId | groupSeries | "average" | "weighted" | "trend"
+  let columnSortKey = null;
+  let columnSortDir = null; // null | "asc" | "desc"
   const expandedGroups = new Set();
   try {
     const compactRaw = localStorage.getItem(PREF_COMPACT);
@@ -336,6 +339,91 @@
       });
     }
     return sorted;
+  }
+
+  // Apply column sort to a students array based on columnSortKey / columnSortDir.
+  // groups is optional (used when sorting by group series key).
+  // Null/missing values always sort to the bottom regardless of direction.
+  function applyColumnSort(students, scoreMap, drafts, groups) {
+    if (!columnSortKey || !columnSortDir) return students;
+    const sorted = [...students];
+    const dir = columnSortDir === "asc" ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      let va, vb;
+
+      if (columnSortKey === "student") {
+        va = (a.name || a.code || "").toLowerCase();
+        vb = (b.name || b.code || "").toLowerCase();
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+      }
+
+      if (columnSortKey === "average") {
+        va = calculateRowAverage(a.code, scoreMap, drafts);
+        vb = calculateRowAverage(b.code, scoreMap, drafts);
+      } else if (columnSortKey === "weighted") {
+        va = calculateWeightedAverage(a.code, scoreMap, drafts);
+        vb = calculateWeightedAverage(b.code, scoreMap, drafts);
+      } else if (columnSortKey === "trend") {
+        const trendOrder = { up: 0, flat: 1, down: 2 };
+        va = trendOrder[calculateTrend(a.code, scoreMap, drafts)] ?? 3;
+        vb = trendOrder[calculateTrend(b.code, scoreMap, drafts)] ?? 3;
+      } else {
+        // Try to match a collapsed group series
+        const group = groups && groups.find(g => g.series === columnSortKey);
+        if (group) {
+          va = calculateGroupAverage(a.code, scoreMap, group.drafts);
+          vb = calculateGroupAverage(b.code, scoreMap, group.drafts);
+        } else {
+          // Individual draft ID
+          const aScores = scoreMap.get(a.code);
+          const bScores = scoreMap.get(b.code);
+          va = aScores && aScores.has(columnSortKey) && typeof aScores.get(columnSortKey) === "number"
+            ? aScores.get(columnSortKey) : null;
+          vb = bScores && bScores.has(columnSortKey) && typeof bScores.get(columnSortKey) === "number"
+            ? bScores.get(columnSortKey) : null;
+        }
+      }
+
+      // Null/missing values always go to the bottom
+      if (va === null && vb === null) return 0;
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      if (va < vb) return -1 * dir;
+      if (va > vb) return 1 * dir;
+      return 0;
+    });
+
+    return sorted;
+  }
+
+  // Attach a click-to-sort handler to a <th> element with the given sort key.
+  // Cycles: none → asc → desc → none.
+  function attachColumnSortClick(th, key) {
+    th.style.cursor = "pointer";
+    th.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (columnSortKey === key) {
+        if (columnSortDir === "asc") {
+          columnSortDir = "desc";
+        } else {
+          columnSortKey = null;
+          columnSortDir = null;
+        }
+      } else {
+        columnSortKey = key;
+        columnSortDir = "asc";
+      }
+      renderGradebook();
+    });
+  }
+
+  // Return a sort indicator character for a given sort key, or empty string.
+  function columnSortIndicator(key) {
+    if (columnSortKey !== key) return "";
+    return columnSortDir === "asc" ? " ▲" : " ▼";
   }
 
   // Compare two drafts by due/created date ascending (used for within-group sorting)
@@ -860,7 +948,8 @@
     const fullTitle = draft.title || "(untitled)";
     const titleEl = document.createElement("div");
     titleEl.className = "gb-col-title";
-    titleEl.textContent = fullTitle.length > 10 ? fullTitle.substring(0, 10) + "…" : fullTitle;
+    const titleText = fullTitle.length > 10 ? fullTitle.substring(0, 10) + "…" : fullTitle;
+    titleEl.textContent = titleText + columnSortIndicator(draft.id);
     titleEl.title = fullTitle;
     th.appendChild(titleEl);
 
@@ -880,6 +969,7 @@
       th.appendChild(ptsEl);
     }
 
+    attachColumnSortClick(th, draft.id);
     return th;
   }
 
@@ -954,7 +1044,8 @@
 
     const thStudent = document.createElement("th");
     thStudent.className = "gb-student-col";
-    thStudent.textContent = "Student";
+    thStudent.textContent = "Student" + columnSortIndicator("student");
+    attachColumnSortClick(thStudent, "student");
     headerRow.appendChild(thStudent);
 
     for (const group of groups) {
@@ -967,7 +1058,7 @@
 
         const nameEl = document.createElement("div");
         nameEl.className = "gb-group-header-name";
-        nameEl.textContent = group.displayName;
+        nameEl.textContent = group.displayName + columnSortIndicator(group.series);
         th.appendChild(nameEl);
 
         // Compact assignment count; for week groups also show the earliest date
@@ -1003,12 +1094,14 @@
         expandEl.className = "gb-group-expand-btn";
         expandEl.setAttribute("aria-label", `Expand ${group.displayName} assignments`);
         expandEl.textContent = "▸";
-        th.appendChild(expandEl);
-
-        th.addEventListener("click", () => {
+        expandEl.addEventListener("click", (e) => {
+          e.stopPropagation();
           expandedGroups.add(group.series);
           renderGradebook();
         });
+        th.appendChild(expandEl);
+
+        attachColumnSortClick(th, group.series);
         headerRow.appendChild(th);
       } else {
         // Expanded: add collapse indicator to first assignment column only (no separate label TH)
@@ -1016,16 +1109,16 @@
           const th = buildAssignmentTh(group.drafts[i]);
           if (i === 0) {
             th.classList.add("gb-group-first-col");
-            th.style.cursor = "pointer";
             const collapseEl = document.createElement("div");
             collapseEl.className = "gb-group-expand-btn";
             collapseEl.setAttribute("aria-label", `Collapse ${group.displayName} assignments`);
             collapseEl.textContent = `◂ ${group.displayName}`;
-            th.insertBefore(collapseEl, th.firstChild);
-            th.addEventListener("click", () => {
+            collapseEl.addEventListener("click", (e) => {
+              e.stopPropagation();
               expandedGroups.delete(group.series);
               renderGradebook();
             });
+            th.insertBefore(collapseEl, th.firstChild);
           }
           headerRow.appendChild(th);
         }
@@ -1039,31 +1132,35 @@
 
     // Average / Weighted / Trend extra columns
     const thAvg = document.createElement("th");
-    thAvg.textContent = "Average";
+    thAvg.textContent = "Average" + columnSortIndicator("average");
     thAvg.style.minWidth = "72px";
     thAvg.dataset.extraCol = "1";
     if (!showMoreColumns) thAvg.style.display = "none";
+    attachColumnSortClick(thAvg, "average");
     headerRow.appendChild(thAvg);
 
     const thWeighted = document.createElement("th");
-    thWeighted.textContent = "Weighted";
+    thWeighted.textContent = "Weighted" + columnSortIndicator("weighted");
     thWeighted.style.minWidth = "72px";
     thWeighted.dataset.extraCol = "1";
     if (!showMoreColumns) thWeighted.style.display = "none";
+    attachColumnSortClick(thWeighted, "weighted");
     headerRow.appendChild(thWeighted);
 
     const thTrend = document.createElement("th");
-    thTrend.textContent = "Trend";
+    thTrend.textContent = "Trend" + columnSortIndicator("trend");
     thTrend.style.minWidth = "56px";
     thTrend.dataset.extraCol = "1";
     if (!showMoreColumns) thTrend.style.display = "none";
+    attachColumnSortClick(thTrend, "trend");
     headerRow.appendChild(thTrend);
 
     tableHead.appendChild(headerRow);
 
     // ── Data rows ─────────────────────────────────────────────────────────────
+    const sortedStudents = applyColumnSort(students, scoreMap, drafts, groups);
     let isFirstRow = true;
-    for (const student of students) {
+    for (const student of sortedStudents) {
       const tr = document.createElement("tr");
       if (isFirstRow) {
         tr.classList.add("gb-highlighted");
@@ -1390,7 +1487,8 @@
     // Student name column (sticky)
     const thStudent = document.createElement("th");
     thStudent.className = "gb-student-col";
-    thStudent.textContent = "Student";
+    thStudent.textContent = "Student" + columnSortIndicator("student");
+    attachColumnSortClick(thStudent, "student");
     headerRow.appendChild(thStudent);
 
     // Assignment columns
@@ -1400,24 +1498,27 @@
 
     // Average / Weighted / Trend columns (shown only when showMoreColumns is true)
     const thAvg = document.createElement("th");
-    thAvg.textContent = "Average";
+    thAvg.textContent = "Average" + columnSortIndicator("average");
     thAvg.style.minWidth = "72px";
     thAvg.dataset.extraCol = "1";
     if (!showMoreColumns) thAvg.style.display = "none";
+    attachColumnSortClick(thAvg, "average");
     headerRow.appendChild(thAvg);
 
     const thWeighted = document.createElement("th");
-    thWeighted.textContent = "Weighted";
+    thWeighted.textContent = "Weighted" + columnSortIndicator("weighted");
     thWeighted.style.minWidth = "72px";
     thWeighted.dataset.extraCol = "1";
     if (!showMoreColumns) thWeighted.style.display = "none";
+    attachColumnSortClick(thWeighted, "weighted");
     headerRow.appendChild(thWeighted);
 
     const thTrend = document.createElement("th");
-    thTrend.textContent = "Trend";
+    thTrend.textContent = "Trend" + columnSortIndicator("trend");
     thTrend.style.minWidth = "56px";
     thTrend.dataset.extraCol = "1";
     if (!showMoreColumns) thTrend.style.display = "none";
+    attachColumnSortClick(thTrend, "trend");
     headerRow.appendChild(thTrend);
 
     tableHead.appendChild(headerRow);
@@ -1425,8 +1526,9 @@
     // Build data rows
     tableBody.innerHTML = "";
 
+    const sortedStudents = applyColumnSort(students, scoreMap, drafts, []);
     let isFirstRow = true; // Track first student row for auto-highlight
-    for (const student of students) {
+    for (const student of sortedStudents) {
       const tr = document.createElement("tr");
       
       // Auto-highlight first student row
