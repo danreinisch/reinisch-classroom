@@ -1152,13 +1152,29 @@
   /**
    * Render Today's Checklist (uses pre-fetched data bundle)
    */
-  function renderChecklist({ submissions, instances, goals, progress, students, schedule }) {
+  async function renderChecklist({ submissions, instances, goals, progress, students, schedule }) {
     const contentEl = $("ovChecklistContent");
     if (!contentEl) return;
 
     const today = formatDateYMD(new Date());
     const checklistKey = `rc_overview_checklist_${today}`;
-    const savedChecklist = JSON.parse(localStorage.getItem(checklistKey) || "{}");
+    const configKey = `checklist_${today}`;
+
+    // Load saved state: try Supabase first if remote, fall back to localStorage
+    let savedChecklist = JSON.parse(localStorage.getItem(checklistKey) || "{}");
+    const useRemote = await isRemote();
+    if (useRemote) {
+      try {
+        const remoteState = await db.getAppConfig(configKey);
+        if (remoteState && typeof remoteState === "object") {
+          savedChecklist = remoteState;
+          // Keep localStorage in sync as an offline cache
+          localStorage.setItem(checklistKey, JSON.stringify(savedChecklist));
+        }
+      } catch {
+        // Supabase unavailable — keep using localStorage fallback
+      }
+    }
 
     const checklist = [];
 
@@ -1267,11 +1283,21 @@
     contentEl.innerHTML = html;
 
     // Persist checkbox state
+    let saveTimer = null;
     contentEl.querySelectorAll(".checklist-checkbox").forEach((cb) => {
       cb.addEventListener("change", (e) => {
         const id = e.target.dataset.id;
         savedChecklist[id] = e.target.checked;
+        // Always save to localStorage immediately (offline-safe)
         localStorage.setItem(checklistKey, JSON.stringify(savedChecklist));
+        // Debounce Supabase writes to avoid in-flight race conditions on rapid toggles
+        if (useRemote) {
+          clearTimeout(saveTimer);
+          const snapshot = { ...savedChecklist };
+          saveTimer = setTimeout(() => {
+            db.setAppConfig(configKey, snapshot).catch(() => {});
+          }, 500);
+        }
       });
     });
   }
