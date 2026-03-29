@@ -176,7 +176,11 @@
     const correct = dataPoints.filter(p => p.is_correct === true).length;
     const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
     const assignmentCount = sortedGroups.length;
-    const summaryText = `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
+    // Determine if any data point uses percentage scoring (score column populated)
+    const hasScoreDots = dataPoints.some(p => p.score != null);
+    const summaryText = hasScoreDots
+      ? `${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`
+      : `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
 
     const ICON_R = 9;   // icon radius — 18px icons give clearer touch targets
     const DOT_GAP = 30; // breathing room between dots
@@ -189,6 +193,14 @@
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
 
     const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+
+    /** Return a fill color for a 0–100 percentage score. */
+    function scoreToColor(score) {
+      if (score >= 100) return '#22c55e';
+      if (score >= 80)  return '#3b82f6';
+      if (score >= 60)  return '#eab308';
+      return '#ef4444';
+    }
 
     let dotsSvg = '';
     sortedGroups.forEach((group, rowIdx) => {
@@ -204,10 +216,24 @@
 
       group.points.forEach((pt, qIdx) => {
         const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
-        const isCorrect = pt.is_correct === true;
-        const iconColor = isCorrect ? '#22c55e' : '#f87171';
-        const iconPaths = isCorrect ? DOT_CHECK_PATHS : DOT_X_PATHS;
-        const dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
+        const useScore = pt.score != null;
+        let dotContent, dotLabel;
+
+        if (useScore) {
+          // Percentage-based: filled circle with color scale
+          const score = Number(pt.score);
+          const circleColor = scoreToColor(score);
+          dotLabel = `Q${qIdx + 1}: ${score}% — ${escapeHtml(dateLabel)}`;
+          dotContent = `<circle cx="${cx}" cy="${y}" r="${ICON_R}" fill="${circleColor}" style="pointer-events:none;" />`;
+        } else {
+          // Binary correct/incorrect: check/X icon
+          const isCorrect = pt.is_correct === true;
+          const iconColor = isCorrect ? '#22c55e' : '#f87171';
+          const iconPaths = isCorrect ? DOT_CHECK_PATHS : DOT_X_PATHS;
+          dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
+          dotContent = `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">${iconPaths}</svg>`;
+        }
+
         // Use double quotes for data-dp: encodeURIComponent output never contains double quotes
         const dpVal = encodeURIComponent(JSON.stringify({
           qNum: qIdx + 1,
@@ -216,22 +242,33 @@
           student_answer: pt.student_answer || null,
           correct_answer: pt.correct_answer || null,
           is_correct: pt.is_correct,
+          score: pt.score ?? null,
           date: pt.date,
         }));
-        // <g> with nested <svg> icon — transparent <rect> provides larger touch target
+        // <g> with nested content — transparent <rect> provides larger touch target
         dotsSvg += `<g data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
           `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
-          `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">` +
-          `${iconPaths}` +
-          `</svg>` +
+          dotContent +
           `<title>${dotLabel}</title>` +
           `</g>`;
       });
     });
 
-    // Legend with same SVG icons
-    const legendCheckSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`;
-    const legendXSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
+    // Legend: percentage scale when any dot uses score-based coloring, otherwise binary
+    let legendHtml;
+    if (hasScoreDots) {
+      legendHtml = `
+        <span style="display:inline-flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#22c55e"/></svg> 100%</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#3b82f6"/></svg> 80–99%</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#eab308"/></svg> 60–79%</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#ef4444"/></svg> 0–59%</span>`;
+    } else {
+      const legendCheckSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`;
+      const legendXSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
+      legendHtml = `
+        <span style="display:inline-flex;align-items:center;gap:5px;">${legendCheckSvg} Correct</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;">${legendXSvg} Incorrect</span>`;
+    }
 
     const html = `
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.45);margin-bottom:4px;">Per-Question Results</div>
@@ -241,10 +278,7 @@
           ${dotsSvg}
         </svg>
       </div>
-      <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.55);">
-        <span style="display:inline-flex;align-items:center;gap:5px;">${legendCheckSvg} Correct</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;">${legendXSvg} Incorrect</span>
-      </div>`;
+      <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.55);">${legendHtml}</div>`;
 
     return { html, hasData: true };
   }
@@ -2291,17 +2325,22 @@
             if (nowExpanded && !panel.dataset.dpLoaded) {
               const goalId = progressToggleBtn.dataset.goalId;
               const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
-              if (goal) {
+              if (!goal) {
+                console.warn('[tc-students] dot-grid: goal not found in allGoals for id:', goalId, '— allGoals.length:', allGoals.length);
+              } else {
                 const student = allStudents.find(s => s.code === goal.student_code);
-                if (student && student.id) {
+                if (!student || !student.id) {
+                  console.warn('[tc-students] dot-grid: student not found for goal.student_code:', goal.student_code);
+                } else {
                   try {
                     const dataPoints = await db.listGoalDataPoints({ studentId: student.id, goalId: goal.id });
+                    console.log('[tc-students] dot-grid: loaded', (dataPoints || []).length, 'data point(s) for goal', goal.id);
                     const { html: dotHtml, hasData } = buildTcDotGridChart(dataPoints, goal.id);
                     if (hasData) {
                       const dotWrapper = document.createElement('div');
                       dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
                       dotWrapper.innerHTML = dotHtml;
-                      panel.insertBefore(dotWrapper, panel.firstChild);
+                      panel.insertBefore(dotWrapper, panel.firstElementChild || null);
                     }
 
                     // Update the status count with per-question data points (where available)
@@ -4985,9 +5024,11 @@
       clearTimeout(hideTimer);
       const qNum = dpData.qNum || '?';
       const choices = Array.isArray(dpData.choices) ? dpData.choices : null;
-      const studentAnswerUpper = dpData.student_answer ? String(dpData.student_answer).trim().toUpperCase() : null;
+      const studentAnswer = dpData.student_answer ? String(dpData.student_answer) : null;
+      const studentAnswerUpper = studentAnswer ? studentAnswer.trim().toUpperCase() : null;
       const correctAnswerUpper = dpData.correct_answer ? String(dpData.correct_answer).trim().toUpperCase() : null;
       const isCorr = dpData.is_correct;
+      const score = dpData.score != null ? Number(dpData.score) : null;
       const dateLabel = dpData.date ? formatDate(dpData.date) : '';
 
       let inner = `<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-bottom:6px;">Question ${escapeHtml(String(qNum))}</div>`;
@@ -5025,11 +5066,26 @@
           return `<div style="padding:2px 0;font-size:12px;${style}">${escapeHtml(choiceText)}</div>`;
         }).join('');
         inner += `<div style="margin-bottom:10px;">${items}</div>`;
+      } else if (studentAnswer !== null) {
+        // Written/fill-in-blank: show the student's answer with score or correct/incorrect indicator
+        inner += `<div style="font-size:12px;margin-bottom:6px;line-height:1.4;opacity:.85;">${escapeHtml(studentAnswer)}</div>`;
+        if (score !== null) {
+          inner += `<div style="font-size:13px;font-weight:700;">${escapeHtml(String(score))}%</div>`;
+        } else {
+          const statusIcon = isCorr
+            ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_CHECK_PATHS}</svg>`
+            : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_X_PATHS}</svg>`;
+          inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${statusIcon}${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+        }
       } else if (!dpData.question_text) {
-        const statusIcon = isCorr
-          ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_CHECK_PATHS}</svg>`
-          : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_X_PATHS}</svg>`;
-        inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${statusIcon}${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+        if (score !== null) {
+          inner += `<div style="font-size:13px;font-weight:700;">${escapeHtml(String(score))}%</div>`;
+        } else {
+          const statusIcon = isCorr
+            ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_CHECK_PATHS}</svg>`
+            : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px;">${DOT_X_PATHS}</svg>`;
+          inner += `<div style="font-size:12px;opacity:.65;font-style:italic;">${statusIcon}${isCorr ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
+        }
       }
       if (dateLabel) {
         inner += `<div style="font-size:11px;opacity:.45;border-top:1px solid rgba(255,255,255,0.08);padding-top:7px;margin-top:4px;">${escapeHtml(dateLabel)}</div>`;
