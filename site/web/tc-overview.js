@@ -218,6 +218,42 @@
       }
     }
 
+    // 6. Near Mastery KPI — goals within 10% of the mastery–baseline range from mastery target
+    const kpiNearMasteryCard = $("kpiNearMasteryCard");
+    const kpiNearMastery = $("kpiNearMastery");
+    const kpiNearMasterySub = $("kpiNearMasterySub");
+
+    if (kpiNearMasteryCard) {
+      let nearMasteryGoals = 0;
+      const nearMasteryStudents = new Set();
+      for (const goal of activeGoals) {
+        if (goal.measurement_type === 'Observation') continue;
+        const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+        const baselineNum = parseGoalValue(goal.baseline);
+        if (masteryNum == null || baselineNum == null || masteryNum < baselineNum) continue;
+        const range = masteryNum - baselineNum;
+        const nearThreshold = masteryNum - range * 0.1;
+        const latestProgress = progress
+          .filter(p => p.goal_code === goal.code && p.student_code === goal.student_code && p.value != null)
+          .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        if (latestProgress.length === 0) continue;
+        const currentVal = parseFloat(latestProgress[0].value);
+        if (!isNaN(currentVal) && currentVal >= nearThreshold && currentVal < masteryNum) {
+          nearMasteryGoals++;
+          nearMasteryStudents.add(goal.student_code);
+        }
+      }
+      if (nearMasteryGoals === 0) {
+        kpiNearMasteryCard.style.display = 'none';
+      } else {
+        kpiNearMasteryCard.style.display = '';
+        if (kpiNearMastery) kpiNearMastery.textContent = nearMasteryGoals;
+        if (kpiNearMasterySub) {
+          kpiNearMasterySub.textContent = `${nearMasteryStudents.size} student${nearMasteryStudents.size !== 1 ? 's' : ''}`;
+        }
+      }
+    }
+
     console.log("[tc-overview] KPIs rendered:", {
       activeStudents,
       pendingReview,
@@ -225,6 +261,22 @@
       avgProgress,
       currentQuarter,
     });
+  }
+
+  /**
+   * Return a Date that is n school days before today.
+   * @param {number} n
+   * @param {number[]} schoolDayNums - day-of-week numbers that are school days (0=Sun…6=Sat)
+   */
+  function nSchoolDaysAgo(n, schoolDayNums) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    let counted = 0;
+    while (counted < n) {
+      d.setDate(d.getDate() - 1);
+      if (schoolDayNums.includes(d.getDay())) counted++;
+    }
+    return d;
   }
 
   /**
@@ -370,7 +422,7 @@
   /**
    * Render Action Required Panel (uses pre-fetched data bundle)
    */
-  function renderOverdueItems({ instances, submissions, students, goals, progress, assignments }) {
+  function renderOverdueItems({ instances, submissions, students, goals, progress, assignments, schedule }) {
     const contentEl = $("ovOverdueContent");
     if (!contentEl) return;
 
@@ -405,21 +457,10 @@
     // Flag goals whose most recent data collection is older than 14 school days.
     // Group results by student so one row covers all overdue goals for that student.
     const OVERDUE_SCHOOL_DAYS = 14;
-    const schoolDayNums = [1, 2, 3, 4, 5]; // Mon–Fri; schedule.schoolDays not available here
+    const schoolDayNums = (schedule && schedule.schoolDays) ? schedule.schoolDays : [1, 2, 3, 4, 5];
 
     // Compute the date that is OVERDUE_SCHOOL_DAYS school days ago
-    function nSchoolDaysAgo(n) {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      let counted = 0;
-      while (counted < n) {
-        d.setDate(d.getDate() - 1);
-        if (schoolDayNums.includes(d.getDay())) counted++;
-      }
-      return d;
-    }
-
-    const overdueThreshold = nSchoolDaysAgo(OVERDUE_SCHOOL_DAYS);
+    const overdueThreshold = nSchoolDaysAgo(OVERDUE_SCHOOL_DAYS, schoolDayNums);
 
     // Map: studentCode → { studentName, studentCode, goals: [{ goalCode, goalArea, lastDate }] }
     const overdueByStudent = new Map();
@@ -433,7 +474,7 @@
         // Determine overdue threshold: use goal.collection_frequency if available
         let thresholdDate = overdueThreshold;
         if (goal.collection_frequency && typeof goal.collection_frequency === 'number') {
-          thresholdDate = nSchoolDaysAgo(goal.collection_frequency);
+          thresholdDate = nSchoolDaysAgo(goal.collection_frequency, schoolDayNums);
         }
         const thresholdStr = formatDateYMD(thresholdDate);
 
@@ -478,6 +519,8 @@
     const missingSubmissions = [];
     for (const inst of instances) {
       if (!inst.due_at) continue;
+      const studentRecord = studentMap.get(inst.student_code);
+      if (studentRecord && studentRecord.active === false) continue;
       const dueDate = new Date(inst.due_at);
       if (dueDate >= now) continue; // not yet overdue
       const hasSub = submissionsByInstance.has(inst.id) && submissionsByInstance.get(inst.id).length > 0;
@@ -538,7 +581,7 @@
       html += `<div class="ov-section-header"><span>Unreviewed Submissions</span><span class="ov-count-badge ov-badge-red">${unreviewed.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
       html += cappedSection(unreviewed, (sub) => `
-        <div class="ov-row-card ov-row-card--red">
+        <a href="/teacher/review/" class="ov-row-card ov-row-card--red">
           <span class="ov-status-dot ov-dot-red"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -550,7 +593,7 @@
               ${sub.submittedAt ? `<span class="ov-row-meta">${getRelativeTime(sub.submittedAt)}</span>` : ''}
             </div>
           </div>
-        </div>`);
+        </a>`);
       html += '</div>';
     }
 
@@ -563,7 +606,7 @@
           `<span class="ov-badge" title="${g.goalArea || g.goalCode}">${g.goalCode}</span>`
         ).join(' ');
         return `
-        <div class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
+        <a href="/teacher/data/?student=${item.studentCode}" class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
           <span class="ov-status-dot ov-dot-amber"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -573,7 +616,7 @@
             </div>
             <div class="ov-row-secondary">${goalBadges}</div>
           </div>
-        </div>`;
+        </a>`;
       });
       html += '</div>';
     }
@@ -584,7 +627,7 @@
       html += `<div class="ov-section-header"${prevSections > 0 ? ' style="margin-top:12px;"' : ''}><span>Missing Submissions</span><span class="ov-count-badge ov-badge-red">${missingSubmissions.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
       html += cappedSection(missingSubmissions, (item) => `
-        <div class="ov-row-card ov-row-card--red" style="border-left: 3px solid #ef4444;">
+        <a href="/teacher/work/" class="ov-row-card ov-row-card--red" style="border-left: 3px solid #ef4444;">
           <span class="ov-status-dot ov-dot-red"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -596,7 +639,7 @@
               <span class="ov-badge">${item.assignmentTitle}</span>
             </div>
           </div>
-        </div>`);
+        </a>`);
       html += '</div>';
     }
 
@@ -758,7 +801,9 @@
           isRegressing = true;
         } else if (last3.length >= 2) {
           // Check if every consecutive pair shows a decline
-          const allDecline = last3.every((v, i) => i === 0 || v < last3[i - 1]);
+          // newest-first: [60, 55, 50] for a declining trend
+          // each older value (higher index) should be greater than the newer one before it
+          const allDecline = last3.every((v, i) => i === 0 || v > last3[i - 1]);
           if (allDecline) isRegressing = true;
         }
 
@@ -880,7 +925,7 @@
       const toggleBtn = hasDetails ? `<button class="ov-show-all-btn" style="margin-top:4px;" data-toggle-target="${detailId}" data-toggle-label="▼ Show details" data-toggle-open-label="▲ Hide details">▼ Show details</button>` : '';
 
       return `
-      <div class="ov-row-card ${cardClass}" style="border-left: 3px solid ${borderColor};">
+      <a href="/teacher/data/?student=${entry.studentCode}" class="ov-row-card ${cardClass}" style="border-left: 3px solid ${borderColor};">
         <span class="ov-status-dot ${dotClass}"></span>
         <div class="ov-row-body">
           <div class="ov-row-primary">
@@ -892,7 +937,7 @@
           ${detailHtml}
           ${toggleBtn}
         </div>
-      </div>`;
+      </a>`;
     }
 
     // Helper: Show-all toggle for student rows
@@ -939,7 +984,7 @@
       const shown = noDataStudents.slice(0, NO_DATA_CAP);
       for (const s of shown) {
         html += `
-        <div class="ov-row-card" style="border-left: 3px solid #6b7280;">
+        <a href="/teacher/data/?student=${s.code}" class="ov-row-card" style="border-left: 3px solid #6b7280;">
           <span class="ov-status-dot" style="background:#9ca3af;"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -948,7 +993,7 @@
             </div>
             <div class="ov-row-secondary"><span class="ov-row-meta">No progress data recorded</span></div>
           </div>
-        </div>`;
+        </a>`;
       }
       if (noDataStudents.length > NO_DATA_CAP) {
         html += `<div class="ov-row-meta" style="padding:6px 4px;">…and ${noDataStudents.length - NO_DATA_CAP} more</div>`;
@@ -978,7 +1023,7 @@
   /**
    * Render Today's Checklist (uses pre-fetched data bundle)
    */
-  function renderChecklist({ submissions, instances, goals, progress, students }) {
+  function renderChecklist({ submissions, instances, goals, progress, students, schedule }) {
     const contentEl = $("ovChecklistContent");
     if (!contentEl) return;
 
@@ -999,34 +1044,33 @@
       });
     }
 
-    // Missing progress data
-    const currentQuarter = getCurrentQuarter();
-    const quarterRange = getQuarterDateRange(currentQuarter);
-    let missingProgressCount = 0;
+    // Missing progress data — aligned with Command Center rolling-window approach
+    const scheduleSchoolDays = (schedule && schedule.schoolDays) ? schedule.schoolDays : [1, 2, 3, 4, 5];
+    let overdueGoalsCount = 0;
 
-    if (quarterRange) {
-      const activeStudents = students.filter((s) => s.active !== false);
-      for (const student of activeStudents) {
-        const studentGoals = goals.filter(
-          (g) => g.student_code === student.code && isGoalActive(g)
+    const activeStudentsForChecklist = students.filter((s) => s.active !== false);
+    for (const student of activeStudentsForChecklist) {
+      const studentGoals = goals.filter(
+        (g) => g.student_code === student.code && isGoalActive(g)
+      );
+      for (const goal of studentGoals) {
+        const effectiveDays = (goal.collection_frequency && typeof goal.collection_frequency === 'number')
+          ? goal.collection_frequency
+          : 14;
+        const goalThreshold = formatDateYMD(nSchoolDaysAgo(effectiveDays, scheduleSchoolDays));
+        const recentEntries = progress.filter(
+          (p) => p.student_code === student.code && p.goal_code === goal.code
         );
-        for (const goal of studentGoals) {
-          const hasProgress = progress.some(
-            (p) =>
-              p.student_code === student.code &&
-              p.goal_code === goal.code &&
-              new Date(p.date) >= quarterRange.start &&
-              new Date(p.date) <= quarterRange.end
-          );
-          if (!hasProgress) missingProgressCount++;
-        }
+        recentEntries.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const lastDate = recentEntries.length > 0 ? recentEntries[0].date : null;
+        if (!lastDate || lastDate < goalThreshold) overdueGoalsCount++;
       }
     }
 
-    if (missingProgressCount > 0) {
+    if (overdueGoalsCount > 0) {
       checklist.push({
         id: "collect-progress",
-        text: `Collect progress data for ${missingProgressCount} goal${missingProgressCount !== 1 ? "s" : ""} (no data this quarter)`,
+        text: `Collect progress data for ${overdueGoalsCount} goal${overdueGoalsCount !== 1 ? "s" : ""} (data collection overdue)`,
         link: "/teacher/data/",
         checked: savedChecklist["collect-progress"] || false,
       });

@@ -308,6 +308,7 @@
       transition: background 0.15s ease;
     }
     .ov-row-card:hover { background: var(--rc-glass-hover); }
+    a.ov-row-card { text-decoration: none; color: inherit; cursor: pointer; }
     .ov-row-card--red   { border-left: 3px solid rgba(239,68,68,.6); }
     .ov-row-card--amber { border-left: 3px solid rgba(245,158,11,.6); }
     .ov-row-card--green { border-left: 3px solid rgba(34,197,94,.6); }
@@ -574,6 +575,11 @@
             <div class="tc-kpi-label">Obs. Coverage</div>
             <div class="tc-kpi-value" id="kpiObsCoverage">—</div>
             <div class="tc-kpi-sub" id="kpiObsCoverageSub"></div>
+          </div>
+          <div class="rc-card" id="kpiNearMasteryCard" style="display: none;">
+            <div class="tc-kpi-label">Near Mastery</div>
+            <div class="tc-kpi-value" id="kpiNearMastery">—</div>
+            <div class="tc-kpi-sub" id="kpiNearMasterySub"></div>
           </div>
         </div>
 
