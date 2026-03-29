@@ -25,6 +25,10 @@
   const SVG_CHECK =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
+  // IEP/Eval deadline constants
+  const IEP_WINDOW_DAYS = 30;
+  const IEP_OVERDUE_CAP = 90;
+
   // State
   let syncStatus = "local";
 
@@ -263,9 +267,8 @@
       const iepNow = new Date();
       iepNow.setHours(0, 0, 0, 0);
       const iepWindowEnd = new Date(iepNow);
-      iepWindowEnd.setDate(iepWindowEnd.getDate() + 30);
+      iepWindowEnd.setDate(iepWindowEnd.getDate() + IEP_WINDOW_DAYS);
 
-      const IEP_OVERDUE_CAP = 90; // ignore deadlines more than 90 days past-due
       const activeStudentList = students.filter((s) => s.active !== false);
       const upcomingDeadlines = [];
       for (const student of activeStudentList) {
@@ -484,8 +487,6 @@
 
     // ── 0. IEP & Eval Deadlines ────────────────────────────────────────────
     // Show upcoming (within 30 days) and past-due IEP/eval dates for active students.
-    const IEP_WINDOW_DAYS = 30;
-    const IEP_OVERDUE_CAP = 90; // ignore deadlines more than 90 days past-due
     const iepNow = new Date();
     iepNow.setHours(0, 0, 0, 0);
     const iepWindowEnd = new Date(iepNow);
@@ -724,14 +725,12 @@
         let cardClass = 'ov-row-card';
         let dotClass = 'ov-status-dot';
         let dateText = '';
-        let cardStyle = '';
         if (item.diffDays < -30) {
           // Very overdue (31–90 days) — muted red
-          cardClass += ' ov-row-card--red';
+          cardClass += ' ov-row-card--red ov-row-card--muted';
           dotClass += ' ov-dot-red';
           const days = Math.abs(item.diffDays);
           dateText = `${days} day${days !== 1 ? 's' : ''} overdue`;
-          cardStyle = ' style="opacity:0.7;"';
         } else if (item.diffDays < 0) {
           cardClass += ' ov-row-card--red';
           dotClass += ' ov-dot-red';
@@ -750,7 +749,7 @@
         }
         const formattedDate = item.dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         return `
-        <a href="/teacher/students/?student=${item.studentCode}" class="${cardClass}"${cardStyle}>
+        <a href="/teacher/students/?student=${item.studentCode}" class="${cardClass}">
           <span class="${dotClass}"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -1397,6 +1396,16 @@
         }
       });
     });
+
+    // Re-render checklist if the page becomes visible after midnight
+    const renderedDay = formatDateYMD(new Date());
+    const midnightAC = new AbortController();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && formatDateYMD(new Date()) !== renderedDay) {
+        midnightAC.abort();
+        renderChecklist({ submissions, instances, goals, progress, students, schedule });
+      }
+    }, { signal: midnightAC.signal });
   }
 
   /**
