@@ -47,7 +47,7 @@ function scoreConstructed(item, studentAnswer) {
     : String(studentAnswer).toLowerCase();
 
   let keywords = [];
-  let minKeywords = 2;
+  let minKeywords = 1;
 
   if (item.scoring && item.scoring.keywords) {
     keywords = item.scoring.keywords.map(k => String(k));
