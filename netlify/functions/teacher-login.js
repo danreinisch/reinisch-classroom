@@ -7,7 +7,7 @@
 console.log('[teacher-login] Module loaded successfully');
 
 const { sign, teacherCookie } = require('./_lib/auth');
-const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, lookupActiveTeacherId } = require('./_lib/supa');
+const { rest, rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, lookupActiveTeacherId } = require('./_lib/supa');
 const {
   generateRequestId,
   jsonResponse,
@@ -219,15 +219,32 @@ async function handleTeacherLogin(event) {
       return jsonResponse(event, 403, { error: 'Access denied' }, {}, requestId);
     }
     
-    // Credentials valid - look up teacher UUID to embed in JWT for split-by-student issuance
-    const teacherId = await lookupActiveTeacherId();
-    if (teacherId) {
+    // Credentials valid - look up teacher UUID to embed in JWT for split-by-student issuance.
+    // This is a hard failure: if the teacher record is missing or unreachable, we cannot
+    // create a usable session, so return 500 rather than silently embedding null.
+    let teacherId;
+    try {
+      const teacherRes = await rest('/rest/v1/teacher?select=id&active=eq.true&limit=1', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!teacherRes.ok) {
+        console.warn(`[teacher-login] [${requestId}] Teacher lookup HTTP error: ${teacherRes.status} ${teacherRes.statusText}; cannot create session.`);
+        return jsonResponse(event, 500, { error: 'Teacher record lookup failed. Please try again or contact admin.' }, {}, requestId);
+      }
+      const teacherRows = await teacherRes.json();
+      if (!Array.isArray(teacherRows) || teacherRows.length === 0) {
+        console.warn(`[teacher-login] [${requestId}] No active teacher record found; rejecting login`);
+        return jsonResponse(event, 500, { error: 'No teacher record found for this username. Contact admin to verify your teacher record exists and is properly configured.' }, {}, requestId);
+      }
+      teacherId = teacherRows[0].id;
       console.log(`[teacher-login] [${requestId}] Resolved active teacher UUID: ${teacherId}`);
-    } else {
-      console.warn(`[teacher-login] [${requestId}] No active teacher record found; teacherId will not be embedded in JWT`);
+    } catch (teacherLookupErr) {
+      console.error(`[teacher-login] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; cannot create session.`);
+      return jsonResponse(event, 500, { error: 'Teacher record lookup failed. Please try again or contact admin.' }, {}, requestId);
     }
 
-    // Create session token with teacherId (may be null if no teacher record found)
+    // Create session token with teacherId
     const token = sign({ role: user.role, username: user.username, teacherId }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
     const setCookie = teacherCookie('tc', token, { secure: true, maxAge: SESSION_DURATION_SECONDS });
 

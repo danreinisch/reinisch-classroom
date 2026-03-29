@@ -88,6 +88,7 @@ function parseBooleanRpcResponse(data) {
  * @returns {Promise<string|null>} teacher UUID, or null if not found or on error
  */
 async function lookupActiveTeacherId() {
+  console.warn('[supa] DEPRECATION: lookupActiveTeacherId() assumes a single active teacher. Use teacherId from JWT instead. This fallback will be removed in a future release.');
   try {
     const res = await rest('/rest/v1/teacher?select=id&active=eq.true&limit=1', {
       method: 'GET',
