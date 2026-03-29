@@ -1206,6 +1206,39 @@
     await Promise.allSettled(renderPromises);
   }
 
+  /**
+   * After goals are rendered, fetch per-question data points for all goals that have a
+   * "View Data" toggle button and update their status-count element so the initial render
+   * shows the correct data-point count instead of the goal_progress aggregate count.
+   */
+  async function batchUpdateGoalDataCounts(container, studentGoals) {
+    const toggleBtns = container.querySelectorAll('.tc-progress-toggle-btn[data-goal-id]');
+    if (!toggleBtns.length) return;
+
+    const qRange = (() => { try { return getQuarterDateRange(getCurrentQuarter()); } catch (_) { return null; } })();
+
+    await Promise.allSettled(Array.from(toggleBtns).map(async btn => {
+      const goalId = btn.dataset.goalId;
+      const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
+      if (!goal) return;
+      const studentId = goal.student_id || allStudents.find(s => s.code === goal.student_code)?.id;
+      if (!studentId) return;
+      try {
+        const dataPoints = await db.listGoalDataPoints({ studentId, goalId: goal.id });
+        if (!dataPoints || dataPoints.length === 0) return;
+        const dpThisQ = qRange
+          ? dataPoints.filter(dp => { const d = new Date(dp.date); return d >= qRange.start && d <= qRange.end; })
+          : dataPoints;
+        if (dpThisQ.length === 0) return;
+        const statusEl = document.getElementById(`tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`);
+        if (statusEl) {
+          const n = dpThisQ.length;
+          statusEl.textContent = `${n} data ${n === 1 ? 'point' : 'points'} this quarter`;
+        }
+      } catch (_) { /* silently ignore — leave existing count text unchanged */ }
+    }));
+  }
+
   async function renderExpandedDetail(studentCode) {
     const container = document.getElementById(`stExpandedDetail-${studentCode}`);
     if (!container) return;
@@ -1307,6 +1340,11 @@
     container.querySelectorAll('.st-goal-edit-form').forEach(form => {
       initObservationFields(form);
     });
+
+    // After the goals tab is rendered, batch-fetch data points to show accurate counts
+    if (selectedDetailTab === 'goals') {
+      batchUpdateGoalDataCounts(contentDiv, studentGoals).catch(() => {});
+    }
   }
 
   async function renderStudentGoalsTab(student, studentGoals) {
@@ -1758,7 +1796,6 @@
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
           <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${avgDisplay}</div>
           <table style="border-collapse:collapse;width:100%;">
-            <thead><tr><th style="text-align:left;font-size:11px;opacity:0.7;padding:0 8px 2px 0;">Date</th><th style="text-align:left;font-size:11px;opacity:0.7;">Value</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>`;
@@ -2344,6 +2381,9 @@
                       dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
                       dotWrapper.innerHTML = dotHtml;
                       panel.prepend(dotWrapper);
+                      // Hide the redundant Date/Value table since dot-grid supersedes it
+                      const table = panel.querySelector('table');
+                      if (table) table.style.display = 'none';
                     }
 
                     // Update the status count with per-question data points (where available)
