@@ -12,7 +12,7 @@ const {
 } = require('./_lib/http');
 
 const { requireTeacher } = require('./_lib/auth');
-const { getSupabaseConfig } = require('./_lib/supa');
+const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
 const { buildItemsFromMeta } = require('./_lib/build-items');
 
 // Class name aliases for backward compatibility with old drafts
@@ -486,29 +486,11 @@ exports.handler = async (event) => {
     if (teacherUUID) {
       console.log(`[teacher-issue-draft] [${requestId}] Using teacher UUID from JWT for "${teacherUsername}": ${teacherUUID}`);
     } else {
-      try {
-        const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(teacherUsername)}&limit=1`;
-        const teacherLookupResponse = await fetch(teacherLookupUrl, {
-          method: 'GET',
-          headers: {
-            'apikey': SUPABASE_SERVICE_ROLE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (teacherLookupResponse.ok) {
-          const teacherRows = await teacherLookupResponse.json();
-          if (teacherRows.length > 0) {
-            teacherUUID = teacherRows[0].id;
-            console.log(`[teacher-issue-draft] [${requestId}] Resolved teacher UUID for "${teacherUsername}" via runtime lookup: ${teacherUUID}`);
-          } else {
-            console.warn(`[teacher-issue-draft] [${requestId}] No teacher record found for teacher_code="${teacherUsername}"; class lookup will not be teacher-scoped`);
-          }
-        } else {
-          console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; class lookup will not be teacher-scoped`);
-        }
-      } catch (teacherLookupErr) {
-        console.warn(`[teacher-issue-draft] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; class lookup will not be teacher-scoped`);
+      teacherUUID = await lookupActiveTeacherId();
+      if (teacherUUID) {
+        console.log(`[teacher-issue-draft] [${requestId}] Resolved active teacher UUID via runtime lookup: ${teacherUUID}`);
+      } else {
+        console.warn(`[teacher-issue-draft] [${requestId}] No active teacher record found; class lookup will not be teacher-scoped`);
       }
     }
 
@@ -517,7 +499,7 @@ exports.handler = async (event) => {
       console.error(`[teacher-issue-draft] [${requestId}] Cannot issue split-by-student draft without teacher UUID. studentCode="${draft.studentCode}"`);
       return jsonResponse(event, 403, {
         ok: false,
-        error: `No teacher record found for username '${teacherUsername}'. Your login session may be outdated — try logging out and back in. If the problem persists, contact admin to verify your teacher record exists.`,
+        error: `No active teacher record found. Try logging out and back in. If the problem persists, contact admin to verify the teacher record is active in the database.`,
       }, { 'Cache-Control': 'no-store' }, requestId);
     }
 
