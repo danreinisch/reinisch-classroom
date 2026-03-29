@@ -57,26 +57,46 @@
     "Warrior Academy": "WA"
   };
 
+  // Inline SVG icon constants for goal areas and UI elements (Feather/Lucide style)
+  const SVG_ICON_BOOK_OPEN    = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+  const SVG_ICON_PENCIL       = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  const SVG_ICON_BOOK         = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+  const SVG_ICON_HASH         = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>';
+  const SVG_ICON_CALCULATOR   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="10" x2="16" y2="18"/><line x1="8" y1="10" x2="12" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>';
+  const SVG_ICON_TARGET       = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+  const SVG_ICON_ARROW_CIRCLE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  const SVG_ICON_USERS        = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+  const SVG_ICON_MESSAGE      = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  const SVG_ICON_TOOL         = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+  const SVG_ICON_SMILE        = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
+  const SVG_ICON_BOOKMARK     = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  const SVG_ICON_CLIPBOARD    = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>';
+  const SVG_ICON_USER         = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:3px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  const SVG_ICON_BAR_CHART    = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:3px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
+  const SVG_ICON_CALENDAR     = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  const SVG_ICON_TRASH        = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:3px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+  const SVG_ICON_LINK         = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:3px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+
   const GOAL_AREA_ICONS = {
-    "Reading Comprehension": "📖",
-    "Written Expression": "✍️",
-    "Basic Reading": "📚",
-    "Behavior": "🎯",
-    "Life Skills Transition": "🚀",
-    "Life Skills Reading Skills": "📖",
-    "Life Skills Writing Skills": "✍️",
-    "Math Calculation": "🔢",
-    "Math Problem Solving": "🧮",
-    "Reading Fluency": "📝",
-    "Social Skills": "🤝",
-    "Language": "💬",
-    "Life Skills": "🛠️",
-    "Emotional Regulation": "😌",
-    "Reading Skills": "📕"
+    "Reading Comprehension":   SVG_ICON_BOOK_OPEN,
+    "Written Expression":      SVG_ICON_PENCIL,
+    "Basic Reading":           SVG_ICON_BOOK,
+    "Behavior":                SVG_ICON_TARGET,
+    "Life Skills Transition":  SVG_ICON_ARROW_CIRCLE,
+    "Life Skills Reading Skills": SVG_ICON_BOOK_OPEN,
+    "Life Skills Writing Skills": SVG_ICON_PENCIL,
+    "Math Calculation":        SVG_ICON_HASH,
+    "Math Problem Solving":    SVG_ICON_CALCULATOR,
+    "Reading Fluency":         SVG_ICON_BOOKMARK,
+    "Social Skills":           SVG_ICON_USERS,
+    "Language":                SVG_ICON_MESSAGE,
+    "Life Skills":             SVG_ICON_TOOL,
+    "Emotional Regulation":    SVG_ICON_SMILE,
+    "Reading Skills":          SVG_ICON_BOOKMARK
   };
 
   // UI indicator for missing dates
-  const MISSING_DATE_WARNING = ' ⚠️';
+  const MISSING_DATE_WARNING = ' <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
   // Inline SVG status icons for table cells and status badges
   const SVG_STATUS_OK   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
@@ -914,11 +934,13 @@
    * Render a compact quarterly-averages row for a goal card.
    * Shows Q1–Q4 avg (collected/expected) for the current school year.
    */
-  function renderQuarterlyAverages(studentCode, goalCode) {
+  function renderQuarterlyAverages(studentCode, goalCode, goalId) {
     const goal = allGoals.find(g => g.student_code === studentCode && g.code === goalCode);
     const expected = (goal && goal.expected_data_points) || 3;
     const measurementType = goal && goal.measurement_type;
     const entries = getProgressForGoal(studentCode, goalCode);
+    const currentQ = (() => { try { return getCurrentQuarter(); } catch (e) { console.warn('[renderQuarterlyAverages] getCurrentQuarter failed:', e); return null; } })();
+    const sanitizedGoalId = goalId ? goalId.replace(/[^a-z0-9]/gi, '_') : null;
 
     const spans = ['Q1', 'Q2', 'Q3', 'Q4'].map(q => {
       const range = getQuarterDateRange(q);
@@ -931,15 +953,17 @@
 
       const count = qEntries.length;
       const countStr = `(${count}/${expected})`;
+      const isCurrentQ = q === currentQ;
+      const idAttr = isCurrentQ && sanitizedGoalId ? ` id="tc-goal-qa-count-${sanitizedGoalId}"` : '';
 
       if (count === 0) {
-        return `<span class="st-qa-badge st-qa-badge--none">${q}: — ${escapeHtml(countStr)}</span>`;
+        return `<span class="st-qa-badge st-qa-badge--none"${idAttr}>${q}: — <span class="st-qa-count">${escapeHtml(countStr)}</span></span>`;
       }
 
       const avg = qEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / (count || 1);
       const avgStr = formatProgressValue(avg, measurementType);
       const statusClass = count >= expected ? 'st-qa-badge--green' : 'st-qa-badge--yellow';
-      return `<span class="st-qa-badge ${statusClass}">${q}: ${escapeHtml(avgStr)} ${escapeHtml(countStr)}</span>`;
+      return `<span class="st-qa-badge ${statusClass}"${idAttr}>${q}: ${escapeHtml(avgStr)} <span class="st-qa-count">${escapeHtml(countStr)}</span></span>`;
     });
 
     return `<div class="st-quarterly-averages">${spans.join('')}</div>`;
@@ -1235,10 +1259,24 @@
           ? dataPoints.filter(dp => { const d = new Date(dp.date); return d >= qRange.start && d <= qRange.end; })
           : dataPoints;
         if (dpThisQ.length === 0) return;
-        const statusEl = document.getElementById(`tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`);
+        const sanitizedId = goal.id.replace(/[^a-z0-9]/gi, '_');
+        const n = dpThisQ.length;
+        const expected = goal.expected_data_points || 3;
+
+        const statusEl = document.getElementById(`tc-goal-status-count-${sanitizedId}`);
         if (statusEl) {
-          const n = dpThisQ.length;
           statusEl.textContent = `${n} data ${n === 1 ? 'point' : 'points'} this quarter`;
+        }
+
+        const headerEl = document.getElementById(`tc-goal-header-count-${sanitizedId}`);
+        if (headerEl) {
+          headerEl.textContent = `${n}/${expected}`;
+        }
+
+        const qaEl = document.getElementById(`tc-goal-qa-count-${sanitizedId}`);
+        if (qaEl) {
+          const countSpan = qaEl.querySelector('.st-qa-count');
+          if (countSpan) countSpan.textContent = `(${n}/${expected})`;
         }
       } catch (err) {
         console.warn(`[tc-students] batchUpdateGoalDataCounts: error for goal ${goal.code}:`, err);
@@ -1703,9 +1741,9 @@
       return renderGoalCardWithDataEntry(goal);
     }
 
-    const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
+    const icon = GOAL_AREA_ICONS[goal.goal_area] || SVG_ICON_CLIPBOARD;
     const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? SVG_STATUS_WARN + ' ' : '';
-    const classContext = goal.class_context ? `<div class="st-goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
+    const classContext = goal.class_context ? `<div class="st-goal-class">${SVG_ICON_BOOK} ${escapeHtml(goal.class_context)}</div>` : '';
     
     // Show token management for external data collectors (not Dan Reinisch)
     const showTokenBtn = goal.data_collector && goal.data_collector !== 'Dan Reinisch';
@@ -1735,7 +1773,9 @@
     const statusEmoji = dataStatus.status === 'ok' ? SVG_STATUS_OK : dataStatus.status === 'warning' ? SVG_STATUS_WARN : SVG_STATUS_BAD;
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
-    const statusCountId = `tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
+    const sanitizedGoalId = goal.id.replace(/[^a-z0-9]/gi, '_');
+    const statusCountId = `tc-goal-status-count-${sanitizedGoalId}`;
+    const headerCountId = `tc-goal-header-count-${sanitizedGoalId}`;
 
     // Build collapsible progress detail section for this quarter
     const progressDetailId = `tc-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
@@ -1849,10 +1889,10 @@
             <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
             ${obsBadgeHtml}
           </div>
-          <span class="st-goal-quarter-status">${statusEmoji} ${quarterProgress.length}/${dataStatus.expected}</span>
+          <span class="st-goal-quarter-status">${statusEmoji} <span id="${headerCountId}" data-expected="${dataStatus.expected}">${quarterProgress.length}/${dataStatus.expected}</span></span>
           <span class="st-goal-chevron">▶</span>
         </div>
-        ${renderQuarterlyAverages(goal.student_code, goal.code)}
+        ${renderQuarterlyAverages(goal.student_code, goal.code, goal.id)}
         <div class="st-goal-body">
           ${descHtml}
           <div class="st-goal-metrics">
@@ -1871,7 +1911,7 @@
               <span id="${statusCountId}">${statusText}</span>
             </div>
             <div class="st-data-status-item">
-              <span>📅</span>
+              <span>${SVG_ICON_CALENDAR}</span>
               <span>${lastText}</span>
             </div>
             ${progressToggleBtn ? `<div class="st-data-status-item" style="margin-left:auto;">${progressToggleBtn}</div>` : ''}
@@ -1880,18 +1920,18 @@
           ${obsEmptyState}
         </div>
         <div class="st-goal-meta">
-          <div class="st-goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
-          <div class="st-goal-collector">${dataCollectorWarning}📊 ${escapeHtml(goal.data_collector || 'N/A')}</div>
+          <div class="st-goal-manager">${SVG_ICON_USER}${escapeHtml(goal.case_manager || 'N/A')}</div>
+          <div class="st-goal-collector">${dataCollectorWarning}${SVG_ICON_BAR_CHART}${escapeHtml(goal.data_collector || 'N/A')}</div>
           ${classContext}
         </div>
         <div class="st-goal-actions">
-          <button class="st-btn st-btn-small st-btn-primary enter-data-btn" data-goal-id="${goal.id}">📊 Enter Data</button>
+          <button class="st-btn st-btn-small st-btn-primary enter-data-btn" data-goal-id="${goal.id}">${SVG_ICON_BAR_CHART}Enter Data</button>
           <button class="st-btn st-btn-small st-btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
           <button class="st-btn st-btn-small st-btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
           ${showTokenBtn ? `
             ${hasActiveToken 
-              ? `<button class="st-btn st-btn-small st-btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">🗑️ Revoke Link</button>`
-              : `<button class="st-btn st-btn-small st-btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
+              ? `<button class="st-btn st-btn-small st-btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">${SVG_ICON_TRASH}Revoke Link</button>`
+              : `<button class="st-btn st-btn-small st-btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">${SVG_ICON_LINK}Copy Link</button>`
             }
           ` : ''}
         </div>
@@ -1900,7 +1940,7 @@
   }
 
   function renderGoalCardWithDataEntry(goal) {
-    const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
+    const icon = GOAL_AREA_ICONS[goal.goal_area] || SVG_ICON_CLIPBOARD;
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
     const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
     
@@ -2087,7 +2127,7 @@
           </div>
           
           <div class="st-data-entry-form">
-            <h4 style="margin:0 0 12px 0; font-size:14px;">📊 Enter Progress Data</h4>
+            <h4 style="margin:0 0 12px 0; font-size:14px;">${SVG_ICON_BAR_CHART}Enter Progress Data</h4>
             
             ${measurementFields}
             
