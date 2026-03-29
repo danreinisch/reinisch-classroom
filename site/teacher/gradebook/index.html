@@ -681,7 +681,11 @@
                   <option value="series">Sort: By Series</option>
                 </select>
                 <button class="gb-btn" type="button" id="btnToggleCompact">⊞ Comfortable</button>
-                <button class="gb-btn primary" type="button" id="btnToggleGroupedView">⊞ Grouped</button>
+                <select id="gbGroupModeSelect" class="gb-sort-select" aria-label="Group assignments by">
+                  <option value="individual">⊞ Individual</option>
+                  <option value="class">⊞ Group by Class</option>
+                  <option value="week">⊞ Group by Week</option>
+                </select>
                 <button class="gb-btn" type="button" id="btnToggleMoreCols">⋯ Show More</button>
                 <button class="gb-btn" type="button" id="btnToggleAnalytics">📊 Analytics</button>
                 <button class="gb-btn" type="button" id="btnToggleMissing">🚨 Missing Work</button>
@@ -770,7 +774,7 @@
             </div>
 
             <div id="gbNoGroupsBanner" class="gb-empty" style="display: none; padding: 8px 16px; background: #fff8e1; border-left: 4px solid #f9a825; margin-bottom: 8px;">
-              <p><strong>No class groupings found.</strong> Assignments are shown individually because no class name could be inferred from their titles or enrollment data. Switch to <em>Individual</em> view or ensure assignment titles contain a class name (e.g. "Language Arts 1 SC").</p>
+              <p><strong>No groupings found.</strong> Assignments are shown individually because no group could be inferred. Switch to <em>Individual</em> view, or for <em>Group by Class</em> ensure assignments have enrollment data; for <em>Group by Week</em> ensure assignment titles start with "Week N" (e.g. "Week 9: Ch. 26").</p>
             </div>
 
             <div class="gb-tablewrap" id="gbTableWrap" style="display: none">
