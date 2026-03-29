@@ -1231,6 +1231,17 @@
   }
 
   /**
+   * Returns a color based on data-point count vs expected threshold.
+   * red=0, yellow=partial (< 2/3 of expected), blue=nearly there (< expected), green=met.
+   */
+  function getCountColor(count, expected) {
+    if (count === 0) return '#ef4444';
+    if (count < Math.floor(expected * 2 / 3)) return '#eab308';
+    if (count < expected) return '#3b82f6';
+    return '#22c55e';
+  }
+
+  /**
    * After goals are rendered, fetch per-question data points for all goals that have a
    * "View Data" toggle button and update their status-count element so the initial render
    * shows the correct data-point count instead of the goal_progress aggregate count.
@@ -1271,6 +1282,7 @@
         const headerEl = document.getElementById(`tc-goal-header-count-${sanitizedId}`);
         if (headerEl) {
           headerEl.textContent = `${n}/${expected}`;
+          headerEl.style.color = getCountColor(n, expected);
         }
 
         const qaEl = document.getElementById(`tc-goal-qa-count-${sanitizedId}`);
@@ -1889,7 +1901,7 @@
             <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
             ${obsBadgeHtml}
           </div>
-          <span class="st-goal-quarter-status">${statusEmoji} <span id="${headerCountId}" data-expected="${dataStatus.expected}">${quarterProgress.length}/${dataStatus.expected}</span></span>
+          <span class="st-goal-quarter-status">${statusEmoji} <span id="${headerCountId}" data-expected="${dataStatus.expected}" style="color:${getCountColor(quarterProgress.length, dataStatus.expected)}">${quarterProgress.length}/${dataStatus.expected}</span></span>
           <span class="st-goal-chevron">▶</span>
         </div>
         ${renderQuarterlyAverages(goal.student_code, goal.code, goal.id)}
