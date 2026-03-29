@@ -705,6 +705,59 @@
     @media (min-width: 3000px) {
       html { font-size: 28px; }
     }
+
+    /* AI Suggest Button */
+    .rv-btn-suggest {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.1));
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #c4b5fd;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: var(--rc-radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 12px;
+    }
+
+    .rv-btn-suggest:hover {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(139, 92, 246, 0.2));
+      border-color: rgba(168, 85, 247, 0.5);
+      color: #ddd6fe;
+    }
+
+    .rv-btn-suggest:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
+    /* AI suggestion flash */
+    @keyframes rv-ai-flash {
+      0% { box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.5); }
+      100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+    }
+
+    .rv-ai-suggested {
+      animation: rv-ai-flash 2s ease-out;
+    }
+
+    /* AI rationale / error messages */
+    .rv-ai-rationale {
+      font-size: 11px;
+      color: rgba(196, 181, 253, 0.7);
+      margin-top: 4px;
+      font-style: italic;
+      transition: opacity 1s ease;
+    }
+
+    .rv-ai-rationale-fading {
+      opacity: 0;
+    }
+
+    .rv-ai-error {
+      font-size: 11px;
+      color: #f87171;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>

@@ -1082,6 +1082,13 @@
               </div>
             </details>
             
+            <button class="rv-btn rv-btn-suggest"
+                    data-item-id="${escapeHtml(item.id)}"
+                    data-submission-id="${escapeHtml(submission.id)}"
+                    aria-label="Get AI-suggested score for this item">
+              ✨ Suggest Grade
+            </button>
+            
             <div class="rv-scoring-controls">
               <div class="rv-score-input-group">
                 <label>Score:</label>
@@ -1361,6 +1368,13 @@
           return;
         }
         
+        // Handle AI suggest button click
+        const suggestBtn = e.target.closest('.rv-btn-suggest');
+        if (suggestBtn) {
+          await handleAiSuggest(suggestBtn);
+          return;
+        }
+
         // Handle per-item save button click
         const saveBtn = e.target.closest('.rv-btn-save-item');
         if (saveBtn) {
@@ -1617,6 +1631,107 @@
     const skippedMsg = skipped.length > 0 ? ` (${skipped.length} skipped — unscored written responses)` : '';
     showToast(`Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed${skippedMsg}`, '#22c55e', '#0b1220');
     await render();
+  }
+
+  // Handle AI-suggested grade for a constructed-response item
+  async function handleAiSuggest(button) {
+    const itemId = button.dataset.itemId;
+    const submissionId = button.dataset.submissionId;
+
+    // Find DOM elements within the same card
+    const card = button.closest('.rv-response-card');
+    const responseTextEl = card && card.querySelector('.rv-response-text');
+    const scoreInput = document.querySelector(`input.rv-score-input[data-item-id="${itemId}"]`);
+    const noteInput = document.querySelector(`textarea.rv-note-input[data-item-id="${itemId}"]`);
+
+    if (!responseTextEl || !scoreInput) return;
+
+    const studentResponse = responseTextEl.textContent || '';
+
+    // Look up item metadata from cache
+    const submission = submissionsData.find(s => s.id === submissionId);
+    const instance = submission && assignmentInstancesData.find(i => i.id === submission.instance_id);
+    const assignmentId = instance && instance.assignment_id;
+    const items = assignmentId ? (assignmentItemsCache[assignmentId] || []) : [];
+    const item = items.find(it => String(it.id) === String(itemId));
+    const maxPoints = (item && item.points) || 5;
+    const itemLabel = item ? (item.item_ref || item.ref || '') : '';
+    const goalCodes = (item && item.goal_codes) || [];
+    const goalDescriptions = []; // Goal descriptions will be enriched from goalsData in a future update
+
+    const rubricTiers = generateRubricTiers(maxPoints);
+
+    // Remove any previous rationale/error messages below this button
+    const prevMsg = button.nextElementSibling;
+    if (prevMsg && (prevMsg.classList.contains('rv-ai-rationale') || prevMsg.classList.contains('rv-ai-error'))) {
+      prevMsg.remove();
+    }
+
+    // Show loading state
+    const originalText = button.textContent.trim();
+    button.textContent = '⏳ Thinking...';
+    button.disabled = true;
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          student_response: studentResponse,
+          rubric_tiers: rubricTiers,
+          max_points: maxPoints,
+          item_label: itemLabel,
+          goal_codes: goalCodes,
+          goal_descriptions: goalDescriptions
+        })
+      });
+
+      if (!res.ok) {
+        let errText = 'Could not get suggestion — please score manually';
+        if (res.status === 503) {
+          errText = 'AI suggestions not configured — ask admin to add OPENAI_API_KEY';
+        }
+        const errDiv = document.createElement('div');
+        errDiv.className = 'rv-ai-error';
+        errDiv.textContent = errText;
+        button.insertAdjacentElement('afterend', errDiv);
+        return;
+      }
+
+      const data = await res.json();
+      const { suggested_score, suggested_note, rationale } = data;
+
+      // Populate fields
+      if (suggested_score != null) {
+        scoreInput.value = suggested_score;
+        scoreInput.classList.add('rv-ai-suggested');
+        setTimeout(() => scoreInput.classList.remove('rv-ai-suggested'), 2000);
+      }
+      if (suggested_note != null && noteInput) {
+        noteInput.value = suggested_note;
+        noteInput.classList.add('rv-ai-suggested');
+        setTimeout(() => noteInput.classList.remove('rv-ai-suggested'), 2000);
+      }
+
+      // Show inline rationale
+      if (rationale) {
+        const rationaleDiv = document.createElement('div');
+        rationaleDiv.className = 'rv-ai-rationale';
+        rationaleDiv.textContent = `AI rationale: ${rationale}`;
+        button.insertAdjacentElement('afterend', rationaleDiv);
+        setTimeout(() => { rationaleDiv.classList.add('rv-ai-rationale-fading'); }, 10000);
+      }
+    } catch (err) {
+      console.error('[tc-review] AI suggest error:', err);
+      const errDiv = document.createElement('div');
+      errDiv.className = 'rv-ai-error';
+      errDiv.textContent = 'Could not get suggestion — please score manually';
+      button.insertAdjacentElement('afterend', errDiv);
+    } finally {
+      button.textContent = originalText;
+      button.disabled = false;
+    }
   }
 
   // Handle saving a score for an item
