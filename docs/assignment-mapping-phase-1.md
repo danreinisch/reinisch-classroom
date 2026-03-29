@@ -325,3 +325,17 @@ Default: `false` (dark launch until review complete)
 - Weighted mapping (split credit across goals)
 - Partial credit for multi-select
 - Enhanced analytics and dashboards
+
+## AI-Assisted Grading for Constructed-Response Items
+
+Constructed-response items now support **AI-Assisted Grading Suggestions** on the Teacher Center
+Review page. When an item has a `constructed` answer type (i.e., no `correct` answer in the
+mapping), teachers see a **✨ Suggest Grade** button on each student's response card.
+
+- Items mapped to IEP goals get **enhanced AI scoring** that considers goal context: the AI is
+  instructed to prioritize evidence of understanding over grammar and mechanics, giving students
+  credit for responses that demonstrate progress toward their IEP goals.
+- The AI suggestion pre-fills the Score and Teacher Note fields. The teacher always reviews and
+  edits before clicking **Save Grade** — the suggestion is never auto-saved.
+
+See [docs/ai-assisted-grading.md](./ai-assisted-grading.md) for full setup and usage details.
