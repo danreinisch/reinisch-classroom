@@ -118,6 +118,8 @@
         const goals = await res.json();
         _reviewGoalsCache = { studentId, goals: Array.isArray(goals) ? goals : [] };
         return _reviewGoalsCache.goals;
+      } else {
+        console.warn(`[tc-review] Goals fetch returned ${res.status}`);
       }
     } catch (err) {
       console.warn('[tc-review] Failed to fetch goals for AI suggest:', err);
@@ -1671,8 +1673,8 @@
     // Find DOM elements within the same card
     const card = button.closest('.rv-response-card');
     const responseTextEl = card && card.querySelector('.rv-response-text');
-    const scoreInput = document.querySelector(`input.rv-score-input[data-item-id="${itemId}"]`);
-    const noteInput = document.querySelector(`textarea.rv-note-input[data-item-id="${itemId}"]`);
+    const scoreInput = card && card.querySelector(`input.rv-score-input[data-item-id="${itemId}"]`);
+    const noteInput = card && card.querySelector(`textarea.rv-note-input[data-item-id="${itemId}"]`);
 
     if (!responseTextEl || !scoreInput) return;
 
@@ -1739,6 +1741,7 @@
         }
         const errDiv = document.createElement('div');
         errDiv.className = 'rv-ai-error';
+        errDiv.setAttribute('role', 'alert');
         errDiv.textContent = errText;
         button.insertAdjacentElement('afterend', errDiv);
         return;
@@ -1771,6 +1774,7 @@
       console.error('[tc-review] AI suggest error:', err);
       const errDiv = document.createElement('div');
       errDiv.className = 'rv-ai-error';
+      errDiv.setAttribute('role', 'alert');
       errDiv.textContent = 'Could not get suggestion — please score manually';
       button.insertAdjacentElement('afterend', errDiv);
     } finally {

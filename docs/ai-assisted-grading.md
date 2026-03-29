@@ -18,9 +18,9 @@ does not appear on MCQ, boolean, or multi-select items, which are scored automat
 ## Setup
 
 1. Add `OPENAI_API_KEY` to the Netlify environment variables for the site.
-2. No other configuration is required. The feature auto-detects the key at runtime:
-   - If the key is present, the **✨ Suggest Grade** button is shown on constructed-response cards.
-   - If the key is **not** set, the backend returns `503` and the button does not appear.
+2. No other configuration is required. The **✨ Suggest Grade** button always appears on
+   constructed-response cards in the Review page. When the key is missing, clicking the button
+   returns a `503` with the message "AI suggestions not configured — ask admin to add OPENAI_API_KEY".
 
 ---
 
@@ -122,7 +122,7 @@ Cost is essentially negligible on an existing OpenAI subscription.
 |---|---|
 | OpenAI times out (> 10 s) | Returns `502`; UI shows "AI suggestion failed — please score manually" |
 | OpenAI returns HTTP error | Returns `502`; UI shows error message |
-| `OPENAI_API_KEY` not configured | Returns `503`; button hidden from UI |
+| `OPENAI_API_KEY` not configured | Returns `503`; UI shows error message on click |
 | Goals Supabase query fails | AI suggest still runs, without goal context |
 | AI returns out-of-range score | Score is clamped to `[0, max_points]` before returning |
 
