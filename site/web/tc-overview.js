@@ -265,6 +265,7 @@
       const iepWindowEnd = new Date(iepNow);
       iepWindowEnd.setDate(iepWindowEnd.getDate() + 30);
 
+      const IEP_OVERDUE_CAP = 90; // ignore deadlines more than 90 days past-due
       const activeStudentList = students.filter((s) => s.active !== false);
       const upcomingDeadlines = [];
       for (const student of activeStudentList) {
@@ -272,9 +273,10 @@
           if (!student[field]) continue;
           const dueDate = new Date(student[field]);
           dueDate.setHours(0, 0, 0, 0);
-          if (dueDate <= iepWindowEnd) {
-            upcomingDeadlines.push({ dueDate, student });
-          }
+          const diffDays = Math.round((dueDate - iepNow) / (1000 * 60 * 60 * 24));
+          if (diffDays < -IEP_OVERDUE_CAP) continue; // stale
+          if (dueDate > iepWindowEnd) continue;
+          upcomingDeadlines.push({ dueDate, student, diffDays });
         }
       }
 
@@ -483,6 +485,7 @@
     // ── 0. IEP & Eval Deadlines ────────────────────────────────────────────
     // Show upcoming (within 30 days) and past-due IEP/eval dates for active students.
     const IEP_WINDOW_DAYS = 30;
+    const IEP_OVERDUE_CAP = 90; // ignore deadlines more than 90 days past-due
     const iepNow = new Date();
     iepNow.setHours(0, 0, 0, 0);
     const iepWindowEnd = new Date(iepNow);
@@ -494,8 +497,9 @@
         if (!student[field]) continue;
         const dueDate = new Date(student[field]);
         dueDate.setHours(0, 0, 0, 0);
-        if (dueDate > iepWindowEnd) continue; // beyond 30-day window
+        if (dueDate > iepWindowEnd) continue; // beyond 30-day future window
         const diffDays = Math.round((dueDate - iepNow) / (1000 * 60 * 60 * 24));
+        if (diffDays < -IEP_OVERDUE_CAP) continue; // too far past-due; stale
         iepDeadlines.push({
           studentName: student.name,
           studentCode: student.code,
@@ -720,7 +724,15 @@
         let cardClass = 'ov-row-card';
         let dotClass = 'ov-status-dot';
         let dateText = '';
-        if (item.diffDays < 0) {
+        let cardStyle = '';
+        if (item.diffDays < -30) {
+          // Very overdue (31–90 days) — muted red
+          cardClass += ' ov-row-card--red';
+          dotClass += ' ov-dot-red';
+          const days = Math.abs(item.diffDays);
+          dateText = `${days} day${days !== 1 ? 's' : ''} overdue`;
+          cardStyle = ' style="opacity:0.7;"';
+        } else if (item.diffDays < 0) {
           cardClass += ' ov-row-card--red';
           dotClass += ' ov-dot-red';
           const days = Math.abs(item.diffDays);
@@ -738,7 +750,7 @@
         }
         const formattedDate = item.dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         return `
-        <a href="/teacher/students/?student=${item.studentCode}" class="${cardClass}">
+        <a href="/teacher/students/?student=${item.studentCode}" class="${cardClass}"${cardStyle}>
           <span class="${dotClass}"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -1368,16 +1380,19 @@
     let saveTimer = null;
     contentEl.querySelectorAll(".checklist-checkbox").forEach((cb) => {
       cb.addEventListener("change", (e) => {
+        const currentDay = formatDateYMD(new Date());
+        const currentKey = `rc_overview_checklist_${currentDay}`;
+        const currentConfigKey = `checklist_${currentDay}`;
+        const currentSaved = JSON.parse(localStorage.getItem(currentKey) || "{}");
         const id = e.target.dataset.id;
-        savedChecklist[id] = e.target.checked;
+        currentSaved[id] = e.target.checked;
         // Always save to localStorage immediately (offline-safe)
-        localStorage.setItem(checklistKey, JSON.stringify(savedChecklist));
+        localStorage.setItem(currentKey, JSON.stringify(currentSaved));
         // Debounce Supabase writes to avoid in-flight race conditions on rapid toggles
         if (useRemote) {
           clearTimeout(saveTimer);
-          const snapshot = { ...savedChecklist };
           saveTimer = setTimeout(() => {
-            db.setAppConfig(configKey, snapshot).catch(() => {});
+            db.setAppConfig(currentConfigKey, currentSaved).catch(() => {});
           }, 500);
         }
       });
@@ -1443,14 +1458,13 @@
 
     // Sort by date (most recent first)
     events.sort((a, b) => b.date - a.date);
-    const recentEvents = events.slice(0, 10);
 
-    if (recentEvents.length === 0) {
+    if (events.length === 0) {
       contentEl.innerHTML = `<div class="ov-card-empty">${SVG_CHECK} No recent activity</div>`;
       return;
     }
 
-    // Filter buttons
+    // Filter buttons — type
     let html = `<div class="ov-feed-filters">
       <button class="ov-feed-filter active" data-filter="all">All</button>
       <button class="ov-feed-filter" data-filter="submission">Submissions</button>
@@ -1458,36 +1472,70 @@
       <button class="ov-feed-filter" data-filter="assignment">Assignments</button>
     </div>`;
 
-    html += "<div class='ov-feed-list'>";
-    for (const event of recentEvents) {
-      html += `
-        <div class="activity-item" data-type="${event.type}">
-          <div class="activity-icon">${event.icon}</div>
-          <div class="activity-text">${event.text}</div>
-          <div class="activity-time">${getRelativeTime(event.date)}</div>
-        </div>
-      `;
-    }
-    html += "</div>";
+    // Filter buttons — time scope
+    html += `<div class="ov-feed-filters" data-filter-group="scope">
+      <button class="ov-feed-filter" data-scope="today">Today</button>
+      <button class="ov-feed-filter active" data-scope="week">This Week</button>
+      <button class="ov-feed-filter" data-scope="all">All Time</button>
+    </div>`;
+
+    html += "<div class='ov-feed-list'></div>";
     html += `<div class="ov-feed-empty" style="display:none;">${SVG_CHECK} No matching activity</div>`;
 
     contentEl.innerHTML = html;
 
+    // Helper: build and render the visible list based on current filter + scope
+    function applyFilters() {
+      const activeTypeBtn = contentEl.querySelector('.ov-feed-filters:not([data-filter-group]) .ov-feed-filter.active');
+      const activeScopeBtn = contentEl.querySelector('.ov-feed-filters[data-filter-group="scope"] .ov-feed-filter.active');
+      const typeFilter = activeTypeBtn ? activeTypeBtn.dataset.filter : 'all';
+      const scope = activeScopeBtn ? activeScopeBtn.dataset.scope : 'week';
+
+      const todayStr = formatDateYMD(new Date());
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = formatDateYMD(weekAgo);
+
+      const filtered = events.filter(ev => {
+        // Apply time scope
+        const evStr = formatDateYMD(ev.date);
+        if (scope === 'today' && evStr !== todayStr) return false;
+        if (scope === 'week' && evStr < weekAgoStr) return false;
+        // Apply type filter
+        if (typeFilter !== 'all' && ev.type !== typeFilter) return false;
+        return true;
+      }).slice(0, 10);
+
+      const feedList = contentEl.querySelector('.ov-feed-list');
+      const feedEmptyEl = contentEl.querySelector('.ov-feed-empty');
+
+      if (filtered.length === 0) {
+        feedList.innerHTML = '';
+        if (feedEmptyEl) feedEmptyEl.style.display = '';
+      } else {
+        if (feedEmptyEl) feedEmptyEl.style.display = 'none';
+        feedList.innerHTML = filtered.map(event => `
+          <div class="activity-item" data-type="${event.type}">
+            <div class="activity-icon">${event.icon}</div>
+            <div class="activity-text">${event.text}</div>
+            <div class="activity-time">${getRelativeTime(event.date)}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Initial render
+    applyFilters();
+
     // Filter delegation
-    const filterBtns = contentEl.querySelectorAll('.ov-feed-filter');
-    const activityItems = contentEl.querySelectorAll('.activity-item');
-    const feedEmptyEl = contentEl.querySelector('.ov-feed-empty');
     contentEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.ov-feed-filter');
       if (!btn) return;
-      const filter = btn.dataset.filter;
-      filterBtns.forEach(b => b.classList.remove('active'));
+      const group = btn.closest('.ov-feed-filters');
+      // Deactivate siblings in same group
+      group.querySelectorAll('.ov-feed-filter').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      activityItems.forEach(item => {
-        item.style.display = (filter === 'all' || item.dataset.type === filter) ? '' : 'none';
-      });
-      const anyVisible = Array.from(activityItems).some(item => item.style.display !== 'none');
-      if (feedEmptyEl) feedEmptyEl.style.display = anyVisible ? 'none' : '';
+      applyFilters();
     });
   }
 
@@ -1505,8 +1553,21 @@
       return;
     }
 
-    // Find the most recent date string across all progress entries
-    const mostRecentStr = progress.reduce((max, p) => (p.date > max ? p.date : max), "");
+    // Exclude auto-generated entries (e.g., from submission reviews)
+    const manualProgress = progress.filter(p => {
+      if (p.source && ['auto', 'submission'].includes(p.source)) return false;
+      return true;
+    });
+
+    if (manualProgress.length === 0) {
+      el.textContent = "No data collected yet";
+      el.style.color = "";
+      el.style.opacity = "0.5";
+      return;
+    }
+
+    // Find the most recent date string across manual progress entries
+    const mostRecentStr = manualProgress.reduce((max, p) => (p.date > max ? p.date : max), "");
     if (!mostRecentStr) {
       el.textContent = "No data collected yet";
       el.style.color = "";
