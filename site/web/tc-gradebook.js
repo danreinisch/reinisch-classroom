@@ -148,6 +148,7 @@
   let studentSearchTerm = "";
   let missingWorkPairs = new Set(); // stores "studentCode::draftId" strings
   let showOnlyMissingStudents = false;
+  let _renderingInProgress = false; // re-entrancy guard for renderGradebook()
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -1110,17 +1111,18 @@
             tdGroupSummary.appendChild(avgLine);
 
             const studentScores = scoreMap.get(student.code);
-            let earnedSum = 0, possibleSum = 0;
+            let rawEarnedSum = 0, possibleSum = 0;
             for (const draft of group.drafts) {
               const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
               if (studentScores && studentScores.has(draft.id) && tp) {
                 const s = studentScores.get(draft.id);
                 if (typeof s === "number") {
-                  earnedSum += calculateEarnedPoints(s, tp);
+                  rawEarnedSum += (s * tp / 100);
                   possibleSum += tp;
                 }
               }
             }
+            const earnedSum = Math.round(rawEarnedSum);
             const countLine = document.createElement("div");
             countLine.className = "gb-score-pts-line";
             if (possibleSum > 0) {
@@ -1140,6 +1142,8 @@
           const hasMissing = group.drafts.some(d => missingWorkPairs.has(`${student.code}::${d.id}`));
           if (hasMissing) {
             tdGroupSummary.classList.add("gb-missing-highlight");
+            const missingCount = group.drafts.filter(d => missingWorkPairs.has(`${student.code}::${d.id}`)).length;
+            tdGroupSummary.title = `${missingCount} missing assignment${missingCount !== 1 ? "s" : ""} in this group`;
           }
           tr.appendChild(tdGroupSummary);
         } else {
@@ -1324,6 +1328,9 @@
 
   // Render the gradebook table
   function renderGradebook() {
+    if (_renderingInProgress) return;
+    _renderingInProgress = true;
+    try {
     const data = buildGradebookData();
     const emptyEl = $("gbEmpty");
     const tableWrapEl = $("gbTableWrap");
@@ -1590,6 +1597,9 @@
     summaryRow.appendChild(tdTrendEmpty);
 
     tableBody.appendChild(summaryRow);
+    } finally {
+      _renderingInProgress = false;
+    }
   }
 
   // Render class filter buttons
@@ -2020,6 +2030,11 @@
         console.log('[gradebook] Refreshing gradebook data after realtime change');
         await loadData();
         renderGradebook();
+        // Refresh missing work panel if it's currently visible
+        const missingPanel = $("gbMissingWorkPanel");
+        if (missingPanel && missingPanel.style.display !== "none") {
+          renderMissingWork();
+        }
         // Briefly flash "🔄 Updated" then revert to "🟢 Synced with Supabase"
         const iconEl = $("gbSyncIcon");
         const textEl = $("gbSyncText");
