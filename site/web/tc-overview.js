@@ -617,8 +617,60 @@
     const missingSubmissions = Array.from(missingByStudent.values())
       .sort((a, b) => b.submissions.length - a.submissions.length);
 
+    // ── 4. Low Observation Coverage ───────────────────────────────────────
+    // Surface observation goals missing recent data when coverage < 80%.
+    const activeStudentCodes = new Set(activeStudents.map(s => s.code));
+    const obsGoals = goals.filter(
+      g => g.measurement_type === 'Observation' && isGoalActive(g) && activeStudentCodes.has(g.student_code)
+    );
+    let lowObsCoverage = [];
+    let obsCoveragePct = 100;
+    if (obsGoals.length > 0) {
+      const obsSchoolDayNums = schoolDayNums; // reuse from Data Collection section
+      const last5Days = [];
+      const iterDate = new Date();
+      iterDate.setHours(0, 0, 0, 0);
+      while (last5Days.length < 5) {
+        if (obsSchoolDayNums.includes(iterDate.getDay())) {
+          last5Days.unshift(formatDateYMD(iterDate));
+        }
+        iterDate.setDate(iterDate.getDate() - 1);
+      }
+      const obsStartDate = last5Days[0];
+
+      // Group missing obs goals by student
+      const missingObsByStudent = new Map();
+      for (const goal of obsGoals) {
+        const hasData = progress.some(p =>
+          p.goal_code === goal.code &&
+          p.student_code === goal.student_code &&
+          p.date >= obsStartDate
+        );
+        if (!hasData) {
+          const student = studentMap.get(goal.student_code);
+          const studentCode = student?.code || goal.student_code;
+          const studentName = student?.name || goal.student_code || 'Unknown';
+          if (!missingObsByStudent.has(studentCode)) {
+            missingObsByStudent.set(studentCode, { studentName, studentCode, goals: [] });
+          }
+          missingObsByStudent.get(studentCode).goals.push({
+            goalCode: goal.code,
+            goalArea: goal.goal_area || '',
+          });
+        }
+      }
+
+      const obsWithData = obsGoals.length - Array.from(missingObsByStudent.values()).reduce((sum, s) => sum + s.goals.length, 0);
+      obsCoveragePct = Math.round((obsWithData / obsGoals.length) * 100);
+
+      if (obsCoveragePct < 80) {
+        lowObsCoverage = Array.from(missingObsByStudent.values())
+          .sort((a, b) => b.goals.length - a.goals.length);
+      }
+    }
+
     // ── Render ─────────────────────────────────────────────────────────────
-    const hasItems = iepDeadlines.length > 0 || unreviewed.length > 0 || dataCollectionOverdue.length > 0 || missingSubmissions.length > 0;
+    const hasItems = iepDeadlines.length > 0 || unreviewed.length > 0 || dataCollectionOverdue.length > 0 || missingSubmissions.length > 0 || lowObsCoverage.length > 0;
 
     if (!hasItems) {
       contentEl.innerHTML = `<div class="ov-card-empty">${SVG_CHECK} All caught up!</div>`;
@@ -635,6 +687,7 @@
     if (unreviewed.length > 0) summaryParts.push(`⚠️ ${unreviewed.length} unreviewed`);
     if (dataCollectionOverdue.length > 0) summaryParts.push(`📋 ${dataCollectionOverdue.length} students need data`);
     if (missingSubmissions.length > 0) summaryParts.push(`📭 ${missingSubmissions.length} student${missingSubmissions.length !== 1 ? 's' : ''} with missing submissions`);
+    if (lowObsCoverage.length > 0) summaryParts.push(`👁️ Obs. coverage: ${obsCoveragePct}%`);
 
     let html = `<div class="ov-summary">${summaryParts.join(' · ')}</div>`;
     html += '<div class="ov-list-body">';
@@ -766,6 +819,35 @@
               <span class="ov-row-meta" style="margin-left:auto;">${item.submissions.length} missing · up to ${maxDays}d overdue</span>
             </div>
             <div class="ov-row-secondary">${assignmentBadges}</div>
+          </div>
+        </a>`;
+      });
+      html += '</div>';
+    }
+
+    // Low Observation Coverage
+    if (lowObsCoverage.length > 0) {
+      const prevSectionCount = iepDeadlines.length + unreviewed.length + dataCollectionOverdue.length + missingSubmissions.length;
+      const obsBadgeClass = obsCoveragePct < 50 ? 'ov-badge-red' : 'ov-badge-amber';
+      html += `<div class="ov-section-header"${prevSectionCount > 0 ? ' style="margin-top:12px;"' : ''}><span>Low Observation Coverage</span><span class="ov-count-badge ${obsBadgeClass}">${obsCoveragePct}%</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      html += cappedSection(lowObsCoverage, (item) => {
+        const goalBadges = item.goals.map(g =>
+          `<span class="ov-badge" title="${g.goalArea || g.goalCode}">${g.goalCode}</span>`
+        ).join(' ');
+        return `
+        <a href="/teacher/data/?student=${item.studentCode}" class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
+          <span class="ov-status-dot ov-dot-amber"></span>
+          <div class="ov-row-body">
+            <div class="ov-row-primary">
+              <span class="ov-student-name">${item.studentName}</span>
+              <span class="ov-student-code">${item.studentCode}</span>
+              <span class="ov-row-meta" style="margin-left:auto;">${item.goals.length} goal${item.goals.length !== 1 ? 's' : ''} missing</span>
+            </div>
+            <div class="ov-row-secondary">
+              ${goalBadges}
+              <span class="ov-row-meta">No data in last 5 school days</span>
+            </div>
           </div>
         </a>`;
       });
@@ -1409,6 +1491,46 @@
     });
   }
 
+  /**
+   * Render the "Last data entry" indicator below the KPI cards.
+   */
+  function renderLastEntry({ progress }) {
+    const el = $("ovLastEntry");
+    if (!el) return;
+
+    if (!progress || progress.length === 0) {
+      el.textContent = "No data collected yet";
+      el.style.color = "";
+      el.style.opacity = "0.5";
+      return;
+    }
+
+    // Find the most recent date string across all progress entries
+    const mostRecentStr = progress.reduce((max, p) => (p.date > max ? p.date : max), "");
+    if (!mostRecentStr) {
+      el.textContent = "No data collected yet";
+      el.style.color = "";
+      el.style.opacity = "0.5";
+      return;
+    }
+
+    const mostRecentDate = new Date(mostRecentStr);
+    const diffDays = Math.floor((new Date() - mostRecentDate) / (1000 * 60 * 60 * 24));
+    const label = getRelativeTime(mostRecentDate);
+    el.textContent = `Last data entry: ${label}`;
+
+    if (diffDays > 7) {
+      el.style.color = "#ef4444";
+      el.style.opacity = "0.9";
+    } else if (diffDays > 3) {
+      el.style.color = "#eab308";
+      el.style.opacity = "0.8";
+    } else {
+      el.style.color = "";
+      el.style.opacity = "0.6";
+    }
+  }
+
   // ─── Initialize ────────────────────────────────────────────────────────────
 
   try {
@@ -1420,6 +1542,7 @@
 
     // Render all sections with shared data (no additional fetches)
     renderKPIs(data);
+    renderLastEntry(data);
     renderCalendarSnapshot(data);
     renderOverdueItems(data);
     renderAtRiskStudents(data);
