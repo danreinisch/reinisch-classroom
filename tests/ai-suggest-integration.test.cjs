@@ -137,6 +137,8 @@ function makeEnsureGoalsLoaded({ fetchImpl } = {}) {
         const goals = await res.json();
         _reviewGoalsCache = { studentId, goals: Array.isArray(goals) ? goals : [] };
         return _reviewGoalsCache.goals;
+      } else {
+        console.warn(`[tc-review] Goals fetch returned ${res.status}`);
       }
     } catch (_err) {
       // graceful degradation
@@ -364,7 +366,28 @@ test('graceful degradation — goals fetch failure does not block AI suggest', a
   assert.strictEqual(body.suggested_score, 3);
 });
 
-// ── Test 5: Rubric tier generation ────────────────────────────────────────────
+// ── Test 4b: Graceful degradation on non-OK goals fetch (with warning) ───────
+
+test('graceful degradation — non-OK goals fetch returns empty array and logs warning', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 500, json: async () => [] });
+  const { ensureGoalsLoaded } = makeEnsureGoalsLoaded({ fetchImpl });
+
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  let goals;
+  try {
+    goals = await ensureGoalsLoaded('student-1', 'https://example.supabase.co', 'anon-key');
+  } finally {
+    console.warn = origWarn;
+  }
+
+  assert.deepStrictEqual(goals, [], 'should return empty array on non-OK status');
+  assert.strictEqual(warnings.length, 1, 'should log exactly one warning');
+  assert.ok(warnings[0].includes('500'), 'warning should include the HTTP status code');
+});
+
+
 
 test('generateRubricTiers — produces valid tiers for max_points=1', () => {
   const tiers = generateRubricTiers(1);

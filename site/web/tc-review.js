@@ -1766,6 +1766,7 @@
       if (rationale) {
         const rationaleDiv = document.createElement('div');
         rationaleDiv.className = 'rv-ai-rationale';
+        rationaleDiv.setAttribute('role', 'status');
         rationaleDiv.textContent = `AI rationale: ${rationale}`;
         button.insertAdjacentElement('afterend', rationaleDiv);
         setTimeout(() => { rationaleDiv.classList.add('rv-ai-rationale-fading'); }, 10000);
