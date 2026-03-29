@@ -130,6 +130,7 @@ async function handleTeacherLogin(event) {
   if (username === 'teacher_local' && isLocalhost) {
     // Accept any password for teacher_local on localhost (dev only)
     const teacherIdDev = await lookupActiveTeacherId();
+    console.log(`[teacher-login] [${requestId}] Dev mode: teacher_local teacherId: ${teacherIdDev ? teacherIdDev : 'none (lookupActiveTeacherId returned null)'}`);
     const token = sign({ role: 'teacher', username: 'teacher_local', teacherId: teacherIdDev }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
     const setCookie = teacherCookie('tc', token, { secure: false, maxAge: SESSION_DURATION_SECONDS });
     
