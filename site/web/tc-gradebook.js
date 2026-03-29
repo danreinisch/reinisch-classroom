@@ -367,6 +367,7 @@
         va = calculateWeightedAverage(a.code, scoreMap, drafts);
         vb = calculateWeightedAverage(b.code, scoreMap, drafts);
       } else if (columnSortKey === "trend") {
+        // Ascending = best trend first: up(0) > flat(1) > down(2); unknown falls to bottom(3)
         const trendOrder = { up: 0, flat: 1, down: 2 };
         va = trendOrder[calculateTrend(a.code, scoreMap, drafts)] ?? 3;
         vb = trendOrder[calculateTrend(b.code, scoreMap, drafts)] ?? 3;
@@ -380,10 +381,10 @@
           // Individual draft ID
           const aScores = scoreMap.get(a.code);
           const bScores = scoreMap.get(b.code);
-          va = aScores && aScores.has(columnSortKey) && typeof aScores.get(columnSortKey) === "number"
-            ? aScores.get(columnSortKey) : null;
-          vb = bScores && bScores.has(columnSortKey) && typeof bScores.get(columnSortKey) === "number"
-            ? bScores.get(columnSortKey) : null;
+          const aVal = aScores ? aScores.get(columnSortKey) : undefined;
+          const bVal = bScores ? bScores.get(columnSortKey) : undefined;
+          va = typeof aVal === "number" ? aVal : null;
+          vb = typeof bVal === "number" ? bVal : null;
         }
       }
 
