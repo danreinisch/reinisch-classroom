@@ -53,7 +53,7 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
             ...(isFillInBlank ? {
               scoring: {
                 keywords: q.keywords || [],
-                min_keywords: q.min_keywords || 2,
+                min_keywords: q.min_keywords || 1,
                 ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
               },
             } : {}),
@@ -65,9 +65,11 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
               correct: isFillInBlank ? null : q.correct,
               hint: q.hint,
               ...(isFillInBlank ? {
-                keywords: q.keywords || [],
-                min_keywords: q.min_keywords || 2,
-                ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
+                scoring: {
+                  keywords: q.keywords || [],
+                  min_keywords: q.min_keywords || 1,
+                  ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
+                },
               } : {}),
             },
             goal_codes: q.goal_codes || goalCodes,

@@ -44,7 +44,7 @@ function scoreConstructed(item, studentAnswer) {
   const answerText = String(studentAnswer).toLowerCase();
 
   let keywords = [];
-  let minKeywords = 2;
+  let minKeywords = 1;
 
   if (item.scoring && item.scoring.keywords) {
     keywords = item.scoring.keywords.map(k => String(k).toLowerCase());
@@ -285,9 +285,9 @@ test('Empty answer → 0 points, no error', () => {
 test('Keywords from item.correct array (no scoring config)', () => {
   const item = { answer_type: 'constructed', points: 2, correct: ['slope', 'intercept'] };
   const result = scoreItem(item, 'slope matters');
-  // 1/2 found, ratio = 0.5, min defaults to 2
+  // 1/2 found, ratio = 0.5, min defaults to 1
   assert.strictEqual(result.earned_points, 1.00, '1/2 keywords = 1pt on 2pt question');
-  assert.strictEqual(result.is_correct, false, 'is_correct=false since 1 < min 2');
+  assert.strictEqual(result.is_correct, true, 'is_correct=true since 1 >= min 1');
 });
 
 test('Case-insensitive keyword matching', () => {
