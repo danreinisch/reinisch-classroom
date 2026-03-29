@@ -163,7 +163,7 @@ function scoreConstructed(item, studentAnswer) {
   
   // Get keywords from scoring config or default to item.correct if array
   let keywords = [];
-  let minKeywords = 2;
+  let minKeywords = 1;
   
   if (item.scoring && item.scoring.keywords) {
     keywords = item.scoring.keywords.map(k => String(k));
