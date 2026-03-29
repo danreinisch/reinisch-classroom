@@ -315,6 +315,13 @@
     return sorted;
   }
 
+  // Compare two drafts by due/created date ascending (used for within-group sorting)
+  function draftDateSorter(a, b) {
+    const da = a.dueAt || a.due_at || a.createdAt || a.created_at || "";
+    const db = b.dueAt || b.due_at || b.createdAt || b.created_at || "";
+    return da.localeCompare(db);
+  }
+
   // Build gradebook data structure
   function buildGradebookData() {
     const students = getFilteredStudents();
@@ -742,6 +749,11 @@
       }
     }
     const groups = CANON_CLASSES.filter(cls => groupMap.has(cls)).map(cls => groupMap.get(cls));
+    // Sort drafts within each group by date
+    for (const group of groups) {
+      group.drafts.sort(draftDateSorter);
+    }
+    ungrouped.sort(draftDateSorter);
     return { groups, ungrouped };
   }
 
@@ -774,6 +786,11 @@
     }
     // Sort groups numerically by week number
     const groups = [...groupMap.values()].sort((a, b) => a.weekNum - b.weekNum);
+    // Sort drafts within each group by date
+    for (const group of groups) {
+      group.drafts.sort(draftDateSorter);
+    }
+    ungrouped.sort(draftDateSorter);
     return { groups, ungrouped };
   }
 
