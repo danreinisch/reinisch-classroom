@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 11 - Lost in Kragdon-ah - Chapters 32-34</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ===== TWO-LAYER CROSSFADE BACKGROUND (flicker-free) ===== */
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            will-change: opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            z-index: 0;
+        }
+        .bg-layer.active { opacity: 1; }
+        #bgLayerA { z-index: 1; }
+        #bgLayerB { z-index: 2; }
+
+        /* Dark overlay for text readability */
+        .bg-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 3;
+        }
+
+        /* ===== SLIDE CONTAINER ===== */
+        .slide-container {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 60px;
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+        }
+        .slide.active { display: block; }
+
+        /* ===== TYPOGRAPHY ===== */
+        h1 {
+            font-size: 3.2em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+            color: #f0f0f0;
+        }
+
+        h2 {
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.8);
+            color: #e8e8e8;
+        }
+
+        h3 {
+            font-size: 1.6em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+            color: #14b8a6;
+        }
+
+        .subtitle {
+            font-size: 1.4em;
+            color: #14b8a6;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .week-info {
+            font-size: 1.1em;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        /* ===== CONTENT CARDS ===== */
+        .content-card {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 30px 40px;
+            margin: 15px auto;
+            max-width: 1000px;
+            text-align: left;
+            font-size: 1.25em;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+
+        .content-card p { margin-bottom: 12px; }
+        .content-card p:last-child { margin-bottom: 0; }
+
+        .highlight {
+            color: #14b8a6;
+            font-weight: 600;
+        }
+
+        .vocab-word {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        .example-box {
+            background: rgba(20, 184, 166, 0.12);
+            border-left: 4px solid #14b8a6;
+            padding: 15px 20px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95em;
+        }
+
+        .question-box {
+            background: rgba(245, 158, 11, 0.12);
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .key-point {
+            background: rgba(139, 92, 246, 0.12);
+            border-left: 4px solid #8b5cf6;
+            padding: 15px 20px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul li {
+            padding: 6px 0 6px 25px;
+            position: relative;
+        }
+
+        ul li::before {
+            content: '▸';
+            color: #14b8a6;
+            position: absolute;
+            left: 5px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .day-label {
+            display: inline-block;
+            background: #14b8a6;
+            color: #000;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .chapter-label {
+            display: inline-block;
+            background: rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            margin-left: 8px;
+        }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background: #14b8a6;
+            transition: width 0.4s ease;
+            z-index: 100;
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 12px;
+            right: 20px;
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.5);
+            z-index: 100;
+        }
+
+        .nav-hint {
+            position: fixed;
+            bottom: 12px;
+            left: 20px;
+            font-size: 0.85em;
+            color: rgba(255,255,255,0.35);
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Two-layer crossfade background -->
+    <div id="bgLayerA" class="bg-layer active"></div>
+    <div id="bgLayerB" class="bg-layer"></div>
+    <div class="bg-overlay"></div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="slide-counter" id="slideCounter"></div>
+    <div class="nav-hint">← → Arrow Keys or Click to Navigate</div>
+
+    <div class="slide-container">
+
+        <!-- SLIDE 1: Title -->
+        <div class="slide active">
+            <h1>Lost in Kragdon-ah</h1>
+            <p class="subtitle">Week 11: Sentence Structure &amp; Transitions — Part 2</p>
+            <p class="week-info">Chapters 32–34: Shipwrecked • The Uncharted Island • Rescue</p>
+            <div class="content-card" style="text-align:center;">
+                <p><span class="highlight">This week:</span> We continue building on sentence structure and transitions.</p>
+                <p>Last week we learned the basics. This week, we look at <span class="highlight">how the author uses different sentence lengths</span> to control pacing and tension, and <span class="highlight">how transitions connect ideas</span> across action-packed scenes.</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: Review from Part 1 -->
+        <div class="slide">
+            <h2>Quick Review: What We Learned in Part 1</h2>
+            <div class="content-card">
+                <p><span class="highlight">Sentence Types:</span></p>
+                <ul>
+                    <li><strong>Simple sentence:</strong> One complete thought. <em>"Alex ran."</em></li>
+                    <li><strong>Compound sentence:</strong> Two complete thoughts joined by a connecting word (and, but, so, or). <em>"Alex ran, <span class="vocab-word">and</span> Senta-eh followed."</em></li>
+                </ul>
+                <p style="margin-top:15px;"><span class="highlight">Transitions:</span> Words or phrases that connect ideas and show how they relate.</p>
+                <ul>
+                    <li><em>First, Next, Then, Finally</em> — show <strong>time order</strong></li>
+                    <li><em>Because, So, Therefore</em> — show <strong>cause and effect</strong></li>
+                    <li><em>But, However, Although</em> — show <strong>contrast</strong></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: New Concept — Complex Sentences -->
+        <div class="slide">
+            <h2>New This Week: Complex Sentences</h2>
+            <div class="content-card">
+                <p>A <span class="highlight">complex sentence</span> has two parts:</p>
+                <ul>
+                    <li>An <strong>independent clause</strong> — a part that can stand alone as a sentence</li>
+                    <li>A <strong>dependent clause</strong> — a part that <em>cannot</em> stand alone (it depends on the other part)</li>
+                </ul>
+                <div class="example-box">
+                    <p><strong>Example from Chapter 32:</strong></p>
+                    <p><span class="vocab-word">"When the ship tilted sharply,</span> Alex was tossed into the wall."</p>
+                    <p>➜ <span class="vocab-word">"When the ship tilted sharply"</span> = dependent clause (can't stand alone)</p>
+                    <p>➜ <em>"Alex was tossed into the wall"</em> = independent clause (can stand alone)</p>
+                </div>
+                <p><span class="highlight">Signal words</span> that start dependent clauses: <em>when, because, although, if, after, before, while, since, unless</em></p>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: Why Sentence Length Matters -->
+        <div class="slide">
+            <h2>Why Sentence Length Matters</h2>
+            <div class="content-card">
+                <p>Authors change sentence length <span class="highlight">on purpose</span> to control how readers feel.</p>
+                <div class="two-col">
+                    <div class="example-box">
+                        <p><strong>Short sentences = Tension &amp; Speed</strong></p>
+                        <p><em>"Alex ran. He dove. Jaws snapped behind him."</em></p>
+                        <p>➜ Fast pace. Your heart beats faster.</p>
+                    </div>
+                    <div class="example-box">
+                        <p><strong>Long sentences = Calm &amp; Description</strong></p>
+                        <p><em>"The night was quiet, and they were far enough from shore that they didn't see a lot of seabirds, so the only sound was the creaking of the ship and the sloshing of the water."</em></p>
+                        <p>➜ Slow pace. You feel relaxed.</p>
+                    </div>
+                </div>
+                <div class="key-point">
+                    <p><strong>Key Idea:</strong> When an author switches from long sentences to short ones, that's a signal that something big is about to happen!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: Day 1 — Chapter 32 Part 1 -->
+        <div class="slide">
+            <span class="day-label">DAY 1</span>
+            <span class="chapter-label">Chapter 32: Shipwrecked</span>
+            <h2>The Calm Before the Storm</h2>
+            <div class="content-card">
+                <p>Chapter 32 opens with Alex sitting awake at night on the ship, keeping watch while everyone sleeps.</p>
+                <p>Notice how the author uses <span class="highlight">long, flowing sentences</span> to set a peaceful mood:</p>
+                <div class="example-box">
+                    <p><em>"The night was quiet. They were far enough from shore that they didn't see a lot of seabirds, <span class="vocab-word">so</span> the only sound was the creaking of the ship and the sloshing of the water against the sides of the boat."</em></p>
+                </div>
+                <p>The transition word <span class="vocab-word">"so"</span> connects the <strong>cause</strong> (being far from shore) to the <strong>effect</strong> (only hearing ship sounds).</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: Day 1 — Chapter 32 Part 2 -->
+        <div class="slide">
+            <span class="day-label">DAY 1</span>
+            <span class="chapter-label">Chapter 32: Shipwrecked</span>
+            <h2>Tension Builds: Short Sentences Take Over</h2>
+            <div class="content-card">
+                <p>When the pirates attack, watch how the sentences get <span class="highlight">shorter and faster</span>:</p>
+                <div class="example-box">
+                    <p><em>"A shudder ran through the ship. Alex slipped the thong of his stone hammer over one wrist and his stabbing sword in the other. Senta-eh strung her bow and shouldered her arrows."</em></p>
+                </div>
+                <p>Each sentence is one action. Boom, boom, boom. The author is speeding up the pace to match the danger.</p>
+                <p style="margin-top:15px;"><strong>Then the captain is killed:</strong></p>
+                <div class="example-box">
+                    <p><em>"The next sound was a gurgling that Alex had heard too often — the death rattle."</em></p>
+                </div>
+                <p>One sentence. One terrible moment. The short structure makes it hit <span class="highlight">harder</span>.</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: Day 1 — Chapter 32 Part 3 -->
+        <div class="slide">
+            <span class="day-label">DAY 1</span>
+            <span class="chapter-label">Chapter 32: Shipwrecked</span>
+            <h2>Transitions in the Action</h2>
+            <div class="content-card">
+                <p>Even during fast action, the author uses <span class="highlight">transitions</span> to keep us organized:</p>
+                <ul>
+                    <li><span class="vocab-word">"Finally,"</span> the boat stopped its sharp turn — shows the end of a sequence</li>
+                    <li><span class="vocab-word">"Even as"</span> he spoke, more men came clambering over the side — shows two things happening at once</li>
+                    <li><span class="vocab-word">"Instead,"</span> he said, "Can they?" — shows Alex choosing a different response</li>
+                </ul>
+                <div class="question-box">
+                    <p><strong>Think About It:</strong> Why does Alex decide <em>not</em> to fight the pirates? How do his short, careful sentences show he is making a quick decision?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: Day 1 — Chapter 32 Key Evidence -->
+        <div class="slide">
+            <span class="day-label">DAY 1</span>
+            <span class="chapter-label">Chapter 32: Shipwrecked</span>
+            <h2>Chapter 32: Key Evidence</h2>
+            <div class="content-card">
+                <div class="two-col">
+                    <div>
+                        <p><span class="highlight">Sentence Structure Evidence:</span></p>
+                        <ul>
+                            <li>Calm night = long, descriptive sentences</li>
+                            <li>Pirate attack = short, punchy sentences</li>
+                            <li>Captain's death = one devastating sentence</li>
+                            <li>Alex's decision to surrender = careful, measured words</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p><span class="highlight">Key Transitions:</span></p>
+                        <ul>
+                            <li><em>Then</em> — moves us forward in time</li>
+                            <li><em>Finally</em> — signals end of a sequence</li>
+                            <li><em>Instead</em> — shows a different choice</li>
+                            <li><em>Even as</em> — shows simultaneous events</li>
+                            <li><em>But</em> — signals a contrast or problem</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: Day 1 Discussion Questions -->
+        <div class="slide">
+            <span class="day-label">DAY 1</span>
+            <span class="chapter-label">Chapter 32: Shipwrecked</span>
+            <h2>Discussion Questions</h2>
+            <div class="content-card">
+                <div class="question-box">
+                    <p><strong>1.</strong> How does the author use sentence length to show the difference between the peaceful night and the pirate attack?</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>2.</strong> Find a transition word in Chapter 32. What two ideas does it connect?</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>3.</strong> When the pirates give the passengers a count of 200 to leave the ship, the sentences become short and urgent. Why does the author do this?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 10: Day 2 — Chapter 33 Part 1 -->
+        <div class="slide">
+            <span class="day-label">DAY 2</span>
+            <span class="chapter-label">Chapter 33: The Uncharted Island</span>
+            <h2>Cause and Effect Transitions</h2>
+            <div class="content-card">
+                <p>Chapter 33 is full of <span class="highlight">cause and effect</span> chains. One thing leads to another, and the author uses transitions to show that:</p>
+                <div class="example-box">
+                    <p><strong>Cause → Effect chain:</strong></p>
+                    <p>The ship sinks → <span class="vocab-word">so</span> they swim for the island → <span class="vocab-word">but</span> tripta-tas attack in the water → <span class="vocab-word">therefore</span> only 17 people survive</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>From the text:</strong></p>
+                    <p><em>"<span class="vocab-word">After</span> the berry man was killed, the spirit seemed to go out of the castaways."</em></p>
+                    <p>➜ <span class="vocab-word">"After"</span> shows the time order AND the cause-effect relationship.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 11: Day 2 — Chapter 33 Part 2 -->
+        <div class="slide">
+            <span class="day-label">DAY 2</span>
+            <span class="chapter-label">Chapter 33: The Uncharted Island</span>
+            <h2>Sequence Transitions: Step by Step</h2>
+            <div class="content-card">
+                <p>When Alex plans the fire ring defense, the author uses <span class="highlight">sequence transitions</span> to walk us through each step:</p>
+                <div class="example-box">
+                    <p><span class="vocab-word">First,</span> they dig a circular trench 60 feet across.</p>
+                    <p><span class="vocab-word">Next,</span> they gather firewood from the beaches and edges of the underbrush.</p>
+                    <p><span class="vocab-word">Then,</span> Alex has everyone pull up live plants and small bushes.</p>
+                    <p><span class="vocab-word">Finally,</span> they fill the trench with dry twigs, lay larger wood across, and light it all on fire.</p>
+                </div>
+                <p>These transitions help the reader follow the plan in the <span class="highlight">correct order</span> — just like following directions.</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 12: Day 2 — Chapter 33 Part 3 -->
+        <div class="slide">
+            <span class="day-label">DAY 2</span>
+            <span class="chapter-label">Chapter 33: The Uncharted Island</span>
+            <h2>Contrast Transitions: Showing Problems</h2>
+            <div class="content-card">
+                <p>The author uses <span class="highlight">contrast transitions</span> to show things going wrong:</p>
+                <div class="example-box">
+                    <p><em>"There were berries that looked appealing, <span class="vocab-word">but</span> Werda-ak said he couldn't verify that they were safe."</em></p>
+                    <p>➜ <span class="vocab-word">"But"</span> shows the problem — they look good, <em>however</em> they might be dangerous.</p>
+                </div>
+                <div class="example-box">
+                    <p><em>"Alex longed to climb the tree and search for ships, <span class="vocab-word">but</span> between the leeches and the poisonous plants, he knew they would have to settle for looking from the beach."</em></p>
+                    <p>➜ <span class="vocab-word">"But"</span> shows what he <em>wants</em> vs. what he <em>can actually do</em>.</p>
+                </div>
+                <div class="key-point">
+                    <p><strong>Key Idea:</strong> Contrast transitions like <em>but, however, although, yet, instead</em> are the author's way of saying "here comes a problem."</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 13: Day 2 — Chapter 33 Key Evidence -->
+        <div class="slide">
+            <span class="day-label">DAY 2</span>
+            <span class="chapter-label">Chapter 33: The Uncharted Island</span>
+            <h2>Chapter 33: Key Evidence</h2>
+            <div class="content-card">
+                <div class="two-col">
+                    <div>
+                        <p><span class="highlight">Transition Types in Chapter 33:</span></p>
+                        <ul>
+                            <li><strong>Cause/Effect:</strong> because, so, therefore, as a result</li>
+                            <li><strong>Sequence:</strong> first, next, then, finally, after</li>
+                            <li><strong>Contrast:</strong> but, however, although, instead</li>
+                            <li><strong>Addition:</strong> also, and, too, as well</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p><span class="highlight">Sentence Structure Evidence:</span></p>
+                        <ul>
+                            <li>Leech discovery = rapid-fire short sentences showing panic</li>
+                            <li>Fire ring plan = longer sentences with sequence transitions</li>
+                            <li>Berry man's death = short, shocking sentence</li>
+                            <li>Alex's despair = complex sentence mixing hope and defeat</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 14: Day 2 Discussion Questions -->
+        <div class="slide">
+            <span class="day-label">DAY 2</span>
+            <span class="chapter-label">Chapter 33: The Uncharted Island</span>
+            <h2>Discussion Questions</h2>
+            <div class="content-card">
+                <div class="question-box">
+                    <p><strong>1.</strong> Find one cause-and-effect transition in Chapter 33. What two ideas does it connect?</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>2.</strong> Why does the author use sequence transitions (first, next, then) when describing Alex's fire ring plan?</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>3.</strong> When the leeches are discovered, the sentences get short and frantic. Why does this match what the characters are feeling?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 15: Day 3 — Chapter 34 Part 1 -->
+        <div class="slide">
+            <span class="day-label">DAY 3</span>
+            <span class="chapter-label">Chapter 34: Rescue</span>
+            <h2>Putting It All Together</h2>
+            <div class="content-card">
+                <p>Chapter 34 uses <span class="highlight">every tool we've learned</span> — sentence length, complex sentences, and all types of transitions.</p>
+                <div class="example-box">
+                    <p><strong>Complex sentence with time transition:</strong></p>
+                    <p><em>"<span class="vocab-word">When</span> the boat was only twenty-five feet from shore, a man dropped the sail <span class="vocab-word">while</span> two others pulled out long poles."</em></p>
+                    <p>➜ Two dependent clauses (<em>when</em> and <em>while</em>) showing timing of multiple events.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>Cause/effect transition:</strong></p>
+                    <p><em>"There are stinda-tas in the water. They've already gotten most of us." → <span class="vocab-word">So</span> swimming is extremely dangerous.</em></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 16: Day 3 — Chapter 34 Part 2 -->
+        <div class="slide">
+            <span class="day-label">DAY 3</span>
+            <span class="chapter-label">Chapter 34: Rescue</span>
+            <h2>Sentence Length at Maximum Tension</h2>
+            <div class="content-card">
+                <p>When Alex acts as bait for the stinda-tas, watch the sentences:</p>
+                <div class="example-box">
+                    <p><em>"He looked up and saw two ping-pong ball eyeballs pop above the water. Those eyes were moving at him at an alarming rate. Alex lost his nerve, turned, and ran."</em></p>
+                </div>
+                <p>Three sentences. Each one shorter than the last. The danger gets closer, the sentences get <span class="highlight">tighter</span>.</p>
+                <p style="margin-top:15px;"><strong>Then at the moment of escape:</strong></p>
+                <div class="example-box">
+                    <p><em>"He heard snapping jaws behind him, <span class="vocab-word">but</span> they closed on empty air."</em></p>
+                </div>
+                <p>One compound sentence — the <span class="vocab-word">"but"</span> is the pivot between death and survival.</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 17: Day 3 — Chapter 34 Part 3 -->
+        <div class="slide">
+            <span class="day-label">DAY 3</span>
+            <span class="chapter-label">Chapter 34: Rescue</span>
+            <h2>Transitions: Connecting the Rescue</h2>
+            <div class="content-card">
+                <p>The rescue sequence uses transitions to show the plan unfolding:</p>
+                <ul>
+                    <li><span class="vocab-word">"Within minutes,"</span> there was a line of fire burning several feet high — <strong>time</strong></li>
+                    <li><span class="vocab-word">"Without waiting for an answer,"</span> Alex skirted the fire and ran — <strong>sequence</strong></li>
+                    <li><span class="vocab-word">"As"</span> they moved, his mind worked — <strong>simultaneous events</strong></li>
+                    <li><span class="vocab-word">"Before long,"</span> the young captain had his crew distribute stew — <strong>time passing</strong></li>
+                </ul>
+                <div class="key-point">
+                    <p><strong>Key Idea:</strong> Transitions are like road signs. They tell the reader: "We're moving forward in time," "This caused that," or "Here comes something different."</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 18: Day 3 — Chapter 34 Key Evidence -->
+        <div class="slide">
+            <span class="day-label">DAY 3</span>
+            <span class="chapter-label">Chapter 34: Rescue</span>
+            <h2>Chapter 34: Key Evidence</h2>
+            <div class="content-card">
+                <div class="two-col">
+                    <div>
+                        <p><span class="highlight">Sentence Structure Highlights:</span></p>
+                        <ul>
+                            <li>Alex as bait = shortest, most tense sentences in the book</li>
+                            <li>Boarding the barge = compound sentences showing teamwork</li>
+                            <li>Safe on the barge = long, relaxed sentences again</li>
+                            <li>Versa-eh's news about Lasta-ah = a mix that builds curiosity</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p><span class="highlight">All Transition Types Used:</span></p>
+                        <ul>
+                            <li><strong>Time:</strong> when, before, after, finally, within minutes</li>
+                            <li><strong>Cause/Effect:</strong> because, so, therefore</li>
+                            <li><strong>Contrast:</strong> but, however, instead</li>
+                            <li><strong>Addition:</strong> also, and, as well</li>
+                            <li><strong>Simultaneous:</strong> while, as, even as</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 19: Day 3 Discussion Questions -->
+        <div class="slide">
+            <span class="day-label">DAY 3</span>
+            <span class="chapter-label">Chapter 34: Rescue</span>
+            <h2>Discussion Questions</h2>
+            <div class="content-card">
+                <div class="question-box">
+                    <p><strong>1.</strong> When Alex uses himself as bait, the sentences become very short. How does this help you feel the danger he is in?</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>2.</strong> Find a complex sentence in Chapter 34 that uses "when," "while," or "because." What are the two parts of the sentence?</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>3.</strong> Once everyone is safe on the barge, the sentences get longer and calmer again. Why does the author change the pace here?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 20: Week 11 Summary -->
+        <div class="slide">
+            <h2>Week 11: What We Learned</h2>
+            <div class="content-card">
+                <p><span class="highlight">Sentence Structure &amp; Transitions — Part 2</span></p>
+                <ul>
+                    <li><strong>Complex sentences</strong> use dependent clauses starting with <em>when, because, although, if, after, before, while, since</em></li>
+                    <li><strong>Short sentences</strong> speed up the pace and build tension</li>
+                    <li><strong>Long sentences</strong> slow things down for description and calm moments</li>
+                    <li><strong>Switching between short and long</strong> is how authors control how you feel</li>
+                </ul>
+                <p style="margin-top:15px;"><span class="highlight">Transition Categories:</span></p>
+                <ul>
+                    <li><strong>Time/Sequence:</strong> first, next, then, finally, after, before, when</li>
+                    <li><strong>Cause/Effect:</strong> because, so, therefore, as a result</li>
+                    <li><strong>Contrast:</strong> but, however, although, yet, instead</li>
+                    <li><strong>Addition:</strong> also, and, too, in addition</li>
+                    <li><strong>Simultaneous:</strong> while, as, even as, at the same time</li>
+                </ul>
+            </div>
+        </div>
+
+    </div><!-- end slide-container -->
+
+    <script>
+        // ===== IMAGE ROTATION (Two-Layer Crossfade — Flicker-Free) =====
+        const imageList = [
+            'image1.jpg','image2.jpg','image3.jpg','image4.jpg',
+            'image5.jpg','image6.jpg','image7.jpg','image8.jpg',
+            'image9.jpg','image10.jpg','image11.jpg','image12.jpg'
+        ];
+
+        // Preload all images
+        imageList.forEach(function(src) {
+            var img = new Image();
+            img.src = src;
+        });
+
+        var layerA = document.getElementById('bgLayerA');
+        var layerB = document.getElementById('bgLayerB');
+        var currentImageIndex = 0;
+        var activeLayer = 'A'; // Track which layer is currently showing
+
+        // Set first image
+        layerA.style.backgroundImage = 'url(' + imageList[0] + ')';
+        layerA.classList.add('active');
+
+        function rotateBg() {
+            currentImageIndex = (currentImageIndex + 1) % imageList.length;
+            var nextImage = 'url(' + imageList[currentImageIndex] + ')';
+
+            if (activeLayer === 'A') {
+                // Paint new image on layer B, then fade B in
+                layerB.style.backgroundImage = nextImage;
+                layerB.classList.add('active');
+                // After transition completes, fade A out
+                setTimeout(function() {
+                    layerA.classList.remove('active');
+                }, 3100);
+                activeLayer = 'B';
+            } else {
+                // Paint new image on layer A, then fade A in
+                layerA.style.backgroundImage = nextImage;
+                layerA.classList.add('active');
+                // After transition completes, fade B out
+                setTimeout(function() {
+                    layerB.classList.remove('active');
+                }, 3100);
+                activeLayer = 'A';
+            }
+        }
+
+        setInterval(rotateBg, 8000);
+
+        // ===== SLIDE NAVIGATION =====
+        var slides = document.querySelectorAll('.slide');
+        var currentSlide = 0;
+        var totalSlides = slides.length;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = Math.max(0, Math.min(n, totalSlides - 1));
+            slides[currentSlide].classList.add('active');
+            updateProgress();
+        }
+
+        function updateProgress() {
+            var pct = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progressBar').style.width = pct + '%';
+            document.getElementById('slideCounter').textContent = (currentSlide + 1) + ' / ' + totalSlides;
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                showSlide(currentSlide + 1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                showSlide(currentSlide - 1);
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            var x = e.clientX;
+            if (x > window.innerWidth / 2) {
+                showSlide(currentSlide + 1);
+            } else {
+                showSlide(currentSlide - 1);
+            }
+        });
+
+        updateProgress();
+    </script>
+</body>
+</html>
