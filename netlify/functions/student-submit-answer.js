@@ -601,6 +601,13 @@ exports.handler = async (event) => {
                           const isCorr = subAnswer.is_correct;
                           const questionText = item.meta?.text || null;
                           const choices = Array.isArray(item.meta?.choices) ? item.meta.choices : null;
+                          // Compute percentage score for percentage-scale dot coloring (written/constructed items)
+                          // earned_points is guaranteed non-null by the guard above; max_points may be absent.
+                          const earnedNum = Number(subAnswer.earned_points);
+                          const maxPts = subAnswer.max_points != null ? Number(subAnswer.max_points) : null;
+                          const scoreVal = (maxPts != null && maxPts > 0 && !isNaN(earnedNum))
+                            ? Math.round((earnedNum / maxPts) * 100)
+                            : null;
 
                           for (const goalCode of goalCodes) {
                             const goalId = goalIdMap[goalCode];
@@ -615,6 +622,7 @@ exports.handler = async (event) => {
                               student_answer: studentAnswerVal,
                               correct_answer: correctAnswerVal,
                               is_correct: isCorr,
+                              score: scoreVal,
                               date: today,
                               source: 'assignment',
                               school_year: schoolYear
