@@ -541,6 +541,46 @@ exports.handler = async (event) => {
 
     let targetClass = classes[0];
 
+    // Fallback: if teacher-scoped query returned 0 results, the class may exist with a
+    // different or NULL teacher_id (e.g. created before teacher_id was being populated).
+    // Retry with a name-only query so existing classes are still found and used.
+    if (!targetClass && teacherUUID) {
+      console.log(`[teacher-issue-draft] [${requestId}] Teacher-scoped query found no class; falling back to name-only lookup`);
+      const fallbackUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name,teacher_id&name=eq.${encodeURIComponent(resolvedClassName)}&limit=1`;
+      const fallbackResponse = await fetch(fallbackUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (fallbackResponse.ok) {
+        const fallbackClasses = await fallbackResponse.json();
+        if (fallbackClasses.length === 1) {
+          targetClass = fallbackClasses[0];
+          console.log(`[teacher-issue-draft] [${requestId}] Fallback found class "${targetClass.name}" (ID: ${targetClass.id}, teacher_id: ${targetClass.teacher_id || 'null'}); adopting for teacher ${teacherUUID}`);
+          // PATCH teacher_id so future teacher-scoped queries find this class directly.
+          const patchUrl = `${SUPABASE_URL}/rest/v1/classes?id=eq.${encodeURIComponent(targetClass.id)}`;
+          const patchResponse = await fetch(patchUrl, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ teacher_id: teacherUUID })
+          });
+          if (patchResponse.ok) {
+            console.log(`[teacher-issue-draft] [${requestId}] Adopted class "${targetClass.name}" — set teacher_id to ${teacherUUID}`);
+          } else {
+            console.warn(`[teacher-issue-draft] [${requestId}] Could not adopt class "${targetClass.name}" (PATCH ${patchResponse.status}); continuing anyway`);
+          }
+        }
+      }
+    }
+
     if (!targetClass) {
       // Auto-create the class if it doesn't exist
       console.log(`[teacher-issue-draft] [${requestId}] Class "${resolvedClassName}" not found, auto-creating${teacherUUID ? ` with teacher_id: ${teacherUUID}` : ''}...`);
