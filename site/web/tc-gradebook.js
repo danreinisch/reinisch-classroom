@@ -107,11 +107,13 @@
   const PREF_COMPACT = "rc_gb_compact";
   const PREF_SHOW_MORE = "rc_gb_show_more";
   const PREF_SORT = "rc_gb_sort";
-  const PREF_GROUPED_VIEW = "rc_gb_grouped_view";
+  const PREF_GROUPED_VIEW = "rc_gb_grouped_view"; // legacy key (boolean)
+  const PREF_GROUP_MODE = "rc_gb_group_mode";     // new key: "individual" | "class" | "week"
   let isCompact = false;
   let showMoreColumns = false;
   let currentSort = "date";
-  let isGroupedView = true;
+  // groupMode: "individual" (flat), "class" (by CANON_CLASSES), "week" (by Week N from title)
+  let groupMode = "class";
   const expandedGroups = new Set();
   try {
     const compactRaw = localStorage.getItem(PREF_COMPACT);
@@ -126,9 +128,15 @@
     if (sortRaw) {
       currentSort = sortRaw;
     }
-    const groupedRaw = localStorage.getItem(PREF_GROUPED_VIEW);
-    if (groupedRaw !== null) {
-      isGroupedView = groupedRaw === "true";
+    const groupModeRaw = localStorage.getItem(PREF_GROUP_MODE);
+    if (groupModeRaw && ["individual", "class", "week"].includes(groupModeRaw)) {
+      groupMode = groupModeRaw;
+    } else {
+      // Migrate from old boolean preference
+      const groupedRaw = localStorage.getItem(PREF_GROUPED_VIEW);
+      if (groupedRaw !== null) {
+        groupMode = groupedRaw === "true" ? "class" : "individual";
+      }
     }
   } catch {
     // If localStorage is unavailable (e.g., privacy mode), fall back to defaults.
@@ -737,6 +745,38 @@
     return { groups, ungrouped };
   }
 
+  // Extract a "Week N" label and numeric week from a draft title, or null if no match
+  function inferWeekFromDraft(draft) {
+    const title = draft.title || "";
+    const m = title.match(/^Week\s*(\d+)\b/i);
+    return m ? { label: `Week ${m[1]}`, num: parseInt(m[1], 10) } : null;
+  }
+
+  // Build groups from a drafts array, ordered numerically by week number parsed from titles
+  function buildWeekGroupsFromDrafts(drafts) {
+    const groupMap = new Map();
+    const ungrouped = [];
+    for (const draft of drafts) {
+      const week = inferWeekFromDraft(draft);
+      if (week) {
+        if (!groupMap.has(week.label)) {
+          groupMap.set(week.label, {
+            series: `week_${week.num}`,
+            displayName: week.label,
+            weekNum: week.num,
+            drafts: []
+          });
+        }
+        groupMap.get(week.label).drafts.push(draft);
+      } else {
+        ungrouped.push(draft);
+      }
+    }
+    // Sort groups numerically by week number
+    const groups = [...groupMap.values()].sort((a, b) => a.weekNum - b.weekNum);
+    return { groups, ungrouped };
+  }
+
   // Calculate average score for a student across a specific set of drafts
   function calculateGroupAverage(studentCode, scoreMap, groupDrafts) {
     const studentScores = scoreMap.get(studentCode);
@@ -834,10 +874,12 @@
 
   // Render gradebook in grouped/collapsed column mode (Option A)
   function renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap) {
-    const { groups, ungrouped } = buildGroupsFromDrafts(drafts);
+    const { groups, ungrouped } = groupMode === "week"
+      ? buildWeekGroupsFromDrafts(drafts)
+      : buildGroupsFromDrafts(drafts);
     const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
 
-    // Show an informational banner when no class groupings could be inferred
+    // Show an informational banner when no groupings could be inferred
     const noGroupsBannerEl = $("gbNoGroupsBanner");
     if (noGroupsBannerEl) {
       noGroupsBannerEl.style.display = groups.length === 0 && drafts.length > 0 ? "block" : "none";
@@ -864,10 +906,26 @@
         nameEl.textContent = group.displayName;
         th.appendChild(nameEl);
 
-        // Compact assignment count instead of full title list
+        // Compact assignment count; for week groups also show the earliest date
         const countEl = document.createElement("div");
         countEl.className = "gb-group-header-count";
-        countEl.textContent = `${group.drafts.length} assignment${group.drafts.length !== 1 ? 's' : ''}`;
+        const countText = `${group.drafts.length} assignment${group.drafts.length !== 1 ? 's' : ''}`;
+        if (groupMode === "week") {
+          const timestamps = group.drafts
+            .map(d => {
+              const raw = d.dueAt || d.due_at || d.createdAt || d.created_at;
+              if (!raw) return NaN;
+              const t = new Date(raw).getTime();
+              return Number.isFinite(t) ? t : NaN;
+            })
+            .filter(t => !isNaN(t));
+          const earliestDate = timestamps.length > 0
+            ? formatShortDate(new Date(Math.min(...timestamps)).toISOString())
+            : "";
+          countEl.textContent = earliestDate ? `${countText} · ${earliestDate}` : countText;
+        } else {
+          countEl.textContent = countText;
+        }
         th.appendChild(countEl);
 
         // Set tooltip with full assignment list for hover reference
@@ -1198,10 +1256,9 @@
       btnShowMore.textContent = showMoreColumns ? "⋯ Show Less" : "⋯ Show More";
       btnShowMore.classList.toggle("primary", showMoreColumns);
     }
-    const btnGroupedView = $("btnToggleGroupedView");
-    if (btnGroupedView) {
-      btnGroupedView.textContent = isGroupedView ? "⊞ Grouped" : "⊞ Individual";
-      btnGroupedView.classList.toggle("primary", isGroupedView);
+    const selectGroupMode = $("gbGroupModeSelect");
+    if (selectGroupMode) {
+      selectGroupMode.value = groupMode;
     }
 
     // Apply/remove compact class on table wrapper
@@ -1225,7 +1282,7 @@
     tableHead.innerHTML = "";
 
     // Grouped view (Option A): delegate to renderGroupedGradebook
-    if (isGroupedView) {
+    if (groupMode !== "individual") {
       tableBody.innerHTML = "";
       renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap);
       return;
@@ -2818,13 +2875,13 @@
   }
 
   /**
-   * Toggle grouped / individual column layout
+   * Set group mode ("individual" | "class" | "week") and re-render
    */
-  function toggleGroupedView() {
-    isGroupedView = !isGroupedView;
+  function setGroupMode(mode) {
+    groupMode = mode;
     expandedGroups.clear();
     try {
-      localStorage.setItem(PREF_GROUPED_VIEW, isGroupedView ? "true" : "false");
+      localStorage.setItem(PREF_GROUP_MODE, mode);
     } catch {
       // Storage unavailable — preference won't persist but UI still works
     }
@@ -3011,10 +3068,11 @@
       btnShowMore.addEventListener("click", toggleMoreColumns);
     }
 
-    // Wire grouped/individual view toggle button
-    const btnToggleGroupedView = $("btnToggleGroupedView");
-    if (btnToggleGroupedView) {
-      btnToggleGroupedView.addEventListener("click", toggleGroupedView);
+    // Wire group mode select
+    const selectGroupMode = $("gbGroupModeSelect");
+    if (selectGroupMode) {
+      selectGroupMode.value = groupMode;
+      selectGroupMode.addEventListener("change", () => setGroupMode(selectGroupMode.value));
     }
 
     // Wire sort select
