@@ -148,6 +148,7 @@
   let studentSearchTerm = "";
   let missingWorkPairs = new Set(); // stores "studentCode::draftId" strings
   let showOnlyMissingStudents = false;
+  let _renderingInProgress = false; // re-entrancy guard for renderGradebook()
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -2017,9 +2018,6 @@
     }, REALTIME_RETRY_DELAY_MS);
   }
   
-  // Re-entrancy guard to prevent render loops
-  let _renderingInProgress = false;
-
   // Handle realtime changes
   let realtimeDebounceTimer = null;
   function handleRealtimeChange(payload) {
