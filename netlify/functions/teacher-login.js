@@ -129,7 +129,7 @@ async function handleTeacherLogin(event) {
   
   if (username === 'teacher_local' && isLocalhost) {
     // Accept any password for teacher_local on localhost (dev only)
-    const token = sign({ role: 'teacher', username: 'teacher_local' }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
+    const token = sign({ role: 'teacher', username: 'teacher_local', teacherId: null }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
     const setCookie = teacherCookie('tc', token, { secure: false, maxAge: SESSION_DURATION_SECONDS });
     
     console.log(`[teacher-login] [${requestId}] Dev mode: teacher_local login on localhost`);
@@ -217,11 +217,38 @@ async function handleTeacherLogin(event) {
       return jsonResponse(event, 403, { error: 'Access denied' }, {}, requestId);
     }
     
-    // Credentials valid - create session token
-    const token = sign({ role: user.role, username: user.username }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
+    // Credentials valid - look up teacher UUID to embed in JWT for split-by-student issuance
+    let teacherId = null;
+    try {
+      const teacherLookupUrl = `${SUPABASE_URL}/rest/v1/teacher?select=id&teacher_code=eq.${encodeURIComponent(user.username)}&limit=1`;
+      const teacherLookupResponse = await fetch(teacherLookupUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (teacherLookupResponse.ok) {
+        const teacherRows = await teacherLookupResponse.json();
+        if (teacherRows.length > 0) {
+          teacherId = teacherRows[0].id;
+          console.log(`[teacher-login] [${requestId}] Resolved teacher UUID for "${user.username}": ${teacherId}`);
+        } else {
+          console.warn(`[teacher-login] [${requestId}] No teacher record found for teacher_code="${user.username}"; teacherId will not be embedded in JWT`);
+        }
+      } else {
+        console.warn(`[teacher-login] [${requestId}] Teacher lookup returned ${teacherLookupResponse.status}; teacherId will not be embedded in JWT`);
+      }
+    } catch (teacherLookupErr) {
+      console.warn(`[teacher-login] [${requestId}] Teacher lookup failed: ${teacherLookupErr.message}; teacherId will not be embedded in JWT`);
+    }
+
+    // Create session token with teacherId (may be null if no teacher record found)
+    const token = sign({ role: user.role, username: user.username, teacherId }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
     const setCookie = teacherCookie('tc', token, { secure: true, maxAge: SESSION_DURATION_SECONDS });
 
-    console.log(`[teacher-login] [${requestId}] Successful login for user:`, user.username, 'role:', user.role);
+    console.log(`[teacher-login] [${requestId}] Successful login for user:`, user.username, 'role:', user.role, 'teacherId:', teacherId ? 'present' : 'none');
     console.log(`[teacher-login] [${requestId}] Set-Cookie header will be sent (secure=true, SameSite=Lax, HttpOnly, Path=/)`);
     
     const securityHeaders = getSecurityHeaders(requestId);
