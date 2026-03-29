@@ -488,6 +488,21 @@
         text-align: center;
         font-variant-numeric: tabular-nums;
       }
+      #gbStudentSearch {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 12px;
+        color: inherit;
+        font-size: 14px;
+      }
+      #gbStudentSearch:focus {
+        outline: none;
+        border-color: rgba(148, 163, 184, 0.5);
+        background: rgba(255, 255, 255, 0.1);
+      }
+      #gbStudentSearch::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+      }
     </style>
   </head>
   <body>
@@ -668,6 +683,9 @@
                 </span>
               </div>
               <div class="gb-actions">
+                <input type="text" id="gbStudentSearch" class="gb-btn" placeholder="🔍 Search students..."
+                  aria-label="Search students by name or code"
+                  style="min-width: 180px; padding: 10px 12px;" />
                 <select id="gbQuarterFilter" class="gb-btn">
                   <option value="">All Quarters</option>
                   <option value="Q1">Q1 (Aug 16–Oct 17)</option>
