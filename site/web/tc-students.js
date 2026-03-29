@@ -1247,6 +1247,7 @@
    * shows the correct data-point count instead of the goal_progress aggregate count.
    */
   async function batchUpdateGoalDataCounts(container, studentGoals) {
+    console.log('[tc-students] batchUpdateGoalDataCounts: verifying goal_data_points table access...');
     const toggleBtns = container.querySelectorAll('.tc-progress-toggle-btn[data-goal-id]');
     if (!toggleBtns.length) return;
     console.log(`[tc-students] batchUpdateGoalDataCounts: checking ${toggleBtns.length} goal(s)`);
@@ -1831,32 +1832,10 @@
         const avg = sorted.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / sorted.length;
         avgFormatted = formatProgressValue(avg, goal.measurement_type);
       }
-      const rows = sorted.map(e => {
-        const val = isObs ? formatObservationValue(e, goal) : formatProgressValue(e.value, goal.measurement_type);
-        const dt = formatDate(e.date);
-        let obsIcon = '';
-        if (isObs) {
-          const parsedEntry = parseObservationNotes(e.notes);
-          if (obsCatForCard === 'session_outcome' && parsedEntry) {
-            if (parsedEntry.rawData === 'met') obsIcon = OBS_HIST_CHECK;
-            else if (parsedEntry.rawData === 'not_met') obsIcon = OBS_HIST_X;
-          } else if (obsCatForCard === 'tally') {
-            obsIcon = OBS_HIST_HASH;
-          } else if (obsCatForCard === 'prompt_count') {
-            obsIcon = OBS_HIST_ALERT;
-          } else if (obsCatForCard === 'behavior_checklist') {
-            obsIcon = OBS_HIST_LIST;
-          }
-        }
-        return `<tr><td style="padding:2px 8px 2px 0;font-size:12px;">${escapeHtml(dt)}</td><td style="padding:2px 0;font-size:12px;">${obsIcon}${escapeHtml(val)}</td></tr>`;
-      }).join('');
       const avgDisplay = avgIsHtml ? avgFormatted : escapeHtml(avgFormatted);
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
           <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${avgDisplay}</div>
-          <table style="border-collapse:collapse;width:100%;">
-            <tbody>${rows}</tbody>
-          </table>
         </div>`;
       progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;">${SVG_VIEW_DATA}View Data</button>`;
     }
@@ -2440,9 +2419,6 @@
                       dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
                       dotWrapper.innerHTML = dotHtml;
                       panel.prepend(dotWrapper);
-                      // Hide the redundant Date/Value table since dot-grid supersedes it
-                      const table = panel.querySelector('table');
-                      if (table) table.style.display = 'none';
                     }
 
                     // Update the status count with per-question data points (where available)
