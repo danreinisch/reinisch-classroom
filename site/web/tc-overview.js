@@ -254,6 +254,53 @@
       }
     }
 
+    // 7. IEP/Eval KPI — upcoming IEP and eval deadlines within 30 days
+    const kpiIepEvalCard = $("kpiIepEvalCard");
+    const kpiIepEval = $("kpiIepEval");
+    const kpiIepEvalSub = $("kpiIepEvalSub");
+
+    if (kpiIepEvalCard) {
+      const iepNow = new Date();
+      iepNow.setHours(0, 0, 0, 0);
+      const iepWindowEnd = new Date(iepNow);
+      iepWindowEnd.setDate(iepWindowEnd.getDate() + 30);
+
+      const activeStudentList = students.filter((s) => s.active !== false);
+      const upcomingDeadlines = [];
+      for (const student of activeStudentList) {
+        for (const field of ['iep_due', 'eval_due']) {
+          if (!student[field]) continue;
+          const dueDate = new Date(student[field]);
+          dueDate.setHours(0, 0, 0, 0);
+          if (dueDate <= iepWindowEnd) {
+            upcomingDeadlines.push({ dueDate, student });
+          }
+        }
+      }
+
+      if (upcomingDeadlines.length === 0) {
+        kpiIepEvalCard.style.display = 'none';
+      } else {
+        kpiIepEvalCard.style.display = '';
+        upcomingDeadlines.sort((a, b) => a.dueDate - b.dueDate);
+        const nearest = upcomingDeadlines[0];
+        const diffDays = Math.round((nearest.dueDate - iepNow) / (1000 * 60 * 60 * 24));
+        const nearestLabel = diffDays < 0
+          ? `${Math.abs(diffDays)}d overdue`
+          : diffDays === 0
+            ? 'Today'
+            : `in ${diffDays}d`;
+        const kpiColor = diffDays <= 7 ? '#ef4444' : diffDays <= 14 ? '#eab308' : '#7c3aed';
+        if (kpiIepEval) {
+          kpiIepEval.textContent = upcomingDeadlines.length;
+          kpiIepEval.style.color = kpiColor;
+        }
+        if (kpiIepEvalSub) {
+          kpiIepEvalSub.textContent = `Next: ${nearest.student.name} (${nearestLabel})`;
+        }
+      }
+    }
+
     console.log("[tc-overview] KPIs rendered:", {
       activeStudents,
       pendingReview,
@@ -431,6 +478,34 @@
     const assignmentMap = new Map(assignments.map((a) => [a.id, a]));
     const studentMap = new Map(students.map((s) => [s.code, s]));
     const instanceMap = new Map(instances.map((i) => [i.id, i]));
+    const activeStudents = students.filter((s) => s.active !== false);
+
+    // ── 0. IEP & Eval Deadlines ────────────────────────────────────────────
+    // Show upcoming (within 30 days) and past-due IEP/eval dates for active students.
+    const IEP_WINDOW_DAYS = 30;
+    const iepNow = new Date();
+    iepNow.setHours(0, 0, 0, 0);
+    const iepWindowEnd = new Date(iepNow);
+    iepWindowEnd.setDate(iepWindowEnd.getDate() + IEP_WINDOW_DAYS);
+
+    const iepDeadlines = [];
+    for (const student of activeStudents) {
+      for (const [field, label] of [['iep_due', 'IEP'], ['eval_due', 'Eval']]) {
+        if (!student[field]) continue;
+        const dueDate = new Date(student[field]);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate > iepWindowEnd) continue; // beyond 30-day window
+        const diffDays = Math.round((dueDate - iepNow) / (1000 * 60 * 60 * 24));
+        iepDeadlines.push({
+          studentName: student.name,
+          studentCode: student.code,
+          type: label,
+          dueDate,
+          diffDays, // negative = overdue
+        });
+      }
+    }
+    iepDeadlines.sort((a, b) => a.dueDate - b.dueDate); // most urgent first
 
     // ── 1. Unreviewed Submissions ──────────────────────────────────────────
     // Fix undefined bug: resolve student_code via instance if direct lookup fails
@@ -465,7 +540,6 @@
     // Map: studentCode → { studentName, studentCode, goals: [{ goalCode, goalArea, lastDate }] }
     const overdueByStudent = new Map();
 
-    const activeStudents = students.filter((s) => s.active !== false);
     for (const student of activeStudents) {
       const studentGoals = goals.filter(
         (g) => g.student_code === student.code && isGoalActive(g)
@@ -538,7 +612,7 @@
     missingSubmissions.sort((a, b) => b.daysOverdue - a.daysOverdue);
 
     // ── Render ─────────────────────────────────────────────────────────────
-    const hasItems = unreviewed.length > 0 || dataCollectionOverdue.length > 0 || missingSubmissions.length > 0;
+    const hasItems = iepDeadlines.length > 0 || unreviewed.length > 0 || dataCollectionOverdue.length > 0 || missingSubmissions.length > 0;
 
     if (!hasItems) {
       contentEl.innerHTML = `<div class="ov-card-empty">${SVG_CHECK} All caught up!</div>`;
@@ -551,6 +625,7 @@
     $("ovOverdueCard").classList.remove("alert-green");
 
     const summaryParts = [];
+    if (iepDeadlines.length > 0) summaryParts.push(`📅 ${iepDeadlines.length} IEP/eval deadline${iepDeadlines.length !== 1 ? 's' : ''}`);
     if (unreviewed.length > 0) summaryParts.push(`⚠️ ${unreviewed.length} unreviewed`);
     if (dataCollectionOverdue.length > 0) summaryParts.push(`📋 ${dataCollectionOverdue.length} students need data`);
     if (missingSubmissions.length > 0) summaryParts.push(`📭 ${missingSubmissions.length} missing submission${missingSubmissions.length !== 1 ? 's' : ''}`);
@@ -576,9 +651,55 @@
       return s;
     }
 
+    // IEP & Eval Deadlines (most urgent first)
+    if (iepDeadlines.length > 0) {
+      const urgentCount = iepDeadlines.filter(d => d.diffDays <= 7).length;
+      const badgeClass = urgentCount > 0 ? 'ov-badge-red' : 'ov-badge-purple';
+      html += `<div class="ov-section-header"><span>IEP &amp; Eval Deadlines</span><span class="ov-count-badge ${badgeClass}">${iepDeadlines.length}</span></div>`;
+      html += '<div class="ov-scroll-body">';
+      html += cappedSection(iepDeadlines, (item) => {
+        let cardClass = 'ov-row-card';
+        let dotClass = 'ov-status-dot';
+        let dateText = '';
+        if (item.diffDays < 0) {
+          cardClass += ' ov-row-card--red';
+          dotClass += ' ov-dot-red';
+          const days = Math.abs(item.diffDays);
+          dateText = `${days} day${days !== 1 ? 's' : ''} overdue`;
+        } else if (item.diffDays <= 7) {
+          cardClass += ' ov-row-card--red';
+          dotClass += ' ov-dot-red';
+          dateText = item.diffDays === 0 ? 'Today' : `in ${item.diffDays} day${item.diffDays !== 1 ? 's' : ''}`;
+        } else if (item.diffDays <= 14) {
+          cardClass += ' ov-row-card--amber';
+          dotClass += ' ov-dot-amber';
+          dateText = `in ${item.diffDays} days`;
+        } else {
+          dateText = `in ${item.diffDays} days`;
+        }
+        const formattedDate = item.dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `
+        <a href="/teacher/students/?student=${item.studentCode}" class="${cardClass}">
+          <span class="${dotClass}"></span>
+          <div class="ov-row-body">
+            <div class="ov-row-primary">
+              <span class="ov-student-name">${item.studentName}</span>
+              <span class="ov-student-code">${item.studentCode}</span>
+              <span class="ov-row-meta" style="margin-left:auto;">${dateText}</span>
+            </div>
+            <div class="ov-row-secondary">
+              <span class="ov-badge ov-badge-purple">${item.type}</span>
+              <span class="ov-row-meta">${formattedDate}</span>
+            </div>
+          </div>
+        </a>`;
+      });
+      html += '</div>';
+    }
+
     // Unreviewed submissions
     if (unreviewed.length > 0) {
-      html += `<div class="ov-section-header"><span>Unreviewed Submissions</span><span class="ov-count-badge ov-badge-red">${unreviewed.length}</span></div>`;
+      html += `<div class="ov-section-header"${iepDeadlines.length > 0 ? ' style="margin-top:12px;"' : ''}><span>Unreviewed Submissions</span><span class="ov-count-badge ov-badge-red">${unreviewed.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
       html += cappedSection(unreviewed, (sub) => `
         <a href="/teacher/review/" class="ov-row-card ov-row-card--red">
@@ -599,7 +720,7 @@
 
     // Data collection overdue — grouped by student
     if (dataCollectionOverdue.length > 0) {
-      html += `<div class="ov-section-header"${unreviewed.length > 0 ? ' style="margin-top:12px;"' : ''}><span>Data Collection Overdue</span><span class="ov-count-badge ov-badge-amber">${dataCollectionOverdue.length} student${dataCollectionOverdue.length !== 1 ? 's' : ''}</span></div>`;
+      html += `<div class="ov-section-header"${(iepDeadlines.length > 0 || unreviewed.length > 0) ? ' style="margin-top:12px;"' : ''}><span>Data Collection Overdue</span><span class="ov-count-badge ov-badge-amber">${dataCollectionOverdue.length} student${dataCollectionOverdue.length !== 1 ? 's' : ''}</span></div>`;
       html += '<div class="ov-scroll-body">';
       html += cappedSection(dataCollectionOverdue, (item) => {
         const goalBadges = item.goals.map(g =>
@@ -623,7 +744,7 @@
 
     // Missing submissions
     if (missingSubmissions.length > 0) {
-      const prevSections = unreviewed.length + dataCollectionOverdue.length;
+      const prevSections = iepDeadlines.length + unreviewed.length + dataCollectionOverdue.length;
       html += `<div class="ov-section-header"${prevSections > 0 ? ' style="margin-top:12px;"' : ''}><span>Missing Submissions</span><span class="ov-count-badge ov-badge-red">${missingSubmissions.length}</span></div>`;
       html += '<div class="ov-scroll-body">';
       html += cappedSection(missingSubmissions, (item) => `
