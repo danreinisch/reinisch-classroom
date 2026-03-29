@@ -34,6 +34,8 @@ function makeEnsureGoalsLoaded({ fetchImpl } = {}) {
         const goals = await res.json();
         _reviewGoalsCache = { studentId, goals: Array.isArray(goals) ? goals : [] };
         return _reviewGoalsCache.goals;
+      } else {
+        console.warn(`[tc-review] Goals fetch returned ${res.status}`);
       }
     } catch (err) {
       // graceful degradation — swallow error
@@ -190,6 +192,23 @@ test('returns empty array when fetch response is not ok', async () => {
   const { ensureGoalsLoaded } = makeEnsureGoalsLoaded({ fetchImpl });
   const result = await ensureGoalsLoaded('student-1', 'https://example.supabase.co', 'key');
   assert.deepStrictEqual(result, [], 'should degrade gracefully on non-ok response');
+});
+
+test('logs console.warn when fetch response is not ok', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 403, json: async () => [] });
+  const { ensureGoalsLoaded } = makeEnsureGoalsLoaded({ fetchImpl });
+
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  try {
+    await ensureGoalsLoaded('student-1', 'https://example.supabase.co', 'key');
+  } finally {
+    console.warn = origWarn;
+  }
+
+  assert.strictEqual(warnings.length, 1, 'should log exactly one warning');
+  assert.ok(warnings[0].includes('403'), 'warning should include the HTTP status code');
 });
 
 test('returns empty array when fetch throws (network error)', async () => {
