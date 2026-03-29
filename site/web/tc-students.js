@@ -1795,9 +1795,6 @@
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
           <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — ${isObs ? '' : 'Avg: '}${avgDisplay}</div>
-          <table style="border-collapse:collapse;width:100%;">
-            <tbody>${rows}</tbody>
-          </table>
         </div>`;
       progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" data-goal-id="${goal.id}" aria-expanded="false" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;">${SVG_VIEW_DATA}View Data</button>`;
     }
