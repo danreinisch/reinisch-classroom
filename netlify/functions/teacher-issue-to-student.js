@@ -224,7 +224,7 @@ exports.handler = async (event) => {
 
     console.log(`[teacher-issue-to-student] [${requestId}] Found ${students.length} student(s)`);
 
-    // Step 3: Build instance rows and upsert with ON CONFLICT DO NOTHING
+    // Step 3: Build instance rows and upsert with retry_config support
     // Build a UTC date string (YYYY-MM-DD) for assigned_at — using UTC avoids
     // timezone-shift issues when running in a Node.js Lambda environment.
     const todayUtc = (() => {
@@ -235,39 +235,208 @@ exports.handler = async (event) => {
       return `${y}-${m}-${day}`;
     })();
 
-    const instances = students.map(student => ({
-      assignment_id: parseInt(assignmentIdStr, 10),
-      student_id: student.id,
-      assigned_at: todayUtc,
-      status: 'Assigned',
-      settings: (perStudentSettings && perStudentSettings[student.code])
-        ? { ...settings, ...perStudentSettings[student.code] }
-        : settings,
-      ...(due_at ? { due_at } : {}),
-    }));
+    const assignmentIdInt = parseInt(assignmentIdStr, 10);
+    const studentIds = students.map(s => s.id);
 
-    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
-    const upsertResponse = await fetch(instancesUrl, {
-      method: 'POST',
+    // Step 3a: Look up any existing instances for this assignment + these students
+    const quotedStudentIds = studentIds.map(id => `"${id}"`).join(',');
+    const existingInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,settings&assignment_id=eq.${assignmentIdStr}&student_id=in.(${quotedStudentIds})`;
+    const existingInstancesResponse = await fetch(existingInstancesUrl, {
+      method: 'GET',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=ignore-duplicates,return=representation',
       },
-      body: JSON.stringify(instances),
     });
+    const existingInstances = existingInstancesResponse.ok
+      ? (await existingInstancesResponse.json().catch(() => []))
+      : [];
 
-    if (!upsertResponse.ok) {
-      const errorText = await upsertResponse.text();
-      console.error(`[teacher-issue-to-student] [${requestId}] Upsert failed: ${upsertResponse.status} - ${errorText}`);
-      throw new Error(`Failed to create assignment instances: ${upsertResponse.status}`);
+    // Build a map of student_id -> existing instance
+    const existingByStudentId = {};
+    for (const inst of (Array.isArray(existingInstances) ? existingInstances : [])) {
+      existingByStudentId[inst.student_id] = inst;
     }
 
-    const createdInstances = await upsertResponse.json().catch(() => []);
-    const issued_count = Array.isArray(createdInstances) ? createdInstances.length : 0;
+    // Step 3b: For existing instances, fetch the most recent submission and correct answers
+    // to build retry_config
+    const existingInstanceIds = Object.values(existingByStudentId).map(i => i.id);
+    let retryConfigByInstanceId = {};
+    if (existingInstanceIds.length > 0) {
+      const quotedInstanceIds = existingInstanceIds.map(id => `"${id}"`).join(',');
 
-    console.log(`[teacher-issue-to-student] [${requestId}] Issued ${issued_count} new instance(s)`);
+      // Fetch the most recent submission per instance (limit to 100 to cap data transfer)
+      const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=id,instance_id,score_total&instance_id=in.(${quotedInstanceIds})&order=submitted_at.desc&limit=100`;
+      const submissionsResponse = await fetch(submissionsUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const allSubmissions = submissionsResponse.ok
+        ? (await submissionsResponse.json().catch(() => []))
+        : [];
+
+      // Keep only the most recent submission per instance
+      const latestSubByInstanceId = {};
+      for (const sub of (Array.isArray(allSubmissions) ? allSubmissions : [])) {
+        if (!latestSubByInstanceId[sub.instance_id]) {
+          latestSubByInstanceId[sub.instance_id] = sub;
+        }
+      }
+
+      // For each instance that has a submission, fetch correct answers
+      const submissionIds = Object.values(latestSubByInstanceId).map(s => s.id);
+      if (submissionIds.length > 0) {
+        const quotedSubIds = submissionIds.map(id => `"${id}"`).join(',');
+        const subAnswersUrl = `${SUPABASE_URL}/rest/v1/submission_answers?select=submission_id,assignment_item_id,raw_answer,is_correct&submission_id=in.(${quotedSubIds})`;
+        const subAnswersResponse = await fetch(subAnswersUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const allSubAnswers = subAnswersResponse.ok
+          ? (await subAnswersResponse.json().catch(() => []))
+          : [];
+
+        // Fetch assignment items (item_ref maps to client-side question IDs)
+        const itemRefsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?select=id,item_ref&assignment_id=eq.${assignmentIdStr}`;
+        const itemRefsResponse = await fetch(itemRefsUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const allItems = itemRefsResponse.ok
+          ? (await itemRefsResponse.json().catch(() => []))
+          : [];
+
+        // Build item_id -> item_ref lookup
+        const itemRefById = {};
+        for (const item of (Array.isArray(allItems) ? allItems : [])) {
+          itemRefById[item.id] = item.item_ref;
+        }
+
+        // Build retry_config per instance_id
+        for (const [instanceId, sub] of Object.entries(latestSubByInstanceId)) {
+          const answersForSub = (Array.isArray(allSubAnswers) ? allSubAnswers : []).filter(a => a.submission_id === sub.id);
+          const lockedQuestionIds = [];
+          const originalAnswers = {};
+          for (const ans of answersForSub) {
+            const itemRef = itemRefById[ans.assignment_item_id];
+            if (!itemRef) continue;
+            if (ans.is_correct === true) {
+              lockedQuestionIds.push(itemRef);
+              const answerVal = ans.raw_answer && ans.raw_answer.value != null
+                ? String(ans.raw_answer.value)
+                : null;
+              if (answerVal !== null) {
+                originalAnswers[itemRef] = answerVal;
+              }
+            }
+          }
+          retryConfigByInstanceId[instanceId] = {
+            locked_question_ids: lockedQuestionIds,
+            original_answers: originalAnswers,
+            original_score: sub.score_total != null ? Math.round(sub.score_total) : null,
+            retry_initiated_at: new Date().toISOString(),
+          };
+        }
+      }
+    }
+
+    // Step 3c: Separate students into those needing UPDATE vs INSERT
+    const studentsToInsert = [];
+    const instancesToUpdate = [];
+
+    for (const student of students) {
+      const existingInst = existingByStudentId[student.id];
+      const instanceSettings = (perStudentSettings && perStudentSettings[student.code])
+        ? { ...settings, ...perStudentSettings[student.code] }
+        : { ...settings };
+
+      if (existingInst) {
+        // Re-issue: reset existing instance with retry_config
+        const retryConfig = retryConfigByInstanceId[existingInst.id];
+        const updatedSettings = { ...instanceSettings };
+        if (retryConfig) {
+          updatedSettings.retry_config = retryConfig;
+          updatedSettings.answers = retryConfig.original_answers;
+        }
+        instancesToUpdate.push({
+          id: existingInst.id,
+          assigned_at: todayUtc,
+          status: 'Assigned',
+          settings: updatedSettings,
+          ...(due_at ? { due_at } : {}),
+        });
+      } else {
+        studentsToInsert.push({
+          assignment_id: assignmentIdInt,
+          student_id: student.id,
+          assigned_at: todayUtc,
+          status: 'Assigned',
+          settings: instanceSettings,
+          ...(due_at ? { due_at } : {}),
+        });
+      }
+    }
+
+    let issued_count = 0;
+
+    // Step 3d: Insert new instances
+    if (studentsToInsert.length > 0) {
+      const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
+      const insertResponse = await fetch(instancesUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=ignore-duplicates,return=representation',
+        },
+        body: JSON.stringify(studentsToInsert),
+      });
+      if (!insertResponse.ok) {
+        const errorText = await insertResponse.text();
+        console.error(`[teacher-issue-to-student] [${requestId}] Insert failed: ${insertResponse.status} - ${errorText}`);
+        throw new Error(`Failed to create assignment instances: ${insertResponse.status}`);
+      }
+      const insertedInstances = await insertResponse.json().catch(() => []);
+      issued_count += Array.isArray(insertedInstances) ? insertedInstances.length : 0;
+    }
+
+    // Step 3e: Update existing instances (re-issue with retry_config)
+    for (const inst of instancesToUpdate) {
+      const { id: instId, ...updatePayload } = inst;
+      const updateUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=eq.${encodeURIComponent(instId)}`;
+      const updateResponse = await fetch(updateUrl, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify(updatePayload),
+      });
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        console.error(`[teacher-issue-to-student] [${requestId}] Update failed for instance ${instId}: ${updateResponse.status} - ${errorText}`);
+        throw new Error(`Failed to update assignment instance: ${updateResponse.status}`);
+      }
+      issued_count += 1;
+    }
+
+    console.log(`[teacher-issue-to-student] [${requestId}] Issued ${issued_count} instance(s) (${studentsToInsert.length} new, ${instancesToUpdate.length} re-issued)`);
 
     return jsonResponse(
       event,

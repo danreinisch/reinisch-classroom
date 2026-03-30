@@ -1180,7 +1180,10 @@ exports.handler = async (event) => {
           ? draft.perStudentWritingConfig
           : null;
 
-        const instances = targetStudents.map(student => {
+        // Build base instance settings per student (without retry_config yet)
+        const baseInstancesByStudent = {};
+        const targetStudentIds = targetStudents.map(s => s.id);
+        for (const student of targetStudents) {
           let instanceSettings = baseInstanceSettings;
           if (perStudentWritingConfig && perStudentWritingConfig[student.code] != null) {
             const rawPc = parseInt(perStudentWritingConfig[student.code], 10);
@@ -1190,41 +1193,199 @@ exports.handler = async (event) => {
               instanceSettings = { ...baseInstanceSettings, ...perStudentWC };
             }
           }
-          return {
-            assignment_id: assignmentId,
-            student_id: student.id,
-            assigned_at: new Date().toISOString().substring(0, 10),
-            due_at: dueAt || null,
-            status: 'Assigned',
-            settings: instanceSettings,
-            school_year: getCurrentSchoolYear(),
-          };
-        });
+          baseInstancesByStudent[student.id] = instanceSettings;
+        }
 
-        // Use upsert with resolution=merge-duplicates for idempotency
-        const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?on_conflict=assignment_id,student_id`;
-        
-        console.log(`[teacher-issue-draft] [${requestId}] Upserting ${instances.length} assignment instances`);
-        
-        const upsertResponse = await fetch(instancesUrl, {
-          method: 'POST',
+        // Look up any existing instances for this assignment + these students
+        const quotedStudentIds = targetStudentIds.map(id => `"${id}"`).join(',');
+        const existingInstancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,settings&assignment_id=eq.${assignmentId}&student_id=in.(${quotedStudentIds})`;
+        const existingInstancesResponse = await fetch(existingInstancesUrl, {
+          method: 'GET',
           headers: {
             'apikey': SUPABASE_SERVICE_ROLE_KEY,
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=representation'
           },
-          body: JSON.stringify(instances)
         });
+        const existingInstances = existingInstancesResponse.ok
+          ? (await existingInstancesResponse.json().catch(() => []))
+          : [];
 
-        if (!upsertResponse.ok) {
-          const errorText = await upsertResponse.text();
-          console.error(`[teacher-issue-draft] [${requestId}] Upsert failed with status ${upsertResponse.status}: ${errorText}`);
-          throw new Error(`Failed to issue assignments: ${upsertResponse.status}`);
+        const existingByStudentId = {};
+        for (const inst of (Array.isArray(existingInstances) ? existingInstances : [])) {
+          existingByStudentId[inst.student_id] = inst;
         }
 
-        const upsertedInstances = await upsertResponse.json();
-        issued_count = upsertedInstances.length;
+        // For existing instances, fetch most recent submission and correct answers to build retry_config
+        const existingInstanceIds = Object.values(existingByStudentId).map(i => i.id);
+        let retryConfigByInstanceId = {};
+        if (existingInstanceIds.length > 0) {
+          const quotedInstanceIds = existingInstanceIds.map(id => `"${id}"`).join(',');
+
+          const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=id,instance_id,score_total&instance_id=in.(${quotedInstanceIds})&order=submitted_at.desc&limit=100`;
+          const submissionsResponse = await fetch(submissionsUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          const allSubmissions = submissionsResponse.ok
+            ? (await submissionsResponse.json().catch(() => []))
+            : [];
+
+          const latestSubByInstanceId = {};
+          for (const sub of (Array.isArray(allSubmissions) ? allSubmissions : [])) {
+            if (!latestSubByInstanceId[sub.instance_id]) {
+              latestSubByInstanceId[sub.instance_id] = sub;
+            }
+          }
+
+          const submissionIds = Object.values(latestSubByInstanceId).map(s => s.id);
+          if (submissionIds.length > 0) {
+            const quotedSubIds = submissionIds.map(id => `"${id}"`).join(',');
+            const subAnswersUrl = `${SUPABASE_URL}/rest/v1/submission_answers?select=submission_id,assignment_item_id,raw_answer,is_correct&submission_id=in.(${quotedSubIds})`;
+            const subAnswersResponse = await fetch(subAnswersUrl, {
+              method: 'GET',
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            const allSubAnswers = subAnswersResponse.ok
+              ? (await subAnswersResponse.json().catch(() => []))
+              : [];
+
+            const itemRefsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?select=id,item_ref&assignment_id=eq.${assignmentId}`;
+            const itemRefsResponse = await fetch(itemRefsUrl, {
+              method: 'GET',
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            const allItems = itemRefsResponse.ok
+              ? (await itemRefsResponse.json().catch(() => []))
+              : [];
+
+            const itemRefById = {};
+            for (const item of (Array.isArray(allItems) ? allItems : [])) {
+              itemRefById[item.id] = item.item_ref;
+            }
+
+            for (const [instanceId, sub] of Object.entries(latestSubByInstanceId)) {
+              const answersForSub = (Array.isArray(allSubAnswers) ? allSubAnswers : []).filter(a => a.submission_id === sub.id);
+              const lockedQuestionIds = [];
+              const originalAnswers = {};
+              for (const ans of answersForSub) {
+                const itemRef = itemRefById[ans.assignment_item_id];
+                if (!itemRef) continue;
+                if (ans.is_correct === true) {
+                  lockedQuestionIds.push(itemRef);
+                  const answerVal = ans.raw_answer && ans.raw_answer.value != null
+                    ? String(ans.raw_answer.value)
+                    : null;
+                  if (answerVal !== null) {
+                    originalAnswers[itemRef] = answerVal;
+                  }
+                }
+              }
+              retryConfigByInstanceId[instanceId] = {
+                locked_question_ids: lockedQuestionIds,
+                original_answers: originalAnswers,
+                original_score: sub.score_total != null ? Math.round(sub.score_total) : null,
+                retry_initiated_at: new Date().toISOString(),
+              };
+            }
+          }
+        }
+
+        // Separate students into those needing INSERT vs UPDATE
+        const studentsToInsert = [];
+        const instancesToUpdate = [];
+        const todayDate = new Date().toISOString().substring(0, 10);
+
+        for (const student of targetStudents) {
+          const existingInst = existingByStudentId[student.id];
+          const instanceSettings = { ...baseInstancesByStudent[student.id] };
+
+          if (existingInst) {
+            const retryConfig = retryConfigByInstanceId[existingInst.id];
+            const updatedSettings = { ...instanceSettings };
+            if (retryConfig) {
+              updatedSettings.retry_config = retryConfig;
+              updatedSettings.answers = retryConfig.original_answers;
+            }
+            instancesToUpdate.push({
+              id: existingInst.id,
+              assigned_at: todayDate,
+              due_at: dueAt || null,
+              status: 'Assigned',
+              settings: updatedSettings,
+              school_year: getCurrentSchoolYear(),
+            });
+          } else {
+            studentsToInsert.push({
+              assignment_id: assignmentId,
+              student_id: student.id,
+              assigned_at: todayDate,
+              due_at: dueAt || null,
+              status: 'Assigned',
+              settings: instanceSettings,
+              school_year: getCurrentSchoolYear(),
+            });
+          }
+        }
+
+        // Insert new instances
+        if (studentsToInsert.length > 0) {
+          const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?on_conflict=assignment_id,student_id`;
+          console.log(`[teacher-issue-draft] [${requestId}] Inserting ${studentsToInsert.length} new assignment instances`);
+          const insertResponse = await fetch(instancesUrl, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates,return=representation'
+            },
+            body: JSON.stringify(studentsToInsert)
+          });
+          if (!insertResponse.ok) {
+            const errorText = await insertResponse.text();
+            console.error(`[teacher-issue-draft] [${requestId}] Insert failed with status ${insertResponse.status}: ${errorText}`);
+            throw new Error(`Failed to issue assignments: ${insertResponse.status}`);
+          }
+          const insertedInstances = await insertResponse.json();
+          issued_count += Array.isArray(insertedInstances) ? insertedInstances.length : 0;
+        }
+
+        // Update existing instances (re-issue with retry_config)
+        for (const inst of instancesToUpdate) {
+          const { id: instId, ...updatePayload } = inst;
+          const updateUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=eq.${encodeURIComponent(instId)}`;
+          const updateResponse = await fetch(updateUrl, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal',
+            },
+            body: JSON.stringify(updatePayload),
+          });
+          if (!updateResponse.ok) {
+            const errorText = await updateResponse.text();
+            console.error(`[teacher-issue-draft] [${requestId}] Update failed for instance ${instId}: ${updateResponse.status} - ${errorText}`);
+            throw new Error(`Failed to update assignment instance: ${updateResponse.status}`);
+          }
+          issued_count += 1;
+        }
+
+        console.log(`[teacher-issue-draft] [${requestId}] Issued ${issued_count} instances (${studentsToInsert.length} new, ${instancesToUpdate.length} re-issued)`);
       }
     }
 
