@@ -151,7 +151,7 @@
       const [students, assignments, submissions, instances] = await Promise.all([
         db.listStudents(),
         db.listAssignments(),
-        db.listSubmissions({ excludeFinalized: true }),
+        db.listSubmissions({ excludeFinalized: false }),
         db.listAssignmentInstances()
       ]);
       
@@ -277,6 +277,8 @@
         return status === 'pending' || status === 'in_progress';
       } else if (currentStatusFilter === 'reviewed') {
         return submission.review_status === 'reviewed';
+      } else if (currentStatusFilter === 'finalized') {
+        return submission.review_status === 'finalized';
       }
       // "all" - no filter
       return true;
@@ -740,6 +742,7 @@
     }).length;
     
     const reviewedCount = submissionsData.filter(s => s.review_status === 'reviewed').length;
+    const finalizedCount = submissionsData.filter(s => s.review_status === 'finalized').length;
     
     // Update badge counts using safe DOM (no innerHTML with user data)
     const needsReviewBtn = $('rvStatusNeedsReview');
@@ -758,6 +761,12 @@
     if (allBtn) {
       const badge = allBtn.querySelector('.rv-badge');
       if (badge) badge.textContent = submissionsData.length;
+    }
+
+    const finalizedBtn = $('rvStatusFinalized');
+    if (finalizedBtn) {
+      const badge = finalizedBtn.querySelector('.rv-badge');
+      if (badge) badge.textContent = finalizedCount;
     }
 
     // Render batch bar
@@ -1238,21 +1247,33 @@
     // Action buttons
     const allConstructedScored = manualScored === manualTotal;
     const finalizeDisabled = constructedItems.length > 0 && !allConstructedScored;
-    
-    const actionsSection = `
-      <div class="rv-actions">
-        <button class="rv-btn rv-btn-primary rv-btn-finalize" 
-                data-submission-id="${escapeHtml(submission.id)}"
-                ${finalizeDisabled ? 'disabled' : ''}>
-          ${CHECK_SVG} Finalize Submission
-        </button>
-        <button class="rv-btn rv-btn-next" 
-                data-submission-id="${escapeHtml(submission.id)}">
-          ${SKIP_SVG} Next Student
-        </button>
-        ${finalizeDisabled ? '<span class="rv-hint">Score all written responses to finalize</span>' : ''}
-      </div>
-    `;
+
+    let actionsSection;
+    if (submission.review_status === 'finalized') {
+      actionsSection = `
+        <div class="rv-actions">
+          <button class="rv-btn rv-btn-warning rv-btn-reopen"
+                  data-submission-id="${escapeHtml(submission.id)}">
+            ↩ Reopen Submission
+          </button>
+        </div>
+      `;
+    } else {
+      actionsSection = `
+        <div class="rv-actions">
+          <button class="rv-btn rv-btn-primary rv-btn-finalize" 
+                  data-submission-id="${escapeHtml(submission.id)}"
+                  ${finalizeDisabled ? 'disabled' : ''}>
+            ${CHECK_SVG} Finalize Submission
+          </button>
+          <button class="rv-btn rv-btn-next" 
+                  data-submission-id="${escapeHtml(submission.id)}">
+            ${SKIP_SVG} Next Student
+          </button>
+          ${finalizeDisabled ? '<span class="rv-hint">Score all written responses to finalize</span>' : ''}
+        </div>
+      `;
+    }
     
     return `
       ${syntheticAssignmentIds.has(assignmentId) ? `
@@ -1324,17 +1345,18 @@
     }
     
     // Status filter tabs
-    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(id => {
+    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll', 'rvStatusFinalized'].forEach(id => {
       const btn = $(id);
       if (btn) {
         btn.addEventListener('click', () => {
           // Update current filter
           if (id === 'rvStatusNeedsReview') currentStatusFilter = 'needs-review';
           else if (id === 'rvStatusReviewed') currentStatusFilter = 'reviewed';
+          else if (id === 'rvStatusFinalized') currentStatusFilter = 'finalized';
           else currentStatusFilter = 'all';
           
           // Update active state
-          ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(btnId => {
+          ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll', 'rvStatusFinalized'].forEach(btnId => {
             const button = $(btnId);
             if (button) {
               if (btnId === id) {
@@ -1425,6 +1447,13 @@
         const returnBtn = e.target.closest('.rv-btn-return');
         if (returnBtn) {
           await handleReturnForRevision(returnBtn);
+          return;
+        }
+
+        // Handle reopen button click
+        const reopenBtn = e.target.closest('.rv-btn-reopen');
+        if (reopenBtn) {
+          await handleReopenSubmission(reopenBtn);
           return;
         }
 
@@ -2174,6 +2203,13 @@
     for (const submission of pendingSubmissions) {
       const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
       if (!instance) continue;
+
+      // Skip re-issued retry assignments — teacher must review manually
+      if (instance.settings && instance.settings.retry_config &&
+          (instance.status === 'Assigned' || instance.status === 'In Progress')) {
+        continue;
+      }
+
       const assignmentId = instance.assignment_id;
       if (!assignmentId) continue;
       submission.assignment_id = assignmentId;
@@ -2309,10 +2345,10 @@
     btns.unshift(`<button class="rv-filter-btn${currentClassFilter === 'All Classes' ? ' active' : ''}" data-class="All Classes">All Classes</button>`);
     bar.innerHTML = btns.join('');
     // Restore saved status tab
-    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(btnId => {
+    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll', 'rvStatusFinalized'].forEach(btnId => {
       const btn = $(btnId);
       if (!btn) return;
-      const maps = { rvStatusNeedsReview: 'needs-review', rvStatusReviewed: 'reviewed', rvStatusAll: 'all' };
+      const maps = { rvStatusNeedsReview: 'needs-review', rvStatusReviewed: 'reviewed', rvStatusAll: 'all', rvStatusFinalized: 'finalized' };
       btn.classList.toggle('active', maps[btnId] === currentStatusFilter);
     });
   }
@@ -2441,6 +2477,37 @@
     } catch (err) {
       console.error('[tc-review] Error returning submission:', err);
       showToast('Error returning submission', '#ef4444', '#fff');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // Reopen a finalized submission (un-finalize)
+  async function handleReopenSubmission(button) {
+    const submissionId = button.dataset.submissionId;
+
+    if (!await rcConfirm('Reopen Submission', 'Reopen this finalized submission? It will return to the review queue with status "In Progress".', 'Reopen')) return;
+
+    button.disabled = true;
+    try {
+      await db.reopenSubmission(submissionId);
+
+      // Update local cache
+      const submission = submissionsData.find(s => s.id === submissionId);
+      if (submission) {
+        submission.review_status = 'pending';
+        const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+        if (instance) instance.status = 'In Progress';
+      }
+
+      showToast('Submission reopened', '#22c55e', '#0b1220');
+      currentStatusFilter = 'needs-review';
+      populateClassFilters();
+      saveFilters();
+      await render();
+    } catch (err) {
+      console.error('[tc-review] Error reopening submission:', err);
+      showToast('Error reopening submission', '#ef4444', '#fff');
     } finally {
       button.disabled = false;
     }
