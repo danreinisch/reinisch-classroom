@@ -1202,7 +1202,7 @@ exports.handler = async (event) => {
         });
 
         // Use upsert with resolution=merge-duplicates for idempotency
-        const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
+        const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?on_conflict=assignment_id,student_id`;
         
         console.log(`[teacher-issue-draft] [${requestId}] Upserting ${instances.length} assignment instances`);
         
