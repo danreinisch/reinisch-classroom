@@ -1325,6 +1325,7 @@ exports.handler = async (event) => {
               due_at: dueAt || null,
               status: 'Assigned',
               settings: updatedSettings,
+              resubmission_count: 0,
               school_year: getCurrentSchoolYear(),
             });
           } else {

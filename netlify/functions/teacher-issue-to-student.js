@@ -376,6 +376,7 @@ exports.handler = async (event) => {
           assigned_at: todayUtc,
           status: 'Assigned',
           settings: updatedSettings,
+          resubmission_count: 0,
           ...(due_at ? { due_at } : {}),
         });
       } else {
