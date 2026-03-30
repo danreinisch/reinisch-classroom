@@ -1319,8 +1319,8 @@
       tabContent = await renderStudentGoalsTab(student, studentGoals);
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
-    } else if (selectedDetailTab === 'compliance') {
-      tabContent = renderComplianceTab(student, studentGoals);
+    } else if (selectedDetailTab === 'skills') {
+      tabContent = await renderSkillsSummaryTab(student, studentGoals);
     } else if (selectedDetailTab === 'settings') {
       tabContent = renderStudentSettingsTab(student);
     }
@@ -1383,7 +1383,7 @@
     tabsDiv.innerHTML = `
       <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
       <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
-      <button class="st-tab ${selectedDetailTab === 'compliance' ? 'active' : ''}" data-tab="compliance">Compliance</button>
+      <button class="st-tab ${selectedDetailTab === 'skills' ? 'active' : ''}" data-tab="skills">Skills Summary</button>
       <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
     `;
     container.appendChild(tabsDiv);
@@ -4733,6 +4733,340 @@
       </div>
     `;
   }
+
+  // ── Skills Summary Tab ───────────────────────────────────────────────────────
+
+  /** Tier score thresholds (percent) */
+  const SKILL_TIER_EXCELLENT   = 80;
+  const SKILL_TIER_ON_TRACK    = 60;
+  const SKILL_TIER_NEEDS_SUPPORT = 40;
+
+  /** Minimum score delta (percentage points) to register an upward or downward trend */
+  const SKILL_TREND_THRESHOLD = 3;
+
+  /**
+   * Friendly display names for known DESE codes.
+   * Unknown codes fall back to displaying the raw code.
+   */
+  const DESE_FRIENDLY_NAMES = {
+    'R.1.A.9-12.a': 'Textual Evidence',
+    'R.1.B.9-12.a': 'Central Idea & Summarization',
+    'R.3.A.9-12.a': 'Word Meaning in Context',
+    'R.3.C.9-12.a': 'Text Structure & Purpose',
+    'R.5.A.9-12.a': 'Argument Analysis',
+    'W.1.A.9-12.a': 'Argumentative Writing',
+    'L.1.A.9-12.a': 'Grammar & Language Conventions',
+  };
+
+  /** In-memory cache: student_code → { skills: [...] } to avoid re-calling OpenAI */
+  const skillsAiCache = new Map();
+
+  /**
+   * Determine tier string and color config from a 0-100 score.
+   */
+  function getSkillTier(score) {
+    if (score === null || score === undefined) return { tier: 'needs-support', label: 'No Data', border: 'rgba(245,158,11,0.4)', bg: 'rgba(245,158,11,0.08)', dot: '🟡' };
+    if (score >= SKILL_TIER_EXCELLENT)     return { tier: 'excellent',     label: 'Strong',        border: 'rgba(34,197,94,0.4)',  bg: 'rgba(34,197,94,0.08)',  dot: '🟢' };
+    if (score >= SKILL_TIER_ON_TRACK)      return { tier: 'on-track',      label: 'On Track',      border: 'rgba(59,130,246,0.4)', bg: 'rgba(59,130,246,0.08)', dot: '🔵' };
+    if (score >= SKILL_TIER_NEEDS_SUPPORT) return { tier: 'needs-support', label: 'Needs Support', border: 'rgba(245,158,11,0.4)', bg: 'rgba(245,158,11,0.08)', dot: '🟡' };
+    return                                        { tier: 'critical',      label: 'Critical',      border: 'rgba(239,68,68,0.4)',  bg: 'rgba(239,68,68,0.08)',  dot: '🔴' };
+  }
+
+  /**
+   * Compute IEP goal skill cards from allProgressEntries.
+   * Returns an array sorted highest score first.
+   */
+  function computeIepSkillCards(student, studentGoals) {
+    const cards = [];
+    const currentQ = (() => { try { return getCurrentQuarter(); } catch (e) { return null; } })();
+    const prevQ = currentQ ? { Q1: null, Q2: 'Q1', Q3: 'Q2', Q4: 'Q3' }[currentQ] : null;
+
+    for (const goal of studentGoals) {
+      if (goal.status === 'archived') continue;
+      if (goal.measurement_type === 'Observation') continue; // observations use non-numeric scale
+
+      const entries = getProgressForGoal(student.code, goal.code);
+      const numericEntries = entries.filter(e => e.value !== null && e.value !== undefined && !isNaN(parseFloat(e.value)));
+
+      // Current quarter avg
+      let currentAvg = null;
+      if (currentQ) {
+        const range = getQuarterDateRange(currentQ);
+        if (range) {
+          const qEntries = numericEntries.filter(e => {
+            const d = new Date(e.date);
+            return d >= range.start && d <= range.end;
+          });
+          if (qEntries.length > 0) {
+            currentAvg = Math.round(qEntries.reduce((s, e) => s + parseFloat(e.value), 0) / qEntries.length * 10) / 10;
+          }
+        }
+      }
+
+      // Previous quarter avg
+      let prevAvg = null;
+      if (prevQ) {
+        const prevRange = getQuarterDateRange(prevQ);
+        if (prevRange) {
+          const prevEntries = numericEntries.filter(e => {
+            const d = new Date(e.date);
+            return d >= prevRange.start && d <= prevRange.end;
+          });
+          if (prevEntries.length > 0) {
+            prevAvg = Math.round(prevEntries.reduce((s, e) => s + parseFloat(e.value), 0) / prevEntries.length * 10) / 10;
+          }
+        }
+      }
+
+      // Fallback: use all-time avg if no current-quarter data
+      const displayScore = currentAvg !== null ? currentAvg
+        : (numericEntries.length > 0 ? Math.round(numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length * 10) / 10 : null);
+
+      // Trend
+      let trend = 'flat';
+      if (currentAvg !== null && prevAvg !== null) {
+        const diff = currentAvg - prevAvg;
+        if (diff >= SKILL_TREND_THRESHOLD) trend = 'up';
+        else if (diff <= -SKILL_TREND_THRESHOLD) trend = 'down';
+      }
+
+      cards.push({
+        type: 'iep',
+        code: goal.code,
+        area: goal.goal_area || goal.desc || goal.code,
+        displayScore,
+        currentAvg,
+        previousAvg: prevAvg,
+        trend,
+        dataPoints: numericEntries.length,
+        target: goal.mastery !== undefined && goal.mastery !== null ? parseFloat(goal.mastery) : null,
+        baseline: goal.baseline !== undefined && goal.baseline !== null ? parseFloat(goal.baseline) : null,
+      });
+    }
+
+    // Sort: highest score first, nulls last
+    cards.sort((a, b) => {
+      if (a.displayScore === null && b.displayScore === null) return 0;
+      if (a.displayScore === null) return 1;
+      if (b.displayScore === null) return -1;
+      return b.displayScore - a.displayScore;
+    });
+
+    return cards;
+  }
+
+  /**
+   * Render a single skill card (IEP or DESE).
+   */
+  function renderSkillCard(card, narrativeHtml) {
+    const score = card.displayScore !== null && card.displayScore !== undefined ? card.displayScore : null;
+    const tierInfo = getSkillTier(score);
+    const pct = score !== null ? Math.min(100, Math.max(0, score)) : 0;
+
+    let trendHtml = '';
+    if (card.type === 'iep') {
+      const trendIcon = card.trend === 'up' ? '↑' : card.trend === 'down' ? '↓' : '→';
+      const trendColor = card.trend === 'up' ? '#22c55e' : card.trend === 'down' ? '#ef4444' : '#9ca3af';
+      trendHtml = `<span style="color:${trendColor};font-weight:700;font-size:16px;margin-left:6px;">${trendIcon}</span>`;
+    }
+
+    const confidenceHtml = card.type === 'dese'
+      ? `<span class="st-skill-confidence">${card.itemCount} item${card.itemCount !== 1 ? 's' : ''}</span>`
+      : `<span class="st-skill-confidence">${card.dataPoints} data point${card.dataPoints !== 1 ? 's' : ''}</span>`;
+
+    const metaHtml = card.type === 'iep' && (card.baseline !== null || card.target !== null)
+      ? `<div class="st-skill-meta">
+           ${card.baseline !== null ? `<span>Baseline: ${card.baseline}%</span>` : ''}
+           ${card.target !== null ? `<span>Target: ${card.target}%</span>` : ''}
+         </div>`
+      : '';
+
+    const scoreDisplay = score !== null ? `${score}%` : '—';
+
+    return `
+      <div class="st-skill-card st-skill-tier-${tierInfo.tier}" data-skill-code="${escapeHtml(card.code)}" style="border-left-color:${tierInfo.border};background:${tierInfo.bg};">
+        <div class="st-skill-card-header">
+          <span class="st-skill-dot">${tierInfo.dot}</span>
+          <div class="st-skill-title">
+            <span class="st-skill-code">${escapeHtml(card.code)}</span>
+            <span class="st-skill-area">${escapeHtml(card.area)}</span>
+          </div>
+          <div class="st-skill-score-area">
+            <span class="st-skill-score">${escapeHtml(scoreDisplay)}</span>
+            ${trendHtml}
+            ${confidenceHtml}
+          </div>
+        </div>
+        <div class="st-skill-bar-wrap">
+          <div class="st-skill-bar" style="width:${pct}%;background:${tierInfo.border};"></div>
+        </div>
+        ${metaHtml}
+        <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || '<span class="st-skill-narrative-loading" role="status">Generating summary…</span>'}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render the Skills Summary tab.
+   */
+  async function renderSkillsSummaryTab(student, studentGoals) {
+    const iepCards = computeIepSkillCards(student, studentGoals);
+
+    // Fetch DESE rollups from Supabase RPC
+    let deseCards = [];
+    try {
+      const supabase = await getSupabase();
+      if (supabase && student.id) {
+        const schoolYear = (() => {
+          const now = new Date();
+          const m = now.getMonth() + 1;
+          return m >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+        })();
+        const { data: deseData, error: deseError } = await supabase.rpc('student_dese_rollups', {
+          p_student_id: student.id,
+          p_school_year: schoolYear,
+        });
+        if (!deseError && Array.isArray(deseData)) {
+          deseCards = deseData
+            .filter(d => d.dese_code && d.percent_correct !== null)
+            .map(d => ({
+              type: 'dese',
+              code: d.dese_code,
+              area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
+              displayScore: parseFloat(d.percent_correct),
+              itemCount: parseInt(d.item_count, 10) || 0,
+            }))
+            .sort((a, b) => b.displayScore - a.displayScore);
+        } else if (deseError) {
+          console.warn('[tc-students] renderSkillsSummaryTab: DESE RPC error:', deseError.message);
+        }
+      }
+    } catch (err) {
+      console.warn('[tc-students] renderSkillsSummaryTab: DESE fetch failed:', err);
+    }
+
+    const hasIep = iepCards.length > 0;
+    const hasDese = deseCards.length > 0;
+
+    if (!hasIep && !hasDese) {
+      return `
+        <div class="st-detail-section">
+          <div class="st-skill-empty">
+            <p>No skills data yet. As assignments are graded and IEP progress is recorded, performance summaries will appear here.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    const cached = skillsAiCache.get(student.code);
+
+    const iepSectionHtml = hasIep ? `
+      <div class="st-skill-section">
+        <h3 class="st-skill-section-title">📋 IEP Goals</h3>
+        ${iepCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null)).join('')}
+      </div>
+    ` : '';
+
+    const deseSectionHtml = `
+      <div class="st-skill-section">
+        <h3 class="st-skill-section-title">📊 DESE Standards (from Assignments)</h3>
+        ${hasDese
+          ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null)).join('')
+          : '<p class="st-skill-no-data">No assignment-based standards data yet.</p>'
+        }
+      </div>
+    `;
+
+    const html = `
+      <div class="st-detail-section" id="skills-tab-${escapeHtml(student.code)}">
+        ${iepSectionHtml}
+        ${deseSectionHtml}
+      </div>
+    `;
+
+    // Fire async AI narrative fetch (skip if cached)
+    if (!cached) {
+      requestSkillsNarratives(student, iepCards, deseCards);
+    }
+
+    return html;
+  }
+
+  /**
+   * Extract the narrative HTML for a given code from a cached AI result.
+   */
+  function getNarrativeHtml(cached, code) {
+    if (!cached || !Array.isArray(cached.skills)) return '';
+    const entry = cached.skills.find(s => s.code === code);
+    if (!entry || !entry.summary) return '';
+    return `<p>${escapeHtml(entry.summary)}</p>`;
+  }
+
+  /**
+   * Fetch AI narratives from the Netlify function and inject them into the rendered cards.
+   */
+  async function requestSkillsNarratives(student, iepCards, deseCards) {
+    try {
+      const iepPayload = iepCards.map(c => ({
+        code: c.code,
+        area: c.area,
+        current_avg: c.currentAvg !== null ? c.currentAvg : c.displayScore,
+        previous_avg: c.previousAvg,
+        trend: c.trend,
+        data_points: c.dataPoints,
+        target: c.target,
+        baseline: c.baseline,
+      }));
+
+      const desePayload = deseCards.map(c => ({
+        code: c.code,
+        percent_correct: c.displayScore,
+        item_count: c.itemCount,
+      }));
+
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          student_code: student.code,
+          iep_goals: iepPayload,
+          dese_standards: desePayload,
+        }),
+      });
+
+      if (!res.ok) {
+        console.warn('[tc-students] AI skills summary returned', res.status, '— skipping narratives');
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.skills)) return;
+
+      // Cache the result
+      skillsAiCache.set(student.code, data);
+
+      // Inject narratives into the already-rendered cards
+      for (const skill of data.skills) {
+        if (!skill.code || !skill.summary) continue;
+        const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
+        const el = document.getElementById(safeId);
+        if (el) {
+          el.innerHTML = `<p>${escapeHtml(skill.summary)}</p>`;
+        }
+      }
+
+      // Remove any remaining loading spinners
+      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+
+    } catch (err) {
+      console.warn('[tc-students] requestSkillsNarratives failed:', err);
+      // Silently remove loading spinners — user still sees the data cards
+      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+    }
+  }
+
+  // ── End Skills Summary Tab ───────────────────────────────────────────────────
 
   /**
    * A1. Goal Progress Timeline Charts (SVG-based)
