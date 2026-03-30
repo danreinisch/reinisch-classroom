@@ -154,6 +154,8 @@
   let _renderingInProgress = false; // re-entrancy guard for renderGradebook()
   let _focusedCellPos = null; // { rowIndex, colIndex } — preserved across re-renders
   let _a11yStatusTimer = null; // timer for announceA11y() debounce
+  let _lastAnnouncedStudentCount = -1; // -1 = uninitialized; ensures first load always announces
+  let _lastAnnouncedDraftCount = -1;   // count-based dedup: re-announces only when counts change
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -169,8 +171,8 @@
   const REALTIME_RETRY_DELAY_MS = 5000;
 
   // Announce a message to screen readers via the live region.
-  // Clears the region first, then sets text after a short delay so consecutive
-  // calls are each picked up by screen readers.
+  // Clears the region first, then sets text after a short delay,
+  // using last-wins debounce so only the most recent message is announced.
   function announceA11y(msg) {
     const el = $("gbA11yStatus");
     if (!el) return;
@@ -251,6 +253,15 @@
       
       // Update sync status indicator
       updateSyncStatus();
+
+      // Announce data loaded to screen readers (only when counts change)
+      const sCount = studentsData.length;
+      const dCount = draftsData.length;
+      if (sCount !== _lastAnnouncedStudentCount || dCount !== _lastAnnouncedDraftCount) {
+        _lastAnnouncedStudentCount = sCount;
+        _lastAnnouncedDraftCount = dCount;
+        announceA11y(`Gradebook loaded with ${sCount} student${sCount !== 1 ? 's' : ''} and ${dCount} assignment${dCount !== 1 ? 's' : ''}`);
+      }
       
     } catch (err) {
       console.error('[gradebook] Error in loadData:', err);
@@ -415,7 +426,8 @@
 
   // Attach a click-to-sort handler to a <th> element with the given sort key.
   // Cycles: none → asc → desc → none.
-  function attachColumnSortClick(th, key) {
+  // displayLabel is used for the sort announcement (clean label without date/pts noise).
+  function attachColumnSortClick(th, key, displayLabel) {
     th.style.cursor = "pointer";
     th.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -434,8 +446,7 @@
       // Announce sort change to screen readers
       if (columnSortKey && columnSortDir) {
         const dirLabel = columnSortDir === "asc" ? "ascending" : "descending";
-        // Use column header text as display name (strip sort indicator chars)
-        const colName = th.textContent.replace(/\s*[▲▼]\s*$/, "").trim() || key;
+        const colName = displayLabel || key;
         announceA11y(`Sorted by ${colName}, ${dirLabel}`);
       } else {
         announceA11y("Sort cleared");
@@ -1063,12 +1074,12 @@
       th.appendChild(ptsEl);
     }
 
-    attachColumnSortClick(th, draft.id);
+    attachColumnSortClick(th, draft.id, draft.title || "(untitled)");
     return th;
   }
 
   // Build an individual score <td> element (Option D: pct + earned/possible)
-  function buildScoreTd(draft, studentCode, scoreMap) {
+  function buildScoreTd(draft, studentCode, scoreMap, studentName) {
     const td = document.createElement("td");
     td.setAttribute("role", "gridcell");
     td.className = "gb-score-cell editable";
@@ -1079,7 +1090,7 @@
     }
 
     const assignmentTitle = draft.title || "(untitled)";
-    const studentName = (studentsData.find(s => s.code === studentCode) || {}).name || studentCode;
+    const resolvedStudentName = studentName || studentCode;
 
     let currentScore = null;
     const studentScores = scoreMap.get(studentCode);
@@ -1103,14 +1114,14 @@
 
         const colorClass = scoreColorClass(score);
         if (colorClass) td.classList.add(colorClass);
-        td.setAttribute("aria-label", `Score for ${studentName} on ${assignmentTitle}: ${score}%. Press Enter to edit`);
+        td.setAttribute("aria-label", `Score for ${resolvedStudentName} on ${assignmentTitle}: ${score}%. Press Enter to edit`);
       } else {
         td.textContent = "—";
-        td.setAttribute("aria-label", `No score for ${studentName} on ${assignmentTitle}. Press Enter to edit`);
+        td.setAttribute("aria-label", `No score for ${resolvedStudentName} on ${assignmentTitle}. Press Enter to edit`);
       }
     } else {
       td.textContent = "—";
-      td.setAttribute("aria-label", `No score for ${studentName} on ${assignmentTitle}. Press Enter to edit`);
+      td.setAttribute("aria-label", `No score for ${resolvedStudentName} on ${assignmentTitle}. Press Enter to edit`);
     }
 
     td.addEventListener("click", () => {
@@ -1150,7 +1161,7 @@
     thStudent.setAttribute("aria-sort", getAriaSortAttr("student"));
     thStudent.className = "gb-student-col";
     thStudent.textContent = "Student" + columnSortIndicator("student");
-    attachColumnSortClick(thStudent, "student");
+    attachColumnSortClick(thStudent, "student", "Student");
     headerRow.appendChild(thStudent);
 
     for (const group of groups) {
@@ -1211,7 +1222,7 @@
         });
         th.appendChild(expandEl);
 
-        attachColumnSortClick(th, group.series);
+        attachColumnSortClick(th, group.series, group.displayName);
         headerRow.appendChild(th);
       } else {
         // Expanded: add collapse indicator to first assignment column only (no separate label TH)
@@ -1251,7 +1262,7 @@
     thAvg.style.minWidth = "72px";
     thAvg.dataset.extraCol = "1";
     if (!showMoreColumns) thAvg.style.display = "none";
-    attachColumnSortClick(thAvg, "average");
+    attachColumnSortClick(thAvg, "average", "Average");
     headerRow.appendChild(thAvg);
 
     const thWeighted = document.createElement("th");
@@ -1261,7 +1272,7 @@
     thWeighted.style.minWidth = "72px";
     thWeighted.dataset.extraCol = "1";
     if (!showMoreColumns) thWeighted.style.display = "none";
-    attachColumnSortClick(thWeighted, "weighted");
+    attachColumnSortClick(thWeighted, "weighted", "Weighted");
     headerRow.appendChild(thWeighted);
 
     const thTrend = document.createElement("th");
@@ -1271,7 +1282,7 @@
     thTrend.style.minWidth = "56px";
     thTrend.dataset.extraCol = "1";
     if (!showMoreColumns) thTrend.style.display = "none";
-    attachColumnSortClick(thTrend, "trend");
+    attachColumnSortClick(thTrend, "trend", "Trend");
     headerRow.appendChild(thTrend);
 
     tableHead.appendChild(headerRow);
@@ -1373,14 +1384,14 @@
         } else {
           // Expanded: individual score cells only (no redundant summary cell)
           for (const draft of group.drafts) {
-            tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
+            tr.appendChild(buildScoreTd(draft, student.code, scoreMap, student.name || student.code));
           }
         }
       }
 
       // Ungrouped score cells (Option D)
       for (const draft of ungrouped) {
-        tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
+        tr.appendChild(buildScoreTd(draft, student.code, scoreMap, student.name || student.code));
       }
 
       // Average / Weighted / Trend cells
@@ -1651,7 +1662,6 @@
       tableBody.innerHTML = "";
       renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap);
       restoreFocusFromPos();
-      announceA11y(`Gradebook loaded with ${students.length} student${students.length !== 1 ? 's' : ''} and ${drafts.length} assignment${drafts.length !== 1 ? 's' : ''}`);
       return;
     }
     const headerRow = document.createElement("tr");
@@ -1663,7 +1673,7 @@
     thStudent.setAttribute("aria-sort", getAriaSortAttr("student"));
     thStudent.className = "gb-student-col";
     thStudent.textContent = "Student" + columnSortIndicator("student");
-    attachColumnSortClick(thStudent, "student");
+    attachColumnSortClick(thStudent, "student", "Student");
     headerRow.appendChild(thStudent);
 
     // Assignment columns
@@ -1679,7 +1689,7 @@
     thAvg.style.minWidth = "72px";
     thAvg.dataset.extraCol = "1";
     if (!showMoreColumns) thAvg.style.display = "none";
-    attachColumnSortClick(thAvg, "average");
+    attachColumnSortClick(thAvg, "average", "Average");
     headerRow.appendChild(thAvg);
 
     const thWeighted = document.createElement("th");
@@ -1689,7 +1699,7 @@
     thWeighted.style.minWidth = "72px";
     thWeighted.dataset.extraCol = "1";
     if (!showMoreColumns) thWeighted.style.display = "none";
-    attachColumnSortClick(thWeighted, "weighted");
+    attachColumnSortClick(thWeighted, "weighted", "Weighted");
     headerRow.appendChild(thWeighted);
 
     const thTrend = document.createElement("th");
@@ -1699,7 +1709,7 @@
     thTrend.style.minWidth = "56px";
     thTrend.dataset.extraCol = "1";
     if (!showMoreColumns) thTrend.style.display = "none";
-    attachColumnSortClick(thTrend, "trend");
+    attachColumnSortClick(thTrend, "trend", "Trend");
     headerRow.appendChild(thTrend);
 
     tableHead.appendChild(headerRow);
@@ -1750,7 +1760,7 @@
 
       // Score cells
       for (const draft of drafts) {
-        tr.appendChild(buildScoreTd(draft, student.code, scoreMap));
+        tr.appendChild(buildScoreTd(draft, student.code, scoreMap, student.name || student.code));
       }
 
       // Average / Weighted / Trend cells
@@ -1892,9 +1902,6 @@
     summaryRow.appendChild(tdTrendEmpty);
 
     tableBody.appendChild(summaryRow);
-
-    // Announce data loaded to screen readers
-    announceA11y(`Gradebook loaded with ${students.length} student${students.length !== 1 ? 's' : ''} and ${drafts.length} assignment${drafts.length !== 1 ? 's' : ''}`);
 
     // Restore focus if a cell was focused before re-render
     restoreFocusFromPos();
