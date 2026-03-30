@@ -852,6 +852,23 @@
     return groupDrafts.filter(d => studentScores.has(d.id) && typeof studentScores.get(d.id) === "number").length;
   }
 
+  // Calculate the raw earned and possible point totals for a student across a group
+  function calculateGroupRawPoints(studentCode, scoreMap, groupDrafts) {
+    const studentScores = scoreMap.get(studentCode);
+    let rawEarnedSum = 0, possibleSum = 0;
+    for (const draft of groupDrafts) {
+      const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+      if (studentScores && studentScores.has(draft.id) && tp) {
+        const s = studentScores.get(draft.id);
+        if (typeof s === "number") {
+          rawEarnedSum += (s * tp / 100);
+          possibleSum += tp;
+        }
+      }
+    }
+    return { rawEarnedSum, possibleSum };
+  }
+
   // Build an individual assignment <th> element (shared by individual mode and expanded groups)
   function buildAssignmentTh(draft) {
     const th = document.createElement("th");
@@ -1652,77 +1669,183 @@
 
     const { students, drafts, scoreMap } = data;
 
-    // Build CSV header
-    const headers = ["Student"];
-    for (const draft of drafts) {
-      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-      let headerLabel = draft.title || "(untitled)";
-      const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
-      if (extras.length) headerLabel += ` (${extras.join(", ")})`;
-      headers.push(headerLabel);
-    }
-    headers.push("Average", "Weighted", "Trend");
+    const rows = [];
 
-    const rows = [headers];
+    if (groupMode !== "individual") {
+      // ── Grouped CSV export ────────────────────────────────────────────────
+      const { groups, ungrouped } = groupMode === "week"
+        ? buildWeekGroupsFromDrafts(drafts)
+        : buildGroupsFromDrafts(drafts);
+      const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
 
-    // Build data rows
-    for (const student of students) {
-      const row = [student.name || student.code];
+      // Build header: one column per group, then individual ungrouped columns
+      const headers = ["Student"];
+      for (const group of groups) {
+        headers.push(group.displayName);
+      }
+      for (const draft of ungrouped) {
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        let headerLabel = draft.title || "(untitled)";
+        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
+        if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+        headers.push(headerLabel);
+      }
+      headers.push("Average", "Weighted", "Trend");
+      rows.push(headers);
 
-      const studentScores = scoreMap.get(student.code);
-      for (const draft of drafts) {
-        if (studentScores && studentScores.has(draft.id)) {
-          const score = studentScores.get(draft.id);
-          if (typeof score === "number") {
-            const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-            if (totalPossible) {
-              row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+      // Build data rows
+      for (const student of students) {
+        const row = [student.name || student.code];
+
+        // Group columns
+        for (const group of groups) {
+          const groupAvg = calculateGroupAverage(student.code, scoreMap, group.drafts);
+          if (groupAvg !== null) {
+            const { rawEarnedSum, possibleSum } = calculateGroupRawPoints(student.code, scoreMap, group.drafts);
+            if (possibleSum > 0) {
+              row.push(`${groupAvg}% (${Math.round(rawEarnedSum)}/${possibleSum})`);
             } else {
-              row.push(score);
+              row.push(`${groupAvg}%`);
             }
           } else {
             row.push("");
           }
-        } else {
-          row.push("");
         }
+
+        // Ungrouped individual columns
+        const studentScores = scoreMap.get(student.code);
+        for (const draft of ungrouped) {
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            if (typeof score === "number") {
+              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              if (totalPossible) {
+                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+              } else {
+                row.push(score);
+              }
+            } else {
+              row.push("");
+            }
+          } else {
+            row.push("");
+          }
+        }
+
+        const avg = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
+        row.push(avg !== null ? avg : "");
+        const weighted = calculateWeightedAverage(student.code, scoreMap, allDraftsFlat);
+        row.push(weighted !== null ? weighted : "");
+        const trend = calculateTrend(student.code, scoreMap, allDraftsFlat);
+        row.push(trend || "");
+
+        rows.push(row);
       }
 
-      const avg = calculateRowAverage(student.code, scoreMap, drafts);
-      row.push(avg !== null ? avg : "");
-      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-      row.push(weighted !== null ? weighted : "");
-      const trend = calculateTrend(student.code, scoreMap, drafts);
-      row.push(trend || "");
+      // Summary row
+      const summaryRow = ["Class Average"];
+      for (const group of groups) {
+        const groupScores = [];
+        for (const student of students) {
+          const ga = calculateGroupAverage(student.code, scoreMap, group.drafts);
+          if (ga !== null) groupScores.push(ga);
+        }
+        summaryRow.push(groupScores.length > 0
+          ? Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length)
+          : "");
+      }
+      for (const draft of ungrouped) {
+        const avg = calculateColumnAverage(draft.id, scoreMap, students);
+        summaryRow.push(avg !== null ? avg : "");
+      }
+      const allScores = [];
+      const allWeightedScores = [];
+      for (const student of students) {
+        const avg = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
+        if (avg !== null) allScores.push(avg);
+        const weighted = calculateWeightedAverage(student.code, scoreMap, allDraftsFlat);
+        if (weighted !== null) allWeightedScores.push(weighted);
+      }
+      summaryRow.push(
+        allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : "",
+        allWeightedScores.length > 0 ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length) : "",
+        "—"
+      );
+      rows.push(summaryRow);
+    } else {
+      // ── Individual (flat) CSV export ──────────────────────────────────────
+      // Build CSV header
+      const headers = ["Student"];
+      for (const draft of drafts) {
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        let headerLabel = draft.title || "(untitled)";
+        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
+        if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+        headers.push(headerLabel);
+      }
+      headers.push("Average", "Weighted", "Trend");
+      rows.push(headers);
 
-      rows.push(row);
-    }
+      // Build data rows
+      for (const student of students) {
+        const row = [student.name || student.code];
 
-    // Add summary row
-    const summaryRow = ["Class Average"];
-    for (const draft of drafts) {
-      const avg = calculateColumnAverage(draft.id, scoreMap, students);
-      summaryRow.push(avg !== null ? avg : "");
+        const studentScores = scoreMap.get(student.code);
+        for (const draft of drafts) {
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            if (typeof score === "number") {
+              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              if (totalPossible) {
+                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+              } else {
+                row.push(score);
+              }
+            } else {
+              row.push("");
+            }
+          } else {
+            row.push("");
+          }
+        }
+
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        row.push(avg !== null ? avg : "");
+        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+        row.push(weighted !== null ? weighted : "");
+        const trend = calculateTrend(student.code, scoreMap, drafts);
+        row.push(trend || "");
+
+        rows.push(row);
+      }
+
+      // Add summary row
+      const summaryRow = ["Class Average"];
+      for (const draft of drafts) {
+        const avg = calculateColumnAverage(draft.id, scoreMap, students);
+        summaryRow.push(avg !== null ? avg : "");
+      }
+      const allScores = [];
+      const allWeightedScores = [];
+      for (const student of students) {
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        if (avg !== null) allScores.push(avg);
+        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+        if (weighted !== null) allWeightedScores.push(weighted);
+      }
+      const overallAvg =
+        allScores.length > 0
+          ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+          : "";
+      const overallWeighted =
+        allWeightedScores.length > 0
+          ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+          : "";
+      summaryRow.push(overallAvg, overallWeighted, "—");
+      rows.push(summaryRow);
     }
-    const allScores = [];
-    const allWeightedScores = [];
-    for (const student of students) {
-      const avg = calculateRowAverage(student.code, scoreMap, drafts);
-      if (avg !== null) allScores.push(avg);
-      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-      if (weighted !== null) allWeightedScores.push(weighted);
-    }
-    const overallAvg =
-      allScores.length > 0
-        ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
-        : "";
-    const overallWeighted =
-      allWeightedScores.length > 0
-        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
-        : "";
-    summaryRow.push(overallAvg, overallWeighted, "—");
-    rows.push(summaryRow);
 
     // Convert to CSV string
     const csvContent = rows
@@ -1781,73 +1904,180 @@
       
       // Build table data
       const headers = ["Student"];
-      for (const draft of drafts) {
-        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        let label = (draft.title || "(untitled)").substring(0, 20);
-        if (dateStr) label += ` ${dateStr}`;
-        if (totalPossible) label += ` ${totalPossible}pt`;
-        headers.push(label);
-      }
-      headers.push("Avg", "Wtd", "Trend");
-      
       const tableData = [];
-      for (const student of students) {
-        const row = [student.name || student.code];
-        const studentScores = scoreMap.get(student.code);
-        
-        for (const draft of drafts) {
-          if (studentScores && studentScores.has(draft.id)) {
-            const score = studentScores.get(draft.id);
-            if (typeof score === "number") {
-              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              if (totalPossible) {
-                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+
+      if (groupMode !== "individual") {
+        // ── Grouped PDF export ──────────────────────────────────────────────
+        const { groups, ungrouped } = groupMode === "week"
+          ? buildWeekGroupsFromDrafts(drafts)
+          : buildGroupsFromDrafts(drafts);
+        const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
+
+        // One column per group, then individual ungrouped columns
+        for (const group of groups) {
+          headers.push(group.displayName);
+        }
+        for (const draft of ungrouped) {
+          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+          let label = (draft.title || "(untitled)").substring(0, 20);
+          if (dateStr) label += ` ${dateStr}`;
+          if (totalPossible) label += ` ${totalPossible}pt`;
+          headers.push(label);
+        }
+        headers.push("Avg", "Wtd", "Trend");
+
+        for (const student of students) {
+          const row = [student.name || student.code];
+
+          // Group columns
+          for (const group of groups) {
+            const groupAvg = calculateGroupAverage(student.code, scoreMap, group.drafts);
+            if (groupAvg !== null) {
+              const { rawEarnedSum, possibleSum } = calculateGroupRawPoints(student.code, scoreMap, group.drafts);
+              if (possibleSum > 0) {
+                row.push(`${groupAvg}% (${Math.round(rawEarnedSum)}/${possibleSum})`);
               } else {
-                row.push(`${score}%`);
+                row.push(`${groupAvg}%`);
               }
             } else {
               row.push("—");
             }
-          } else {
-            row.push("—");
           }
+
+          // Ungrouped individual columns
+          const studentScores = scoreMap.get(student.code);
+          for (const draft of ungrouped) {
+            if (studentScores && studentScores.has(draft.id)) {
+              const score = studentScores.get(draft.id);
+              if (typeof score === "number") {
+                const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+                if (totalPossible) {
+                  row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+                } else {
+                  row.push(`${score}%`);
+                }
+              } else {
+                row.push("—");
+              }
+            } else {
+              row.push("—");
+            }
+          }
+
+          const avg = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
+          row.push(avg !== null ? `${avg}%` : "—");
+          const weighted = calculateWeightedAverage(student.code, scoreMap, allDraftsFlat);
+          row.push(weighted !== null ? `${weighted}%` : "—");
+          const trend = calculateTrend(student.code, scoreMap, allDraftsFlat);
+          row.push(trend || "—");
+
+          tableData.push(row);
+        }
+
+        // Summary row
+        const summaryRow = ["Class Avg"];
+        for (const group of groups) {
+          const groupScores = [];
+          for (const student of students) {
+            const ga = calculateGroupAverage(student.code, scoreMap, group.drafts);
+            if (ga !== null) groupScores.push(ga);
+          }
+          summaryRow.push(groupScores.length > 0
+            ? `${Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length)}%`
+            : "—");
+        }
+        for (const draft of ungrouped) {
+          const avg = calculateColumnAverage(draft.id, scoreMap, students);
+          summaryRow.push(avg !== null ? `${avg}%` : "—");
+        }
+        const allScores = [];
+        const allWeightedScores = [];
+        for (const student of students) {
+          const avg = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
+          if (avg !== null) allScores.push(avg);
+          const weighted = calculateWeightedAverage(student.code, scoreMap, allDraftsFlat);
+          if (weighted !== null) allWeightedScores.push(weighted);
+        }
+        const overallAvg = allScores.length > 0
+          ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+          : null;
+        const overallWeighted = allWeightedScores.length > 0
+          ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+          : null;
+        summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
+        summaryRow.push(overallWeighted !== null ? `${overallWeighted}%` : "—");
+        summaryRow.push("—");
+        tableData.push(summaryRow);
+      } else {
+        // ── Individual (flat) PDF export ────────────────────────────────────
+        for (const draft of drafts) {
+          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+          let label = (draft.title || "(untitled)").substring(0, 20);
+          if (dateStr) label += ` ${dateStr}`;
+          if (totalPossible) label += ` ${totalPossible}pt`;
+          headers.push(label);
+        }
+        headers.push("Avg", "Wtd", "Trend");
+
+        for (const student of students) {
+          const row = [student.name || student.code];
+          const studentScores = scoreMap.get(student.code);
+          
+          for (const draft of drafts) {
+            if (studentScores && studentScores.has(draft.id)) {
+              const score = studentScores.get(draft.id);
+              if (typeof score === "number") {
+                const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+                if (totalPossible) {
+                  row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+                } else {
+                  row.push(`${score}%`);
+                }
+              } else {
+                row.push("—");
+              }
+            } else {
+              row.push("—");
+            }
+          }
+          
+          const avg = calculateRowAverage(student.code, scoreMap, drafts);
+          row.push(avg !== null ? `${avg}%` : "—");
+          const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+          row.push(weighted !== null ? `${weighted}%` : "—");
+          const trend = calculateTrend(student.code, scoreMap, drafts);
+          row.push(trend || "—");
+          
+          tableData.push(row);
         }
         
-        const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row.push(avg !== null ? `${avg}%` : "—");
-        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row.push(weighted !== null ? `${weighted}%` : "—");
-        const trend = calculateTrend(student.code, scoreMap, drafts);
-        row.push(trend || "—");
-        
-        tableData.push(row);
+        // Add summary row
+        const summaryRow = ["Class Avg"];
+        for (const draft of drafts) {
+          const avg = calculateColumnAverage(draft.id, scoreMap, students);
+          summaryRow.push(avg !== null ? `${avg}%` : "—");
+        }
+        const allScores = [];
+        const allWeightedScores = [];
+        for (const student of students) {
+          const avg = calculateRowAverage(student.code, scoreMap, drafts);
+          if (avg !== null) allScores.push(avg);
+          const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+          if (weighted !== null) allWeightedScores.push(weighted);
+        }
+        const overallAvg = allScores.length > 0
+          ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+          : null;
+        const overallWeighted = allWeightedScores.length > 0
+          ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+          : null;
+        summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
+        summaryRow.push(overallWeighted !== null ? `${overallWeighted}%` : "—");
+        summaryRow.push("—");
+        tableData.push(summaryRow);
       }
-      
-      // Add summary row
-      const summaryRow = ["Class Avg"];
-      for (const draft of drafts) {
-        const avg = calculateColumnAverage(draft.id, scoreMap, students);
-        summaryRow.push(avg !== null ? `${avg}%` : "—");
-      }
-      const allScores = [];
-      const allWeightedScores = [];
-      for (const student of students) {
-        const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        if (avg !== null) allScores.push(avg);
-        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-        if (weighted !== null) allWeightedScores.push(weighted);
-      }
-      const overallAvg = allScores.length > 0
-        ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
-        : null;
-      const overallWeighted = allWeightedScores.length > 0
-        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
-        : null;
-      summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
-      summaryRow.push(overallWeighted !== null ? `${overallWeighted}%` : "—");
-      summaryRow.push("—");
-      tableData.push(summaryRow);
       
       // Add table using autoTable plugin if available, otherwise basic table
       if (doc.autoTable) {
