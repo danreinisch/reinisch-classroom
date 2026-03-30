@@ -135,6 +135,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       
       // Save previous day if exists
       if (currentDay) {
+        if (currentDay.type === 'questions' && currentDay.questions.length === 0) {
+          console.warn('[parseTxtToMeta] Day', currentDay.day_number, 'has 0 questions — possible parser issue');
+        }
         meta.days.push(currentDay);
       }
 
@@ -153,7 +156,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
         const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z][):]|Correct\s+Answer:|ANSWER:|Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|\d+\.\s|DESE\s+Standard|IEP\s+Goal|[A-Z][).]|[A-Z]:|Correct\s+Answer:|ANSWER:|Answer:|Correct:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
           || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
           dayLabel += ' - ' + nextLine;
@@ -232,9 +235,62 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
+      // Check for bare-number format: "N. [tags] text" or "N. text" (Week 10 format)
+      const bareNumberMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+      if (bareNumberMatch) {
+        // Save previous question if exists
+        if (currentQuestion) {
+          currentDay.questions.push(currentQuestion);
+        }
+
+        const qNumber = parseInt(bareNumberMatch[1], 10);
+        const restOfLine = bareNumberMatch[2] || '';
+
+        // Extract inline [IG: code] tags → goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        // Remove all bracket tags and parenthetical type hints to get any remaining text
+        const remainingText = restOfLine
+          .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+
+        currentQuestion = {
+          number: qNumber,
+          text: remainingText,
+          type: 'multiple_choice',
+          choices: [],
+          correct: '',
+          hint: ''
+        };
+        if (igCodes.length > 0) {
+          currentQuestion.goal_codes = igCodes;
+        }
+        if (mlsCodes.length > 0) {
+          currentQuestion.dese_codes = mlsCodes;
+        }
+
+        currentSection = 'question';
+        continue;
+      }
+
       if (currentQuestion) {
-        // Check for choices (A), B), C), etc. or A:, B:, C:, etc.)
-        const choiceMatch = trimmed.match(/^([A-Z])[):]\s*(.*)$/);
+        // Check for choices (A), B), C), etc. or A:, B:, C:, etc. or A., B., C., etc.)
+        const choiceMatch = trimmed.match(/^([A-Z])[).:]\s*(.*)$/);
         if (choiceMatch) {
           currentQuestion.choices.push({
             letter: choiceMatch[1],
@@ -243,8 +299,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer:, ANSWER:, or Answer:
-        const correctMatch = trimmed.match(/^(?:Correct\s+)?Answer:\s*([A-Z])/i);
+        // Check for Correct Answer:, ANSWER:, Answer:, or Correct:
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
@@ -336,6 +392,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   if (currentDay) {
     if (currentQuestion && currentDay.type === 'questions') {
       currentDay.questions.push(currentQuestion);
+    }
+    if (currentDay.type === 'questions' && currentDay.questions.length === 0) {
+      console.warn('[parseTxtToMeta] Day', currentDay.day_number, 'has 0 questions — possible parser issue');
     }
     meta.days.push(currentDay);
   }
@@ -911,4 +970,210 @@ Keywords: DNA;RNA;case:true;min:2`;
   assert.deepStrictEqual(q1.keywords, ['DNA', 'RNA'], 'keywords should be DNA and RNA only');
   assert.strictEqual(q1.min_keywords, 2, 'min_keywords should be 2');
   assert.strictEqual(q1.case_sensitive, true, 'case_sensitive should be true');
+});
+
+// ── Week 10 format tests ──────────────────────────────────────────────────────
+
+test('Parse Week 10 bare-number question format with inline tags and A. choices', () => {
+  const txtContent = `--- Day 1 — Chapter 29: Arrival ---
+
+1. [MLS.L.4.B] [IG: S001.11.1]
+   Break down the word 'pre-car-i-ous-ly' from Chapter 29. How many syllables?
+   A. 4 syllables
+   B. 5 syllables
+   C. 3 syllables
+   Correct: B
+   Hint: Clap it out slowly — one clap for each part of the word.
+
+2. [MLS.L.4.A] [IG: S001.11.2]
+   In Chapter 29, the word 'unnerving' describes the winged lizards. Based on context, what does it mean?
+   A. Making someone feel anxious, nervous, or uncomfortable
+   B. Making someone feel happy, content, and very relaxed
+   C. Making someone feel sleepy, drowsy, and very bored
+   Correct: A
+   Hint: Read the sentence with this word in it.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse Week 10 format');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].day_number, 1, 'Day number should be 1');
+  assert.strictEqual(result.days[0].type, 'questions', 'Day should be questions type');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
+
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.number, 1, 'Q1 number should be 1');
+  assert.strictEqual(q1.text, "Break down the word 'pre-car-i-ous-ly' from Chapter 29. How many syllables?", 'Q1 text should be on next line');
+  assert.strictEqual(q1.choices.length, 3, 'Q1 should have 3 choices');
+  assert.strictEqual(q1.choices[0].letter, 'A', 'First choice letter should be A');
+  assert.strictEqual(q1.choices[0].text, '4 syllables', 'First choice text should be "4 syllables"');
+  assert.strictEqual(q1.correct, 'B', 'Q1 correct answer should be B');
+  assert.strictEqual(q1.hint, 'Clap it out slowly — one clap for each part of the word.', 'Q1 hint should be parsed');
+  assert.deepStrictEqual(q1.goal_codes, ['S001.11.1'], 'Q1 should have goal_codes from [IG:] tag');
+  assert.deepStrictEqual(q1.dese_codes, ['MLS.L.4.B'], 'Q1 should have dese_codes from [MLS.*] tag');
+
+  const q2 = result.days[0].questions[1];
+  assert.strictEqual(q2.number, 2, 'Q2 number should be 2');
+  assert.strictEqual(q2.correct, 'A', 'Q2 correct answer should be A');
+  assert.deepStrictEqual(q2.goal_codes, ['S001.11.2'], 'Q2 should have goal_codes from [IG:] tag');
+  assert.deepStrictEqual(q2.dese_codes, ['MLS.L.4.A'], 'Q2 should have dese_codes from [MLS.*] tag');
+});
+
+test('Parse Week 10 "Correct: X" answer format', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+1. What color is the sky?
+   A. Blue
+   B. Red
+   C. Green
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse Correct: format');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].correct, 'A', 'Should parse "Correct: A" as correct answer A');
+});
+
+test('Parse Week 10 A. period-format choices', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+1. How many syllables in "beautiful"?
+   A. 2
+   B. 3
+   C. 4
+   Correct: B`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse A. choice format');
+  assert.strictEqual(result.days[0].questions[0].choices.length, 3, 'Should have 3 choices');
+  assert.strictEqual(result.days[0].questions[0].choices[0].letter, 'A', 'First choice letter A');
+  assert.strictEqual(result.days[0].questions[0].choices[0].text, '2', 'First choice text');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Correct answer B');
+});
+
+test('Parse Week 10 multi-line question: tags on one line, text on next line', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+1. [MLS.R.2.A] [IG: S001.11.5]
+   What is the main idea of Chapter 29?
+   A. Alex arrives on a new planet
+   B. Alex leaves his family
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse multi-line question');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].text, 'What is the main idea of Chapter 29?', 'Question text should come from next line');
+  assert.deepStrictEqual(result.days[0].questions[0].goal_codes, ['S001.11.5'], 'Should have goal_codes');
+  assert.deepStrictEqual(result.days[0].questions[0].dese_codes, ['MLS.R.2.A'], 'Should have dese_codes');
+});
+
+test('Parse Week 10 question with multiple inline [IG:] and [MLS.*] tags', () => {
+  const txtContent = `DAY 4 QUESTIONS
+
+25. [MLS.W.3.A] [MLS.R.3.A] [MLS.L.1.A] [IG: S001.11.3-1] [IG: S001.11.3-2]
+   Write 2-3 sentences explaining how the author uses transition words.
+   A. Yes
+   B. No
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse multiple inline tags');
+  const q = result.days[0].questions[0];
+  assert.strictEqual(q.number, 25, 'Question number should be 25');
+  assert.deepStrictEqual(q.goal_codes, ['S001.11.3-1', 'S001.11.3-2'], 'Should have both [IG:] codes');
+  assert.deepStrictEqual(q.dese_codes, ['MLS.W.3.A', 'MLS.R.3.A', 'MLS.L.1.A'], 'Should have all [MLS.*] codes');
+});
+
+test('Parse Week 10 True/False bare-number question', () => {
+  const txtContent = `--- Day 1 — Chapter 29: Arrival ---
+
+6. [MLS.L.1.A] [IG: S001.11.3-3] (True/False)
+   True or False: In Chapter 29, 'Run!' is a complete sentence.
+   A. True
+   B. False
+   Correct: A
+   Hint: Go back to the chapter and think about whether this word can tell someone to do something.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse True/False bare-number question');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+  const q = result.days[0].questions[0];
+  assert.strictEqual(q.number, 6, 'Question number should be 6');
+  assert.strictEqual(q.text, "True or False: In Chapter 29, 'Run!' is a complete sentence.", 'Should get text from next line');
+  assert.strictEqual(q.choices.length, 2, 'Should have 2 choices (True/False)');
+  assert.strictEqual(q.correct, 'A', 'Correct answer should be A');
+  assert.deepStrictEqual(q.goal_codes, ['S001.11.3-3'], 'Should extract [IG:] code');
+  assert.deepStrictEqual(q.dese_codes, ['MLS.L.1.A'], 'Should extract [MLS.*] code');
+});
+
+test('Parse Week 10 full excerpt with multiple days and questions', () => {
+  const txtContent = `--- Day 1 — Chapter 29: Arrival ---
+
+1. [MLS.L.4.B] [IG: S001.11.1]
+   Break down the word 'pre-car-i-ous-ly' from Chapter 29. How many syllables?
+   A. 4 syllables
+   B. 5 syllables
+   C. 3 syllables
+   Correct: B
+   Hint: Clap it out slowly.
+
+2. [MLS.L.4.A] [IG: S001.11.2]
+   What does 'unnerving' mean in context?
+   A. Anxious or uncomfortable
+   B. Happy and content
+   C. Sleepy and bored
+   Correct: A
+   Hint: Read the sentence.
+
+--- Day 4 — Written Response ---
+
+25. [MLS.W.3.A] [IG: S001.11.3-1] (Written Response)
+   Write 2-3 sentences about transition words.
+   HINTS:
+   - Pick one specific word.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse full Week 10 excerpt');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 days');
+
+  const day1 = result.days[0];
+  assert.strictEqual(day1.day_number, 1, 'Day 1 number');
+  assert.strictEqual(day1.type, 'questions', 'Day 1 should be questions');
+  assert.strictEqual(day1.questions.length, 2, 'Day 1 should have 2 questions');
+  assert.strictEqual(day1.questions[0].correct, 'B', 'Day 1 Q1 correct');
+  assert.strictEqual(day1.questions[1].correct, 'A', 'Day 1 Q2 correct');
+
+  const day2 = result.days[1];
+  assert.strictEqual(day2.day_number, 4, 'Day 4 number');
+  assert.strictEqual(day2.type, 'writing_prompt', 'Day 4 should be writing_prompt');
+});
+
+test('Warning logged when questions-type day has 0 questions', () => {
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+
+  const txtContent = `DAY 1 QUESTIONS
+
+DAY 2 QUESTIONS
+
+Question 1: What is 1+1?
+A) 2
+B) 3
+Correct Answer: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+  console.warn = origWarn;
+
+  assert(result !== null, 'Should parse successfully');
+  assert.strictEqual(warnings.length, 1, 'Should have 1 warning for empty-questions day');
+  assert(warnings[0].includes('Day 1'), 'Warning should mention Day 1');
+  assert(warnings[0].includes('0 questions'), 'Warning should mention 0 questions');
 });
