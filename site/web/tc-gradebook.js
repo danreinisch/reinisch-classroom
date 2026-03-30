@@ -152,6 +152,7 @@
   let missingWorkPairs = new Set(); // stores "studentCode::draftId" strings
   let showOnlyMissingStudents = false;
   let _renderingInProgress = false; // re-entrancy guard for renderGradebook()
+  let _focusedCellPos = null; // { rowIndex, colIndex } — preserved across re-renders
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -671,6 +672,7 @@
   function makeScoreEditable(td, studentCode, draftId, currentScore, totalPossible) {
     const maxScore = totalPossible || 100;
     td.classList.add("editing");
+    let _skipBlurCancel = false; // set to true when Tab or explicit save handles navigation
 
     // Create inline editor container
     const editorDiv = document.createElement("div");
@@ -777,15 +779,46 @@
       if (e.relatedTarget === btnSave || e.relatedTarget === btnCancel) {
         return;
       }
+      if (_skipBlurCancel) return;
       // Cancel on blur — require explicit save via Enter or ✓ button
       // This prevents accidental saves when clicking outside the cell
       cancel();
     });
     
+    // Helper: move focus to the next focusable cell after td in the same row
+    const moveFocusToNextCell = (fromTd) => {
+      const row = fromTd.closest("tr");
+      if (!row) return;
+      const cells = Array.from(row.cells);
+      const idx = cells.indexOf(fromTd);
+      for (let i = idx + 1; i < cells.length; i++) {
+        if (cells[i].tabIndex >= 0 && cells[i].style.display !== "none") {
+          cells[i].focus();
+          break;
+        }
+      }
+    };
+
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         save();
+      } else if (e.key === "Tab") {
+        e.preventDefault();
+        _skipBlurCancel = true;
+        const newValue = input.value.trim();
+        if (newValue !== "") {
+          // Save then move focus to next score cell in the row
+          save().then(() => {
+            moveFocusToNextCell(td);
+          }).finally(() => {
+            _skipBlurCancel = false;
+          });
+        } else {
+          cancel();
+          _skipBlurCancel = false;
+          moveFocusToNextCell(td);
+        }
       } else if (e.key === "Escape") {
         e.preventDefault();
         cancel();
@@ -995,6 +1028,7 @@
   function buildScoreTd(draft, studentCode, scoreMap) {
     const td = document.createElement("td");
     td.className = "gb-score-cell editable";
+    td.tabIndex = 0;
 
     if (missingWorkPairs.has(`${studentCode}::${draft.id}`)) {
       td.classList.add("gb-missing-highlight");
@@ -1073,6 +1107,8 @@
         const th = document.createElement("th");
         th.className = "gb-group-header";
         th.style.minWidth = isCompact ? "80px" : "150px";
+        th.tabIndex = 0;
+        th.dataset.groupSeries = group.series;
 
         const nameEl = document.createElement("div");
         nameEl.className = "gb-group-header-name";
@@ -1127,6 +1163,8 @@
           const th = buildAssignmentTh(group.drafts[i]);
           if (i === 0) {
             th.classList.add("gb-group-first-col");
+            th.tabIndex = 0;
+            th.dataset.groupSeriesExpanded = group.series;
             const collapseEl = document.createElement("div");
             collapseEl.className = "gb-group-expand-btn";
             collapseEl.setAttribute("aria-label", `Collapse ${group.displayName} assignments`);
@@ -1196,6 +1234,7 @@
       // Student cell (sticky) with hover card
       const tdStudent = document.createElement("td");
       tdStudent.className = "gb-student-cell";
+      tdStudent.tabIndex = 0;
       tdStudent.textContent = student.name || student.code;
       const trendLabel = trend === "up" ? "↗ Improving" : trend === "down" ? "↘ Declining" : "→ Steady";
       tdStudent.dataset.tooltip = JSON.stringify({
@@ -1219,6 +1258,7 @@
           // Collapsed: single group summary cell
           const tdGroupSummary = document.createElement("td");
           tdGroupSummary.className = "gb-group-cell gb-score-cell";
+          tdGroupSummary.tabIndex = 0;
           if (groupAvg !== null) {
             const avgLine = document.createElement("div");
             avgLine.className = "gb-score-pct";
@@ -1441,10 +1481,42 @@
     tableBody.appendChild(summaryRow);
   }
 
+  // Helper: restore focus to the previously-captured cell position after a re-render
+  function restoreFocusFromPos() {
+    if (!_focusedCellPos) return;
+    const { rowIndex, colIndex } = _focusedCellPos;
+    _focusedCellPos = null;
+    const tableBodyEl = $("gbTableBody");
+    if (!tableBodyEl) return;
+    const targetRow = tableBodyEl.rows[rowIndex] || tableBodyEl.rows[tableBodyEl.rows.length - 1];
+    if (!targetRow) return;
+    const targetCell = targetRow.cells[colIndex] || targetRow.cells[targetRow.cells.length - 1];
+    if (targetCell && targetCell.tabIndex >= 0) {
+      targetCell.focus({ preventScroll: false });
+    }
+  }
+
   // Render the gradebook table
   function renderGradebook() {
     if (_renderingInProgress) return;
     _renderingInProgress = true;
+
+    // Capture focused cell position before wiping the DOM
+    const tableWrapCapture = $("gbTableWrap");
+    if (tableWrapCapture && tableWrapCapture.contains(document.activeElement)) {
+      const focused = document.activeElement;
+      const row = focused.closest("tr");
+      if (row) {
+        const allRows = Array.from(row.parentElement.rows);
+        const rowIndex = allRows.indexOf(row);
+        const cells = Array.from(row.cells);
+        const colIndex = cells.indexOf(focused.closest("td,th"));
+        if (rowIndex >= 0 && colIndex >= 0) {
+          _focusedCellPos = { rowIndex, colIndex };
+        }
+      }
+    }
+
     try {
     const data = buildGradebookData();
     const emptyEl = $("gbEmpty");
@@ -1498,6 +1570,7 @@
     if (groupMode !== "individual") {
       tableBody.innerHTML = "";
       renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap);
+      restoreFocusFromPos();
       return;
     }
     const headerRow = document.createElement("tr");
@@ -1566,6 +1639,7 @@
       // Student name cell (sticky) with quick-stats hover card
       const tdStudent = document.createElement("td");
       tdStudent.className = "gb-student-cell";
+      tdStudent.tabIndex = 0;
       tdStudent.textContent = student.name || student.code;
 
       // Build quick stats for hover card
@@ -1717,6 +1791,9 @@
     summaryRow.appendChild(tdTrendEmpty);
 
     tableBody.appendChild(summaryRow);
+
+    // Restore focus if a cell was focused before re-render
+    restoreFocusFromPos();
     } finally {
       _renderingInProgress = false;
     }
@@ -3449,6 +3526,123 @@
     });
   }
 
+  // ── Keyboard Navigation ───────────────────────────────────────────────────
+  // Single delegated keydown listener on gbTableWrap; handles:
+  //   Arrow keys  → move focus to adjacent visible cell
+  //   Home/End    → jump to first/last cell in current row
+  //   Enter       → open score editor on score cells; expand/collapse groups on headers
+  function setupKeyboardNavigation() {
+    const tableWrapEl = $("gbTableWrap");
+    if (!tableWrapEl) return;
+
+    tableWrapEl.addEventListener("keydown", (e) => {
+      const target = e.target;
+
+      // Only handle keys when a focusable gradebook cell has focus
+      const isScoreCell  = target.classList.contains("gb-score-cell");
+      const isStudentCell = target.classList.contains("gb-student-cell");
+      const isGroupCell  = target.classList.contains("gb-group-cell");
+      const isGroupHeader = target.tagName === "TH" && target.classList.contains("gb-group-header");
+      const isGroupFirstCol = target.tagName === "TH" && target.classList.contains("gb-group-first-col");
+
+      const isFocusableCell = isScoreCell || isStudentCell || isGroupCell || isGroupHeader || isGroupFirstCol;
+      if (!isFocusableCell) return;
+
+      // If the cell is in edit mode, let the editor's own handlers take over
+      if (target.classList.contains("editing")) return;
+
+      const key = e.key;
+
+      // ── Enter: open editor or toggle group ──────────────────────────────
+      if (key === "Enter") {
+        if (isGroupHeader && target.dataset.groupSeries) {
+          e.preventDefault();
+          expandedGroups.add(target.dataset.groupSeries);
+          renderGradebook();
+          return;
+        }
+        if (isGroupFirstCol && target.dataset.groupSeriesExpanded) {
+          e.preventDefault();
+          expandedGroups.delete(target.dataset.groupSeriesExpanded);
+          renderGradebook();
+          return;
+        }
+        if (isScoreCell && target.classList.contains("editable")) {
+          e.preventDefault();
+          target.click(); // triggers existing makeScoreEditable() click handler
+          return;
+        }
+        return;
+      }
+
+      // ── Arrow key / Home / End navigation ───────────────────────────────
+      const isNavKey = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(key);
+      if (!isNavKey) return;
+
+      e.preventDefault();
+
+      // Collect all navigable rows (thead + tbody rows)
+      const table = tableWrapEl.querySelector("table");
+      if (!table) return;
+
+      const allRows = [
+        ...Array.from(table.tHead ? table.tHead.rows : []),
+        ...Array.from(table.tBodies[0] ? table.tBodies[0].rows : [])
+      ];
+
+      // Find current row/cell
+      const currentRow = target.closest("tr");
+      if (!currentRow) return;
+      const rowIndex = allRows.indexOf(currentRow);
+      const currentCells = Array.from(currentRow.cells);
+      const colIndex = currentCells.indexOf(target);
+      if (rowIndex < 0 || colIndex < 0) return;
+
+      // Helper: get visible cells in a row (those with tabIndex >= 0 and not display:none)
+      function getVisibleCells(row) {
+        return Array.from(row.cells).filter(
+          c => c.tabIndex >= 0 && c.style.display !== "none"
+        );
+      }
+
+      let targetCell = null;
+
+      if (key === "Home") {
+        const visCells = getVisibleCells(currentRow);
+        targetCell = visCells[0] || null;
+      } else if (key === "End") {
+        const visCells = getVisibleCells(currentRow);
+        targetCell = visCells[visCells.length - 1] || null;
+      } else if (key === "ArrowLeft" || key === "ArrowRight") {
+        const visCells = getVisibleCells(currentRow);
+        const visIdx = visCells.indexOf(target);
+        if (key === "ArrowLeft"  && visIdx > 0)                  targetCell = visCells[visIdx - 1];
+        if (key === "ArrowRight" && visIdx < visCells.length - 1) targetCell = visCells[visIdx + 1];
+      } else if (key === "ArrowUp" || key === "ArrowDown") {
+        const delta = key === "ArrowUp" ? -1 : 1;
+        // Walk rows in the given direction to find one with a cell at same (or nearby) column
+        for (let ri = rowIndex + delta; ri >= 0 && ri < allRows.length; ri += delta) {
+          const candidateRow = allRows[ri];
+          const visCells = getVisibleCells(candidateRow);
+          // Skip rows with no focusable visible cells (summary rows, header rows without tabindex, etc.)
+          if (visCells.length === 0) continue;
+          // Prefer same column index; fall back to last visible cell
+          const sameCol = Array.from(candidateRow.cells)[colIndex];
+          if (sameCol && sameCol.tabIndex >= 0 && sameCol.style.display !== "none") {
+            targetCell = sameCol;
+          } else {
+            targetCell = visCells[Math.min(colIndex, visCells.length - 1)] || visCells[0];
+          }
+          break;
+        }
+      }
+
+      if (targetCell) {
+        targetCell.focus();
+      }
+    });
+  }
+
   // Initialize
   async function init() {
     await loadData();
@@ -3456,6 +3650,7 @@
     renderClassFilter();
     renderGradebook();
     setupStudentHoverCard();
+    setupKeyboardNavigation();
 
     // Wire manual assignment button
     const btnManualAssignment = $("btnManualAssignment");
