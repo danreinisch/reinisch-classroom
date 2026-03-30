@@ -530,9 +530,42 @@
         z-index: 2;
         position: relative;
       }
+
+      /* Screen-reader-only utility (visually hidden but accessible) */
+      .gb-sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0,0,0,0);
+        white-space: nowrap;
+        border: 0;
+      }
+      /* Skip link becomes visible on focus */
+      .gb-skip-link:focus {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        width: auto;
+        height: auto;
+        clip: auto;
+        overflow: visible;
+        white-space: normal;
+        background: #1e2d3d;
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 6px;
+        z-index: 99999;
+        text-decoration: none;
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
+    <!-- Skip-to-content link for keyboard users -->
+    <a href="#gbTableWrap" class="gb-sr-only gb-skip-link">Skip to gradebook</a>
+    <!-- Live region for screen-reader announcements -->
+    <div id="gbA11yStatus" role="status" aria-live="polite" class="gb-sr-only"></div>
     <div class="tc-app">
       <header class="tc-topbar">
         <button
@@ -823,7 +856,7 @@
             </div>
 
             <div class="gb-tablewrap" id="gbTableWrap" style="display: none">
-              <table class="gb-table" id="gbTable">
+              <table class="gb-table" id="gbTable" role="grid">
                 <thead id="gbTableHead">
                   <!-- Table headers populated by JS -->
                 </thead>
