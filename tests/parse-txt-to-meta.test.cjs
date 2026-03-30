@@ -363,6 +363,48 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
+      // Check for bare-number format: "N. [tags] (Written Response)" (Week 10 format)
+      // Require at least one bracket tag to avoid matching plain numbered list lines
+      const wpBareNumberMatch = trimmed.match(/^(\d+)\.\s+(.*\[.*)/);
+      if (wpBareNumberMatch) {
+        const restOfLine = wpBareNumberMatch[2] || '';
+
+        // Extract inline [IG: code] tags → goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        // Remove all bracket tags and parenthetical type hints to get any remaining text
+        const remainingText = restOfLine
+          .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+
+        if (igCodes.length > 0) {
+          currentDay.goal_codes = igCodes;
+        }
+        if (mlsCodes.length > 0) {
+          currentDay.dese_codes = mlsCodes;
+        }
+        if (remainingText) {
+          currentDay.prompt = remainingText;
+        }
+        currentSection = 'prompt';
+        continue;
+      }
+
       // Check for Writing Structure: or REMEMBER YOUR WRITING STRUCTURE: or REMEMBER YOUR STRUCTURE:
       if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i)) {
         currentSection = 'structure';
@@ -1153,6 +1195,33 @@ test('Parse Week 10 full excerpt with multiple days and questions', () => {
   const day2 = result.days[1];
   assert.strictEqual(day2.day_number, 4, 'Day 4 number');
   assert.strictEqual(day2.type, 'writing_prompt', 'Day 4 should be writing_prompt');
+});
+
+test('Parse Week 10 Written Response day with bare-number question format', () => {
+  const txtContent = `--- Day 4 — Written Response ---
+
+25. [MLS.W.3.A] [MLS.R.3.A] [MLS.L.1.A] [IG: S001.11.3-1] [IG: S001.11.3-2] (Written Response)
+   Based on Chapters 29-31, write 2-3 sentences explaining how the author uses transition words to connect ideas. Give a specific example and explain what that word does in the sentence.
+   HINTS:
+   - Pick one specific word from the chapters (like 'so,' 'but,' 'though,' etc.)
+   - Find the sentence it appears in
+   - Explain what job that word does between the two ideas`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse Week 10 Written Response day');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+
+  const day = result.days[0];
+  assert.strictEqual(day.day_number, 4, 'Day number should be 4');
+  assert.strictEqual(day.type, 'writing_prompt', 'Day type should be writing_prompt');
+  assert(day.prompt && day.prompt.length > 0, 'prompt should be populated');
+  assert(day.prompt.includes('Based on Chapters 29-31'), 'prompt should contain the question text');
+  assert(day.prompt.includes('transition words'), 'prompt should contain continuation text');
+  assert.deepStrictEqual(day.goal_codes, ['S001.11.3-1', 'S001.11.3-2'], 'Should have both [IG:] codes');
+  assert.deepStrictEqual(day.dese_codes, ['MLS.W.3.A', 'MLS.R.3.A', 'MLS.L.1.A'], 'Should have all [MLS.*] codes');
+  assert.strictEqual(day.hints.length, 3, 'Should have 3 hint bullets');
+  assert(day.hints[0].includes("Pick one specific word"), 'First hint should match');
 });
 
 test('Warning logged when questions-type day has 0 questions', () => {
