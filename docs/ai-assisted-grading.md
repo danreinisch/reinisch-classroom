@@ -123,7 +123,7 @@ details.
 | Model | `gpt-4o-mini` |
 | Temperature | `0.3` (for consistent scoring) |
 | Avg input tokens / request | ~400–600 |
-| Avg output tokens / request | ~250 |
+| Avg output tokens / request | ~200–350 |
 | Cost per suggestion | ~$0.0002 |
 | 16 items × 25 students | ~$0.04 per full class assignment |
 | Monthly estimate (4 assignments) | ~$0.16 / month |
@@ -136,7 +136,7 @@ Cost is essentially negligible on an existing OpenAI subscription.
 
 | Scenario | Behavior |
 |---|---|
-| OpenAI times out (> 10 s) | Returns `502`; UI shows "AI suggestion failed — please score manually" |
+| OpenAI times out (> 15 s) | Returns `502`; UI shows "AI suggestion failed — please score manually" |
 | OpenAI returns HTTP error | Returns `502`; UI shows error message |
 | `OPENAI_API_KEY` not configured | Returns `503`; UI shows error message on click |
 | Goals Supabase query fails | AI suggest still runs, without goal context |

@@ -296,6 +296,29 @@ test('handles missing optional fields gracefully (no goal_codes, no item_label)'
   assert.strictEqual(body.suggested_score, 3);
 });
 
+test('suggested_note contains multi-sentence feedback', async () => {
+  const multiSentenceNote = 'You correctly identified the slope as 2. However, you did not mention the y-intercept in your explanation. Make sure to include how the line crosses the y-axis. Refer back to the standard form y = mx + b for guidance.';
+  const suggestion = { suggested_score: 3, suggested_note: multiSentenceNote, rationale: 'Partial credit for slope only.' };
+  global.fetch = makeOpenAiResponse(suggestion);
+  const res = await handler(authedEvent(validBody));
+  assert.strictEqual(res.statusCode, 200);
+  const body = JSON.parse(res.body);
+  assert.strictEqual(body.ok, true);
+  assert.strictEqual(body.suggested_note, multiSentenceNote);
+  const periodCount = (body.suggested_note.match(/\./g) || []).length;
+  assert.ok(periodCount >= 2, `expected at least 2 sentence-ending periods, got ${periodCount}`);
+});
+
+test('suggested_note defaults to empty string when AI omits it', async () => {
+  const suggestion = { suggested_score: 2, rationale: 'Partial credit.' };
+  global.fetch = makeOpenAiResponse(suggestion);
+  const res = await handler(authedEvent(validBody));
+  assert.strictEqual(res.statusCode, 200);
+  const body = JSON.parse(res.body);
+  assert.strictEqual(body.ok, true);
+  assert.strictEqual(body.suggested_note, '');
+});
+
 // ── Run ───────────────────────────────────────────────────────────────────────
 
 runAll();
