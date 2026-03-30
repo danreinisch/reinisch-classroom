@@ -153,6 +153,7 @@
   let showOnlyMissingStudents = false;
   let _renderingInProgress = false; // re-entrancy guard for renderGradebook()
   let _focusedCellPos = null; // { rowIndex, colIndex } — preserved across re-renders
+  let _a11yStatusTimer = null; // timer for announceA11y() debounce
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -166,6 +167,17 @@
   let realtimeFlashTimer = null;
   const REALTIME_MAX_RETRIES = 3;
   const REALTIME_RETRY_DELAY_MS = 5000;
+
+  // Announce a message to screen readers via the live region.
+  // Clears the region first, then sets text after a short delay so consecutive
+  // calls are each picked up by screen readers.
+  function announceA11y(msg) {
+    const el = $("gbA11yStatus");
+    if (!el) return;
+    el.textContent = "";
+    clearTimeout(_a11yStatusTimer);
+    _a11yStatusTimer = setTimeout(() => { el.textContent = msg; }, 50);
+  }
 
   // Load data from Supabase (if available) or localStorage
   async function loadData() {
@@ -419,7 +431,22 @@
         columnSortDir = "asc";
       }
       renderGradebook();
+      // Announce sort change to screen readers
+      if (columnSortKey && columnSortDir) {
+        const dirLabel = columnSortDir === "asc" ? "ascending" : "descending";
+        // Use column header text as display name (strip sort indicator chars)
+        const colName = th.textContent.replace(/\s*[▲▼]\s*$/, "").trim() || key;
+        announceA11y(`Sorted by ${colName}, ${dirLabel}`);
+      } else {
+        announceA11y("Sort cleared");
+      }
     });
+  }
+
+  // Return the aria-sort attribute value for a given sort key.
+  function getAriaSortAttr(key) {
+    if (columnSortKey !== key) return "none";
+    return columnSortDir === "asc" ? "ascending" : "descending";
   }
 
   // Return a sort indicator character for a given sort key, or empty string.
@@ -660,6 +687,10 @@
       }
 
       // Reload data and re-render
+      const savedStudentName = (studentsData.find(s => s.code === studentCode) || {}).name || studentCode;
+      const savedDraft = draftsData.find(d => d.id === draftId);
+      const savedTitle = savedDraft ? (savedDraft.title || "(untitled)") : draftId;
+      announceA11y(`Score saved: ${score} for ${savedStudentName} on ${savedTitle}`);
       await loadData();
       renderGradebook();
     } catch (err) {
@@ -673,6 +704,14 @@
     const maxScore = totalPossible || 100;
     td.classList.add("editing");
     let _skipBlurCancel = false; // set to true when Tab or explicit save handles navigation
+
+    // Lookup student name and assignment title for aria-label updates
+    const _editStudentName = (studentsData.find(s => s.code === studentCode) || {}).name || studentCode;
+    const _editDraft = draftsData.find(d => d.id === draftId);
+    const _editTitle = _editDraft ? (_editDraft.title || "(untitled)") : draftId;
+
+    // Update aria-label to reflect editing state
+    td.setAttribute("aria-label", `Editing score for ${_editStudentName} on ${_editTitle}. Press Escape to cancel`);
 
     // Create inline editor container
     const editorDiv = document.createElement("div");
@@ -765,8 +804,10 @@
         if (colorClass) {
           td.classList.add(colorClass);
         }
+        td.setAttribute("aria-label", `Score for ${_editStudentName} on ${_editTitle}: ${currentScore}%. Press Enter to edit`);
       } else {
         td.textContent = "—";
+        td.setAttribute("aria-label", `No score for ${_editStudentName} on ${_editTitle}. Press Enter to edit`);
       }
     };
 
@@ -994,6 +1035,8 @@
   // Build an individual assignment <th> element (shared by individual mode and expanded groups)
   function buildAssignmentTh(draft) {
     const th = document.createElement("th");
+    th.setAttribute("role", "columnheader");
+    th.setAttribute("aria-sort", getAriaSortAttr(draft.id));
     th.style.minWidth = isCompact ? "56px" : "68px";
 
     const fullTitle = draft.title || "(untitled)";
@@ -1027,12 +1070,16 @@
   // Build an individual score <td> element (Option D: pct + earned/possible)
   function buildScoreTd(draft, studentCode, scoreMap) {
     const td = document.createElement("td");
+    td.setAttribute("role", "gridcell");
     td.className = "gb-score-cell editable";
     td.tabIndex = 0;
 
     if (missingWorkPairs.has(`${studentCode}::${draft.id}`)) {
       td.classList.add("gb-missing-highlight");
     }
+
+    const assignmentTitle = draft.title || "(untitled)";
+    const studentName = (studentsData.find(s => s.code === studentCode) || {}).name || studentCode;
 
     let currentScore = null;
     const studentScores = scoreMap.get(studentCode);
@@ -1056,11 +1103,14 @@
 
         const colorClass = scoreColorClass(score);
         if (colorClass) td.classList.add(colorClass);
+        td.setAttribute("aria-label", `Score for ${studentName} on ${assignmentTitle}: ${score}%. Press Enter to edit`);
       } else {
         td.textContent = "—";
+        td.setAttribute("aria-label", `No score for ${studentName} on ${assignmentTitle}. Press Enter to edit`);
       }
     } else {
       td.textContent = "—";
+      td.setAttribute("aria-label", `No score for ${studentName} on ${assignmentTitle}. Press Enter to edit`);
     }
 
     td.addEventListener("click", () => {
@@ -1093,8 +1143,11 @@
 
     // ── Header row ────────────────────────────────────────────────────────────
     const headerRow = document.createElement("tr");
+    headerRow.setAttribute("role", "row");
 
     const thStudent = document.createElement("th");
+    thStudent.setAttribute("role", "columnheader");
+    thStudent.setAttribute("aria-sort", getAriaSortAttr("student"));
     thStudent.className = "gb-student-col";
     thStudent.textContent = "Student" + columnSortIndicator("student");
     attachColumnSortClick(thStudent, "student");
@@ -1105,6 +1158,9 @@
 
       if (!isExpanded) {
         const th = document.createElement("th");
+        th.setAttribute("role", "columnheader");
+        th.setAttribute("aria-sort", getAriaSortAttr(group.series));
+        th.setAttribute("aria-expanded", "false");
         th.className = "gb-group-header";
         th.style.minWidth = isCompact ? "80px" : "150px";
         th.tabIndex = 0;
@@ -1164,6 +1220,7 @@
           if (i === 0) {
             th.classList.add("gb-group-first-col");
             th.tabIndex = 0;
+            th.setAttribute("aria-expanded", "true");
             th.dataset.groupSeriesExpanded = group.series;
             const collapseEl = document.createElement("div");
             collapseEl.className = "gb-group-expand-btn";
@@ -1188,6 +1245,8 @@
 
     // Average / Weighted / Trend extra columns
     const thAvg = document.createElement("th");
+    thAvg.setAttribute("role", "columnheader");
+    thAvg.setAttribute("aria-sort", getAriaSortAttr("average"));
     thAvg.textContent = "Average" + columnSortIndicator("average");
     thAvg.style.minWidth = "72px";
     thAvg.dataset.extraCol = "1";
@@ -1196,6 +1255,8 @@
     headerRow.appendChild(thAvg);
 
     const thWeighted = document.createElement("th");
+    thWeighted.setAttribute("role", "columnheader");
+    thWeighted.setAttribute("aria-sort", getAriaSortAttr("weighted"));
     thWeighted.textContent = "Weighted" + columnSortIndicator("weighted");
     thWeighted.style.minWidth = "72px";
     thWeighted.dataset.extraCol = "1";
@@ -1204,6 +1265,8 @@
     headerRow.appendChild(thWeighted);
 
     const thTrend = document.createElement("th");
+    thTrend.setAttribute("role", "columnheader");
+    thTrend.setAttribute("aria-sort", getAriaSortAttr("trend"));
     thTrend.textContent = "Trend" + columnSortIndicator("trend");
     thTrend.style.minWidth = "56px";
     thTrend.dataset.extraCol = "1";
@@ -1218,6 +1281,7 @@
     let isFirstRow = true;
     for (const student of sortedStudents) {
       const tr = document.createElement("tr");
+      tr.setAttribute("role", "row");
       if (isFirstRow) {
         tr.classList.add("gb-highlighted");
         isFirstRow = false;
@@ -1233,6 +1297,7 @@
 
       // Student cell (sticky) with hover card
       const tdStudent = document.createElement("td");
+      tdStudent.setAttribute("role", "rowheader");
       tdStudent.className = "gb-student-cell";
       tdStudent.tabIndex = 0;
       tdStudent.textContent = student.name || student.code;
@@ -1257,13 +1322,16 @@
         if (!isExpanded) {
           // Collapsed: single group summary cell
           const tdGroupSummary = document.createElement("td");
+          tdGroupSummary.setAttribute("role", "gridcell");
           tdGroupSummary.className = "gb-group-cell gb-score-cell";
           tdGroupSummary.tabIndex = 0;
+          const studentDisplayName = student.name || student.code;
           if (groupAvg !== null) {
             const avgLine = document.createElement("div");
             avgLine.className = "gb-score-pct";
             avgLine.textContent = `${groupAvg}%`;
             tdGroupSummary.appendChild(avgLine);
+            tdGroupSummary.setAttribute("aria-label", `${group.displayName} average for ${studentDisplayName}: ${groupAvg}%`);
 
             const studentScores = scoreMap.get(student.code);
             let rawEarnedSum = 0, possibleSum = 0;
@@ -1293,6 +1361,7 @@
             if (colorClass) tdGroupSummary.classList.add(colorClass);
           } else {
             tdGroupSummary.textContent = "—";
+            tdGroupSummary.setAttribute("aria-label", `No score for ${group.displayName} for ${studentDisplayName}`);
           }
           const hasMissing = group.drafts.some(d => missingWorkPairs.has(`${student.code}::${d.id}`));
           if (hasMissing) {
@@ -1316,6 +1385,7 @@
 
       // Average / Weighted / Trend cells
       const tdAvg = document.createElement("td");
+      tdAvg.setAttribute("role", "gridcell");
       tdAvg.className = "gb-score-cell";
       tdAvg.dataset.extraCol = "1";
       if (!showMoreColumns) tdAvg.style.display = "none";
@@ -1329,6 +1399,7 @@
       tr.appendChild(tdAvg);
 
       const tdWeighted = document.createElement("td");
+      tdWeighted.setAttribute("role", "gridcell");
       tdWeighted.className = "gb-score-cell";
       tdWeighted.dataset.extraCol = "1";
       if (!showMoreColumns) tdWeighted.style.display = "none";
@@ -1343,6 +1414,7 @@
       tr.appendChild(tdWeighted);
 
       const tdTrend = document.createElement("td");
+      tdTrend.setAttribute("role", "gridcell");
       tdTrend.className = "gb-score-cell";
       tdTrend.dataset.extraCol = "1";
       tdTrend.style.textAlign = "center";
@@ -1366,9 +1438,11 @@
 
     // ── Summary row ───────────────────────────────────────────────────────────
     const summaryRow = document.createElement("tr");
+    summaryRow.setAttribute("role", "row");
     summaryRow.className = "gb-summary-row";
 
     const tdSummaryLabel = document.createElement("td");
+    tdSummaryLabel.setAttribute("role", "rowheader");
     tdSummaryLabel.className = "gb-student-cell";
     tdSummaryLabel.textContent = "Class Average";
     summaryRow.appendChild(tdSummaryLabel);
@@ -1385,6 +1459,7 @@
       if (!isExpanded) {
         // Collapsed: single group summary cell
         const tdGroupSummary = document.createElement("td");
+        tdGroupSummary.setAttribute("role", "gridcell");
         tdGroupSummary.className = "gb-group-cell gb-score-cell";
         if (groupScores.length > 0) {
           const overallGroupAvg = Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length);
@@ -1399,6 +1474,7 @@
         // Expanded: individual column averages only (no redundant summary cell)
         for (const draft of group.drafts) {
           const td = document.createElement("td");
+          td.setAttribute("role", "gridcell");
           td.className = "gb-score-cell";
           const avg = calculateColumnAverage(draft.id, scoreMap, students);
           if (avg !== null) {
@@ -1416,6 +1492,7 @@
     // Ungrouped column averages
     for (const draft of ungrouped) {
       const td = document.createElement("td");
+      td.setAttribute("role", "gridcell");
       td.className = "gb-score-cell";
       const avg = calculateColumnAverage(draft.id, scoreMap, students);
       if (avg !== null) {
@@ -1430,6 +1507,7 @@
 
     // Overall average / weighted summary cells
     const tdOverallAvg = document.createElement("td");
+    tdOverallAvg.setAttribute("role", "gridcell");
     tdOverallAvg.className = "gb-score-cell";
     tdOverallAvg.dataset.extraCol = "1";
     if (!showMoreColumns) tdOverallAvg.style.display = "none";
@@ -1451,6 +1529,7 @@
     summaryRow.appendChild(tdOverallAvg);
 
     const tdOverallWeighted = document.createElement("td");
+    tdOverallWeighted.setAttribute("role", "gridcell");
     tdOverallWeighted.className = "gb-score-cell";
     tdOverallWeighted.dataset.extraCol = "1";
     if (!showMoreColumns) tdOverallWeighted.style.display = "none";
@@ -1472,6 +1551,7 @@
     summaryRow.appendChild(tdOverallWeighted);
 
     const tdTrendEmpty = document.createElement("td");
+    tdTrendEmpty.setAttribute("role", "gridcell");
     tdTrendEmpty.className = "gb-score-cell";
     tdTrendEmpty.dataset.extraCol = "1";
     if (!showMoreColumns) tdTrendEmpty.style.display = "none";
@@ -1571,12 +1651,16 @@
       tableBody.innerHTML = "";
       renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap);
       restoreFocusFromPos();
+      announceA11y(`Gradebook loaded with ${students.length} student${students.length !== 1 ? 's' : ''} and ${drafts.length} assignment${drafts.length !== 1 ? 's' : ''}`);
       return;
     }
     const headerRow = document.createElement("tr");
+    headerRow.setAttribute("role", "row");
 
     // Student name column (sticky)
     const thStudent = document.createElement("th");
+    thStudent.setAttribute("role", "columnheader");
+    thStudent.setAttribute("aria-sort", getAriaSortAttr("student"));
     thStudent.className = "gb-student-col";
     thStudent.textContent = "Student" + columnSortIndicator("student");
     attachColumnSortClick(thStudent, "student");
@@ -1589,6 +1673,8 @@
 
     // Average / Weighted / Trend columns (shown only when showMoreColumns is true)
     const thAvg = document.createElement("th");
+    thAvg.setAttribute("role", "columnheader");
+    thAvg.setAttribute("aria-sort", getAriaSortAttr("average"));
     thAvg.textContent = "Average" + columnSortIndicator("average");
     thAvg.style.minWidth = "72px";
     thAvg.dataset.extraCol = "1";
@@ -1597,6 +1683,8 @@
     headerRow.appendChild(thAvg);
 
     const thWeighted = document.createElement("th");
+    thWeighted.setAttribute("role", "columnheader");
+    thWeighted.setAttribute("aria-sort", getAriaSortAttr("weighted"));
     thWeighted.textContent = "Weighted" + columnSortIndicator("weighted");
     thWeighted.style.minWidth = "72px";
     thWeighted.dataset.extraCol = "1";
@@ -1605,6 +1693,8 @@
     headerRow.appendChild(thWeighted);
 
     const thTrend = document.createElement("th");
+    thTrend.setAttribute("role", "columnheader");
+    thTrend.setAttribute("aria-sort", getAriaSortAttr("trend"));
     thTrend.textContent = "Trend" + columnSortIndicator("trend");
     thTrend.style.minWidth = "56px";
     thTrend.dataset.extraCol = "1";
@@ -1621,6 +1711,7 @@
     let isFirstRow = true; // Track first student row for auto-highlight
     for (const student of sortedStudents) {
       const tr = document.createElement("tr");
+      tr.setAttribute("role", "row");
       
       // Auto-highlight first student row
       if (isFirstRow) {
@@ -1638,6 +1729,7 @@
 
       // Student name cell (sticky) with quick-stats hover card
       const tdStudent = document.createElement("td");
+      tdStudent.setAttribute("role", "rowheader");
       tdStudent.className = "gb-student-cell";
       tdStudent.tabIndex = 0;
       tdStudent.textContent = student.name || student.code;
@@ -1663,6 +1755,7 @@
 
       // Average / Weighted / Trend cells
       const tdAvg = document.createElement("td");
+      tdAvg.setAttribute("role", "gridcell");
       tdAvg.className = "gb-score-cell";
       tdAvg.dataset.extraCol = "1";
       if (!showMoreColumns) tdAvg.style.display = "none";
@@ -1676,6 +1769,7 @@
       tr.appendChild(tdAvg);
 
       const tdWeighted = document.createElement("td");
+      tdWeighted.setAttribute("role", "gridcell");
       tdWeighted.className = "gb-score-cell";
       tdWeighted.dataset.extraCol = "1";
       if (!showMoreColumns) tdWeighted.style.display = "none";
@@ -1690,6 +1784,7 @@
       tr.appendChild(tdWeighted);
 
       const tdTrend = document.createElement("td");
+      tdTrend.setAttribute("role", "gridcell");
       tdTrend.className = "gb-score-cell";
       tdTrend.dataset.extraCol = "1";
       tdTrend.style.textAlign = "center";
@@ -1713,9 +1808,11 @@
 
     // Summary row (class averages)
     const summaryRow = document.createElement("tr");
+    summaryRow.setAttribute("role", "row");
     summaryRow.className = "gb-summary-row";
 
     const tdSummaryLabel = document.createElement("td");
+    tdSummaryLabel.setAttribute("role", "rowheader");
     tdSummaryLabel.className = "gb-student-cell";
     tdSummaryLabel.textContent = "Class Average";
     summaryRow.appendChild(tdSummaryLabel);
@@ -1723,6 +1820,7 @@
     // Calculate column averages
     for (const draft of drafts) {
       const td = document.createElement("td");
+      td.setAttribute("role", "gridcell");
       td.className = "gb-score-cell";
       const avg = calculateColumnAverage(draft.id, scoreMap, students);
       if (avg !== null) {
@@ -1737,6 +1835,7 @@
 
     // Overall average
     const tdOverallAvg = document.createElement("td");
+    tdOverallAvg.setAttribute("role", "gridcell");
     tdOverallAvg.className = "gb-score-cell";
     tdOverallAvg.dataset.extraCol = "1";
     if (!showMoreColumns) tdOverallAvg.style.display = "none";
@@ -1761,6 +1860,7 @@
 
     // Overall weighted average
     const tdOverallWeighted = document.createElement("td");
+    tdOverallWeighted.setAttribute("role", "gridcell");
     tdOverallWeighted.className = "gb-score-cell";
     tdOverallWeighted.dataset.extraCol = "1";
     if (!showMoreColumns) tdOverallWeighted.style.display = "none";
@@ -1784,6 +1884,7 @@
 
     // Empty trend cell for summary row
     const tdTrendEmpty = document.createElement("td");
+    tdTrendEmpty.setAttribute("role", "gridcell");
     tdTrendEmpty.className = "gb-score-cell";
     tdTrendEmpty.dataset.extraCol = "1";
     if (!showMoreColumns) tdTrendEmpty.style.display = "none";
@@ -1791,6 +1892,9 @@
     summaryRow.appendChild(tdTrendEmpty);
 
     tableBody.appendChild(summaryRow);
+
+    // Announce data loaded to screen readers
+    announceA11y(`Gradebook loaded with ${students.length} student${students.length !== 1 ? 's' : ''} and ${drafts.length} assignment${drafts.length !== 1 ? 's' : ''}`);
 
     // Restore focus if a cell was focused before re-render
     restoreFocusFromPos();
@@ -2845,6 +2949,9 @@
     filterCheckbox.addEventListener("change", () => {
       showOnlyMissingStudents = filterCheckbox.checked;
       renderGradebook();
+      announceA11y(showOnlyMissingStudents
+        ? "Showing only students with missing work"
+        : "Showing all students");
     });
     filterLabel.appendChild(filterCheckbox);
     filterLabel.appendChild(document.createTextNode("Show only students with missing work"));
