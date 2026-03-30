@@ -1357,16 +1357,13 @@
               }
             }
             const earnedSum = Math.round(rawEarnedSum);
-            const countLine = document.createElement("div");
-            countLine.className = "gb-score-pts-line";
             if (possibleSum > 0) {
+              const countLine = document.createElement("div");
+              countLine.className = "gb-score-pts-line";
               countLine.textContent = `${earnedSum}/${possibleSum}`;
               countLine.title = "Earned points / Possible points";
-            } else {
-              countLine.textContent = `${done}/${group.drafts.length} graded`;
-              countLine.title = "Assignments graded / Total assignments";
+              tdGroupSummary.appendChild(countLine);
             }
-            tdGroupSummary.appendChild(countLine);
 
             const colorClass = scoreColorClass(groupAvg);
             if (colorClass) tdGroupSummary.classList.add(colorClass);
