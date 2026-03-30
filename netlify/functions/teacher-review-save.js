@@ -320,6 +320,50 @@ async function handleMarkReviewed(body, requestId) {
   return { statusCode: 200, data: { ok: true } };
 }
 
+// Action: return_for_revision
+// For re-issued assignments with retry_config: mark submission as 'returned' and reset instance to 'Assigned'.
+// Skips createResubmission so that an already-used resubmission_count does not block the operation.
+async function handleReturnForRevision(body, requestId) {
+  const { submissionId, instanceId, feedback, gradedBy } = body;
+
+  if (!submissionId || typeof submissionId !== 'string') {
+    return { statusCode: 400, error: 'submissionId is required' };
+  }
+
+  const subPatch = { review_status: 'returned', graded_at: new Date().toISOString() };
+  if (feedback !== undefined) subPatch.feedback = feedback || null;
+  if (gradedBy !== undefined) subPatch.graded_by = gradedBy || null;
+
+  const subRes = await supaFetch(
+    `/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(subPatch)
+    }
+  );
+
+  if (!subRes.ok) {
+    console.error(`[teacher-review-save] [${requestId}] return_for_revision submission update failed:`, subRes.status, subRes.data);
+    return { statusCode: 500, error: 'Failed to return submission for revision', detail: subRes.data };
+  }
+
+  // Reset instance status to Assigned so the student can see it again in retry mode
+  const iid = instanceId || await lookupInstanceId(submissionId, requestId);
+  if (iid) {
+    const instRes = await supaFetch(
+      `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(iid)}`,
+      { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'Assigned' }) }
+    );
+    if (!instRes.ok) {
+      console.error(`[teacher-review-save] [${requestId}] return_for_revision instance status reset FAILED — student may not see the assignment: status=${instRes.status}`, instRes.data);
+    }
+  }
+
+  console.log(`[teacher-review-save] [${requestId}] return_for_revision OK submission=${submissionId}`);
+  return { statusCode: 200, data: { ok: true } };
+}
+
 // Helper: look up instance_id for a submission via service role key
 async function lookupInstanceId(submissionId, requestId) {
   const res = await supaFetch(
@@ -393,6 +437,9 @@ exports.handler = async (event) => {
       break;
     case 'mark_reviewed':
       result = await handleMarkReviewed(body, requestId);
+      break;
+    case 'return_for_revision':
+      result = await handleReturnForRevision(body, requestId);
       break;
     case 'set_in_progress':
       result = await handleSetInProgress(body, requestId);

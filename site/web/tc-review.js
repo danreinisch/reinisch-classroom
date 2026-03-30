@@ -2453,21 +2453,49 @@
     const submission = submissionsData.find(s => s.id === submissionId);
     if (!submission) return;
 
+    // Check if this is a re-issued assignment with retry_config
+    const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+    const hasRetryConfig = !!(instance?.settings?.retry_config);
+
     button.disabled = true;
     try {
-      await db.createResubmission({
-        instance_id: submission.instance_id,
-        original_submission_id: submissionId,
-        answers: {}
-      });
+      if (hasRetryConfig) {
+        // Re-issued assignment: skip createResubmission() entirely (resubmission_count may already be 1).
+        // Just mark the submission as Returned and reset the instance back to Assigned so the
+        // student sees the assignment again in retry mode with correct answers locked.
+        const res = await fetch('/.netlify/functions/teacher-review-save', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'return_for_revision',
+            submissionId,
+            instanceId: submission.instance_id,
+            gradedBy: localStorage.getItem('rc_teacher_name') || '',
+            feedback
+          })
+        });
+        let data = {};
+        try { data = await res.json(); } catch (parseErr) { console.warn('[tc-review] Could not parse return_for_revision response:', parseErr); }
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Failed to return for revision');
+        }
+      } else {
+        // Normal flow: create a resubmission record then mark as Returned
+        await db.createResubmission({
+          instance_id: submission.instance_id,
+          original_submission_id: submissionId,
+          answers: {}
+        });
 
-      await db.upsertSubmission({
-        id: submissionId,
-        status: 'Returned',
-        graded_at: new Date().toISOString(),
-        graded_by: localStorage.getItem('rc_teacher_name') || '',
-        feedback
-      });
+        await db.upsertSubmission({
+          id: submissionId,
+          status: 'Returned',
+          graded_at: new Date().toISOString(),
+          graded_by: localStorage.getItem('rc_teacher_name') || '',
+          feedback
+        });
+      }
 
       submission.review_status = 'returned';
 
