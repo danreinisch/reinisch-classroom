@@ -174,6 +174,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       
       // Save previous day if exists
       if (currentDay) {
+        if (currentDay.type === 'questions' && currentDay.questions.length === 0) {
+          console.warn('[parseTxtToMeta] Day', currentDay.day_number, 'has 0 questions — possible parser issue');
+        }
         meta.days.push(currentDay);
       }
 
@@ -193,7 +196,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         // If the next line is not a special marker, it might be a subtitle
         // NOTE: This regex pattern is also used in tests/parse-txt-to-meta.test.cjs - keep in sync
         const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z][):]|Correct\s+Answer:|ANSWER:|Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|\d+\.\s|DESE\s+Standard|IEP\s+Goal|[A-Z][).]|[A-Z]:|Correct\s+Answer:|ANSWER:|Answer:|Correct:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
           || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
           // This is likely a subtitle, append it to the label
@@ -275,9 +278,62 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
+      // Check for bare-number format: "N. [tags] text" or "N. text" (Week 10 format)
+      const bareNumberMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+      if (bareNumberMatch) {
+        // Save previous question if exists
+        if (currentQuestion) {
+          currentDay.questions.push(currentQuestion);
+        }
+
+        const qNumber = parseInt(bareNumberMatch[1], 10);
+        const restOfLine = bareNumberMatch[2] || '';
+
+        // Extract inline [IG: code] tags → goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        // Remove all bracket tags and parenthetical type hints to get any remaining text
+        const remainingText = restOfLine
+          .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+
+        currentQuestion = {
+          number: qNumber,
+          text: remainingText,
+          type: 'multiple_choice',
+          choices: [],
+          correct: '',
+          hint: ''
+        };
+        if (igCodes.length > 0) {
+          currentQuestion.goal_codes = igCodes;
+        }
+        if (mlsCodes.length > 0) {
+          currentQuestion.dese_codes = mlsCodes;
+        }
+
+        currentSection = 'question';
+        continue;
+      }
+
       if (currentQuestion) {
-        // Check for choices (A), B), C), etc. or A:, B:, C:, etc.)
-        const choiceMatch = trimmed.match(/^([A-Z])[):]\s*(.*)$/);
+        // Check for choices (A), B), C), etc. or A:, B:, C:, etc. or A., B., C., etc.)
+        const choiceMatch = trimmed.match(/^([A-Z])[).:]\s*(.*)$/);
         if (choiceMatch) {
           currentQuestion.choices.push({
             letter: choiceMatch[1],
@@ -286,8 +342,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer:, ANSWER:, or Answer:
-        const correctMatch = trimmed.match(/^(?:Correct\s+)?Answer:\s*([A-Z])/i);
+        // Check for Correct Answer:, ANSWER:, Answer:, or Correct:
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
@@ -380,6 +436,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Save last question if exists
     if (currentQuestion && currentDay.type === 'questions') {
       currentDay.questions.push(currentQuestion);
+    }
+    if (currentDay.type === 'questions' && currentDay.questions.length === 0) {
+      console.warn('[parseTxtToMeta] Day', currentDay.day_number, 'has 0 questions — possible parser issue');
     }
     meta.days.push(currentDay);
   }
