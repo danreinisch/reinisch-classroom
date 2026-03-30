@@ -1399,30 +1399,36 @@
   }
 
   /**
-   * Arms both a midnight setTimeout and a visibilitychange listener so the checklist
+   * Arms a 60-second interval date-check and a visibilitychange listener so the checklist
    * re-renders whenever the day rolls over. Whichever fires first cancels the other to
-   * prevent double re-renders. After re-rendering, both mechanisms are re-armed so the
-   * page is always ready for the next day boundary.
+   * prevent double re-renders. After re-rendering, fresh data is fetched and both
+   * mechanisms are re-armed so the page is always ready for the next day boundary.
+   * If the fresh-data fetch fails, the watch re-arms with the existing stale data as a
+   * last resort so the midnight watch never permanently dies.
    */
   function armChecklistMidnightWatch(data) {
     const renderedDay = formatDateYMD(new Date());
     const ac = new AbortController();
 
-    // Calculate ms until the next 00:00:00
-    const now = new Date();
-    const nextMidnight = new Date(now);
-    nextMidnight.setDate(nextMidnight.getDate() + 1);
-    nextMidnight.setHours(0, 0, 0, 0);
-    const msUntilMidnight = nextMidnight - now;
+    // Check every 60 s if the day has rolled over — avoids long-timer drift
+    const CHECK_INTERVAL_MS = 60_000;
+    const intervalId = setInterval(() => {
+      if (formatDateYMD(new Date()) !== renderedDay) {
+        triggerRerender();
+      }
+    }, CHECK_INTERVAL_MS);
 
     function triggerRerender() {
-      clearTimeout(midnightTimer); // cancel the timeout if visibility fired first
+      clearInterval(intervalId); // cancel the interval
       ac.abort(); // remove the visibility listener
-      renderChecklist(data).then(() => armChecklistMidnightWatch(data));
+      // Fetch fresh data so overnight changes are visible
+      loadAllData()
+        .then(freshData => renderChecklist(freshData).then(() => armChecklistMidnightWatch(freshData)))
+        .catch((err) => {
+          console.warn("[tc-overview] Midnight re-render failed; re-arming with stale data:", err);
+          armChecklistMidnightWatch(data); // fallback: re-arm with stale data
+        });
     }
-
-    // Midnight timeout fallback — fires once at the next 00:00:00
-    const midnightTimer = setTimeout(triggerRerender, msUntilMidnight);
 
     // Visibility change listener — fires when user returns to page after midnight
     document.addEventListener('visibilitychange', () => {
@@ -1640,7 +1646,12 @@
     renderCalendarSnapshot(data);
     renderOverdueItems(data);
     renderAtRiskStudents(data);
-    renderChecklist(data).then(() => armChecklistMidnightWatch(data));
+    renderChecklist(data)
+      .then(() => armChecklistMidnightWatch(data))
+      .catch((err) => {
+        console.warn("[tc-overview] Initial checklist render failed; arming midnight watch anyway:", err);
+        armChecklistMidnightWatch(data);
+      });
     renderActivityFeed(data);
 
     console.log("[tc-overview] All sections rendered");
