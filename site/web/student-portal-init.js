@@ -1410,6 +1410,17 @@
     const isGraded = instance.status === 'Graded' || instance.status === 'Reviewed';
     assignmentViewerState.isReadOnly = isReadOnly;
     assignmentViewerState.isGraded = isGraded;
+
+    // Detect retry mode from re-issued assignment settings
+    const retryConfig = instance.settings && instance.settings.retry_config;
+    if (retryConfig && !isReadOnly && Array.isArray(retryConfig.locked_question_ids) && retryConfig.locked_question_ids.length > 0) {
+      assignmentViewerState.isRetryMode = true;
+      assignmentViewerState.retryLockedQuestionIds = new Set(retryConfig.locked_question_ids);
+      console.log(LOG_PREFIX, 'Retry mode activated from instance retry_config:', retryConfig.locked_question_ids.length, 'locked question(s)');
+    } else {
+      assignmentViewerState.isRetryMode = false;
+      assignmentViewerState.retryLockedQuestionIds = new Set();
+    }
     
     // Feature 1: Load saved answers from instance settings
     if (instance.settings && instance.settings.answers) {

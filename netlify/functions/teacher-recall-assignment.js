@@ -206,8 +206,47 @@ exports.handler = async (event) => {
       }
 
       if (validInstanceIds.length > 0) {
-        // Delete submissions for these instances (foreign key order: submissions first)
         const quotedIds = validInstanceIds.map(id => `"${id}"`).join(',');
+
+        // Delete goal_data_points for these instances
+        const deleteGoalDataPointsUrl = `${SUPABASE_URL}/rest/v1/goal_data_points?assignment_instance_id=in.(${quotedIds})`;
+        console.log(`[teacher-recall-assignment] [${requestId}] Deleting goal_data_points for ${validInstanceIds.length} instance(s)`);
+        const deleteGoalDataPointsResponse = await fetch(deleteGoalDataPointsUrl, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+        });
+        if (!deleteGoalDataPointsResponse.ok) {
+          const errorText = await deleteGoalDataPointsResponse.text();
+          console.warn(`[teacher-recall-assignment] [${requestId}] Failed to delete goal_data_points: ${deleteGoalDataPointsResponse.status} - ${errorText}`);
+        } else {
+          console.log(`[teacher-recall-assignment] [${requestId}] Deleted goal_data_points for recalled instances`);
+        }
+
+        // Delete goal_progress entries linked to these instances
+        const deleteGoalProgressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?assignment_instance_id=in.(${quotedIds})`;
+        console.log(`[teacher-recall-assignment] [${requestId}] Deleting goal_progress for ${validInstanceIds.length} instance(s)`);
+        const deleteGoalProgressResponse = await fetch(deleteGoalProgressUrl, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+        });
+        if (!deleteGoalProgressResponse.ok) {
+          const errorText = await deleteGoalProgressResponse.text();
+          console.warn(`[teacher-recall-assignment] [${requestId}] Failed to delete goal_progress: ${deleteGoalProgressResponse.status} - ${errorText}`);
+        } else {
+          console.log(`[teacher-recall-assignment] [${requestId}] Deleted goal_progress for recalled instances`);
+        }
+
+        // Delete submissions for these instances (foreign key order: submissions first)
         const deleteSubmissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?instance_id=in.(${quotedIds})`;
 
         console.log(`[teacher-recall-assignment] [${requestId}] Deleting submissions for ${validInstanceIds.length} instance(s)`);
