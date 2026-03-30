@@ -263,7 +263,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         currentQuestion = {
           number: parseInt(questionMatch[1], 10),
           text: '',
-          type: 'multiple_choice',
+          type: 'mcq',
           choices: [],
           correct: '',
           hint: ''
@@ -315,7 +315,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         currentQuestion = {
           number: qNumber,
           text: remainingText,
-          type: 'multiple_choice',
+          type: 'mcq',
           choices: [],
           correct: '',
           hint: ''

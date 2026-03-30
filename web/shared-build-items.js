@@ -18,6 +18,15 @@ export function extractCodesFromHint(hint) {
 }
 
 /**
+ * Maps legacy 'multiple_choice' type to 'mcq' and returns the value or 'mcq'
+ * as a fallback, ensuring the DB CHECK constraint is never violated.
+ */
+function normalizeAnswerType(type) {
+  if (type === 'multiple_choice') return 'mcq';
+  return type || 'mcq';
+}
+
+/**
  * Canonical implementation of buildItemsFromMeta.
  * Builds synthetic assignment_items from assignment metadata.
  *
@@ -48,7 +57,7 @@ export function buildItemsFromMeta(assignmentId, meta, options = {}) {
             id: `${idPrefix}${item_ref}`,
             assignment_id: assignmentId,
             item_ref,
-            answer_type: isFillInBlank ? 'constructed' : (q.type || 'mcq'),
+            answer_type: isFillInBlank ? 'constructed' : normalizeAnswerType(q.type),
             points: q.points || 1,
             ...(isFillInBlank ? {
               scoring: {

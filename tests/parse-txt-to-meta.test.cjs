@@ -221,7 +221,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         currentQuestion = {
           number: parseInt(questionMatch[1], 10),
           text: '',
-          type: 'multiple_choice',
+          type: 'mcq',
           choices: [],
           correct: '',
           hint: ''
@@ -272,7 +272,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         currentQuestion = {
           number: qNumber,
           text: remainingText,
-          type: 'multiple_choice',
+          type: 'mcq',
           choices: [],
           correct: '',
           hint: ''
@@ -823,7 +823,7 @@ Keywords: slope;intercept;linear;min:2`;
   assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
 
   const q1 = result.days[0].questions[0];
-  assert.strictEqual(q1.type, 'multiple_choice', 'Q1 should be multiple_choice');
+  assert.strictEqual(q1.type, 'mcq', 'Q1 should be mcq');
   assert.strictEqual(q1.choices.length, 3, 'Q1 should have 3 choices');
   assert.strictEqual(q1.correct, 'B', 'Q1 correct should be B');
 
@@ -895,7 +895,7 @@ Answer: A`;
   assert.strictEqual(result.days.length, 2, 'Should have 2 days');
 
   const day1q1 = result.days[0].questions[0];
-  assert.strictEqual(day1q1.type, 'multiple_choice', 'Day 1 Q1 should be multiple_choice');
+  assert.strictEqual(day1q1.type, 'mcq', 'Day 1 Q1 should be mcq');
   assert.strictEqual(day1q1.correct, 'B', 'Day 1 Q1 correct should be B');
 
   const day2q1 = result.days[1].questions[0];
@@ -904,7 +904,7 @@ Answer: A`;
   assert.strictEqual(day2q1.min_keywords, 2, 'Day 2 Q1 min_keywords should be 2');
 
   const day2q2 = result.days[1].questions[1];
-  assert.strictEqual(day2q2.type, 'multiple_choice', 'Day 2 Q2 should be multiple_choice');
+  assert.strictEqual(day2q2.type, 'mcq', 'Day 2 Q2 should be mcq');
   assert.strictEqual(day2q2.correct, 'A', 'Day 2 Q2 correct should be A');
 });
 
