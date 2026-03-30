@@ -258,7 +258,7 @@
       }
     }
 
-    // 7. IEP/Eval KPI — upcoming IEP and eval deadlines within 30 days
+    // 7. IEP/Eval KPI — upcoming IEP and eval deadlines within IEP_WINDOW_DAYS days
     const kpiIepEvalCard = $("kpiIepEvalCard");
     const kpiIepEval = $("kpiIepEval");
     const kpiIepEvalSub = $("kpiIepEvalSub");
@@ -486,7 +486,7 @@
     const activeStudents = students.filter((s) => s.active !== false);
 
     // ── 0. IEP & Eval Deadlines ────────────────────────────────────────────
-    // Show upcoming (within 30 days) and past-due IEP/eval dates for active students.
+    // Show upcoming (within IEP_WINDOW_DAYS days) and past-due IEP/eval dates for active students.
     const iepNow = new Date();
     iepNow.setHours(0, 0, 0, 0);
     const iepWindowEnd = new Date(iepNow);
@@ -1334,22 +1334,22 @@
       });
     }
 
-    // Upcoming IEP meetings (within 30 days)
-    const thirtyDaysFromNow = new Date(nowDate);
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    // Upcoming IEP meetings (within IEP_WINDOW_DAYS days)
+    const iepWindowEnd = new Date(nowDate);
+    iepWindowEnd.setDate(iepWindowEnd.getDate() + IEP_WINDOW_DAYS);
 
     let upcomingIEPs = 0;
     for (const student of students) {
       if (student.iep_due) {
         const iepDate = new Date(student.iep_due);
-        if (iepDate >= nowDate && iepDate <= thirtyDaysFromNow) upcomingIEPs++;
+        if (iepDate >= nowDate && iepDate <= iepWindowEnd) upcomingIEPs++;
       }
     }
 
     if (upcomingIEPs > 0) {
       checklist.push({
         id: "iep-meetings",
-        text: `${upcomingIEPs} IEP meeting${upcomingIEPs !== 1 ? "s" : ""} coming up within 30 days`,
+        text: `${upcomingIEPs} IEP meeting${upcomingIEPs !== 1 ? "s" : ""} coming up within ${IEP_WINDOW_DAYS} days`,
         link: "/teacher/students/",
         checked: savedChecklist["iep-meetings"] || false,
       });
@@ -1396,16 +1396,40 @@
         }
       });
     });
+  }
 
-    // Re-render checklist if the page becomes visible after midnight
+  /**
+   * Arms both a midnight setTimeout and a visibilitychange listener so the checklist
+   * re-renders whenever the day rolls over. Whichever fires first cancels the other to
+   * prevent double re-renders. After re-rendering, both mechanisms are re-armed so the
+   * page is always ready for the next day boundary.
+   */
+  function armChecklistMidnightWatch(data) {
     const renderedDay = formatDateYMD(new Date());
-    const midnightAC = new AbortController();
+    const ac = new AbortController();
+
+    // Calculate ms until the next 00:00:00
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setDate(nextMidnight.getDate() + 1);
+    nextMidnight.setHours(0, 0, 0, 0);
+    const msUntilMidnight = nextMidnight - now;
+
+    function triggerRerender() {
+      clearTimeout(midnightTimer); // cancel the timeout if visibility fired first
+      ac.abort(); // remove the visibility listener
+      renderChecklist(data).then(() => armChecklistMidnightWatch(data));
+    }
+
+    // Midnight timeout fallback — fires once at the next 00:00:00
+    const midnightTimer = setTimeout(triggerRerender, msUntilMidnight);
+
+    // Visibility change listener — fires when user returns to page after midnight
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && formatDateYMD(new Date()) !== renderedDay) {
-        midnightAC.abort();
-        renderChecklist({ submissions, instances, goals, progress, students, schedule });
+        triggerRerender();
       }
-    }, { signal: midnightAC.signal });
+    }, { signal: ac.signal });
   }
 
   /**
@@ -1616,7 +1640,7 @@
     renderCalendarSnapshot(data);
     renderOverdueItems(data);
     renderAtRiskStudents(data);
-    renderChecklist(data);
+    renderChecklist(data).then(() => armChecklistMidnightWatch(data));
     renderActivityFeed(data);
 
     console.log("[tc-overview] All sections rendered");
