@@ -18,6 +18,15 @@ function extractCodesFromHint(hint) {
 }
 
 /**
+ * Maps legacy 'multiple_choice' type to 'mcq' and returns the value or 'mcq'
+ * as a fallback, ensuring the DB CHECK constraint is never violated.
+ */
+function normalizeAnswerType(type) {
+  if (type === 'multiple_choice') return 'mcq';
+  return type || 'mcq';
+}
+
+/**
  * Canonical server-side buildItemsFromMeta.
  * Builds assignment_items rows from a parsed meta object.
  * Supports meta.days[] (TXT) and meta.questions[] (HTML manifest) formats.
@@ -36,7 +45,7 @@ function buildItemsFromMeta(assignmentId, meta) {
           items.push({
             assignment_id: assignmentId,
             item_ref: `${day.day_number}_${q.number}`,
-            answer_type: isFillInBlank ? 'constructed' : (q.type || 'mcq'),
+            answer_type: isFillInBlank ? 'constructed' : normalizeAnswerType(q.type),
             points: q.points || 1,
             goal_codes: q.goal_codes || goalCodes,
             dese_codes: q.dese_codes || deseCodes,
