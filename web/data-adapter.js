@@ -409,7 +409,9 @@ const local = {
       result = result.filter(s => s.instance_id === filters.instance_id);
     }
     
-    result = result.filter(s => s.review_status !== 'finalized');
+    if (filters.excludeFinalized) {
+      result = result.filter(s => s.review_status !== 'finalized');
+    }
     
     return result;
   },
@@ -552,6 +554,24 @@ const local = {
       instance.status = 'Reviewed';
       store.set('assignmentInstances', instances);
     }
+    return true;
+  },
+
+  async reopenSubmission(submissionId) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) throw new Error('Submission not found');
+
+    submission.review_status = 'pending';
+    store.set('submissions', submissions);
+
+    const instances = store.get('assignmentInstances', []);
+    const instance = instances.find(i => i.id === submission.instance_id);
+    if (instance) {
+      instance.status = 'In Progress';
+      store.set('assignmentInstances', instances);
+    }
+
     return true;
   },
 

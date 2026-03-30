@@ -246,6 +246,45 @@ async function handleSetInProgress(body, requestId) {
   return { statusCode: 200, data: { ok: true } };
 }
 
+// Action: reopen
+// PATCH submissions review_status back to 'pending', PATCH assignment_instances to 'In Progress'
+async function handleReopen(body, requestId) {
+  const { submissionId } = body;
+
+  if (!submissionId || typeof submissionId !== 'string') {
+    return { statusCode: 400, error: 'submissionId is required' };
+  }
+
+  const subRes = await supaFetch(
+    `/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ review_status: 'pending' })
+    }
+  );
+
+  if (!subRes.ok) {
+    console.error(`[teacher-review-save] [${requestId}] reopen submission update failed:`, subRes.status, subRes.data);
+    return { statusCode: 500, error: 'Failed to reopen submission', detail: subRes.data };
+  }
+
+  const iid = await lookupInstanceId(submissionId, requestId);
+  if (iid) {
+    const instRes = await supaFetch(
+      `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(iid)}`,
+      { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'In Progress' }) }
+    );
+    if (!instRes.ok) {
+      console.warn(`[teacher-review-save] [${requestId}] reopen instance update warning:`, instRes.status, instRes.data);
+      // Non-fatal
+    }
+  }
+
+  console.log(`[teacher-review-save] [${requestId}] reopen OK submission=${submissionId}`);
+  return { statusCode: 200, data: { ok: true } };
+}
+
 // Action: mark_reviewed
 // PATCH submissions review_status to 'reviewed', PATCH assignment_instances to Reviewed
 async function handleMarkReviewed(body, requestId) {
@@ -348,6 +387,9 @@ exports.handler = async (event) => {
       break;
     case 'finalize':
       result = await handleFinalize(body, requestId);
+      break;
+    case 'reopen':
+      result = await handleReopen(body, requestId);
       break;
     case 'mark_reviewed':
       result = await handleMarkReviewed(body, requestId);

@@ -836,6 +836,24 @@ const local = {
     return true;
   },
 
+  async reopenSubmission(submissionId) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) throw new Error('Submission not found');
+
+    submission.review_status = 'pending';
+    store.set('submissions', submissions);
+
+    const instances = store.get('assignmentInstances', []);
+    const instance = instances.find(i => i.id === submission.instance_id);
+    if (instance) {
+      instance.status = 'In Progress';
+      store.set('assignmentInstances', instances);
+    }
+
+    return true;
+  },
+
   // ============================================================================
   // Archive Tab: Student Archive Management
   // ============================================================================
@@ -2379,6 +2397,30 @@ const remote = {
       const err = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(err.error || `Set in_progress failed: ${response.status}`);
     }
+    return true;
+  },
+
+  /**
+   * Reopen a finalized submission — sets review_status back to 'pending' and instance to 'In Progress'
+   * @param {string} submissionId - Submission ID
+   * @returns {boolean} Success
+   */
+  async reopenSubmission(submissionId) {
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'reopen',
+        submissionId
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Reopen failed: ${response.status}`);
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!data.ok) throw new Error(data.error || 'Failed to reopen submission');
     return true;
   },
 
