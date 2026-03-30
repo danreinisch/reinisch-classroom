@@ -406,6 +406,48 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
+      // Check for bare-number format: "N. [tags] (Written Response)" (Week 10 format)
+      // Require at least one bracket tag to avoid matching plain numbered list lines
+      const wpBareNumberMatch = trimmed.match(/^(\d+)\.\s+(.*\[.*)/);
+      if (wpBareNumberMatch) {
+        const restOfLine = wpBareNumberMatch[2] || '';
+
+        // Extract inline [IG: code] tags → goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        // Remove all bracket tags and parenthetical type hints to get any remaining text
+        const remainingText = restOfLine
+          .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+
+        if (igCodes.length > 0) {
+          currentDay.goal_codes = igCodes;
+        }
+        if (mlsCodes.length > 0) {
+          currentDay.dese_codes = mlsCodes;
+        }
+        if (remainingText) {
+          currentDay.prompt = remainingText;
+        }
+        currentSection = 'prompt';
+        continue;
+      }
+
       // Check for Writing Structure: or REMEMBER YOUR WRITING STRUCTURE: or REMEMBER YOUR STRUCTURE:
       if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i)) {
         currentSection = 'structure';
