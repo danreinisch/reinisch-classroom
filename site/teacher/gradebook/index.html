@@ -518,6 +518,18 @@
       #gbStudentSearch::placeholder {
         color: rgba(255, 255, 255, 0.4);
       }
+
+      /* Keyboard navigation focus indicators */
+      .gb-score-cell:focus-visible,
+      .gb-student-cell:focus-visible,
+      .gb-group-cell:focus-visible,
+      .gb-group-header:focus-visible,
+      th.gb-group-first-col:focus-visible {
+        outline: 2px solid rgba(59, 130, 246, 0.8);
+        outline-offset: -2px;
+        z-index: 2;
+        position: relative;
+      }
     </style>
   </head>
   <body>
