@@ -267,6 +267,24 @@
     padding: 1px 7px;
     vertical-align: middle;
   }
+  /* Auto-save toast */
+  #save-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.35);
+    color: #86efac;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  #save-toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -662,6 +680,82 @@
     }
   }
 
+  // ── localStorage auto-save ──────────────────────────────────────
+  function lsKey() {
+    return `rc_html_quiz_unit5_${studentName}`;
+  }
+
+  let _saveToastTimer = null;
+  function showSaveToast() {
+    const toast = document.getElementById('save-toast');
+    if (!toast) return;
+    toast.classList.add('show');
+    if (_saveToastTimer) clearTimeout(_saveToastTimer);
+    _saveToastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  function saveToLocalStorage() {
+    try {
+      // retryLocked contains Sets — convert to arrays for JSON serialization
+      const retryLockedArrays = {};
+      Object.keys(retryLocked).forEach(day => {
+        retryLockedArrays[day] = Array.from(retryLocked[day]);
+      });
+      const state = { answers, submitted, retryMode, retryLocked: retryLockedArrays };
+      localStorage.setItem(lsKey(), JSON.stringify(state));
+      showSaveToast();
+    } catch (e) { /* ignore – quota exceeded or private mode */ }
+  }
+
+  function loadFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(lsKey());
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (state.answers && typeof state.answers === 'object') answers = state.answers;
+      if (state.submitted && typeof state.submitted === 'object') submitted = state.submitted;
+      if (state.retryMode && typeof state.retryMode === 'object') retryMode = state.retryMode;
+      if (state.retryLocked && typeof state.retryLocked === 'object') {
+        // Re-hydrate arrays back into Sets
+        Object.keys(state.retryLocked).forEach(day => {
+          retryLocked[day] = new Set(state.retryLocked[day]);
+        });
+      }
+    } catch (e) { /* ignore corrupt data */ }
+  }
+
+  // Debounced postMessage autosave to parent portal (3 s)
+  let _autosaveTimer = null;
+  function scheduleAutosavePostMessage() {
+    if (window.parent === window) return; // not in an iframe
+    if (_autosaveTimer) clearTimeout(_autosaveTimer);
+    _autosaveTimer = setTimeout(() => {
+      _autosaveTimer = null;
+      const allAnswers = {};
+      Object.keys(answers).forEach(key => {
+        const val = answers[key];
+        // MC answers are stored as numbers; convert to string for the bridge
+        allAnswers[key] = typeof val === 'number' ? String(val) : val;
+      });
+      window.parent.postMessage({ type: 'rc-assignment-autosave', answers: allAnswers }, '*');
+    }, 3000);
+  }
+
+  // Combined save: localStorage + debounced postMessage
+  function autoSave() {
+    saveToLocalStorage();
+    scheduleAutosavePostMessage();
+  }
+
+  // Debounced version for fill-in-blank inputs (500 ms)
+  let _fillDebounceTimer = null;
+  function autoSaveDebounced() {
+    if (_fillDebounceTimer) clearTimeout(_fillDebounceTimer);
+    _fillDebounceTimer = setTimeout(() => { _fillDebounceTimer = null; autoSave(); }, 500);
+  }
+
+  // ────────────────────────────────────────────────────────────────
+
   // ── Rendering ───────────────────────────────────────────────────
   function renderDay(dayIndex) {
     const day = DAYS[dayIndex];
@@ -737,6 +831,7 @@
               document.querySelectorAll(`[name="${q.id}"]`).forEach(r => r.closest('.mc-option').classList.remove('selected'));
               label.classList.add('selected');
               answers[q.id] = oi;
+              autoSave();
             });
           }
           opts.appendChild(label);
@@ -757,7 +852,7 @@
         } else if (isLocked) {
           inp.classList.add('correct');
         } else {
-          inp.addEventListener('input', () => { answers[q.id] = inp.value; });
+          inp.addEventListener('input', () => { answers[q.id] = inp.value; autoSaveDebounced(); });
         }
         block.appendChild(inp);
         if (isSubmitted) {
@@ -860,6 +955,7 @@
         answerDetails.forEach(d => {
           if (!d.correct) delete answers[d.id];
         });
+        autoSave();
         renderDayNav();
         renderDay(currentDayIndex);
         return;
@@ -870,6 +966,7 @@
     delete retryMode[day.day];
     delete retryLocked[day.day];
     submitted[day.day] = { correct, total, statusMsg: result.message };
+    autoSave();
 
     // Update day nav
     renderDayNav();
@@ -905,6 +1002,37 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('student-name-display').textContent = studentName;
+
+    // Restore any previously saved state
+    loadFromLocalStorage();
+
+    // ── ONE-TIME DATA RECOVERY (2026-03-31) ─────────────────────────
+    // Students lost their Day 1–3 answers due to missing auto-save.
+    // Pre-fill correct answers and mark as submitted so students can
+    // continue from Day 4. This block can be removed after all students
+    // have loaded the assignment at least once.
+    // ────────────────────────────────────────────────────────────────
+    const hasDay1Answers = ['q1_1','q1_2','q1_3','q1_4','q1_5'].some(k => answers[k] !== undefined);
+    const hasDay2Answers = ['q2_1','q2_2','q2_3','q2_4','q2_5'].some(k => answers[k] !== undefined);
+    const hasDay3Answers = ['q3_1','q3_2','q3_3','q3_4','q3_5'].some(k => answers[k] !== undefined);
+
+    if (!submitted[1] && !hasDay1Answers) {
+      answers.q1_1 = 2; answers.q1_2 = 1; answers.q1_3 = 'part-time';
+      answers.q1_4 = 1; answers.q1_5 = 'written';
+      submitted[1] = { correct: 5, total: 5, statusMsg: '✓ Score submitted (recovered)' };
+    }
+    if (!submitted[2] && !hasDay2Answers) {
+      answers.q2_1 = 1; answers.q2_2 = 2; answers.q2_3 = 'cover';
+      answers.q2_4 = 1; answers.q2_5 = 'action';
+      submitted[2] = { correct: 5, total: 5, statusMsg: '✓ Score submitted (recovered)' };
+    }
+    if (!submitted[3] && !hasDay3Answers) {
+      answers.q3_1 = 0; answers.q3_2 = 1; answers.q3_3 = 'thank-you';
+      answers.q3_4 = 2; answers.q3_5 = 'eye';
+      submitted[3] = { correct: 5, total: 5, statusMsg: '✓ Score submitted (recovered)' };
+    }
+    // ────────────────────────────────────────────────────────────────
+
     renderDayNav();
     renderDay(0);
   });
@@ -918,5 +1046,6 @@
   <div id="day-nav" class="day-nav"></div>
   <div id="quiz-container"></div>
 </div>
+<div id="save-toast">✓ Saved</div>
 </body>
 </html>

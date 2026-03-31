@@ -13,7 +13,7 @@ function validatePayload(data, expectedInstanceId) {
     return { valid: false, reason: 'payload must be an object' };
   }
 
-  if (data.type !== 'rc-assignment-submit') {
+  if (data.type !== 'rc-assignment-submit' && data.type !== 'rc-assignment-autosave') {
     return { valid: false, reason: `unexpected type: ${data.type}` };
   }
 
@@ -134,7 +134,6 @@ console.log('--- validatePayload ---');
 // ── Multi-answer payloads ──────────────────────────────────────────────────────
 
 console.log('--- multi-answer payloads ---');
-
 {
   const answers = { Q1: 'A', Q2: 'false', Q3: 'Some written response' };
   const result = validatePayload(
@@ -158,6 +157,51 @@ console.log('--- multi-answer payloads ---');
   );
   assert.strictEqual(result.valid, true, 'optional scores field should not invalidate payload');
   console.log('✓ optional scores field is ignored in validation');
+}
+
+// ── rc-assignment-autosave type ───────────────────────────────────────────────
+
+console.log('--- rc-assignment-autosave ---');
+
+{
+  // Valid autosave payload (no instance_id field)
+  const result = validatePayload(
+    { type: 'rc-assignment-autosave', answers: { q1_1: '2' } },
+    INSTANCE_ID
+  );
+  assert.strictEqual(result.valid, true, 'valid autosave payload should pass');
+  console.log('✓ valid autosave payload passes');
+}
+
+{
+  // Valid autosave payload with matching instance_id
+  const result = validatePayload(
+    { type: 'rc-assignment-autosave', instance_id: INSTANCE_ID, answers: { q1_1: '2', q1_2: '1' } },
+    INSTANCE_ID
+  );
+  assert.strictEqual(result.valid, true, 'autosave with matching instance_id should pass');
+  console.log('✓ autosave with matching instance_id passes');
+}
+
+{
+  // Autosave with instance_id mismatch
+  const result = validatePayload(
+    { type: 'rc-assignment-autosave', instance_id: 'different-uuid', answers: { q1_1: '2' } },
+    INSTANCE_ID
+  );
+  assert.strictEqual(result.valid, false);
+  assert.ok(result.reason.includes('instance_id'), 'reason should mention instance_id');
+  console.log('✓ autosave instance_id mismatch is rejected');
+}
+
+{
+  // Autosave with empty answers
+  const result = validatePayload(
+    { type: 'rc-assignment-autosave', answers: {} },
+    INSTANCE_ID
+  );
+  assert.strictEqual(result.valid, false);
+  console.log('✓ autosave with empty answers is rejected');
 }
 
 console.log('\nAll html-assignment-bridge tests passed ✓');
