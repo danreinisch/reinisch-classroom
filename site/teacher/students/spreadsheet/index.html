@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Master Spreadsheet</title>
+    <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+    <link rel="stylesheet" href="/assets/css/class-clock.css" />
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      /* ── Spreadsheet Toolbar ─────────────────────────────────────── */
+      .ss-toolbar {
+        display: flex;
+        gap: 10px;
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(255,255,255,.10);
+        flex-wrap: wrap;
+        align-items: center;
+        background: rgba(255,255,255,.02);
+      }
+      .ss-toolbar input[type="text"],
+      .ss-toolbar select {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,.14);
+        background: rgba(0,0,0,.3);
+        color: inherit;
+        font-size: 13px;
+      }
+      .ss-toolbar input[type="text"] { min-width: 180px; }
+      .ss-toolbar select { min-width: 140px; }
+      .ss-toolbar-sep { flex: 1; }
+      .ss-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      /* ── Buttons ─────────────────────────────────────────────────── */
+      .ss-btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.06);
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background .15s, border-color .15s;
+      }
+      .ss-btn:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.28); }
+      .ss-btn-primary {
+        background: rgba(34,197,94,.2);
+        border-color: rgba(34,197,94,.5);
+        color: #4ade80;
+        font-weight: 600;
+      }
+      .ss-btn-primary:hover { background: rgba(34,197,94,.3); border-color: rgba(34,197,94,.7); }
+
+      /* ── Col-visibility dropdown ─────────────────────────────────── */
+      .ss-col-toggle-wrap { position: relative; }
+      .ss-col-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 200;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 10px;
+        padding: 10px 14px;
+        min-width: 220px;
+        max-height: 360px;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      }
+      .ss-col-panel.open { display: block; }
+      .ss-col-panel label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .ss-col-panel label:hover { color: #4ade80; }
+
+      /* ── Export dropdown ──────────────────────────────────────────── */
+      .ss-export-wrap { position: relative; }
+      .ss-export-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 200;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 10px;
+        padding: 6px;
+        min-width: 160px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      }
+      .ss-export-panel.open { display: block; }
+      .ss-export-panel button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 12px;
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+      .ss-export-panel button:hover { background: rgba(255,255,255,.08); }
+
+      /* ── Table wrapper ───────────────────────────────────────────── */
+      .ss-table-wrap {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+        /* allow frozen first column */
+      }
+
+      /* ── Spreadsheet table ───────────────────────────────────────── */
+      .ss-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+        min-width: max-content;
+        width: 100%;
+      }
+      .ss-table th,
+      .ss-table td {
+        padding: 0;
+        border-right: 1px solid rgba(255,255,255,.07);
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        white-space: nowrap;
+      }
+      .ss-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #0f172a;
+        padding: 8px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: rgba(240,255,250,.55);
+        user-select: none;
+        white-space: nowrap;
+      }
+      /* Frozen column */
+      .ss-table th:first-child,
+      .ss-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 11;
+        background: #0d1626;
+        box-shadow: 2px 0 6px rgba(0,0,0,.4);
+        min-width: 110px;
+      }
+      .ss-table th:first-child {
+        z-index: 20;
+        background: #0f172a;
+      }
+
+      /* Row banding by student group */
+      .ss-table tr[data-band="1"] td { background: rgba(255,255,255,.018); }
+      .ss-table tr[data-band="0"] td { background: transparent; }
+      .ss-table tr[data-band="1"] td:first-child { background: #0d1626; }
+      .ss-table tr[data-band="0"] td:first-child { background: #0a1120; }
+
+      /* Separator between student groups */
+      .ss-table tr.ss-group-sep td {
+        border-top: 1px solid rgba(255,255,255,.12) !important;
+      }
+
+      /* Cell hover */
+      .ss-table td:hover { background: rgba(255,255,255,.06) !important; }
+
+      /* ── Editable cells ──────────────────────────────────────────── */
+      .ss-cell {
+        display: flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 6px 10px;
+        cursor: text;
+        position: relative;
+        min-width: 80px;
+      }
+      .ss-cell-wide { min-width: 220px; max-width: 380px; white-space: normal; line-height: 1.35; }
+      .ss-cell-ro { cursor: default; color: rgba(240,255,250,.5); font-style: italic; }
+      .ss-cell-ro .ss-cell-val { font-style: italic; }
+      .ss-cell.editing {
+        padding: 0;
+        background: rgba(34,197,94,.08) !important;
+        outline: 2px solid rgba(34,197,94,.5);
+        outline-offset: -2px;
+      }
+      .ss-cell input,
+      .ss-cell select,
+      .ss-cell textarea {
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: inherit;
+        font: inherit;
+        padding: 6px 10px;
+        resize: none;
+      }
+      .ss-cell textarea { min-height: 60px; line-height: 1.4; white-space: normal; }
+
+      /* Saved pulse */
+      @keyframes ssPulse {
+        0%   { outline-color: rgba(34,197,94,.8); background: rgba(34,197,94,.14) !important; }
+        100% { outline-color: transparent;        background: inherit !important; }
+      }
+      .ss-cell.saved { animation: ssPulse .8s ease-out forwards; }
+
+      /* Locked cells (code, goal code after creation) */
+      .ss-cell-locked { cursor: default !important; color: rgba(240,255,250,.7); }
+      .ss-cell-locked .ss-lock-icon { opacity: .35; font-size: 10px; margin-left: 4px; }
+
+      /* Draft rows */
+      tr.ss-draft td { border: 1px dashed rgba(34,197,94,.35) !important; }
+      tr.ss-draft td:first-child { border-left-color: rgba(34,197,94,.55) !important; }
+      .ss-draft-badge {
+        font-size: 10px;
+        background: rgba(34,197,94,.15);
+        border: 1px solid rgba(34,197,94,.35);
+        border-radius: 4px;
+        padding: 1px 5px;
+        margin-left: 4px;
+        color: #4ade80;
+        white-space: nowrap;
+      }
+
+      /* Archived rows */
+      tr.ss-archived td { opacity: .4; }
+      tr.ss-archived .ss-cell-val { text-decoration: line-through; }
+
+      /* Progress badge */
+      .ss-progress-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgba(34,197,94,.15);
+        border: 1px solid rgba(34,197,94,.25);
+        color: #4ade80;
+      }
+      .ss-progress-badge.low {
+        background: rgba(239,68,68,.12);
+        border-color: rgba(239,68,68,.25);
+        color: #f87171;
+      }
+      .ss-progress-badge.mid {
+        background: rgba(234,179,8,.12);
+        border-color: rgba(234,179,8,.25);
+        color: #fbbf24;
+      }
+
+      /* Row actions menu */
+      .ss-row-actions {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+      .ss-row-menu-btn {
+        background: none;
+        border: none;
+        color: rgba(240,255,250,.4);
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 16px;
+        line-height: 1;
+        transition: color .15s, background .15s;
+      }
+      .ss-row-menu-btn:hover { color: inherit; background: rgba(255,255,255,.1); }
+      .ss-row-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        z-index: 300;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 8px;
+        padding: 4px;
+        min-width: 190px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      }
+      .ss-row-menu.open { display: block; }
+      .ss-row-menu button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 7px 12px;
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 5px;
+        white-space: nowrap;
+      }
+      .ss-row-menu button:hover { background: rgba(255,255,255,.08); }
+      .ss-row-menu button.danger { color: #f87171; }
+      .ss-row-menu button.danger:hover { background: rgba(239,68,68,.1); }
+
+      /* ── Status bar ──────────────────────────────────────────────── */
+      .ss-statusbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 20px;
+        font-size: 12px;
+        color: rgba(240,255,250,.5);
+        border-top: 1px solid rgba(255,255,255,.08);
+        background: rgba(0,0,0,.2);
+        flex-wrap: wrap;
+      }
+      .ss-statusbar .ss-save-indicator { display: flex; align-items: center; gap: 5px; }
+      .ss-statusbar .ss-save-indicator.saving { color: #fbbf24; }
+      .ss-statusbar .ss-save-indicator.saved  { color: #4ade80; }
+      @keyframes ssSpinKf { to { transform: rotate(360deg); } }
+      .ss-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(251,191,36,.4); border-top-color: #fbbf24; border-radius: 50%; animation: ssSpinKf .6s linear infinite; }
+
+      /* ── Import diff preview ─────────────────────────────────────── */
+      .ss-diff-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+      .ss-diff-table th, .ss-diff-table td { padding: 5px 8px; border: 1px solid rgba(255,255,255,.08); }
+      .ss-diff-table th { background: rgba(255,255,255,.06); font-weight: 600; }
+      .ss-diff-new  td { background: rgba(34,197,94,.1);  }
+      .ss-diff-chg  td { background: rgba(234,179,8,.1);  }
+      .ss-diff-same td { opacity: .45; }
+
+      /* ── Modal (local copy for this page) ────────────────────────── */
+      .ss-modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0,0,0,.65);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .ss-modal-backdrop.active { display: flex; }
+      .ss-modal {
+        background: #111827;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 14px;
+        padding: 24px;
+        min-width: 320px;
+        max-width: 860px;
+        max-height: 90vh;
+        overflow-y: auto;
+        width: 100%;
+        box-shadow: 0 16px 48px rgba(0,0,0,.6);
+      }
+      .ss-modal h2 { margin: 0 0 16px; font-size: 18px; }
+      .ss-modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+      /* ── Misc helpers ─────────────────────────────────────────────── */
+      .ss-empty {
+        padding: 60px 20px;
+        text-align: center;
+        color: rgba(240,255,250,.4);
+        font-size: 15px;
+      }
+      .ss-hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <!-- Top bar -->
+      <header class="tc-topbar">
+        <a href="/teacher/students/" class="tc-btn" title="Back to Students" aria-label="Back to Students" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </a>
+        <div class="tc-title">Teacher Center — Master Spreadsheet</div>
+        <span id="ssSyncBadge" class="st-sync-badge"></span>
+      </header>
+
+      <div class="tc-shell">
+        <!-- Sidebar navigation (matches other TC pages) -->
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </span><span class="tc-label">Overview</span></a>
+            <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </span><span class="tc-label">Work</span></a>
+            <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </span><span class="tc-label">Library</span></a>
+            <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </span><span class="tc-label">Review</span></a>
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+            </span><span class="tc-label">Gradebook</span></a>
+            <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </span><span class="tc-label">Students</span></a>
+            <a data-href="/teacher/calendar/" href="/teacher/calendar/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </span><span class="tc-label">Calendar</span></a>
+            <a data-href="/teacher/schedule/" href="/teacher/schedule/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span><span class="tc-label">Schedule</span></a>
+            <a data-href="/teacher/substitute/" href="/teacher/substitute/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </span><span class="tc-label">Substitute</span></a>
+            <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </span><span class="tc-label">Data</span></a>
+            <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                <rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line>
+              </svg>
+            </span><span class="tc-label">Archive</span></a>
+            <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </span><span class="tc-label">Admin</span></a>
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+            </span><span class="tc-label">Reporting</span></a>
+            <a data-href="/teacher/share/" href="/teacher/share/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+            </span><span class="tc-label">Share</span></a>
+            <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m-6-6H0m12 0h6m-3-9 3 3m-6 6 3 3M7.8 7.8 4.9 4.9m12.2 12.2-2.9-2.9m0-9.4 2.9 2.9M7.8 16.2l-2.9 2.9"></path>
+              </svg>
+            </span><span class="tc-label">Settings</span></a>
+          </nav>
+        </aside>
+
+        <main class="tc-main" style="display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - var(--tc-topbar-h));">
+
+          <!-- Toolbar -->
+          <div class="ss-toolbar">
+            <input type="text" id="ssSearch" placeholder="Search students, goals, codes…" />
+            <select id="ssClassFilter"><option value="">All Classes</option></select>
+            <select id="ssGoalAreaFilter"><option value="">All Goal Areas</option></select>
+            <select id="ssSortSelect">
+              <option value="code">Sort: Student Code</option>
+              <option value="class">Sort: Class</option>
+              <option value="goal_area">Sort: Goal Area</option>
+            </select>
+            <label class="ss-toggle-label">
+              <input type="checkbox" id="ssShowArchived" /> Show Archived
+            </label>
+
+            <div class="ss-toolbar-sep"></div>
+
+            <!-- Column visibility -->
+            <div class="ss-col-toggle-wrap">
+              <button class="ss-btn" id="ssColToggleBtn">👁 Columns</button>
+              <div class="ss-col-panel" id="ssColPanel">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+
+            <!-- Export dropdown -->
+            <div class="ss-export-wrap">
+              <button class="ss-btn" id="ssExportBtn">📤 Export ▾</button>
+              <div class="ss-export-panel" id="ssExportPanel">
+                <button data-fmt="csv">📄 CSV</button>
+                <button data-fmt="json">{ } JSON</button>
+                <button data-fmt="pdf">🖨 PDF</button>
+                <button data-fmt="md">Ⅿ Markdown</button>
+              </div>
+            </div>
+
+            <!-- Import -->
+            <button class="ss-btn" id="ssImportBtn">📥 Import CSV</button>
+
+            <!-- Add row -->
+            <button class="ss-btn ss-btn-primary" id="ssAddRowBtn">+ Add Row</button>
+          </div>
+
+          <!-- Spreadsheet table -->
+          <div class="ss-table-wrap" id="ssTableWrap">
+            <div id="ssLoading" class="ss-empty">Loading data…</div>
+            <table class="ss-table ss-hidden" id="ssTable">
+              <thead id="ssTableHead"></thead>
+              <tbody id="ssTableBody"></tbody>
+            </table>
+            <div id="ssEmpty" class="ss-empty ss-hidden">No goals found. Add a row to get started.</div>
+          </div>
+
+          <!-- Add Row button at bottom -->
+          <div style="padding:10px 20px;border-top:1px solid rgba(255,255,255,.07);">
+            <button class="ss-btn ss-btn-primary" id="ssAddRowBtnBottom">+ Add Row</button>
+          </div>
+
+          <!-- Status bar -->
+          <div class="ss-statusbar">
+            <span id="ssCountBadge">—</span>
+            <span class="ss-save-indicator" id="ssSaveIndicator"></span>
+            <span id="ssLastSaved"></span>
+            <span id="ssDraftWarning" style="color:#fbbf24;display:none;">⚠ Unsaved draft rows</span>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Import modal (hidden by default) -->
+    <div class="ss-modal-backdrop" id="ssImportModal">
+      <div class="ss-modal" style="max-width:920px;">
+        <h2>📥 Import CSV</h2>
+        <p style="font-size:13px;color:rgba(240,255,250,.6);margin-bottom:16px;">
+          Drop your CSV file or click to browse. Uses the same column format as the Google Sheets master.
+        </p>
+        <div id="ssImportDropzone" style="border:2px dashed rgba(255,255,255,.2);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:border-color .2s;" tabindex="0">
+          <div style="font-size:32px;margin-bottom:8px;">📂</div>
+          <div>Drop CSV here or <span style="color:#4ade80;text-decoration:underline;">browse</span></div>
+          <input type="file" id="ssImportFile" accept=".csv" style="display:none;" />
+        </div>
+        <div id="ssImportPreview" style="display:none;margin-top:16px;">
+          <h3 style="font-size:14px;margin-bottom:8px;">Preview Changes</h3>
+          <div style="font-size:12px;margin-bottom:8px;color:rgba(240,255,250,.5);">
+            <span style="background:rgba(34,197,94,.15);padding:2px 6px;border-radius:4px;margin-right:8px;">🟢 New</span>
+            <span style="background:rgba(234,179,8,.12);padding:2px 6px;border-radius:4px;margin-right:8px;">🟡 Changed</span>
+            <span style="opacity:.45;padding:2px 6px;border-radius:4px;">⚪ Unchanged</span>
+          </div>
+          <div style="overflow:auto;max-height:340px;">
+            <table class="ss-diff-table" id="ssDiffTable"></table>
+          </div>
+          <div id="ssImportSummary" style="font-size:13px;margin-top:10px;color:rgba(240,255,250,.7);"></div>
+        </div>
+        <div class="ss-modal-footer">
+          <button class="ss-btn" id="ssImportCancelBtn">Cancel</button>
+          <button class="ss-btn ss-btn-primary ss-hidden" id="ssImportConfirmBtn">✓ Commit Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CACHE-BUST: Update the ?v= parameter below whenever JS files change. -->
+    <script src="/web/supabase-config.js?v=20260331"></script>
+    <script defer src="/web/teacher-shell.js?v=20260331"></script>
+    <script src="/web/rc-modal.js?v=20260331"></script>
+    <script type="module" src="/web/tc-spreadsheet.js?v=20260331"></script>
+    <script defer src="/assets/js/class-clock.js" type="module"></script>
+  </body>
+</html>
