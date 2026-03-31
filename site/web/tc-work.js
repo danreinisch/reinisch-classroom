@@ -314,6 +314,28 @@
     return span;
   }
 
+  /**
+   * Build a table cell showing the class name, with targeted student codes shown
+   * as a subtitle when `d.studentCodes` is set.
+   * @param {object} d - draft object
+   * @returns {HTMLTableCellElement}
+   */
+  function makeClassCell(d) {
+    const td = document.createElement("td");
+    if (Array.isArray(d.studentCodes) && d.studentCodes.length > 0) {
+      const classSpan = document.createElement("span");
+      classSpan.textContent = safeStr(d.className) || "—"; // SAFETY: textContent
+      td.appendChild(classSpan);
+      const codesSpan = document.createElement("span");
+      codesSpan.style.cssText = "display:block;font-size:11px;opacity:0.7;margin-top:2px;";
+      codesSpan.textContent = "→ " + d.studentCodes.join(", "); // SAFETY: textContent
+      td.appendChild(codesSpan);
+    } else {
+      td.textContent = safeStr(d.className) || "—"; // SAFETY: textContent
+    }
+    return td;
+  }
+
   function renderTable(drafts) {
     const empty = $("draftsEmpty");
     const table = $("draftsTable");
@@ -484,8 +506,7 @@
           }
           tr.appendChild(tdTitle);
 
-          const tdClass = document.createElement("td");
-          tdClass.textContent = safeStr(d.className) || "—";
+          const tdClass = makeClassCell(d);
           tr.appendChild(tdClass);
 
           const tdWhen = document.createElement("td");
@@ -525,8 +546,7 @@
       tdTitle.appendChild(makeStatusBadge(d));
       tr.appendChild(tdTitle);
 
-      const tdClass = document.createElement("td");
-      tdClass.textContent = safeStr(d.className) || "—";
+      const tdClass = makeClassCell(d);
       tr.appendChild(tdClass);
 
       const tdWhen = document.createElement("td");
@@ -1052,6 +1072,9 @@
     $("draftDue").value = isoToDatetimeLocal(d.dueAt);
     $("draftNotes").value = d.notes || "";
     if ($("draftAutoRelease")) $("draftAutoRelease").checked = !!d.autoRelease;
+    if ($("draftStudentCodes")) {
+      $("draftStudentCodes").value = Array.isArray(d.studentCodes) ? d.studentCodes.join(", ") : "";
+    }
 
     // Update file labels to show current files
     const aLabel = $("assignmentFileName");
@@ -1346,6 +1369,12 @@
     const notes = safeStr($("draftNotes").value).trim();
     const autoRelease = $("draftAutoRelease") ? !!$("draftAutoRelease").checked : false;
 
+    // Parse optional student codes (comma-separated, case-insensitive → uppercased)
+    const studentCodesRaw = $("draftStudentCodes") ? safeStr($("draftStudentCodes").value).trim() : "";
+    const studentCodes = studentCodesRaw
+      ? studentCodesRaw.split(",").map(c => c.trim().toUpperCase()).filter(Boolean)
+      : [];
+
     // Read scoring defaults from form (with fallbacks)
     const scoringDefaults = readScoringDefaults();
 
@@ -1378,6 +1407,7 @@
       draft.dueAt = dueAt || null;
       draft.notes = notes || null;
       draft.autoRelease = autoRelease;
+      draft.studentCodes = studentCodes.length > 0 ? studentCodes : undefined;
       draft.updatedAt = nowISO();
       draft.meta = Object.assign({}, draft.meta || {}, { scoring_defaults: scoringDefaults, total_possible: totalPossible });
 
@@ -1499,6 +1529,7 @@
       dueAt: dueAt || null,
       notes: notes || null,
       autoRelease,
+      studentCodes: studentCodes.length > 0 ? studentCodes : undefined,
       createdAt: nowISO(),
       meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
       writingConfig: (() => {
@@ -1823,10 +1854,18 @@
       let confirmed = false;
 
       if (draft.studentCode) {
-        // Single-student draft: simple confirmation
+        // Single-student draft (from "Split by Student"): simple confirmation
         confirmed = await rcConfirm(
           "Issue Assignment",
           `Issue "${draft.title}" to ${draft.studentCode} in ${draft.className}?`,
+          "Issue"
+        );
+      } else if (Array.isArray(draft.studentCodes) && draft.studentCodes.length > 0) {
+        // Targeted multi-student draft: show exactly which students will receive it
+        const codesList = draft.studentCodes.join(", ");
+        confirmed = await rcConfirm(
+          "Issue Assignment",
+          `Issue "${draft.title}" to ${codesList} in ${draft.className}?\n\n(${draft.studentCodes.length} student${draft.studentCodes.length !== 1 ? 's' : ''} — targeted, not whole class)`,
           "Issue"
         );
       } else {
@@ -1930,6 +1969,9 @@
     const draftLines = pending.map(d => {
       if (d.studentCode) {
         return `\u2022 "${d.title}" \u2192 ${d.studentCode} (${d.className})`;
+      }
+      if (Array.isArray(d.studentCodes) && d.studentCodes.length > 0) {
+        return `\u2022 "${d.title}" \u2192 ${d.studentCodes.join(", ")} (${d.className})`;
       }
       return `\u2022 "${d.title}" \u2192 ${d.className} (all enrolled students)`;
     }).join("\n");
@@ -2371,6 +2413,9 @@
     const draftLines = pending.map(d => {
       if (d.studentCode) {
         return `\u2022 "${d.title}" \u2192 ${d.studentCode} (${d.className})`;
+      }
+      if (Array.isArray(d.studentCodes) && d.studentCodes.length > 0) {
+        return `\u2022 "${d.title}" \u2192 ${d.studentCodes.join(", ")} (${d.className})`;
       }
       return `\u2022 "${d.title}" \u2192 ${d.className} (all enrolled students)`;
     }).join("\n");

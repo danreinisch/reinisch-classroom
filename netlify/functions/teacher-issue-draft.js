@@ -1152,7 +1152,16 @@ exports.handler = async (event) => {
         // This is an explicit enrollment check: the student MUST be present in the
         // enrolled students list for the resolved class.
         let targetStudents = students;
-        if (draft.studentCode && typeof draft.studentCode === 'string') {
+        if (Array.isArray(draft.studentCodes) && draft.studentCodes.length > 0) {
+          // Multiple targeted students from the "Student Code(s)" field on the Create Draft form
+          const codes = draft.studentCodes.map(c => c.trim().toUpperCase());
+          targetStudents = students.filter(s => codes.includes(s.code));
+          if (targetStudents.length === 0) {
+            console.error(`[teacher-issue-draft] [${requestId}] None of the specified students (${codes.join(', ')}) are enrolled in class "${draft.className}" (resolved: "${resolvedClassName}", class ID: ${targetClass.id}). Enrolled student count: ${students.length}`);
+            return jsonResponse(event, 404, { ok: false, error: `None of the specified students (${codes.join(', ')}) are enrolled in your ${draft.className} class. Check enrollment on the Students page.` }, { 'Cache-Control': 'no-store' }, requestId);
+          }
+          console.log(`[teacher-issue-draft] [${requestId}] Targeted student codes filter — matched ${targetStudents.length} of ${codes.length} specified code(s): ${targetStudents.map(s => s.code).join(', ')}`);
+        } else if (draft.studentCode && typeof draft.studentCode === 'string') {
           const code = draft.studentCode.trim();
           targetStudents = students.filter(s => s.code === code);
           if (targetStudents.length === 0) {
