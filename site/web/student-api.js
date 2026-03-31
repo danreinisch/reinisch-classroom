@@ -2,6 +2,38 @@
 // All student portal data access goes through these functions (no direct Supabase calls)
 
 /**
+ * Deduplicate submissions per instance_id: keep only the most recent submission
+ * with non-empty answers for each instance_id. This prevents stale/empty
+ * resubmission shells (e.g. from "Return for Revision") from appearing in results.
+ * @param {Array} submissions
+ * @returns {Array}
+ */
+function deduplicateSubmissions(submissions) {
+  const byInstance = new Map();
+  for (const sub of submissions) {
+    const iid = sub.instance_id;
+    if (!iid) continue;
+    const hasAnswers = sub.answers && typeof sub.answers === 'object' && Object.keys(sub.answers).length > 0;
+    const existing = byInstance.get(iid);
+    if (!existing) {
+      byInstance.set(iid, sub);
+    } else {
+      const existingHasAnswers = existing.answers && typeof existing.answers === 'object' && Object.keys(existing.answers).length > 0;
+      const subTime = new Date(sub.submitted_at || 0).getTime();
+      const existingTime = new Date(existing.submitted_at || 0).getTime();
+      if (hasAnswers && !existingHasAnswers) {
+        byInstance.set(iid, sub);
+      } else if (!hasAnswers && existingHasAnswers) {
+        // keep existing
+      } else if (subTime > existingTime) {
+        byInstance.set(iid, sub);
+      }
+    }
+  }
+  return Array.from(byInstance.values());
+}
+
+/**
  * Base fetch wrapper with error handling and auth redirect
  * @param {string} url - Full URL to fetch
  * @param {Object} options - Fetch options
@@ -225,7 +257,8 @@ export function createStudentApiAdapter(studentCode) {
     // Submissions
     async listSubmissions(filters = {}) {
       // Ignore filters, always return for current student
-      return await getStudentSubmissions(studentCode);
+      const submissions = await getStudentSubmissions(studentCode);
+      return deduplicateSubmissions(submissions);
     },
     
     async getLatestSubmission(instance_id) {
