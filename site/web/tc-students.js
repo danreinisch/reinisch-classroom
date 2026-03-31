@@ -4769,6 +4769,9 @@
   /** In-memory cache: student_code → { iepCards, deseCards } for button click handler */
   const skillsCardsCache = new Map();
 
+  /** Guard against duplicate in-flight AI generation requests (e.g. rapid tab switching) */
+  const skillsGenerationInFlight = new Map(); // student.code → true
+
   /** Placeholder shown in skill card narrative area before AI commentary is generated */
   const SKILL_NARRATIVE_PLACEHOLDER_HTML = '<span class="st-skill-narrative-placeholder">Click \'Generate AI Commentary\' above to see a detailed summary.</span>';
 
@@ -5015,6 +5018,8 @@
                 area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
                 displayScore: parseFloat(d.percent_correct),
                 itemCount: parseInt(d.item_count, 10) || 0,
+                // Note: iepAligned is computed below (not in fetchDeseRollupsFallback) to keep
+                // the fallback function a pure data-fetching utility, matching the RPC path.
                 iepAligned: iepDesePrefixes.length > 0 && iepDesePrefixes.some(p => d.dese_code.startsWith(p)),
               }));
           } catch (fbErr) {
@@ -5125,11 +5130,15 @@
 
       if (!res.ok) {
         console.warn('[tc-students] AI skills summary returned', res.status, '— skipping narratives');
+        document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
         return;
       }
 
       const data = await res.json();
-      if (!data.ok || !Array.isArray(data.skills)) return;
+      if (!data.ok || !Array.isArray(data.skills)) {
+        document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+        return;
+      }
 
       // Cache the result
       skillsAiCache.set(student.code, data);
@@ -5139,7 +5148,7 @@
         if (!skill.code || !skill.summary) continue;
         const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
         const el = document.getElementById(safeId);
-        if (el) {
+        if (el && document.body.contains(el)) {
           el.innerHTML = `<p>${escapeHtml(skill.summary)}</p>`;
         }
       }
@@ -5177,9 +5186,13 @@
       `)
       // !assignment_item_id disambiguates the FK from submission_answers → assignment_items
       .eq('student_id', studentId)
-      .eq('school_year', schoolYear);
+      .eq('school_year', schoolYear)
+      .limit(500);
 
     if (error) throw error;
+    if ((data || []).length >= 500) {
+      console.warn('[tc-students] fetchDeseRollupsFallback: hit 500-row limit — DESE rollups may be incomplete. Deploy the student_dese_rollups RPC for accurate data.');
+    }
 
     const rollupMap = new Map(); // dese_code → { earnedSum, maxSum, count }
     for (const instance of data || []) {
@@ -5224,10 +5237,14 @@
    * Must be called after the tab HTML has been inserted into the DOM.
    */
   function initSkillsTabButton(contentDiv, student) {
-    const btn = contentDiv.querySelector(`#ai-generate-btn-${student.code}`);
-    if (!btn) return;
+    const btnId = `ai-generate-btn-${student.code}`;
+    const btn = document.getElementById(btnId);
+    if (!btn || !contentDiv.contains(btn)) return;
 
     btn.addEventListener('click', async () => {
+      // Guard against duplicate in-flight requests (e.g. rapid tab switching)
+      if (skillsGenerationInFlight.get(student.code)) return;
+
       btn.disabled = true;
       btn.textContent = 'Generating…';
 
@@ -5245,7 +5262,9 @@
         return;
       }
 
+      skillsGenerationInFlight.set(student.code, true);
       await requestSkillsNarratives(student, cards.iepCards, cards.deseCards);
+      skillsGenerationInFlight.delete(student.code);
 
       if (skillsAiCache.has(student.code)) {
         btn.textContent = '✅ Commentary Generated';
