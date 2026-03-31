@@ -1403,6 +1403,11 @@
     if (selectedDetailTab === 'goals') {
       batchUpdateGoalDataCounts(contentDiv, studentGoals).catch(() => {});
     }
+
+    // Wire up the AI Commentary button for the skills tab
+    if (selectedDetailTab === 'skills') {
+      initSkillsTabButton(contentDiv, student);
+    }
   }
 
   async function renderStudentGoalsTab(student, studentGoals) {
@@ -4761,6 +4766,12 @@
   /** In-memory cache: student_code → { skills: [...] } to avoid re-calling OpenAI */
   const skillsAiCache = new Map();
 
+  /** In-memory cache: student_code → { iepCards, deseCards } for button click handler */
+  const skillsCardsCache = new Map();
+
+  /** Placeholder shown in skill card narrative area before AI commentary is generated */
+  const SKILL_NARRATIVE_PLACEHOLDER_HTML = '<span class="st-skill-narrative-placeholder">Click \'Generate AI Commentary\' above to see a detailed summary.</span>';
+
   /**
    * Determine tier string and color config from a 0-100 score.
    */
@@ -4936,7 +4947,7 @@
           <div class="st-skill-bar" style="width:${pct}%;background:${tierInfo.border};"></div>
         </div>
         ${metaHtml}
-        <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || '<span class="st-skill-narrative-loading" role="status">Generating summary…</span>'}</div>
+        <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || SKILL_NARRATIVE_PLACEHOLDER_HTML}</div>
       </div>
     `;
   }
@@ -4992,7 +5003,23 @@
             }))
             .sort((a, b) => b.displayScore - a.displayScore);
         } else if (deseError) {
-          console.warn('[tc-students] renderSkillsSummaryTab: DESE RPC error:', deseError.message);
+          console.warn('[tc-students] renderSkillsSummaryTab: DESE RPC error:', deseError.message, '— trying client-side fallback');
+          // Client-side fallback: query the underlying tables directly
+          try {
+            const fallbackRows = await fetchDeseRollupsFallback(supabase, student.id, schoolYear);
+            deseCards = fallbackRows
+              .filter(d => d.dese_code && d.percent_correct !== null)
+              .map(d => ({
+                type: 'dese',
+                code: d.dese_code,
+                area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
+                displayScore: parseFloat(d.percent_correct),
+                itemCount: parseInt(d.item_count, 10) || 0,
+                iepAligned: iepDesePrefixes.length > 0 && iepDesePrefixes.some(p => d.dese_code.startsWith(p)),
+              }));
+          } catch (fbErr) {
+            console.warn('[tc-students] renderSkillsSummaryTab: DESE fallback also failed:', fbErr);
+          }
         }
       }
     } catch (err) {
@@ -5012,7 +5039,18 @@
       `;
     }
 
+    // Store cards so the button click handler can access them
+    skillsCardsCache.set(student.code, { iepCards, deseCards });
+
     const cached = skillsAiCache.get(student.code);
+
+    const btnText = cached ? '✅ Commentary Generated' : '✨ Generate AI Commentary';
+    const btnDisabled = cached ? 'disabled' : '';
+    const aiButtonHtml = `
+      <button class="st-ai-generate-btn" id="ai-generate-btn-${escapeHtml(student.code)}" ${btnDisabled}>
+        ${btnText}
+      </button>
+    `;
 
     const iepSectionHtml = hasIep ? `
       <div class="st-skill-section">
@@ -5033,15 +5071,11 @@
 
     const html = `
       <div class="st-detail-section" id="skills-tab-${escapeHtml(student.code)}">
+        ${aiButtonHtml}
         ${iepSectionHtml}
         ${deseSectionHtml}
       </div>
     `;
-
-    // Fire async AI narrative fetch (skip if cached)
-    if (!cached) {
-      requestSkillsNarratives(student, iepCards, deseCards);
-    }
 
     return html;
   }
@@ -5118,6 +5152,115 @@
       // Silently remove loading spinners — user still sees the data cards
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
     }
+  }
+
+  /**
+   * Client-side fallback for DESE rollups when the RPC function is not deployed.
+   * Queries assignment_instances → submissions → submission_answers → assignment_item_mappings
+   * and aggregates earned/max points by dese_code.
+   */
+  async function fetchDeseRollupsFallback(supabase, studentId, schoolYear) {
+    const { data, error } = await supabase
+      .from('assignment_instances')
+      .select(`
+        submissions (
+          submission_answers (
+            earned_points,
+            max_points,
+            assignment_items!assignment_item_id (
+              assignment_item_mappings (
+                dese_codes
+              )
+            )
+          )
+        )
+      `)
+      // !assignment_item_id disambiguates the FK from submission_answers → assignment_items
+      .eq('student_id', studentId)
+      .eq('school_year', schoolYear);
+
+    if (error) throw error;
+
+    const rollupMap = new Map(); // dese_code → { earnedSum, maxSum, count }
+    for (const instance of data || []) {
+      for (const sub of instance.submissions || []) {
+        for (const sa of sub.submission_answers || []) {
+          const earned = typeof sa.earned_points === 'number' ? sa.earned_points : 0;
+          const max = typeof sa.max_points === 'number' ? sa.max_points : 0;
+          if (max <= 0) continue;
+
+          const mappings = sa.assignment_items?.assignment_item_mappings;
+          if (!Array.isArray(mappings)) continue;
+
+          for (const mapping of mappings) {
+            if (!Array.isArray(mapping.dese_codes)) continue;
+            for (const code of mapping.dese_codes) {
+              if (!code) continue;
+              const existing = rollupMap.get(code) || { earnedSum: 0, maxSum: 0, count: 0 };
+              existing.earnedSum += earned;
+              existing.maxSum += max;
+              existing.count += 1;
+              rollupMap.set(code, existing);
+            }
+          }
+        }
+      }
+    }
+
+    return Array.from(rollupMap.entries())
+      .filter(([, s]) => s.maxSum > 0)
+      .map(([dese_code, s]) => ({
+        dese_code,
+        percent_correct: Math.round(s.earnedSum / s.maxSum * 1000) / 10,
+        total_earned: s.earnedSum,
+        total_possible: s.maxSum,
+        item_count: s.count,
+      }))
+      .sort((a, b) => b.percent_correct - a.percent_correct);
+  }
+
+  /**
+   * Wire up the "Generate AI Commentary" button in the Skills Summary tab.
+   * Must be called after the tab HTML has been inserted into the DOM.
+   */
+  function initSkillsTabButton(contentDiv, student) {
+    const btn = contentDiv.querySelector(`#ai-generate-btn-${student.code}`);
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Generating…';
+
+      // Replace placeholders with loading spinners while generating
+      contentDiv.querySelectorAll('.st-skill-narrative-placeholder').forEach(el => {
+        el.className = 'st-skill-narrative-loading';
+        el.setAttribute('role', 'status');
+        el.textContent = 'Generating summary…';
+      });
+
+      const cards = skillsCardsCache.get(student.code);
+      if (!cards) {
+        btn.disabled = false;
+        btn.textContent = '✨ Generate AI Commentary';
+        return;
+      }
+
+      await requestSkillsNarratives(student, cards.iepCards, cards.deseCards);
+
+      if (skillsAiCache.has(student.code)) {
+        btn.textContent = '✅ Commentary Generated';
+        // Keep disabled — reload the tab to regenerate
+      } else {
+        // Generation failed — restore button and placeholders
+        btn.disabled = false;
+        btn.textContent = '✨ Generate AI Commentary';
+        contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
+          if (!el.textContent.trim()) {
+            el.innerHTML = SKILL_NARRATIVE_PLACEHOLDER_HTML;
+          }
+        });
+      }
+    });
   }
 
   // ── End Skills Summary Tab ───────────────────────────────────────────────────

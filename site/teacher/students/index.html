@@ -1023,6 +1023,34 @@
         margin-top: 3px;
         white-space: nowrap;
       }
+      .st-ai-generate-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        border-radius: 8px;
+        background: rgba(139, 92, 246, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        margin-bottom: 20px;
+      }
+      .st-ai-generate-btn:hover:not(:disabled) {
+        background: rgba(139, 92, 246, 0.2);
+        border-color: rgba(139, 92, 246, 0.6);
+      }
+      .st-ai-generate-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .st-skill-narrative-placeholder {
+        color: rgba(255, 255, 255, 0.3);
+        font-style: italic;
+        font-size: 12px;
+      }
 
       /* Responsive */
       @media (max-width: 768px) {
