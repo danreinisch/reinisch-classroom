@@ -541,8 +541,11 @@
                 </div>
 
                 <div class="work-field">
-                  <label for="draftStudentCodes">Student Code(s) — optional, comma-separated</label>
-                  <input id="draftStudentCodes" name="studentCodes" type="text" placeholder="e.g. S043 or S017, S043" autocomplete="off" style="text-transform:uppercase;" />
+                  <label for="draftStudentCodes">Student Code(s) — optional, leave blank for entire class</label>
+                  <select id="draftStudentCodes" name="studentCodes" multiple size="4" disabled>
+                    <option value="" disabled>Select a class first…</option>
+                  </select>
+                  <div id="draftStudentCodesHint" style="font-size:11px;color:var(--rc-ink-dim);margin-top:4px;">Hold Ctrl/⌘ to select multiple students. Leave all unselected to issue to the entire class.</div>
                 </div>
 
                 <div class="work-field">

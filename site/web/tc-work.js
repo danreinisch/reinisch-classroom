@@ -101,6 +101,9 @@
 
   let editingId = null; // Track which draft is being edited
 
+  // Populated inside wire(); allows startEdit() to trigger a roster fetch
+  let _populateStudentDropdown = async (className, preselectCodes) => {}; // eslint-disable-line no-unused-vars
+
   function nowISO() {
     return new Date().toISOString();
   }
@@ -1072,9 +1075,12 @@
     $("draftDue").value = isoToDatetimeLocal(d.dueAt);
     $("draftNotes").value = d.notes || "";
     if ($("draftAutoRelease")) $("draftAutoRelease").checked = !!d.autoRelease;
-    if ($("draftStudentCodes")) {
-      $("draftStudentCodes").value = Array.isArray(d.studentCodes) ? d.studentCodes.join(", ") : "";
-    }
+
+    // Populate the student codes multi-select dropdown, pre-selecting stored codes
+    _populateStudentDropdown(
+      d.className || "",
+      Array.isArray(d.studentCodes) ? d.studentCodes : []
+    );
 
     // Update file labels to show current files
     const aLabel = $("assignmentFileName");
@@ -1149,6 +1155,9 @@
     
     const mLabel = $("mappingFileName");
     if (mLabel) mLabel.textContent = "No file selected";
+
+    // Reset student dropdown back to initial disabled state
+    _populateStudentDropdown("", null);
     
     clearMsg();
   }
@@ -1369,10 +1378,10 @@
     const notes = safeStr($("draftNotes").value).trim();
     const autoRelease = $("draftAutoRelease") ? !!$("draftAutoRelease").checked : false;
 
-    // Parse optional student codes (comma-separated, case-insensitive → uppercased)
-    const studentCodesRaw = $("draftStudentCodes") ? safeStr($("draftStudentCodes").value).trim() : "";
-    const studentCodes = studentCodesRaw
-      ? studentCodesRaw.split(",").map(c => c.trim().toUpperCase()).filter(Boolean)
+    // Read selected student codes from the multi-select dropdown
+    const studentCodesSel = $("draftStudentCodes");
+    const studentCodes = studentCodesSel
+      ? Array.from(studentCodesSel.selectedOptions).map(o => o.value.trim().toUpperCase()).filter(Boolean)
       : [];
 
     // Read scoring defaults from form (with fallbacks)
@@ -3474,6 +3483,96 @@ function normalizeTaggedAssignmentText(input) {
     // ensureMegaCheckbox(); // DISABLED: replaced by preview panel
 
     const classSel = document.getElementById("draftClass");
+
+    // --- Student dropdown roster fetch ---
+    // When the class dropdown changes, fetch enrolled students and populate the
+    // draftStudentCodes multi-select. If no class is selected, disable it.
+    async function populateStudentDropdown(className, preselectCodes) {
+      const studentSel = document.getElementById("draftStudentCodes");
+      if (!studentSel) return;
+
+      // Clear existing options
+      studentSel.innerHTML = "";
+
+      if (!className) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.disabled = true;
+        placeholder.textContent = "Select a class first…";
+        studentSel.appendChild(placeholder);
+        studentSel.disabled = true;
+        return;
+      }
+
+      // Show loading state
+      const loadingOpt = document.createElement("option");
+      loadingOpt.value = "";
+      loadingOpt.disabled = true;
+      loadingOpt.textContent = "Loading students…";
+      studentSel.appendChild(loadingOpt);
+      studentSel.disabled = true;
+
+      try {
+        const resp = await fetch("/.netlify/functions/teacher-validate-enrollments", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pairs: [], classNames: [className] }),
+        });
+
+        studentSel.innerHTML = "";
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const codes = data.enrolledStudentsByClass && data.enrolledStudentsByClass[className];
+          if (Array.isArray(codes) && codes.length > 0) {
+            const sorted = codes.slice().sort();
+            for (const code of sorted) {
+              const opt = document.createElement("option");
+              opt.value = code;
+              opt.textContent = code;
+              if (Array.isArray(preselectCodes) && preselectCodes.includes(code)) {
+                opt.selected = true;
+              }
+              studentSel.appendChild(opt);
+            }
+            studentSel.disabled = false;
+          } else {
+            const noOpt = document.createElement("option");
+            noOpt.value = "";
+            noOpt.disabled = true;
+            noOpt.textContent = "No enrolled students found";
+            studentSel.appendChild(noOpt);
+            studentSel.disabled = true;
+          }
+        } else {
+          const errOpt = document.createElement("option");
+          errOpt.value = "";
+          errOpt.disabled = true;
+          errOpt.textContent = "Could not load students";
+          studentSel.appendChild(errOpt);
+          studentSel.disabled = true;
+        }
+      } catch (err) {
+        console.error("[tc-work] Failed to load students for dropdown:", err);
+        studentSel.innerHTML = "";
+        const errOpt = document.createElement("option");
+        errOpt.value = "";
+        errOpt.disabled = true;
+        errOpt.textContent = "Could not load students";
+        studentSel.appendChild(errOpt);
+        studentSel.disabled = true;
+      }
+    }
+
+    if (classSel) {
+      classSel.addEventListener("change", () => {
+        populateStudentDropdown(classSel.value, []);
+      });
+    }
+
+    // Expose to module scope so startEdit() can call it with preselected codes
+    _populateStudentDropdown = populateStudentDropdown;
 
     // Scoring total display
     let lastItemCounts = { questions: 0, writingPrompts: 0 };
