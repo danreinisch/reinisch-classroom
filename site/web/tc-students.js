@@ -4773,10 +4773,35 @@
   }
 
   /**
+   * Map IEP goal_area values to DESE domain prefixes for IEP-alignment detection.
+   * Returns a Set of prefixes like 'R.', 'W.', etc.
+   * Matching is intentionally broad (substring) so that areas like "Reading Comprehension"
+   * and "Written Expression" map to R. and W. respectively. The Set prevents duplicates.
+   */
+  function getIepDeseDomainPrefixes(studentGoals) {
+    const prefixes = new Set();
+    for (const goal of studentGoals) {
+      if (goal.status === 'archived') continue;
+      const area = (goal.goal_area || '').toLowerCase();
+      // Reading / Comprehension  →  R.x DESE codes
+      if (area.includes('reading') || area.includes('comprehension')) prefixes.add('R.');
+      // Writing / Written Expression  →  W.x DESE codes
+      if (area.includes('writing') || area.includes('written') || area.includes('expression')) prefixes.add('W.');
+      // Language / Grammar  →  L.x DESE codes
+      if (area.includes('language') || area.includes('grammar')) prefixes.add('L.');
+      // Math  →  M.x DESE codes
+      if (area.includes('math')) prefixes.add('M.');
+    }
+    return prefixes;
+  }
+
+  /**
    * Compute IEP goal skill cards from allProgressEntries.
+   * goalDataPointsMap (optional): Map<goalId, count> from goal_data_points table — used
+   * for the data-points count display so it matches the Goals tab.
    * Returns an array sorted highest score first.
    */
-  function computeIepSkillCards(student, studentGoals) {
+  function computeIepSkillCards(student, studentGoals, goalDataPointsMap = new Map()) {
     const cards = [];
     const currentQ = (() => { try { return getCurrentQuarter(); } catch (e) { return null; } })();
     const prevQ = currentQ ? { Q1: null, Q2: 'Q1', Q3: 'Q2', Q4: 'Q3' }[currentQ] : null;
@@ -4830,6 +4855,11 @@
         else if (diff <= -SKILL_TREND_THRESHOLD) trend = 'down';
       }
 
+      // Prefer the goal_data_points count (matches the Goals tab) over goal_progress entry count
+      const dataPoints = goalDataPointsMap.has(goal.id)
+        ? goalDataPointsMap.get(goal.id)
+        : numericEntries.length;
+
       cards.push({
         type: 'iep',
         code: goal.code,
@@ -4838,7 +4868,7 @@
         currentAvg,
         previousAvg: prevAvg,
         trend,
-        dataPoints: numericEntries.length,
+        dataPoints,
         target: goal.mastery !== undefined && goal.mastery !== null ? parseFloat(goal.mastery) : null,
         baseline: goal.baseline !== undefined && goal.baseline !== null ? parseFloat(goal.baseline) : null,
       });
@@ -4870,6 +4900,10 @@
       trendHtml = `<span style="color:${trendColor};font-weight:700;font-size:16px;margin-left:6px;">${trendIcon}</span>`;
     }
 
+    const iepBadgeHtml = card.type === 'dese' && card.iepAligned
+      ? `<span class="st-skill-iep-badge" title="Related to student&#39;s IEP goal area">📌 IEP-aligned</span>`
+      : '';
+
     const confidenceHtml = card.type === 'dese'
       ? `<span class="st-skill-confidence">${card.itemCount} item${card.itemCount !== 1 ? 's' : ''}</span>`
       : `<span class="st-skill-confidence">${card.dataPoints} data point${card.dataPoints !== 1 ? 's' : ''}</span>`;
@@ -4890,6 +4924,7 @@
           <div class="st-skill-title">
             <span class="st-skill-code">${escapeHtml(card.code)}</span>
             <span class="st-skill-area">${escapeHtml(card.area)}</span>
+            ${iepBadgeHtml}
           </div>
           <div class="st-skill-score-area">
             <span class="st-skill-score">${escapeHtml(scoreDisplay)}</span>
@@ -4910,7 +4945,25 @@
    * Render the Skills Summary tab.
    */
   async function renderSkillsSummaryTab(student, studentGoals) {
-    const iepCards = computeIepSkillCards(student, studentGoals);
+    // Fetch per-question data point counts (matches Goals tab "14/3" display)
+    let goalDataPointsMap = new Map(); // goalId → count
+    try {
+      if (student.id) {
+        const allDataPoints = await db.listGoalDataPoints({ studentId: student.id });
+        for (const dp of allDataPoints) {
+          if (dp.goal_id) {
+            goalDataPointsMap.set(dp.goal_id, (goalDataPointsMap.get(dp.goal_id) || 0) + 1);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[tc-students] renderSkillsSummaryTab: goal data points fetch failed:', err);
+    }
+
+    const iepCards = computeIepSkillCards(student, studentGoals, goalDataPointsMap);
+
+    // Determine which DESE domain prefixes correspond to this student's IEP goal areas
+    const iepDesePrefixes = [...getIepDeseDomainPrefixes(studentGoals)];
 
     // Fetch DESE rollups from Supabase RPC
     let deseCards = [];
@@ -4935,6 +4988,7 @@
               area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
               displayScore: parseFloat(d.percent_correct),
               itemCount: parseInt(d.item_count, 10) || 0,
+              iepAligned: iepDesePrefixes.length > 0 && iepDesePrefixes.some(p => d.dese_code.startsWith(p)),
             }))
             .sort((a, b) => b.displayScore - a.displayScore);
         } else if (deseError) {
