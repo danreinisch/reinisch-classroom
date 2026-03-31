@@ -163,4 +163,106 @@ console.log('\n--- escapeHtml XSS coverage ---');
   console.log('✓ safe content passes through unchanged');
 }
 
+// ── Submission deduplication per instance_id ─────────────────────────────────
+
+console.log('\n--- Submission deduplication per instance_id ---');
+
+// Mirror of the deduplication logic in loadData() of tc-review.js
+function deduplicateSubmissions(rawSubmissions) {
+  const byInstance = new Map();
+  for (const sub of rawSubmissions) {
+    const iid = sub.instance_id;
+    if (!iid) continue;
+    const hasAnswers = sub.answers && Object.keys(sub.answers).length > 0;
+    const existing = byInstance.get(iid);
+    if (!existing) {
+      byInstance.set(iid, sub);
+    } else {
+      const existingHasAnswers = existing.answers && Object.keys(existing.answers).length > 0;
+      const subTime = new Date(sub.submitted_at || 0).getTime();
+      const existingTime = new Date(existing.submitted_at || 0).getTime();
+      if (hasAnswers && !existingHasAnswers) {
+        byInstance.set(iid, sub);
+      } else if (!hasAnswers && existingHasAnswers) {
+        // keep existing
+      } else if (subTime > existingTime) {
+        byInstance.set(iid, sub);
+      }
+    }
+  }
+  return Array.from(byInstance.values());
+}
+
+{
+  // One instance, multiple submissions: keep the most recent with answers
+  const subs = [
+    { id: 'orig', instance_id: 'inst1', answers: { q1: 'A' }, submitted_at: '2026-01-01T00:00:00Z' },
+    { id: 'resub', instance_id: 'inst1', answers: { q1: 'B', q2: 'C' }, submitted_at: '2026-02-01T00:00:00Z' },
+    { id: 'empty', instance_id: 'inst1', answers: {}, submitted_at: '2026-03-01T00:00:00Z' },
+  ];
+  const result = deduplicateSubmissions(subs);
+  assert.strictEqual(result.length, 1, 'should keep 1 submission per instance');
+  assert.strictEqual(result[0].id, 'resub', 'should keep most recent submission with answers (not empty shell)');
+  console.log('✓ keeps most recent submission with answers, ignores empty shell');
+}
+
+{
+  // S002 scenario: original (27%), resubmission (67%), empty shell
+  const subs = [
+    { id: 'original', instance_id: 'inst-s002', answers: { '1_1': 'A', '1_2': 'B' }, submitted_at: '2026-01-10T00:00:00Z' },
+    { id: 'resubmission', instance_id: 'inst-s002', answers: { '1_1': 'A', '1_2': 'C', wr: 'text' }, submitted_at: '2026-02-10T00:00:00Z' },
+    { id: 'empty_shell', instance_id: 'inst-s002', answers: {}, submitted_at: '2026-03-10T00:00:00Z' },
+  ];
+  const result = deduplicateSubmissions(subs);
+  assert.strictEqual(result.length, 1, 'S002: should reduce to 1 submission');
+  assert.strictEqual(result[0].id, 'resubmission', 'S002: should select the resubmission (67%), not the empty shell');
+  console.log('✓ S002 scenario: resubmission selected over empty shell');
+}
+
+{
+  // Multiple instances: each gets their own winner
+  const subs = [
+    { id: 's1a', instance_id: 'inst1', answers: { q1: 'A' }, submitted_at: '2026-01-01T00:00:00Z' },
+    { id: 's1b', instance_id: 'inst1', answers: { q1: 'B' }, submitted_at: '2026-02-01T00:00:00Z' },
+    { id: 's2a', instance_id: 'inst2', answers: { q1: 'C' }, submitted_at: '2026-01-15T00:00:00Z' },
+  ];
+  const result = deduplicateSubmissions(subs);
+  assert.strictEqual(result.length, 2, 'should produce 1 submission per instance');
+  const ids = result.map(s => s.id).sort();
+  assert.deepStrictEqual(ids, ['s1b', 's2a'], 'should select most recent per instance');
+  console.log('✓ multiple instances: each gets most recent submission');
+}
+
+{
+  // All empty answers: fall back to most recent
+  const subs = [
+    { id: 'empty1', instance_id: 'inst1', answers: {}, submitted_at: '2026-01-01T00:00:00Z' },
+    { id: 'empty2', instance_id: 'inst1', answers: {}, submitted_at: '2026-03-01T00:00:00Z' },
+    { id: 'empty3', instance_id: 'inst1', answers: null, submitted_at: '2026-02-01T00:00:00Z' },
+  ];
+  const result = deduplicateSubmissions(subs);
+  assert.strictEqual(result.length, 1, 'all-empty: should keep 1 submission');
+  assert.strictEqual(result[0].id, 'empty2', 'all-empty: should keep most recent');
+  console.log('✓ all-empty answers: keeps most recent submission');
+}
+
+{
+  // Submissions with no instance_id are skipped
+  const subs = [
+    { id: 'no_iid', instance_id: null, answers: { q1: 'A' }, submitted_at: '2026-01-01T00:00:00Z' },
+    { id: 'valid', instance_id: 'inst1', answers: { q1: 'B' }, submitted_at: '2026-01-01T00:00:00Z' },
+  ];
+  const result = deduplicateSubmissions(subs);
+  assert.strictEqual(result.length, 1, 'should skip submissions with no instance_id');
+  assert.strictEqual(result[0].id, 'valid');
+  console.log('✓ submissions with null instance_id are skipped');
+}
+
+{
+  // Empty input
+  const result = deduplicateSubmissions([]);
+  assert.deepStrictEqual(result, [], 'empty input returns empty array');
+  console.log('✓ empty input returns empty array');
+}
+
 console.log('\n✓ All tc-review-helpers tests passed!');

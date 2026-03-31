@@ -157,8 +157,38 @@
       
       studentsData = students || [];
       assignmentsData = assignments || [];
-      submissionsData = submissions || [];
       assignmentInstancesData = instances || [];
+
+      // Deduplicate submissions per instance: keep only the most recent submission
+      // with non-empty answers for each instance_id. This prevents stale/empty
+      // resubmission shells (e.g. from "Return for Revision") from polluting the queue.
+      const rawSubmissions = submissions || [];
+      const byInstance = new Map();
+      for (const sub of rawSubmissions) {
+        const iid = sub.instance_id;
+        if (!iid) continue;
+        const hasAnswers = sub.answers && Object.keys(sub.answers).length > 0;
+        const existing = byInstance.get(iid);
+        if (!existing) {
+          byInstance.set(iid, sub);
+        } else {
+          const existingHasAnswers = existing.answers && Object.keys(existing.answers).length > 0;
+          // Prefer a submission with actual answers; among ties prefer the more recent one
+          const subTime = new Date(sub.submitted_at || 0).getTime();
+          const existingTime = new Date(existing.submitted_at || 0).getTime();
+          if (hasAnswers && !existingHasAnswers) {
+            byInstance.set(iid, sub);
+          } else if (!hasAnswers && existingHasAnswers) {
+            // keep existing
+          } else if (subTime > existingTime) {
+            byInstance.set(iid, sub);
+          }
+        }
+      }
+      submissionsData = Array.from(byInstance.values());
+      if (submissionsData.length < rawSubmissions.length) {
+        console.log(`[tc-review] Deduplicated ${rawSubmissions.length} → ${submissionsData.length} submissions (${rawSubmissions.length - submissionsData.length} stale/empty shells removed)`);
+      }
 
       // Reset item/answer caches so refreshed data picks up any DB changes (e.g. after backfill)
       assignmentItemsCache = {};
@@ -2481,20 +2511,23 @@
           throw new Error(data.error || 'Failed to return for revision');
         }
       } else {
-        // Normal flow: create a resubmission record then mark as Returned
-        await db.createResubmission({
-          instance_id: submission.instance_id,
-          original_submission_id: submissionId,
-          answers: {}
-        });
-
+        // Normal flow: mark the existing submission as Returned and reset the instance
+        // so the student can resubmit. We do NOT call createResubmission() because that
+        // creates an empty submission shell with answers:{} which pollutes the review queue.
         await db.upsertSubmission({
           id: submissionId,
-          status: 'Returned',
+          review_status: 'returned',
           graded_at: new Date().toISOString(),
           graded_by: localStorage.getItem('rc_teacher_name') || '',
           feedback
         });
+
+        // Reset instance status so the student sees the assignment again
+        const instanceToReset = assignmentInstancesData.find(i => i.id === submission.instance_id);
+        if (instanceToReset) {
+          await db.upsertAssignmentInstance({ id: instanceToReset.id, status: 'Assigned' });
+          instanceToReset.status = 'Assigned';
+        }
       }
 
       submission.review_status = 'returned';
