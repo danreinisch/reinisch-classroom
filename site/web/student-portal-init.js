@@ -1267,6 +1267,8 @@
     isRetryMode: false,
     retryLockedQuestionIds: new Set(),
     scoringResults: [],
+    submissionAnswers: [],
+    submissionFeedback: null,
   };
   
   // Constants
@@ -1396,7 +1398,7 @@
   /**
    * Open the assignment viewer as a right-slide panel
    */
-  function openAssignmentViewer(instance) {
+  async function openAssignmentViewer(instance) {
     console.log(LOG_PREFIX, 'Opening assignment viewer for:', instance.id);
     
     assignmentViewerState.currentAssignment = instance;
@@ -1404,6 +1406,8 @@
     assignmentViewerState.answers = new Map();
     assignmentViewerState.currentDay = 0;
     assignmentViewerState.scoringResults = [];
+    assignmentViewerState.submissionAnswers = [];
+    assignmentViewerState.submissionFeedback = null;
     
     // Check if assignment is submitted or graded (read-only mode)
     const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded' || instance.status === 'Reviewed';
@@ -1438,6 +1442,27 @@
         });
         // Show "resuming" toast
         showToast('📌 Resuming your progress...');
+      }
+    }
+
+    // Fetch submission details (teacher feedback + per-item grading data) for graded assignments
+    if (isGraded) {
+      const studentCode = sessionStorage.getItem('rc_user_code');
+      if (studentCode) {
+        try {
+          const detailsUrl = `/.netlify/functions/student-submission-details?code=${encodeURIComponent(studentCode)}&instance_id=${encodeURIComponent(instance.id)}`;
+          const detailsResp = await fetch(detailsUrl);
+          if (detailsResp.ok) {
+            const detailsData = await detailsResp.json();
+            if (detailsData.ok) {
+              assignmentViewerState.submissionAnswers = detailsData.answers || [];
+              assignmentViewerState.submissionFeedback = detailsData.feedback || null;
+              console.log(LOG_PREFIX, 'Loaded submission details:', assignmentViewerState.submissionAnswers.length, 'answers, feedback:', !!assignmentViewerState.submissionFeedback);
+            }
+          }
+        } catch (e) {
+          console.warn(LOG_PREFIX, 'Could not fetch submission details (non-fatal):', e);
+        }
       }
     }
     
@@ -1685,19 +1710,38 @@
     const isRetryMode = assignmentViewerState.isRetryMode;
     const retryLockedIds = assignmentViewerState.retryLockedQuestionIds || new Set();
     const scoringResults = assignmentViewerState.scoringResults || [];
+    const submissionAnswers = assignmentViewerState.submissionAnswers || [];
     
     const questionsHtml = questions.map((q) => {
       const questionId = `${dayData.day_number}_${q.number}`;
       const choices = q.choices || [];
       const savedAnswer = assignmentViewerState.answers.get(questionId);
       const isLocked = isRetryMode && retryLockedIds.has(questionId);
+
+      // Look up per-item submission data for graded mode (correct/incorrect highlighting + teacher note)
+      const subAnswer = submissionAnswers.find(a => a.item_ref === questionId) || null;
+      const correctAnswer = subAnswer ? subAnswer.correct_answer : null;
+      const studentAnswerFromSub = subAnswer && subAnswer.raw_answer ? (subAnswer.raw_answer.value || null) : null;
       
       const choicesHtml = choices.map(choice => {
         const isChecked = savedAnswer === choice.letter ? 'checked' : '';
         const disabledAttr = (isReadOnly || isLocked) ? 'disabled' : '';
-        // In retry mode, mark the selected choice of a locked question with the locked-correct style
-        const isSelectedLockedChoice = isLocked && savedAnswer === choice.letter;
-        const choiceClass = isSelectedLockedChoice ? 'locked-correct' : (isLocked ? 'locked-disabled' : '');
+        let choiceClass = '';
+        if (isGraded && subAnswer && correctAnswer != null) {
+          // Always highlight the correct answer in green; highlight the student's wrong choice in red
+          const choiceLetter = String(choice.letter).toUpperCase();
+          const isCorrectAnswer = choiceLetter === String(correctAnswer).toUpperCase();
+          const isStudentChoice = studentAnswerFromSub != null && choiceLetter === String(studentAnswerFromSub).toUpperCase();
+          if (isCorrectAnswer) {
+            choiceClass = 'correct';
+          } else if (isStudentChoice && !subAnswer.is_correct) {
+            choiceClass = 'incorrect';
+          }
+        } else {
+          // In retry mode, mark the selected choice of a locked question with the locked-correct style
+          const isSelectedLockedChoice = isLocked && savedAnswer === choice.letter;
+          choiceClass = isSelectedLockedChoice ? 'locked-correct' : (isLocked ? 'locked-disabled' : '');
+        }
         return `
           <div class="st-choice ${choiceClass}" data-question-id="${questionId}" data-letter="${choice.letter}">
             <input type="radio" name="q_${questionId}" id="q_${questionId}_${choice.letter}" value="${choice.letter}" ${isChecked} ${disabledAttr}>
@@ -1711,11 +1755,13 @@
 
       // Fill-in-blank: questions with no predefined choices render a textarea.
       // When in read-only mode and scoring results are available, show ✓/✗ feedback.
+      // scoringResults covers freshly-submitted sessions; subAnswer covers pre-graded assignments.
       let answerInputHtml;
       if (choices.length === 0) {
         const scoringResult = scoringResults.find(r => r.item_ref === questionId);
-        const feedbackHtml = (isReadOnly || isLocked) && scoringResult != null
-          ? `<div class="st-fib-feedback ${scoringResult.is_correct ? 'st-fib-correct' : 'st-fib-incorrect'}">${scoringResult.is_correct ? '✓ Correct' : '✗ Incorrect'}</div>`
+        const isCorrectFib = scoringResult != null ? scoringResult.is_correct : (subAnswer != null ? subAnswer.is_correct : null);
+        const feedbackHtml = (isReadOnly || isLocked) && isCorrectFib !== null
+          ? `<div class="st-fib-feedback ${isCorrectFib ? 'st-fib-correct' : 'st-fib-incorrect'}">${isCorrectFib ? '✓ Correct' : '✗ Incorrect'}</div>`
           : '';
         answerInputHtml = `<textarea class="st-text-answer" data-question-id="${questionId}" rows="2" placeholder="Type your answer here..." aria-label="Answer for question ${q.number}"${(isReadOnly || isLocked) ? ' disabled' : ''}>${escapeHtml(savedAnswer || '')}</textarea>${feedbackHtml}`;
       } else {
@@ -1723,6 +1769,11 @@
       }
 
       const retryLockedBadge = isLocked ? `<div class="st-retry-correct-badge">✓ Correct</div>` : '';
+
+      // Per-item teacher note (shown in graded mode when teacher has provided feedback)
+      const teacherNoteHtml = (isGraded && subAnswer && subAnswer.teacher_note)
+        ? `<div class="st-teacher-note">📝 <strong>Teacher note:</strong> ${escapeHtml(subAnswer.teacher_note)}</div>`
+        : '';
       
       const hintHtml = q.hint ? `
         <div class="st-hint-section">
@@ -1742,6 +1793,7 @@
             <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud" aria-label="Read question ${q.number} aloud">🔊</button>
           </div>
           ${answerInputHtml}
+          ${teacherNoteHtml}
           ${hintHtml}
         </div>
       `;
@@ -1752,6 +1804,14 @@
         ${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}
       </div>
     ` : '';
+
+    // Overall teacher feedback banner (shown below the graded banner when feedback was provided)
+    const feedbackBannerHtml = (isGraded && assignmentViewerState.submissionFeedback)
+      ? `<div class="st-overall-feedback">
+          <div class="st-overall-feedback-label">💬 Teacher Feedback</div>
+          <div class="st-overall-feedback-text">${escapeHtml(assignmentViewerState.submissionFeedback)}</div>
+        </div>`
+      : '';
 
     const retryBanner = isRetryMode ? `
       <div class="st-retry-banner">
@@ -1798,6 +1858,7 @@
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
+      ${feedbackBannerHtml}
       ${retryBanner}
       ${progressHtml}
       ${vocabHtml}
