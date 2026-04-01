@@ -14,14 +14,15 @@
     'Life Skills Transition', 'Life Skills Reading Skills', 'Life Skills Writing Skills',
     'Math Calculation', 'Math Problem Solving', 'Reading Fluency', 'Social Skills',
     'Language', 'Life Skills', 'Emotional Regulation', 'Reading Skills',
+    'OT', 'Readiness Skills',
   ];
 
   const MEASUREMENT_TYPES = ['Percent', 'x/y', 'Number'];
 
   const CLASS_NAMES = [
     'Language Arts 1 SC', 'Language Arts 2 SC', 'Language Arts 3 SC', 'Language Arts 4 SC',
-    'Life Skills Language Arts SC', 'Life Skills', 'Consumer Math', 'Geometry SC',
-    'Speech/Language', 'Warrior Academy',
+    'Life Skills Language Arts SC', 'Life Skills', 'Life Skills SC', 'Life Skills Math SC',
+    'Consumer Math', 'Geometry SC', 'Speech/Language', 'Warrior Academy', 'Related Services',
   ];
 
   // Column definitions: key, label, source, editable, type
@@ -29,7 +30,7 @@
     { key: 'student_code',      label: 'Student Code Name',                   editable: 'new-only', type: 'text' },
     { key: 'goal_desc',         label: 'IEP Goal',                             editable: true,       type: 'textarea' },
     { key: 'goal_code',         label: 'Student Code IEP Goal Code',           editable: 'new-only', type: 'text' },
-    { key: 'active',            label: 'Student: Active/Inactive',             editable: true,       type: 'select', options: ['Active', 'Inactive'] },
+    { key: 'active',            label: 'Student: Active/Inactive',             editable: true,       type: 'select', options: ['Active', 'Inactive'], cascade: true },
     { key: 'baseline',          label: 'Baseline',                             editable: true,       type: 'text' },
     { key: 'mastery',           label: 'Mastery',                              editable: true,       type: 'text' },
     { key: 'class_context',     label: 'Class',                                editable: true,       type: 'select-custom', options: CLASS_NAMES },
@@ -107,6 +108,8 @@
     // Accept MM/DD/YYYY or YYYY-MM-DD
     const slash = String(val).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (slash) return `${slash[3]}-${slash[1].padStart(2, '0')}-${slash[2].padStart(2, '0')}`;
+    const slash2 = String(val).match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+    if (slash2) return `20${slash2[3]}-${slash2[1].padStart(2, '0')}-${slash2[2].padStart(2, '0')}`;
     const iso = String(val).match(/^\d{4}-\d{2}-\d{2}$/);
     if (iso) return val;
     return null;
