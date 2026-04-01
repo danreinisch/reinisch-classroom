@@ -168,6 +168,8 @@ console.log('\n--- escapeHtml XSS coverage ---');
 console.log('\n--- Submission deduplication per instance_id ---');
 
 // Mirror of the deduplication logic in loadData() of tc-review.js
+// NOTE: The canonical implementations are now in site/web/data-adapter.js,
+// web/data-adapter.js, and site/web/student-api.js (applied in listSubmissions()).
 function deduplicateSubmissions(rawSubmissions) {
   const byInstance = new Map();
   for (const sub of rawSubmissions) {

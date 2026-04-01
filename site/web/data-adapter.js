@@ -102,6 +102,38 @@ function mapToCanonicalNames(code, name) {
   return ['Unknown'];
 }
 
+/**
+ * Deduplicate submissions per instance_id: keep only the most recent submission
+ * with non-empty answers for each instance_id. This prevents stale/empty
+ * resubmission shells (e.g. from "Return for Revision") from appearing in results.
+ * @param {Array} submissions
+ * @returns {Array}
+ */
+function deduplicateSubmissions(submissions) {
+  const byInstance = new Map();
+  for (const sub of submissions) {
+    const iid = sub.instance_id;
+    if (!iid) continue;
+    const hasAnswers = sub.answers && typeof sub.answers === 'object' && Object.keys(sub.answers).length > 0;
+    const existing = byInstance.get(iid);
+    if (!existing) {
+      byInstance.set(iid, sub);
+    } else {
+      const existingHasAnswers = existing.answers && typeof existing.answers === 'object' && Object.keys(existing.answers).length > 0;
+      const subTime = new Date(sub.submitted_at || 0).getTime();
+      const existingTime = new Date(existing.submitted_at || 0).getTime();
+      if (hasAnswers && !existingHasAnswers) {
+        byInstance.set(iid, sub);
+      } else if (!hasAnswers && existingHasAnswers) {
+        // keep existing
+      } else if (subTime > existingTime) {
+        byInstance.set(iid, sub);
+      }
+    }
+  }
+  return Array.from(byInstance.values());
+}
+
 const local = {
   // Students
   async listStudents() { return store.get('students', []); },
@@ -346,7 +378,7 @@ const local = {
       result = result.filter(s => s.review_status !== 'finalized');
     }
     
-    return result;
+    return deduplicateSubmissions(result);
   },
   
   // Portal B: Get latest submission for an instance
@@ -1586,7 +1618,7 @@ const remote = {
     const { data, error } = await query;
     if (error) throw error;
     
-    return data || [];
+    return deduplicateSubmissions(data || []);
   },
   
   // Portal B: Get latest submission for an instance
