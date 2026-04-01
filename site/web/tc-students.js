@@ -2836,6 +2836,13 @@
     if (importCsvBtn) {
       importCsvBtn.addEventListener('click', showImportCsvModal);
     }
+
+    const masterSpreadsheetBtn = document.getElementById('stMasterSpreadsheet');
+    if (masterSpreadsheetBtn) {
+      masterSpreadsheetBtn.addEventListener('click', () => {
+        window.location.href = '/teacher/students/spreadsheet/';
+      });
+    }
   }
 
   async function handleSaveInlineEdit(goalId, e) {

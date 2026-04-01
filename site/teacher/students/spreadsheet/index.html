@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Center — Master Spreadsheet</title>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .tc-main { min-width: 0; overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 56px); }
+
+    /* Page header */
+    .spr-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .spr-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+
+    /* Toolbar */
+    .spr-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .spr-toolbar input[type="text"],
+    .spr-toolbar select {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--rc-glass-border);
+      background: rgba(255,255,255,0.07);
+      color: inherit;
+      font-size: 13px;
+    }
+    .spr-toolbar input[type="text"] { min-width: 180px; }
+    .spr-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--rc-glass-border);
+      background: rgba(255,255,255,0.07);
+      color: inherit;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .spr-btn:hover { background: rgba(255,255,255,0.13); }
+    .spr-btn-primary {
+      background: rgba(99,102,241,0.3);
+      border-color: rgba(99,102,241,0.5);
+    }
+    .spr-btn-primary:hover { background: rgba(99,102,241,0.45); }
+    .spr-btn-sm { padding: 4px 9px; font-size: 12px; }
+    .spr-sep { width: 1px; height: 24px; background: var(--rc-glass-border); margin: 0 2px; }
+
+    /* Column visibility dropdown */
+    .spr-col-toggle-wrap { position: relative; }
+    .spr-col-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 200;
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 10px;
+      padding: 8px 0;
+      min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .spr-col-dropdown.open { display: block; }
+    .spr-col-dropdown label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.1s;
+    }
+    .spr-col-dropdown label:hover { background: rgba(255,255,255,0.07); }
+
+    /* Export dropdown */
+    .spr-export-wrap { position: relative; }
+    .spr-export-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      z-index: 200;
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 10px;
+      padding: 8px 0;
+      min-width: 160px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .spr-export-dropdown.open { display: block; }
+    .spr-export-dropdown button {
+      display: block;
+      width: 100%;
+      padding: 8px 14px;
+      text-align: left;
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .spr-export-dropdown button:hover { background: rgba(255,255,255,0.07); }
+
+    /* Table wrapper for horizontal scroll with frozen column */
+    .spr-table-wrap {
+      flex: 1;
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid var(--rc-glass-border);
+      background: rgba(255,255,255,0.02);
+      position: relative;
+    }
+
+    /* Spreadsheet table */
+    .spr-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 100%;
+      font-size: 13px;
+    }
+    .spr-table th,
+    .spr-table td {
+      padding: 7px 10px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      white-space: nowrap;
+      vertical-align: middle;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .spr-table th {
+      background: rgba(255,255,255,0.06);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      user-select: none;
+      cursor: pointer;
+    }
+    .spr-table th:hover { background: rgba(255,255,255,0.11); }
+    .spr-table th.sorted-asc::after { content: ' ↑'; }
+    .spr-table th.sorted-desc::after { content: ' ↓'; }
+
+    /* Frozen first column */
+    .spr-table th:first-child,
+    .spr-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: #181c2b;
+      border-right: 2px solid rgba(99,102,241,0.35);
+      min-width: 110px;
+      max-width: 110px;
+    }
+    .spr-table th:first-child {
+      z-index: 15;
+      background: #1e2133;
+    }
+
+    /* Row banding by student group */
+    .spr-row-band-a td { background: rgba(255,255,255,0.015); }
+    .spr-row-band-b td { background: rgba(255,255,255,0.00); }
+    .spr-row-band-a td:first-child,
+    .spr-row-band-b td:first-child { background: #181c2b; }
+    .spr-table tr:hover td { background: rgba(255,255,255,0.05) !important; }
+    .spr-table tr:hover td:first-child { background: #222640 !important; }
+
+    /* Row separator between student groups */
+    .spr-group-sep td { border-top: 2px solid rgba(99,102,241,0.2) !important; }
+
+    /* Inactive student rows */
+    .spr-row-inactive td { opacity: 0.45; }
+    .spr-row-inactive td:first-child { opacity: 0.45; }
+
+    /* Archived goal rows */
+    .spr-row-archived td { opacity: 0.35; text-decoration: line-through; }
+    .spr-row-archived td:first-child { text-decoration: none; }
+
+    /* Draft (unsaved new) rows */
+    .spr-row-draft td {
+      background: rgba(234,179,8,0.07) !important;
+      border-bottom: 1px dashed rgba(234,179,8,0.3) !important;
+    }
+    .spr-row-draft td:first-child { background: rgba(234,179,8,0.1) !important; }
+    .spr-draft-badge {
+      display: inline-block;
+      font-size: 10px;
+      background: rgba(234,179,8,0.25);
+      color: #facc15;
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* Editable cells */
+    .spr-cell-editable { cursor: text; }
+    .spr-cell-editable:hover { background: rgba(99,102,241,0.1) !important; }
+
+    /* Cell saving indicator */
+    @keyframes spr-save-pulse {
+      0%   { background: rgba(34,197,94,0.25); }
+      100% { background: transparent; }
+    }
+    .spr-cell-saved { animation: spr-save-pulse 0.8s ease-out; }
+
+    /* Inline editors */
+    .spr-table td input[type="text"],
+    .spr-table td input[type="date"],
+    .spr-table td select,
+    .spr-table td textarea {
+      width: 100%;
+      padding: 3px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(99,102,241,0.5);
+      background: rgba(30,33,51,0.97);
+      color: inherit;
+      font-size: 13px;
+      font-family: inherit;
+      box-sizing: border-box;
+      outline: none;
+    }
+    .spr-table td textarea {
+      min-height: 56px;
+      resize: vertical;
+      white-space: pre-wrap;
+    }
+
+    /* More-actions menu */
+    .spr-more-wrap { position: relative; display: inline-block; }
+    .spr-more-btn {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 16px;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+    .spr-more-btn:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+    .spr-more-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 2px);
+      z-index: 300;
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 10px;
+      padding: 6px 0;
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      white-space: nowrap;
+    }
+    .spr-more-menu.open { display: block; }
+    .spr-more-menu button {
+      display: block;
+      width: 100%;
+      padding: 7px 14px;
+      text-align: left;
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .spr-more-menu button:hover { background: rgba(255,255,255,0.07); }
+    .spr-more-menu button.danger { color: #f87171; }
+
+    /* Progress cell */
+    .spr-progress-cell { display: flex; align-items: center; gap: 6px; }
+    .spr-progress-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      min-width: 40px;
+    }
+    .spr-progress-bar { height: 100%; background: #22c55e; border-radius: 3px; }
+
+    /* Add row */
+    .spr-add-row-btn-wrap { padding: 10px 0; flex-shrink: 0; }
+
+    /* Status bar */
+    .spr-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      border-top: 1px solid var(--rc-glass-border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .spr-status-saved { color: #22c55e; }
+    .spr-status-saving { color: #facc15; }
+    .spr-status-error { color: #f87171; }
+
+    /* Import modal */
+    .spr-import-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 400;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+    }
+    .spr-import-overlay.open { display: flex; }
+    .spr-import-modal {
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 860px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .spr-import-modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .spr-drop-zone {
+      border: 2px dashed rgba(99,102,241,0.4);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 16px;
+    }
+    .spr-drop-zone.drag-over { border-color: rgba(99,102,241,0.9); background: rgba(99,102,241,0.1); }
+    .spr-drop-zone p { margin: 8px 0 0; font-size: 13px; color: rgba(255,255,255,0.5); }
+    .spr-import-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .spr-diff-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .spr-diff-table th, .spr-diff-table td {
+      padding: 5px 8px;
+      border: 1px solid rgba(255,255,255,0.07);
+      text-align: left;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .spr-diff-table th { background: rgba(255,255,255,0.06); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+    .spr-diff-new td { background: rgba(34,197,94,0.12); }
+    .spr-diff-changed td { background: rgba(234,179,8,0.12); }
+    .spr-diff-unchanged td { opacity: 0.4; }
+
+    /* Loading overlay */
+    .spr-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      font-size: 16px;
+      color: rgba(255,255,255,0.5);
+      gap: 12px;
+    }
+    @keyframes spr-spin { to { transform: rotate(360deg); } }
+    .spr-spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spr-spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* Print styles */
+    @media print {
+      .tc-topbar, .tc-sidebar, .spr-toolbar, .spr-status-bar,
+      .spr-add-row-btn-wrap, .spr-more-wrap { display: none !important; }
+      .tc-main { height: auto; overflow: visible; }
+      .spr-table-wrap { overflow: visible; border: none; }
+      .spr-table th:first-child, .spr-table td:first-child { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </a>
+      <div class="tc-title">Teacher Center — Master Spreadsheet</div>
+    </header>
+
+    <div class="tc-shell">
+      <aside class="tc-sidebar" aria-label="Teacher navigation">
+        <nav class="tc-nav">
+          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </span><span class="tc-label">Overview</span></a>
+          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </span><span class="tc-label">Work</span></a>
+          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </span><span class="tc-label">Library</span></a>
+          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </span><span class="tc-label">Review</span></a>
+          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+          </span><span class="tc-label">Gradebook</span></a>
+          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </span><span class="tc-label">Students</span></a>
+          <a data-href="/teacher/calendar/" href="/teacher/calendar/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span><span class="tc-label">Calendar</span></a>
+          <a data-href="/teacher/schedule/" href="/teacher/schedule/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </span><span class="tc-label">Schedule</span></a>
+          <a data-href="/teacher/substitute/" href="/teacher/substitute/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </span><span class="tc-label">Substitute</span></a>
+          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </span><span class="tc-label">Data</span></a>
+          <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="21 8 21 21 3 21 3 8"></polyline>
+              <rect x="1" y="3" width="22" height="5"></rect>
+              <line x1="10" y1="12" x2="14" y2="12"></line>
+            </svg>
+          </span><span class="tc-label">Archive</span></a>
+          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </span><span class="tc-label">Admin</span></a>
+          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <line x1="10" y1="9" x2="8" y2="9"></line>
+            </svg>
+          </span><span class="tc-label">Reporting</span></a>
+          <a data-href="/teacher/share/" href="/teacher/share/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+          </span><span class="tc-label">Share</span></a>
+          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m-6-6H0m12 0h6m-3-9 3 3m-6 6 3 3M7.8 7.8 4.9 4.9m12.2 12.2-2.9-2.9m0-9.4 2.9 2.9M7.8 16.2l-2.9 2.9"></path>
+            </svg>
+          </span><span class="tc-label">Settings</span></a>
+        </nav>
+      </aside>
+
+      <main class="tc-main" id="sprMain">
+        <!-- Page header -->
+        <div class="spr-header">
+          <h1>📊 Master Spreadsheet</h1>
+          <a href="/teacher/students/" class="spr-btn">← Back to Students</a>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="spr-toolbar" id="sprToolbar">
+          <input type="text" id="sprSearch" placeholder="🔍 Search students, goals…" aria-label="Search" />
+          <select id="sprClassFilter" aria-label="Filter by class">
+            <option value="">All Classes</option>
+          </select>
+          <select id="sprGoalAreaFilter" aria-label="Filter by goal area">
+            <option value="">All Goal Areas</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="sprShowArchived" /> Show Archived
+          </label>
+          <div class="spr-sep"></div>
+          <div class="spr-col-toggle-wrap">
+            <button class="spr-btn" id="sprColToggleBtn">⚙ Columns</button>
+            <div class="spr-col-dropdown" id="sprColDropdown" role="menu"></div>
+          </div>
+          <div class="spr-sep"></div>
+          <button class="spr-btn" id="sprImportBtn">📥 Import CSV</button>
+          <div class="spr-export-wrap">
+            <button class="spr-btn" id="sprExportBtn">📤 Export ▾</button>
+            <div class="spr-export-dropdown" id="sprExportDropdown" role="menu">
+              <button id="sprExportCsv">📄 Export CSV</button>
+              <button id="sprExportJson">📋 Export JSON</button>
+              <button id="sprExportMd">📝 Export Markdown</button>
+              <button id="sprExportPdf">🖨 Print / PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spreadsheet table -->
+        <div class="spr-table-wrap" id="sprTableWrap">
+          <div class="spr-loading" id="sprLoading">
+            <div class="spr-spinner"></div>
+            Loading spreadsheet data…
+          </div>
+          <table class="spr-table" id="sprTable" style="display:none;" aria-label="Master Spreadsheet">
+            <thead>
+              <tr id="sprHeaderRow"></tr>
+            </thead>
+            <tbody id="sprTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Add Row button -->
+        <div class="spr-add-row-btn-wrap">
+          <button class="spr-btn spr-btn-primary" id="sprAddRowBtn">+ Add Row</button>
+        </div>
+
+        <!-- Status bar -->
+        <div class="spr-status-bar" id="sprStatusBar">
+          <span id="sprStatusCount">Loading…</span>
+          <span id="sprStatusSave"></span>
+          <span id="sprStatusTime"></span>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Import CSV modal -->
+  <div class="spr-import-overlay" id="sprImportOverlay" role="dialog" aria-modal="true" aria-label="Import CSV">
+    <div class="spr-import-modal">
+      <h2>📥 Import CSV</h2>
+      <div class="spr-drop-zone" id="sprDropZone" tabindex="0" role="button" aria-label="Drop CSV file here or click to browse">
+        <div style="font-size: 32px;">📄</div>
+        <div style="margin-top: 8px; font-weight: 600;">Drop CSV file here or click to browse</div>
+        <p>Accepts the same format as the Google Sheets master CSV</p>
+        <input type="file" id="sprFileInput" accept=".csv" style="display:none;" aria-label="Choose CSV file" />
+      </div>
+      <div id="sprImportPreview" style="display:none;">
+        <h3 style="margin: 0 0 10px; font-size: 15px;">Preview Changes</h3>
+        <div style="margin-bottom: 10px; font-size: 13px; display: flex; gap: 16px;">
+          <span>🟢 <span id="sprDiffNewCount">0</span> new rows</span>
+          <span>🟡 <span id="sprDiffChangedCount">0</span> changed rows</span>
+          <span>⚪ <span id="sprDiffUnchangedCount">0</span> unchanged rows</span>
+        </div>
+        <div style="max-height: 320px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--rc-glass-border);">
+          <table class="spr-diff-table" id="sprDiffTable">
+            <thead><tr id="sprDiffHeaderRow"></tr></thead>
+            <tbody id="sprDiffBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="spr-import-actions">
+        <button class="spr-btn" id="sprImportCancelBtn">Cancel</button>
+        <button class="spr-btn spr-btn-primary" id="sprImportConfirmBtn" style="display:none;">✅ Import Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/web/supabase-config.js"></script>
+  <script defer src="/web/teacher-shell.js"></script>
+  <script src="/web/rc-modal.js"></script>
+  <script type="module" src="/web/tc-spreadsheet.js"></script>
+</body>
+</html>
