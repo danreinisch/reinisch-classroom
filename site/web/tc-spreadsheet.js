@@ -83,6 +83,17 @@
   const MIN_COL_WIDTH = 80;   // minimum column width in px
   const COL_AUTOFIT_PAD = 4;  // extra padding added during auto-fit
 
+  const RC_CUSTOM_COLS_LS = 'rc-spreadsheet-custom-columns';
+  const RC_CUSTOM_DATA_LS = 'rc-spreadsheet-custom-data';
+  const RC_ROW_ORDER_LS   = 'rc-spreadsheet-row-order';
+
+  // ─── Custom Columns & Row Order State ────────────────────────────────────────
+
+  let customColumns = [];  // [{key, label, type, options, _custom:true}]
+  let customData = {};     // {goal_code: {colKey: value}} persisted in localStorage
+  let rowOrder = [];       // [goal_code, ...] custom order, persisted in localStorage
+  let dragState = null;    // {sourceIdx} during drag-and-drop
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   function escapeHtml(text) {
@@ -189,6 +200,67 @@
     catch (_e) { /* ignore localStorage quota or disabled errors */ }
   }
 
+  // ─── Custom Column Persistence ───────────────────────────────────────────────
+
+  function loadCustomCols() {
+    try { customColumns = JSON.parse(localStorage.getItem(RC_CUSTOM_COLS_LS) || '[]'); }
+    catch (_e) { customColumns = []; }
+  }
+
+  function saveCustomCols() {
+    try { localStorage.setItem(RC_CUSTOM_COLS_LS, JSON.stringify(customColumns)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  function loadCustomData() {
+    try { customData = JSON.parse(localStorage.getItem(RC_CUSTOM_DATA_LS) || '{}'); }
+    catch (_e) { customData = {}; }
+  }
+
+  function saveCustomData() {
+    try { localStorage.setItem(RC_CUSTOM_DATA_LS, JSON.stringify(customData)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  function getCustomVal(row, colKey) {
+    if (row._draft) return row._customData?.[colKey] || '';
+    return customData[row.goal_code]?.[colKey] || '';
+  }
+
+  function setCustomVal(row, colKey, value) {
+    if (row._draft) {
+      if (!row._customData) row._customData = {};
+      row._customData[colKey] = value;
+      return;
+    }
+    if (!customData[row.goal_code]) customData[row.goal_code] = {};
+    customData[row.goal_code][colKey] = value;
+    saveCustomData();
+  }
+
+  // ─── Row Order Persistence ───────────────────────────────────────────────────
+
+  function loadRowOrder() {
+    try { rowOrder = JSON.parse(localStorage.getItem(RC_ROW_ORDER_LS) || '[]'); }
+    catch (_e) { rowOrder = []; }
+  }
+
+  function saveRowOrder() {
+    try { localStorage.setItem(RC_ROW_ORDER_LS, JSON.stringify(rowOrder)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  function applyRowOrder() {
+    if (!rowOrder.length) return;
+    const orderMap = {};
+    rowOrder.forEach((code, idx) => { orderMap[code] = idx; });
+    allRows.sort((a, b) => {
+      const ai = orderMap[a.goal_code] !== undefined ? orderMap[a.goal_code] : Infinity;
+      const bi = orderMap[b.goal_code] !== undefined ? orderMap[b.goal_code] : Infinity;
+      return ai - bi;
+    });
+  }
+
   function applyColWidthToDOM(colKey) {
     const px = colWidths[colKey];
     if (!px) return;
@@ -213,7 +285,7 @@
   }
 
   function flashUndoRedoCells(action) {
-    const colDef = COLUMNS.find(c => c.key === action.col.key);
+    const colDef = allColumns().find(c => c.key === action.col.key);
     if (!colDef) return;
     const allVisible = [...filteredRows, ...draftRows];
     // Include main row + all cascaded rows
@@ -233,9 +305,33 @@
   function performUndo() {
     const action = undoStack.pop();
     if (!action) { showToast('Nothing to undo', '#6366f1'); return; }
-    action.row[action.col.key] = action.oldVal;
-    if (action.cascaded) {
-      for (const c of action.cascaded) c.row[action.col.key] = c.oldVal;
+
+    if (action.type === 'reorder') {
+      const newOrOld = action.oldOrder;
+      const orderMap = {};
+      newOrOld.forEach((code, idx) => { orderMap[code] = idx; });
+      allRows.sort((a, b) => {
+        const ai = orderMap[a.goal_code] !== undefined ? orderMap[a.goal_code] : Infinity;
+        const bi = orderMap[b.goal_code] !== undefined ? orderMap[b.goal_code] : Infinity;
+        return ai - bi;
+      });
+      rowOrder = newOrOld.filter(Boolean);
+      saveRowOrder();
+      redoStack.push(action);
+      applyFilters();
+      renderSpreadsheet();
+      updateCountStatus();
+      showToast('Undo: row reorder', '#6366f1');
+      return;
+    }
+
+    if (action.col?._custom) {
+      setCustomVal(action.row, action.col.key, action.oldVal);
+    } else {
+      action.row[action.col.key] = action.oldVal;
+      if (action.cascaded) {
+        for (const c of action.cascaded) c.row[action.col.key] = c.oldVal;
+      }
     }
     redoStack.push(action);
     applyFilters();
@@ -248,9 +344,33 @@
   function performRedo() {
     const action = redoStack.pop();
     if (!action) { showToast('Nothing to redo', '#6366f1'); return; }
-    action.row[action.col.key] = action.newVal;
-    if (action.cascaded) {
-      for (const c of action.cascaded) c.row[action.col.key] = action.newVal;
+
+    if (action.type === 'reorder') {
+      const newOrder = action.newOrder;
+      const orderMap = {};
+      newOrder.forEach((code, idx) => { orderMap[code] = idx; });
+      allRows.sort((a, b) => {
+        const ai = orderMap[a.goal_code] !== undefined ? orderMap[a.goal_code] : Infinity;
+        const bi = orderMap[b.goal_code] !== undefined ? orderMap[b.goal_code] : Infinity;
+        return ai - bi;
+      });
+      rowOrder = newOrder.filter(Boolean);
+      saveRowOrder();
+      undoStack.push(action);
+      applyFilters();
+      renderSpreadsheet();
+      updateCountStatus();
+      showToast('Redo: row reorder', '#6366f1');
+      return;
+    }
+
+    if (action.col?._custom) {
+      setCustomVal(action.row, action.col.key, action.newVal);
+    } else {
+      action.row[action.col.key] = action.newVal;
+      if (action.cascaded) {
+        for (const c of action.cascaded) c.row[action.col.key] = action.newVal;
+      }
     }
     undoStack.push(action);
     applyFilters();
@@ -387,7 +507,7 @@
     const colKeys = new Set(selectedCells.map(c => c.colKey));
     if (colKeys.size !== 1) { hideBulkToolbar(); return; }
     const colKey = [...colKeys][0];
-    const col = COLUMNS.find(c => c.key === colKey);
+    const col = allColumns().find(c => c.key === colKey);
     if (!col || col.editable === false) { hideBulkToolbar(); return; }
     const tb = getBulkToolbar();
     const label = tb.querySelector('.spr-bulk-label');
@@ -413,7 +533,7 @@
   function applyBulkValue(val) {
     if (!selectedCells.length) return;
     const colKey = selectedCells[0].colKey;
-    const col = COLUMNS.find(c => c.key === colKey);
+    const col = allColumns().find(c => c.key === colKey);
     if (!col || col.editable === false) return;
     const allVisible = [...filteredRows, ...draftRows];
     const undoEntries = [];
@@ -424,17 +544,21 @@
       let finalVal = val;
       if (col.key === 'active') finalVal = val === 'Active';
       if ((col.key === 'iep_due' || col.key === 'eval_due') && val) finalVal = toIsoDate(val) || val;
-      const oldVal = row[col.key];
+      const oldVal = col._custom ? getCustomVal(row, col.key) : row[col.key];
       if (String(oldVal ?? '') === String(finalVal ?? '')) continue;
       undoEntries.push({ row, rowIdx, oldVal, newVal: finalVal });
-      row[col.key] = finalVal;
+      if (col._custom) {
+        setCustomVal(row, col.key, finalVal);
+      } else {
+        row[col.key] = finalVal;
+      }
       const td = document.querySelector(`tr[data-row-idx="${rowIdx}"] td[data-col="${colKey}"]`);
       if (td) {
         renderSingleCell(td, col, row, rowIdx);
         td.classList.add('spr-cell-selected');
         flashCell(td);
       }
-      if (!row._draft) scheduleAutoSave(row, rowIdx, null);
+      if (!row._draft && !col._custom) scheduleAutoSave(row, rowIdx, null);
     }
     if (undoEntries.length > 0) {
       const [first, ...rest] = undoEntries;
@@ -705,6 +829,8 @@
         };
       });
 
+      // Apply custom row order (from localStorage) before filtering/rendering
+      applyRowOrder();
       applyFilters();
       renderSpreadsheet();
       updateCountStatus();
@@ -743,19 +869,28 @@
       return true;
     });
 
-    // Sort
-    filteredRows.sort((a, b) => {
-      const va = (a[sortKey] || '').toString().toLowerCase();
-      const vb = (b[sortKey] || '').toString().toLowerCase();
-      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
+    // Sort — skip when a custom row order is active and sort is still at its default (student_code asc)
+    // In that case allRows already reflects the custom order and filteredRows inherits it.
+    const hasCustomOrder = rowOrder.length > 0;
+    const isDefaultSort = sortKey === 'student_code' && sortDir === 'asc';
+    if (!hasCustomOrder || !isDefaultSort) {
+      filteredRows.sort((a, b) => {
+        const va = (a[sortKey] || '').toString().toLowerCase();
+        const vb = (b[sortKey] || '').toString().toLowerCase();
+        const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
+  function allColumns() {
+    return [...COLUMNS, ...customColumns];
+  }
+
   function visibleColumns() {
-    return COLUMNS.filter(c => !hiddenCols.has(c.key));
+    return allColumns().filter(c => !hiddenCols.has(c.key));
   }
 
   function renderSpreadsheet() {
@@ -792,6 +927,15 @@
         setupColumnResize(th, col.key);
       }
 
+      // Right-click context menu for custom columns (remove option)
+      if (col._custom) {
+        th.classList.add('spr-th-custom');
+        th.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          showCustomColContextMenu(e.clientX, e.clientY, col);
+        });
+      }
+
       // Apply stored column width
       if (colWidths[col.key]) {
         const px = colWidths[col.key];
@@ -815,14 +959,42 @@
     renderSpreadsheet();
   }
 
+  function buildDisplayRows() {
+    // Separate inline drafts (tied to a student) from free drafts
+    const inlineDraftsByStudent = {};
+    const freeDrafts = [];
+    for (const d of draftRows) {
+      if (d._afterStudentCode) {
+        if (!inlineDraftsByStudent[d._afterStudentCode]) inlineDraftsByStudent[d._afterStudentCode] = [];
+        inlineDraftsByStudent[d._afterStudentCode].push(d);
+      } else {
+        freeDrafts.push(d);
+      }
+    }
+    // Build display list: filtered rows with inline drafts inserted after each student group
+    const result = [];
+    for (let i = 0; i < filteredRows.length; i++) {
+      const row = filteredRows[i];
+      result.push(row);
+      const nextRow = filteredRows[i + 1];
+      if (!nextRow || nextRow.student_code !== row.student_code) {
+        const inline = inlineDraftsByStudent[row.student_code] || [];
+        result.push(...inline);
+      }
+    }
+    result.push(...freeDrafts);
+    return result;
+  }
+
   function renderRows() {
     const tbody = document.getElementById('sprTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const rows = [...filteredRows, ...draftRows];
+    const rows = buildDisplayRows();
     let bandIndex = 0;
     let lastStudentCode = null;
+    const seenStudents = new Set();
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -834,6 +1006,15 @@
       tr.dataset.rowIdx = i;
       tr.dataset.studentCode = row.student_code || '';
       tr.dataset.goalCode = row.goal_code || '';
+
+      // Track first occurrence of each student for goal count badge
+      const isFirstOfStudent = !row._draft && !seenStudents.has(row.student_code) && !!row.student_code;
+      if (isFirstOfStudent) {
+        seenStudents.add(row.student_code);
+        const goalCount = allRows.filter(r => r.student_code === row.student_code && r._goal_active !== false).length;
+        tr.dataset.firstOfStudent = '1';
+        tr.dataset.studentGoalCount = String(goalCount);
+      }
 
       if (row._draft) {
         tr.classList.add('spr-row-draft');
@@ -856,7 +1037,8 @@
   }
 
   function renderCell(td, col, row, rowIdx) {
-    const val = row[col.key];
+    // For custom columns, get value from custom data store; otherwise from row object
+    const val = col._custom ? getCustomVal(row, col.key) : row[col.key];
 
     if (col.key === '_actions') {
       td.innerHTML = buildMoreMenu(row, rowIdx);
@@ -888,9 +1070,23 @@
     } else if (col.key === 'iep_due' || col.key === 'eval_due') {
       td.textContent = formatDate(val);
     } else if (col.key === 'student_code') {
-      let html = `<strong>${escapeHtml(val || '')}</strong>`;
+      // Drag handle: show only for non-draft rows
+      const dragHandleHtml = !row._draft
+        ? `<span class="spr-drag-handle" draggable="true" title="Drag to reorder">⠿</span>`
+        : '';
+      // Goal count badge: show on first row of each student group
+      const tr = td.closest('tr') || { dataset: {} };
+      const isFirstOfStudent = tr.dataset && tr.dataset.firstOfStudent === '1';
+      const goalCount = tr.dataset ? parseInt(tr.dataset.studentGoalCount || '0', 10) : 0;
+      const countBadge = (isFirstOfStudent && goalCount > 0)
+        ? ` <span class="spr-goal-count-badge" title="${goalCount} goal${goalCount !== 1 ? 's' : ''}">×${goalCount}</span>`
+        : '';
+      let html = `${dragHandleHtml}<strong>${escapeHtml(val || '')}</strong>${countBadge}`;
       if (row._draft) html += `<span class="spr-draft-badge">draft</span>`;
       td.innerHTML = html;
+      // Prevent drag handle click from opening cell editor
+      const handle = td.querySelector('.spr-drag-handle');
+      if (handle) handle.addEventListener('click', e => e.stopPropagation());
     } else {
       td.textContent = val || '';
     }
@@ -898,12 +1094,13 @@
     // All data cells are keyboard-navigable
     td.tabIndex = 0;
 
-    // Make editable
-    const canEdit = col.editable === true || (col.editable === 'new-only' && row._draft);
+    // Make editable (custom columns are always editable)
+    const canEdit = col._custom || col.editable === true || (col.editable === 'new-only' && row._draft);
     if (canEdit) {
       td.classList.add('spr-cell-editable');
       td.title = 'Click to edit';
       td.addEventListener('click', e => {
+        if (e.target.closest('.spr-drag-handle')) return; // don't open editor for drag handle
         if (e.shiftKey) {
           // Shift+click: extend selection (don't open editor)
           const activeEl = document.activeElement;
@@ -1066,6 +1263,20 @@
   }
 
   function handleCellCommit(col, row, rowIdx, newVal, _prevContent, td) {
+    // Handle custom column saves separately (localStorage, not DB)
+    if (col._custom) {
+      const oldVal = getCustomVal(row, col.key);
+      if (String(oldVal ?? '') === String(newVal ?? '')) {
+        renderSingleCell(td, col, row, rowIdx);
+        return;
+      }
+      setCustomVal(row, col.key, newVal);
+      pushUndo({ col, row, rowIdx, oldVal, newVal, cascaded: null });
+      renderSingleCell(td, col, row, rowIdx);
+      flashCell(td);
+      return;
+    }
+
     // Convert active dropdown value
     let finalVal = newVal;
     if (col.key === 'active') finalVal = newVal === 'Active';
@@ -1136,12 +1347,13 @@
         <button data-action="copy-row" data-row-idx="${rowIdx}">📋 Copy Row</button>
         <button data-action="copy-goal-text" data-row-idx="${rowIdx}">📝 Copy Goal Text</button>
         <button data-action="add-goal" data-row-idx="${rowIdx}">➕ Add Goal for ${escapeHtml(row.student_code)}</button>
+        <button data-action="duplicate-student" data-row-idx="${rowIdx}">👥 Duplicate Student</button>
         <button data-action="archive-goal" data-row-idx="${rowIdx}" class="danger">🗄 Archive This Goal</button>
       </div>
     </div>`;
   }
 
-  function attachMoreMenuListeners(td, row, rowIdx) {
+  function attachMoreMenuListeners(td, row, _rowIdx) {
     const btn = td.querySelector('.spr-more-btn');
     const menu = td.querySelector('.spr-more-menu');
     if (!btn || !menu) return;
@@ -1158,17 +1370,18 @@
         e.stopPropagation();
         menu.classList.remove('open');
         const action = b.dataset.action;
-        if (action === 'archive-goal') handleArchiveGoal(row, rowIdx);
+        if (action === 'archive-goal') handleArchiveGoal(row);
         else if (action === 'copy-row') handleCopyRow(row);
         else if (action === 'copy-goal-text') handleCopyGoalText(row);
         else if (action === 'add-goal') handleAddGoalForStudent(row.student_code);
+        else if (action === 'duplicate-student') handleDuplicateStudent(row);
       });
     });
   }
 
-  async function handleArchiveGoal(row, rowIdx) {
+  async function handleArchiveGoal(row) {
     if (row._draft) {
-      draftRows = draftRows.filter((_, i) => i !== (rowIdx - filteredRows.length));
+      draftRows = draftRows.filter(d => d !== row);
       applyFilters();
       renderSpreadsheet();
       updateCountStatus();
@@ -1199,10 +1412,11 @@
   }
 
   function handleCopyRow(row) {
-    const vals = COLUMNS
+    const vals = allColumns()
       .filter(c => c.key !== '_actions' && c.key !== 'progress')
       .map(c => {
         if (c.key === 'active') return row.active ? 'Active' : 'Inactive';
+        if (c._custom) return getCustomVal(row, c.key) || '';
         return row[c.key] || '';
       });
     navigator.clipboard.writeText(vals.join('\t')).then(() => showToast('Row copied to clipboard')).catch(() => {});
@@ -1225,7 +1439,232 @@
     }
   }
 
-  // ─── Draft rows ──────────────────────────────────────────────────────────────
+  function handleDuplicateStudent(row) {
+    const studentRows = allRows.filter(r => r.student_code === row.student_code && r._goal_active !== false);
+    if (studentRows.length === 0) {
+      showToast('No active goals found for this student', '#ef4444');
+      return;
+    }
+    // Create draft rows for the new student, placed after this student's rows
+    const drafts = studentRows.map(r => ({
+      ...makeDraftRow(''),
+      goal_desc:        r.goal_desc,
+      goal_area:        r.goal_area,
+      baseline:         r.baseline,
+      mastery:          r.mastery,
+      measurement_type: r.measurement_type,
+      class_context:    r.class_context,
+      case_manager:     r.case_manager,
+      iep_due:          r.iep_due,
+      eval_due:         r.eval_due,
+      _afterStudentCode: row.student_code,
+    }));
+    draftRows.push(...drafts);
+    renderRows();
+    updateCountStatus();
+    showToast(`${studentRows.length} goal${studentRows.length !== 1 ? 's' : ''} duplicated — enter new student code`);
+    // Focus the student_code cell of the first duplicate row
+    setTimeout(() => {
+      const allTrs = document.querySelectorAll('#sprTableBody tr.spr-row-draft');
+      for (const tr of allTrs) {
+        const codeTd = tr.querySelector('td[data-col="student_code"]');
+        if (codeTd) { codeTd.click(); break; }
+      }
+    }, 50);
+  }
+
+  // ─── Custom Columns ──────────────────────────────────────────────────────────
+
+  function openAddColumnModal() {
+    const overlay = document.getElementById('sprAddColOverlay');
+    if (!overlay) return;
+    const nameInput = overlay.querySelector('#sprColName');
+    const typeSelect = overlay.querySelector('#sprColType');
+    const optionsWrap = overlay.querySelector('#sprColOptionsWrap');
+    if (nameInput) nameInput.value = '';
+    if (typeSelect) { typeSelect.value = 'text'; }
+    if (optionsWrap) optionsWrap.style.display = 'none';
+    overlay.classList.add('open');
+    if (nameInput) nameInput.focus();
+  }
+
+  function closeAddColumnModal() {
+    const overlay = document.getElementById('sprAddColOverlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function handleAddColumn() {
+    const overlay = document.getElementById('sprAddColOverlay');
+    if (!overlay) return;
+    const nameInput = overlay.querySelector('#sprColName');
+    const typeSelect = overlay.querySelector('#sprColType');
+    const optionsInput = overlay.querySelector('#sprColOptions');
+    const name = nameInput?.value.trim();
+    const type = typeSelect?.value || 'text';
+    if (!name) { showToast('Column name is required', '#ef4444'); return; }
+    const key = 'custom_' + (crypto.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2));
+    const col = { key, label: name, type, _custom: true, editable: true };
+    if (type === 'select' || type === 'select-custom') {
+      col.options = (optionsInput?.value || '').split(',').map(o => o.trim()).filter(Boolean);
+    }
+    customColumns.push(col);
+    saveCustomCols();
+    closeAddColumnModal();
+    renderSpreadsheet();
+    updateColumnVisibilityPanel();
+    showToast(`Column "${name}" added`);
+  }
+
+  async function removeCustomColumn(colKey) {
+    const col = customColumns.find(c => c.key === colKey);
+    if (!col) return;
+    const confirmed = await rcConfirm(
+      'Remove Column',
+      `Remove the custom column "${col.label}"? All data in this column will be lost.`,
+      'Remove',
+      { danger: true }
+    );
+    if (!confirmed) return;
+    customColumns = customColumns.filter(c => c.key !== colKey);
+    saveCustomCols();
+    // Remove data for this column from customData
+    for (const rowKey of Object.keys(customData)) {
+      delete customData[rowKey][colKey];
+    }
+    saveCustomData();
+    renderSpreadsheet();
+    updateColumnVisibilityPanel();
+    showToast(`Column "${col.label}" removed`);
+  }
+
+  function showCustomColContextMenu(x, y, col) {
+    // Remove any existing context menu
+    document.querySelectorAll('.spr-col-ctx-menu').forEach(el => el.remove());
+    const menu = document.createElement('div');
+    menu.className = 'spr-col-ctx-menu';
+    menu.innerHTML = `<button data-action="remove">🗑 Remove Column</button>`;
+    menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9000;background:#1e2133;
+      border:1px solid var(--rc-glass-border);border-radius:8px;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.45);`;
+    menu.querySelector('[data-action="remove"]').style.cssText =
+      'display:block;width:100%;padding:8px 14px;text-align:left;background:none;border:none;color:#f87171;font-size:13px;cursor:pointer;white-space:nowrap;';
+    menu.querySelector('[data-action="remove"]').addEventListener('click', () => {
+      menu.remove();
+      removeCustomColumn(col.key);
+    });
+    document.body.appendChild(menu);
+    const dismiss = () => { menu.remove(); document.removeEventListener('click', dismiss); };
+    setTimeout(() => document.addEventListener('click', dismiss), 0);
+  }
+
+  // ─── Row Drag-and-Drop ───────────────────────────────────────────────────────
+
+  function setupRowDragHandlers() {
+    const tbody = document.getElementById('sprTableBody');
+    if (!tbody) return;
+
+    tbody.addEventListener('dragstart', e => {
+      const handle = e.target.closest('.spr-drag-handle');
+      if (!handle) { e.preventDefault(); return; }
+      const tr = handle.closest('tr[data-row-idx]');
+      if (!tr) return;
+      const rowIdx = parseInt(tr.dataset.rowIdx, 10);
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(rowIdx));
+      tr.classList.add('spr-row-dragging');
+      dragState = { sourceIdx: rowIdx };
+    });
+
+    tbody.addEventListener('dragover', e => {
+      if (!dragState) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const tr = e.target.closest('tr[data-row-idx]');
+      if (!tr) return;
+      document.querySelectorAll('.spr-row-drag-over').forEach(r => r.classList.remove('spr-row-drag-over'));
+      if (!tr.classList.contains('spr-row-dragging')) tr.classList.add('spr-row-drag-over');
+    });
+
+    tbody.addEventListener('dragleave', e => {
+      const tr = e.target.closest('tr[data-row-idx]');
+      if (tr) tr.classList.remove('spr-row-drag-over');
+    });
+
+    tbody.addEventListener('drop', async e => {
+      e.preventDefault();
+      if (!dragState) return;
+      const targetTr = e.target.closest('tr[data-row-idx]');
+      document.querySelectorAll('.spr-row-drag-over, .spr-row-dragging').forEach(r => {
+        r.classList.remove('spr-row-drag-over', 'spr-row-dragging');
+      });
+      if (!targetTr) { dragState = null; return; }
+      const targetIdx = parseInt(targetTr.dataset.rowIdx, 10);
+      const sourceIdx = dragState.sourceIdx;
+      dragState = null;
+      if (sourceIdx !== targetIdx) await reorderRows(sourceIdx, targetIdx);
+    });
+
+    tbody.addEventListener('dragend', () => {
+      document.querySelectorAll('.spr-row-drag-over, .spr-row-dragging').forEach(r => {
+        r.classList.remove('spr-row-drag-over', 'spr-row-dragging');
+      });
+      dragState = null;
+    });
+  }
+
+  async function reorderRows(sourceIdx, targetIdx) {
+    const displayRows = buildDisplayRows();
+    const sourceRow = displayRows[sourceIdx];
+    const targetRow = displayRows[targetIdx];
+    if (!sourceRow || !targetRow) return;
+    if (sourceRow._draft || targetRow._draft) {
+      showToast('Cannot reorder draft rows', '#ef4444');
+      return;
+    }
+
+    // Check if student has multiple rows
+    const studentRows = allRows.filter(r => r.student_code === sourceRow.student_code);
+    let moveAllStudent = false;
+    if (studentRows.length > 1) {
+      moveAllStudent = await rcConfirm(
+        'Move Student Rows',
+        `${sourceRow.student_code} has ${studentRows.length} goals. Move all rows for this student together?`,
+        'Move All'
+      );
+    }
+
+    // Save old order for undo
+    const oldOrder = allRows.map(r => r.goal_code).filter(Boolean);
+
+    if (moveAllStudent) {
+      const others = allRows.filter(r => r.student_code !== sourceRow.student_code);
+      const studentRowsInOrder = allRows.filter(r => r.student_code === sourceRow.student_code);
+      const targetInAll = allRows.findIndex(r => r === targetRow);
+      const sourceInAll = allRows.findIndex(r => r === sourceRow);
+      const insertBefore = targetInAll < sourceInAll;
+      const targetInOthers = others.findIndex(r => r === targetRow);
+      const insertAt = targetInOthers >= 0 ? (insertBefore ? targetInOthers : targetInOthers + 1) : others.length;
+      const newAllRows = [...others];
+      newAllRows.splice(insertAt, 0, ...studentRowsInOrder);
+      allRows.length = 0;
+      allRows.push(...newAllRows);
+    } else {
+      const srcInAll = allRows.findIndex(r => r === sourceRow);
+      const tgtInAll = allRows.findIndex(r => r === targetRow);
+      if (srcInAll < 0 || tgtInAll < 0) return;
+      allRows.splice(srcInAll, 1);
+      const newTgtInAll = allRows.findIndex(r => r === targetRow);
+      const insertPos = tgtInAll > srcInAll ? newTgtInAll + 1 : newTgtInAll;
+      allRows.splice(insertPos, 0, sourceRow);
+    }
+
+    rowOrder = allRows.map(r => r.goal_code).filter(Boolean);
+    saveRowOrder();
+    pushUndo({ type: 'reorder', oldOrder, newOrder: [...rowOrder] });
+    applyFilters();
+    renderSpreadsheet();
+    updateCountStatus();
+    showToast('Rows reordered');
+  }
 
   function makeDraftRow(studentCode) {
     return {
@@ -1349,16 +1788,20 @@
   function dateTag() { return TODAY; }
 
   function exportCsv() {
-    const lines = [CSV_HEADERS.join(',')];
+    const customCols = customColumns;
+    const headers = [...CSV_HEADERS, ...customCols.map(c => c.label)];
+    const lines = [headers.join(',')];
     for (const r of allRows) {
       if (!showArchived && (!r.active || !r._goal_active)) continue;
-      lines.push([
+      const baseCells = [
         r.student_code, r.goal_desc, r.goal_code,
         r.active ? 'Active' : 'Inactive',
         r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
         r.data_collector, r.data_collector_email, r.measurement_type,
         r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
-      ].map(csvEscape).join(','));
+      ];
+      const customCells = customCols.map(c => getCustomVal(r, c.key));
+      lines.push([...baseCells, ...customCells].map(csvEscape).join(','));
     }
     downloadFile(lines.join('\n'), `master_spreadsheet_export_${dateTag()}.csv`, 'text/csv;charset=utf-8;');
     showToast('CSV exported');
@@ -1390,18 +1833,21 @@
   }
 
   function exportMarkdown() {
-    const cols = CSV_HEADERS;
+    const customCols = customColumns;
+    const cols = [...CSV_HEADERS, ...customCols.map(c => c.label)];
     let md = `| ${cols.join(' | ')} |\n`;
     md += `| ${cols.map(() => '---').join(' | ')} |\n`;
     for (const r of allRows) {
       if (!showArchived && (!r.active || !r._goal_active)) continue;
-      const cells = [
+      const baseCells = [
         r.student_code, r.goal_desc, r.goal_code,
         r.active ? 'Active' : 'Inactive',
         r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
         r.data_collector, r.data_collector_email, r.measurement_type,
         r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
-      ].map(v => String(v || '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' '));
+      ];
+      const customCells = customCols.map(c => getCustomVal(r, c.key));
+      const cells = [...baseCells, ...customCells].map(v => String(v || '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' '));
       md += `| ${cells.join(' | ')} |\n`;
     }
     downloadFile(md, `master_spreadsheet_export_${dateTag()}.md`, 'text/markdown');
@@ -1585,7 +2031,7 @@
     const panel = document.getElementById('sprColDropdown');
     if (!panel) return;
     panel.innerHTML = '';
-    for (const col of COLUMNS) {
+    for (const col of allColumns()) {
       if (col.key === '_actions') continue;
       const label = document.createElement('label');
       const cb = document.createElement('input');
@@ -1599,6 +2045,14 @@
       });
       label.appendChild(cb);
       label.appendChild(document.createTextNode(' ' + (col.label || col.key)));
+      if (col._custom) {
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '🗑';
+        removeBtn.title = 'Remove column';
+        removeBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:#f87171;margin-left:4px;font-size:12px;';
+        removeBtn.addEventListener('click', e => { e.stopPropagation(); removeCustomColumn(col.key); });
+        label.appendChild(removeBtn);
+      }
       panel.appendChild(label);
     }
   }
@@ -1785,6 +2239,30 @@
       });
     }
 
+    // Add Column button
+    const addColBtn = document.getElementById('sprAddColBtn');
+    if (addColBtn) addColBtn.addEventListener('click', openAddColumnModal);
+
+    // Add Column modal
+    const addColOverlay = document.getElementById('sprAddColOverlay');
+    if (addColOverlay) {
+      addColOverlay.addEventListener('click', e => { if (e.target === addColOverlay) closeAddColumnModal(); });
+      const cancelBtn = addColOverlay.querySelector('#sprAddColCancelBtn');
+      const confirmBtn = addColOverlay.querySelector('#sprAddColConfirmBtn');
+      const typeSelect = addColOverlay.querySelector('#sprColType');
+      const optionsWrap = addColOverlay.querySelector('#sprColOptionsWrap');
+      if (cancelBtn) cancelBtn.addEventListener('click', closeAddColumnModal);
+      if (confirmBtn) confirmBtn.addEventListener('click', handleAddColumn);
+      if (typeSelect && optionsWrap) {
+        typeSelect.addEventListener('change', () => {
+          optionsWrap.style.display = (typeSelect.value === 'select' || typeSelect.value === 'select-custom') ? '' : 'none';
+        });
+      }
+      addColOverlay.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeAddColumnModal();
+      });
+    }
+
     // Beforeunload warning for pending drafts
     window.addEventListener('beforeunload', e => {
       if (draftRows.length > 0) {
@@ -1798,8 +2276,12 @@
 
   function init() {
     loadColWidths();
+    loadCustomCols();
+    loadCustomData();
+    loadRowOrder();
     setupEventHandlers();
     setupKeyboardNavigation();
+    setupRowDragHandlers();
     loadData().then(() => {
       buildClassFilterOptions();
       buildGoalAreaFilterOptions();

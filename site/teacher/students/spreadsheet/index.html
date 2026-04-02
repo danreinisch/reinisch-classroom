@@ -491,6 +491,80 @@
       .spr-table-wrap { overflow: visible; border: none; }
       .spr-table th:first-child, .spr-table td:first-child { position: static; }
     }
+
+    /* ─── Custom column header ──────────────────────────────────────────────── */
+    .spr-th-custom .spr-th-label::after { content: ' ✦'; opacity: 0.5; font-size: 9px; }
+
+    /* ─── Goal count badge ──────────────────────────────────────────────────── */
+    .spr-goal-count-badge {
+      display: inline-block;
+      font-size: 10px;
+      background: rgba(99,102,241,0.2);
+      color: rgba(99,102,241,0.9);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+      font-weight: 600;
+    }
+
+    /* ─── Drag handle ───────────────────────────────────────────────────────── */
+    .spr-drag-handle {
+      display: inline-block;
+      cursor: grab;
+      opacity: 0;
+      user-select: none;
+      margin-right: 5px;
+      vertical-align: middle;
+      font-size: 14px;
+      transition: opacity 0.15s;
+    }
+    .spr-table tr:hover .spr-drag-handle { opacity: 0.5; }
+    .spr-drag-handle:hover { opacity: 1 !important; }
+    .spr-row-dragging td { opacity: 0.45; outline: 2px dashed rgba(99,102,241,0.5); }
+    .spr-row-drag-over td { border-top: 2px solid rgba(99,102,241,0.8) !important; }
+
+    /* ─── Add Column modal ──────────────────────────────────────────────────── */
+    .spr-addcol-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+    }
+    .spr-addcol-overlay.open { display: flex; }
+    .spr-addcol-modal {
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .spr-addcol-modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .spr-addcol-field { margin-bottom: 14px; }
+    .spr-addcol-field label { display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px;
+      color: rgba(255,255,255,0.6); }
+    .spr-addcol-field input,
+    .spr-addcol-field select,
+    .spr-addcol-field textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--rc-glass-border);
+      background: rgba(255,255,255,0.07);
+      color: inherit;
+      font-size: 13px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .spr-addcol-field textarea { resize: vertical; min-height: 60px; }
+    .spr-addcol-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -645,6 +719,7 @@
             <button class="spr-btn" id="sprColToggleBtn">⚙ Columns</button>
             <div class="spr-col-dropdown" id="sprColDropdown" role="menu"></div>
           </div>
+          <button class="spr-btn" id="sprAddColBtn" title="Add custom column">＋ Column</button>
           <div class="spr-sep"></div>
           <button class="spr-btn" id="sprImportBtn">📥 Import CSV</button>
           <div class="spr-export-wrap">
@@ -722,5 +797,34 @@
   <script defer src="/web/teacher-shell.js"></script>
   <script src="/web/rc-modal.js"></script>
   <script type="module" src="/web/tc-spreadsheet.js"></script>
+
+  <!-- Add Custom Column modal -->
+  <div class="spr-addcol-overlay" id="sprAddColOverlay" role="dialog" aria-modal="true" aria-label="Add Custom Column">
+    <div class="spr-addcol-modal">
+      <h2>＋ Add Custom Column</h2>
+      <div class="spr-addcol-field">
+        <label for="sprColName">Column Name <span style="color:#f87171">*</span></label>
+        <input type="text" id="sprColName" placeholder="e.g. Service Minutes" autocomplete="off" />
+      </div>
+      <div class="spr-addcol-field">
+        <label for="sprColType">Column Type</label>
+        <select id="sprColType">
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="date">Date</option>
+          <option value="select">Select (dropdown)</option>
+          <option value="select-custom">Select + Custom entry</option>
+        </select>
+      </div>
+      <div class="spr-addcol-field" id="sprColOptionsWrap" style="display:none;">
+        <label for="sprColOptions">Options <span style="color:rgba(255,255,255,0.5);font-weight:400;">(comma-separated)</span></label>
+        <textarea id="sprColOptions" placeholder="Option A, Option B, Option C"></textarea>
+      </div>
+      <div class="spr-addcol-actions">
+        <button class="spr-btn" id="sprAddColCancelBtn">Cancel</button>
+        <button class="spr-btn spr-btn-primary" id="sprAddColConfirmBtn">Add Column</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
