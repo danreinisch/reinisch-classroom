@@ -1,5 +1,6 @@
 // POST /.netlify/functions/submissions-create
 // Body: { assignment_id, student_name, content?, content_url? }
+// Inserts into hub_submissions (the assignment-hub simple submission flow).
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
 
 function getCurrentSchoolYear() {
@@ -35,7 +36,7 @@ exports.handler = async (event) => {
     }
 
     const payload = [{ assignment_id, student_name, content: content || null, content_url: content_url || null, school_year: getCurrentSchoolYear() }];
-    const url = `${SUPABASE_URL}/rest/v1/submissions`;
+    const url = `${SUPABASE_URL}/rest/v1/hub_submissions`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
