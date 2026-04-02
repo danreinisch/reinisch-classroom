@@ -7,14 +7,27 @@ async function fetchJSON(url, init) {
 
 const SUBMITTED_KEY = 'rc_submitted';
 
+// NOTE: submitted state is stored locally per device/browser only.
+// A student who submits on one device will not see the locked state on another device.
+// TODO: A future enhancement could query the server for submission status on load
+// (e.g., check a /submissions-status endpoint) and merge with local state.
 function getSubmitted() {
   try { return JSON.parse(localStorage.getItem(SUBMITTED_KEY) || '[]'); }
   catch { return []; }
 }
 
+const SUBMITTED_MAX = 200;
+
 function markSubmitted(id) {
-  const list = getSubmitted();
-  if (!list.includes(id)) list.push(id);
+  const sid = String(id);
+  // Normalize all stored IDs to strings to handle mixed types from pre-fix storage
+  const list = getSubmitted().map(String);
+  if (!list.includes(sid)) {
+    list.push(sid);
+    // Cap the array to prevent unbounded growth across school years;
+    // oldest (front) entries are dropped first (FIFO) to keep the most recent submissions
+    if (list.length > SUBMITTED_MAX) list.splice(0, list.length - SUBMITTED_MAX);
+  }
   localStorage.setItem(SUBMITTED_KEY, JSON.stringify(list));
 }
 
@@ -89,7 +102,8 @@ async function submitWork(ev, assignment_id) {
     status.textContent = 'Submitted!';
     status.className = 'status ok';
     markSubmitted(assignment_id);
-    lockCard(form.closest('.card'));
+    const cardEl = form.closest('.card');
+    if (cardEl) lockCard(cardEl);
   } else {
     status.textContent = 'Submit failed: ' + (typeof data === 'string' ? data : 'error');
     status.className = 'status err';
