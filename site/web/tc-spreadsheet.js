@@ -72,6 +72,15 @@
   let lastSavedAt = null;
   let pendingDraftCount = 0;
 
+  // ─── UX Enhancement State ───────────────────────────────────────────────────
+  let undoStack = [];        // [{col, row, rowIdx, oldVal, newVal, cascaded}]
+  let redoStack = [];        // same structure
+  const UNDO_MAX = 50;
+  let selectedCells = [];    // [{rowIdx, colKey}]
+  let selAnchor = null;      // {rowIdx, colKey} — anchor for range selection
+  let colWidths = {};        // colKey → width px, persisted in localStorage
+  const COL_WIDTHS_LS = 'spr_col_widths_v1';
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   function escapeHtml(text) {
@@ -164,6 +173,482 @@
     td.classList.remove('spr-cell-saved');
     void td.offsetWidth;
     td.classList.add('spr-cell-saved');
+  }
+
+  // ─── Column Widths ───────────────────────────────────────────────────────────
+
+  function loadColWidths() {
+    try { colWidths = JSON.parse(localStorage.getItem(COL_WIDTHS_LS) || '{}'); }
+    catch (_e) { colWidths = {}; }
+  }
+
+  function saveColWidths() {
+    try { localStorage.setItem(COL_WIDTHS_LS, JSON.stringify(colWidths)); }
+    catch (_e) { /* ignore storage errors */ }
+  }
+
+  function applyColWidthToDOM(colKey) {
+    const px = colWidths[colKey];
+    if (!px) return;
+    const styleVal = px + 'px';
+    document.querySelectorAll(`th[data-key="${colKey}"], td[data-col="${colKey}"]`).forEach(el => {
+      el.style.minWidth = styleVal;
+      el.style.maxWidth = styleVal;
+      el.style.width = styleVal;
+    });
+  }
+
+  function applyAllColWidths() {
+    for (const colKey of Object.keys(colWidths)) applyColWidthToDOM(colKey);
+  }
+
+  // ─── Undo / Redo ─────────────────────────────────────────────────────────────
+
+  function pushUndo(action) {
+    undoStack.push(action);
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    redoStack = [];
+  }
+
+  function flashUndoRedoCells(action) {
+    const colDef = COLUMNS.find(c => c.key === action.col.key);
+    if (!colDef) return;
+    const allVisible = [...filteredRows, ...draftRows];
+    // Include main row + all cascaded rows
+    const rows = [action.row, ...(action.cascaded || []).map(c => c.row)];
+    for (const r of rows) {
+      const idx = allVisible.indexOf(r);
+      if (idx < 0) continue;
+      const td = document.querySelector(`tr[data-row-idx="${idx}"] td[data-col="${action.col.key}"]`);
+      if (!td) continue;
+      td.classList.remove('spr-cell-undo-flash');
+      void td.offsetWidth;
+      td.classList.add('spr-cell-undo-flash');
+      setTimeout(() => td.classList.remove('spr-cell-undo-flash'), 700);
+    }
+  }
+
+  function performUndo() {
+    const action = undoStack.pop();
+    if (!action) { showToast('Nothing to undo', '#6366f1'); return; }
+    action.row[action.col.key] = action.oldVal;
+    if (action.cascaded) {
+      for (const c of action.cascaded) c.row[action.col.key] = c.oldVal;
+    }
+    redoStack.push(action);
+    applyFilters();
+    renderSpreadsheet();
+    updateCountStatus();
+    flashUndoRedoCells(action);
+    scheduleAutoSave(action.row, action.rowIdx, null);
+  }
+
+  function performRedo() {
+    const action = redoStack.pop();
+    if (!action) { showToast('Nothing to redo', '#6366f1'); return; }
+    action.row[action.col.key] = action.newVal;
+    if (action.cascaded) {
+      for (const c of action.cascaded) c.row[action.col.key] = action.newVal;
+    }
+    undoStack.push(action);
+    applyFilters();
+    renderSpreadsheet();
+    updateCountStatus();
+    flashUndoRedoCells(action);
+    scheduleAutoSave(action.row, action.rowIdx, null);
+  }
+
+  // ─── Multi-Cell Selection ────────────────────────────────────────────────────
+
+  function clearSelection() {
+    document.querySelectorAll('.spr-cell-selected').forEach(td => td.classList.remove('spr-cell-selected'));
+    selectedCells = [];
+    hideBulkToolbar();
+  }
+
+  function selectSingleCell(rowIdx, colKey) {
+    clearSelection();
+    selAnchor = { rowIdx, colKey };
+    const td = document.querySelector(`tr[data-row-idx="${rowIdx}"] td[data-col="${colKey}"]`);
+    if (td) {
+      selectedCells.push({ rowIdx, colKey });
+      td.classList.add('spr-cell-selected');
+    }
+  }
+
+  function selectRangeTo(toRowIdx, toColKey) {
+    const anchor = selAnchor;
+    // Clear visual selection but preserve anchor
+    document.querySelectorAll('.spr-cell-selected').forEach(td => td.classList.remove('spr-cell-selected'));
+    selectedCells = [];
+    if (!anchor) {
+      selAnchor = { rowIdx: toRowIdx, colKey: toColKey };
+      const td = document.querySelector(`tr[data-row-idx="${toRowIdx}"] td[data-col="${toColKey}"]`);
+      if (td) { selectedCells.push({ rowIdx: toRowIdx, colKey: toColKey }); td.classList.add('spr-cell-selected'); }
+      return;
+    }
+    selAnchor = anchor; // restore
+
+    const visCols = visibleColumns();
+    const fromColIdx = visCols.findIndex(c => c.key === anchor.colKey);
+    const toColIdx = visCols.findIndex(c => c.key === toColKey);
+    const minRow = Math.min(anchor.rowIdx, toRowIdx);
+    const maxRow = Math.max(anchor.rowIdx, toRowIdx);
+    const minColIdx = Math.min(fromColIdx < 0 ? 0 : fromColIdx, toColIdx < 0 ? 0 : toColIdx);
+    const maxColIdx = Math.max(fromColIdx < 0 ? 0 : fromColIdx, toColIdx < 0 ? 0 : toColIdx);
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let ci = minColIdx; ci <= maxColIdx; ci++) {
+        const ck = visCols[ci]?.key;
+        if (!ck) continue;
+        const td = document.querySelector(`tr[data-row-idx="${r}"] td[data-col="${ck}"]`);
+        if (td) {
+          selectedCells.push({ rowIdx: r, colKey: ck });
+          td.classList.add('spr-cell-selected');
+        }
+      }
+    }
+    updateBulkToolbar();
+  }
+
+  function extendSelectionByKey(key) {
+    if (!selAnchor) return;
+    const last = selectedCells[selectedCells.length - 1];
+    if (!last) return;
+    const visCols = visibleColumns();
+    const allVisible = [...filteredRows, ...draftRows];
+    let { rowIdx, colKey } = last;
+    const colIdx = visCols.findIndex(c => c.key === colKey);
+    if (key === 'ArrowRight' && colIdx < visCols.length - 1) { colKey = visCols[colIdx + 1].key; }
+    else if (key === 'ArrowLeft' && colIdx > 0) { colKey = visCols[colIdx - 1].key; }
+    else if (key === 'ArrowDown' && rowIdx < allVisible.length - 1) { rowIdx++; }
+    else if (key === 'ArrowUp' && rowIdx > 0) { rowIdx--; }
+    else return;
+    selectRangeTo(rowIdx, colKey);
+  }
+
+  // ─── Bulk Edit Toolbar ───────────────────────────────────────────────────────
+
+  let bulkToolbarEl = null;
+  let bulkFillMode = false;
+
+  function getBulkToolbar() {
+    if (!bulkToolbarEl) {
+      bulkToolbarEl = document.createElement('div');
+      bulkToolbarEl.className = 'spr-bulk-toolbar';
+      bulkToolbarEl.innerHTML = `
+        <span class="spr-bulk-label"></span>
+        <div class="spr-bulk-fill-wrap">
+          <input class="spr-bulk-fill-input" placeholder="New value…" />
+          <button class="spr-btn spr-btn-sm spr-bulk-fill-apply-btn">Apply</button>
+          <button class="spr-btn spr-btn-sm spr-bulk-fill-cancel-btn">Cancel</button>
+        </div>
+        <div class="spr-bulk-actions">
+          <button class="spr-btn spr-btn-sm spr-bulk-fill-btn">✏️ Fill…</button>
+          <button class="spr-btn spr-btn-sm spr-bulk-clear-btn">🗑 Clear</button>
+          <button class="spr-btn spr-btn-sm spr-bulk-close-btn">✕</button>
+        </div>
+      `;
+      bulkToolbarEl.querySelector('.spr-bulk-fill-btn').addEventListener('click', () => {
+        bulkFillMode = true;
+        bulkToolbarEl.querySelector('.spr-bulk-fill-wrap').style.display = 'flex';
+        bulkToolbarEl.querySelector('.spr-bulk-actions').style.display = 'none';
+        bulkToolbarEl.querySelector('.spr-bulk-fill-input').value = '';
+        bulkToolbarEl.querySelector('.spr-bulk-fill-input').focus();
+      });
+      bulkToolbarEl.querySelector('.spr-bulk-fill-apply-btn').addEventListener('click', () => {
+        const val = bulkToolbarEl.querySelector('.spr-bulk-fill-input').value;
+        applyBulkValue(val);
+      });
+      bulkToolbarEl.querySelector('.spr-bulk-fill-cancel-btn').addEventListener('click', () => {
+        bulkFillMode = false;
+        bulkToolbarEl.querySelector('.spr-bulk-fill-wrap').style.display = 'none';
+        bulkToolbarEl.querySelector('.spr-bulk-actions').style.display = 'flex';
+      });
+      bulkToolbarEl.querySelector('.spr-bulk-clear-btn').addEventListener('click', () => applyBulkValue(''));
+      bulkToolbarEl.querySelector('.spr-bulk-close-btn').addEventListener('click', () => {
+        clearSelection();
+        selAnchor = null;
+      });
+      // Enter key in fill input applies
+      bulkToolbarEl.querySelector('.spr-bulk-fill-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); applyBulkValue(e.target.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); bulkToolbarEl.querySelector('.spr-bulk-fill-cancel-btn').click(); }
+      });
+      document.body.appendChild(bulkToolbarEl);
+    }
+    return bulkToolbarEl;
+  }
+
+  function updateBulkToolbar() {
+    if (selectedCells.length < 2) { hideBulkToolbar(); return; }
+    const colKeys = new Set(selectedCells.map(c => c.colKey));
+    if (colKeys.size !== 1) { hideBulkToolbar(); return; }
+    const colKey = [...colKeys][0];
+    const col = COLUMNS.find(c => c.key === colKey);
+    if (!col || col.editable === false) { hideBulkToolbar(); return; }
+    const tb = getBulkToolbar();
+    const label = tb.querySelector('.spr-bulk-label');
+    if (label) label.textContent = `${selectedCells.length} cells · ${col.label}`;
+    tb.style.display = 'flex';
+    if (!bulkFillMode) {
+      tb.querySelector('.spr-bulk-fill-wrap').style.display = 'none';
+      tb.querySelector('.spr-bulk-actions').style.display = 'flex';
+    }
+  }
+
+  function hideBulkToolbar() {
+    if (bulkToolbarEl) {
+      bulkToolbarEl.style.display = 'none';
+      bulkFillMode = false;
+      const wrap = bulkToolbarEl.querySelector('.spr-bulk-fill-wrap');
+      const actions = bulkToolbarEl.querySelector('.spr-bulk-actions');
+      if (wrap) wrap.style.display = 'none';
+      if (actions) actions.style.display = 'flex';
+    }
+  }
+
+  function applyBulkValue(val) {
+    if (!selectedCells.length) return;
+    const colKey = selectedCells[0].colKey;
+    const col = COLUMNS.find(c => c.key === colKey);
+    if (!col || col.editable === false) return;
+    const allVisible = [...filteredRows, ...draftRows];
+    const undoEntries = [];
+    for (const { rowIdx, colKey: ck } of selectedCells) {
+      if (ck !== colKey) continue;
+      const row = allVisible[rowIdx];
+      if (!row) continue;
+      let finalVal = val;
+      if (col.key === 'active') finalVal = val === 'Active';
+      if ((col.key === 'iep_due' || col.key === 'eval_due') && val) finalVal = toIsoDate(val) || val;
+      const oldVal = row[col.key];
+      if (String(oldVal ?? '') === String(finalVal ?? '')) continue;
+      undoEntries.push({ row, rowIdx, oldVal, newVal: finalVal });
+      row[col.key] = finalVal;
+      const td = document.querySelector(`tr[data-row-idx="${rowIdx}"] td[data-col="${colKey}"]`);
+      if (td) {
+        renderSingleCell(td, col, row, rowIdx);
+        td.classList.add('spr-cell-selected');
+        flashCell(td);
+      }
+      if (!row._draft) scheduleAutoSave(row, rowIdx, null);
+    }
+    if (undoEntries.length > 0) {
+      const [first, ...rest] = undoEntries;
+      pushUndo({
+        col, row: first.row, rowIdx: first.rowIdx,
+        oldVal: first.oldVal, newVal: first.newVal,
+        cascaded: rest.length > 0 ? rest.map(e => ({ row: e.row, oldVal: e.oldVal })) : null,
+      });
+    }
+    const count = undoEntries.length;
+    showToast(count > 0 ? `Updated ${count} cell${count !== 1 ? 's' : ''}` : 'No changes');
+    hideBulkToolbar();
+    clearSelection();
+    selAnchor = null;
+  }
+
+  // ─── Column Resizing ─────────────────────────────────────────────────────────
+
+  function setupColumnResize(th, colKey) {
+    const handle = th.querySelector('.spr-resize-handle');
+    if (!handle) return;
+    let startX = 0;
+    let startWidth = 0;
+    let dragging = false;
+
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startWidth = th.offsetWidth;
+      handle.classList.add('resizing');
+
+      const onMove = moveEvt => {
+        if (!dragging) return;
+        const newWidth = Math.max(80, startWidth + (moveEvt.clientX - startX));
+        th.style.minWidth = newWidth + 'px';
+        th.style.maxWidth = newWidth + 'px';
+        th.style.width = newWidth + 'px';
+        document.querySelectorAll(`td[data-col="${colKey}"]`).forEach(td => {
+          td.style.minWidth = newWidth + 'px';
+          td.style.maxWidth = newWidth + 'px';
+          td.style.width = newWidth + 'px';
+        });
+      };
+
+      const onUp = upEvt => {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const newWidth = Math.max(80, startWidth + (upEvt.clientX - startX));
+        colWidths[colKey] = newWidth;
+        saveColWidths();
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // Double-click to auto-fit column width
+    handle.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      const tds = document.querySelectorAll(`td[data-col="${colKey}"]`);
+      let maxW = 80;
+      // Temporarily reset width to measure content
+      const prevStyle = th.getAttribute('style') || '';
+      th.style.width = '';
+      th.style.minWidth = '';
+      th.style.maxWidth = '';
+      maxW = th.scrollWidth;
+      tds.forEach(td => {
+        const prev = td.getAttribute('style') || '';
+        td.style.width = '';
+        td.style.minWidth = '';
+        td.style.maxWidth = '';
+        maxW = Math.max(maxW, td.scrollWidth);
+        td.setAttribute('style', prev);
+      });
+      th.setAttribute('style', prevStyle);
+      const newWidth = Math.max(80, maxW + 4);
+      th.style.minWidth = newWidth + 'px';
+      th.style.maxWidth = newWidth + 'px';
+      th.style.width = newWidth + 'px';
+      tds.forEach(td => {
+        td.style.minWidth = newWidth + 'px';
+        td.style.maxWidth = newWidth + 'px';
+        td.style.width = newWidth + 'px';
+      });
+      colWidths[colKey] = newWidth;
+      saveColWidths();
+    });
+  }
+
+  // ─── Keyboard Navigation ─────────────────────────────────────────────────────
+
+  function setupKeyboardNavigation() {
+    const tableWrap = document.getElementById('sprTableWrap');
+    if (!tableWrap) return;
+
+    tableWrap.addEventListener('keydown', e => {
+      const target = e.target;
+      if (!target) return;
+      // Let editors handle their own keys
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
+      const td = target.closest('td');
+      if (!td) return;
+      const tr = td.closest('tr');
+      if (!tr) return;
+      const table = tableWrap.querySelector('table');
+      if (!table) return;
+
+      const key = e.key;
+
+      // Escape: clear selection and unfocus
+      if (key === 'Escape') {
+        e.preventDefault();
+        clearSelection();
+        selAnchor = null;
+        td.blur();
+        return;
+      }
+
+      // Enter: activate cell editor
+      if (key === 'Enter') {
+        e.preventDefault();
+        const rowIdx = parseInt(tr.dataset.rowIdx);
+        const colKey = td.dataset.col;
+        const allVisible = [...filteredRows, ...draftRows];
+        const row = allVisible[rowIdx];
+        const col = COLUMNS.find(c => c.key === colKey);
+        if (row && col && (col.editable === true || (col.editable === 'new-only' && row._draft))) {
+          activateCellEditor(td, col, row, rowIdx);
+        }
+        return;
+      }
+
+      const isShift = e.shiftKey;
+      const isNavKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key);
+      if (!isNavKey) return;
+      e.preventDefault();
+
+      if (isShift) {
+        // Set anchor to current cell if not set
+        if (!selAnchor) {
+          selAnchor = { rowIdx: parseInt(tr.dataset.rowIdx || '0'), colKey: td.dataset.col };
+        }
+        extendSelectionByKey(key);
+        return;
+      }
+
+      // Plain arrow: move focus
+      const allTableRows = [
+        ...Array.from(table.tHead ? table.tHead.rows : []),
+        ...Array.from(table.tBodies
+          ? Array.from(table.tBodies).flatMap(b => Array.from(b.rows))
+          : []),
+      ];
+      const rowIndex = allTableRows.indexOf(tr);
+      if (rowIndex < 0) return;
+
+      const visCells = Array.from(tr.cells).filter(c => c.tabIndex >= 0);
+      const colIndex = visCells.indexOf(td);
+      if (colIndex < 0) return;
+
+      let targetCell = null;
+      switch (key) {
+        case 'ArrowRight':
+          if (colIndex < visCells.length - 1) targetCell = visCells[colIndex + 1];
+          break;
+        case 'ArrowLeft':
+          if (colIndex > 0) targetCell = visCells[colIndex - 1];
+          break;
+        case 'ArrowDown': {
+          const nextTr = allTableRows[rowIndex + 1];
+          if (nextTr) {
+            const nextCells = Array.from(nextTr.cells).filter(c => c.tabIndex >= 0);
+            targetCell = nextCells[Math.min(colIndex, nextCells.length - 1)] || null;
+          }
+          break;
+        }
+        case 'ArrowUp': {
+          const prevTr = allTableRows[rowIndex - 1];
+          if (prevTr) {
+            const prevCells = Array.from(prevTr.cells).filter(c => c.tabIndex >= 0);
+            targetCell = prevCells[Math.min(colIndex, prevCells.length - 1)] || null;
+          }
+          break;
+        }
+      }
+
+      if (targetCell) {
+        clearSelection();
+        selAnchor = null;
+        targetCell.focus();
+      }
+    });
+  }
+
+  // ─── Focus navigation helper (used by Tab/Shift+Tab in cell editors) ─────────
+
+  function moveFocusFromCell(rowIdx, colKey, dir) {
+    const wrap = document.getElementById('sprTableWrap');
+    if (!wrap) return;
+    const allNavTds = Array.from(wrap.querySelectorAll('tbody td')).filter(c => c.tabIndex >= 0);
+    const currentIdx = allNavTds.findIndex(
+      cell => cell.closest('tr')?.dataset.rowIdx == rowIdx && cell.dataset.col === colKey
+    );
+    if (currentIdx < 0) return;
+    const nextIdx = currentIdx + dir;
+    if (nextIdx >= 0 && nextIdx < allNavTds.length) {
+      allNavTds[nextIdx].focus();
+    }
   }
 
   // ─── Data Loading ────────────────────────────────────────────────────────────
@@ -275,6 +760,7 @@
     renderHeaders();
     renderRows();
     updateColumnVisibilityPanel();
+    applyAllColWidths();
   }
 
   function renderHeaders() {
@@ -283,12 +769,35 @@
     tr.innerHTML = '';
     for (const col of visibleColumns()) {
       const th = document.createElement('th');
-      th.textContent = col.label;
       th.dataset.key = col.key;
       if (col.key === sortKey) th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
       if (col.key !== '_actions' && col.key !== 'progress' && col.editable !== false) {
         th.addEventListener('click', () => handleHeaderSort(col.key, th));
       }
+
+      // Label span (handles text truncation inside th)
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'spr-th-label';
+      labelSpan.textContent = col.label;
+      th.appendChild(labelSpan);
+
+      // Resize handle (all columns except actions)
+      if (col.key !== '_actions') {
+        const handle = document.createElement('span');
+        handle.className = 'spr-resize-handle';
+        handle.addEventListener('click', e => e.stopPropagation()); // don't trigger sort
+        th.appendChild(handle);
+        setupColumnResize(th, col.key);
+      }
+
+      // Apply stored column width
+      if (colWidths[col.key]) {
+        const px = colWidths[col.key];
+        th.style.minWidth = px + 'px';
+        th.style.maxWidth = px + 'px';
+        th.style.width = px + 'px';
+      }
+
       tr.appendChild(th);
     }
   }
@@ -367,6 +876,7 @@
         td.textContent = '—';
         td.style.color = 'rgba(255,255,255,0.3)';
       }
+      td.tabIndex = 0;
       return;
     }
 
@@ -383,12 +893,49 @@
       td.textContent = val || '';
     }
 
+    // All data cells are keyboard-navigable
+    td.tabIndex = 0;
+
     // Make editable
     const canEdit = col.editable === true || (col.editable === 'new-only' && row._draft);
     if (canEdit) {
       td.classList.add('spr-cell-editable');
       td.title = 'Click to edit';
-      td.addEventListener('click', () => activateCellEditor(td, col, row, rowIdx));
+      td.addEventListener('click', e => {
+        if (e.shiftKey) {
+          // Shift+click: extend selection (don't open editor)
+          const activeEl = document.activeElement;
+          if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+          e.preventDefault();
+          if (!selAnchor) selAnchor = { rowIdx, colKey: col.key };
+          selectRangeTo(rowIdx, col.key);
+        } else {
+          clearSelection();
+          selAnchor = { rowIdx, colKey: col.key };
+          activateCellEditor(td, col, row, rowIdx);
+        }
+      });
+    } else {
+      // Non-editable data cells: click selects them for navigation
+      td.addEventListener('click', e => {
+        if (e.shiftKey && selAnchor) {
+          const activeEl = document.activeElement;
+          if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+          e.preventDefault();
+          selectRangeTo(rowIdx, col.key);
+        } else {
+          selectSingleCell(rowIdx, col.key);
+          selAnchor = { rowIdx, colKey: col.key };
+        }
+      });
+    }
+
+    // Apply stored column width
+    if (colWidths[col.key]) {
+      const px = colWidths[col.key];
+      td.style.minWidth = px + 'px';
+      td.style.maxWidth = px + 'px';
+      td.style.width = px + 'px';
     }
   }
 
@@ -396,10 +943,13 @@
     // Prevent double-activating
     if (td.querySelector('input,select,textarea')) return;
 
+    clearSelection(); // exit multi-cell selection mode
+
     const prevContent = td.innerHTML;
     const currentVal = row[col.key];
 
     let editor;
+    let committed = false;
 
     if (col.type === 'select') {
       editor = document.createElement('select');
@@ -448,7 +998,9 @@
     editor.focus();
     if (editor.select) editor.select();
 
-    const commit = () => {
+    const commit = (moveDir = 0) => {
+      if (committed) return;
+      committed = true;
       const newVal = editor.tagName === 'SELECT' ? editor.value
                    : editor.type === 'date'      ? editor.value
                    : editor.value.trim();
@@ -462,28 +1014,51 @@
       const targetTd = newTd || td;
 
       handleCellCommit(col, row, rowIdx, newVal, prevContent, targetTd);
+
+      if (moveDir !== 0) {
+        moveFocusFromCell(rowIdx, col.key, moveDir);
+      } else {
+        if (targetTd) targetTd.focus();
+      }
     };
 
     const cancel = () => {
+      if (committed) return;
+      committed = true;
       td.innerHTML = prevContent;
       td.classList.add('spr-cell-editable');
-      td.addEventListener('click', () => activateCellEditor(td, col, row, rowIdx));
+      td.addEventListener('click', e => {
+        if (e.shiftKey) {
+          if (!selAnchor) selAnchor = { rowIdx, colKey: col.key };
+          selectRangeTo(rowIdx, col.key);
+        } else {
+          clearSelection();
+          selAnchor = { rowIdx, colKey: col.key };
+          activateCellEditor(td, col, row, rowIdx);
+        }
+      });
+      td.focus();
     };
 
     if (editor.tagName === 'SELECT') {
-      editor.addEventListener('change', commit);
-      editor.addEventListener('blur', commit);
-    } else if (editor.tagName === 'TEXTAREA') {
-      editor.addEventListener('blur', commit);
+      editor.addEventListener('change', () => commit());
+      editor.addEventListener('blur', () => commit());
       editor.addEventListener('keydown', e => {
-        if (e.key === 'Escape') cancel();
+        if (e.key === 'Tab') { e.preventDefault(); commit(e.shiftKey ? -1 : 1); }
+        else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      });
+    } else if (editor.tagName === 'TEXTAREA') {
+      editor.addEventListener('blur', () => commit());
+      editor.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+        else if (e.key === 'Tab') { e.preventDefault(); commit(e.shiftKey ? -1 : 1); }
       });
     } else {
-      editor.addEventListener('blur', commit);
+      editor.addEventListener('blur', () => commit());
       editor.addEventListener('keydown', e => {
-        if (e.key === 'Enter') commit();
-        else if (e.key === 'Escape') cancel();
-        else if (e.key === 'Tab') { e.preventDefault(); commit(); }
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+        else if (e.key === 'Tab') { e.preventDefault(); commit(e.shiftKey ? -1 : 1); }
       });
     }
   }
@@ -500,6 +1075,17 @@
       return;
     }
 
+    // Record old value for undo BEFORE cascading
+    const oldVal = row[col.key];
+    const cascadeOld = [];
+    if (col.cascade && !row._draft) {
+      for (const r of allRows) {
+        if (r.student_code === row.student_code && r !== row) {
+          cascadeOld.push({ row: r, oldVal: r[col.key] });
+        }
+      }
+    }
+
     // Update local state
     row[col.key] = finalVal;
 
@@ -511,6 +1097,14 @@
       for (const r of filteredRows) {
         if (r.student_code === row.student_code) r[col.key] = finalVal;
       }
+    }
+
+    // Push to undo stack (not for draft rows)
+    if (!row._draft) {
+      pushUndo({
+        col, row, rowIdx, oldVal, newVal: finalVal,
+        cascaded: cascadeOld.length > 0 ? cascadeOld : null,
+      });
     }
 
     // Re-render cell
@@ -1157,6 +1751,30 @@
         .forEach(el => el.classList.remove('open'));
     });
 
+    // Clear cell selection on outside click (outside the table)
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#sprTableWrap') && !e.target.closest('.spr-bulk-toolbar')) {
+        clearSelection();
+        selAnchor = null;
+      }
+    });
+
+    // Undo / Redo keyboard shortcuts
+    document.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (e.key.toLowerCase() !== 'z') return;
+      // Let browser handle undo within active text inputs/textareas
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') &&
+          !activeEl.readOnly && !activeEl.disabled) return;
+      e.preventDefault();
+      if (e.shiftKey) {
+        performRedo();
+      } else {
+        performUndo();
+      }
+    });
+
     // Close import modal on backdrop click
     const importOverlay = document.getElementById('sprImportOverlay');
     if (importOverlay) {
@@ -1177,7 +1795,9 @@
   // ─── Init ─────────────────────────────────────────────────────────────────────
 
   function init() {
+    loadColWidths();
     setupEventHandlers();
+    setupKeyboardNavigation();
     loadData().then(() => {
       buildClassFilterOptions();
       buildGoalAreaFilterOptions();
