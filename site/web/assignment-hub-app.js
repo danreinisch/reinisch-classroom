@@ -5,6 +5,38 @@ async function fetchJSON(url, init) {
   catch { return { ok: res.ok, status: res.status, data: text }; }
 }
 
+const SUBMITTED_KEY = 'rc_submitted';
+
+function getSubmitted() {
+  try { return JSON.parse(localStorage.getItem(SUBMITTED_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function markSubmitted(id) {
+  const list = getSubmitted();
+  if (!list.includes(id)) list.push(id);
+  localStorage.setItem(SUBMITTED_KEY, JSON.stringify(list));
+}
+
+function lockCard(cardEl) {
+  cardEl.querySelectorAll('input, textarea, select').forEach(el => {
+    el.disabled = true;
+    el.classList.add('submitted-disabled');
+  });
+  const btn = cardEl.querySelector('button[type="submit"]');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '✓ Submitted';
+  }
+  if (!cardEl.querySelector('.submitted-banner')) {
+    const banner = document.createElement('div');
+    banner.className = 'submitted-banner';
+    banner.textContent = '✓ Your work has been submitted successfully!';
+    const form = cardEl.querySelector('form');
+    if (form) form.parentElement.insertBefore(banner, form);
+  }
+}
+
 function card(assign) {
   const due = assign.due_date ? new Date(assign.due_date + 'T00:00:00').toLocaleDateString() : 'No due date';
   return `
@@ -30,6 +62,11 @@ async function loadAssignments() {
   const A = (data.assignments || []);
   if (!A.length) { list.textContent = 'No active assignments yet.'; return; }
   list.innerHTML = A.map(card).join('');
+  const submitted = getSubmitted();
+  submitted.forEach(id => {
+    const cardEl = list.querySelector(`.card[data-id="${CSS.escape(String(id))}"]`);
+    if (cardEl) lockCard(cardEl);
+  });
 }
 
 async function submitWork(ev, assignment_id) {
@@ -51,7 +88,8 @@ async function submitWork(ev, assignment_id) {
   if (ok) {
     status.textContent = 'Submitted!';
     status.className = 'status ok';
-    form.reset();
+    markSubmitted(assignment_id);
+    lockCard(form.closest('.card'));
   } else {
     status.textContent = 'Submit failed: ' + (typeof data === 'string' ? data : 'error');
     status.className = 'status err';
