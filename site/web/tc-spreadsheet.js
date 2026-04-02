@@ -835,6 +835,7 @@
       renderSpreadsheet();
       updateCountStatus();
     } catch (err) {
+      console.error('[tc-spreadsheet] loadData error', err);
       showError('Failed to load data: ' + (err.message || err));
     } finally {
       showLoading(false);
@@ -1352,7 +1353,7 @@
     </div>`;
   }
 
-  function attachMoreMenuListeners(td, row, rowIdx) {
+  function attachMoreMenuListeners(td, row, _rowIdx) {
     const btn = td.querySelector('.spr-more-btn');
     const menu = td.querySelector('.spr-more-menu');
     if (!btn || !menu) return;
@@ -1369,7 +1370,7 @@
         e.stopPropagation();
         menu.classList.remove('open');
         const action = b.dataset.action;
-        if (action === 'archive-goal') handleArchiveGoal(row, rowIdx);
+        if (action === 'archive-goal') handleArchiveGoal(row);
         else if (action === 'copy-row') handleCopyRow(row);
         else if (action === 'copy-goal-text') handleCopyGoalText(row);
         else if (action === 'add-goal') handleAddGoalForStudent(row.student_code);
@@ -1378,7 +1379,7 @@
     });
   }
 
-  async function handleArchiveGoal(row, _rowIdx) {
+  async function handleArchiveGoal(row) {
     if (row._draft) {
       draftRows = draftRows.filter(d => d !== row);
       applyFilters();
@@ -1501,7 +1502,7 @@
     const name = nameInput?.value.trim();
     const type = typeSelect?.value || 'text';
     if (!name) { showToast('Column name is required', '#ef4444'); return; }
-    const key = 'custom_' + Date.now();
+    const key = 'custom_' + (crypto.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2));
     const col = { key, label: name, type, _custom: true, editable: true };
     if (type === 'select' || type === 'select-custom') {
       col.options = (optionsInput?.value || '').split(',').map(o => o.trim()).filter(Boolean);
