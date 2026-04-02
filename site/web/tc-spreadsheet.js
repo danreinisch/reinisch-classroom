@@ -80,6 +80,8 @@
   let selAnchor = null;      // {rowIdx, colKey} — anchor for range selection
   let colWidths = {};        // colKey → width px, persisted in localStorage
   const COL_WIDTHS_LS = 'spr_col_widths_v1';
+  const MIN_COL_WIDTH = 80;   // minimum column width in px
+  const COL_AUTOFIT_PAD = 4;  // extra padding added during auto-fit
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -179,12 +181,12 @@
 
   function loadColWidths() {
     try { colWidths = JSON.parse(localStorage.getItem(COL_WIDTHS_LS) || '{}'); }
-    catch (_e) { colWidths = {}; }
+    catch (_e) { colWidths = {}; /* invalid JSON, reset */ }
   }
 
   function saveColWidths() {
     try { localStorage.setItem(COL_WIDTHS_LS, JSON.stringify(colWidths)); }
-    catch (_e) { /* ignore storage errors */ }
+    catch (_e) { /* ignore localStorage quota or disabled errors */ }
   }
 
   function applyColWidthToDOM(colKey) {
@@ -468,7 +470,7 @@
 
       const onMove = moveEvt => {
         if (!dragging) return;
-        const newWidth = Math.max(80, startWidth + (moveEvt.clientX - startX));
+        const newWidth = Math.max(MIN_COL_WIDTH, startWidth + (moveEvt.clientX - startX));
         th.style.minWidth = newWidth + 'px';
         th.style.maxWidth = newWidth + 'px';
         th.style.width = newWidth + 'px';
@@ -485,7 +487,7 @@
         handle.classList.remove('resizing');
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        const newWidth = Math.max(80, startWidth + (upEvt.clientX - startX));
+        const newWidth = Math.max(MIN_COL_WIDTH, startWidth + (upEvt.clientX - startX));
         colWidths[colKey] = newWidth;
         saveColWidths();
       };
@@ -515,7 +517,7 @@
         td.setAttribute('style', prev);
       });
       th.setAttribute('style', prevStyle);
-      const newWidth = Math.max(80, maxW + 4);
+      const newWidth = Math.max(MIN_COL_WIDTH, maxW + COL_AUTOFIT_PAD);
       th.style.minWidth = newWidth + 'px';
       th.style.maxWidth = newWidth + 'px';
       th.style.width = newWidth + 'px';
