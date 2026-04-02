@@ -22,7 +22,7 @@
   const CLASS_NAMES = [
     'Language Arts 1 SC', 'Language Arts 2 SC', 'Language Arts 3 SC', 'Language Arts 4 SC',
     'Life Skills Language Arts SC', 'Life Skills', 'Life Skills SC', 'Life Skills Math SC',
-    'Consumer Math', 'Geometry SC', 'Speech/Language', 'Warrior Academy', 'Related Services',
+    'Algebra 1', 'Consumer Math', 'Geometry SC', 'Speech/Language', 'Warrior Academy', 'Related Services',
   ];
 
   // Column definitions: key, label, source, editable, type
@@ -38,7 +38,7 @@
     { key: 'case_manager',      label: 'Case Manager',                         editable: true,       type: 'text', cascade: true },
     { key: 'data_collector',    label: 'Teacher to Collect Data',              editable: true,       type: 'text' },
     { key: 'data_collector_email', label: 'Teacher to Collect Data Email Address', editable: true,  type: 'text' },
-    { key: 'measurement_type',  label: 'Measurement Type',                     editable: true,       type: 'select', options: MEASUREMENT_TYPES },
+    { key: 'measurement_type',  label: 'Measurement Type',                     editable: true,       type: 'select-custom', options: MEASUREMENT_TYPES },
     { key: 'iep_due',           label: 'IEP Due',                              editable: true,       type: 'date', cascade: true },
     { key: 'eval_due',          label: 'Eval Due',                             editable: true,       type: 'date', cascade: true },
     { key: 'progress',          label: 'Progress %',                           editable: false,      type: 'progress' },
