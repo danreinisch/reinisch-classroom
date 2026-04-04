@@ -42,6 +42,7 @@
     { key: 'iep_due',           label: 'IEP Due',                              editable: true,       type: 'date', cascade: true },
     { key: 'eval_due',          label: 'Eval Due',                             editable: true,       type: 'date', cascade: true },
     { key: 'progress',          label: 'Progress %',                           editable: false,      type: 'progress' },
+    { key: 'notes',             label: 'Notes',                                editable: true,       type: 'textarea' },
     { key: '_actions',          label: '',                                     editable: false,      type: 'actions' },
   ];
 
@@ -49,7 +50,7 @@
     'Student Code Name', 'IEP Goal', 'Student Code IEP Goal Code',
     'Student: Active/Inactive', 'Baseline', 'Mastery', 'Class', 'Goal Area',
     'Case Manager', 'Teacher to Collect Data', 'Teacher to Collect Data Email Address',
-    'Measurement Type', 'IEP Due', 'Eval Due',
+    'Measurement Type', 'IEP Due', 'Eval Due', 'Notes',
   ];
 
   const SAVE_DEBOUNCE_MS = 1500;
@@ -92,6 +93,9 @@
   const RC_COLORS_LS      = 'rc-spreadsheet-colors-enabled';
   const RC_CUSTOM_OPTS_LS = 'rc-spreadsheet-custom-options';
   const CUSTOM_OPTS_MAX   = 20;
+  const AUTO_BACKUP_INTERVAL_EDITS = 25;
+  const RC_AUTO_BACKUP_LS    = 'rc-spreadsheet-auto-backup';
+  const RC_AUTO_BACKUP_TS_LS = 'rc-spreadsheet-auto-backup-ts';
 
   // ─── Custom Columns & Row Order State ────────────────────────────────────────
 
@@ -102,6 +106,7 @@
 
   // ─── PR 3: Data Integrity State ──────────────────────────────────────────────
   let caseManagerFilter = '';
+  let dataCollectorFilter = '';
   let warningsOnlyFilter = false;
   let validationWarnings = {};  // goal_code → [{colKey, message, overdue}]
   let changeLog = [];           // array of log entries, persisted in localStorage
@@ -109,6 +114,7 @@
   // ─── PR 4: Polish State ───────────────────────────────────────────────────────
   let colorsEnabled = true;     // conditional formatting toggle
   let customOptions = {};       // {colKey: [val, ...]} remembered custom values per column
+  let editsSinceBackup = 0;     // counter for auto-backup trigger
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -827,6 +833,7 @@
     hideBulkToolbar();
     clearSelection();
     selAnchor = null;
+    autoBackupIfNeeded();
   }
 
   // ─── Column Resizing ─────────────────────────────────────────────────────────
@@ -1079,6 +1086,7 @@
           measurement_type:     g.measurement_type || 'Percent',
           iep_due:              stu.iep_due || '',
           eval_due:             stu.eval_due || '',
+          notes:                g.notes || '',
           _goal_active:         g.status !== 'archived' && g.status !== 'Archived',
         };
       });
@@ -1121,6 +1129,7 @@
       if (classFilter && r.class_context !== classFilter) return false;
       if (goalAreaFilter && r.goal_area !== goalAreaFilter) return false;
       if (caseManagerFilter && r.case_manager !== caseManagerFilter) return false;
+      if (dataCollectorFilter && r.data_collector !== dataCollectorFilter) return false;
       if (warningsOnlyFilter && !validationWarnings[r.goal_code]) return false;
       return true;
     });
@@ -1666,6 +1675,7 @@
       renderSingleCell(td, col, row, rowIdx);
       flashCell(td);
       scheduleValidation();
+      autoBackupIfNeeded();
       return;
     }
 
@@ -1740,6 +1750,7 @@
     } else {
       scheduleAutoSave(row, rowIdx, td);
       scheduleValidation();
+      autoBackupIfNeeded();
     }
   }
 
@@ -1822,6 +1833,7 @@
       updateCountStatus();
       setStatusSaved();
       showToast(`Goal ${row.goal_code} archived`);
+      autoBackupIfNeeded();
     } catch (err) {
       setStatusError(err.message);
       showToast('Failed to archive goal: ' + err.message, '#ef4444');
@@ -2100,6 +2112,7 @@
       measurement_type:     'Percent',
       iep_due:              null,
       eval_due:             null,
+      notes:                '',
       _goal_active:         true,
       _draft:               true,
     };
@@ -2143,6 +2156,7 @@
         data_collector_email: draftRow.data_collector_email,
         class_context:       draftRow.class_context,
         case_manager:        draftRow.case_manager,
+        notes:               draftRow.notes,
       });
       // Move from draft to allRows
       draftRow._draft = false;
@@ -2187,6 +2201,7 @@
         data_collector_email: row.data_collector_email,
         class_context:       row.class_context,
         case_manager:        row.case_manager,
+        notes:               row.notes,
       });
       flashCell(td);
       setStatusSaved();
@@ -2216,6 +2231,7 @@
         r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
         r.data_collector, r.data_collector_email, r.measurement_type,
         r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
+        r.notes || '',
       ];
       const customCells = customCols.map(c => getCustomVal(r, c.key));
       lines.push([...baseCells, ...customCells].map(csvEscape).join(','));
@@ -2243,6 +2259,7 @@
         baseline: r.baseline, mastery: r.mastery, class_context: r.class_context,
         measurement_type: r.measurement_type, data_collector: r.data_collector,
         data_collector_email: r.data_collector_email, case_manager: r.case_manager,
+        notes: r.notes || '',
       });
     }
     downloadFile(JSON.stringify(Object.values(byStudent), null, 2), `master_spreadsheet_export_${dateTag()}.json`, 'application/json');
@@ -2262,6 +2279,7 @@
         r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
         r.data_collector, r.data_collector_email, r.measurement_type,
         r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
+        r.notes || '',
       ];
       const customCells = customCols.map(c => getCustomVal(r, c.key));
       const cells = [...baseCells, ...customCells].map(v => String(v || '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' '));
@@ -2352,6 +2370,7 @@
       measurement_type:     r[11] || 'Percent',
       iep_due:              toIsoDate(r[12]),
       eval_due:             toIsoDate(r[13]),
+      notes:                r[14] || '',
     })).filter(r => r.student_code && r.goal_code);
 
     buildDiffPreview();
@@ -2435,6 +2454,7 @@
           data_collector_email: r.data_collector_email,
           class_context: r.class_context,
           case_manager: r.case_manager,
+          notes: r.notes,
         });
         saved++;
       } catch (_err) { failed++; }
@@ -2450,6 +2470,7 @@
     }
     await loadData();
     runValidation();
+    autoBackupIfNeeded();
   }
 
   // ─── Column visibility panel ─────────────────────────────────────────────────
@@ -2521,6 +2542,18 @@
     }
   }
 
+  function buildDataCollectorFilterOptions() {
+    const sel = document.getElementById('sprDataCollectorFilter');
+    if (!sel) return;
+    const collectors = new Set(allRows.map(r => r.data_collector).filter(Boolean));
+    sel.innerHTML = '<option value="">All Data Collectors</option>';
+    for (const c of [...collectors].sort()) {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    }
+  }
+
   // ─── Compare CSV (Read-Only Diff) ─────────────────────────────────────────────
 
   const COMPARE_FIELDS = [
@@ -2533,6 +2566,7 @@
     { key: 'class_context',   label: 'Class'        },
     { key: 'iep_due',         label: 'IEP Due'      },
     { key: 'eval_due',        label: 'Eval Due'     },
+    { key: 'notes',           label: 'Notes'        },
   ];
 
   function openCompareCsvModal() {
@@ -2573,6 +2607,7 @@
         measurement_type:  r[11] || 'Percent',
         iep_due:           toIsoDate(r[12]) || '',
         eval_due:          toIsoDate(r[13]) || '',
+        notes:             r[14] || '',
       })).filter(r => r.student_code && r.goal_code);
       buildCompareDiff(parsed);
     };
@@ -2793,34 +2828,7 @@
     if (input) { input.value = ''; input.click(); }
   }
 
-  async function handleRestoreFile(file) {
-    let backup;
-    try {
-      const text = await file.text();
-      backup = JSON.parse(text);
-    } catch (_e) {
-      showToast('Invalid JSON backup file', '#ef4444');
-      return;
-    }
-    if (!backup || !backup.backup_version) {
-      showToast('Invalid backup file — missing backup_version', '#ef4444');
-      return;
-    }
-    const studentCount = new Set((backup.rows || []).map(r => r.student_code).filter(Boolean)).size;
-    const goalCount = (backup.rows || []).length;
-    const customColCount = (backup.customColumns || []).length;
-
-    // Auto-create pre-restore backup before asking for confirmation
-    const preBackup = buildBackupObject();
-    downloadFile(JSON.stringify(preBackup, null, 2), `spreadsheet_pre_restore_backup_${dateTag()}.json`, 'application/json');
-
-    const confirmed = await rcConfirm(
-      'Restore Backup',
-      `Restore ${studentCount} student${studentCount !== 1 ? 's' : ''}, ${goalCount} goal${goalCount !== 1 ? 's' : ''}, and ${customColCount} custom column${customColCount !== 1 ? 's' : ''}?\n\nA pre-restore backup has been downloaded automatically. Your current data will be overwritten.`,
-      'Restore'
-    );
-    if (!confirmed) return;
-
+  async function applyBackupObject(backup) {
     // Restore localStorage state
     if (Array.isArray(backup.customColumns)) { customColumns = backup.customColumns; saveCustomCols(); }
     if (backup.customData && typeof backup.customData === 'object') { customData = backup.customData; saveCustomData(); }
@@ -2849,6 +2857,7 @@
             data_collector_email: r.data_collector_email,
             class_context: r.class_context,
             case_manager: r.case_manager,
+            notes: r.notes,
           });
           saved++;
         } catch (_err) { failed++; }
@@ -2867,7 +2876,87 @@
     buildClassFilterOptions();
     buildGoalAreaFilterOptions();
     buildCaseManagerFilterOptions();
+    buildDataCollectorFilterOptions();
     runValidation();
+  }
+
+  async function handleRestoreFile(file) {
+    let backup;
+    try {
+      const text = await file.text();
+      backup = JSON.parse(text);
+    } catch (_e) {
+      showToast('Invalid JSON backup file', '#ef4444');
+      return;
+    }
+    if (!backup || !backup.backup_version) {
+      showToast('Invalid backup file — missing backup_version', '#ef4444');
+      return;
+    }
+    const studentCount = new Set((backup.rows || []).map(r => r.student_code).filter(Boolean)).size;
+    const goalCount = (backup.rows || []).length;
+    const customColCount = (backup.customColumns || []).length;
+
+    // Auto-create pre-restore backup before asking for confirmation
+    const preBackup = buildBackupObject();
+    downloadFile(JSON.stringify(preBackup, null, 2), `spreadsheet_pre_restore_backup_${dateTag()}.json`, 'application/json');
+
+    const confirmed = await rcConfirm(
+      'Restore Backup',
+      `Restore ${studentCount} student${studentCount !== 1 ? 's' : ''}, ${goalCount} goal${goalCount !== 1 ? 's' : ''}, and ${customColCount} custom column${customColCount !== 1 ? 's' : ''}?\n\nA pre-restore backup has been downloaded automatically. Your current data will be overwritten.`,
+      'Restore'
+    );
+    if (!confirmed) return;
+
+    await applyBackupObject(backup);
+  }
+
+  async function restoreAutoBackup() {
+    let json;
+    try {
+      json = localStorage.getItem(RC_AUTO_BACKUP_LS);
+    } catch (_e) {
+      showToast('No auto-backup available', '#ef4444');
+      return;
+    }
+    if (!json) {
+      showToast('No auto-backup available', '#ef4444');
+      return;
+    }
+    let backup;
+    try {
+      backup = JSON.parse(json);
+    } catch (_e) {
+      showToast('Auto-backup data is corrupted', '#ef4444');
+      return;
+    }
+    const timestamp = localStorage.getItem(RC_AUTO_BACKUP_TS_LS) || 'unknown';
+
+    // Auto-create pre-restore backup before confirmation
+    const preBackup = buildBackupObject();
+    downloadFile(JSON.stringify(preBackup, null, 2), `spreadsheet_pre_restore_backup_${dateTag()}.json`, 'application/json');
+
+    const confirmed = await rcConfirm(
+      'Restore Auto-Backup',
+      `Restore from auto-backup saved at ${timestamp}? A pre-restore backup will be downloaded first.`,
+      'Restore'
+    );
+    if (!confirmed) return;
+
+    await applyBackupObject(backup);
+  }
+
+  function autoBackupIfNeeded() {
+    try {
+      editsSinceBackup++;
+      if (editsSinceBackup >= AUTO_BACKUP_INTERVAL_EDITS) {
+        const backup = buildBackupObject();
+        localStorage.setItem(RC_AUTO_BACKUP_LS, JSON.stringify(backup));
+        localStorage.setItem(RC_AUTO_BACKUP_TS_LS, new Date().toISOString());
+        editsSinceBackup = 0;
+        showToast('💾 Auto-backup saved', '#6366f1');
+      }
+    } catch (_e) { /* ignore localStorage errors (e.g. quota exceeded) */ }
   }
 
   function setupEventHandlers() {
@@ -2909,6 +2998,17 @@
     if (caseManagerEl) {
       caseManagerEl.addEventListener('change', () => {
         caseManagerFilter = caseManagerEl.value;
+        applyFilters();
+        renderRows();
+        updateCountStatus();
+      });
+    }
+
+    // Data collector filter
+    const dataCollectorEl = document.getElementById('sprDataCollectorFilter');
+    if (dataCollectorEl) {
+      dataCollectorEl.addEventListener('change', () => {
+        dataCollectorFilter = dataCollectorEl.value;
         applyFilters();
         renderRows();
         updateCountStatus();
@@ -3112,6 +3212,10 @@
       });
     }
 
+    // Restore Auto-Backup button
+    const restoreAutoBackupBtn = document.getElementById('sprRestoreAutoBackupBtn');
+    if (restoreAutoBackupBtn) restoreAutoBackupBtn.addEventListener('click', restoreAutoBackup);
+
     // Colors toggle button
     const colorsBtn = document.getElementById('sprColorsBtn');
     if (colorsBtn) {
@@ -3130,10 +3234,6 @@
         renderSpreadsheet();
       });
     }
-
-    // Print button
-    const printBtn = document.getElementById('sprPrintBtn');
-    if (printBtn) printBtn.addEventListener('click', exportPdf);
 
     // Compare CSV button + modal
     const compareCsvBtn = document.getElementById('sprCompareCsvBtn');
@@ -3179,7 +3279,8 @@
   function checkLocalStorageUsage() {
     try {
       const keys = [COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
-                    RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS];
+                    RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
+                    RC_AUTO_BACKUP_LS, RC_AUTO_BACKUP_TS_LS];
       let totalBytes = 0;
       for (const k of keys) {
         const val = localStorage.getItem(k);
@@ -3209,8 +3310,12 @@
       buildClassFilterOptions();
       buildGoalAreaFilterOptions();
       buildCaseManagerFilterOptions();
+      buildDataCollectorFilterOptions();
       runValidation();
       checkLocalStorageUsage();
+      // Capture initial state as auto-backup on first load
+      editsSinceBackup = AUTO_BACKUP_INTERVAL_EDITS;
+      autoBackupIfNeeded();
     });
   }
 

@@ -173,7 +173,7 @@ const local = {
                      measurement_type = 'percent', data_collector = null, 
                      data_collector_email = null, class_context = null, 
                      goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
-                     observation_config = null }) {
+                     observation_config = null, notes = null }) {
     const map = store.get('iepGoals', {});
     const goals = map[student_code] || [];
     const idx = goals.findIndex(g => g.code === code);
@@ -182,7 +182,7 @@ const local = {
     const goal = { 
       code, desc: description, target, status, measurement_type, data_collector, 
       data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version,
-      observation_config
+      observation_config, notes
     };
     if (idx >= 0) {
       goals[idx] = { ...goals[idx], ...goal };
@@ -1232,7 +1232,7 @@ const remote = {
                      measurement_type = 'percent', data_collector = null,
                      data_collector_email = null, class_context = null,
                      goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
-                     observation_config = null }) {
+                     observation_config = null, notes = null }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Lookup student by code
@@ -1246,7 +1246,7 @@ const remote = {
       student_id: stu.id, code, desc: description, target, status,
       measurement_type, data_collector, data_collector_email, class_context,
       goal_area, baseline, mastery, case_manager, version,
-      observation_config
+      observation_config, notes
     };
     let { data, error } = await supabase.from('goals')
       .upsert(fullPayload, { onConflict: 'student_id,code' })
@@ -1277,7 +1277,7 @@ const remote = {
       .from('goals')
       .select(`id, code, desc, target, status, student_id, 
               measurement_type, data_collector, data_collector_email, class_context,
-              goal_area, baseline, mastery, case_manager, version, observation_config,
+              goal_area, baseline, mastery, case_manager, version, observation_config, notes,
               students!inner(code)`)
       .eq('active', true)
       .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
@@ -1322,7 +1322,8 @@ const remote = {
       mastery: g.mastery,
       case_manager: g.case_manager,
       version: g.version,
-      observation_config: g.observation_config
+      observation_config: g.observation_config,
+      notes: g.notes
     }));
   },
   async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
