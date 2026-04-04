@@ -86,6 +86,9 @@
   const RC_CUSTOM_COLS_LS = 'rc-spreadsheet-custom-columns';
   const RC_CUSTOM_DATA_LS = 'rc-spreadsheet-custom-data';
   const RC_ROW_ORDER_LS   = 'rc-spreadsheet-row-order';
+  const RC_CHANGELOG_LS   = 'rc-spreadsheet-changelog';
+  const RC_HIDDEN_COLS_LS = 'rc-spreadsheet-hidden-cols';
+  const CHANGELOG_MAX     = 500;
 
   // ─── Custom Columns & Row Order State ────────────────────────────────────────
 
@@ -93,6 +96,12 @@
   let customData = {};     // {goal_code: {colKey: value}} persisted in localStorage
   let rowOrder = [];       // [goal_code, ...] custom order, persisted in localStorage
   let dragState = null;    // {sourceIdx} during drag-and-drop
+
+  // ─── PR 3: Data Integrity State ──────────────────────────────────────────────
+  let caseManagerFilter = '';
+  let warningsOnlyFilter = false;
+  let validationWarnings = {};  // goal_code → [{colKey, message, overdue}]
+  let changeLog = [];           // array of log entries, persisted in localStorage
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -250,6 +259,134 @@
     catch (_e) { /* ignore */ }
   }
 
+  // ─── Hidden Columns Persistence ─────────────────────────────────────────────
+
+  function loadHiddenCols() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(RC_HIDDEN_COLS_LS) || '[]');
+      hiddenCols = new Set(arr);
+    } catch (_e) { hiddenCols = new Set(); }
+  }
+
+  function saveHiddenCols() {
+    try { localStorage.setItem(RC_HIDDEN_COLS_LS, JSON.stringify([...hiddenCols])); }
+    catch (_e) { /* ignore */ }
+  }
+
+  // ─── Change Log ──────────────────────────────────────────────────────────────
+
+  function loadChangeLog() {
+    try { changeLog = JSON.parse(localStorage.getItem(RC_CHANGELOG_LS) || '[]'); }
+    catch (_e) { changeLog = []; }
+  }
+
+  function saveChangeLog() {
+    try { localStorage.setItem(RC_CHANGELOG_LS, JSON.stringify(changeLog)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  function appendChangeLog(entry) {
+    changeLog.unshift({ ...entry, timestamp: new Date().toISOString() });
+    if (changeLog.length > CHANGELOG_MAX) changeLog.length = CHANGELOG_MAX;
+    saveChangeLog();
+  }
+
+  // ─── Inline Validation ───────────────────────────────────────────────────────
+
+  const scheduleValidation = debounce(() => runValidation(), 350);
+
+  function runValidation() {
+    validationWarnings = {};
+    const today = new Date().toISOString().slice(0, 10);
+    for (const row of allRows) {
+      if (!row._goal_active || !row.active) continue; // only active goals of active students
+      const issues = [];
+      if (!row.baseline) {
+        issues.push({ colKey: 'baseline', message: 'Missing baseline for active goal' });
+      }
+      if (!row.mastery) {
+        issues.push({ colKey: 'mastery', message: 'Missing mastery target for active goal' });
+      }
+      if (row.measurement_type === 'Percent' && row.baseline && row.mastery) {
+        const b = parseFloat(row.baseline);
+        const m = parseFloat(row.mastery);
+        if (!isNaN(b) && !isNaN(m) && b >= m) {
+          issues.push({ colKey: 'baseline', message: `Baseline (${row.baseline}) ≥ mastery (${row.mastery}) — goal may already be met` });
+          issues.push({ colKey: 'mastery', message: `Baseline (${row.baseline}) ≥ mastery (${row.mastery}) — goal may already be met` });
+        }
+      }
+      if (!row.iep_due) {
+        issues.push({ colKey: 'iep_due', message: 'Missing IEP Due date' });
+      } else if (row.iep_due < today) {
+        issues.push({ colKey: 'iep_due', message: `IEP Due date is overdue (${formatDate(row.iep_due)})`, overdue: true });
+      }
+      if (!row.eval_due) {
+        issues.push({ colKey: 'eval_due', message: 'Missing Eval Due date' });
+      } else if (row.eval_due < today) {
+        issues.push({ colKey: 'eval_due', message: `Eval Due date is overdue (${formatDate(row.eval_due)})`, overdue: true });
+      }
+      if (!row.measurement_type) {
+        issues.push({ colKey: 'measurement_type', message: 'Missing measurement type' });
+      }
+      if (!row.goal_area) {
+        issues.push({ colKey: 'goal_area', message: 'Missing goal area' });
+      }
+      if (issues.length > 0) validationWarnings[row.goal_code] = issues;
+    }
+    applyValidationWarnings();
+  }
+
+  function applyValidationWarnings() {
+    // Clear existing warning decorations
+    document.querySelectorAll('.spr-cell-warn, .spr-cell-warn-overdue').forEach(td => {
+      td.classList.remove('spr-cell-warn', 'spr-cell-warn-overdue');
+      const icon = td.querySelector('.spr-warn-icon');
+      if (icon) icon.remove();
+    });
+
+    // Count total warnings across all allRows (for badge)
+    let totalWarnCount = 0;
+    for (const issues of Object.values(validationWarnings)) {
+      // Count unique colKeys per row
+      const cols = new Set(issues.map(i => i.colKey));
+      totalWarnCount += cols.size;
+    }
+
+    // Apply to DOM for currently visible rows
+    const displayRows = buildDisplayRows();
+    for (const [goalCode, issues] of Object.entries(validationWarnings)) {
+      const rowIdx = displayRows.findIndex(r => r.goal_code === goalCode);
+      if (rowIdx < 0) continue;
+      // Group issues by colKey
+      const byCol = {};
+      for (const issue of issues) {
+        if (!byCol[issue.colKey]) byCol[issue.colKey] = { messages: [], overdue: false };
+        byCol[issue.colKey].messages.push(issue.message);
+        if (issue.overdue) byCol[issue.colKey].overdue = true;
+      }
+      for (const [colKey, warn] of Object.entries(byCol)) {
+        const td = document.querySelector(`tr[data-row-idx="${rowIdx}"] td[data-col="${colKey}"]`);
+        if (!td) continue;
+        td.classList.add(warn.overdue ? 'spr-cell-warn-overdue' : 'spr-cell-warn');
+        td.title = warn.messages.join('; ');
+        const icon = document.createElement('span');
+        icon.className = 'spr-warn-icon';
+        icon.textContent = '⚠';
+        td.appendChild(icon);
+      }
+    }
+
+    updateWarningBadge(totalWarnCount);
+  }
+
+  function updateWarningBadge(count) {
+    const btn = document.getElementById('sprWarningsBtn');
+    if (!btn) return;
+    btn.textContent = count > 0 ? `⚠️ ${count} warning${count !== 1 ? 's' : ''}` : '⚠️ No warnings';
+    btn.style.color = count > 0 ? '#facc15' : '';
+    btn.classList.toggle('spr-btn-active', warningsOnlyFilter);
+  }
+
   function applyRowOrder() {
     if (!rowOrder.length) return;
     const orderMap = {};
@@ -318,6 +455,7 @@
       rowOrder = newOrOld.filter(Boolean);
       saveRowOrder();
       redoStack.push(action);
+      runValidation();
       applyFilters();
       renderSpreadsheet();
       updateCountStatus();
@@ -333,7 +471,12 @@
         for (const c of action.cascaded) c.row[action.col.key] = c.oldVal;
       }
     }
+    appendChangeLog({
+      student_code: action.row.student_code, goal_code: action.row.goal_code,
+      column: action.col.label, old_value: String(action.newVal ?? ''), new_value: String(action.oldVal ?? ''), edit_type: 'undo',
+    });
     redoStack.push(action);
+    runValidation();
     applyFilters();
     renderSpreadsheet();
     updateCountStatus();
@@ -357,6 +500,7 @@
       rowOrder = newOrder.filter(Boolean);
       saveRowOrder();
       undoStack.push(action);
+      runValidation();
       applyFilters();
       renderSpreadsheet();
       updateCountStatus();
@@ -372,7 +516,12 @@
         for (const c of action.cascaded) c.row[action.col.key] = action.newVal;
       }
     }
+    appendChangeLog({
+      student_code: action.row.student_code, goal_code: action.row.goal_code,
+      column: action.col.label, old_value: String(action.oldVal ?? ''), new_value: String(action.newVal ?? ''), edit_type: 'redo',
+    });
     undoStack.push(action);
+    runValidation();
     applyFilters();
     renderSpreadsheet();
     updateCountStatus();
@@ -567,6 +716,16 @@
         oldVal: first.oldVal, newVal: first.newVal,
         cascaded: rest.length > 0 ? rest.map(e => ({ row: e.row, oldVal: e.oldVal })) : null,
       });
+      // Log each affected cell
+      for (const entry of undoEntries) {
+        if (!entry.row._draft) {
+          appendChangeLog({
+            student_code: entry.row.student_code, goal_code: entry.row.goal_code,
+            column: col.label, old_value: String(entry.oldVal ?? ''), new_value: String(entry.newVal ?? ''), edit_type: 'bulk',
+          });
+        }
+      }
+      scheduleValidation();
     }
     const count = undoEntries.length;
     showToast(count > 0 ? `Updated ${count} cell${count !== 1 ? 's' : ''}` : 'No changes');
@@ -866,6 +1025,8 @@
                !r.goal_code.toLowerCase().includes(q)) return false;
       if (classFilter && r.class_context !== classFilter) return false;
       if (goalAreaFilter && r.goal_area !== goalAreaFilter) return false;
+      if (caseManagerFilter && r.case_manager !== caseManagerFilter) return false;
+      if (warningsOnlyFilter && !validationWarnings[r.goal_code]) return false;
       return true;
     });
 
@@ -1034,6 +1195,8 @@
 
       tbody.appendChild(tr);
     }
+    // Re-apply validation warning decorations to the freshly-rendered DOM
+    applyValidationWarnings();
   }
 
   function renderCell(td, col, row, rowIdx) {
@@ -1272,8 +1435,13 @@
       }
       setCustomVal(row, col.key, newVal);
       pushUndo({ col, row, rowIdx, oldVal, newVal, cascaded: null });
+      appendChangeLog({
+        student_code: row.student_code, goal_code: row.goal_code,
+        column: col.label, old_value: String(oldVal ?? ''), new_value: String(newVal ?? ''), edit_type: 'manual',
+      });
       renderSingleCell(td, col, row, rowIdx);
       flashCell(td);
+      scheduleValidation();
       return;
     }
 
@@ -1320,6 +1488,20 @@
       });
     }
 
+    // Log the change (including any cascade rows)
+    if (!row._draft) {
+      appendChangeLog({
+        student_code: row.student_code, goal_code: row.goal_code,
+        column: col.label, old_value: String(oldVal ?? ''), new_value: String(finalVal ?? ''), edit_type: 'manual',
+      });
+      for (const { row: cr, oldVal: cOld } of cascadeOld) {
+        appendChangeLog({
+          student_code: cr.student_code, goal_code: cr.goal_code,
+          column: col.label, old_value: String(cOld ?? ''), new_value: String(finalVal ?? ''), edit_type: 'manual',
+        });
+      }
+    }
+
     // Re-render cell
     renderSingleCell(td, col, row, rowIdx);
     flashCell(td);
@@ -1328,6 +1510,7 @@
       checkDraftReadyToSave(row, rowIdx);
     } else {
       scheduleAutoSave(row, rowIdx, td);
+      scheduleValidation();
     }
   }
 
@@ -1400,7 +1583,12 @@
         await supabase.from('goals').update({ active: false, status: 'archived' }).eq('id', row.goal_id);
       }
       row._goal_active = false;
+      appendChangeLog({
+        student_code: row.student_code, goal_code: row.goal_code,
+        column: 'Status', old_value: 'Active', new_value: 'Archived', edit_type: 'manual',
+      });
       applyFilters();
+      runValidation();
       renderSpreadsheet();
       updateCountStatus();
       setStatusSaved();
@@ -2022,7 +2210,15 @@
     }
     setStatusSaved();
     showToast(`Imported ${saved} rows${failed > 0 ? ` (${failed} failed)` : ''}`);
+    // Log one entry per imported row
+    for (const r of importParsedRows) {
+      appendChangeLog({
+        student_code: r.student_code, goal_code: r.goal_code,
+        column: 'CSV Import', old_value: '', new_value: 'imported', edit_type: 'csv-import',
+      });
+    }
     await loadData();
+    runValidation();
   }
 
   // ─── Column visibility panel ─────────────────────────────────────────────────
@@ -2041,6 +2237,7 @@
       cb.addEventListener('change', () => {
         if (cb.checked) hiddenCols.delete(col.key);
         else hiddenCols.add(col.key);
+        saveHiddenCols();
         renderSpreadsheet();
       });
       label.appendChild(cb);
@@ -2081,7 +2278,185 @@
     }
   }
 
-  // ─── Event wiring ─────────────────────────────────────────────────────────────
+  function buildCaseManagerFilterOptions() {
+    const sel = document.getElementById('sprCaseManagerFilter');
+    if (!sel) return;
+    const managers = new Set(allRows.map(r => r.case_manager).filter(Boolean));
+    sel.innerHTML = '<option value="">All Case Managers</option>';
+    for (const m of [...managers].sort()) {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = m;
+      sel.appendChild(o);
+    }
+  }
+
+  // ─── Change Log Modal ────────────────────────────────────────────────────────
+
+  function openChangeLogModal() {
+    const overlay = document.getElementById('sprChangeLogOverlay');
+    if (!overlay) return;
+    renderChangeLogContent();
+    overlay.classList.add('open');
+  }
+
+  function closeChangeLogModal() {
+    const overlay = document.getElementById('sprChangeLogOverlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function renderChangeLogContent() {
+    const container = document.getElementById('sprChangeLogContent');
+    if (!container) return;
+    if (!changeLog.length) {
+      container.innerHTML = '<div style="padding:24px;text-align:center;color:rgba(255,255,255,0.4);font-size:13px;">No changes recorded yet.</div>';
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'spr-diff-table spr-changelog-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = `<tr>${['Timestamp','Student','Goal Code','Column','Old Value','New Value','Type'].map(h => `<th>${h}</th>`).join('')}</tr>`;
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for (const entry of changeLog) {
+      const tr = document.createElement('tr');
+      const ts = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '';
+      [ts, entry.student_code || '', entry.goal_code || '', entry.column || '',
+       entry.old_value || '', entry.new_value || '', entry.edit_type || ''].forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    container.innerHTML = '';
+    container.appendChild(table);
+  }
+
+  async function clearChangeLog() {
+    const confirmed = await rcConfirm('Clear Change Log', 'Clear all change log entries? This cannot be undone.', 'Clear');
+    if (!confirmed) return;
+    changeLog = [];
+    saveChangeLog();
+    renderChangeLogContent();
+    showToast('Change log cleared');
+  }
+
+  function downloadChangeLog() {
+    const headers = ['Timestamp', 'Student', 'Goal Code', 'Column', 'Old Value', 'New Value', 'Type'];
+    const lines = [headers.join(',')];
+    for (const entry of changeLog) {
+      const ts = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '';
+      lines.push([ts, entry.student_code || '', entry.goal_code || '', entry.column || '',
+        entry.old_value || '', entry.new_value || '', entry.edit_type || ''].map(csvEscape).join(','));
+    }
+    downloadFile(lines.join('\n'), `spreadsheet_changelog_${dateTag()}.csv`, 'text/csv;charset=utf-8;');
+    showToast('Change log downloaded');
+  }
+
+  // ─── Backup & Restore ────────────────────────────────────────────────────────
+
+  function buildBackupObject() {
+    return {
+      backup_version: 1,
+      timestamp: new Date().toISOString(),
+      rows: allRows,
+      customColumns,
+      customData,
+      rowOrder,
+      colWidths,
+      hiddenCols: [...hiddenCols],
+      changeLog,
+    };
+  }
+
+  function backupData(filenamePrefix = 'spreadsheet_backup') {
+    const backup = buildBackupObject();
+    downloadFile(JSON.stringify(backup, null, 2), `${filenamePrefix}_${dateTag()}.json`, 'application/json');
+    showToast('Backup downloaded');
+  }
+
+  function triggerRestore() {
+    const input = document.getElementById('sprRestoreInput');
+    if (input) { input.value = ''; input.click(); }
+  }
+
+  async function handleRestoreFile(file) {
+    let backup;
+    try {
+      const text = await file.text();
+      backup = JSON.parse(text);
+    } catch (_e) {
+      showToast('Invalid JSON backup file', '#ef4444');
+      return;
+    }
+    if (!backup || !backup.backup_version) {
+      showToast('Invalid backup file — missing backup_version', '#ef4444');
+      return;
+    }
+    const studentCount = new Set((backup.rows || []).map(r => r.student_code).filter(Boolean)).size;
+    const goalCount = (backup.rows || []).length;
+    const customColCount = (backup.customColumns || []).length;
+
+    // Auto-create pre-restore backup before asking for confirmation
+    const preBackup = buildBackupObject();
+    downloadFile(JSON.stringify(preBackup, null, 2), `spreadsheet_pre_restore_backup_${dateTag()}.json`, 'application/json');
+
+    const confirmed = await rcConfirm(
+      'Restore Backup',
+      `Restore ${studentCount} student${studentCount !== 1 ? 's' : ''}, ${goalCount} goal${goalCount !== 1 ? 's' : ''}, and ${customColCount} custom column${customColCount !== 1 ? 's' : ''}?\n\nA pre-restore backup has been downloaded automatically. Your current data will be overwritten.`,
+      'Restore'
+    );
+    if (!confirmed) return;
+
+    // Restore localStorage state
+    if (Array.isArray(backup.customColumns)) { customColumns = backup.customColumns; saveCustomCols(); }
+    if (backup.customData && typeof backup.customData === 'object') { customData = backup.customData; saveCustomData(); }
+    if (Array.isArray(backup.rowOrder)) { rowOrder = backup.rowOrder; saveRowOrder(); }
+    if (backup.colWidths && typeof backup.colWidths === 'object') { colWidths = backup.colWidths; saveColWidths(); }
+    if (Array.isArray(backup.hiddenCols)) { hiddenCols = new Set(backup.hiddenCols); saveHiddenCols(); }
+    if (Array.isArray(backup.changeLog)) { changeLog = backup.changeLog; saveChangeLog(); }
+
+    // Re-import rows to DB using same logic as CSV import
+    if (Array.isArray(backup.rows) && backup.rows.length > 0) {
+      setStatusSaving();
+      let saved = 0; let failed = 0;
+      for (const r of backup.rows) {
+        try {
+          await db.upsertStudent({
+            code: r.student_code, name: r.student_code,
+            iep_due: r.iep_due, eval_due: r.eval_due,
+            primary_case_manager: r.case_manager, active: r.active,
+          });
+          await db.upsertGoal({
+            student_code: r.student_code, code: r.goal_code,
+            desc: r.goal_desc, goal_area: r.goal_area,
+            baseline: r.baseline, mastery: r.mastery,
+            measurement_type: r.measurement_type,
+            data_collector: r.data_collector,
+            data_collector_email: r.data_collector_email,
+            class_context: r.class_context,
+            case_manager: r.case_manager,
+          });
+          saved++;
+        } catch (_err) { failed++; }
+      }
+      appendChangeLog({
+        student_code: '', goal_code: '', column: 'Backup Restore',
+        old_value: '', new_value: `Restored ${saved} rows from backup`, edit_type: 'csv-import',
+      });
+      setStatusSaved();
+      showToast(`Restore complete: ${saved} row${saved !== 1 ? 's' : ''}${failed > 0 ? ` (${failed} failed)` : ''}`);
+    } else {
+      showToast('Restore complete (no rows to re-import)');
+    }
+
+    await loadData();
+    buildClassFilterOptions();
+    buildGoalAreaFilterOptions();
+    buildCaseManagerFilterOptions();
+    runValidation();
+  }
 
   function setupEventHandlers() {
     // Search
@@ -2111,6 +2486,29 @@
     if (goalAreaEl) {
       goalAreaEl.addEventListener('change', () => {
         goalAreaFilter = goalAreaEl.value;
+        applyFilters();
+        renderRows();
+        updateCountStatus();
+      });
+    }
+
+    // Case manager filter
+    const caseManagerEl = document.getElementById('sprCaseManagerFilter');
+    if (caseManagerEl) {
+      caseManagerEl.addEventListener('change', () => {
+        caseManagerFilter = caseManagerEl.value;
+        applyFilters();
+        renderRows();
+        updateCountStatus();
+      });
+    }
+
+    // Warnings filter button
+    const warningsBtn = document.getElementById('sprWarningsBtn');
+    if (warningsBtn) {
+      warningsBtn.addEventListener('click', () => {
+        warningsOnlyFilter = !warningsOnlyFilter;
+        warningsBtn.classList.toggle('spr-btn-active', warningsOnlyFilter);
         applyFilters();
         renderRows();
         updateCountStatus();
@@ -2263,6 +2661,37 @@
       });
     }
 
+    // Change Log button
+    const changeLogBtn = document.getElementById('sprChangeLogBtn');
+    if (changeLogBtn) changeLogBtn.addEventListener('click', openChangeLogModal);
+
+    // Change Log modal
+    const changeLogOverlay = document.getElementById('sprChangeLogOverlay');
+    if (changeLogOverlay) {
+      changeLogOverlay.addEventListener('click', e => { if (e.target === changeLogOverlay) closeChangeLogModal(); });
+      changeLogOverlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeChangeLogModal(); });
+      const closeBtn = changeLogOverlay.querySelector('#sprChangeLogCloseBtn');
+      const clearBtn = changeLogOverlay.querySelector('#sprChangeLogClearBtn');
+      const downloadBtn = changeLogOverlay.querySelector('#sprChangeLogDownloadBtn');
+      if (closeBtn) closeBtn.addEventListener('click', closeChangeLogModal);
+      if (clearBtn) clearBtn.addEventListener('click', clearChangeLog);
+      if (downloadBtn) downloadBtn.addEventListener('click', downloadChangeLog);
+    }
+
+    // Backup button
+    const backupBtn = document.getElementById('sprBackupBtn');
+    if (backupBtn) backupBtn.addEventListener('click', () => backupData());
+
+    // Restore button + hidden file input
+    const restoreBtn = document.getElementById('sprRestoreBtn');
+    if (restoreBtn) restoreBtn.addEventListener('click', triggerRestore);
+    const restoreInput = document.getElementById('sprRestoreInput');
+    if (restoreInput) {
+      restoreInput.addEventListener('change', () => {
+        if (restoreInput.files[0]) handleRestoreFile(restoreInput.files[0]);
+      });
+    }
+
     // Beforeunload warning for pending drafts
     window.addEventListener('beforeunload', e => {
       if (draftRows.length > 0) {
@@ -2279,12 +2708,16 @@
     loadCustomCols();
     loadCustomData();
     loadRowOrder();
+    loadHiddenCols();
+    loadChangeLog();
     setupEventHandlers();
     setupKeyboardNavigation();
     setupRowDragHandlers();
     loadData().then(() => {
       buildClassFilterOptions();
       buildGoalAreaFilterOptions();
+      buildCaseManagerFilterOptions();
+      runValidation();
     });
   }
 

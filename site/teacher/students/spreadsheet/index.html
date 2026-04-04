@@ -565,6 +565,86 @@
     }
     .spr-addcol-field textarea { resize: vertical; min-height: 60px; }
     .spr-addcol-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+    /* ─── Inline validation warnings ───────────────────────────────────────── */
+    .spr-cell-warn {
+      border-left: 3px solid #facc15 !important;
+      background: rgba(250,204,21,0.06) !important;
+      position: relative;
+    }
+    .spr-cell-warn-overdue {
+      border-left: 3px solid #f97316 !important;
+      background: rgba(249,115,22,0.08) !important;
+      position: relative;
+    }
+    .spr-warn-icon {
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      font-size: 9px;
+      pointer-events: none;
+      opacity: 0.8;
+      line-height: 1;
+    }
+    .spr-btn-active {
+      background: rgba(250,204,21,0.2) !important;
+      border-color: rgba(250,204,21,0.5) !important;
+      color: #facc15 !important;
+    }
+
+    /* ─── Change Log modal ──────────────────────────────────────────────────── */
+    .spr-changelog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+    }
+    .spr-changelog-overlay.open { display: flex; }
+    .spr-changelog-modal {
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 95%;
+      max-width: 1000px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .spr-changelog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+    .spr-changelog-header h2 { margin: 0; font-size: 18px; }
+    .spr-changelog-header .spr-changelog-actions { display: flex; gap: 8px; }
+    #sprChangeLogContent {
+      overflow-y: auto;
+      flex: 1;
+      border-radius: 8px;
+      border: 1px solid var(--rc-glass-border);
+    }
+    .spr-changelog-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .spr-changelog-table th, .spr-changelog-table td {
+      padding: 5px 8px;
+      border: 1px solid rgba(255,255,255,0.07);
+      text-align: left;
+      white-space: nowrap;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .spr-changelog-table th { background: rgba(255,255,255,0.06); font-weight: 600; font-size: 11px; text-transform: uppercase; position: sticky; top: 0; }
+    .spr-changelog-table td:nth-child(4), .spr-changelog-table td:nth-child(5), .spr-changelog-table td:nth-child(6) {
+      max-width: 180px;
+    }
   </style>
 </head>
 <body>
@@ -711,6 +791,10 @@
           <select id="sprGoalAreaFilter" aria-label="Filter by goal area">
             <option value="">All Goal Areas</option>
           </select>
+          <select id="sprCaseManagerFilter" aria-label="Filter by case manager">
+            <option value="">All Case Managers</option>
+          </select>
+          <button class="spr-btn" id="sprWarningsBtn" title="Click to filter rows with warnings">⚠️ No warnings</button>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
             <input type="checkbox" id="sprShowArchived" /> Show Archived
           </label>
@@ -720,6 +804,11 @@
             <div class="spr-col-dropdown" id="sprColDropdown" role="menu"></div>
           </div>
           <button class="spr-btn" id="sprAddColBtn" title="Add custom column">＋ Column</button>
+          <div class="spr-sep"></div>
+          <button class="spr-btn" id="sprChangeLogBtn" title="View change history">📋 Change Log</button>
+          <button class="spr-btn" id="sprBackupBtn" title="Download full backup as JSON">💾 Backup</button>
+          <button class="spr-btn" id="sprRestoreBtn" title="Restore from JSON backup">📂 Restore</button>
+          <input type="file" id="sprRestoreInput" accept=".json" style="display:none;" aria-label="Choose backup JSON file" />
           <div class="spr-sep"></div>
           <button class="spr-btn" id="sprImportBtn">📥 Import CSV</button>
           <div class="spr-export-wrap">
@@ -823,6 +912,23 @@
       <div class="spr-addcol-actions">
         <button class="spr-btn" id="sprAddColCancelBtn">Cancel</button>
         <button class="spr-btn spr-btn-primary" id="sprAddColConfirmBtn">Add Column</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Log modal -->
+  <div class="spr-changelog-overlay" id="sprChangeLogOverlay" role="dialog" aria-modal="true" aria-label="Change Log">
+    <div class="spr-changelog-modal">
+      <div class="spr-changelog-header">
+        <h2>📋 Change Log</h2>
+        <div class="spr-changelog-actions">
+          <button class="spr-btn spr-btn-sm" id="sprChangeLogDownloadBtn" title="Download log as CSV">⬇ Download CSV</button>
+          <button class="spr-btn spr-btn-sm" id="sprChangeLogClearBtn" style="color:#f87171;" title="Clear all log entries">🗑 Clear Log</button>
+          <button class="spr-btn spr-btn-sm" id="sprChangeLogCloseBtn">✕ Close</button>
+        </div>
+      </div>
+      <div id="sprChangeLogContent">
+        <!-- Populated by JS -->
       </div>
     </div>
   </div>
