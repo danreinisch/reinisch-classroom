@@ -374,7 +374,6 @@
     aibDownloadZipBtn.disabled = true;
 
     try {
-      // eslint-disable-next-line no-undef
       const zip = new JSZip();
       const week = (aibWeek.value || 'presentation').trim();
       const folderName = 'presentation-week' + week;
