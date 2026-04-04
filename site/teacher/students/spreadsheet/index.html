@@ -916,6 +916,9 @@
           <select id="sprCaseManagerFilter" aria-label="Filter by case manager">
             <option value="">All Case Managers</option>
           </select>
+          <select id="sprDataCollectorFilter" aria-label="Filter by data collector">
+            <option value="">All Data Collectors</option>
+          </select>
           <button class="spr-btn" id="sprWarningsBtn" title="Click to filter rows with warnings">⚠️ No warnings</button>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
             <input type="checkbox" id="sprShowArchived" /> Show Archived
@@ -934,6 +937,7 @@
               <button id="sprChangeLogBtn" title="View change history">📋 Change Log</button>
               <button id="sprBackupBtn" title="Download full backup as JSON">💾 Backup</button>
               <button id="sprRestoreBtn" title="Restore from JSON backup">📂 Restore</button>
+              <button id="sprRestoreAutoBackupBtn" title="Restore from last auto-backup">🔄 Restore Auto-Backup</button>
               <button id="sprImportBtn">📥 Import CSV</button>
               <button id="sprCompareCsvBtn" title="Compare a CSV file against current data (read-only)">📊 Compare CSV</button>
             </div>
@@ -948,7 +952,6 @@
               <button id="sprExportPdf">🖨 Print / PDF</button>
             </div>
           </div>
-          <button class="spr-btn" id="sprPrintBtn" title="Print spreadsheet">🖨 Print</button>
         </div>
 
         <!-- Spreadsheet table -->
