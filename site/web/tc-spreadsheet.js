@@ -307,6 +307,8 @@
       if (!row.mastery) {
         issues.push({ colKey: 'mastery', message: 'Missing mastery target for active goal' });
       }
+      // Baseline ≥ mastery check only applies to Percent type since x/y and Number
+      // values are not directly comparable as percentages
       if (row.measurement_type === 'Percent' && row.baseline && row.mastery) {
         const b = parseFloat(row.baseline);
         const m = parseFloat(row.mastery);
@@ -344,10 +346,10 @@
       if (icon) icon.remove();
     });
 
-    // Count total warnings across all allRows (for badge)
+    // Count total warning cells across all rows (unique colKeys per row, not total issues)
     let totalWarnCount = 0;
     for (const issues of Object.values(validationWarnings)) {
-      // Count unique colKeys per row
+      // Count unique colKeys per row so multiple issues on the same cell count as one
       const cols = new Set(issues.map(i => i.colKey));
       totalWarnCount += cols.size;
     }
@@ -2443,7 +2445,7 @@
       }
       appendChangeLog({
         student_code: '', goal_code: '', column: 'Backup Restore',
-        old_value: '', new_value: `Restored ${saved} rows from backup`, edit_type: 'csv-import',
+        old_value: '', new_value: `Restored ${saved} rows from backup`, edit_type: 'backup-restore',
       });
       setStatusSaved();
       showToast(`Restore complete: ${saved} row${saved !== 1 ? 's' : ''}${failed > 0 ? ` (${failed} failed)` : ''}`);
