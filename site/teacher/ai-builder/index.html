@@ -349,8 +349,8 @@
         <section class="ai-section">
           <p class="ai-section-title">Source Material</p>
           <div class="ai-field" style="margin-bottom: 12px;">
-            <label for="aiSourceText">Paste source text (optional)</label>
-            <textarea id="aiSourceText" class="rc-input" placeholder="Paste article, passage, or any source material here…"></textarea>
+            <label for="aiSourceText">Paste source text (optional — max ~50,000 characters)</label>
+            <textarea id="aiSourceText" class="rc-input" placeholder="Paste article, passage, or any source material here…" maxlength="50000"></textarea>
           </div>
           <div class="ai-field">
             <label for="aiSourceFile">Or upload a file (.txt or .pdf)</label>
@@ -462,7 +462,7 @@
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
   <script defer src="/web/teacher-shell.js"></script>
   <script defer src="/web/tc-ai-builder.js"></script>
 </body>
