@@ -3185,7 +3185,7 @@
         const val = localStorage.getItem(k);
         if (val) totalBytes += k.length + val.length;
       }
-      const totalMB = (totalBytes * 2) / (1024 * 1024); // UTF-16 = 2 bytes per char
+      const totalMB = (totalBytes * 2) / (1024 * 1024); // ~2 bytes per char (UTF-16 approximation)
       if (totalMB > 4) {
         console.warn(`[tc-spreadsheet] localStorage usage is ${totalMB.toFixed(2)} MB — approaching browser limit`);
         showToast('⚠️ Storage is getting full. Consider clearing the change log.', '#f97316');
