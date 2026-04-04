@@ -119,7 +119,8 @@ function buildUserMessage(body) {
   const safeScope = sanitizeForPrompt(scope, 50);
   const safeLibraryRef = sanitizeForPrompt(library_ref, 300);
   const safeSourceFilename = sanitizeForPrompt(source_filename, 200);
-  // Source material is already sliced to 50KB client-side; apply additional server-side cap
+  // Frontend enforces 50,000 char maxlength; backend applies an independent 40,000 char cap
+  // as a defence-in-depth measure for prompt length and token budget.
   const safeSource = source_material
     ? String(source_material).replace(/[\r]/g, '').slice(0, 40000)
     : '';
