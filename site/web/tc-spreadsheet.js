@@ -96,6 +96,7 @@
   const AUTO_BACKUP_INTERVAL_EDITS = 25;
   const RC_AUTO_BACKUP_LS    = 'rc-spreadsheet-auto-backup';
   const RC_AUTO_BACKUP_TS_LS = 'rc-spreadsheet-auto-backup-ts';
+  const RECENTLY_EDITED_MS   = 600000; // 10 minutes in milliseconds
   const RC_COL_ORDER_LS        = 'rc-spreadsheet-col-order';
   const RC_VIEWS_LS            = 'rc-spreadsheet-views';
   const RC_COLLAPSED_LS        = 'rc-spreadsheet-collapsed-students';
@@ -1605,8 +1606,12 @@
         });
       }
     } else if (col.key === 'data_collector_email' && val) {
+      // Validate email format before constructing mailto link (prevent URL injection)
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const link = document.createElement('a');
-      link.href = `mailto:${val}`;
+      if (emailPattern.test(String(val))) {
+        link.href = `mailto:${val}`;
+      }
       link.textContent = val;
       link.style.cssText = 'color: #818cf8; text-decoration: underline; font-size: 13px;';
       link.addEventListener('click', e => e.stopPropagation()); // don't trigger cell editor
@@ -1636,7 +1641,7 @@
         const existingTitle = td.title || '';
         td.title = existingTitle ? `${existingTitle}\n✏️ Edited ${ago}` : `✏️ Edited ${ago}`;
         const diffMs = Date.now() - new Date(cellTs).getTime();
-        if (diffMs < 600000) { // 10 minutes
+        if (diffMs < RECENTLY_EDITED_MS) {
           td.classList.add('spr-recently-edited');
         }
       }
@@ -1657,8 +1662,8 @@
     const canEdit = col._custom || col.editable === true || (col.editable === 'new-only' && row._draft);
     if (canEdit) {
       td.classList.add('spr-cell-editable');
-      const existingTitleCE = td.title || '';
-      td.title = existingTitleCE ? `${existingTitleCE}\nClick to edit` : 'Click to edit';
+      const prevTitle = td.title || '';
+      td.title = prevTitle ? `${prevTitle}\nClick to edit` : 'Click to edit';
       td.addEventListener('click', e => {
         if (e.target.closest('.spr-drag-handle')) return; // don't open editor for drag handle
         if (e.shiftKey) {
@@ -3507,11 +3512,12 @@
   // ─── Email Data Collectors ───────────────────────────────────────────────────
 
   function emailDataCollectors() {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const emails = [...new Set(
       filteredRows
         .filter(r => !r._draft && r.data_collector_email)
         .map(r => r.data_collector_email.trim())
-        .filter(Boolean)
+        .filter(e => emailPattern.test(e))
     )];
     if (!emails.length) {
       showToast('No data collector emails in current view', '#ef4444');
