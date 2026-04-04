@@ -89,6 +89,9 @@
   const RC_CHANGELOG_LS   = 'rc-spreadsheet-changelog';
   const RC_HIDDEN_COLS_LS = 'rc-spreadsheet-hidden-cols';
   const CHANGELOG_MAX     = 500;
+  const RC_COLORS_LS      = 'rc-spreadsheet-colors-enabled';
+  const RC_CUSTOM_OPTS_LS = 'rc-spreadsheet-custom-options';
+  const CUSTOM_OPTS_MAX   = 20;
 
   // ─── Custom Columns & Row Order State ────────────────────────────────────────
 
@@ -102,6 +105,10 @@
   let warningsOnlyFilter = false;
   let validationWarnings = {};  // goal_code → [{colKey, message, overdue}]
   let changeLog = [];           // array of log entries, persisted in localStorage
+
+  // ─── PR 4: Polish State ───────────────────────────────────────────────────────
+  let colorsEnabled = true;     // conditional formatting toggle
+  let customOptions = {};       // {colKey: [val, ...]} remembered custom values per column
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -291,6 +298,42 @@
     saveChangeLog();
   }
 
+  // ─── Colors Persistence ──────────────────────────────────────────────────────
+
+  function loadColors() {
+    const stored = localStorage.getItem(RC_COLORS_LS);
+    colorsEnabled = stored === null ? true : stored === 'true';
+  }
+
+  function saveColors() {
+    try { localStorage.setItem(RC_COLORS_LS, String(colorsEnabled)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  // ─── Custom Options Persistence ──────────────────────────────────────────────
+
+  function loadCustomOptions() {
+    try { customOptions = JSON.parse(localStorage.getItem(RC_CUSTOM_OPTS_LS) || '{}'); }
+    catch (_e) { customOptions = {}; }
+  }
+
+  function saveCustomOptions() {
+    try { localStorage.setItem(RC_CUSTOM_OPTS_LS, JSON.stringify(customOptions)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  function rememberCustomOption(colKey, value) {
+    if (!value || !String(value).trim()) return;
+    const v = String(value).trim();
+    if (!customOptions[colKey]) customOptions[colKey] = [];
+    const arr = customOptions[colKey];
+    const idx = arr.indexOf(v);
+    if (idx >= 0) arr.splice(idx, 1); // remove duplicate to re-add at front
+    arr.unshift(v);                    // most-recently-used first
+    if (arr.length > CUSTOM_OPTS_MAX) arr.length = CUSTOM_OPTS_MAX;
+    saveCustomOptions();
+  }
+
   // ─── Inline Validation ───────────────────────────────────────────────────────
 
   const scheduleValidation = debounce(() => runValidation(), 350);
@@ -387,6 +430,56 @@
     btn.textContent = count > 0 ? `⚠️ ${count} warning${count !== 1 ? 's' : ''}` : '⚠️ No warnings';
     btn.style.color = count > 0 ? '#facc15' : '';
     btn.classList.toggle('spr-btn-active', warningsOnlyFilter);
+  }
+
+  // ─── Conditional Formatting ──────────────────────────────────────────────────
+
+  function applyConditionalFormattingToCell(td, col, row) {
+    if (!colorsEnabled || row._draft || col.key === '_actions' || col.key === 'progress') {
+      td.style.backgroundColor = '';
+      return;
+    }
+    // Don't clobber an active inline editor
+    if (td.querySelector('input,select,textarea')) return;
+
+    const COLOR_GREEN  = 'rgba(34,197,94,0.13)';
+    const COLOR_RED    = 'rgba(248,113,113,0.13)';
+    const COLOR_YELLOW = 'rgba(250,204,21,0.13)';
+    const COLOR_ORANGE = 'rgba(249,115,22,0.15)';
+    const COLOR_RED_DUE = 'rgba(248,113,113,0.18)';
+
+    if (col.key === 'active') {
+      td.style.backgroundColor = row.active ? COLOR_GREEN : COLOR_RED;
+      return;
+    }
+
+    if (col.key === 'baseline' && row.measurement_type === 'Percent' && row.baseline && row.mastery) {
+      const b = parseFloat(row.baseline);
+      const m = parseFloat(row.mastery);
+      if (!isNaN(b) && !isNaN(m) && m > 0) {
+        const ratio = b / m;
+        if (ratio >= 0.9) { td.style.backgroundColor = COLOR_GREEN; return; }
+        if (ratio < 0.5)  { td.style.backgroundColor = COLOR_RED;   return; }
+        td.style.backgroundColor = '';
+        return;
+      }
+    }
+
+    if (col.key === 'iep_due' || col.key === 'eval_due') {
+      const dateVal = row[col.key];
+      if (dateVal) {
+        const today = new Date();
+        const due = new Date(dateVal + 'T00:00:00');
+        const diffDays = Math.floor((due - today) / 86400000);
+        if (diffDays < 0)  { td.style.backgroundColor = COLOR_RED_DUE; return; }
+        if (diffDays < 30) { td.style.backgroundColor = COLOR_ORANGE;  return; }
+        if (diffDays < 60) { td.style.backgroundColor = COLOR_YELLOW;  return; }
+      }
+      td.style.backgroundColor = '';
+      return;
+    }
+
+    td.style.backgroundColor = '';
   }
 
   function applyRowOrder() {
@@ -1301,6 +1394,9 @@
       td.style.maxWidth = px + 'px';
       td.style.width = px + 'px';
     }
+
+    // Apply conditional formatting (colors)
+    applyConditionalFormattingToCell(td, col, row);
   }
 
   function activateCellEditor(td, col, row, rowIdx) {
@@ -1310,7 +1406,147 @@
     clearSelection(); // exit multi-cell selection mode
 
     const prevContent = td.innerHTML;
-    const currentVal = row[col.key];
+    // For custom columns use the custom data store; otherwise use the row object
+    const currentVal = col._custom ? getCustomVal(row, col.key) : (row[col.key] ?? '');
+
+    // ── Select-Custom: custom dropdown with remembered options ────────────────
+    if (col.type === 'select-custom') {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:100%;';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = String(currentVal || '');
+      input.style.cssText = 'width:100%;padding:3px 6px;border-radius:5px;border:1px solid rgba(99,102,241,.5);background:rgba(30,33,51,.97);color:inherit;font-size:13px;font-family:inherit;box-sizing:border-box;outline:none;';
+      wrap.appendChild(input);
+
+      // Floating dropdown appended to body for correct stacking
+      const ddEl = document.createElement('div');
+      ddEl.style.cssText = 'position:fixed;z-index:9999;background:#1e2133;border:1px solid var(--rc-glass-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.4);max-height:200px;overflow-y:auto;min-width:160px;display:none;font-size:13px;';
+      document.body.appendChild(ddEl);
+
+      const predefOpts = col.options || [];
+      const remArr = customOptions[col.key] || [];
+      // Live reference to remembered opts not in predefined list
+      const remOpts = remArr.filter(v => !predefOpts.includes(v));
+
+      let scCommitted = false;
+
+      const repositionDd = () => {
+        const rect = input.getBoundingClientRect();
+        ddEl.style.left  = rect.left + 'px';
+        ddEl.style.top   = (rect.bottom + 2) + 'px';
+        ddEl.style.width = Math.max(rect.width, 160) + 'px';
+      };
+
+      const renderDd = (filter) => {
+        ddEl.innerHTML = '';
+        const q = (filter || '').toLowerCase();
+        const fp = predefOpts.filter(o => !q || o.toLowerCase().includes(q));
+        const fr = remOpts.filter(o => !q || o.toLowerCase().includes(q));
+        if (!fp.length && !fr.length) { ddEl.style.display = 'none'; return; }
+
+        fp.forEach(opt => {
+          const d = document.createElement('div');
+          d.textContent = opt;
+          d.style.cssText = 'padding:6px 12px;cursor:pointer;';
+          d.onmouseenter = () => { d.style.background = 'rgba(255,255,255,.08)'; };
+          d.onmouseleave = () => { d.style.background = ''; };
+          d.addEventListener('mousedown', e => { e.preventDefault(); input.value = opt; scCommitVal(); });
+          ddEl.appendChild(d);
+        });
+
+        if (fr.length) {
+          const sep = document.createElement('div');
+          sep.textContent = '── remembered ──';
+          sep.style.cssText = 'padding:3px 10px;font-size:10px;color:rgba(255,255,255,.35);text-align:center;border-top:1px solid rgba(255,255,255,.06);margin-top:3px;pointer-events:none;';
+          ddEl.appendChild(sep);
+
+          fr.forEach(opt => {
+            const d = document.createElement('div');
+            d.style.cssText = 'padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;';
+            const span = document.createElement('span');
+            span.textContent = opt;
+            span.style.flex = '1';
+            const xb = document.createElement('button');
+            xb.textContent = '×';
+            xb.title = 'Forget this option';
+            xb.style.cssText = 'background:none;border:none;color:rgba(248,113,113,.7);cursor:pointer;padding:0;font-size:14px;line-height:1;flex-shrink:0;';
+            xb.addEventListener('mousedown', e => {
+              e.preventDefault(); e.stopPropagation();
+              const ix = remArr.indexOf(opt); if (ix >= 0) remArr.splice(ix, 1);
+              const ri = remOpts.indexOf(opt); if (ri >= 0) remOpts.splice(ri, 1);
+              saveCustomOptions();
+              renderDd(input.value);
+            });
+            d.appendChild(span); d.appendChild(xb);
+            d.onmouseenter = () => { d.style.background = 'rgba(255,255,255,.08)'; };
+            d.onmouseleave = () => { d.style.background = ''; };
+            d.addEventListener('mousedown', e => {
+              if (e.target === xb) return;
+              e.preventDefault(); input.value = opt; scCommitVal();
+            });
+            ddEl.appendChild(d);
+          });
+        }
+
+        ddEl.style.display = '';
+        repositionDd();
+      };
+
+      const scCommitVal = (moveDir = 0) => {
+        if (scCommitted) return;
+        scCommitted = true;
+        ddEl.remove();
+        const newVal = input.value.trim();
+        td.innerHTML = '';
+        td.classList.add('spr-cell-editable');
+        td.title = 'Click to edit';
+        td.replaceWith(td.cloneNode(false));
+        const newTd = document.querySelector(`tr[data-row-idx="${rowIdx}"] td[data-col="${col.key}"]`);
+        const targetTd = newTd || td;
+        handleCellCommit(col, row, rowIdx, newVal, prevContent, targetTd);
+        if (moveDir !== 0) {
+          moveFocusFromCell(rowIdx, col.key, moveDir);
+        } else if (targetTd) {
+          targetTd.focus();
+        }
+      };
+
+      const scCancelVal = () => {
+        if (scCommitted) return;
+        scCommitted = true;
+        ddEl.remove();
+        td.innerHTML = prevContent;
+        td.classList.add('spr-cell-editable');
+        td.addEventListener('click', e => {
+          if (e.shiftKey) {
+            if (!selAnchor) selAnchor = { rowIdx, colKey: col.key };
+            selectRangeTo(rowIdx, col.key);
+          } else {
+            clearSelection();
+            selAnchor = { rowIdx, colKey: col.key };
+            activateCellEditor(td, col, row, rowIdx);
+          }
+        });
+        td.focus();
+      };
+
+      input.addEventListener('focus', () => renderDd(input.value));
+      input.addEventListener('input', () => renderDd(input.value));
+      input.addEventListener('blur', () => { setTimeout(() => { if (!scCommitted) scCommitVal(); }, 200); });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter')  { e.preventDefault(); scCommitVal(); }
+        else if (e.key === 'Escape') { e.preventDefault(); scCancelVal(); }
+        else if (e.key === 'Tab')    { e.preventDefault(); scCommitVal(e.shiftKey ? -1 : 1); }
+      });
+
+      td.innerHTML = '';
+      td.appendChild(wrap);
+      input.focus();
+      if (input.select) input.select();
+      return; // early return — handled entirely above
+    }
 
     let editor;
     let committed = false;
@@ -1324,24 +1560,6 @@
           o.selected = true;
         }
         editor.appendChild(o);
-      }
-    } else if (col.type === 'select-custom') {
-      editor = document.createElement('select');
-      const blankOpt = document.createElement('option');
-      blankOpt.value = ''; blankOpt.textContent = '— Select —';
-      if (!currentVal) blankOpt.selected = true;
-      editor.appendChild(blankOpt);
-      for (const opt of (col.options || [])) {
-        const o = document.createElement('option');
-        o.value = opt; o.textContent = opt;
-        if (currentVal === opt) o.selected = true;
-        editor.appendChild(o);
-      }
-      // Allow custom value
-      if (currentVal && !(col.options || []).includes(currentVal)) {
-        const custom = document.createElement('option');
-        custom.value = currentVal; custom.textContent = currentVal; custom.selected = true;
-        editor.insertBefore(custom, editor.children[1]);
       }
     } else if (col.type === 'date') {
       editor = document.createElement('input');
@@ -1435,6 +1653,10 @@
         renderSingleCell(td, col, row, rowIdx);
         return;
       }
+      // Remember custom option for select-custom columns
+      if (col.type === 'select-custom' && newVal && !(col.options || []).includes(newVal)) {
+        rememberCustomOption(col.key, newVal);
+      }
       setCustomVal(row, col.key, newVal);
       pushUndo({ col, row, rowIdx, oldVal, newVal, cascaded: null });
       appendChangeLog({
@@ -1451,6 +1673,11 @@
     let finalVal = newVal;
     if (col.key === 'active') finalVal = newVal === 'Active';
     if (col.key === 'iep_due' || col.key === 'eval_due') finalVal = newVal || null;
+
+    // Remember custom option for select-custom columns (built-in)
+    if (col.type === 'select-custom' && finalVal && !(col.options || []).includes(String(finalVal))) {
+      rememberCustomOption(col.key, String(finalVal));
+    }
 
     // No change
     if (String(row[col.key] ?? '') === String(finalVal ?? '')) {
@@ -2045,6 +2272,8 @@
   }
 
   function exportPdf() {
+    const el = document.getElementById('sprPrintHeaderDate');
+    if (el) el.textContent = `Printed: ${new Date().toLocaleDateString()}`;
     window.print();
   }
 
@@ -2290,6 +2519,187 @@
       o.value = m; o.textContent = m;
       sel.appendChild(o);
     }
+  }
+
+  // ─── Compare CSV (Read-Only Diff) ─────────────────────────────────────────────
+
+  const COMPARE_FIELDS = [
+    { key: 'student_code',    label: 'Student'      },
+    { key: 'goal_desc',       label: 'IEP Goal'     },
+    { key: 'goal_area',       label: 'Goal Area'    },
+    { key: 'baseline',        label: 'Baseline'     },
+    { key: 'mastery',         label: 'Mastery'      },
+    { key: 'measurement_type',label: 'Meas. Type'   },
+    { key: 'class_context',   label: 'Class'        },
+    { key: 'iep_due',         label: 'IEP Due'      },
+    { key: 'eval_due',        label: 'Eval Due'     },
+  ];
+
+  function openCompareCsvModal() {
+    const overlay = document.getElementById('sprCompareOverlay');
+    const preview = document.getElementById('sprComparePreview');
+    const fileInput = document.getElementById('sprCompareFileInput');
+    if (!overlay) return;
+    if (preview) preview.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+    overlay.classList.add('open');
+  }
+
+  function closeCompareCsvModal() {
+    const overlay = document.getElementById('sprCompareOverlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function handleCompareCsvFile(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const rows = parseCsv(e.target.result);
+      if (!rows.length) { showToast('No data found in CSV', '#ef4444'); return; }
+      const firstRow = rows[0];
+      const hasHeader = firstRow.some(c => c === 'Student Code Name' || c === 'IEP Goal');
+      const dataRows = hasHeader ? rows.slice(1) : rows;
+      const parsed = dataRows.map(r => ({
+        student_code:      r[0] || '',
+        goal_desc:         r[1] || '',
+        goal_code:         r[2] || '',
+        active:            (r[3] || 'Active').toLowerCase() !== 'inactive',
+        baseline:          r[4] || '',
+        mastery:           r[5] || '',
+        class_context:     r[6] || '',
+        goal_area:         r[7] || '',
+        case_manager:      r[8] || '',
+        data_collector:    r[9] || '',
+        data_collector_email: r[10] || '',
+        measurement_type:  r[11] || 'Percent',
+        iep_due:           toIsoDate(r[12]) || '',
+        eval_due:          toIsoDate(r[13]) || '',
+      })).filter(r => r.student_code && r.goal_code);
+      buildCompareDiff(parsed);
+    };
+    reader.readAsText(file);
+  }
+
+  function buildCompareDiff(csvRows) {
+    const csvMap = {};
+    for (const r of csvRows) { if (r.goal_code) csvMap[r.goal_code] = r; }
+    const sprMap = {};
+    for (const r of allRows)  { if (r.goal_code) sprMap[r.goal_code] = r; }
+
+    let addedCount = 0, removedCount = 0, changedCount = 0, unchangedCount = 0;
+    const diffItems = []; // {type, csvRow, sprRow, changedCells}
+
+    // Added / Changed / Unchanged (from CSV perspective)
+    for (const csvRow of csvRows) {
+      const sprRow = sprMap[csvRow.goal_code];
+      if (!sprRow) {
+        addedCount++;
+        diffItems.push({ type: 'added', csvRow, sprRow: null, changedCells: {} });
+      } else {
+        const changedCells = {};
+        for (const { key } of COMPARE_FIELDS) {
+          const cv = String(csvRow[key] ?? '');
+          const sv = String(sprRow[key] ?? '');
+          if (cv !== sv) changedCells[key] = { old: sv, new: cv };
+        }
+        if (Object.keys(changedCells).length > 0) {
+          changedCount++;
+          diffItems.push({ type: 'changed', csvRow, sprRow, changedCells });
+        } else {
+          unchangedCount++;
+          diffItems.push({ type: 'unchanged', csvRow, sprRow, changedCells: {} });
+        }
+      }
+    }
+
+    // Removed (in spreadsheet but not in CSV)
+    for (const sprRow of allRows) {
+      if (!csvMap[sprRow.goal_code]) {
+        removedCount++;
+        diffItems.push({ type: 'removed', csvRow: null, sprRow, changedCells: {} });
+      }
+    }
+
+    // Summary
+    const summaryEl = document.getElementById('sprCompareSummary');
+    if (summaryEl) {
+      summaryEl.textContent =
+        `${addedCount} added · ${removedCount} removed · ${changedCount} changed · ${unchangedCount} unchanged`;
+    }
+
+    // Build table header
+    const table = document.getElementById('sprCompareTable');
+    if (!table) return;
+    const headerTr = table.querySelector('thead tr');
+    if (headerTr) {
+      headerTr.innerHTML = `<th>Status</th><th>Goal Code</th>` +
+        COMPARE_FIELDS.map(f => `<th>${escapeHtml(f.label)}</th>`).join('');
+    }
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    let showUnchanged = false;
+
+    function renderCompareRows() {
+      tbody.innerHTML = '';
+      for (const item of diffItems) {
+        if (item.type === 'unchanged' && !showUnchanged) continue;
+        const tr = document.createElement('tr');
+        tr.dataset.diffType = item.type;
+
+        let statusText = '';
+        if (item.type === 'added')     { statusText = '🟢 Added';   tr.style.background = 'rgba(34,197,94,.1)'; }
+        if (item.type === 'removed')   { statusText = '🔴 Removed'; tr.style.background = 'rgba(248,113,113,.1)'; }
+        if (item.type === 'changed')   { statusText = '🟡 Changed'; }
+        if (item.type === 'unchanged') { statusText = '─';          tr.style.opacity = '0.4'; }
+
+        const statusTd = document.createElement('td');
+        statusTd.textContent = statusText;
+        tr.appendChild(statusTd);
+
+        const rowData = item.csvRow || item.sprRow;
+        const goalTd = document.createElement('td');
+        goalTd.textContent = rowData.goal_code || '';
+        tr.appendChild(goalTd);
+
+        for (const { key } of COMPARE_FIELDS) {
+          const td = document.createElement('td');
+          if (item.type === 'removed') {
+            td.textContent = item.sprRow[key] || '';
+          } else if (item.type === 'changed' && item.changedCells[key]) {
+            const diff = item.changedCells[key];
+            td.style.background = 'rgba(250,204,21,.18)';
+            td.innerHTML =
+              `<span style="text-decoration:line-through;opacity:.55;font-size:11px;display:block;">${escapeHtml(diff.old)}</span>` +
+              `<span>${escapeHtml(diff.new)}</span>`;
+            td.title = `${diff.old} → ${diff.new}`;
+          } else {
+            td.textContent = (item.csvRow || item.sprRow)[key] || '';
+          }
+          tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    renderCompareRows();
+
+    const toggleBtn = document.getElementById('sprCompareShowUnchangedBtn');
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        showUnchanged = !showUnchanged;
+        const label = showUnchanged ? '👁 Hide Unchanged' : '👁 Show Unchanged';
+        toggleBtn.textContent = label;
+        toggleBtn.setAttribute('aria-label', showUnchanged ? 'Hide unchanged rows' : 'Show unchanged rows');
+        renderCompareRows();
+      };
+      toggleBtn.textContent = '👁 Show Unchanged';
+      toggleBtn.setAttribute('aria-label', 'Show unchanged rows');
+    }
+
+    const preview = document.getElementById('sprComparePreview');
+    if (preview) preview.style.display = '';
   }
 
   // ─── Change Log Modal ────────────────────────────────────────────────────────
@@ -2694,6 +3104,59 @@
       });
     }
 
+    // Colors toggle button
+    const colorsBtn = document.getElementById('sprColorsBtn');
+    if (colorsBtn) {
+      // Set initial state
+      colorsBtn.style.opacity = colorsEnabled ? '' : '0.5';
+      colorsBtn.title = colorsEnabled
+        ? 'Click to disable conditional formatting'
+        : 'Click to enable conditional formatting';
+      colorsBtn.addEventListener('click', () => {
+        colorsEnabled = !colorsEnabled;
+        saveColors();
+        colorsBtn.style.opacity = colorsEnabled ? '' : '0.5';
+        colorsBtn.title = colorsEnabled
+          ? 'Click to disable conditional formatting'
+          : 'Click to enable conditional formatting';
+        renderSpreadsheet();
+      });
+    }
+
+    // Print button
+    const printBtn = document.getElementById('sprPrintBtn');
+    if (printBtn) printBtn.addEventListener('click', exportPdf);
+
+    // Compare CSV button + modal
+    const compareCsvBtn = document.getElementById('sprCompareCsvBtn');
+    if (compareCsvBtn) compareCsvBtn.addEventListener('click', openCompareCsvModal);
+
+    const compareOverlay = document.getElementById('sprCompareOverlay');
+    if (compareOverlay) {
+      compareOverlay.addEventListener('click', e => { if (e.target === compareOverlay) closeCompareCsvModal(); });
+      compareOverlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeCompareCsvModal(); });
+      const closeBtn = compareOverlay.querySelector('#sprCompareCloseBtn');
+      if (closeBtn) closeBtn.addEventListener('click', closeCompareCsvModal);
+    }
+
+    const compareDropZone = document.getElementById('sprCompareDropZone');
+    const compareFileInput = document.getElementById('sprCompareFileInput');
+    if (compareDropZone && compareFileInput) {
+      compareDropZone.addEventListener('click', () => compareFileInput.click());
+      compareDropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') compareFileInput.click(); });
+      compareDropZone.addEventListener('dragover', e => { e.preventDefault(); compareDropZone.classList.add('drag-over'); });
+      compareDropZone.addEventListener('dragleave', () => compareDropZone.classList.remove('drag-over'));
+      compareDropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        compareDropZone.classList.remove('drag-over');
+        const file = e.dataTransfer?.files[0];
+        if (file) handleCompareCsvFile(file);
+      });
+      compareFileInput.addEventListener('change', () => {
+        if (compareFileInput.files[0]) handleCompareCsvFile(compareFileInput.files[0]);
+      });
+    }
+
     // Beforeunload warning for pending drafts
     window.addEventListener('beforeunload', e => {
       if (draftRows.length > 0) {
@@ -2712,6 +3175,8 @@
     loadRowOrder();
     loadHiddenCols();
     loadChangeLog();
+    loadColors();
+    loadCustomOptions();
     setupEventHandlers();
     setupKeyboardNavigation();
     setupRowDragHandlers();
