@@ -485,11 +485,52 @@
 
     /* Print styles */
     @media print {
+      /* ── Hide UI chrome ──────────────────────────────────────────────────── */
       .tc-topbar, .tc-sidebar, .spr-toolbar, .spr-status-bar,
-      .spr-add-row-btn-wrap, .spr-more-wrap { display: none !important; }
-      .tc-main { height: auto; overflow: visible; }
-      .spr-table-wrap { overflow: visible; border: none; }
-      .spr-table th:first-child, .spr-table td:first-child { position: static; }
+      .spr-add-row-btn-wrap, .spr-more-wrap, .spr-drag-handle,
+      .spr-goal-count-badge, .spr-warn-icon, .spr-bulk-toolbar,
+      td[data-col="_actions"] { display: none !important; }
+
+      /* ── Layout ──────────────────────────────────────────────────────────── */
+      body { background: #fff !important; color: #000 !important; }
+      .tc-app, .tc-shell { display: block !important; }
+      .tc-main { height: auto !important; overflow: visible !important; padding: 0 !important; }
+      .spr-table-wrap { overflow: visible !important; border: none !important; border-radius: 0 !important; }
+
+      /* ── Print header ────────────────────────────────────────────────────── */
+      .spr-print-header { display: block !important; margin-bottom: 10px; }
+      .spr-print-header h2 { font-size: 14px; font-weight: 700; color: #000; margin: 0 0 2px; }
+      .spr-print-header p  { font-size: 10px; color: #555; margin: 0; }
+
+      /* ── Table ───────────────────────────────────────────────────────────── */
+      .spr-table { font-size: 10px !important; width: 100% !important; }
+      .spr-table th, .spr-table td {
+        border: 1px solid #bbb !important;
+        background: #fff !important;
+        color: #000 !important;
+        padding: 2px 5px !important;
+        max-width: none !important;
+        white-space: normal !important;
+      }
+      .spr-table th { background: #eee !important; font-size: 9px !important; }
+
+      /* ── Remove frozen column positioning ───────────────────────────────── */
+      .spr-table th:first-child,
+      .spr-table td:first-child { position: static !important; border-right: 1px solid #bbb !important; }
+
+      /* ── Strip conditional formatting inline colors ──────────────────────── */
+      .spr-table td { background-color: #fff !important; }
+
+      /* ── Active/Inactive text: remove color ─────────────────────────────── */
+      .spr-table td span[style*="color"] { color: #000 !important; }
+
+      /* ── Strip row opacity classes ───────────────────────────────────────── */
+      .spr-row-inactive td, .spr-row-archived td { opacity: 1 !important; text-decoration: none !important; }
+      .spr-row-draft { display: none !important; }
+
+      /* ── Page breaks ─────────────────────────────────────────────────────── */
+      tr { break-inside: avoid; }
+      .spr-group-sep { break-before: auto; }
     }
 
     /* ─── Custom column header ──────────────────────────────────────────────── */
@@ -645,6 +686,49 @@
     .spr-changelog-table td:nth-child(4), .spr-changelog-table td:nth-child(5), .spr-changelog-table td:nth-child(6) {
       max-width: 180px;
     }
+
+    /* ─── Compare CSV modal ─────────────────────────────────────────────────── */
+    .spr-compare-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+    }
+    .spr-compare-overlay.open { display: flex; }
+    .spr-compare-modal {
+      background: #1e2133;
+      border: 1px solid var(--rc-glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 95%;
+      max-width: 1100px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      overflow-y: auto;
+    }
+    .spr-compare-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .spr-compare-header h2 { margin: 0; font-size: 18px; }
+    .spr-compare-header .spr-compare-actions { display: flex; gap: 8px; }
+    .spr-compare-summary {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    .spr-diff-removed td { background: rgba(248,113,113,0.1) !important; }
   </style>
 </head>
 <body>
@@ -776,6 +860,12 @@
       </aside>
 
       <main class="tc-main" id="sprMain">
+        <!-- Print header (hidden on screen, visible when printing) -->
+        <div class="spr-print-header" style="display:none;">
+          <h2>Master Spreadsheet</h2>
+          <p id="sprPrintHeaderDate"></p>
+        </div>
+
         <!-- Page header -->
         <div class="spr-header">
           <h1>📊 Master Spreadsheet</h1>
@@ -804,6 +894,7 @@
             <div class="spr-col-dropdown" id="sprColDropdown" role="menu"></div>
           </div>
           <button class="spr-btn" id="sprAddColBtn" title="Add custom column">＋ Column</button>
+          <button class="spr-btn" id="sprColorsBtn" title="Click to disable conditional formatting">🎨 Colors</button>
           <div class="spr-sep"></div>
           <button class="spr-btn" id="sprChangeLogBtn" title="View change history">📋 Change Log</button>
           <button class="spr-btn" id="sprBackupBtn" title="Download full backup as JSON">💾 Backup</button>
@@ -811,6 +902,7 @@
           <input type="file" id="sprRestoreInput" accept=".json" style="display:none;" aria-label="Choose backup JSON file" />
           <div class="spr-sep"></div>
           <button class="spr-btn" id="sprImportBtn">📥 Import CSV</button>
+          <button class="spr-btn" id="sprCompareCsvBtn" title="Compare a CSV file against current data (read-only)">📊 Compare CSV</button>
           <div class="spr-export-wrap">
             <button class="spr-btn" id="sprExportBtn">📤 Export ▾</button>
             <div class="spr-export-dropdown" id="sprExportDropdown" role="menu">
@@ -820,6 +912,7 @@
               <button id="sprExportPdf">🖨 Print / PDF</button>
             </div>
           </div>
+          <button class="spr-btn" id="sprPrintBtn" title="Print spreadsheet">🖨 Print</button>
         </div>
 
         <!-- Spreadsheet table -->
@@ -929,6 +1022,41 @@
       </div>
       <div id="sprChangeLogContent">
         <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Compare CSV modal -->
+  <div class="spr-compare-overlay" id="sprCompareOverlay" role="dialog" aria-modal="true" aria-label="Compare CSV">
+    <div class="spr-compare-modal">
+      <div class="spr-compare-header">
+        <h2>📊 Compare CSV</h2>
+        <div class="spr-compare-actions">
+          <button class="spr-btn spr-btn-sm" id="sprCompareCloseBtn">✕ Close</button>
+        </div>
+      </div>
+
+      <!-- File drop zone -->
+      <div class="spr-drop-zone" id="sprCompareDropZone" tabindex="0" role="button" aria-label="Drop CSV file here or click to browse">
+        <div style="font-size: 32px;">📊</div>
+        <div style="margin-top: 8px; font-weight: 600;">Drop CSV file here or click to browse</div>
+        <p>Compares against current spreadsheet data — read-only, no changes are applied</p>
+        <input type="file" id="sprCompareFileInput" accept=".csv" style="display:none;" aria-label="Choose CSV file to compare" />
+      </div>
+
+      <!-- Diff preview -->
+      <div id="sprComparePreview" style="display:none;">
+        <div class="spr-compare-summary" id="sprCompareSummary"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);">Matching on goal_code · 🟢 Added &nbsp; 🔴 Removed &nbsp; 🟡 Changed cells highlighted</div>
+          <button class="spr-btn spr-btn-sm" id="sprCompareShowUnchangedBtn">👁 Show Unchanged</button>
+        </div>
+        <div style="max-height: 50vh; overflow-y: auto; border-radius: 8px; border: 1px solid var(--rc-glass-border);">
+          <table class="spr-diff-table" id="sprCompareTable">
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
