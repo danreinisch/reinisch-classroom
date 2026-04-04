@@ -518,6 +518,7 @@
       .tc-topbar, .tc-sidebar, .spr-toolbar, .spr-status-bar,
       .spr-add-row-btn-wrap, .spr-more-wrap, .spr-drag-handle,
       .spr-goal-count-badge, .spr-warn-icon, .spr-bulk-toolbar,
+      .spr-comment-dot,
       td[data-col="_actions"], th[data-key="_actions"] { display: none !important; }
 
       /* ── Layout ──────────────────────────────────────────────────────────── */
@@ -549,6 +550,9 @@
 
       /* ── Strip conditional formatting inline colors ──────────────────────── */
       .spr-table td { background-color: #fff !important; }
+
+      /* ── Reset recently-edited indicator ────────────────────────────────── */
+      .spr-recently-edited { border-right: none !important; }
 
       /* ── Active/Inactive text: remove color ─────────────────────────────── */
       .spr-table td span[style*="color"] { color: #000 !important; }
@@ -808,6 +812,25 @@
       user-select: none;
     }
     .spr-collapse-toggle:hover { opacity: 1; }
+
+    /* ─── Cell comment indicator ────────────────────────────────────────────────── */
+    .spr-comment-dot {
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-top: 6px solid #6366f1;
+      pointer-events: none;
+    }
+    .spr-has-comment { position: relative; }
+
+    /* ─── Recently-edited cell indicator ───────────────────────────────────────── */
+    .spr-recently-edited { border-right: 2px solid rgba(99,102,241,0.4) !important; }
+
+    /* ─── DB sync status ────────────────────────────────────────────────────────── */
+    .spr-sync-status { color: #818cf8; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -992,6 +1015,7 @@
               <button id="sprRestoreAutoBackupBtn" title="Restore from last auto-backup">🔄 Restore Auto-Backup</button>
               <button id="sprImportBtn">📥 Import CSV</button>
               <button id="sprCompareCsvBtn" title="Compare a CSV file against current data (read-only)">📊 Compare CSV</button>
+              <button id="sprEmailDataCollectorsBtn" title="Email all data collectors in current view">📧 Email Data Collectors</button>
             </div>
             <input type="file" id="sprRestoreInput" accept=".json" style="display:none;" aria-label="Choose backup JSON file" />
           </div>
@@ -1030,6 +1054,7 @@
           <span id="sprStatusCount">Loading…</span>
           <span id="sprStatusSave"></span>
           <span id="sprStatusTime"></span>
+          <span id="sprSyncStatus" class="spr-sync-status"></span>
         </div>
       </main>
     </div>
