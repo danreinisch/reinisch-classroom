@@ -421,6 +421,7 @@
       min-width: 40px;
     }
     .spr-progress-bar { height: 100%; background: #22c55e; border-radius: 3px; }
+    .spr-sparkline { flex-shrink: 0; margin-left: 4px; vertical-align: middle; }
 
     /* Add row */
     .spr-add-row-btn-wrap { padding: 10px 0; flex-shrink: 0; }
@@ -521,20 +522,24 @@
       .spr-comment-dot,
       td[data-col="_actions"], th[data-key="_actions"] { display: none !important; }
 
+      /* ── Sparklines hidden in print to save space ────────────────────────── */
+      .spr-sparkline { display: none !important; }
+
       /* ── Layout ──────────────────────────────────────────────────────────── */
-      body { background: #fff !important; color: #000 !important; }
+      body:not(.spr-print-dark) { background: #fff !important; color: #000 !important; }
       .tc-app, .tc-shell { display: block !important; }
       .tc-main { height: auto !important; overflow: visible !important; padding: 0 !important; }
       .spr-table-wrap { overflow: visible !important; border: none !important; border-radius: 0 !important; }
 
       /* ── Print header ────────────────────────────────────────────────────── */
       .spr-print-header { display: block !important; margin-bottom: 10px; }
-      .spr-print-header h2 { font-size: 14px; font-weight: 700; color: #000; margin: 0 0 2px; }
-      .spr-print-header p  { font-size: 10px; color: #555; margin: 0; }
+      body:not(.spr-print-dark) .spr-print-header h2 { font-size: 14px; font-weight: 700; color: #000; margin: 0 0 2px; }
+      body:not(.spr-print-dark) .spr-print-header p  { font-size: 10px; color: #555; margin: 0; }
 
       /* ── Table ───────────────────────────────────────────────────────────── */
       .spr-table { font-size: 10px !important; width: 100% !important; }
-      .spr-table th, .spr-table td {
+      body:not(.spr-print-dark) .spr-table th,
+      body:not(.spr-print-dark) .spr-table td {
         border: 1px solid #bbb !important;
         background: #fff !important;
         color: #000 !important;
@@ -542,20 +547,20 @@
         max-width: none !important;
         white-space: normal !important;
       }
-      .spr-table th { background: #eee !important; font-size: 9px !important; }
+      body:not(.spr-print-dark) .spr-table th { background: #eee !important; font-size: 9px !important; }
 
       /* ── Remove frozen column positioning ───────────────────────────────── */
       .spr-table th:first-child,
       .spr-table td:first-child { position: static !important; border-right: 1px solid #bbb !important; }
 
       /* ── Strip conditional formatting inline colors ──────────────────────── */
-      .spr-table td { background-color: #fff !important; }
+      body:not(.spr-print-dark) .spr-table td { background-color: #fff !important; }
 
       /* ── Reset recently-edited indicator ────────────────────────────────── */
       .spr-recently-edited { border-right: none !important; }
 
       /* ── Active/Inactive text: remove color ─────────────────────────────── */
-      .spr-table td span[style*="color"] { color: #000 !important; }
+      body:not(.spr-print-dark) .spr-table td span[style*="color"] { color: #000 !important; }
 
       /* ── Strip row opacity classes ───────────────────────────────────────── */
       .spr-row-inactive td, .spr-row-archived td { opacity: 1 !important; text-decoration: none !important; }
@@ -564,6 +569,28 @@
       /* ── Page breaks ─────────────────────────────────────────────────────── */
       tr { break-inside: avoid; }
       .spr-group-sep { break-before: auto; }
+
+      /* ── Dark print mode — activated by .spr-print-dark on body ─────────── */
+      body.spr-print-dark { background: #0f1219 !important; color: #e2e8f0 !important; }
+      body.spr-print-dark .tc-main { background: #0f1219 !important; }
+      body.spr-print-dark .spr-table th,
+      body.spr-print-dark .spr-table td {
+        border-color: rgba(255,255,255,0.15) !important;
+        background: #181c2b !important;
+        color: #e2e8f0 !important;
+        padding: 2px 5px !important;
+        max-width: none !important;
+        white-space: normal !important;
+      }
+      body.spr-print-dark .spr-table th {
+        background: #1e2133 !important;
+        color: #e2e8f0 !important;
+        font-size: 9px !important;
+      }
+      body.spr-print-dark .spr-print-header h2 { font-size: 14px; font-weight: 700; color: #e2e8f0 !important; margin: 0 0 2px; }
+      body.spr-print-dark .spr-print-header p  { font-size: 10px; color: #94a3b8 !important; margin: 0; }
+      /* Re-enable conditional formatting colors in dark print mode */
+      body.spr-print-dark .spr-table td { background-color: inherit !important; }
     }
 
     /* ─── Custom column header ──────────────────────────────────────────────── */
@@ -1005,6 +1032,7 @@
           </div>
           <button class="spr-btn" id="sprAddColBtn" title="Add custom column">＋ Column</button>
           <button class="spr-btn" id="sprColorsBtn" title="Click to disable conditional formatting">🎨 Colors</button>
+          <button class="spr-btn" id="sprCfRulesBtn" title="Customize conditional formatting thresholds">⚙️ Format Rules</button>
           <div class="spr-sep"></div>
           <div class="spr-more-tools-wrap" style="position:relative;">
             <button class="spr-btn" id="sprMoreToolsBtn">⋯ More ▾</button>
@@ -1026,6 +1054,7 @@
               <button id="sprExportJson">📋 Export JSON</button>
               <button id="sprExportMd">📝 Export Markdown</button>
               <button id="sprExportPdf">🖨 Print / PDF</button>
+              <button id="sprPrintDarkToggle">🌙 Print Dark Mode: Off</button>
             </div>
           </div>
         </div>
@@ -1148,6 +1177,7 @@
       <div class="spr-compare-header">
         <h2>📊 Compare CSV</h2>
         <div class="spr-compare-actions">
+          <button class="spr-btn spr-btn-sm" id="sprCompareApplyBtn" style="display:none;">✅ Apply Changes</button>
           <button class="spr-btn spr-btn-sm" id="sprCompareCloseBtn">✕ Close</button>
         </div>
       </div>
@@ -1173,6 +1203,55 @@
             <tbody></tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conditional Formatting Rules modal -->
+  <div class="spr-import-overlay" id="sprCfRulesOverlay" role="dialog" aria-modal="true" aria-label="Conditional Formatting Rules">
+    <div class="spr-import-modal" style="max-width:480px;">
+      <h2>⚙️ Conditional Formatting Rules</h2>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
+        <div>
+          <div style="font-weight:600;margin-bottom:8px;font-size:13px;">Baseline/Mastery Ratio (Percent type)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label style="font-size:12px;color:rgba(255,255,255,0.6);">
+              Green when ratio ≥
+              <input type="number" id="sprCfGreenRatio" min="0" max="1" step="0.01" style="margin-top:4px;width:100%;padding:6px 10px;border-radius:7px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,0.07);color:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+              <span style="font-size:11px;opacity:0.5;">(0–1, e.g. 0.9 = 90%)</span>
+            </label>
+            <label style="font-size:12px;color:rgba(255,255,255,0.6);">
+              Red when ratio &lt;
+              <input type="number" id="sprCfRedRatio" min="0" max="1" step="0.01" style="margin-top:4px;width:100%;padding:6px 10px;border-radius:7px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,0.07);color:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+              <span style="font-size:11px;opacity:0.5;">(0–1, e.g. 0.5 = 50%)</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:8px;font-size:13px;">IEP/Eval Due Date Thresholds (days until due)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <label style="font-size:12px;color:rgba(255,255,255,0.6);">
+              🔴 Red when &lt;
+              <input type="number" id="sprCfRedDays" min="-365" max="365" step="1" style="margin-top:4px;width:100%;padding:6px 10px;border-radius:7px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,0.07);color:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+              <span style="font-size:11px;opacity:0.5;">days (0 = overdue)</span>
+            </label>
+            <label style="font-size:12px;color:rgba(255,255,255,0.6);">
+              🟠 Orange when &lt;
+              <input type="number" id="sprCfOrangeDays" min="0" max="730" step="1" style="margin-top:4px;width:100%;padding:6px 10px;border-radius:7px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,0.07);color:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+              <span style="font-size:11px;opacity:0.5;">days</span>
+            </label>
+            <label style="font-size:12px;color:rgba(255,255,255,0.6);">
+              🟡 Yellow when &lt;
+              <input type="number" id="sprCfYellowDays" min="0" max="730" step="1" style="margin-top:4px;width:100%;padding:6px 10px;border-radius:7px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,0.07);color:inherit;font-size:13px;outline:none;box-sizing:border-box;" />
+              <span style="font-size:11px;opacity:0.5;">days</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
+        <button class="spr-btn" id="sprCfRulesResetBtn" style="margin-right:auto;">↺ Reset to Defaults</button>
+        <button class="spr-btn" id="sprCfRulesCancelBtn">Cancel</button>
+        <button class="spr-btn spr-btn-primary" id="sprCfRulesSaveBtn">💾 Save Rules</button>
       </div>
     </div>
   </div>
