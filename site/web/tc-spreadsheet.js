@@ -125,13 +125,15 @@
   let editsSinceBackup = 0;     // counter for auto-backup trigger
   let compareParsedRows = [];   // last CSV rows loaded in Compare modal
   let printDarkMode = false;    // dark print mode toggle
-  let cfRules = {
+
+  const CF_RULES_DEFAULTS = {
     baselineGreenRatio: 0.9,    // baseline/mastery ratio >= this → green
     baselineRedRatio: 0.5,      // baseline/mastery ratio < this → red
     dateRedDays: 0,             // days until due < this → red (overdue)
     dateOrangeDays: 30,         // days until due < this → orange
     dateYellowDays: 60,         // days until due < this → yellow
   };
+  let cfRules = { ...CF_RULES_DEFAULTS };
   let progressHistory = {};     // goal_code → [{value, date}, ...] sorted by date
 
   // ─── PR 2: Views & Navigation State ──────────────────────────────────────────
@@ -469,17 +471,10 @@
 
   function loadCfRules() {
     try {
-      const defaults = {
-        baselineGreenRatio: 0.9,
-        baselineRedRatio: 0.5,
-        dateRedDays: 0,
-        dateOrangeDays: 30,
-        dateYellowDays: 60,
-      };
       const stored = JSON.parse(localStorage.getItem(RC_CF_RULES_LS) || '{}');
-      cfRules = Object.assign({}, defaults, stored);
+      cfRules = Object.assign({}, CF_RULES_DEFAULTS, stored);
     } catch (_e) {
-      cfRules = { baselineGreenRatio: 0.9, baselineRedRatio: 0.5, dateRedDays: 0, dateOrangeDays: 30, dateYellowDays: 60 };
+      cfRules = { ...CF_RULES_DEFAULTS };
     }
   }
 
@@ -3351,9 +3346,10 @@
     // Show/hide Apply button based on actionable changes
     const applyBtn = document.getElementById('sprCompareApplyBtn');
     if (applyBtn) {
-      if (addedCount + changedCount > 0) {
+      const actionableCount = addedCount + changedCount;
+      if (actionableCount > 0) {
         applyBtn.style.display = '';
-        applyBtn.textContent = `✅ Apply ${addedCount + changedCount} change${(addedCount + changedCount) !== 1 ? 's' : ''}`;
+        applyBtn.textContent = `✅ Apply ${actionableCount} change${actionableCount !== 1 ? 's' : ''}`;
       } else {
         applyBtn.style.display = 'none';
       }
@@ -3738,7 +3734,7 @@
       showToast('Green ratio must be greater than red ratio', '#ef4444');
       return;
     }
-    if (orangeDays > yellowDays) {
+    if (orangeDays >= yellowDays) {
       showToast('Orange days threshold must be less than yellow days threshold', '#ef4444');
       return;
     }
@@ -3757,13 +3753,7 @@
   }
 
   function resetCfRules() {
-    cfRules = {
-      baselineGreenRatio: 0.9,
-      baselineRedRatio: 0.5,
-      dateRedDays: 0,
-      dateOrangeDays: 30,
-      dateYellowDays: 60,
-    };
+    cfRules = { ...CF_RULES_DEFAULTS };
     saveCfRules();
     renderSpreadsheet();
     closeCfRulesModal();
