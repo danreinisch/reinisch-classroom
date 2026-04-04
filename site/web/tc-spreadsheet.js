@@ -96,6 +96,9 @@
   const AUTO_BACKUP_INTERVAL_EDITS = 25;
   const RC_AUTO_BACKUP_LS    = 'rc-spreadsheet-auto-backup';
   const RC_AUTO_BACKUP_TS_LS = 'rc-spreadsheet-auto-backup-ts';
+  const RC_COL_ORDER_LS   = 'rc-spreadsheet-col-order';
+  const RC_VIEWS_LS       = 'rc-spreadsheet-views';
+  const RC_COLLAPSED_LS   = 'rc-spreadsheet-collapsed-students';
 
   // ─── Custom Columns & Row Order State ────────────────────────────────────────
 
@@ -115,6 +118,11 @@
   let colorsEnabled = true;     // conditional formatting toggle
   let customOptions = {};       // {colKey: [val, ...]} remembered custom values per column
   let editsSinceBackup = 0;     // counter for auto-backup trigger
+
+  // ─── PR 2: Views & Navigation State ──────────────────────────────────────────
+  let columnOrder = [];          // [colKey, ...] user-preferred column order
+  let savedViews = [];           // [{name, filters}] preset filter combinations
+  let collapsedStudents = new Set(); // student codes with collapsed goal rows
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -338,6 +346,44 @@
     arr.unshift(v);                    // most-recently-used first
     if (arr.length > CUSTOM_OPTS_MAX) arr.length = CUSTOM_OPTS_MAX;
     saveCustomOptions();
+  }
+
+  // ─── Column Order Persistence ────────────────────────────────────────────────
+
+  function loadColumnOrder() {
+    try { columnOrder = JSON.parse(localStorage.getItem(RC_COL_ORDER_LS) || '[]'); }
+    catch (_e) { columnOrder = []; }
+  }
+
+  function saveColumnOrder() {
+    try { localStorage.setItem(RC_COL_ORDER_LS, JSON.stringify(columnOrder)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  // ─── Saved Views Persistence ─────────────────────────────────────────────────
+
+  function loadViews() {
+    try { savedViews = JSON.parse(localStorage.getItem(RC_VIEWS_LS) || '[]'); }
+    catch (_e) { savedViews = []; }
+  }
+
+  function saveViews() {
+    try { localStorage.setItem(RC_VIEWS_LS, JSON.stringify(savedViews)); }
+    catch (_e) { /* ignore */ }
+  }
+
+  // ─── Collapsed Students Persistence ─────────────────────────────────────────
+
+  function loadCollapsedStudents() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(RC_COLLAPSED_LS) || '[]');
+      collapsedStudents = new Set(arr);
+    } catch (_e) { collapsedStudents = new Set(); }
+  }
+
+  function saveCollapsedStudents() {
+    try { localStorage.setItem(RC_COLLAPSED_LS, JSON.stringify([...collapsedStudents])); }
+    catch (_e) { /* ignore */ }
   }
 
   // ─── Inline Validation ───────────────────────────────────────────────────────
@@ -1151,7 +1197,15 @@
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   function allColumns() {
-    return [...COLUMNS, ...customColumns];
+    const combined = [...COLUMNS, ...customColumns];
+    if (!columnOrder.length) return combined;
+    const orderMap = {};
+    columnOrder.forEach((key, idx) => { orderMap[key] = idx; });
+    return combined.sort((a, b) => {
+      const ai = orderMap[a.key] !== undefined ? orderMap[a.key] : Infinity;
+      const bi = orderMap[b.key] !== undefined ? orderMap[b.key] : Infinity;
+      return ai - bi;
+    });
   }
 
   function visibleColumns() {
@@ -1187,9 +1241,55 @@
       if (col.key !== '_actions') {
         const handle = document.createElement('span');
         handle.className = 'spr-resize-handle';
+        handle.draggable = false; // don't conflict with column drag
         handle.addEventListener('click', e => e.stopPropagation()); // don't trigger sort
         th.appendChild(handle);
         setupColumnResize(th, col.key);
+      }
+
+      // Column drag-and-drop (all columns except _actions)
+      if (col.key !== '_actions') {
+        th.draggable = true;
+        th.addEventListener('dragstart', e => {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', col.key);
+          th.classList.add('spr-th-dragging');
+        });
+        th.addEventListener('dragover', e => {
+          if (!e.dataTransfer.types.includes('text/plain')) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          document.querySelectorAll('.spr-th-drag-over').forEach(el => el.classList.remove('spr-th-drag-over'));
+          if (!th.classList.contains('spr-th-dragging')) th.classList.add('spr-th-drag-over');
+        });
+        th.addEventListener('dragleave', () => th.classList.remove('spr-th-drag-over'));
+        th.addEventListener('drop', e => {
+          e.preventDefault();
+          th.classList.remove('spr-th-drag-over');
+          const sourceKey = e.dataTransfer.getData('text/plain');
+          if (!sourceKey || sourceKey === col.key) return;
+          const allCols = [...COLUMNS, ...customColumns];
+          // Build current order array from all column keys
+          const currentOrder = (columnOrder.length ? columnOrder : allCols.map(c => c.key));
+          // Ensure all current column keys are represented
+          const fullOrder = allCols.map(c => c.key).map(k => {
+            const existingIdx = currentOrder.indexOf(k);
+            return { key: k, idx: existingIdx >= 0 ? existingIdx : Infinity };
+          }).sort((a, b) => a.idx - b.idx).map(x => x.key);
+          const srcIdx = fullOrder.indexOf(sourceKey);
+          const tgtIdx = fullOrder.indexOf(col.key);
+          if (srcIdx < 0 || tgtIdx < 0) return;
+          fullOrder.splice(srcIdx, 1);
+          fullOrder.splice(tgtIdx, 0, sourceKey);
+          columnOrder = fullOrder;
+          saveColumnOrder();
+          renderSpreadsheet();
+        });
+        th.addEventListener('dragend', () => {
+          document.querySelectorAll('.spr-th-dragging, .spr-th-drag-over').forEach(el => {
+            el.classList.remove('spr-th-dragging', 'spr-th-drag-over');
+          });
+        });
       }
 
       // Right-click context menu for custom columns (remove option)
@@ -1266,6 +1366,9 @@
       const isFirst = row.student_code !== lastStudentCode;
       if (isFirst && lastStudentCode !== null) bandIndex++;
       if (isFirst) lastStudentCode = row.student_code;
+
+      // Skip collapsed non-first rows (except draft rows)
+      if (!row._draft && !isFirst && collapsedStudents.has(row.student_code)) continue;
 
       const tr = document.createElement('tr');
       tr.dataset.rowIdx = i;
@@ -1345,15 +1448,36 @@
       const tr = td.closest('tr') || { dataset: {} };
       const isFirstOfStudent = tr.dataset && tr.dataset.firstOfStudent === '1';
       const goalCount = tr.dataset ? parseInt(tr.dataset.studentGoalCount || '0', 10) : 0;
-      const countBadge = (isFirstOfStudent && goalCount > 0)
-        ? ` <span class="spr-goal-count-badge" title="${goalCount} goal${goalCount !== 1 ? 's' : ''}">×${goalCount}</span>`
+      const isCollapsed = collapsedStudents.has(row.student_code);
+      // Collapse toggle: show on first row only when student has more than 1 goal
+      const toggleHtml = (isFirstOfStudent && goalCount > 1)
+        ? `<span class="spr-collapse-toggle" data-student="${escapeHtml(row.student_code)}" title="${isCollapsed ? 'Expand' : 'Collapse'}">${isCollapsed ? '▶' : '▼'}</span>`
         : '';
-      let html = `${dragHandleHtml}<strong>${escapeHtml(val || '')}</strong>${countBadge}`;
+      const countBadge = (isFirstOfStudent && goalCount > 0)
+        ? ` <span class="spr-goal-count-badge" title="${goalCount} goal${goalCount !== 1 ? 's' : ''}">×${goalCount}</span>${isCollapsed && goalCount > 1 ? `<span style="font-size:10px;opacity:0.5;"> (+${goalCount - 1} more)</span>` : ''}`
+        : '';
+      let html = `${toggleHtml}${dragHandleHtml}<strong>${escapeHtml(val || '')}</strong>${countBadge}`;
       if (row._draft) html += `<span class="spr-draft-badge">draft</span>`;
       td.innerHTML = html;
       // Prevent drag handle click from opening cell editor
       const handle = td.querySelector('.spr-drag-handle');
       if (handle) handle.addEventListener('click', e => e.stopPropagation());
+      // Collapse toggle: handle click fully here (stopPropagation prevents cell selection)
+      const toggle = td.querySelector('.spr-collapse-toggle');
+      if (toggle) {
+        toggle.addEventListener('click', e => {
+          e.stopPropagation();
+          const studentCode = toggle.dataset.student;
+          if (collapsedStudents.has(studentCode)) {
+            collapsedStudents.delete(studentCode);
+          } else {
+            collapsedStudents.add(studentCode);
+          }
+          saveCollapsedStudents();
+          renderRows();
+          updateCountStatus();
+        });
+      }
     } else {
       td.textContent = val || '';
     }
@@ -2473,6 +2597,130 @@
     autoBackupIfNeeded();
   }
 
+  // ─── Views Dropdown ──────────────────────────────────────────────────────────
+
+  function renderViewsDropdown() {
+    const panel = document.getElementById('sprViewsDropdown');
+    if (!panel) return;
+    panel.innerHTML = '';
+
+    // Save Current View button
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '💾 Save Current View…';
+    saveBtn.style.fontWeight = '600';
+    saveBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      // Show inline input
+      panel.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'padding:8px 14px;display:flex;flex-direction:column;gap:8px;';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'View name…';
+      input.style.cssText = 'padding:6px 10px;border-radius:7px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,0.07);color:inherit;font-size:13px;outline:none;width:100%;box-sizing:border-box;';
+      const confirmBtn = document.createElement('button');
+      confirmBtn.textContent = '💾 Save';
+      confirmBtn.className = 'spr-btn spr-btn-sm';
+      const doSave = () => {
+        const name = input.value.trim();
+        if (!name) return;
+        savedViews.push({
+          name,
+          filters: {
+            searchQuery, classFilter, goalAreaFilter, caseManagerFilter,
+            dataCollectorFilter, showArchived, warningsOnlyFilter, sortKey, sortDir,
+          },
+        });
+        saveViews();
+        panel.classList.remove('open');
+        renderViewsDropdown();
+        showToast(`View "${name}" saved`);
+      };
+      confirmBtn.addEventListener('click', e2 => { e2.stopPropagation(); doSave(); });
+      input.addEventListener('keydown', e2 => {
+        if (e2.key === 'Enter') { e2.preventDefault(); doSave(); }
+        else if (e2.key === 'Escape') { e2.preventDefault(); panel.classList.remove('open'); renderViewsDropdown(); }
+      });
+      wrap.appendChild(input);
+      wrap.appendChild(confirmBtn);
+      panel.appendChild(wrap);
+      input.focus();
+    });
+    panel.appendChild(saveBtn);
+
+    // Separator
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:var(--rc-glass-border);margin:4px 0;';
+    panel.appendChild(sep);
+
+    // Saved views list
+    if (!savedViews.length) {
+      const empty = document.createElement('div');
+      empty.textContent = 'No saved views';
+      empty.style.cssText = 'padding:8px 14px;font-size:12px;color:rgba(255,255,255,0.35);';
+      panel.appendChild(empty);
+    } else {
+      savedViews.forEach((view, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:0 4px 0 0;';
+        const viewBtn = document.createElement('button');
+        viewBtn.textContent = view.name;
+        viewBtn.style.cssText = 'flex:1;text-align:left;background:none;border:none;color:inherit;font-size:13px;cursor:pointer;padding:6px 14px;transition:background 0.1s;';
+        viewBtn.addEventListener('click', () => {
+          applyView(view);
+          panel.classList.remove('open');
+        });
+        viewBtn.addEventListener('mouseenter', () => { viewBtn.style.background = 'rgba(255,255,255,0.07)'; });
+        viewBtn.addEventListener('mouseleave', () => { viewBtn.style.background = ''; });
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '×';
+        delBtn.title = 'Delete view';
+        delBtn.style.cssText = 'background:none;border:none;color:rgba(248,113,113,0.7);cursor:pointer;padding:2px 8px;font-size:14px;line-height:1;flex-shrink:0;';
+        delBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          savedViews.splice(i, 1);
+          saveViews();
+          renderViewsDropdown();
+        });
+        row.appendChild(viewBtn);
+        row.appendChild(delBtn);
+        panel.appendChild(row);
+      });
+    }
+  }
+
+  function applyView(view) {
+    const f = view.filters;
+    searchQuery        = f.searchQuery || '';
+    classFilter        = f.classFilter || '';
+    goalAreaFilter     = f.goalAreaFilter || '';
+    caseManagerFilter  = f.caseManagerFilter || '';
+    dataCollectorFilter = f.dataCollectorFilter || '';
+    showArchived       = !!f.showArchived;
+    warningsOnlyFilter = !!f.warningsOnlyFilter;
+    sortKey            = f.sortKey || 'student_code';
+    sortDir            = f.sortDir || 'asc';
+
+    // Update DOM controls to reflect restored filter values
+    const searchEl = document.getElementById('sprSearch');
+    if (searchEl) searchEl.value = searchQuery;
+    const classEl = document.getElementById('sprClassFilter');
+    if (classEl) classEl.value = classFilter;
+    const goalAreaEl = document.getElementById('sprGoalAreaFilter');
+    if (goalAreaEl) goalAreaEl.value = goalAreaFilter;
+    const caseManagerEl = document.getElementById('sprCaseManagerFilter');
+    if (caseManagerEl) caseManagerEl.value = caseManagerFilter;
+    const dataCollectorEl = document.getElementById('sprDataCollectorFilter');
+    if (dataCollectorEl) dataCollectorEl.value = dataCollectorFilter;
+    const archivedEl = document.getElementById('sprShowArchived');
+    if (archivedEl) archivedEl.checked = showArchived;
+
+    applyFilters();
+    renderRows();
+    updateCountStatus();
+    showToast(`View "${view.name}" applied`);
+  }
+
   // ─── Column visibility panel ─────────────────────────────────────────────────
 
   function updateColumnVisibilityPanel() {
@@ -2504,6 +2752,19 @@
       }
       panel.appendChild(label);
     }
+
+    // Reset Column Order button
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = '↩ Reset Column Order';
+    resetBtn.className = 'spr-btn spr-btn-sm';
+    resetBtn.style.cssText = 'margin:8px 14px;font-size:11px;';
+    resetBtn.addEventListener('click', () => {
+      columnOrder = [];
+      saveColumnOrder();
+      renderSpreadsheet();
+      showToast('Column order reset');
+    });
+    panel.appendChild(resetBtn);
   }
 
   function buildClassFilterOptions() {
@@ -2814,6 +3075,9 @@
       colWidths,
       hiddenCols: [...hiddenCols],
       changeLog,
+      columnOrder,
+      savedViews,
+      collapsedStudents: [...collapsedStudents],
     };
   }
 
@@ -2836,6 +3100,9 @@
     if (backup.colWidths && typeof backup.colWidths === 'object') { colWidths = backup.colWidths; saveColWidths(); }
     if (Array.isArray(backup.hiddenCols)) { hiddenCols = new Set(backup.hiddenCols); saveHiddenCols(); }
     if (Array.isArray(backup.changeLog)) { changeLog = backup.changeLog; saveChangeLog(); }
+    if (Array.isArray(backup.columnOrder)) { columnOrder = backup.columnOrder; saveColumnOrder(); }
+    if (Array.isArray(backup.savedViews)) { savedViews = backup.savedViews; saveViews(); }
+    if (Array.isArray(backup.collapsedStudents)) { collapsedStudents = new Set(backup.collapsedStudents); saveCollapsedStudents(); }
 
     // Re-import rows to DB using same logic as CSV import
     if (Array.isArray(backup.rows) && backup.rows.length > 0) {
@@ -3082,6 +3349,16 @@
         moreToolsDropdown.classList.toggle('open');
       });
     }
+
+    // Views dropdown
+    const viewsBtn = document.getElementById('sprViewsBtn');
+    const viewsDropdown = document.getElementById('sprViewsDropdown');
+    if (viewsBtn && viewsDropdown) {
+      viewsBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        viewsDropdown.classList.toggle('open');
+      });
+    }
     const exportCsvBtn = document.getElementById('sprExportCsv');
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
     const exportJsonBtn = document.getElementById('sprExportJson');
@@ -3093,7 +3370,10 @@
 
     // Import
     const importBtn = document.getElementById('sprImportBtn');
-    if (importBtn) importBtn.addEventListener('click', openImportModal);
+    if (importBtn) {
+      importBtn.title = 'Import CSV data (Ctrl+Shift+I)';
+      importBtn.addEventListener('click', openImportModal);
+    }
 
     const importCancelBtn = document.getElementById('sprImportCancelBtn');
     if (importCancelBtn) importCancelBtn.addEventListener('click', closeImportModal);
@@ -3122,7 +3402,7 @@
 
     // Close dropdowns on outside click
     document.addEventListener('click', () => {
-      document.querySelectorAll('.spr-col-dropdown.open,.spr-export-dropdown.open,.spr-more-menu.open,.spr-more-tools-dropdown.open')
+      document.querySelectorAll('.spr-col-dropdown.open,.spr-export-dropdown.open,.spr-more-menu.open,.spr-more-tools-dropdown.open,.spr-views-dropdown.open')
         .forEach(el => el.classList.remove('open'));
     });
 
@@ -3184,7 +3464,10 @@
 
     // Change Log button
     const changeLogBtn = document.getElementById('sprChangeLogBtn');
-    if (changeLogBtn) changeLogBtn.addEventListener('click', openChangeLogModal);
+    if (changeLogBtn) {
+      changeLogBtn.title = 'View change history (Ctrl+Shift+L)';
+      changeLogBtn.addEventListener('click', openChangeLogModal);
+    }
 
     // Change Log modal
     const changeLogOverlay = document.getElementById('sprChangeLogOverlay');
@@ -3201,7 +3484,10 @@
 
     // Backup button
     const backupBtn = document.getElementById('sprBackupBtn');
-    if (backupBtn) backupBtn.addEventListener('click', () => backupData());
+    if (backupBtn) {
+      backupBtn.title = 'Download full backup as JSON (Ctrl+Shift+B)';
+      backupBtn.addEventListener('click', () => backupData());
+    }
 
     // Restore button + hidden file input
     const restoreBtn = document.getElementById('sprRestoreBtn');
@@ -3238,7 +3524,10 @@
 
     // Compare CSV button + modal
     const compareCsvBtn = document.getElementById('sprCompareCsvBtn');
-    if (compareCsvBtn) compareCsvBtn.addEventListener('click', openCompareCsvModal);
+    if (compareCsvBtn) {
+      compareCsvBtn.title = 'Compare a CSV file against current data (read-only) (Ctrl+Shift+D)';
+      compareCsvBtn.addEventListener('click', openCompareCsvModal);
+    }
 
     const compareOverlay = document.getElementById('sprCompareOverlay');
     if (compareOverlay) {
@@ -3266,6 +3555,44 @@
       });
     }
 
+    // Collapse All / Expand All button
+    const collapseAllBtn = document.getElementById('sprCollapseAllBtn');
+    if (collapseAllBtn) {
+      collapseAllBtn.addEventListener('click', () => {
+        const studentsWithMultipleGoals = [...new Set(allRows.map(r => r.student_code).filter(Boolean))].filter(code => {
+          return allRows.filter(r => r.student_code === code && r._goal_active !== false).length > 1;
+        });
+        const anyExpanded = studentsWithMultipleGoals.some(code => !collapsedStudents.has(code));
+        if (anyExpanded) {
+          studentsWithMultipleGoals.forEach(code => collapsedStudents.add(code));
+          collapseAllBtn.textContent = '⊞ Expand All';
+        } else {
+          collapsedStudents.clear();
+          collapseAllBtn.textContent = '⊟ Collapse All';
+        }
+        saveCollapsedStudents();
+        renderRows();
+        updateCountStatus();
+      });
+    }
+
+    // Global keyboard shortcuts (Ctrl/Cmd+Shift+key)
+    document.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return;
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+      const key = e.key.toUpperCase();
+      if (key === 'L') { e.preventDefault(); openChangeLogModal(); }
+      else if (key === 'B') { e.preventDefault(); backupData(); }
+      else if (key === 'I') { e.preventDefault(); openImportModal(); }
+      else if (key === 'D') { e.preventDefault(); openCompareCsvModal(); }
+      else if (key === 'V') {
+        e.preventDefault();
+        const vd = document.getElementById('sprViewsDropdown');
+        if (vd) vd.classList.toggle('open');
+      }
+    });
+
     // Beforeunload warning for pending drafts
     window.addEventListener('beforeunload', e => {
       if (draftRows.length > 0) {
@@ -3281,7 +3608,7 @@
     try {
       const keys = [COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
                     RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
-                    RC_AUTO_BACKUP_LS, RC_AUTO_BACKUP_TS_LS];
+                    RC_AUTO_BACKUP_LS, RC_AUTO_BACKUP_TS_LS, RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS];
       let totalBytes = 0;
       for (const k of keys) {
         const val = localStorage.getItem(k);
@@ -3304,6 +3631,10 @@
     loadChangeLog();
     loadColors();
     loadCustomOptions();
+    loadColumnOrder();
+    loadViews();
+    loadCollapsedStudents();
+    renderViewsDropdown();
     setupEventHandlers();
     setupKeyboardNavigation();
     setupRowDragHandlers();
