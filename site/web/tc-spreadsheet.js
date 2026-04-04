@@ -96,9 +96,11 @@
   const AUTO_BACKUP_INTERVAL_EDITS = 25;
   const RC_AUTO_BACKUP_LS    = 'rc-spreadsheet-auto-backup';
   const RC_AUTO_BACKUP_TS_LS = 'rc-spreadsheet-auto-backup-ts';
-  const RC_COL_ORDER_LS   = 'rc-spreadsheet-col-order';
-  const RC_VIEWS_LS       = 'rc-spreadsheet-views';
-  const RC_COLLAPSED_LS   = 'rc-spreadsheet-collapsed-students';
+  const RC_COL_ORDER_LS        = 'rc-spreadsheet-col-order';
+  const RC_VIEWS_LS            = 'rc-spreadsheet-views';
+  const RC_COLLAPSED_LS        = 'rc-spreadsheet-collapsed-students';
+  const RC_CELL_COMMENTS_LS    = 'rc-spreadsheet-cell-comments';
+  const RC_CELL_TIMESTAMPS_LS  = 'rc-spreadsheet-cell-timestamps';
 
   // ─── Custom Columns & Row Order State ────────────────────────────────────────
 
@@ -123,6 +125,8 @@
   let columnOrder = [];          // [colKey, ...] user-preferred column order
   let savedViews = [];           // [{name, filters}] preset filter combinations
   let collapsedStudents = new Set(); // student codes with collapsed goal rows
+  let cellComments = {};         // {"goal_code::colKey": {text, timestamp}}
+  let cellTimestamps = {};       // {"goal_code::colKey": "ISO string"}
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -218,6 +222,20 @@
     td.classList.add('spr-cell-saved');
   }
 
+  function formatRelativeTime(isoString) {
+    const now = Date.now();
+    const then = new Date(isoString).getTime();
+    const diffMs = now - then;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(isoString).toLocaleDateString();
+  }
+
   // ─── Column Widths ───────────────────────────────────────────────────────────
 
   function loadColWidths() {
@@ -228,6 +246,7 @@
   function saveColWidths() {
     try { localStorage.setItem(COL_WIDTHS_LS, JSON.stringify(colWidths)); }
     catch (_e) { /* ignore localStorage quota or disabled errors */ }
+    debouncedSyncToDb();
   }
 
   // ─── Custom Column Persistence ───────────────────────────────────────────────
@@ -240,6 +259,7 @@
   function saveCustomCols() {
     try { localStorage.setItem(RC_CUSTOM_COLS_LS, JSON.stringify(customColumns)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   function loadCustomData() {
@@ -250,6 +270,7 @@
   function saveCustomData() {
     try { localStorage.setItem(RC_CUSTOM_DATA_LS, JSON.stringify(customData)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   function getCustomVal(row, colKey) {
@@ -278,6 +299,7 @@
   function saveRowOrder() {
     try { localStorage.setItem(RC_ROW_ORDER_LS, JSON.stringify(rowOrder)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   // ─── Hidden Columns Persistence ─────────────────────────────────────────────
@@ -292,6 +314,7 @@
   function saveHiddenCols() {
     try { localStorage.setItem(RC_HIDDEN_COLS_LS, JSON.stringify([...hiddenCols])); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   // ─── Change Log ──────────────────────────────────────────────────────────────
@@ -304,6 +327,7 @@
   function saveChangeLog() {
     try { localStorage.setItem(RC_CHANGELOG_LS, JSON.stringify(changeLog)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   function appendChangeLog(entry) {
@@ -322,6 +346,7 @@
   function saveColors() {
     try { localStorage.setItem(RC_COLORS_LS, String(colorsEnabled)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   // ─── Custom Options Persistence ──────────────────────────────────────────────
@@ -334,6 +359,7 @@
   function saveCustomOptions() {
     try { localStorage.setItem(RC_CUSTOM_OPTS_LS, JSON.stringify(customOptions)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   function rememberCustomOption(colKey, value) {
@@ -360,6 +386,7 @@
   function saveColumnOrder() {
     try { localStorage.setItem(RC_COL_ORDER_LS, JSON.stringify(columnOrder)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   // ─── Saved Views Persistence ─────────────────────────────────────────────────
@@ -372,6 +399,7 @@
   function saveViews() {
     try { localStorage.setItem(RC_VIEWS_LS, JSON.stringify(savedViews)); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
 
   // ─── Collapsed Students Persistence ─────────────────────────────────────────
@@ -386,7 +414,97 @@
   function saveCollapsedStudents() {
     try { localStorage.setItem(RC_COLLAPSED_LS, JSON.stringify([...collapsedStudents])); }
     catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
   }
+
+  // ─── Cell Comments Persistence ───────────────────────────────────────────────
+
+  function loadCellComments() {
+    try { cellComments = JSON.parse(localStorage.getItem(RC_CELL_COMMENTS_LS) || '{}'); }
+    catch (_e) { cellComments = {}; }
+  }
+
+  function saveCellComments() {
+    try { localStorage.setItem(RC_CELL_COMMENTS_LS, JSON.stringify(cellComments)); }
+    catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
+  }
+
+  // ─── Cell Timestamps Persistence ────────────────────────────────────────────
+
+  function loadCellTimestamps() {
+    try { cellTimestamps = JSON.parse(localStorage.getItem(RC_CELL_TIMESTAMPS_LS) || '{}'); }
+    catch (_e) { cellTimestamps = {}; }
+  }
+
+  function saveCellTimestamps() {
+    try { localStorage.setItem(RC_CELL_TIMESTAMPS_LS, JSON.stringify(cellTimestamps)); }
+    catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
+  }
+
+  // ─── DB Settings Sync ────────────────────────────────────────────────────────
+
+  async function syncSettingsToDb() {
+    try {
+      const settings = {};
+      const keys = [
+        COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
+        RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
+        RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS,
+        RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS,
+      ];
+      for (const k of keys) {
+        const val = localStorage.getItem(k);
+        if (val !== null) settings[k] = val;
+      }
+      const supabase = await getSupabase();
+      if (!supabase) return;
+      await supabase.from('spreadsheet_settings').upsert({ user_id: 'default', settings });
+      const el = document.getElementById('sprSyncStatus');
+      if (el) {
+        el.textContent = '☁️ Synced';
+        setTimeout(() => { if (el.textContent === '☁️ Synced') el.textContent = ''; }, 3000);
+      }
+    } catch (_e) {
+      console.warn('[tc-spreadsheet] syncSettingsToDb failed (table may not exist yet):', _e);
+    }
+  }
+
+  async function loadSettingsFromDb() {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return;
+      const { data } = await supabase
+        .from('spreadsheet_settings')
+        .select('settings')
+        .eq('user_id', 'default')
+        .single();
+      if (!data?.settings) return;
+      const dbSettings = data.settings;
+      const keys = [
+        COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
+        RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
+        RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS,
+        RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS,
+      ];
+      let anyMissing = false;
+      for (const k of keys) {
+        if (!localStorage.getItem(k) && dbSettings[k] !== undefined) {
+          try { localStorage.setItem(k, dbSettings[k]); } catch (_e) { /* ignore */ }
+          anyMissing = true;
+        }
+      }
+      if (!anyMissing) {
+        // localStorage already has data — sync it back to DB to keep it fresh
+        syncSettingsToDb();
+      }
+    } catch (_e) {
+      console.warn('[tc-spreadsheet] loadSettingsFromDb failed (table may not exist yet):', _e);
+    }
+  }
+
+  const debouncedSyncToDb = debounce(syncSettingsToDb, 5000);
 
   // ─── Inline Validation ───────────────────────────────────────────────────────
 
@@ -865,15 +983,18 @@
         oldVal: first.oldVal, newVal: first.newVal,
         cascaded: rest.length > 0 ? rest.map(e => ({ row: e.row, oldVal: e.oldVal })) : null,
       });
-      // Log each affected cell
+      // Log each affected cell and record timestamps
       for (const entry of undoEntries) {
         if (!entry.row._draft) {
           appendChangeLog({
             student_code: entry.row.student_code, goal_code: entry.row.goal_code,
             column: col.label, old_value: String(entry.oldVal ?? ''), new_value: String(entry.newVal ?? ''), edit_type: 'bulk',
           });
+          const tsKey = `${entry.row.goal_code}::${col.key}`;
+          cellTimestamps[tsKey] = new Date().toISOString();
         }
       }
+      if (undoEntries.some(e => !e.row._draft)) saveCellTimestamps();
       scheduleValidation();
     }
     const count = undoEntries.length;
@@ -1483,8 +1604,50 @@
           updateCountStatus();
         });
       }
+    } else if (col.key === 'data_collector_email' && val) {
+      const link = document.createElement('a');
+      link.href = `mailto:${val}`;
+      link.textContent = val;
+      link.style.cssText = 'color: #818cf8; text-decoration: underline; font-size: 13px;';
+      link.addEventListener('click', e => e.stopPropagation()); // don't trigger cell editor
+      td.appendChild(link);
     } else {
       td.textContent = val || '';
+    }
+
+    // Comment indicator
+    if (col.key !== '_actions' && col.key !== 'progress' && !row._draft) {
+      const commentKey = `${row.goal_code}::${col.key}`;
+      if (cellComments[commentKey]) {
+        const commentDot = document.createElement('span');
+        commentDot.className = 'spr-comment-dot';
+        commentDot.title = cellComments[commentKey].text;
+        td.appendChild(commentDot);
+        td.classList.add('spr-has-comment');
+      }
+    }
+
+    // Last-edited timestamp tooltip
+    if (col.key !== '_actions' && col.key !== 'progress' && !row._draft) {
+      const tsKey = `${row.goal_code}::${col.key}`;
+      const cellTs = cellTimestamps[tsKey];
+      if (cellTs) {
+        const ago = formatRelativeTime(cellTs);
+        const existingTitle = td.title || '';
+        td.title = existingTitle ? `${existingTitle}\n✏️ Edited ${ago}` : `✏️ Edited ${ago}`;
+        const diffMs = Date.now() - new Date(cellTs).getTime();
+        if (diffMs < 600000) { // 10 minutes
+          td.classList.add('spr-recently-edited');
+        }
+      }
+    }
+
+    // Right-click: cell comment menu (not for actions or progress columns)
+    if (col.key !== '_actions' && col.key !== 'progress' && !row._draft) {
+      td.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        showCellCommentMenu(e.clientX, e.clientY, row, col);
+      });
     }
 
     // All data cells are keyboard-navigable
@@ -1494,7 +1657,8 @@
     const canEdit = col._custom || col.editable === true || (col.editable === 'new-only' && row._draft);
     if (canEdit) {
       td.classList.add('spr-cell-editable');
-      td.title = 'Click to edit';
+      const existingTitleCE = td.title || '';
+      td.title = existingTitleCE ? `${existingTitleCE}\nClick to edit` : 'Click to edit';
       td.addEventListener('click', e => {
         if (e.target.closest('.spr-drag-handle')) return; // don't open editor for drag handle
         if (e.shiftKey) {
@@ -1877,6 +2041,9 @@
     if (row._draft) {
       checkDraftReadyToSave(row, rowIdx);
     } else {
+      const tsKey = `${row.goal_code}::${col.key}`;
+      cellTimestamps[tsKey] = new Date().toISOString();
+      saveCellTimestamps();
       scheduleAutoSave(row, rowIdx, td);
       scheduleValidation();
       autoBackupIfNeeded();
@@ -2111,6 +2278,107 @@
     });
     document.body.appendChild(menu);
     const dismiss = () => { menu.remove(); document.removeEventListener('click', dismiss); };
+    setTimeout(() => document.addEventListener('click', dismiss), 0);
+  }
+
+  function showCellCommentMenu(x, y, row, col) {
+    // Remove any existing comment menus
+    document.querySelectorAll('.spr-cell-comment-menu').forEach(el => el.remove());
+
+    const commentKey = `${row.goal_code}::${col.key}`;
+    const existing = cellComments[commentKey];
+
+    const menu = document.createElement('div');
+    menu.className = 'spr-cell-comment-menu';
+    menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9100;background:#1e2133;
+      border:1px solid var(--rc-glass-border);border-radius:10px;padding:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:260px;`;
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:rgba(255,255,255,.5);margin-bottom:8px;';
+    header.textContent = `💬 Comment — ${escapeHtml(col.label)}`;
+    menu.appendChild(header);
+
+    // Timestamp label (if existing)
+    if (existing?.timestamp) {
+      const tsLabel = document.createElement('div');
+      tsLabel.style.cssText = 'font-size:11px;color:rgba(255,255,255,.35);margin-bottom:6px;';
+      tsLabel.textContent = `Added ${formatRelativeTime(existing.timestamp)}`;
+      menu.appendChild(tsLabel);
+    }
+
+    // Textarea
+    const ta = document.createElement('textarea');
+    ta.value = existing?.text || '';
+    ta.placeholder = 'Add a comment…';
+    ta.rows = 3;
+    ta.style.cssText = 'width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--rc-glass-border);background:rgba(255,255,255,.07);color:inherit;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;outline:none;';
+    menu.appendChild(ta);
+
+    // Buttons row
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:6px;margin-top:8px;';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '💬 Save';
+    saveBtn.className = 'spr-btn spr-btn-sm spr-btn-primary';
+    saveBtn.addEventListener('click', () => {
+      const text = ta.value.trim();
+      if (!text) { ta.focus(); return; }
+      cellComments[commentKey] = { text, timestamp: new Date().toISOString() };
+      saveCellComments();
+      menu.remove();
+      const tr = document.querySelector(`tr[data-goal-code="${row.goal_code}"]`);
+      if (tr) {
+        const rowIdx = parseInt(tr.dataset.rowIdx, 10);
+        const cellTd = tr.querySelector(`td[data-col="${col.key}"]`);
+        if (cellTd && !isNaN(rowIdx)) renderSingleCell(cellTd, col, row, rowIdx);
+      }
+    });
+    btns.appendChild(saveBtn);
+
+    if (existing) {
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '🗑 Remove';
+      removeBtn.className = 'spr-btn spr-btn-sm';
+      removeBtn.style.color = '#f87171';
+      removeBtn.addEventListener('click', () => {
+        delete cellComments[commentKey];
+        saveCellComments();
+        menu.remove();
+        const tr = document.querySelector(`tr[data-goal-code="${row.goal_code}"]`);
+        if (tr) {
+          const rowIdx = parseInt(tr.dataset.rowIdx, 10);
+          const cellTd = tr.querySelector(`td[data-col="${col.key}"]`);
+          if (cellTd && !isNaN(rowIdx)) renderSingleCell(cellTd, col, row, rowIdx);
+        }
+      });
+      btns.appendChild(removeBtn);
+    }
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '✕';
+    cancelBtn.className = 'spr-btn spr-btn-sm';
+    cancelBtn.addEventListener('click', () => menu.remove());
+    btns.appendChild(cancelBtn);
+
+    menu.appendChild(btns);
+    document.body.appendChild(menu);
+
+    // Adjust position to stay within viewport
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
+    if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
+
+    ta.focus();
+
+    const dismiss = e => {
+      if (!menu.contains(e.target)) {
+        menu.remove();
+        document.removeEventListener('click', dismiss);
+      }
+    };
     setTimeout(() => document.addEventListener('click', dismiss), 0);
   }
 
@@ -3083,6 +3351,8 @@
       columnOrder,
       savedViews,
       collapsedStudents: [...collapsedStudents],
+      cellComments,
+      cellTimestamps,
     };
   }
 
@@ -3108,6 +3378,8 @@
     if (Array.isArray(backup.columnOrder)) { columnOrder = backup.columnOrder; saveColumnOrder(); }
     if (Array.isArray(backup.savedViews)) { savedViews = backup.savedViews; saveViews(); }
     if (Array.isArray(backup.collapsedStudents)) { collapsedStudents = new Set(backup.collapsedStudents); saveCollapsedStudents(); }
+    if (backup.cellComments && typeof backup.cellComments === 'object') { cellComments = backup.cellComments; saveCellComments(); }
+    if (backup.cellTimestamps && typeof backup.cellTimestamps === 'object') { cellTimestamps = backup.cellTimestamps; saveCellTimestamps(); }
 
     // Re-import rows to DB using same logic as CSV import
     if (Array.isArray(backup.rows) && backup.rows.length > 0) {
@@ -3230,6 +3502,23 @@
         showToast('💾 Auto-backup saved', '#6366f1');
       }
     } catch (_e) { /* ignore localStorage errors (e.g. quota exceeded) */ }
+  }
+
+  // ─── Email Data Collectors ───────────────────────────────────────────────────
+
+  function emailDataCollectors() {
+    const emails = [...new Set(
+      filteredRows
+        .filter(r => !r._draft && r.data_collector_email)
+        .map(r => r.data_collector_email.trim())
+        .filter(Boolean)
+    )];
+    if (!emails.length) {
+      showToast('No data collector emails in current view', '#ef4444');
+      return;
+    }
+    window.open('mailto:' + emails.join(','));
+    showToast(`Opening email to ${emails.length} data collector${emails.length !== 1 ? 's' : ''}`);
   }
 
   function setupEventHandlers() {
@@ -3508,6 +3797,10 @@
     const restoreAutoBackupBtn = document.getElementById('sprRestoreAutoBackupBtn');
     if (restoreAutoBackupBtn) restoreAutoBackupBtn.addEventListener('click', restoreAutoBackup);
 
+    // Email Data Collectors button
+    const emailDataCollectorsBtn = document.getElementById('sprEmailDataCollectorsBtn');
+    if (emailDataCollectorsBtn) emailDataCollectorsBtn.addEventListener('click', emailDataCollectors);
+
     // Colors toggle button
     const colorsBtn = document.getElementById('sprColorsBtn');
     if (colorsBtn) {
@@ -3618,7 +3911,8 @@
     try {
       const keys = [COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
                     RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
-                    RC_AUTO_BACKUP_LS, RC_AUTO_BACKUP_TS_LS, RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS];
+                    RC_AUTO_BACKUP_LS, RC_AUTO_BACKUP_TS_LS, RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS,
+                    RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS];
       let totalBytes = 0;
       for (const k of keys) {
         const val = localStorage.getItem(k);
@@ -3632,7 +3926,8 @@
     } catch (_e) { /* ignore */ }
   }
 
-  function init() {
+  async function init() {
+    await loadSettingsFromDb();
     loadColWidths();
     loadCustomCols();
     loadCustomData();
@@ -3644,6 +3939,8 @@
     loadColumnOrder();
     loadViews();
     loadCollapsedStudents();
+    loadCellComments();
+    loadCellTimestamps();
     renderViewsDropdown();
     setupEventHandlers();
     setupKeyboardNavigation();
