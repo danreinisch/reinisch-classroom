@@ -2689,10 +2689,13 @@
     if (toggleBtn) {
       toggleBtn.onclick = () => {
         showUnchanged = !showUnchanged;
-        toggleBtn.textContent = showUnchanged ? '👁 Hide Unchanged' : '👁 Show Unchanged';
+        const label = showUnchanged ? '👁 Hide Unchanged' : '👁 Show Unchanged';
+        toggleBtn.textContent = label;
+        toggleBtn.setAttribute('aria-label', showUnchanged ? 'Hide unchanged rows' : 'Show unchanged rows');
         renderCompareRows();
       };
       toggleBtn.textContent = '👁 Show Unchanged';
+      toggleBtn.setAttribute('aria-label', 'Show unchanged rows');
     }
 
     const preview = document.getElementById('sprComparePreview');
