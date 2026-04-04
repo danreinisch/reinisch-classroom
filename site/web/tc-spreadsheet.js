@@ -88,7 +88,7 @@
   const RC_ROW_ORDER_LS   = 'rc-spreadsheet-row-order';
   const RC_CHANGELOG_LS   = 'rc-spreadsheet-changelog';
   const RC_HIDDEN_COLS_LS = 'rc-spreadsheet-hidden-cols';
-  const CHANGELOG_MAX     = 500;
+  const CHANGELOG_MAX     = 300;
   const RC_COLORS_LS      = 'rc-spreadsheet-colors-enabled';
   const RC_CUSTOM_OPTS_LS = 'rc-spreadsheet-custom-options';
   const CUSTOM_OPTS_MAX   = 20;
@@ -1534,7 +1534,7 @@
 
       input.addEventListener('focus', () => renderDd(input.value));
       input.addEventListener('input', () => renderDd(input.value));
-      input.addEventListener('blur', () => { setTimeout(() => { if (!scCommitted) scCommitVal(); }, 200); });
+      input.addEventListener('blur', () => { setTimeout(() => { if (!scCommitted) scCommitVal(); }, 120); });
       input.addEventListener('keydown', e => {
         if (e.key === 'Enter')  { e.preventDefault(); scCommitVal(); }
         else if (e.key === 'Escape') { e.preventDefault(); scCancelVal(); }
@@ -2648,10 +2648,10 @@
         tr.dataset.diffType = item.type;
 
         let statusText = '';
-        if (item.type === 'added')     { statusText = '🟢 Added';   tr.style.background = 'rgba(34,197,94,.1)'; }
-        if (item.type === 'removed')   { statusText = '🔴 Removed'; tr.style.background = 'rgba(248,113,113,.1)'; }
-        if (item.type === 'changed')   { statusText = '🟡 Changed'; }
-        if (item.type === 'unchanged') { statusText = '─';          tr.style.opacity = '0.4'; }
+        if (item.type === 'added')     { statusText = '🟢 Added';   tr.classList.add('spr-diff-added'); }
+        if (item.type === 'removed')   { statusText = '🔴 Removed'; tr.classList.add('spr-diff-removed'); }
+        if (item.type === 'changed')   { statusText = '🟡 Changed'; tr.classList.add('spr-diff-changed'); }
+        if (item.type === 'unchanged') { statusText = '─';          tr.classList.add('spr-diff-unchanged'); }
 
         const statusTd = document.createElement('td');
         statusTd.textContent = statusText;
@@ -2973,6 +2973,14 @@
         exportDropdown.classList.toggle('open');
       });
     }
+    const moreToolsBtn = document.getElementById('sprMoreToolsBtn');
+    const moreToolsDropdown = document.getElementById('sprMoreToolsDropdown');
+    if (moreToolsBtn && moreToolsDropdown) {
+      moreToolsBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        moreToolsDropdown.classList.toggle('open');
+      });
+    }
     const exportCsvBtn = document.getElementById('sprExportCsv');
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
     const exportJsonBtn = document.getElementById('sprExportJson');
@@ -3013,7 +3021,7 @@
 
     // Close dropdowns on outside click
     document.addEventListener('click', () => {
-      document.querySelectorAll('.spr-col-dropdown.open,.spr-export-dropdown.open,.spr-more-menu.open')
+      document.querySelectorAll('.spr-col-dropdown.open,.spr-export-dropdown.open,.spr-more-menu.open,.spr-more-tools-dropdown.open')
         .forEach(el => el.classList.remove('open'));
     });
 
@@ -3168,6 +3176,23 @@
 
   // ─── Init ─────────────────────────────────────────────────────────────────────
 
+  function checkLocalStorageUsage() {
+    try {
+      const keys = [COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
+                    RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS];
+      let totalBytes = 0;
+      for (const k of keys) {
+        const val = localStorage.getItem(k);
+        if (val) totalBytes += k.length + val.length;
+      }
+      const totalMB = (totalBytes * 2) / (1024 * 1024); // ~2 bytes per char (UTF-16 approximation)
+      if (totalMB > 4) {
+        console.warn(`[tc-spreadsheet] localStorage usage is ${totalMB.toFixed(2)} MB — approaching browser limit`);
+        showToast('⚠️ Storage is getting full. Consider clearing the change log.', '#f97316');
+      }
+    } catch (_e) { /* ignore */ }
+  }
+
   function init() {
     loadColWidths();
     loadCustomCols();
@@ -3185,6 +3210,7 @@
       buildGoalAreaFilterOptions();
       buildCaseManagerFilterOptions();
       runValidation();
+      checkLocalStorageUsage();
     });
   }
 
