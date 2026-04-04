@@ -65,7 +65,7 @@ function buildSystemPrompt(students, goals, enrollments) {
   for (const s of students) {
     const studentGoals = goals.filter(g => g.student_id === s.id);
     const goalSummary = studentGoals.length > 0
-      ? studentGoals.map(g => `[${g.code}] ${g.goal_area}: baseline ${g.baseline}%, target ${g.target}%`).join('; ')
+      ? studentGoals.map(g => `[${g.code}] ${g.goal_area}: baseline ${g.baseline}%, target ${g.mastery || g.target || 'n/a'}`).join('; ')
       : 'No active IEP goals on file';
 
     const enrolled = enrollments
@@ -213,7 +213,7 @@ exports.handler = async (event) => {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       }),
-      rest('/rest/v1/goals?select=id,student_id,code,desc,goal_area,baseline,target,active&active=eq.true', {
+      rest('/rest/v1/goals?select=id,student_id,code,desc,goal_area,baseline,mastery,target,active&active=eq.true', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       }),

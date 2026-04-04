@@ -284,7 +284,7 @@
     if (!content.trim()) { showStatus("Nothing to download — generate content first.", "error"); return; }
 
     if (typeof JSZip === "undefined") {
-      showStatus("JSZip not loaded. Please refresh and try again.", "error");
+      showStatus("JSZip library not available. Check your network connection — the CDN may be unreachable. As a fallback, you can copy the content above and save it manually as an HTML file.", "error");
       return;
     }
 
