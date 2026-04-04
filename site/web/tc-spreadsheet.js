@@ -102,6 +102,8 @@
   const RC_COLLAPSED_LS        = 'rc-spreadsheet-collapsed-students';
   const RC_CELL_COMMENTS_LS    = 'rc-spreadsheet-cell-comments';
   const RC_CELL_TIMESTAMPS_LS  = 'rc-spreadsheet-cell-timestamps';
+  const RC_PRINT_DARK_LS       = 'rc-spreadsheet-print-dark';
+  const RC_CF_RULES_LS         = 'rc-spreadsheet-cf-rules';
 
   // ─── Custom Columns & Row Order State ────────────────────────────────────────
 
@@ -121,6 +123,16 @@
   let colorsEnabled = true;     // conditional formatting toggle
   let customOptions = {};       // {colKey: [val, ...]} remembered custom values per column
   let editsSinceBackup = 0;     // counter for auto-backup trigger
+  let compareParsedRows = [];   // last CSV rows loaded in Compare modal
+  let printDarkMode = false;    // dark print mode toggle
+  let cfRules = {
+    baselineGreenRatio: 0.9,    // baseline/mastery ratio >= this → green
+    baselineRedRatio: 0.5,      // baseline/mastery ratio < this → red
+    dateRedDays: 0,             // days until due < this → red (overdue)
+    dateOrangeDays: 30,         // days until due < this → orange
+    dateYellowDays: 60,         // days until due < this → yellow
+  };
+  let progressHistory = {};     // goal_code → [{value, date}, ...] sorted by date
 
   // ─── PR 2: Views & Navigation State ──────────────────────────────────────────
   let columnOrder = [];          // [colKey, ...] user-preferred column order
@@ -444,6 +456,39 @@
     debouncedSyncToDb();
   }
 
+  function loadPrintDark() {
+    try { printDarkMode = localStorage.getItem(RC_PRINT_DARK_LS) === 'true'; }
+    catch (_e) { printDarkMode = false; }
+  }
+
+  function savePrintDark() {
+    try { localStorage.setItem(RC_PRINT_DARK_LS, String(printDarkMode)); }
+    catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
+  }
+
+  function loadCfRules() {
+    try {
+      const defaults = {
+        baselineGreenRatio: 0.9,
+        baselineRedRatio: 0.5,
+        dateRedDays: 0,
+        dateOrangeDays: 30,
+        dateYellowDays: 60,
+      };
+      const stored = JSON.parse(localStorage.getItem(RC_CF_RULES_LS) || '{}');
+      cfRules = Object.assign({}, defaults, stored);
+    } catch (_e) {
+      cfRules = { baselineGreenRatio: 0.9, baselineRedRatio: 0.5, dateRedDays: 0, dateOrangeDays: 30, dateYellowDays: 60 };
+    }
+  }
+
+  function saveCfRules() {
+    try { localStorage.setItem(RC_CF_RULES_LS, JSON.stringify(cfRules)); }
+    catch (_e) { /* ignore */ }
+    debouncedSyncToDb();
+  }
+
   // ─── DB Settings Sync ────────────────────────────────────────────────────────
 
   async function syncSettingsToDb() {
@@ -454,6 +499,7 @@
         RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
         RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS,
         RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS,
+        RC_PRINT_DARK_LS, RC_CF_RULES_LS,
       ];
       for (const k of keys) {
         const val = localStorage.getItem(k);
@@ -488,6 +534,7 @@
         RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
         RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS,
         RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS,
+        RC_PRINT_DARK_LS, RC_CF_RULES_LS,
       ];
       let anyMissing = false;
       for (const k of keys) {
@@ -631,8 +678,8 @@
       const m = parseFloat(row.mastery);
       if (!isNaN(b) && !isNaN(m) && m > 0) {
         const ratio = b / m;
-        if (ratio >= 0.9) { td.style.backgroundColor = COLOR_GREEN; return; }
-        if (ratio < 0.5)  { td.style.backgroundColor = COLOR_RED;   return; }
+        if (ratio >= cfRules.baselineGreenRatio) { td.style.backgroundColor = COLOR_GREEN; return; }
+        if (ratio < cfRules.baselineRedRatio)    { td.style.backgroundColor = COLOR_RED;   return; }
         td.style.backgroundColor = '';
         return;
       }
@@ -644,9 +691,9 @@
         const today = new Date();
         const due = new Date(dateVal + 'T00:00:00');
         const diffDays = Math.floor((due - today) / 86400000);
-        if (diffDays < 0)  { td.style.backgroundColor = COLOR_RED_DUE; return; }
-        if (diffDays < 30) { td.style.backgroundColor = COLOR_ORANGE;  return; }
-        if (diffDays < 60) { td.style.backgroundColor = COLOR_YELLOW;  return; }
+        if (diffDays < cfRules.dateRedDays)    { td.style.backgroundColor = COLOR_RED_DUE; return; }
+        if (diffDays < cfRules.dateOrangeDays) { td.style.backgroundColor = COLOR_ORANGE;  return; }
+        if (diffDays < cfRules.dateYellowDays) { td.style.backgroundColor = COLOR_YELLOW;  return; }
       }
       td.style.backgroundColor = '';
       return;
@@ -1227,14 +1274,21 @@
         console.warn('[tc-spreadsheet] Could not load progress data', _e);
       }
 
-      // Build progress map: goal_code → latest % value
+      // Build progress map (latest) and history (all entries)
       progressMap = {};
+      progressHistory = {};
       for (const p of (progressData || [])) {
         const gc = p.goals?.code || p.goal_code;
         if (!gc) continue;
         if (!progressMap[gc] || p.date > (progressMap[gc].date || '')) {
           progressMap[gc] = { value: p.value, date: p.date };
         }
+        if (!progressHistory[gc]) progressHistory[gc] = [];
+        progressHistory[gc].push({ value: parseFloat(p.value) || 0, date: p.date });
+      }
+      // Sort each history array by date ascending
+      for (const gc of Object.keys(progressHistory)) {
+        progressHistory[gc].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
       }
 
       // Merge: one row per goal
@@ -1542,13 +1596,21 @@
 
     if (col.key === 'progress') {
       const p = progressMap[row.goal_code];
+      const history = progressHistory[row.goal_code] || [];
       if (p) {
         const pct = typeof p.value === 'number' ? p.value : parseFloat(p.value) || 0;
         const display = Number.isFinite(pct) ? `${Math.round(pct)}%` : String(p.value || '—');
         const barWidth = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
+
+        let sparklineHtml = '';
+        if (history.length >= 2) {
+          sparklineHtml = buildSparklineSvg(history);
+        }
+
         td.innerHTML = `<div class="spr-progress-cell">
           <span style="min-width:38px;text-align:right;font-size:12px;">${escapeHtml(display)}</span>
           <div class="spr-progress-bar-wrap"><div class="spr-progress-bar" style="width:${barWidth}%"></div></div>
+          ${sparklineHtml}
         </div>`;
       } else {
         td.textContent = '—';
@@ -2060,6 +2122,30 @@
     td.className = '';
     td.removeAttribute('title');
     renderCell(td, col, row, rowIdx);
+  }
+
+  function buildSparklineSvg(history) {
+    const W = 40, H = 16, PAD = 1;
+    const values = history.map(h => h.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    const points = values.map((v, i) => {
+      const x = PAD + (i / (values.length - 1)) * (W - PAD * 2);
+      const y = PAD + (1 - (v - min) / range) * (H - PAD * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+
+    const trend = values[values.length - 1] - values[0];
+    const color = trend > 0 ? '#22c55e' : trend < 0 ? '#f87171' : '#94a3b8';
+
+    const titleText = values.map((v, i) => `${history[i].date || ''}: ${Math.round(v)}%`).join(' → ');
+
+    return `<svg class="spr-sparkline" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+      `<title>${escapeHtml(titleText)}</title>` +
+      `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `</svg>`;
   }
 
   // ─── More-actions menu ───────────────────────────────────────────────────────
@@ -3259,6 +3345,20 @@
 
     renderCompareRows();
 
+    // Store parsed rows so applyCompareChanges() can use them
+    compareParsedRows = csvRows;
+
+    // Show/hide Apply button based on actionable changes
+    const applyBtn = document.getElementById('sprCompareApplyBtn');
+    if (applyBtn) {
+      if (addedCount + changedCount > 0) {
+        applyBtn.style.display = '';
+        applyBtn.textContent = `✅ Apply ${addedCount + changedCount} change${(addedCount + changedCount) !== 1 ? 's' : ''}`;
+      } else {
+        applyBtn.style.display = 'none';
+      }
+    }
+
     const toggleBtn = document.getElementById('sprCompareShowUnchangedBtn');
     if (toggleBtn) {
       toggleBtn.onclick = () => {
@@ -3274,6 +3374,68 @@
 
     const preview = document.getElementById('sprComparePreview');
     if (preview) preview.style.display = '';
+  }
+
+  async function applyCompareChanges() {
+    const csvMap = {};
+    for (const r of compareParsedRows) { if (r.goal_code) csvMap[r.goal_code] = r; }
+    const sprMap = {};
+    for (const r of allRows) { if (r.goal_code) sprMap[r.goal_code] = r; }
+
+    // Determine added/changed rows (same logic as buildCompareDiff)
+    const toApply = [];
+    for (const csvRow of compareParsedRows) {
+      const sprRow = sprMap[csvRow.goal_code];
+      if (!sprRow) {
+        toApply.push(csvRow); // added
+      } else {
+        const hasChanges = COMPARE_FIELDS.some(({ key }) => String(csvRow[key] ?? '') !== String(sprRow[key] ?? ''));
+        if (hasChanges) toApply.push(csvRow); // changed
+      }
+    }
+
+    const count = toApply.length;
+    if (count === 0) { showToast('No changes to apply'); return; }
+
+    const confirmed = await rcConfirm(
+      'Apply CSV Changes',
+      `Apply ${count} added/changed row${count !== 1 ? 's' : ''} from the compared CSV? This will update the database.`,
+      'Apply'
+    );
+    if (!confirmed) return;
+
+    closeCompareCsvModal();
+    setStatusSaving();
+    let saved = 0; let failed = 0;
+    for (const r of toApply) {
+      try {
+        await db.upsertStudent({
+          code: r.student_code, name: r.student_code,
+          iep_due: r.iep_due, eval_due: r.eval_due,
+          primary_case_manager: r.case_manager, active: r.active,
+        });
+        await db.upsertGoal({
+          student_code: r.student_code, code: r.goal_code,
+          desc: r.goal_desc, goal_area: r.goal_area,
+          baseline: r.baseline, mastery: r.mastery,
+          measurement_type: r.measurement_type,
+          data_collector: r.data_collector,
+          data_collector_email: r.data_collector_email,
+          class_context: r.class_context,
+          case_manager: r.case_manager,
+          notes: r.notes,
+        });
+        appendChangeLog({
+          student_code: r.student_code, goal_code: r.goal_code,
+          column: 'CSV Compare Apply', old_value: '', new_value: 'applied', edit_type: 'csv-compare-apply',
+        });
+        saved++;
+      } catch (_err) { failed++; }
+    }
+    setStatusSaved();
+    autoBackupIfNeeded();
+    await loadData();
+    showToast(`Applied ${saved} row${saved !== 1 ? 's' : ''}${failed > 0 ? ` (${failed} failed)` : ''}`);
   }
 
   // ─── Change Log Modal ────────────────────────────────────────────────────────
@@ -3358,6 +3520,8 @@
       collapsedStudents: [...collapsedStudents],
       cellComments,
       cellTimestamps,
+      printDarkMode,
+      cfRules,
     };
   }
 
@@ -3385,6 +3549,11 @@
     if (Array.isArray(backup.collapsedStudents)) { collapsedStudents = new Set(backup.collapsedStudents); saveCollapsedStudents(); }
     if (backup.cellComments && typeof backup.cellComments === 'object') { cellComments = backup.cellComments; saveCellComments(); }
     if (backup.cellTimestamps && typeof backup.cellTimestamps === 'object') { cellTimestamps = backup.cellTimestamps; saveCellTimestamps(); }
+    if (typeof backup.printDarkMode === 'boolean') { printDarkMode = backup.printDarkMode; savePrintDark(); document.body.classList.toggle('spr-print-dark', printDarkMode); }
+    if (backup.cfRules && typeof backup.cfRules === 'object') {
+      cfRules = Object.assign({}, cfRules, backup.cfRules);
+      saveCfRules();
+    }
 
     // Re-import rows to DB using same logic as CSV import
     if (Array.isArray(backup.rows) && backup.rows.length > 0) {
@@ -3525,6 +3694,80 @@
     }
     window.open('mailto:' + emails.join(','));
     showToast(`Opening email to ${emails.length} data collector${emails.length !== 1 ? 's' : ''}`);
+  }
+
+  // ─── CF Rules Modal ──────────────────────────────────────────────────────────
+
+  function openCfRulesModal() {
+    const overlay = document.getElementById('sprCfRulesOverlay');
+    if (!overlay) return;
+    // Populate inputs from current cfRules
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    setVal('sprCfGreenRatio',   cfRules.baselineGreenRatio);
+    setVal('sprCfRedRatio',     cfRules.baselineRedRatio);
+    setVal('sprCfRedDays',      cfRules.dateRedDays);
+    setVal('sprCfOrangeDays',   cfRules.dateOrangeDays);
+    setVal('sprCfYellowDays',   cfRules.dateYellowDays);
+    overlay.classList.add('open');
+  }
+
+  function closeCfRulesModal() {
+    const overlay = document.getElementById('sprCfRulesOverlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function saveCfRulesFromModal() {
+    const getNum = (id, min, max) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const v = parseFloat(el.value);
+      if (!Number.isFinite(v) || v < min || v > max) return null;
+      return v;
+    };
+    const greenRatio   = getNum('sprCfGreenRatio',   0, 1);
+    const redRatio     = getNum('sprCfRedRatio',     0, 1);
+    const redDays      = getNum('sprCfRedDays',     -365, 365);
+    const orangeDays   = getNum('sprCfOrangeDays',   0, 730);
+    const yellowDays   = getNum('sprCfYellowDays',   0, 730);
+
+    if (greenRatio === null || redRatio === null || redDays === null || orangeDays === null || yellowDays === null) {
+      showToast('Please enter valid numbers in all fields', '#ef4444');
+      return;
+    }
+    if (redRatio >= greenRatio) {
+      showToast('Green ratio must be greater than red ratio', '#ef4444');
+      return;
+    }
+    if (orangeDays > yellowDays) {
+      showToast('Orange days threshold must be less than yellow days threshold', '#ef4444');
+      return;
+    }
+
+    cfRules = {
+      baselineGreenRatio: greenRatio,
+      baselineRedRatio:   redRatio,
+      dateRedDays:        redDays,
+      dateOrangeDays:     orangeDays,
+      dateYellowDays:     yellowDays,
+    };
+    saveCfRules();
+    renderSpreadsheet();
+    closeCfRulesModal();
+    showToast('Conditional formatting rules saved');
+  }
+
+  function resetCfRules() {
+    cfRules = {
+      baselineGreenRatio: 0.9,
+      baselineRedRatio: 0.5,
+      dateRedDays: 0,
+      dateOrangeDays: 30,
+      dateYellowDays: 60,
+    };
+    saveCfRules();
+    renderSpreadsheet();
+    closeCfRulesModal();
+    showToast('Conditional formatting rules reset to defaults');
   }
 
   function setupEventHandlers() {
@@ -3909,6 +4152,41 @@
         e.returnValue = '';
       }
     });
+
+    // Compare Apply button
+    const compareApplyBtn = document.getElementById('sprCompareApplyBtn');
+    if (compareApplyBtn) compareApplyBtn.addEventListener('click', applyCompareChanges);
+
+    // Print Dark Mode toggle
+    const printDarkToggle = document.getElementById('sprPrintDarkToggle');
+    if (printDarkToggle) {
+      printDarkToggle.textContent = printDarkMode ? '🌙 Print Dark Mode: On' : '🌙 Print Dark Mode: Off';
+      printDarkToggle.addEventListener('click', e => {
+        e.stopPropagation(); // keep dropdown open
+        printDarkMode = !printDarkMode;
+        savePrintDark();
+        printDarkToggle.textContent = printDarkMode ? '🌙 Print Dark Mode: On' : '🌙 Print Dark Mode: Off';
+        document.body.classList.toggle('spr-print-dark', printDarkMode);
+        showToast(printDarkMode ? 'Print will use dark theme' : 'Print will use light theme');
+      });
+      if (printDarkMode) document.body.classList.add('spr-print-dark');
+    }
+
+    // CF Rules button + modal
+    const cfRulesBtn = document.getElementById('sprCfRulesBtn');
+    if (cfRulesBtn) cfRulesBtn.addEventListener('click', openCfRulesModal);
+
+    const cfRulesOverlay = document.getElementById('sprCfRulesOverlay');
+    if (cfRulesOverlay) {
+      cfRulesOverlay.addEventListener('click', e => { if (e.target === cfRulesOverlay) closeCfRulesModal(); });
+      cfRulesOverlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeCfRulesModal(); });
+      const saveBtn = cfRulesOverlay.querySelector('#sprCfRulesSaveBtn');
+      const cancelBtn = cfRulesOverlay.querySelector('#sprCfRulesCancelBtn');
+      const resetBtn = cfRulesOverlay.querySelector('#sprCfRulesResetBtn');
+      if (saveBtn)   saveBtn.addEventListener('click', saveCfRulesFromModal);
+      if (cancelBtn) cancelBtn.addEventListener('click', closeCfRulesModal);
+      if (resetBtn)  resetBtn.addEventListener('click', resetCfRules);
+    }
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -3918,7 +4196,7 @@
       const keys = [COL_WIDTHS_LS, RC_CUSTOM_COLS_LS, RC_CUSTOM_DATA_LS, RC_ROW_ORDER_LS,
                     RC_CHANGELOG_LS, RC_HIDDEN_COLS_LS, RC_COLORS_LS, RC_CUSTOM_OPTS_LS,
                     RC_AUTO_BACKUP_LS, RC_AUTO_BACKUP_TS_LS, RC_COL_ORDER_LS, RC_VIEWS_LS, RC_COLLAPSED_LS,
-                    RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS];
+                    RC_CELL_COMMENTS_LS, RC_CELL_TIMESTAMPS_LS, RC_PRINT_DARK_LS, RC_CF_RULES_LS];
       let totalBytes = 0;
       for (const k of keys) {
         const val = localStorage.getItem(k);
@@ -3947,6 +4225,8 @@
     loadCollapsedStudents();
     loadCellComments();
     loadCellTimestamps();
+    loadPrintDark();
+    loadCfRules();
     renderViewsDropdown();
     setupEventHandlers();
     setupKeyboardNavigation();
