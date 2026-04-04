@@ -338,6 +338,8 @@
 
   function rememberCustomOption(colKey, value) {
     if (!value || !String(value).trim()) return;
+    // Guard against prototype pollution via malicious column key
+    if (!colKey || typeof colKey !== 'string' || Object.prototype.hasOwnProperty.call(Object.prototype, colKey)) return;
     const v = String(value).trim();
     if (!customOptions[colKey]) customOptions[colKey] = [];
     const arr = customOptions[colKey];
@@ -1256,7 +1258,7 @@
           th.classList.add('spr-th-dragging');
         });
         th.addEventListener('dragover', e => {
-          if (!e.dataTransfer.types.includes('text/plain')) return;
+          if (!Array.from(e.dataTransfer.types).includes('text/plain')) return;
           e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
           document.querySelectorAll('.spr-th-drag-over').forEach(el => el.classList.remove('spr-th-drag-over'));
@@ -1453,8 +1455,11 @@
       const toggleHtml = (isFirstOfStudent && goalCount > 1)
         ? `<span class="spr-collapse-toggle" data-student="${escapeHtml(row.student_code)}" title="${isCollapsed ? 'Expand' : 'Collapse'}">${isCollapsed ? '▶' : '▼'}</span>`
         : '';
+      const collapsedIndicator = (isCollapsed && goalCount > 1)
+        ? `<span style="font-size:10px;opacity:0.5;"> (+${goalCount - 1} more)</span>`
+        : '';
       const countBadge = (isFirstOfStudent && goalCount > 0)
-        ? ` <span class="spr-goal-count-badge" title="${goalCount} goal${goalCount !== 1 ? 's' : ''}">×${goalCount}</span>${isCollapsed && goalCount > 1 ? `<span style="font-size:10px;opacity:0.5;"> (+${goalCount - 1} more)</span>` : ''}`
+        ? ` <span class="spr-goal-count-badge" title="${goalCount} goal${goalCount !== 1 ? 's' : ''}">×${goalCount}</span>${collapsedIndicator}`
         : '';
       let html = `${toggleHtml}${dragHandleHtml}<strong>${escapeHtml(val || '')}</strong>${countBadge}`;
       if (row._draft) html += `<span class="spr-draft-badge">draft</span>`;
@@ -2623,7 +2628,7 @@
       confirmBtn.className = 'spr-btn spr-btn-sm';
       const doSave = () => {
         const name = input.value.trim();
-        if (!name) return;
+        if (!name) { showToast('Please enter a view name', '#ef4444'); return; }
         savedViews.push({
           name,
           filters: {
@@ -3559,9 +3564,14 @@
     const collapseAllBtn = document.getElementById('sprCollapseAllBtn');
     if (collapseAllBtn) {
       collapseAllBtn.addEventListener('click', () => {
-        const studentsWithMultipleGoals = [...new Set(allRows.map(r => r.student_code).filter(Boolean))].filter(code => {
-          return allRows.filter(r => r.student_code === code && r._goal_active !== false).length > 1;
-        });
+        // Build goal count map in a single pass
+        const goalCountMap = {};
+        for (const r of allRows) {
+          if (r.student_code && r._goal_active !== false) {
+            goalCountMap[r.student_code] = (goalCountMap[r.student_code] || 0) + 1;
+          }
+        }
+        const studentsWithMultipleGoals = Object.keys(goalCountMap).filter(code => goalCountMap[code] > 1);
         const anyExpanded = studentsWithMultipleGoals.some(code => !collapsedStudents.has(code));
         if (anyExpanded) {
           studentsWithMultipleGoals.forEach(code => collapsedStudents.add(code));
