@@ -152,13 +152,13 @@
     return d.innerHTML;
   }
 
-  function showToast(message, color = '#22c55e') {
+  function showToast(message, color = '#22c55e', duration = 3000) {
     const t = document.createElement('div');
     t.style.cssText = `position:fixed;top:20px;right:20px;background:${color};color:#fff;padding:14px 20px;
       border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:9999;font-size:14px;max-width:320px;`;
     t.textContent = message;
     document.body.appendChild(t);
-    setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, 3000);
+    setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, duration);
   }
 
   function debounce(fn, ms) {
@@ -1315,6 +1315,23 @@
       applyFilters();
       renderSpreadsheet();
       updateCountStatus();
+
+      // Detect when columns that should have been imported are all blank —
+      // this can happen when data was written before the schema migration
+      // added these columns, leaving existing rows with NULL values.
+      if (allRows.length > 0) {
+        const activeRows = allRows.filter(r => r.active && r._goal_active);
+        if (activeRows.length > 0) {
+          const blankBoth = activeRows.filter(r => !r.baseline && !r.class_context).length;
+          if (blankBoth / activeRows.length > 0.5) {
+            showToast(
+              '⚠ Most goals are missing Baseline / Class data. Use the Import CSV button (⬆) to re-import your CSV and backfill the missing data.',
+              '#f59e0b',
+              8000
+            );
+          }
+        }
+      }
     } catch (err) {
       console.error('[tc-spreadsheet] loadData error', err);
       showError('Failed to load data: ' + (err.message || err));
