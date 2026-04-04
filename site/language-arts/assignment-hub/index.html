@@ -77,6 +77,13 @@
   </div>
 
   <script defer src="/web/public-shell.js"></script>
-  <script defer src="/web/assignment-hub-app.js?v=20260404"></script>
+  <script>
+    (function() {
+      var s = document.createElement('script');
+      s.src = '/web/assignment-hub-app.js?v=' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      s.defer = true;
+      document.body.appendChild(s);
+    })();
+  </script>
 </body>
 </html>
