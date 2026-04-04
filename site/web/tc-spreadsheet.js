@@ -2930,7 +2930,8 @@
       showToast('Auto-backup data is corrupted', '#ef4444');
       return;
     }
-    const timestamp = localStorage.getItem(RC_AUTO_BACKUP_TS_LS) || 'unknown';
+    const rawTimestamp = localStorage.getItem(RC_AUTO_BACKUP_TS_LS) || '';
+    const timestamp = rawTimestamp ? new Date(rawTimestamp).toLocaleString() : 'unknown';
 
     // Auto-create pre-restore backup before confirmation
     const preBackup = buildBackupObject();
