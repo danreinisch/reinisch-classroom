@@ -1325,7 +1325,7 @@
           const blankBoth = activeRows.filter(r => !r.baseline && !r.class_context).length;
           if (blankBoth / activeRows.length > 0.5) {
             showToast(
-              '⚠ Most goals are missing Baseline / Class data. Re-import your CSV to backfill.',
+              '⚠ Most goals are missing Baseline / Class data. Use the Import CSV button (⬆) to re-import your CSV and backfill the missing data.',
               '#f59e0b',
               8000
             );
