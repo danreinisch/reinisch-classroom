@@ -64,11 +64,16 @@
   const aibSendToWorkBtn = document.getElementById('aibSendToWorkBtn');
   const aibDownloadZipBtn = document.getElementById('aibDownloadZipBtn');
 
+  const aibSourceCount = document.getElementById('aibSourceCount');
+  const aibExtraStudentsWarn = document.getElementById('aibExtraStudentsWarn');
+
   // ── State ───────────────────────────────────────────────────────────────────
 
   let currentTaskType = 'assignments';
   const uploadedImages = [];
   let selectedLibRef = null;
+  let cachedStudents = [];
+  let cachedGoals = [];
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -128,8 +133,34 @@
     const reader = new FileReader();
     reader.onload = (e) => {
       aibSource.value = e.target.result;
+      aibSource.dispatchEvent(new Event('input'));
     };
     reader.readAsText(file);
+  });
+
+  // ── Source Character Count ──────────────────────────────────────────────────
+
+  aibSource.addEventListener('input', () => {
+    const len = (aibSource.value || '').length;
+    const max = 40000;
+    if (aibSourceCount) {
+      aibSourceCount.textContent = len.toLocaleString() + ' / ' + max.toLocaleString() + ' characters';
+      aibSourceCount.style.color = len > max ? '#fca5a5' : '';
+    }
+  });
+
+  // ── Extra Students Blur Validation ──────────────────────────────────────────
+
+  aibExtraStudents.addEventListener('blur', () => {
+    if (aibExtraStudentsWarn) aibExtraStudentsWarn.style.display = 'none';
+    const raw = (aibExtraStudents.value || '').trim();
+    if (!raw || !cachedStudents.length) return;
+    const codes = raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    const knownCodes = new Set(cachedStudents.map((s) => (s.code || '').toUpperCase()));
+    const unknown = codes.filter((c) => !knownCodes.has(c));
+    if (unknown.length > 0) {
+      showMsg(aibExtraStudentsWarn, '⚠ Unknown codes: ' + unknown.join(', ') + ' — will be treated as external/DESE-only', 'info');
+    }
   });
 
   // ── Image Upload ────────────────────────────────────────────────────────────
@@ -472,5 +503,43 @@
   // ── Init ────────────────────────────────────────────────────────────────────
 
   updateTypeUI();
+
+  // ── Prefetch Students & Goals for Autocomplete ──────────────────────────────
+
+  (async () => {
+    try {
+      const students = await db.listStudents();
+      cachedStudents = Array.isArray(students) ? students : [];
+      const studentList = document.getElementById('aibStudentList');
+      if (studentList) {
+        cachedStudents.forEach((s) => {
+          if (s.code) {
+            const opt = document.createElement('option');
+            opt.value = s.code;
+            studentList.appendChild(opt);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[tc-ai-builder] Could not prefetch students:', e.message);
+    }
+    try {
+      const goals = await db.listGoalsAll();
+      cachedGoals = Array.isArray(goals) ? goals : [];
+      const goalList = document.getElementById('aibGoalList');
+      if (goalList) {
+        cachedGoals.forEach((g) => {
+          if (g.code) {
+            const opt = document.createElement('option');
+            opt.value = g.code;
+            goalList.appendChild(opt);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[tc-ai-builder] Could not prefetch goals:', e.message);
+    }
+  })();
+
   console.log('[tc-ai-builder] Ready');
 })();

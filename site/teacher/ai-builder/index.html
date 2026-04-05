@@ -484,11 +484,11 @@
               <div class="aib-grid">
                 <div class="aib-field">
                   <label for="aibProbeStudent">Target Student</label>
-                  <input type="text" id="aibProbeStudent" placeholder="e.g. S001" maxlength="10" />
+                  <input type="text" id="aibProbeStudent" placeholder="e.g. S001" maxlength="10" list="aibStudentList" />
                 </div>
                 <div class="aib-field">
                   <label for="aibProbeGoals">Target Goal(s) <span class="aib-subtle" style="font-weight: normal;">(optional)</span></label>
-                  <input type="text" id="aibProbeGoals" placeholder="e.g. S001.11.1, S001.11.2" />
+                  <input type="text" id="aibProbeGoals" placeholder="e.g. S001.11.1, S001.11.2" list="aibGoalList" />
                 </div>
                 <div class="aib-field">
                   <label for="aibProbeCount">Number of Questions</label>
@@ -503,8 +503,9 @@
             <h2 style="margin: 0 0 4px 0; font-size: 15px;">Additional Students <span class="aib-subtle" style="font-weight: normal; font-size: 12px;">(optional)</span></h2>
             <p class="aib-subtle" style="font-size: 13px; margin: 0 0 10px 0;">Include students not in your classes (e.g., case-managed students in other teachers' rooms)</p>
             <div class="aib-field">
-              <input type="text" id="aibExtraStudents" placeholder="e.g. S031, S032, S044" />
+              <input type="text" id="aibExtraStudents" placeholder="e.g. S031, S032, S044" list="aibStudentList" />
             </div>
+            <div id="aibExtraStudentsWarn" class="aib-msg" style="display:none;"></div>
           </div>
           <div class="aib-card">
             <h2 style="margin: 0 0 4px 0; font-size: 15px;">Source Material</h2>
@@ -512,6 +513,7 @@
             <div class="aib-field">
               <textarea id="aibSource" placeholder="Paste chapter text, key events, or summaries here…" style="min-height: 140px;"></textarea>
             </div>
+            <div id="aibSourceCount" style="font-size: 11px; color: var(--rc-ink-dim); margin-top: 4px; opacity: 0.7;">0 / 40,000 characters</div>
             <div style="margin-top: 8px;">
               <label class="aib-btn" style="cursor: pointer;" for="aibSourceFile">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -588,6 +590,8 @@
             <div id="aibOutputMsg" class="aib-msg"></div>
             <textarea id="aibOutput" class="aib-preview" style="font-family: monospace; width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.25); border: 1px solid var(--rc-glass-border); border-radius: 12px; padding: 16px; font-size: 13px; white-space: pre; resize: vertical; color: inherit; outline: none;"></textarea>
           </div>
+        <datalist id="aibStudentList"></datalist>
+        <datalist id="aibGoalList"></datalist>
         </main>
       </div>
     </div>
