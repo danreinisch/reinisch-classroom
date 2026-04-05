@@ -1226,7 +1226,7 @@ const remote = {
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
     if (e1) throw e1;
     const { data, error } = await supabase.from('goals')
-      .select('id, code, desc, target, status, measurement_type, data_collector, data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version, observation_config, notes')
+      .select('id, code, desc, target, status, measurement_type, data_collector, data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version, observation_config, notes, addressed_in_class, individual_delivery')
       .eq('student_id', stu.id)
       .eq('active', true)
       .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
@@ -1237,7 +1237,8 @@ const remote = {
                      measurement_type = 'percent', data_collector = null,
                      data_collector_email = null, class_context = null,
                      goal_area = null, baseline = null, mastery = null, case_manager = null, version = 1,
-                     observation_config = null, notes = null }) {
+                     observation_config = null, notes = null,
+                     addressed_in_class = true, individual_delivery = false }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Lookup student by code
@@ -1251,7 +1252,7 @@ const remote = {
       student_id: stu.id, code, desc: description, target, status,
       measurement_type, data_collector, data_collector_email, class_context,
       goal_area, baseline, mastery, case_manager, version,
-      observation_config, notes
+      observation_config, notes, addressed_in_class, individual_delivery
     };
     let { data, error } = await supabase.from('goals')
       .upsert(fullPayload, { onConflict: 'student_id,code' })
@@ -1260,7 +1261,7 @@ const remote = {
     
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
-      console.error('[data-adapter] ⚠ Schema fallback in upsertGoal() — enriched fields (baseline, mastery, class_context, etc.) were NOT saved. Apply the 20260404_ensure_goals_columns migration.', { code: error.code, message: error.message });
+      console.error('[data-adapter] ⚠ Schema fallback in upsertGoal() — enriched fields (baseline, mastery, class_context, addressed_in_class, individual_delivery, etc.) were NOT saved. Apply the 20260405_goal_delivery_fields migration.', { code: error.code, message: error.message });
       const basicPayload = { student_id: stu.id, code, desc: description, target, status };
       const fallback = await supabase.from('goals')
         .upsert(basicPayload, { onConflict: 'student_id,code' })
@@ -1283,6 +1284,7 @@ const remote = {
       .select(`id, code, desc, target, status, student_id, 
               measurement_type, data_collector, data_collector_email, class_context,
               goal_area, baseline, mastery, case_manager, version, observation_config, notes,
+              addressed_in_class, individual_delivery,
               students!inner(code)`)
       .eq('active', true)
       .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
@@ -1290,7 +1292,7 @@ const remote = {
     
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
-      console.error('[data-adapter] ⚠ Schema fallback in listGoalsAll() — enriched fields (baseline, mastery, class_context, etc.) will be missing. Apply the 20260404_ensure_goals_columns migration.', { code: error.code, message: error.message });
+      console.error('[data-adapter] ⚠ Schema fallback in listGoalsAll() — enriched fields (baseline, mastery, class_context, addressed_in_class, individual_delivery, etc.) will be missing. Apply the 20260405_goal_delivery_fields migration.', { code: error.code, message: error.message });
       const fallback = await supabase
         .from('goals')
         .select('id, code, desc, target, status, student_id, students!inner(code)')
