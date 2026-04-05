@@ -60,15 +60,16 @@ exports.handler = async function(event) {
   console.log('[teacher-ai-builder-save] [' + requestId + '] Authorized: ' + authResult.user.username);
 
   // Validate body size (200KB max)
-  var sizeErr = validateBodySize(event.body, 200);
-  if (sizeErr) {
-    return jsonResponse(event, 413, { ok: false, error: sizeErr }, {}, requestId);
+  var bodySizeCheck = validateBodySize(event.body, 200);
+  if (!bodySizeCheck.valid) {
+    return jsonResponse(event, 413, { ok: false, error: bodySizeCheck.error }, {}, requestId);
   }
 
-  var body = safeJsonParse(event.body);
-  if (!body) {
-    return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON body' }, {}, requestId);
+  var parsed = safeJsonParse(event.body);
+  if (!parsed.ok) {
+    return jsonResponse(event, 400, { ok: false, error: parsed.error || 'Invalid JSON body' }, {}, requestId);
   }
+  var body = parsed.data;
 
   var task_type = body.task_type || 'assignments';
   var subject = body.subject || 'ELA';

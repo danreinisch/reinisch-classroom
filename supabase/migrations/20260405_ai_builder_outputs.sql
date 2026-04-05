@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS ai_builder_outputs (
   content text NOT NULL,                               -- The generated output text
   student_codes text[] DEFAULT '{}',                   -- Array of student codes included in generation
   goal_codes text[] DEFAULT '{}',                      -- Array of goal codes included in generation
-  assignment_id uuid REFERENCES assignments(id) ON DELETE SET NULL,  -- Link to Library assignment if issued
+  assignment_id bigint REFERENCES assignments(id) ON DELETE SET NULL,  -- Link to Library assignment if issued
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'superseded', 'archived')),
   superseded_by uuid REFERENCES ai_builder_outputs(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now() NOT NULL,
