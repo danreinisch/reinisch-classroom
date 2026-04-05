@@ -120,6 +120,11 @@
   const DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
   const DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
 
+  // Accordion pagination / display constants
+  const ACC_PAGE_SIZE = 5;        // assignments shown per page in accordion
+  const ACC_Q_TEXT_CARD_MAX = 55; // max chars of question text shown on the inline card
+  const ACC_Q_TEXT_ARIA_MAX = 40; // max chars of question text used in aria-label
+
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
   const CLASS_CODE_TO_CANONICAL_NAMES = {
@@ -166,13 +171,13 @@
   // formatObservationProgressEntry is now provided by obs-utils.js (imported as formatObservationValue)
 
   /**
-   * Build an inline SVG dot-grid chart for per-question goal data points.
+   * Build a collapsible accordion chart for per-question goal data points.
    * Groups data points by assignment_instance_id (one row per assignment/date).
-   * Each dot represents one question — green = correct, red = incorrect.
    * Shared logic mirroring buildDotGridChart in student-portal-init.js.
    *
    * @param {Array}  dataPoints  rows from goal_data_points table for this goal
    * @param {string} goalId      goal UUID (used as id prefix)
+   * @param {string} [suffix]    optional suffix to ensure unique DOM IDs
    * @returns {{ html: string, hasData: boolean }}
    */
   function buildTcDotGridChart(dataPoints, goalId, suffix) {
@@ -190,7 +195,8 @@
       groups.get(key).points.push(pt);
     }
 
-    const sortedGroups = [...groups.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Sort groups newest-first
+    const sortedGroups = [...groups.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const total = dataPoints.length;
     const correct = dataPoints.filter(p => p.is_correct === true).length;
@@ -202,61 +208,103 @@
       ? `${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`
       : `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
 
-    const ICON_R = 9;   // icon radius — 18px icons give clearer touch targets
-    const DOT_GAP = 30; // breathing room between dots
-    const ROW_H = 52;   // taller rows for readability
-    const LABEL_W = 64;
-    const PAD_RIGHT = 16;
-    const PAD_TOP = 10;
-    const MAX_DOTS = Math.max(...sortedGroups.map(g => g.points.length));
-    const chartW = LABEL_W + (MAX_DOTS * DOT_GAP) + PAD_RIGHT;
-    const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
-
     const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}${suffix || ''}`;
 
     /** Return a fill color for a 0–100 percentage score. */
-    function scoreToColor(score) {
+    const scoreToColor = (score) => {
       if (score >= 100) return '#22c55e';
       if (score >= 80)  return '#3b82f6';
       if (score >= 60)  return '#eab308';
       return '#ef4444';
+    };
+
+    /** Return the border color for a question card. */
+    const cardBorderColor = (pt) => {
+      if (pt.score != null) return scoreToColor(Number(pt.score));
+      return pt.is_correct === true ? '#22c55e' : '#ef4444';
+    };
+
+    // Trend indicator: compare last 3 vs prior 3 assignments (requires 6+)
+    let trendHtml = '';
+    if (sortedGroups.length >= 6) {
+      const groupAvgScore = (grps) => {
+        const pts = grps.flatMap(g => g.points);
+        if (!pts.length) return 0;
+        if (hasScoreDots) {
+          const scored = pts.filter(p => p.score != null);
+          return scored.length ? scored.reduce((s, p) => s + Number(p.score), 0) / scored.length : 0;
+        }
+        return (pts.filter(p => p.is_correct === true).length / pts.length) * 100;
+      };
+      const recentAvg = groupAvgScore(sortedGroups.slice(0, 3));
+      const priorAvg  = groupAvgScore(sortedGroups.slice(3, 6));
+      const diff = recentAvg - priorAvg;
+      let trendClass, trendLabel;
+      if (diff >= 5) {
+        trendClass = 'st-acc-trend--up';
+        trendLabel = '↗ improving';
+      } else if (diff <= -5) {
+        trendClass = 'st-acc-trend--down';
+        trendLabel = '↘ declining';
+      } else {
+        trendClass = 'st-acc-trend--flat';
+        trendLabel = '→ steady';
+      }
+      trendHtml = `<div class="st-acc-trend-bar"><span class="st-acc-trend ${trendClass}">${trendLabel}</span></div>`;
     }
 
-    let dotsSvg = '';
-    sortedGroups.forEach((group, rowIdx) => {
-      const y = PAD_TOP + rowIdx * ROW_H + ROW_H / 2;
-      const dateLabel = formatDate(group.date);
+    // Build accordion rows
+    const chevronSvg = '<svg class="st-acc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
 
-      if (rowIdx > 0) {
-        const sepY = PAD_TOP + rowIdx * ROW_H;
-        dotsSvg += `<line stroke="rgba(255,255,255,0.08)" stroke-width="1" x1="0" y1="${sepY}" x2="${chartW}" y2="${sepY}" />`;
+    let accRows = '';
+    sortedGroups.forEach((group, rowIdx) => {
+      const hidden = rowIdx >= ACC_PAGE_SIZE;
+      const dateLabel = escapeHtml(formatDate(group.date));
+      const qCount = group.points.length;
+      const qCountLabel = `${qCount} question${qCount !== 1 ? 's' : ''}`;
+
+      // Score badge for the row
+      let rowScoreHtml = '';
+      if (hasScoreDots) {
+        const scoredPts = group.points.filter(p => p.score != null);
+        if (scoredPts.length) {
+          const avg = scoredPts.reduce((s, p) => s + Number(p.score), 0) / scoredPts.length;
+          rowScoreHtml = `<span class="st-acc-row-score" style="color:${scoreToColor(avg)};">${Math.round(avg)}%</span>`;
+        }
+      } else {
+        const rowCorrect = group.points.filter(p => p.is_correct === true).length;
+        const rowPct = group.points.length ? Math.round((rowCorrect / group.points.length) * 100) : 0;
+        const scoreColor = scoreToColor(rowPct);
+        rowScoreHtml = `<span class="st-acc-row-score" style="color:${scoreColor};">${rowCorrect}/${group.points.length}</span>`;
       }
 
-      dotsSvg += `<text fill="rgba(255,255,255,0.55)" font-size="11" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
-
+      // Per-question cards
+      let cardsHtml = '';
       group.points.forEach((pt, qIdx) => {
-        const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
-        const useScore = pt.score != null;
-        let dotContent, dotLabel;
+        const qNum = qIdx + 1;
+        const rawText = pt.question_text || null;
+        const cardText = rawText
+          ? (rawText.length > ACC_Q_TEXT_CARD_MAX ? rawText.substring(0, ACC_Q_TEXT_CARD_MAX) + '…' : rawText)
+          : `Question ${qNum}`;
+        const ariaText = rawText
+          ? (rawText.length > ACC_Q_TEXT_ARIA_MAX ? rawText.substring(0, ACC_Q_TEXT_ARIA_MAX) + '…' : rawText)
+          : `Question ${qNum}`;
 
-        if (useScore) {
-          // Percentage-based: filled circle with color scale
+        let scoreDisplay;
+        if (pt.score != null) {
           const score = Number(pt.score);
-          const circleColor = scoreToColor(score);
-          dotLabel = `Q${qIdx + 1}: ${score}% — ${escapeHtml(dateLabel)}`;
-          dotContent = `<circle cx="${cx}" cy="${y}" r="${ICON_R}" fill="${circleColor}" style="pointer-events:none;" />`;
+          const color = scoreToColor(score);
+          scoreDisplay = `<span class="st-acc-q-score" style="color:${color};">${score}%</span>`;
         } else {
-          // Binary correct/incorrect: check/X icon
           const isCorrect = pt.is_correct === true;
           const iconColor = isCorrect ? '#22c55e' : '#f87171';
           const iconPaths = isCorrect ? DOT_CHECK_PATHS : DOT_X_PATHS;
-          dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
-          dotContent = `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">${iconPaths}</svg>`;
+          scoreDisplay = `<svg class="st-acc-q-score" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths}</svg>`;
         }
 
-        // Use double quotes for data-dp: encodeURIComponent output never contains double quotes
+        const borderColor = cardBorderColor(pt);
         const dpVal = encodeURIComponent(JSON.stringify({
-          qNum: qIdx + 1,
+          qNum,
           question_text: pt.question_text || null,
           choices: pt.choices || null,
           student_answer: pt.student_answer || null,
@@ -265,16 +313,33 @@
           score: pt.score ?? null,
           date: pt.date,
         }));
-        // <g> with nested content — transparent <rect> provides larger touch target
-        dotsSvg += `<g data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
-          `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
-          dotContent +
-          `<title>${dotLabel}</title>` +
-          `</g>`;
+        const ariaLabel = escapeHtml(`Q${qNum}: ${ariaText} — ${formatDate(group.date)}`);
+        cardsHtml += `<button class="st-acc-q-card" data-dp="${dpVal}" style="border-left-color:${borderColor};" aria-label="${ariaLabel}">` +
+          `<span class="st-acc-q-num">Q${qNum}</span>` +
+          `<span class="st-acc-q-text">${escapeHtml(cardText)}</span>` +
+          scoreDisplay +
+          `</button>`;
       });
+
+      const rowHiddenClass = hidden ? ' st-acc-row--hidden' : '';
+      accRows += `<div class="st-acc-row${rowHiddenClass}">` +
+        `<button class="st-acc-row-toggle" aria-expanded="false">` +
+        `<span class="st-acc-row-date">${dateLabel}</span>` +
+        `<span class="st-acc-row-meta">${escapeHtml(qCountLabel)}</span>` +
+        rowScoreHtml +
+        chevronSvg +
+        `</button>` +
+        `<div class="st-acc-row-body" hidden><div class="st-acc-q-cards">${cardsHtml}</div></div>` +
+        `</div>`;
     });
 
-    // Legend: percentage scale when any dot uses score-based coloring, otherwise binary
+    // "Show older" button when there are hidden rows
+    const hiddenCount = Math.max(0, sortedGroups.length - ACC_PAGE_SIZE);
+    const showOlderBtn = hiddenCount > 0
+      ? `<button class="st-acc-show-older" data-acc-list="${idBase}-acc" data-total="${sortedGroups.length}" data-loaded="${ACC_PAGE_SIZE}">Show older assignments (${hiddenCount} more)</button>`
+      : '';
+
+    // Legend
     let legendHtml;
     if (hasScoreDots) {
       legendHtml = `
@@ -291,14 +356,16 @@
     }
 
     const html = `
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.45);margin-bottom:4px;">Per-Question Results</div>
-      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:8px;">${escapeHtml(summaryText)}</div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <svg id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 480)}" height="${chartH}" role="img" aria-label="${escapeHtml('Dot grid chart: ' + summaryText)}" style="display:block;min-width:200px;overflow:visible;">
-          ${dotsSvg}
-        </svg>
-      </div>
-      <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.55);">${legendHtml}</div>`;
+      <div class="st-dot-grid-wrap">
+        <div class="st-dot-grid-header">Per-Question Results</div>
+        <div class="st-dot-grid-summary">${escapeHtml(summaryText)}</div>
+        ${trendHtml}
+        <div class="st-acc-list" id="${idBase}-acc">
+          ${accRows}
+        </div>
+        ${showOlderBtn}
+        <div class="st-dot-grid-legend">${legendHtml}</div>
+      </div>`;
 
     return { html, hasData: true };
   }
@@ -2384,7 +2451,48 @@
     if (tableBody) {
       tableBody.addEventListener('click', async (e) => {
         // PRIORITY 1: Handle all button-specific clicks first (highest priority)
-        
+
+        // Accordion row toggle
+        if (e.target.closest('.st-acc-row-toggle')) {
+          const toggleBtn = e.target.closest('.st-acc-row-toggle');
+          const row = toggleBtn.closest('.st-acc-row');
+          if (row) {
+            const body = row.querySelector('.st-acc-row-body');
+            const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+            toggleBtn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+            if (body) body.hidden = expanded;
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        // "Show older" accordion pagination
+        if (e.target.closest('.st-acc-show-older')) {
+          const btn = e.target.closest('.st-acc-show-older');
+          const listId = btn.getAttribute('data-acc-list');
+          const list = listId ? document.getElementById(listId) : null;
+          if (list) {
+            const hiddenRows = list.querySelectorAll('.st-acc-row--hidden');
+            let shown = 0;
+            for (const row of hiddenRows) {
+              if (shown >= ACC_PAGE_SIZE) break;
+              row.classList.remove('st-acc-row--hidden');
+              shown++;
+            }
+            const total = Number(btn.getAttribute('data-total')) || 0;
+            const newLoaded = (Number(btn.getAttribute('data-loaded')) || 0) + shown;
+            btn.setAttribute('data-loaded', newLoaded);
+            const remaining = total - newLoaded;
+            if (remaining <= 0) {
+              btn.remove();
+            } else {
+              btn.textContent = `Show older assignments (${remaining} more)`;
+            }
+          }
+          e.stopPropagation();
+          return;
+        }
+
         // Description toggle - handle BEFORE interactive element check
         if (e.target.classList.contains('st-desc-toggle')) {
           const desc = e.target.closest('.st-goal-description');
