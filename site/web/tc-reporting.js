@@ -339,6 +339,29 @@
   }
 
   /**
+   * Format a numeric goal progress value according to the goal's measurement type.
+   * - 'Number' goals: display raw value with one decimal, no % suffix
+   * - 'Observation' goals: return empty string (status text is used instead)
+   * - All others (Percent, x/y, fraction, unset): show as integer percentage
+   */
+  function formatGoalValue(value, goal) {
+    if (value == null || isNaN(value)) return 'N/A';
+    const mt = (goal.measurement_type || '').toLowerCase();
+    if (mt === 'observation') return '';
+    if (mt === 'number') return value.toFixed(1);
+    return value.toFixed(0) + '%';
+  }
+
+  /**
+   * Display baseline → mastery/target in original text format (preserves fractions etc.)
+   */
+  function formatGoalTarget(goal) {
+    const baseline = goal.baseline || 'N/A';
+    const mastery = goal.mastery || goal.target || 'N/A';
+    return `${baseline} → ${mastery}`;
+  }
+
+  /**
    * Infer a display label for an assignment's type.
    * - 'html' + meta.questions  → 'HTML'
    * - 'html' + meta.days       → 'TXT'
@@ -607,7 +630,7 @@
 
         const currentDisplay = goal.measurement_type === 'Observation'
           ? (goalProgressData.count > 0 ? status : 'No Data')
-          : (goalProgressData.average != null ? goalProgressData.average.toFixed(0) + '%' : 'N/A');
+          : formatGoalValue(goalProgressData.average, goal);
 
         const makeOption = (val, label) =>
           `<option value="${val}"${selectedStatusValue === val ? " selected" : ""}>${label}</option>`;
@@ -841,7 +864,7 @@
             <td><strong>${escapeHtml(goal.code)}</strong></td>
             <td>${escapeHtml(goal.goal_area || "N/A")}</td>
             <td>${escapeHtml(String(goal.baseline || 'N/A'))}</td>
-            <td>${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</td>
+            <td>${goalProgressData.average != null ? formatGoalValue(goalProgressData.average, goal) : "N/A"}</td>
             <td>${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</td>
             <td>${goalProgressData.count}</td>
             <td>${status}</td>
@@ -1291,6 +1314,23 @@ ${narrative}`;
     const seed = hashCode(seedStr);
     const pick = (arr) => arr[seed % arr.length];
 
+    // Append class_context / data_collector context to any narrative string.
+    const withCtx = (narrativeStr, sts) => {
+      const contextParts = [];
+      if (goal.class_context) {
+        contextParts.push(`Data collected in ${goal.class_context}`);
+      }
+      if (goal.data_collector && goal.data_collector !== (student.primary_case_manager || '')) {
+        contextParts.push(`data collected by ${goal.data_collector}`);
+      }
+      if (contextParts.length > 0) {
+        const trimmed = narrativeStr.trimEnd();
+        const base = trimmed.endsWith('.') ? trimmed.slice(0, -1) : trimmed;
+        narrativeStr = `${base}. ${contextParts.join('; ')}.`;
+      }
+      return { narrative: narrativeStr, status: sts };
+    };
+
     // ── Observation branch ────────────────────────────────────────────────────
     // Goals with measurement_type === 'Observation' get category-specific narrative
     // language rather than percentage-based copy.
@@ -1303,10 +1343,7 @@ ${narrative}`;
       const entries = quarterData.entries || [];
 
       if (count === 0) {
-        return {
-          narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.`,
-          status: 'Not Making Progress',
-        };
+        return withCtx(`No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.`, 'Not Making Progress');
       }
 
       // ── session_outcome ──
@@ -1341,7 +1378,7 @@ ${narrative}`;
               `Observation data from ${quarter} indicates ${name} met the session target ${metCount} of ${validCount} time${validCount !== 1 ? 's' : ''}.`,
             ])
           : `No evaluable observation sessions were recorded for ${name} in ${area} during ${quarter}.`;
-        return { narrative, status };
+        return withCtx(narrative, status);
       }
 
       // ── tally ──
@@ -1393,7 +1430,7 @@ ${narrative}`;
           `Across ${countDesc} in ${quarter}, ${name} averaged ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} per observation. The target maximum is ${targetMax} prompt${targetMax !== 1 ? 's' : ''}.`,
           `Data collected over ${countDesc} this quarter indicates ${name} needed an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} (target: ${targetMax} or fewer).`,
         ]);
-        return { narrative, status };
+        return withCtx(narrative, status);
       }
 
       // ── behavior_checklist ──
@@ -1439,15 +1476,15 @@ ${narrative}`;
           `Across ${countDesc} in ${quarter}, ${name} demonstrated an average of ${avgMet}/${totalBehaviors} checklist behaviors.${consistentNote}`,
           `Behavior checklist data from ${countDesc} this quarter shows ${name} averaged ${avgMet} of ${totalBehaviors} behaviors met per session.${consistentNote}`,
         ]);
-        return { narrative, status };
+        return withCtx(narrative, status);
       }
 
       // Fallback for unknown observation category
       const avgStr = avg != null ? avg.toFixed(0) : '—';
-      return {
-        narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr}.`,
-        status: avg != null && avg >= targetVal ? 'Goal Met' : 'Progressing but Not Sufficient',
-      };
+      return withCtx(
+        `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr}.`,
+        avg != null && avg >= targetVal ? 'Goal Met' : 'Progressing but Not Sufficient'
+      );
     }
     // ── End observation branch ────────────────────────────────────────────────
 
@@ -1466,10 +1503,7 @@ ${narrative}`;
         `Additional data points should be gathered to accurately measure progress toward the ${goal.mastery || goal.target || targetVal.toFixed(0)} criterion.`,
         `It is recommended that data collection for this goal be prioritized in the upcoming quarter.`,
       ];
-      return {
-        narrative: `${pick(openings)} ${pick(closings)}`,
-        status: "Not Making Progress",
-      };
+      return withCtx(`${pick(openings)} ${pick(closings)}`, "Not Making Progress");
     }
 
     // --- Baseline comparison ---
@@ -1617,10 +1651,7 @@ ${narrative}`;
           ])
         : "";
 
-    return {
-      narrative: `${opening} ${middle} ${closing}${caveat}`,
-      status,
-    };
+    return withCtx(`${opening} ${middle} ${closing}${caveat}`, status);
   }
 
   /**
@@ -2585,10 +2616,10 @@ ${narrative}`;
         const q3Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q3'));
         const q4Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q4'));
 
-        const q1Avg = q1Data.average != null ? q1Data.average.toFixed(0) + '%' : '—';
-        const q2Avg = q2Data.average != null ? q2Data.average.toFixed(0) + '%' : '—';
-        const q3Avg = q3Data.average != null ? q3Data.average.toFixed(0) + '%' : '—';
-        const q4Avg = q4Data.average != null ? q4Data.average.toFixed(0) + '%' : '—';
+        const q1Avg = q1Data.average != null ? formatGoalValue(q1Data.average, goal) : '—';
+        const q2Avg = q2Data.average != null ? formatGoalValue(q2Data.average, goal) : '—';
+        const q3Avg = q3Data.average != null ? formatGoalValue(q3Data.average, goal) : '—';
+        const q4Avg = q4Data.average != null ? formatGoalValue(q4Data.average, goal) : '—';
 
         // Calculate trend
         const values = [q1Data.average, q2Data.average, q3Data.average, q4Data.average].filter(v => v != null);
@@ -3661,7 +3692,7 @@ ${narrative}`;
             progressCell = '⚠️ Needs support';
           }
         } else {
-          progressCell = avgRaw != null ? `${avgRaw}%` : '—';
+          progressCell = avgRaw != null ? formatGoalValue(data.average, goal) : '—';
         }
         const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
         const masteryDisplay = goal.mastery != null ? escapeHtml(String(goal.mastery)) : targetDisplay;
@@ -4359,7 +4390,7 @@ ${narrative}`;
         const avgRaw = data.average != null ? data.average.toFixed(1) : null;
         const progressCell = isParent
           ? (avgRaw == null ? 'No data yet' : data.average >= 80 ? 'On track' : data.average >= 60 ? 'Making progress' : 'Needs support')
-          : (avgRaw != null ? `${avgRaw}%` : '—');
+          : (data.average != null ? formatGoalValue(data.average, goal) : '—');
         const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
         const masteryDisplay = goal.mastery != null ? escapeHtml(String(goal.mastery)) : targetDisplay;
         const baselineDisplay = goal.baseline != null ? escapeHtml(String(goal.baseline)) : '—';

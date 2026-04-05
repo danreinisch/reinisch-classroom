@@ -538,7 +538,26 @@
           anyMissing = true;
         }
       }
-      if (!anyMissing) {
+      if (anyMissing) {
+        const hydratedCount = keys.filter(k => localStorage.getItem(k)).length;
+        console.log(`[tc-spreadsheet] Hydrated settings from DB (${hydratedCount}/${keys.length} keys present) — refreshing in-memory state`);
+        loadColWidths();
+        loadCustomCols();
+        loadCustomData();
+        loadRowOrder();
+        loadHiddenCols();
+        loadChangeLog();
+        loadColors();
+        loadCustomOptions();
+        loadColumnOrder();
+        loadViews();
+        loadCollapsedStudents();
+        loadCellComments();
+        loadCellTimestamps();
+        loadPrintDark();
+        loadCfRules();
+        if (typeof renderSpreadsheet === 'function') renderSpreadsheet();
+      } else {
         // localStorage already has data — sync it back to DB to keep it fresh
         syncSettingsToDb();
       }
