@@ -1225,7 +1225,12 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
     if (e1) throw e1;
-    const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).eq('active', true).or('status.is.null,status.not.in.(closed,archived,Closed,Archived)').order('code');
+    const { data, error } = await supabase.from('goals')
+      .select('id, code, desc, target, status, measurement_type, data_collector, data_collector_email, class_context, goal_area, baseline, mastery, case_manager, version, observation_config, notes')
+      .eq('student_id', stu.id)
+      .eq('active', true)
+      .or('status.is.null,status.not.in.(closed,archived,Closed,Archived)')
+      .order('code');
     if (error) throw error; return data;
   },
   async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open',
@@ -1255,14 +1260,14 @@ const remote = {
     
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
-      console.warn('[data-adapter] Schema fallback triggered in upsertGoal()', { code: error.code, message: error.message });
+      console.error('[data-adapter] ⚠ Schema fallback in upsertGoal() — enriched fields (baseline, mastery, class_context, etc.) were NOT saved. Apply the 20260404_ensure_goals_columns migration.', { code: error.code, message: error.message });
       const basicPayload = { student_id: stu.id, code, desc: description, target, status };
       const fallback = await supabase.from('goals')
         .upsert(basicPayload, { onConflict: 'student_id,code' })
         .select()
         .single();
       if (fallback.error) throw fallback.error;
-      return { student_code, ...fallback.data };
+      return { student_code, ...fallback.data, _fallback: true };
     }
     
     if (error) throw error;
@@ -1285,7 +1290,7 @@ const remote = {
     
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
-      console.warn('[data-adapter] Schema fallback triggered in listGoalsAll()', { code: error.code, message: error.message });
+      console.error('[data-adapter] ⚠ Schema fallback in listGoalsAll() — enriched fields (baseline, mastery, class_context, etc.) will be missing. Apply the 20260404_ensure_goals_columns migration.', { code: error.code, message: error.message });
       const fallback = await supabase
         .from('goals')
         .select('id, code, desc, target, status, student_id, students!inner(code)')
@@ -2076,7 +2081,7 @@ const remote = {
 
     // Fetch goals and students to enrich the flat rows; if either lookup fails, proceed with empty maps.
     const [goalsResult, studentsResult] = await Promise.all([
-      supabase.from('goals').select('id, code, desc, goal_area'),
+      supabase.from('goals').select('id, code, desc, goal_area, baseline, mastery, measurement_type, class_context'),
       supabase.from('students').select('id, code, name'),
     ]);
     const goalById = new Map((!goalsResult.error && goalsResult.data ? goalsResult.data : []).map(g => [g.id, g]));
