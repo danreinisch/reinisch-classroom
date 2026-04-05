@@ -652,8 +652,9 @@
     }
 
     // Trend indicator: compare avg of 3 most recent vs. prior 3 assignments
+    // Requires at least 6 groups so both halves have 3 full assignments to compare.
     let trendHtml = '';
-    if (sortedGroups.length >= 4) {
+    if (sortedGroups.length >= 6) {
       function groupAvgScore(grps) {
         const pts = grps.flatMap(g => g.points);
         if (!pts.length) return 0;
@@ -670,6 +671,10 @@
       else if (diff < -5) trendHtml = '<span class="st-acc-trend st-acc-trend--down">↘ declining</span>';
       else                trendHtml = '<span class="st-acc-trend st-acc-trend--flat">→ steady</span>';
     }
+
+    // Truncation limits: card body shows more context; aria-label is shorter for concise a11y text
+    const Q_TEXT_CARD_MAX = 55;   // max chars of question text shown in the card
+    const Q_TEXT_ARIA_MAX = 40;   // max chars of question text used in aria-label
 
     // Build accordion rows
     const rowsHtml = sortedGroups.map((group, rowIdx) => {
@@ -713,7 +718,7 @@
 
         // Show actual question text (truncated) instead of generic "Q#"
         const qText = pt.question_text
-          ? (pt.question_text.length > 55 ? pt.question_text.substring(0, 55) + '…' : pt.question_text)
+          ? (pt.question_text.length > Q_TEXT_CARD_MAX ? pt.question_text.substring(0, Q_TEXT_CARD_MAX) + '…' : pt.question_text)
           : `Question ${qIdx + 1}`;
 
         const dpVal = encodeURIComponent(JSON.stringify({
@@ -727,7 +732,7 @@
           date: pt.date,
         }));
 
-        const shortLabel = pt.question_text ? pt.question_text.substring(0, 40) : `Question ${qIdx + 1}`;
+        const shortLabel = pt.question_text ? pt.question_text.substring(0, Q_TEXT_ARIA_MAX) : `Question ${qIdx + 1}`;
         const scoreLabel = useScore ? `${Number(pt.score)}%` : (pt.is_correct ? 'Correct' : 'Incorrect');
         const ariaLabel = `Q${qIdx + 1}: ${shortLabel} — ${scoreLabel}`;
 

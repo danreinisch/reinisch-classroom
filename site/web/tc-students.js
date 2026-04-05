@@ -166,16 +166,6 @@
   // formatObservationProgressEntry is now provided by obs-utils.js (imported as formatObservationValue)
 
   /**
-   * Build an inline SVG dot-grid chart for per-question goal data points.
-   * Groups data points by assignment_instance_id (one row per assignment/date).
-   * Each dot represents one question — green = correct, red = incorrect.
-   * Shared logic mirroring buildDotGridChart in student-portal-init.js.
-   *
-   * @param {Array}  dataPoints  rows from goal_data_points table for this goal
-   * @param {string} goalId      goal UUID (used as id prefix)
-   * @returns {{ html: string, hasData: boolean }}
-   */
-  /**
    * Build a collapsible accordion chart for per-question goal data points.
    * Mirrors buildDotGridChart in student-portal-init.js.
    * Groups data points by assignment_instance_id (one row per assignment/date).
@@ -227,8 +217,9 @@
     }
 
     // Trend indicator: compare avg of 3 most recent vs. prior 3 assignments
+    // Requires at least 6 groups so both halves have 3 full assignments to compare.
     let trendHtml = '';
-    if (sortedGroups.length >= 4) {
+    if (sortedGroups.length >= 6) {
       function groupAvgScore(grps) {
         const pts = grps.flatMap(g => g.points);
         if (!pts.length) return 0;
@@ -245,6 +236,10 @@
       else if (diff < -5) trendHtml = '<span class="st-acc-trend st-acc-trend--down">↘ declining</span>';
       else                trendHtml = '<span class="st-acc-trend st-acc-trend--flat">→ steady</span>';
     }
+
+    // Truncation limits: card body shows more context; aria-label is shorter for concise a11y text
+    const Q_TEXT_CARD_MAX = 55;   // max chars of question text shown in the card
+    const Q_TEXT_ARIA_MAX = 40;   // max chars of question text used in aria-label
 
     // Build accordion rows
     const rowsHtml = sortedGroups.map((group, rowIdx) => {
@@ -288,7 +283,7 @@
 
         // Show actual question text (truncated) instead of generic "Q#"
         const qText = pt.question_text
-          ? (pt.question_text.length > 55 ? pt.question_text.substring(0, 55) + '…' : pt.question_text)
+          ? (pt.question_text.length > Q_TEXT_CARD_MAX ? pt.question_text.substring(0, Q_TEXT_CARD_MAX) + '…' : pt.question_text)
           : `Question ${qIdx + 1}`;
 
         const dpVal = encodeURIComponent(JSON.stringify({
@@ -302,7 +297,7 @@
           date: pt.date,
         }));
 
-        const shortLabel = pt.question_text ? pt.question_text.substring(0, 40) : `Question ${qIdx + 1}`;
+        const shortLabel = pt.question_text ? pt.question_text.substring(0, Q_TEXT_ARIA_MAX) : `Question ${qIdx + 1}`;
         const scoreLabel = useScore ? `${Number(pt.score)}%` : (pt.is_correct ? 'Correct' : 'Incorrect');
         const ariaLabel = `Q${qIdx + 1}: ${shortLabel} — ${scoreLabel}`;
 
