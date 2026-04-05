@@ -2007,17 +2007,26 @@
           }
         }
 
-        // No retry (score > 60% or student declined) — mark as read-only
-        clearSavedAnswers(instance.id);
+        // No retry — lock the existing DOM in place without re-rendering to
+        // avoid a flash of blank content while the view rebuilds.
         assignmentViewerState.isRetryMode = false;
         assignmentViewerState.retryLockedQuestionIds = new Set();
-        // Store scoring results so fill-in-blank textareas can show ✓/✗ feedback
+        // Store scoring results for later reference when the viewer is re-opened
         assignmentViewerState.scoringResults = submitResult.results || [];
-        this.textContent = '✓ Submitted!';
-        setTimeout(() => {
-          assignmentViewerState.isReadOnly = true;
-          renderQuestionsDay(container, dayData, instance);
-        }, 1000);
+        assignmentViewerState.isReadOnly = true;
+
+        // Disable all interactive inputs so answers remain visible exactly as entered
+        container.querySelectorAll('input, textarea, select, button').forEach(el => {
+          el.disabled = true;
+        });
+
+        // Replace the submit button with a submitted banner (no DOM flash)
+        const submittedBanner = document.createElement('div');
+        submittedBanner.className = 'st-submitted-banner';
+        submittedBanner.textContent = '✓ Submitted!';
+        this.replaceWith(submittedBanner);
+        // clearSavedAnswers is deferred to closeAssignmentViewer so answers stay
+        // visible until the student closes the panel.
       });
     }
 
@@ -2607,9 +2616,6 @@
         try {
           const submitResult = await saveWritingResponseToServer(instance, response);
 
-          // Clear saved answers after successful submit
-          clearSavedAnswers(instance.id);
-
           // Future-proof: check retry eligibility (mirrors MCQ flow)
           // Writing prompts are typically teacher-scored, so score_total
           // will usually be null here, but this handles the case where
@@ -2630,11 +2636,22 @@
             }
           }
 
-          this.textContent = '✓ Submitted!';
-          setTimeout(() => {
-            assignmentViewerState.isReadOnly = true;
-            renderWritingPromptDay(container, dayData, instance);
-          }, 1000);
+          // Lock the existing DOM in place without re-rendering to avoid a
+          // flash of blank content while the view rebuilds.
+          assignmentViewerState.isReadOnly = true;
+
+          // Disable all interactive inputs so the response stays visible
+          container.querySelectorAll('input, textarea, select, button').forEach(el => {
+            el.disabled = true;
+          });
+
+          // Replace the submit button with a submitted banner (no DOM flash)
+          const submittedBanner = document.createElement('div');
+          submittedBanner.className = 'st-submitted-banner';
+          submittedBanner.textContent = '✓ Submitted — Waiting for teacher review';
+          this.replaceWith(submittedBanner);
+          // clearSavedAnswers is deferred to closeAssignmentViewer so the
+          // response stays visible until the student closes the panel.
         } catch (err) {
           console.error(LOG_PREFIX, 'Failed to submit writing response:', err);
           // Show inline error instead of alert
@@ -3145,6 +3162,14 @@
       loadStudentAssignmentsForTabs(studentCode).catch(err => {
         console.error(LOG_PREFIX, 'Failed to reload assignments:', err);
       });
+    }
+
+    // Clear any locally-saved draft answers now that the viewer is closed.
+    // If the assignment was submitted (isReadOnly=true), this deferred cleanup
+    // ensures answers stayed visible on screen until the panel closed rather
+    // than disappearing immediately after submit.
+    if (assignmentViewerState.isReadOnly && assignmentViewerState.currentAssignment?.id) {
+      clearSavedAnswers(assignmentViewerState.currentAssignment.id);
     }
   }
 
