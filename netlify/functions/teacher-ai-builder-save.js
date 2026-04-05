@@ -23,6 +23,14 @@ var SUPABASE_URL = supaConfig.url;
 var SUPABASE_SERVICE_ROLE_KEY = supaConfig.key;
 var SESSION_SECRET = process.env.SESSION_SECRET;
 
+function getCurrentSchoolYear() {
+  var now = new Date();
+  var month = now.getMonth() + 1;
+  var year = now.getFullYear();
+  var startYear = month >= 8 ? year : year - 1;
+  return startYear + '-' + (startYear + 1);
+}
+
 exports.handler = async function(event) {
   var requestId = generateRequestId();
   console.log('[teacher-ai-builder-save] [' + requestId + '] Request received');
@@ -87,7 +95,7 @@ exports.handler = async function(event) {
     student_codes: Array.isArray(body.student_codes) ? body.student_codes : [],
     goal_codes: Array.isArray(body.goal_codes) ? body.goal_codes : [],
     status: 'active',
-    school_year: body.school_year || null,
+    school_year: body.school_year || getCurrentSchoolYear(),
   };
 
   try {
