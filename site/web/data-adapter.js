@@ -1056,6 +1056,39 @@ const local = {
     localStorage.setItem('rc_app_config_' + key, JSON.stringify(value));
     return value;
   },
+
+  // AI Builder Outputs (local stubs)
+  async listAiBuilderOutputs(filters = {}) {
+    const outputs = store.get('aiBuilderOutputs', []);
+    return outputs.filter(o => {
+      if (filters.status && o.status !== filters.status) return false;
+      if (filters.week && o.week !== filters.week) return false;
+      if (filters.subject && o.subject !== filters.subject) return false;
+      return true;
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  },
+
+  async saveAiBuilderOutput(output) {
+    const outputs = store.get('aiBuilderOutputs', []);
+    const entry = {
+      id: 'aio_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      ...output,
+      created_at: new Date().toISOString(),
+      status: 'active',
+    };
+    outputs.push(entry);
+    store.set('aiBuilderOutputs', outputs);
+    return entry;
+  },
+
+  async updateAiBuilderOutput(id, updates) {
+    const outputs = store.get('aiBuilderOutputs', []);
+    const idx = outputs.findIndex(o => o.id === id);
+    if (idx === -1) throw new Error('Output not found');
+    outputs[idx] = { ...outputs[idx], ...updates };
+    store.set('aiBuilderOutputs', outputs);
+    return outputs[idx];
+  },
 };
 
 const remote = {

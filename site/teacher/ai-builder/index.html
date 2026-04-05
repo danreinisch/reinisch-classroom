@@ -264,6 +264,130 @@
 
       #aibImgSection { display: none; }
       #aibProbeSection { display: none; }
+
+      .aib-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--rc-glass-border);
+        padding-bottom: 0;
+      }
+
+      .aib-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 18px;
+        border: none;
+        background: transparent;
+        color: var(--rc-ink-dim);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+        margin-bottom: -1px;
+      }
+
+      .aib-tab:hover {
+        color: inherit;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .aib-tab.active {
+        color: inherit;
+        border-bottom-color: rgba(99, 102, 241, 0.7);
+      }
+
+      .aib-history-card {
+        border: 1px solid var(--rc-glass-border);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        margin-bottom: 12px;
+      }
+
+      .aib-history-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .aib-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .aib-badge-assignments { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+      .aib-badge-presentations { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+      .aib-badge-both { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; }
+      .aib-badge-dataProbe { background: rgba(249, 115, 22, 0.2); color: #fdba74; }
+      .aib-badge-active { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+      .aib-badge-superseded { background: rgba(234, 179, 8, 0.15); color: #fde047; }
+      .aib-badge-archived { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+      .aib-history-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0 0 6px 0;
+      }
+
+      .aib-history-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--rc-ink-dim);
+        margin-bottom: 10px;
+      }
+
+      .aib-history-preview {
+        font-family: monospace;
+        font-size: 12px;
+        color: var(--rc-ink-dim);
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--rc-glass-border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 120px;
+        overflow: hidden;
+        margin-bottom: 8px;
+        transition: max-height 0.3s ease;
+      }
+
+      .aib-history-preview.expanded {
+        max-height: none;
+      }
+
+      .aib-history-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .aib-history-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+        align-items: flex-end;
+      }
+
+      .aib-history-filters .aib-field {
+        min-width: 140px;
+        flex: 1;
+      }
     </style>
   </head>
   <body>
@@ -415,6 +539,20 @@
           <p class="aib-subtle" style="margin-top: -6px">
             Generate individualized assignments and presentations powered by Claude. Student and goal data is pulled live from Supabase — no copy-paste required.
           </p>
+
+          <!-- Tab Navigation -->
+          <div class="aib-tabs">
+            <button class="aib-tab active" data-tab="create" id="aibTabCreate">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              Create
+            </button>
+            <button class="aib-tab" data-tab="manage" id="aibTabManage">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              Manage
+            </button>
+          </div>
+
+          <div id="aibCreatePanel">
 
           <!-- Task Type Selector -->
           <div class="aib-card">
@@ -628,6 +766,53 @@
             </div>
             <div id="aibIssueMsg" class="aib-msg"></div>
           </div>
+
+          </div><!-- /aibCreatePanel -->
+
+          <!-- Manage Panel -->
+          <div id="aibManagePanel" style="display: none;">
+            <h2 style="margin: 0 0 12px 0; font-size: 16px;">Generation History</h2>
+
+            <!-- Filters -->
+            <div class="aib-history-filters">
+              <div class="aib-field">
+                <label for="aibHistoryStatus">Status</label>
+                <select id="aibHistoryStatus">
+                  <option value="">All</option>
+                  <option value="active">Active</option>
+                  <option value="superseded">Superseded</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+              <div class="aib-field">
+                <label for="aibHistoryWeek">Week</label>
+                <input type="text" id="aibHistoryWeek" placeholder="e.g. 14" />
+              </div>
+              <div class="aib-field">
+                <label for="aibHistorySubject">Subject</label>
+                <select id="aibHistorySubject">
+                  <option value="">All</option>
+                  <option value="ELA">ELA</option>
+                  <option value="Life Skills">Life Skills</option>
+                  <option value="Math">Math</option>
+                  <option value="Science">Science</option>
+                  <option value="Social Studies">Social Studies</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="aib-field" style="flex: 0 0 auto; align-self: flex-end;">
+                <button class="aib-btn" type="button" id="aibHistoryRefreshBtn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <!-- History list -->
+            <div id="aibHistoryList">
+              <div style="color: var(--rc-ink-dim); padding: 40px 20px; text-align: center;">No generations yet. Create your first assignment or presentation in the <strong>Create</strong> tab.</div>
+            </div>
+          </div><!-- /aibManagePanel -->
 
         <datalist id="aibStudentList"></datalist>
         <datalist id="aibGoalList"></datalist>
