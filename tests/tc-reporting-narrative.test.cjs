@@ -1080,7 +1080,7 @@ const goalWithCtx = { code: 'S001.1.1', goal_area: 'Reading Comprehension', base
 const studentWithCM = { name: 'Maria Garcia', code: 'S001', primary_case_manager: 'Mr. Smith' };
 const goalWithCtxOnly = { code: 'S001.1.2', goal_area: 'Reading Comprehension', baseline: 45, target: 80, class_context: 'Period 3 ELA' };
 const goalWithDCOnly = { code: 'S001.1.3', goal_area: 'Math', baseline: 40, target: 80, data_collector: 'Ms. Johnson' };
-const goalNoCM = { code: 'S001.1.4', goal_area: 'Math', baseline: 40, target: 80, data_collector: 'Ms. Johnson' };
+const goalWithDataCollectorOnly = { code: 'S001.1.4', goal_area: 'Math', baseline: 40, target: 80, data_collector: 'Ms. Johnson' };
 const sufficientQ = { average: 72, count: 5, values: [68, 70, 72, 74, 78] };
 
 test('narrative appends class_context when present', () => {
@@ -1176,8 +1176,8 @@ test('buildRichProgressNarrative in tc-reporting.js uses _ctxParts for class_con
 });
 
 test('data_collector omitted when student has no primary_case_manager (falsy default)', () => {
-  const studentNoCM = { name: 'Alex Lee', code: 'S002' };
-  const { narrative } = buildRichProgressNarrative(studentNoCM, goalNoCM, sufficientQ, null, 'Q3');
+  const studentWithoutPrimaryCaseManager = { name: 'Alex Lee', code: 'S002' };
+  const { narrative } = buildRichProgressNarrative(studentWithoutPrimaryCaseManager, goalWithDataCollectorOnly, sufficientQ, null, 'Q3');
   assert.ok(
     narrative.includes('data collected by Ms. Johnson'),
     `Narrative should include data_collector when student has no primary_case_manager: ${narrative}`
