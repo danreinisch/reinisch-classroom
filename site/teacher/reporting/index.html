@@ -241,6 +241,10 @@
       .rp-goal-desc {
         margin: 10px 0;
         opacity: 0.9;
+        font-size: 13px;
+        line-height: 1.55;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
       .rp-goal-targets {
         display: grid;
@@ -367,6 +371,7 @@
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 4px;
+        min-width: 0;
       }
       .rp-qs-goal-code {
         font-weight: 700;
@@ -377,6 +382,11 @@
       .rp-qs-goal-desc {
         font-size: 13px;
         opacity: 0.9;
+        line-height: 1.5;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        flex: 1;
+        min-width: 0;
       }
       .rp-qs-goal-status {
         margin-left: auto;
@@ -403,6 +413,8 @@
         font-style: italic;
         opacity: 0.85;
         line-height: 1.55;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
 
       .rp-grades-section {
@@ -802,6 +814,12 @@
         .rp-ev-doc-footer {
           border-top-color: #ccc !important;
           color: #444 !important;
+        }
+        .rp-goal-desc,
+        .rp-qs-goal-desc,
+        .rp-qs-goal-narrative {
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
         }
       }
 
