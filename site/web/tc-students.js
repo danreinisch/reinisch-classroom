@@ -175,7 +175,7 @@
    * @param {string} goalId      goal UUID (used as id prefix)
    * @returns {{ html: string, hasData: boolean }}
    */
-  function buildTcDotGridChart(dataPoints, goalId) {
+  function buildTcDotGridChart(dataPoints, goalId, suffix) {
     if (!dataPoints || dataPoints.length === 0) {
       return { html: '', hasData: false };
     }
@@ -212,7 +212,7 @@
     const chartW = LABEL_W + (MAX_DOTS * DOT_GAP) + PAD_RIGHT;
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
 
-    const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+    const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}${suffix || ''}`;
 
     /** Return a fill color for a 0–100 percentage score. */
     function scoreToColor(score) {
