@@ -185,6 +185,20 @@
   const aibHistoryRefreshBtn = document.getElementById('aibHistoryRefreshBtn');
   if (aibHistoryRefreshBtn) aibHistoryRefreshBtn.addEventListener('click', () => loadHistory());
 
+  const aibHistoryStatus = document.getElementById('aibHistoryStatus');
+  const aibHistorySubject = document.getElementById('aibHistorySubject');
+  const aibHistoryWeek = document.getElementById('aibHistoryWeek');
+
+  if (aibHistoryStatus) aibHistoryStatus.addEventListener('change', loadHistory);
+  if (aibHistorySubject) aibHistorySubject.addEventListener('change', loadHistory);
+  if (aibHistoryWeek) {
+    let weekDebounce;
+    aibHistoryWeek.addEventListener('input', () => {
+      clearTimeout(weekDebounce);
+      weekDebounce = setTimeout(loadHistory, 400);
+    });
+  }
+
   // ── School year helper ───────────────────────────────────────────────────────
 
   function getSchoolYear() {
@@ -206,6 +220,9 @@
   }
 
   // ── History loading ──────────────────────────────────────────────────────────
+
+  // In-memory cache for lazily-fetched content (keyed by output id)
+  const historyContentCache = new Map();
 
   function relativeTime(dateStr) {
     const date = new Date(dateStr);
@@ -256,8 +273,6 @@
 
       const studentCount = Array.isArray(o.student_codes) ? o.student_codes.length : 0;
       const goalCount = Array.isArray(o.goal_codes) ? o.goal_codes.length : 0;
-      const preview = (o.content || '').slice(0, 500);
-      const hasMore = (o.content || '').length > 500;
 
       card.innerHTML =
         '<div class="aib-history-meta">' +
@@ -276,15 +291,23 @@
         '</div>' +
         (safeId ? '<div class="aib-history-preview" id="aibHistPreview_' + safeId + '"></div>' : '<div class="aib-history-preview"></div>') +
         '<div class="aib-history-actions">' +
-          (hasMore && safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="expand">Expand</button>' : '') +
+          (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="expand">Expand</button>' : '') +
           '<button class="aib-btn" type="button"' + (safeId ? ' data-id="' + safeId + '"' : '') + ' data-action="copy">Copy Output</button>' +
         '</div>';
 
-      // Set preview text safely via textContent
-      const previewEl = card.querySelector('.aib-history-preview');
-      if (previewEl) previewEl.textContent = preview + (hasMore ? '\n…' : '');
+      // Set preview text safely via textContent (empty until expanded)
 
-      // Expand/collapse toggle
+      // Helper: fetch content for this record, using cache
+      async function fetchContent(id) {
+        if (historyContentCache.has(id)) return historyContentCache.get(id);
+        const detailRes = await fetch('/.netlify/functions/teacher-ai-builder-history-detail?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
+        const detailData = await detailRes.json().catch(() => ({}));
+        if (!detailRes.ok || !detailData.ok) throw new Error(detailData.error || 'Failed to load content');
+        historyContentCache.set(id, detailData.content || '');
+        return historyContentCache.get(id);
+      }
+
+      // Expand/collapse/copy toggle
       card.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
@@ -293,25 +316,59 @@
         if (action === 'expand') {
           const previewEl2 = document.getElementById('aibHistPreview_' + id);
           if (!previewEl2) return;
-          previewEl2.classList.add('expanded');
-          previewEl2.textContent = o.content;
-          btn.textContent = 'Collapse';
-          btn.dataset.action = 'collapse';
+          if (historyContentCache.has(id)) {
+            previewEl2.classList.add('expanded');
+            previewEl2.textContent = historyContentCache.get(id);
+            btn.textContent = 'Collapse';
+            btn.dataset.action = 'collapse';
+          } else {
+            btn.disabled = true;
+            btn.textContent = 'Loading…';
+            fetchContent(id).then((content) => {
+              previewEl2.classList.add('expanded');
+              previewEl2.textContent = content;
+              btn.textContent = 'Collapse';
+              btn.dataset.action = 'collapse';
+              btn.disabled = false;
+            }).catch((err) => {
+              btn.textContent = 'Expand';
+              btn.disabled = false;
+              console.warn('[tc-ai-builder] Failed to load content:', err.message);
+            });
+          }
         } else if (action === 'collapse') {
           const previewEl2 = document.getElementById('aibHistPreview_' + id);
           if (!previewEl2) return;
           previewEl2.classList.remove('expanded');
-          previewEl2.textContent = preview + (hasMore ? '\n…' : '');
+          previewEl2.textContent = '';
           btn.textContent = 'Expand';
           btn.dataset.action = 'expand';
         } else if (action === 'copy') {
-          navigator.clipboard.writeText(o.content || '').then(() => {
-            const orig = btn.textContent;
-            btn.textContent = '✅ Copied!';
-            setTimeout(() => { btn.textContent = orig; }, 2000);
-          }).catch(() => {
-            btn.textContent = 'Copy failed';
-          });
+          if (!id) return;
+          const doCopy = (content) => {
+            navigator.clipboard.writeText(content || '').then(() => {
+              const orig = btn.textContent;
+              btn.textContent = '✅ Copied!';
+              setTimeout(() => { btn.textContent = orig; }, 2000);
+            }).catch(() => {
+              btn.textContent = 'Copy failed';
+            });
+          };
+          if (!historyContentCache.has(id)) {
+            btn.disabled = true;
+            btn.textContent = 'Loading…';
+            fetchContent(id).then((content) => {
+              btn.disabled = false;
+              btn.textContent = 'Copy Output';
+              doCopy(content);
+            }).catch((err) => {
+              btn.disabled = false;
+              btn.textContent = 'Copy Output';
+              console.warn('[tc-ai-builder] Failed to load content for copy:', err.message);
+            });
+          } else {
+            doCopy(historyContentCache.get(id));
+          }
         }
       });
 
@@ -711,7 +768,7 @@
         const studentCodes = cachedStudents.filter(s => s.active !== false).map(s => s.code);
         const goalCodes = cachedGoals.filter(g => g.active !== false).map(g => g.code).filter(Boolean);
 
-        await fetch('/.netlify/functions/teacher-ai-builder-save', {
+        const saveRes = await fetch('/.netlify/functions/teacher-ai-builder-save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -730,7 +787,13 @@
             school_year: getSchoolYear(),
           }),
         });
-        console.log('[tc-ai-builder] Output auto-saved to history');
+        const saveData = await saveRes.json().catch(() => ({}));
+        if (!saveRes.ok || !saveData.ok) {
+          console.warn('[tc-ai-builder] Auto-save to history failed:', saveData.error || saveRes.status);
+          showMsg(aibMsg, 'Generation complete! (Note: history could not be saved.)', 'ok');
+        } else {
+          console.log('[tc-ai-builder] Output auto-saved to history');
+        }
       } catch (saveErr) {
         console.warn('[tc-ai-builder] Auto-save failed (non-critical):', saveErr.message);
       }
