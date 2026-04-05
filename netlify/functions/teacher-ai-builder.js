@@ -47,8 +47,8 @@ async function buildStudentContext(requestId) {
   }
   var students = Array.isArray(studentsData.data) ? studentsData.data : [];
 
-  // Fetch all active IEP goals
-  var goalsRes = await rest('/rest/v1/goals?select=id,student_id,code,desc,goal_area,baseline,mastery,status,active&active=eq.true&order=code.asc');
+  // Fetch all active IEP goals (all enriched fields for AI context quality)
+  var goalsRes = await rest('/rest/v1/goals?select=id,student_id,code,desc,goal_area,baseline,mastery,status,active,class_context,data_collector,data_collector_email,measurement_type,notes,case_manager,version&active=eq.true&order=code.asc');
   var goalsData = await jsonRes(goalsRes);
   var goals = (goalsData.ok && Array.isArray(goalsData.data)) ? goalsData.data : [];
 
@@ -89,7 +89,17 @@ async function buildStudentContext(requestId) {
         var mastery = g.mastery || 'N/A';
         var area = g.goal_area || 'N/A';
         var status = g.status || 'Open';
-        lines.push('  [' + g.code + '] ' + area + ' | ' + baseline + ' → ' + mastery + ' | ' + status);
+        var measurement = g.measurement_type || '';
+        var classCtx = g.class_context || '';
+        var collector = g.data_collector || '';
+        var notes = g.notes || '';
+        var extra = [
+          measurement ? 'Measurement: ' + measurement : '',
+          classCtx ? 'Class: ' + classCtx : '',
+          collector ? 'Data Collector: ' + collector : '',
+          notes ? 'Notes: ' + sanitizeForPrompt(notes, 200) : '',
+        ].filter(Boolean).join(' | ');
+        lines.push('  [' + g.code + '] ' + area + ' | ' + baseline + ' → ' + mastery + ' | ' + status + (extra ? ' | ' + extra : ''));
       });
     }
     lines.push('');
