@@ -606,7 +606,7 @@
    * @param {string} goalId     - goal UUID (used as id prefix for aria/interaction)
    * @returns {{ html: string, hasData: boolean }}
    */
-  function buildDotGridChart(dataPoints, goalId) {
+  function buildDotGridChart(dataPoints, goalId, suffix) {
     if (!dataPoints || dataPoints.length === 0) {
       return { html: '', hasData: false };
     }
@@ -649,7 +649,7 @@
     const chartW = LABEL_W + (MAX_DOTS_PER_ROW * DOT_GAP) + PAD_RIGHT;
     const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
 
-    const idBase = `dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
+    const idBase = `dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}${suffix || ''}`;
 
     // Inline SVG icon paths — use module-level constants
     const CHECK_PATHS = DOT_CHECK_PATHS;
@@ -897,7 +897,7 @@
 
       // Dot grid chart (per-question data points)
       const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
-      const { html: dotGridHtml, hasData: hasDotGrid } = buildDotGridChart(goalDataPoints, goal.id);
+      const { html: dotGridHtml, hasData: hasDotGrid } = buildDotGridChart(goalDataPoints, goal.id, containerSuffix);
       // When per-question dot-grid data exists, show it instead of the legacy line chart
       const chartSectionHtml = hasDotGrid
         ? dotGridHtml
