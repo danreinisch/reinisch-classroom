@@ -95,7 +95,7 @@
 
   /**
    * Format a goal progress value based on measurement type.
-   * @param {number|null} value - The numeric value (usually an average)
+   * @param {number|null} value - The numeric value on a 0-100 scale (usually an average from getGoalProgressForQuarter)
    * @param {string} measurementType - 'Percent', 'x/y', 'Number', 'Observation', etc.
    * @param {object} goal - The goal object (for baseline/mastery context)
    * @returns {string} Formatted display string
@@ -105,14 +105,14 @@
     const type = (measurementType || 'Percent').toLowerCase();
     if (type === 'observation') return 'N/A'; // Observations don't have numeric averages
     if (type === 'x/y' || type === 'fraction') {
-      // If baseline/mastery are in x/y format, try to preserve denominator
+      // value is stored as a 0-100 percentage internally; convert back to x/y using the mastery denominator
       const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
       if (denomMatch) {
         const denom = parseInt(denomMatch[1]);
         const numerator = Math.round(value * denom / 100);
         return `${numerator}/${denom}`;
       }
-      return value.toFixed(0) + '%'; // fallback to percent if can't parse
+      return value.toFixed(0) + '%'; // fallback to percent if can't parse denominator
     }
     if (type === 'number') return value.toFixed(1);
     // Default: Percent
