@@ -35,6 +35,11 @@
   const TOAST_FADE_OUT_DURATION_MS = 300;
   const TIMER_INIT_DELAY_MS = 100;
 
+  // Accordion chart (goal progress per-question display)
+  const ACC_PAGE_SIZE = 5;        // assignments shown per page in accordion
+  const ACC_Q_TEXT_CARD_MAX = 55; // max chars of question text shown on the inline card
+  const ACC_Q_TEXT_ARIA_MAX = 40; // max chars of question text used in aria-label
+
   /** Shared inline-SVG icon map — single source of truth for Student Portal icons.
    *  All use stroke="currentColor" so they inherit text color and respond to
    *  the glow system (filter: drop-shadow) from rc-theme.css. */
@@ -613,8 +618,6 @@
       return { html: '', hasData: false };
     }
 
-    const PAGE_SIZE = 5;
-
     // Group by instance (assignment_instance_id or date as fallback)
     const groups = new Map();
     for (const pt of dataPoints) {
@@ -672,14 +675,10 @@
       else                trendHtml = '<span class="st-acc-trend st-acc-trend--flat">→ steady</span>';
     }
 
-    // Truncation limits: card body shows more context; aria-label is shorter for concise a11y text
-    const Q_TEXT_CARD_MAX = 55;   // max chars of question text shown in the card
-    const Q_TEXT_ARIA_MAX = 40;   // max chars of question text used in aria-label
-
     // Build accordion rows
     const rowsHtml = sortedGroups.map((group, rowIdx) => {
       const dateLabel = formatDate(group.date);
-      const hidden = rowIdx >= PAGE_SIZE;
+      const hidden = rowIdx >= ACC_PAGE_SIZE;
 
       // Per-assignment score badge
       const gTotal = group.points.length;
@@ -718,7 +717,7 @@
 
         // Show actual question text (truncated) instead of generic "Q#"
         const qText = pt.question_text
-          ? (pt.question_text.length > Q_TEXT_CARD_MAX ? pt.question_text.substring(0, Q_TEXT_CARD_MAX) + '…' : pt.question_text)
+          ? (pt.question_text.length > ACC_Q_TEXT_CARD_MAX ? pt.question_text.substring(0, ACC_Q_TEXT_CARD_MAX) + '…' : pt.question_text)
           : `Question ${qIdx + 1}`;
 
         const dpVal = encodeURIComponent(JSON.stringify({
@@ -732,7 +731,7 @@
           date: pt.date,
         }));
 
-        const shortLabel = pt.question_text ? pt.question_text.substring(0, Q_TEXT_ARIA_MAX) : `Question ${qIdx + 1}`;
+        const shortLabel = pt.question_text ? pt.question_text.substring(0, ACC_Q_TEXT_ARIA_MAX) : `Question ${qIdx + 1}`;
         const scoreLabel = useScore ? `${Number(pt.score)}%` : (pt.is_correct ? 'Correct' : 'Incorrect');
         const ariaLabel = `Q${qIdx + 1}: ${shortLabel} — ${scoreLabel}`;
 
@@ -757,9 +756,9 @@
     }).join('');
 
     // "Show older" pagination button
-    const hiddenCount = Math.max(0, sortedGroups.length - PAGE_SIZE);
+    const hiddenCount = Math.max(0, sortedGroups.length - ACC_PAGE_SIZE);
     const showOlderBtn = hiddenCount > 0
-      ? `<button class="st-acc-show-older" type="button" data-acc-list="${idBase}-acc" data-loaded="${PAGE_SIZE}" data-total="${sortedGroups.length}">Show older assignments (${hiddenCount} more)</button>`
+      ? `<button class="st-acc-show-older" type="button" data-acc-list="${idBase}-acc" data-loaded="${ACC_PAGE_SIZE}" data-total="${sortedGroups.length}">Show older assignments (${hiddenCount} more)</button>`
       : '';
 
     // Legend
@@ -1082,17 +1081,16 @@
         const accListId = showOlderBtn.dataset.accList;
         const accList = accListId ? document.getElementById(accListId) : null;
         if (!accList) return;
-        const PAGE_SIZE = 5;
-        const loaded = parseInt(showOlderBtn.dataset.loaded, 10) || PAGE_SIZE;
+        const loaded = parseInt(showOlderBtn.dataset.loaded, 10) || ACC_PAGE_SIZE;
         const total = parseInt(showOlderBtn.dataset.total, 10) || 0;
         const hiddenRows = accList.querySelectorAll('.st-acc-row--hidden');
         let shown = 0;
         for (const r of hiddenRows) {
-          if (shown >= PAGE_SIZE) break;
+          if (shown >= ACC_PAGE_SIZE) break;
           r.classList.remove('st-acc-row--hidden');
           shown++;
         }
-        const newLoaded = Math.min(loaded + PAGE_SIZE, total);
+        const newLoaded = Math.min(loaded + ACC_PAGE_SIZE, total);
         showOlderBtn.dataset.loaded = String(newLoaded);
         const remaining = total - newLoaded;
         if (remaining <= 0) {
