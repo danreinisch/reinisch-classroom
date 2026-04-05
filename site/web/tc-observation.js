@@ -137,6 +137,7 @@
   let notifIconEl = null;            // notification icon DOM element
   let missedPopupAutoCloseTimer = null; // auto-close timer for missed-period popups (Issue 5)
   let missedPopupDoneObs = null;        // MutationObserver watching done button (Issue 5)
+  let _firstCheck = true;               // diagnostic: log extra detail on first checkPeriod() call
 
   // ─── localStorage Queue ───────────────────────────────────────────────────
   const QUEUE_KEY = 'rc_obs_pending';
@@ -243,17 +244,79 @@
         getSchedule()
       ]);
 
-      allGoals = (goals || []).filter(g =>
-        g.measurement_type === 'Observation' && g.observation_config != null
+      const rawGoals = goals || [];
+      const obsTypeGoals = rawGoals.filter(g => g.measurement_type === 'Observation');
+      const withConfig = obsTypeGoals.filter(g => g.observation_config != null);
+      const withPeriods = withConfig.filter(g =>
+        Array.isArray(g.observation_config.class_periods) &&
+        g.observation_config.class_periods.length > 0
       );
+
+      allGoals = withConfig;
       allStudents = students || [];
       allEnrollments = enrollments || [];
       schedule = sched;
-      console.log(
-        '[tc-observation] loadData: loaded', allGoals.length, 'observation goals,',
-        allStudents.length, 'students,',
-        'schedule:', schedule ? `${(schedule.periods || []).length} periods` : 'none'
-      );
+
+      console.group('[tc-observation] loadData: data summary');
+      console.log('Total goals (all types):', rawGoals.length);
+      console.log('  → measurement_type === "Observation":', obsTypeGoals.length);
+      console.log('  → have non-null observation_config:', withConfig.length);
+      console.log('  → have non-empty class_periods:', withPeriods.length);
+      if (withConfig.length > 0) {
+        console.group('Observation goals detail');
+        for (const g of withConfig) {
+          console.log(
+            `goal=${g.code} student=${g.student_code}`,
+            `category=${g.observation_config?.category ?? '(none)'}`,
+            `class_periods=${JSON.stringify(g.observation_config?.class_periods ?? [])}`
+          );
+        }
+        console.groupEnd();
+      }
+      if (!sched) {
+        console.warn('[tc-observation] ⚠️ No class schedule configured. Go to Settings → Class Schedule to set up your period times.');
+      } else if (!Array.isArray(sched.periods) || sched.periods.length === 0) {
+        console.warn('[tc-observation] ⚠️ Schedule loaded but schedule.periods is empty. Go to Settings → Class Schedule to add period times.');
+      } else {
+        console.log('Schedule loaded successfully —', sched.periods.length, 'period(s):');
+        console.group('Schedule periods');
+        for (const p of sched.periods) {
+          console.log(`label="${p.label}" start=${p.start} end=${p.end}`);
+        }
+        console.groupEnd();
+      }
+      console.log('Total students loaded:', allStudents.length);
+      console.log('Total enrollments loaded:', allEnrollments.length);
+      console.groupEnd();
+
+      // ── Period label cross-reference check ───────────────────────────────
+      if (sched && Array.isArray(sched.periods) && sched.periods.length > 0 && withConfig.length > 0) {
+        const scheduledLabels = new Set(sched.periods.map(p => p.label));
+        const referencedLabels = new Set(
+          withConfig.flatMap(g => g.observation_config?.class_periods ?? [])
+        );
+
+        const orphaned = [...referencedLabels].filter(l => !scheduledLabels.has(l));
+        const uncovered = [...scheduledLabels].filter(l => !referencedLabels.has(l));
+
+        console.group('[tc-observation] Period label cross-reference check');
+        if (orphaned.length > 0) {
+          console.warn(
+            '⚠️ Orphaned period references (in goals but NOT in schedule) — these goals will NEVER trigger a popup:',
+            orphaned
+          );
+          console.warn('  Schedule has:', [...scheduledLabels]);
+          console.warn('  Goals reference:', [...referencedLabels]);
+        } else {
+          console.log('✓ All goal class_periods match a schedule label');
+        }
+        if (uncovered.length > 0) {
+          console.log('Uncovered schedule periods (no observation goals assigned):', uncovered);
+        } else {
+          console.log('✓ Every schedule period has at least one observation goal');
+        }
+        console.groupEnd();
+      }
     } catch (err) {
       console.warn('[tc-observation] Data load error:', err.message);
     }
@@ -1091,21 +1154,42 @@
     }
     shownPopups.add(popupKey);
 
-    // Find goals for this period
-    const goalsForPeriod = allGoals.filter(g => {
+    // Find goals for this period — log match details
+    console.group('[tc-observation] showPopup: goal-period matching for "' + periodLabel + '"');
+    const goalsForPeriod = [];
+    for (const g of allGoals) {
       const cfg = g.observation_config;
-      return Array.isArray(cfg?.class_periods) && cfg.class_periods.includes(periodLabel);
-    });
+      const periods = cfg?.class_periods ?? [];
+      if (Array.isArray(periods) && periods.includes(periodLabel)) {
+        goalsForPeriod.push(g);
+        console.log(`  ✓ MATCH  goal=${g.code} student=${g.student_code} class_periods=${JSON.stringify(periods)}`);
+      } else {
+        console.log(
+          `  ✗ NO MATCH  goal=${g.code} student=${g.student_code}`,
+          `class_periods=${JSON.stringify(periods)} — does not include "${periodLabel}"`
+        );
+      }
+    }
+    console.log(`Total matched: ${goalsForPeriod.length} / ${allGoals.length}`);
 
     if (goalsForPeriod.length === 0) {
-      console.log('[tc-observation] showPopup: no observation goals for period —', periodLabel);
+      console.warn('[tc-observation] showPopup: no observation goals for period —', periodLabel);
+      console.groupEnd();
       return;
     }
 
-    // Check if ALL goals already have data; if so, don't show
-    const allRecorded = goalsForPeriod.every(g =>
-      isAlreadyRecorded(g.student_code, g.code, date, periodLabel)
-    );
+    // Check if ALL goals already have data; if so, don't show — log per-goal allRecorded check
+    console.group('allRecorded check per goal');
+    const recordedFlags = goalsForPeriod.map(g => {
+      const recorded = isAlreadyRecorded(g.student_code, g.code, date, periodLabel);
+      console.log(`  goal=${g.code} student=${g.student_code} already recorded=${recorded}`);
+      return recorded;
+    });
+    const allRecorded = recordedFlags.every(Boolean);
+    console.log('allRecorded (all goals recorded):', allRecorded);
+    console.groupEnd();
+    console.groupEnd();
+
     if (allRecorded) {
       console.log('[tc-observation] showPopup: suppressed (all goals already recorded) —', periodLabel);
       return;
@@ -1253,6 +1337,48 @@
 
     const now = new Date();
     const periodInfo = getCurrentPeriod(schedule, now);
+
+    if (_firstCheck) {
+      _firstCheck = false;
+      const queue = readQueue();
+      const goalsForCurrentPeriod = periodInfo.status === 'in-class'
+        ? allGoals.filter(g => {
+            const cfg = g.observation_config;
+            return Array.isArray(cfg?.class_periods) &&
+                   cfg.class_periods.includes(periodInfo.period.label);
+          })
+        : [];
+      console.group('[tc-observation] checkPeriod: FIRST CHECK diagnostic');
+      console.log('Current time:', now.toString());
+      console.log('Day of week:', ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()]);
+      const schoolDays = schedule.schoolDays ?? schedule.school_days ?? null;
+      console.log(
+        'Is school day per schedule.schoolDays:',
+        Array.isArray(schoolDays)
+          ? `${schoolDays.includes(now.getDay())} (schoolDays=${JSON.stringify(schoolDays)})`
+          : '(schoolDays not defined on schedule)'
+      );
+      console.log('getCurrentPeriod() result:', JSON.stringify({
+        status: periodInfo.status,
+        periodLabel: periodInfo.period?.label ?? null,
+        remainingSeconds: periodInfo.remainingSeconds ?? null
+      }));
+      if (periodInfo.status === 'in-class') {
+        console.log(
+          'remainingSeconds > POPUP_TRIGGER_SECONDS?',
+          periodInfo.remainingSeconds > POPUP_TRIGGER_SECONDS,
+          `(${periodInfo.remainingSeconds} > ${POPUP_TRIGGER_SECONDS})`
+        );
+        console.log('Goals matching current period:', goalsForCurrentPeriod.length);
+      }
+      console.log('shownPopups:', [...shownPopups]);
+      console.log(
+        'localStorage queue (rc_obs_pending): total=', queue.length,
+        'synced=', queue.filter(e => e.synced).length,
+        'unsynced=', queue.filter(e => !e.synced).length
+      );
+      console.groupEnd();
+    }
 
     // Detect period-end transitions: if we were in a period and now we're not,
     // check whether there are unrecorded goals for that period.
