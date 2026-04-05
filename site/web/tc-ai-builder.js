@@ -76,6 +76,12 @@
   const aibSourceCount = document.getElementById('aibSourceCount');
   const aibExtraStudentsWarn = document.getElementById('aibExtraStudentsWarn');
 
+  // Tab elements
+  const aibTabCreate = document.getElementById('aibTabCreate');
+  const aibTabManage = document.getElementById('aibTabManage');
+  const aibCreatePanel = document.getElementById('aibCreatePanel');
+  const aibManagePanel = document.getElementById('aibManagePanel');
+
   // ── State ───────────────────────────────────────────────────────────────────
 
   let currentTaskType = 'assignments';
@@ -160,6 +166,174 @@
     aibPresScope.style.display = showPresScope ? 'block' : 'none';
 
     aibProbeSection.style.display = currentTaskType === 'dataProbe' ? 'block' : 'none';
+  }
+
+  // ── Tab Switching ────────────────────────────────────────────────────────────
+
+  function switchTab(tab) {
+    const isCreate = tab === 'create';
+    if (aibTabCreate) aibTabCreate.classList.toggle('active', isCreate);
+    if (aibTabManage) aibTabManage.classList.toggle('active', !isCreate);
+    if (aibCreatePanel) aibCreatePanel.style.display = isCreate ? '' : 'none';
+    if (aibManagePanel) aibManagePanel.style.display = isCreate ? 'none' : '';
+    if (!isCreate) loadHistory();
+  }
+
+  if (aibTabCreate) aibTabCreate.addEventListener('click', () => switchTab('create'));
+  if (aibTabManage) aibTabManage.addEventListener('click', () => switchTab('manage'));
+
+  const aibHistoryRefreshBtn = document.getElementById('aibHistoryRefreshBtn');
+  if (aibHistoryRefreshBtn) aibHistoryRefreshBtn.addEventListener('click', () => loadHistory());
+
+  // ── hashSource helper ────────────────────────────────────────────────────────
+
+  async function hashSource(text) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ── History loading ──────────────────────────────────────────────────────────
+
+  function relativeTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return diffMin + ' min ago';
+    if (diffHr < 24) return diffHr + ' hour' + (diffHr === 1 ? '' : 's') + ' ago';
+    if (diffDay < 7) return diffDay + ' day' + (diffDay === 1 ? '' : 's') + ' ago';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderHistoryCards(outputs) {
+    const historyList = document.getElementById('aibHistoryList');
+    if (!historyList) return;
+    historyList.innerHTML = '';
+
+    // Escape HTML entities to prevent XSS when injecting data into innerHTML
+    function esc(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    const taskLabels = { assignments: 'Assignments', presentations: 'Presentations', both: 'Both', dataProbe: 'Data Probe' };
+
+    outputs.forEach((o) => {
+      const card = document.createElement('div');
+      card.className = 'aib-history-card';
+
+      const taskType = o.task_type || 'assignments';
+      const statusClass = 'aib-badge-' + esc(o.status || 'active');
+      const typeClass = 'aib-badge-' + esc(taskType);
+      const taskLabel = taskLabels[taskType] || esc(taskType);
+      const title = taskType === 'dataProbe'
+        ? 'Data Probe' + (o.student_codes && o.student_codes.length ? ' — ' + esc(o.student_codes[0]) : '')
+        : 'Week ' + esc(o.week) + (o.theme ? ' — ' + esc(o.theme) : '');
+
+      const studentCount = Array.isArray(o.student_codes) ? o.student_codes.length : 0;
+      const goalCount = Array.isArray(o.goal_codes) ? o.goal_codes.length : 0;
+      const preview = (o.content || '').slice(0, 500);
+      const hasMore = (o.content || '').length > 500;
+
+      card.innerHTML =
+        '<div class="aib-history-meta">' +
+          '<span class="aib-badge ' + typeClass + '">' + esc(taskLabel) + '</span>' +
+          '<span class="aib-badge">' + esc(o.subject || 'ELA') + '</span>' +
+          '<span class="aib-badge ' + statusClass + '">' + esc(o.status || 'active') + '</span>' +
+          (o.scope ? '<span style="font-size:12px;color:var(--rc-ink-dim);">' + esc(o.scope) + '</span>' : '') +
+          '<span style="font-size:12px;color:var(--rc-ink-dim);margin-left:auto;">' + esc(relativeTime(o.created_at)) + '</span>' +
+        '</div>' +
+        '<div class="aib-history-title">' + title + '</div>' +
+        '<div class="aib-history-stats">' +
+          '<span>' + studentCount + ' student' + (studentCount === 1 ? '' : 's') + '</span>' +
+          '<span>' + goalCount + ' goal' + (goalCount === 1 ? '' : 's') + '</span>' +
+          (o.chapters ? '<span>Ch. ' + esc(o.chapters) + '</span>' : '') +
+          (o.model ? '<span>' + esc(o.model) + '</span>' : '') +
+        '</div>' +
+        '<div class="aib-history-preview" id="aibHistPreview_' + esc(o.id) + '"></div>' +
+        '<div class="aib-history-actions">' +
+          (hasMore ? '<button class="aib-btn" type="button" data-id="' + esc(o.id) + '" data-action="expand">Expand</button>' : '') +
+          '<button class="aib-btn" type="button" data-id="' + esc(o.id) + '" data-action="copy">Copy Output</button>' +
+        '</div>';
+
+      // Set preview text safely via textContent
+      const previewEl = card.querySelector('.aib-history-preview');
+      if (previewEl) previewEl.textContent = preview + (hasMore ? '\n…' : '');
+
+      // Expand/collapse toggle
+      card.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (action === 'expand') {
+          const previewEl2 = document.getElementById('aibHistPreview_' + id);
+          if (!previewEl2) return;
+          previewEl2.classList.add('expanded');
+          previewEl2.textContent = o.content;
+          btn.textContent = 'Collapse';
+          btn.dataset.action = 'collapse';
+        } else if (action === 'collapse') {
+          const previewEl2 = document.getElementById('aibHistPreview_' + id);
+          if (!previewEl2) return;
+          previewEl2.classList.remove('expanded');
+          previewEl2.textContent = preview + (hasMore ? '\n…' : '');
+          btn.textContent = 'Expand';
+          btn.dataset.action = 'expand';
+        } else if (action === 'copy') {
+          navigator.clipboard.writeText(o.content || '').then(() => {
+            const orig = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => { btn.textContent = orig; }, 2000);
+          }).catch(() => {
+            btn.textContent = 'Copy failed';
+          });
+        }
+      });
+
+      historyList.appendChild(card);
+    });
+  }
+
+  async function loadHistory() {
+    const historyList = document.getElementById('aibHistoryList');
+    if (!historyList) return;
+
+    historyList.innerHTML = '<div style="color: var(--rc-ink-dim); padding: 20px; text-align: center;">Loading history…</div>';
+
+    try {
+      const params = new URLSearchParams();
+      const statusFilter = document.getElementById('aibHistoryStatus');
+      const weekFilter = document.getElementById('aibHistoryWeek');
+      const subjectFilter = document.getElementById('aibHistorySubject');
+      if (statusFilter && statusFilter.value) params.set('status', statusFilter.value);
+      if (weekFilter && weekFilter.value) params.set('week', weekFilter.value);
+      if (subjectFilter && subjectFilter.value) params.set('subject', subjectFilter.value);
+
+      const url = '/.netlify/functions/teacher-ai-builder-history' + (params.toString() ? '?' + params.toString() : '');
+      const res = await fetch(url, { credentials: 'same-origin' });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        historyList.innerHTML = '<div class="aib-msg err" style="display:block;">Failed to load history: ' + (data.error || 'Unknown error') + '</div>';
+        return;
+      }
+
+      const outputs = data.outputs || [];
+      if (outputs.length === 0) {
+        historyList.innerHTML = '<div style="color: var(--rc-ink-dim); padding: 40px 20px; text-align: center;">No generations yet. Create your first assignment or presentation in the <strong>Create</strong> tab.</div>';
+        return;
+      }
+
+      renderHistoryCards(outputs);
+    } catch (err) {
+      historyList.innerHTML = '<div class="aib-msg err" style="display:block;">Failed to load history: ' + err.message + '</div>';
+    }
   }
 
   // ── Subject Selector ────────────────────────────────────────────────────────
@@ -510,6 +684,36 @@
       showMsg(aibMsg, 'Generation complete! Review and edit below.', 'ok');
       savePrefs();
       aibOutputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Auto-save to history (non-blocking — don't let save failure block the UI)
+      try {
+        const sourceText = (aibSource.value || '').trim();
+        const sourceHash = sourceText ? await hashSource(sourceText) : '';
+        const studentCodes = cachedStudents.filter(s => s.active !== false).map(s => s.code);
+        const goalCodes = cachedGoals.filter(g => g.active !== false).map(g => g.code).filter(Boolean);
+
+        await fetch('/.netlify/functions/teacher-ai-builder-save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            task_type: taskType,
+            subject: aibSubject ? aibSubject.value : 'ELA',
+            week,
+            chapters,
+            theme,
+            scope,
+            model,
+            source_hash: sourceHash,
+            content: aibOutput.value,
+            student_codes: studentCodes,
+            goal_codes: goalCodes,
+          }),
+        });
+        console.log('[tc-ai-builder] Output auto-saved to history');
+      } catch (saveErr) {
+        console.warn('[tc-ai-builder] Auto-save failed (non-critical):', saveErr.message);
+      }
     } catch (err) {
       console.error('[tc-ai-builder] Generation error:', err);
       showMsg(aibMsg, 'Error: ' + err.message, 'err');
