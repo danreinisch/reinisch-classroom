@@ -201,7 +201,14 @@
   aibSourceFile.addEventListener('change', () => {
     const file = aibSourceFile.files[0];
     if (!file) return;
-    aibSourceFileName.textContent = file.name;
+    const sizeKB = Math.max(1, Math.round(file.size / 1024));
+    const sizeLabel = sizeKB >= 1024
+      ? (sizeKB / 1024).toFixed(1) + ' MB'
+      : sizeKB + ' KB';
+    aibSourceFileName.textContent = file.name + ' (' + sizeLabel + ')';
+    if (file.size > 200 * 1024) {
+      showMsg(aibMsg, '⚠ File is ' + sizeLabel + ' — the backend limit is 200 KB. Large files may be rejected. Consider trimming the content.', 'info');
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       aibSource.value = e.target.result;
@@ -492,7 +499,7 @@
             .join(' ');
         }
         if (aibIssueTitle) aibIssueTitle.value = issueTitle;
-        aibIssueCard.style.display = 'block';
+        aibIssueCard.style.display = taskType === 'presentations' ? 'none' : 'block';
       }
 
       showMsg(aibMsg, 'Generation complete! Review and edit below.', 'ok');
