@@ -1887,9 +1887,9 @@
           // Mark the selected answer
           input.checked = true;
           
-          // Remove previous selection styling
+          // Remove previous selection styling and retry-mode incorrect highlight
           choicesContainer.querySelectorAll('.st-choice').forEach(c => {
-            c.classList.remove('selected');
+            c.classList.remove('selected', 'incorrect');
           });
           
           // Mark this choice as selected (neutral styling)
@@ -2003,6 +2003,20 @@
               results.filter(r => r.is_correct === true).map(r => r.item_ref)
             );
             renderQuestionsDay(container, dayData, instance);
+            // Highlight incorrect choices in retry mode so students can see what to fix
+            results.forEach(r => {
+              if (r.is_correct === false && r.item_ref) {
+                const savedAnswer = assignmentViewerState.answers.get(r.item_ref);
+                if (savedAnswer) {
+                  const choiceEl = container.querySelector(
+                    `.st-choice[data-question-id="${r.item_ref}"][data-letter="${savedAnswer}"]`
+                  );
+                  if (choiceEl) {
+                    choiceEl.classList.add('incorrect');
+                  }
+                }
+              }
+            });
             showToast('Retry mode active — only your incorrect answers are editable.', 'info');
             return;
           }
