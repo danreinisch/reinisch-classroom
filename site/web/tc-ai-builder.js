@@ -26,6 +26,7 @@
 
   const aibWeek = document.getElementById('aibWeek');
   const aibChapters = document.getElementById('aibChapters');
+  const aibSubject = document.getElementById('aibSubject');
   const aibTheme = document.getElementById('aibTheme');
   const aibScope = document.getElementById('aibScope');
   const aibPresScope = document.getElementById('aibPresScope');
@@ -83,6 +84,7 @@
   let cachedStudents = [];
   let cachedGoals = [];
   const AIB_PREFS_KEY = 'rc_aib_prefs_v1';
+  let savedScopeValue = null;
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -113,8 +115,10 @@
       const prefs = JSON.parse(raw);
       if (prefs.week && aibWeek) aibWeek.value = prefs.week;
       if (prefs.chapters && aibChapters) aibChapters.value = prefs.chapters;
+      if (prefs.subject && aibSubject) aibSubject.value = prefs.subject;
       if (prefs.theme && aibTheme) aibTheme.value = prefs.theme;
-      if (prefs.scope && aibScope) aibScope.value = prefs.scope;
+      // Scope options are populated asynchronously; save value for deferred restore
+      if (prefs.scope) savedScopeValue = prefs.scope;
       if (prefs.model && aibModel) aibModel.value = prefs.model;
       if (prefs.taskType) {
         currentTaskType = prefs.taskType;
@@ -129,6 +133,7 @@
       const prefs = {
         week: (aibWeek.value || '').trim(),
         chapters: (aibChapters.value || '').trim(),
+        subject: aibSubject ? aibSubject.value : 'ELA',
         theme: (aibTheme.value || '').trim(),
         scope: aibScope.value,
         model: aibModel.value,
@@ -155,6 +160,27 @@
     aibPresScope.style.display = showPresScope ? 'block' : 'none';
 
     aibProbeSection.style.display = currentTaskType === 'dataProbe' ? 'block' : 'none';
+  }
+
+  // ── Subject Selector ────────────────────────────────────────────────────────
+
+  const subjectThemePlaceholders = {
+    ELA: 'e.g. Transition Words, Figurative Language',
+    Math: 'e.g. Fractions, Geometry, Algebra',
+    Science: 'e.g. Photosynthesis, Newton\'s Laws',
+    'Social Studies': 'e.g. Civil War, Constitution',
+    'Life Skills': 'e.g. Cooking Safety, Money Skills',
+    Other: 'e.g. Topic or theme for this week',
+  };
+
+  function updateThemePlaceholder() {
+    if (!aibSubject || !aibTheme) return;
+    const placeholder = subjectThemePlaceholders[aibSubject.value] || 'e.g. Topic or theme for this week';
+    aibTheme.placeholder = placeholder;
+  }
+
+  if (aibSubject) {
+    aibSubject.addEventListener('change', updateThemePlaceholder);
   }
 
   // ── Task Type Selector ──────────────────────────────────────────────────────
@@ -398,6 +424,7 @@
         taskType,
         week,
         chapters,
+        subject: aibSubject ? aibSubject.value : 'ELA',
         theme,
         source: source || undefined,
         scope,
@@ -683,6 +710,7 @@
 
   restorePrefs();
   updateTypeUI();
+  updateThemePlaceholder();
 
   // ── Prefetch Students & Goals for Autocomplete ──────────────────────────────
 
@@ -727,14 +755,29 @@
     }
     try {
       const classes = await db.listClasses();
-      if (aibIssueClass && Array.isArray(classes) && classes.length > 0) {
-        classes.forEach((c) => {
+      const cachedClasses = Array.isArray(classes) ? classes : [];
+      // Populate Issue Class dropdown
+      if (aibIssueClass && cachedClasses.length > 0) {
+        cachedClasses.forEach((c) => {
           const name = c.name || c.code || String(c.id);
           const opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name;
           aibIssueClass.appendChild(opt);
         });
+      }
+      // Populate Scope dropdown dynamically
+      if (aibScope && cachedClasses.length > 0) {
+        cachedClasses.forEach((c) => {
+          if (c.name) {
+            const opt = document.createElement('option');
+            opt.value = c.name;
+            opt.textContent = c.name;
+            aibScope.appendChild(opt);
+          }
+        });
+        // Re-apply saved scope preference now that dynamic options are available
+        if (savedScopeValue) aibScope.value = savedScopeValue;
       }
     } catch (e) {
       console.warn('[tc-ai-builder] Could not prefetch classes:', e.message);
