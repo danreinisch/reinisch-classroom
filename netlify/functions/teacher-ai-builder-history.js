@@ -76,14 +76,20 @@ exports.handler = async function(event) {
   }
 
   if (params.week) {
-    filters += '&week=eq.' + encodeURIComponent(params.week);
+    var weekNum = parseInt(params.week, 10);
+    if (!isNaN(weekNum) && weekNum >= 1 && weekNum <= 52) {
+      filters += '&week=eq.' + weekNum;
+    }
   }
 
   if (params.subject) {
-    filters += '&subject=eq.' + encodeURIComponent(params.subject);
+    var allowedSubjects = ['ELA', 'Math', 'Science', 'Social Studies', 'Life Skills', 'Other'];
+    if (allowedSubjects.indexOf(params.subject) !== -1) {
+      filters += '&subject=eq.' + encodeURIComponent(params.subject);
+    }
   }
 
-  var path = '/rest/v1/ai_builder_outputs?select=id,task_type,subject,week,chapters,theme,scope,model,source_hash,student_codes,goal_codes,assignment_id,status,superseded_by,created_at,school_year,content&' + filters + '&order=created_at.desc&limit=100';
+  var path = '/rest/v1/ai_builder_outputs?select=id,task_type,subject,week,chapters,theme,scope,model,source_hash,student_codes,goal_codes,assignment_id,status,superseded_by,created_at,school_year&' + filters + '&order=created_at.desc&limit=100';
 
   try {
     var res = await rest(path, { method: 'GET' });
