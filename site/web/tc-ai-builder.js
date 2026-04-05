@@ -216,10 +216,14 @@
     if (!historyList) return;
     historyList.innerHTML = '';
 
-    // Escape HTML entities to prevent XSS when injecting data into innerHTML
+    // Escape HTML entities to prevent XSS when injecting text into innerHTML
     function esc(str) {
       return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
+
+    // Validate a value against an allowlist; return fallback if not in list
+    const allowedStatuses = ['active', 'superseded', 'archived'];
+    const allowedTypes = ['assignments', 'presentations', 'both', 'dataProbe'];
 
     const taskLabels = { assignments: 'Assignments', presentations: 'Presentations', both: 'Both', dataProbe: 'Data Probe' };
 
@@ -227,10 +231,15 @@
       const card = document.createElement('div');
       card.className = 'aib-history-card';
 
-      const taskType = o.task_type || 'assignments';
-      const statusClass = 'aib-badge-' + esc(o.status || 'active');
-      const typeClass = 'aib-badge-' + esc(taskType);
-      const taskLabel = taskLabels[taskType] || esc(taskType);
+      // Validate DB enum values before using in CSS class names or HTML attributes
+      const taskType = allowedTypes.includes(o.task_type) ? o.task_type : 'assignments';
+      const status = allowedStatuses.includes(o.status) ? o.status : 'active';
+      // UUID format validation for use in element IDs and data attributes
+      const safeId = /^[0-9a-f-_]{1,64}$/i.test(String(o.id || '')) ? String(o.id) : '';
+
+      const statusClass = 'aib-badge-' + status;
+      const typeClass = 'aib-badge-' + taskType;
+      const taskLabel = taskLabels[taskType];
       const title = taskType === 'dataProbe'
         ? 'Data Probe' + (o.student_codes && o.student_codes.length ? ' — ' + esc(o.student_codes[0]) : '')
         : 'Week ' + esc(o.week) + (o.theme ? ' — ' + esc(o.theme) : '');
@@ -244,7 +253,7 @@
         '<div class="aib-history-meta">' +
           '<span class="aib-badge ' + typeClass + '">' + esc(taskLabel) + '</span>' +
           '<span class="aib-badge">' + esc(o.subject || 'ELA') + '</span>' +
-          '<span class="aib-badge ' + statusClass + '">' + esc(o.status || 'active') + '</span>' +
+          '<span class="aib-badge ' + statusClass + '">' + esc(status) + '</span>' +
           (o.scope ? '<span style="font-size:12px;color:var(--rc-ink-dim);">' + esc(o.scope) + '</span>' : '') +
           '<span style="font-size:12px;color:var(--rc-ink-dim);margin-left:auto;">' + esc(relativeTime(o.created_at)) + '</span>' +
         '</div>' +
@@ -255,10 +264,10 @@
           (o.chapters ? '<span>Ch. ' + esc(o.chapters) + '</span>' : '') +
           (o.model ? '<span>' + esc(o.model) + '</span>' : '') +
         '</div>' +
-        '<div class="aib-history-preview" id="aibHistPreview_' + esc(o.id) + '"></div>' +
+        (safeId ? '<div class="aib-history-preview" id="aibHistPreview_' + safeId + '"></div>' : '<div class="aib-history-preview"></div>') +
         '<div class="aib-history-actions">' +
-          (hasMore ? '<button class="aib-btn" type="button" data-id="' + esc(o.id) + '" data-action="expand">Expand</button>' : '') +
-          '<button class="aib-btn" type="button" data-id="' + esc(o.id) + '" data-action="copy">Copy Output</button>' +
+          (hasMore && safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="expand">Expand</button>' : '') +
+          '<button class="aib-btn" type="button"' + (safeId ? ' data-id="' + safeId + '"' : '') + ' data-action="copy">Copy Output</button>' +
         '</div>';
 
       // Set preview text safely via textContent

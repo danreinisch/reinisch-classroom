@@ -68,7 +68,7 @@ exports.handler = async function(event) {
   var content = body.content;
 
   if (!week || typeof week !== 'string') {
-    return jsonResponse(event, 400, { ok: false, error: 'week is required' }, {}, requestId);
+    return jsonResponse(event, 400, { ok: false, error: 'week must be a non-empty string' }, {}, requestId);
   }
   if (!content || typeof content !== 'string') {
     return jsonResponse(event, 400, { ok: false, error: 'content is required' }, {}, requestId);

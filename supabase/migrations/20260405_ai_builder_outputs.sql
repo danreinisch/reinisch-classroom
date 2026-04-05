@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS ai_builder_outputs (
   theme text,
   scope text,                                          -- All Classes, or specific class name
   model text,
-  source_hash text,                                    -- SHA-256 hash of source material (for dedup/comparison, not storing full source)
+  source_hash text,                                    -- SHA-256 hex digest of source material (for dedup/comparison, not storing full source)
   content text NOT NULL,                               -- The generated output text
   student_codes text[] DEFAULT '{}',                   -- Array of student codes included in generation
   goal_codes text[] DEFAULT '{}',                      -- Array of goal codes included in generation
