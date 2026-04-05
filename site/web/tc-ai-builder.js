@@ -296,7 +296,6 @@
         '</div>';
 
       // Set preview text safely via textContent (empty until expanded)
-      const previewEl = card.querySelector('.aib-history-preview');
 
       // Helper: fetch content for this record, using cache
       async function fetchContent(id) {
@@ -345,6 +344,7 @@
           btn.textContent = 'Expand';
           btn.dataset.action = 'expand';
         } else if (action === 'copy') {
+          if (!id) return;
           const doCopy = (content) => {
             navigator.clipboard.writeText(content || '').then(() => {
               const orig = btn.textContent;
@@ -354,7 +354,7 @@
               btn.textContent = 'Copy failed';
             });
           };
-          if (id && !historyContentCache.has(id)) {
+          if (!historyContentCache.has(id)) {
             btn.disabled = true;
             btn.textContent = 'Loading…';
             fetchContent(id).then((content) => {
@@ -367,7 +367,7 @@
               console.warn('[tc-ai-builder] Failed to load content for copy:', err.message);
             });
           } else {
-            doCopy(id ? historyContentCache.get(id) : '');
+            doCopy(historyContentCache.get(id));
           }
         }
       });
