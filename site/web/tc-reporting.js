@@ -3165,13 +3165,13 @@ ${narrative}`;
           <div style="border-top:1px solid #c7d7f0; padding:10px 0;">
             <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
               <span style="font-weight:700; font-size:13px; color:#1e3a5f;">${escapeHtml(goal.code)}</span>
-              <span style="font-size:13px; color:#333;">${escapeHtml(goal.desc || "No description")}</span>
+              <span style="font-size:13px; color:#333; word-break:break-word; overflow-wrap:break-word; flex:1; min-width:0;">${escapeHtml(goal.desc || "No description")}</span>
               <span style="margin-left:auto; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; background:${statusColor}; color:#fff; white-space:nowrap;">${escapeHtml(status)}</span>
             </div>
             <div style="font-size:12px; color:#555; margin-bottom:4px;">
               <strong>${progress.count}</strong> Data Points &nbsp;|&nbsp; <strong>${avgDisplay}</strong> Avg
             </div>
-            <div style="font-size:12px; color:#444; font-style:italic; line-height:1.5;">${escapeHtml(narrative)}</div>
+            <div style="font-size:12px; color:#444; font-style:italic; line-height:1.5; word-break:break-word; overflow-wrap:break-word;">${escapeHtml(narrative)}</div>
           </div>`;
       }).join("");
       allStudentReportsHTML += `
@@ -4402,7 +4402,7 @@ ${narrative}`;
         return `<tr>
           <td>${escapeHtml(goal.code || goal.id || '—')}</td>
           <td>${escapeHtml(goal.area || goal.skill_area || '—')}</td>
-          <td style="font-size:12px;">${goalDesc}</td>
+          <td style="font-size:12px; max-width:300px; word-break:break-word; line-height:1.45;">${goalDesc}</td>
           <td>${baselineDisplay}</td>
           <td>${escapeHtml(progressCell)}</td>
           <td>${masteryDisplay}</td>
