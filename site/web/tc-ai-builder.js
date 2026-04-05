@@ -84,6 +84,7 @@
   let cachedStudents = [];
   let cachedGoals = [];
   const AIB_PREFS_KEY = 'rc_aib_prefs_v1';
+  let savedScopeValue = null;
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +117,8 @@
       if (prefs.chapters && aibChapters) aibChapters.value = prefs.chapters;
       if (prefs.subject && aibSubject) aibSubject.value = prefs.subject;
       if (prefs.theme && aibTheme) aibTheme.value = prefs.theme;
-      if (prefs.scope && aibScope) aibScope.value = prefs.scope;
+      // Scope options are populated asynchronously; save value for deferred restore
+      if (prefs.scope) savedScopeValue = prefs.scope;
       if (prefs.model && aibModel) aibModel.value = prefs.model;
       if (prefs.taskType) {
         currentTaskType = prefs.taskType;
@@ -774,14 +776,8 @@
             aibScope.appendChild(opt);
           }
         });
-        // Restore saved scope preference after options are populated
-        try {
-          const raw = localStorage.getItem(AIB_PREFS_KEY);
-          if (raw) {
-            const prefs = JSON.parse(raw);
-            if (prefs.scope && aibScope) aibScope.value = prefs.scope;
-          }
-        } catch (_e) { /* ignore */ }
+        // Re-apply saved scope preference now that dynamic options are available
+        if (savedScopeValue) aibScope.value = savedScopeValue;
       }
     } catch (e) {
       console.warn('[tc-ai-builder] Could not prefetch classes:', e.message);
