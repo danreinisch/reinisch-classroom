@@ -2007,6 +2007,8 @@
           }
         }
 
+        await rcAlert('Assignment Submitted', 'Your answers have been saved! Your teacher will review them soon.');
+
         // No retry — lock the existing DOM in place without re-rendering to
         // avoid a flash of blank content while the view rebuilds.
         assignmentViewerState.isRetryMode = false;
@@ -2635,6 +2637,8 @@
               return;
             }
           }
+
+          await rcAlert('Assignment Submitted', 'Your response has been saved! Your teacher will review it soon.');
 
           // Lock the existing DOM in place without re-rendering to avoid a
           // flash of blank content while the view rebuilds.
