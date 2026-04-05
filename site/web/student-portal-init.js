@@ -28,6 +28,7 @@
   // Feature constants
   const MIN_WRITING_ANSWER_LENGTH = 10;
   const AUTO_SAVE_DEBOUNCE_MS = 1000;
+  const AUTO_SAVE_ERROR_TOAST_COOLDOWN_MS = 10000;
   const WRITER_BADGE_WORD_THRESHOLD = 50;
   const SPEECH_PAUSE_MS = 300;
   const TOAST_DISPLAY_DURATION_MS = 5000;
@@ -73,6 +74,9 @@
 
   // Keyboard handler for Escape-to-close the assignment panel; stored so it can be removed.
   let assignmentPanelEscapeHandler = null;
+
+  // Timestamp of the last auto-save error toast; used to suppress duplicate toasts (10 s cooldown).
+  let lastAutoSaveErrorToastAt = 0;
 
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
@@ -2785,7 +2789,11 @@
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to save answers:', err);
       if (!submit) {
-        showToast('⚠️ Could not save — check your connection', 'error');
+        const now = Date.now();
+        if (now - lastAutoSaveErrorToastAt > AUTO_SAVE_ERROR_TOAST_COOLDOWN_MS) {
+          lastAutoSaveErrorToastAt = now;
+          showToast('⚠️ Could not save — check your connection', 'error');
+        }
       }
       // Don't alert - let the student continue working
       return null;
