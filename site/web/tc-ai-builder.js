@@ -63,6 +63,7 @@
   const aibOutputMsg = document.getElementById('aibOutputMsg');
   const aibSendToWorkBtn = document.getElementById('aibSendToWorkBtn');
   const aibDownloadZipBtn = document.getElementById('aibDownloadZipBtn');
+  const aibCopyBtn = document.getElementById('aibCopyBtn');
 
   const aibSourceCount = document.getElementById('aibSourceCount');
   const aibExtraStudentsWarn = document.getElementById('aibExtraStudentsWarn');
@@ -74,6 +75,7 @@
   let selectedLibRef = null;
   let cachedStudents = [];
   let cachedGoals = [];
+  const AIB_PREFS_KEY = 'rc_aib_prefs_v1';
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -94,6 +96,43 @@
       if (text) aibProgressText.textContent = text;
     } else {
       aibProgress.classList.remove('visible');
+    }
+  }
+
+  function restorePrefs() {
+    try {
+      const raw = localStorage.getItem(AIB_PREFS_KEY);
+      if (!raw) return;
+      const prefs = JSON.parse(raw);
+      if (prefs.week && aibWeek) aibWeek.value = prefs.week;
+      if (prefs.chapters && aibChapters) aibChapters.value = prefs.chapters;
+      if (prefs.theme && aibTheme) aibTheme.value = prefs.theme;
+      if (prefs.scope && aibScope) aibScope.value = prefs.scope;
+      if (prefs.model && aibModel) aibModel.value = prefs.model;
+      if (prefs.taskType) {
+        currentTaskType = prefs.taskType;
+      }
+    } catch (e) {
+      console.warn('[tc-ai-builder] Could not restore preferences:', e.message);
+    }
+  }
+
+  function savePrefs() {
+    try {
+      const prefs = {
+        week: (aibWeek.value || '').trim(),
+        chapters: (aibChapters.value || '').trim(),
+        theme: (aibTheme.value || '').trim(),
+        scope: aibScope.value,
+        model: aibModel.value,
+        taskType: currentTaskType,
+      };
+      localStorage.setItem(AIB_PREFS_KEY, JSON.stringify(prefs));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        console.warn('[tc-ai-builder] localStorage quota exceeded');
+        showMsg(aibMsg, '⚠ Preferences could not be saved (storage full).', 'err');
+      }
     }
   }
 
@@ -162,6 +201,32 @@
       showMsg(aibExtraStudentsWarn, '⚠ Unknown codes: ' + unknown.join(', ') + ' — will be treated as external/DESE-only', 'info');
     }
   });
+
+  // ── Goal Datalist Filter by Selected Student ────────────────────────────────
+
+  if (aibProbeStudent) {
+    aibProbeStudent.addEventListener('input', () => {
+      const code = (aibProbeStudent.value || '').trim().toUpperCase();
+      const goalList = document.getElementById('aibGoalList');
+      if (!goalList) return;
+      const filtered = code
+        ? cachedGoals.filter((g) => {
+            const studentCode = (g.student_code || '').toUpperCase();
+            return studentCode === code;
+          })
+        : cachedGoals;
+      const frag = document.createDocumentFragment();
+      filtered.forEach((g) => {
+        if (g.code) {
+          const opt = document.createElement('option');
+          opt.value = g.code;
+          frag.appendChild(opt);
+        }
+      });
+      goalList.innerHTML = '';
+      goalList.appendChild(frag);
+    });
+  }
 
   // ── Image Upload ────────────────────────────────────────────────────────────
 
@@ -376,8 +441,10 @@
         aibDownloadZipBtn.style.display =
           taskType === 'presentations' || taskType === 'both' ? 'inline-flex' : 'none';
       }
+      if (aibCopyBtn) aibCopyBtn.style.display = 'inline-flex';
 
       showMsg(aibMsg, 'Generation complete! Review and edit below.', 'ok');
+      savePrefs();
       aibOutputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
       console.error('[tc-ai-builder] Generation error:', err);
@@ -500,8 +567,28 @@
 
   aibDownloadZipBtn.addEventListener('click', handleDownloadZip);
 
+  // ── Copy to Clipboard ───────────────────────────────────────────────────────
+
+  if (aibCopyBtn) {
+    aibCopyBtn.addEventListener('click', async () => {
+      const content = (aibOutput.value || '').trim();
+      if (!content) {
+        showMsg(aibOutputMsg, 'No content to copy.', 'err');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(content);
+        showMsg(aibOutputMsg, '✅ Copied to clipboard!', 'ok');
+      } catch (err) {
+        console.error('[tc-ai-builder] Clipboard error:', err);
+        showMsg(aibOutputMsg, 'Failed to copy — try selecting text manually.', 'err');
+      }
+    });
+  }
+
   // ── Init ────────────────────────────────────────────────────────────────────
 
+  restorePrefs();
   updateTypeUI();
 
   // ── Prefetch Students & Goals for Autocomplete ──────────────────────────────
@@ -538,6 +625,12 @@
       }
     } catch (e) {
       console.warn('[tc-ai-builder] Could not prefetch goals:', e.message);
+    }
+    if (!cachedStudents.length && !cachedGoals.length) {
+      console.warn('[tc-ai-builder] Autocomplete data unavailable — student/goal suggestions disabled');
+      if (aibExtraStudentsWarn) {
+        showMsg(aibExtraStudentsWarn, 'ℹ Student/goal autocomplete unavailable (database not connected)', 'info');
+      }
     }
   })();
 
