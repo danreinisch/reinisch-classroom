@@ -593,6 +593,35 @@
             <div id="aibOutputMsg" class="aib-msg"></div>
             <textarea id="aibOutput" class="aib-preview" style="font-family: monospace; width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.25); border: 1px solid var(--rc-glass-border); border-radius: 12px; padding: 16px; font-size: 13px; white-space: pre; resize: vertical; color: inherit; outline: none;"></textarea>
           </div>
+
+          <!-- Issue to Students -->
+          <div class="aib-card" id="aibIssueCard" style="display: none;">
+            <h2 style="margin: 0 0 12px; font-size: 15px;">Issue to Students</h2>
+            <div class="aib-grid" style="margin-top: 0;">
+              <div class="aib-field">
+                <label for="aibIssueClass">Class</label>
+                <select id="aibIssueClass">
+                  <option value="">Select a class…</option>
+                </select>
+              </div>
+              <div class="aib-field">
+                <label for="aibIssueTitle">Title</label>
+                <input type="text" id="aibIssueTitle" placeholder="Assignment title" />
+              </div>
+              <div class="aib-field">
+                <label for="aibIssueDue">Due Date (optional)</label>
+                <input type="date" id="aibIssueDue" />
+              </div>
+            </div>
+            <div class="aib-actions" style="margin-top: 12px;">
+              <button class="aib-btn success" type="button" id="aibIssueBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                Issue to Class
+              </button>
+            </div>
+            <div id="aibIssueMsg" class="aib-msg"></div>
+          </div>
+
         <datalist id="aibStudentList"></datalist>
         <datalist id="aibGoalList"></datalist>
         </main>
