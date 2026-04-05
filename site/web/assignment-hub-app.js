@@ -93,7 +93,7 @@ async function submitWork(ev, assignment_id) {
     content: form.content.value.trim() || null,
     content_url: form.content_url.value.trim() || null,
   };
-  const { ok, data } = await fetchJSON('/.netlify/functions/submissions-create', {
+  const { ok, data, status: status_code } = await fetchJSON('/.netlify/functions/submissions-create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -105,7 +105,7 @@ async function submitWork(ev, assignment_id) {
     const cardEl = form.closest('.card');
     if (cardEl) lockCard(cardEl);
   } else {
-    status.textContent = 'Submit failed: ' + (typeof data === 'string' ? data : 'error');
+    status.textContent = `Submit failed (${status_code}): ${typeof data === 'string' ? data : 'unknown error'}`;
     status.className = 'status err';
   }
   return false;

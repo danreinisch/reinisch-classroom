@@ -1979,7 +1979,7 @@
             errorMsg.style.cssText = 'color: #fca5a5; margin-top: 8px; font-size: 14px;';
             this.parentElement.insertBefore(errorMsg, this.nextSibling);
           }
-          errorMsg.textContent = 'Failed to submit. Please try again.';
+          errorMsg.textContent = 'Failed to submit — please check your connection and try again. If this keeps happening, tell your teacher.';
           this.textContent = currentlyRetrying ? 'Re-submit Answers' : 'Submit Assignment';
           this.disabled = false;
           return;
@@ -2662,7 +2662,7 @@
             errorMsg.style.cssText = 'color: #fca5a5; margin-top: 8px; font-size: 14px;';
             this.parentElement.insertBefore(errorMsg, this.nextSibling);
           }
-          errorMsg.textContent = 'Failed to submit response. Please try again.';
+          errorMsg.textContent = 'Failed to submit — please check your connection and try again. If this keeps happening, tell your teacher.';
           this.textContent = 'Submit Assignment';
           this.disabled = false;
         }
