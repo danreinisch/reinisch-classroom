@@ -95,7 +95,7 @@ exports.handler = async (event) => {
     const studentId = studentData[0].id;
 
     // Fetch goal progress for this student with joined goal data — filter to active goals only
-    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area)&student_id=eq.${studentId}&goals.active=eq.true&order=date.desc`;
+    const progressUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*,goals!inner(code,desc,goal_area,baseline,mastery,measurement_type,class_context)&student_id=eq.${studentId}&goals.active=eq.true&order=date.desc`;
     
     console.log(`[student-goal-progress] [${requestId}] Fetching goal progress for student ID:`, studentId);
     
@@ -184,13 +184,17 @@ exports.handler = async (event) => {
       const FALLBACK_GOAL_DESC = 'Goal details unavailable';
       const FALLBACK_GOAL_AREA = 'Uncategorized';
       
-      // Map fallback data without goal details
-      const fallbackFlattened = (fallbackProgress || []).map(entry => ({
+      // Map fallback data, then attempt to enrich with real goal metadata
+      let fallbackFlattened = (fallbackProgress || []).map(entry => ({
         id: entry.id,
         goal_id: entry.goal_id,
         goal_code: `G${entry.goal_id}`,
         goal_desc: FALLBACK_GOAL_DESC,
         goal_area: FALLBACK_GOAL_AREA,
+        baseline: null,
+        mastery: null,
+        measurement_type: null,
+        class_context: null,
         student_id: entry.student_id,
         student_code: codeNorm,
         class_id: entry.class_id,
@@ -201,6 +205,45 @@ exports.handler = async (event) => {
         collected_by: entry.collected_by,
         created_at: entry.created_at
       }));
+      
+      // Best-effort: fetch goal metadata for the goal IDs present in fallback results
+      const goalIds = [...new Set((fallbackProgress || []).map(p => p.goal_id).filter(Boolean))];
+      if (goalIds.length > 0) {
+        try {
+          const goalsUrl = `${SUPABASE_URL}/rest/v1/goals?select=id,code,desc,goal_area,baseline,mastery,measurement_type,class_context&id=in.(${goalIds.join(',')})`;
+          const goalsResponse = await fetch(goalsUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (goalsResponse.ok) {
+            const goalsData = await goalsResponse.json();
+            const goalsMap = {};
+            (goalsData || []).forEach(g => { goalsMap[g.id] = g; });
+            fallbackFlattened = fallbackFlattened.map(entry => {
+              const goal = goalsMap[entry.goal_id] || {};
+              return {
+                ...entry,
+                goal_code: goal.code || entry.goal_code,
+                goal_desc: goal.desc || entry.goal_desc,
+                goal_area: goal.goal_area || entry.goal_area,
+                baseline: goal.baseline ?? entry.baseline,
+                mastery: goal.mastery ?? entry.mastery,
+                measurement_type: goal.measurement_type ?? entry.measurement_type,
+                class_context: goal.class_context ?? entry.class_context,
+              };
+            });
+            console.log(`[student-goal-progress] [${requestId}] Fallback goals enrichment successful for ${goalsData.length} goals`);
+          } else {
+            console.warn(`[student-goal-progress] [${requestId}] Fallback goals enrichment query failed (status: ${goalsResponse.status}), using placeholder values`);
+          }
+        } catch (enrichErr) {
+          console.warn(`[student-goal-progress] [${requestId}] Fallback goals enrichment error:`, enrichErr);
+        }
+      }
       
       console.log(`[student-goal-progress] [${requestId}] Fallback successful, fetched ${fallbackFlattened.length} entries`);
       
@@ -227,6 +270,10 @@ exports.handler = async (event) => {
       goal_code: entry.goals?.code || `G${entry.goal_id}`,
       goal_desc: entry.goals?.desc || FALLBACK_GOAL_DESC,
       goal_area: entry.goals?.goal_area || FALLBACK_GOAL_AREA,
+      baseline: entry.goals?.baseline ?? null,
+      mastery: entry.goals?.mastery ?? null,
+      measurement_type: entry.goals?.measurement_type ?? null,
+      class_context: entry.goals?.class_context ?? null,
       student_id: entry.student_id,
       student_code: codeNorm,
       class_id: entry.class_id,
