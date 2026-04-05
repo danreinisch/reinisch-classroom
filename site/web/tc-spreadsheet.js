@@ -538,7 +538,27 @@
           anyMissing = true;
         }
       }
-      if (!anyMissing) {
+      if (anyMissing) {
+        console.log('[tc-spreadsheet] Hydrated settings from DB — refreshing in-memory state');
+        // Re-load all settings from the now-hydrated localStorage
+        loadColWidths();
+        loadCustomCols();
+        loadCustomData();
+        loadRowOrder();
+        loadHiddenCols();
+        loadChangeLog();
+        loadColors();
+        loadCustomOptions();
+        loadColumnOrder();
+        loadViews();
+        loadCollapsedStudents();
+        loadCellComments();
+        loadCellTimestamps();
+        loadPrintDark();
+        loadCfRules();
+        // Re-render to reflect the restored settings
+        if (typeof renderSpreadsheet === 'function') renderSpreadsheet();
+      } else {
         // localStorage already has data — sync it back to DB to keep it fresh
         syncSettingsToDb();
       }

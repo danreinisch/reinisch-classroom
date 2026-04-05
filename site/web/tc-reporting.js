@@ -94,6 +94,32 @@
   }
 
   /**
+   * Format a goal progress value based on measurement type.
+   * @param {number|null} value - The numeric value (usually an average)
+   * @param {string} measurementType - 'Percent', 'x/y', 'Number', 'Observation', etc.
+   * @param {object} goal - The goal object (for baseline/mastery context)
+   * @returns {string} Formatted display string
+   */
+  function formatGoalValue(value, measurementType, goal) {
+    if (value == null) return 'N/A';
+    const type = (measurementType || 'Percent').toLowerCase();
+    if (type === 'observation') return 'N/A'; // Observations don't have numeric averages
+    if (type === 'x/y' || type === 'fraction') {
+      // If baseline/mastery are in x/y format, try to preserve denominator
+      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
+      if (denomMatch) {
+        const denom = parseInt(denomMatch[1]);
+        const numerator = Math.round(value * denom / 100);
+        return `${numerator}/${denom}`;
+      }
+      return value.toFixed(0) + '%'; // fallback to percent if can't parse
+    }
+    if (type === 'number') return value.toFixed(1);
+    // Default: Percent
+    return value.toFixed(0) + '%';
+  }
+
+  /**
    * Build a rich per-question answer detail HTML block for the evidence report.
    * Shows question text, choices, student answer, correct answer, DESE codes, and IEP goal descriptions.
    * @param {Object} submission - submission row (has .answers JSONB)
@@ -536,7 +562,7 @@
         const isObs = goal.measurement_type === 'Observation';
         const avgDisplay = isObs
           ? (progress.count > 0 ? status : 'No Data')
-          : (progress.average != null ? progress.average.toFixed(0) + "%" : "N/A");
+          : formatGoalValue(progress.average, goal.measurement_type, goal);
         const statusClass =
           status === "Goal Met" ? "rp-qs-goal-status--met" :
           status === "Making Adequate Progress" ? "rp-qs-goal-status--adequate" :
@@ -607,7 +633,7 @@
 
         const currentDisplay = goal.measurement_type === 'Observation'
           ? (goalProgressData.count > 0 ? status : 'No Data')
-          : (goalProgressData.average != null ? goalProgressData.average.toFixed(0) + '%' : 'N/A');
+          : formatGoalValue(goalProgressData.average, goal.measurement_type, goal);
 
         const makeOption = (val, label) =>
           `<option value="${val}"${selectedStatusValue === val ? " selected" : ""}>${label}</option>`;
@@ -747,7 +773,7 @@
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
               <div><strong>Starting point:</strong> ${escapeHtml(String(goal.baseline || 'N/A'))}</div>
-              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
+              <div><strong>Current:</strong> ${formatGoalValue(goalProgressData.average, goal.measurement_type, goal)}</div>
               <div><strong>Goal:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>
             </div>
             <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border-left: 4px solid ${statusColor};">
@@ -841,7 +867,7 @@
             <td><strong>${escapeHtml(goal.code)}</strong></td>
             <td>${escapeHtml(goal.goal_area || "N/A")}</td>
             <td>${escapeHtml(String(goal.baseline || 'N/A'))}</td>
-            <td>${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</td>
+            <td>${formatGoalValue(goalProgressData.average, goal.measurement_type, goal)}</td>
             <td>${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</td>
             <td>${goalProgressData.count}</td>
             <td>${status}</td>
@@ -894,7 +920,7 @@
 
     const quarterLabel = getQuarterLabel(tab1State.quarter);
     const quarterDates = getQuarterDateRange(tab1State.quarter);
-    const current = goalProgressData.average != null ? goalProgressData.average.toFixed(1) : "N/A";
+    const current = formatGoalValue(goalProgressData.average, goal.measurement_type, goal);
     const baseline = goal.baseline || "N/A";
     const target = goal.target || "N/A";
 
@@ -926,7 +952,7 @@
 
     return `[Goal Code: ${goalCode}] ${goal.goal_area || ""}
 Reporting Period: ${quarterLabel} (${formatDateYYYYMMDD(quarterDates.start)} - ${formatDateYYYYMMDD(quarterDates.end)})
-Baseline: ${baseline}% | Current: ${current}% | Target: ${target}%
+Baseline: ${baseline} | Current: ${current} | Target: ${target}
 Data Points (${goalProgressData.count}): ${dataPointsStr}
 Method: ${method}
 Status: ${richStatus}
@@ -1278,6 +1304,14 @@ ${narrative}`;
     const count = quarterData.count;
     const quarter = quarterLabel || "this quarter";
 
+    // Contextual suffix appended to all narrative paths
+    const _ctxParts = [];
+    if (goal.class_context) _ctxParts.push(`Data collected in ${goal.class_context}`);
+    if (goal.data_collector && goal.data_collector !== (student.primary_case_manager || '')) {
+      _ctxParts.push(`data collected by ${goal.data_collector}`);
+    }
+    const _ctx = _ctxParts.length > 0 ? ' ' + _ctxParts.join('; ') + '.' : '';
+
     // Deterministic phrase picker: same goal → same index variation across templates.
     // Fall back to goal_area + desc when code is missing to preserve uniqueness.
     const hashCode = (str) => {
@@ -1304,7 +1338,7 @@ ${narrative}`;
 
       if (count === 0) {
         return {
-          narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.`,
+          narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.` + _ctx,
           status: 'Not Making Progress',
         };
       }
@@ -1341,7 +1375,7 @@ ${narrative}`;
               `Observation data from ${quarter} indicates ${name} met the session target ${metCount} of ${validCount} time${validCount !== 1 ? 's' : ''}.`,
             ])
           : `No evaluable observation sessions were recorded for ${name} in ${area} during ${quarter}.`;
-        return { narrative, status };
+        return { narrative: narrative + _ctx, status };
       }
 
       // ── tally ──
@@ -1368,7 +1402,7 @@ ${narrative}`;
           `Across ${countDesc} in ${quarter}, ${name} averaged a ${avgStr}% success rate for this observational goal.`,
           `Tally data collected over ${countDesc} this quarter shows ${name} achieved the target ${avgStr}% of the time.`,
         ]);
-        return { narrative, status };
+        return { narrative: narrative + _ctx, status };
       }
 
       // ── prompt_count ──
@@ -1393,7 +1427,7 @@ ${narrative}`;
           `Across ${countDesc} in ${quarter}, ${name} averaged ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} per observation. The target maximum is ${targetMax} prompt${targetMax !== 1 ? 's' : ''}.`,
           `Data collected over ${countDesc} this quarter indicates ${name} needed an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} (target: ${targetMax} or fewer).`,
         ]);
-        return { narrative, status };
+        return { narrative: narrative + _ctx, status };
       }
 
       // ── behavior_checklist ──
@@ -1439,13 +1473,13 @@ ${narrative}`;
           `Across ${countDesc} in ${quarter}, ${name} demonstrated an average of ${avgMet}/${totalBehaviors} checklist behaviors.${consistentNote}`,
           `Behavior checklist data from ${countDesc} this quarter shows ${name} averaged ${avgMet} of ${totalBehaviors} behaviors met per session.${consistentNote}`,
         ]);
-        return { narrative, status };
+        return { narrative: narrative + _ctx, status };
       }
 
       // Fallback for unknown observation category
       const avgStr = avg != null ? avg.toFixed(0) : '—';
       return {
-        narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr}.`,
+        narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr}.` + _ctx,
         status: avg != null && avg >= targetVal ? 'Goal Met' : 'Progressing but Not Sufficient',
       };
     }
@@ -1467,7 +1501,7 @@ ${narrative}`;
         `It is recommended that data collection for this goal be prioritized in the upcoming quarter.`,
       ];
       return {
-        narrative: `${pick(openings)} ${pick(closings)}`,
+        narrative: `${pick(openings)} ${pick(closings)}` + _ctx,
         status: "Not Making Progress",
       };
     }
@@ -1618,7 +1652,7 @@ ${narrative}`;
         : "";
 
     return {
-      narrative: `${opening} ${middle} ${closing}${caveat}`,
+      narrative: `${opening} ${middle} ${closing}${caveat}` + _ctx,
       status,
     };
   }
@@ -1965,7 +1999,7 @@ ${narrative}`;
             </div>
             <div class="rp-goal-summary-stats">
               <div><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || 'N/A'))}</div>
-              <div><strong>Latest:</strong> ${latestValue != null ? latestValue.toFixed(0) : "N/A"}%</div>
+              <div><strong>Latest:</strong> ${formatGoalValue(latestValue, goal.measurement_type, goal)}</div>
               <div><strong>Mastery:</strong> ${escapeHtml(String(goal.mastery || goal.target || 'N/A'))}</div>
             </div>
             <div class="rp-sparkline">${sparkline}</div>
@@ -2160,7 +2194,7 @@ ${narrative}`;
           <td>${escapeHtml(goal.code)}</td>
           <td>${escapeHtml(goal.goal_area || "N/A")}</td>
           <td>${goalQuarterData.length}</td>
-          <td>${latestPoint ? parseFloat(latestPoint.value).toFixed(0) + "%" : "N/A"}</td>
+          <td>${latestPoint ? formatGoalValue(parseFloat(latestPoint.value), goal.measurement_type, goal) : "N/A"}</td>
         </tr>
       `;
       })
@@ -2585,10 +2619,10 @@ ${narrative}`;
         const q3Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q3'));
         const q4Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q4'));
 
-        const q1Avg = q1Data.average != null ? q1Data.average.toFixed(0) + '%' : '—';
-        const q2Avg = q2Data.average != null ? q2Data.average.toFixed(0) + '%' : '—';
-        const q3Avg = q3Data.average != null ? q3Data.average.toFixed(0) + '%' : '—';
-        const q4Avg = q4Data.average != null ? q4Data.average.toFixed(0) + '%' : '—';
+        const q1Avg = q1Data.average != null ? formatGoalValue(q1Data.average, goal.measurement_type, goal) : '—';
+        const q2Avg = q2Data.average != null ? formatGoalValue(q2Data.average, goal.measurement_type, goal) : '—';
+        const q3Avg = q3Data.average != null ? formatGoalValue(q3Data.average, goal.measurement_type, goal) : '—';
+        const q4Avg = q4Data.average != null ? formatGoalValue(q4Data.average, goal.measurement_type, goal) : '—';
 
         // Calculate trend
         const values = [q1Data.average, q2Data.average, q3Data.average, q4Data.average].filter(v => v != null);
@@ -3121,7 +3155,7 @@ ${narrative}`;
       // Start student section with page break (except for first student)
       const pageBreakStyle = index > 0 ? "page-break-before: always;" : "";
       const batchGoalDetailRowsHtml = goalSummaries.map(({ goal, progress, status, narrative }) => {
-        const avgDisplay = progress.average != null ? progress.average.toFixed(0) + "%" : "N/A";
+        const avgDisplay = formatGoalValue(progress.average, goal.measurement_type, goal);
         const statusColor =
           status === "Goal Met" ? "#16a34a" :
           status === "Making Adequate Progress" ? "#2563eb" :
@@ -3221,7 +3255,7 @@ ${narrative}`;
 
             <div style="display:flex; gap:24px; margin-bottom: 10px; font-size:13px;">
               <span><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline || "N/A"))}</span>
-              <span><strong>Current Avg:</strong> ${goalProgress.average != null ? goalProgress.average.toFixed(0) + "%" : "N/A"}</span>
+              <span><strong>Current Avg:</strong> ${formatGoalValue(goalProgress.average, goal.measurement_type, goal)}</span>
               <span><strong>Mastery:</strong> ${escapeHtml(String(goal.mastery || goal.target || "N/A"))}</span>
               <span><strong>Data Points:</strong> ${goalProgress.count}</span>
             </div>
@@ -3661,7 +3695,7 @@ ${narrative}`;
             progressCell = '⚠️ Needs support';
           }
         } else {
-          progressCell = avgRaw != null ? `${avgRaw}%` : '—';
+          progressCell = data.average != null ? formatGoalValue(data.average, goal.measurement_type, goal) : '—';
         }
         const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
         const masteryDisplay = goal.mastery != null ? escapeHtml(String(goal.mastery)) : targetDisplay;
@@ -4359,7 +4393,7 @@ ${narrative}`;
         const avgRaw = data.average != null ? data.average.toFixed(1) : null;
         const progressCell = isParent
           ? (avgRaw == null ? 'No data yet' : data.average >= 80 ? 'On track' : data.average >= 60 ? 'Making progress' : 'Needs support')
-          : (avgRaw != null ? `${avgRaw}%` : '—');
+          : (data.average != null ? formatGoalValue(data.average, goal.measurement_type, goal) : '—');
         const targetDisplay = goal.target != null ? escapeHtml(String(goal.target)) : '—';
         const masteryDisplay = goal.mastery != null ? escapeHtml(String(goal.mastery)) : targetDisplay;
         const baselineDisplay = goal.baseline != null ? escapeHtml(String(goal.baseline)) : '—';
