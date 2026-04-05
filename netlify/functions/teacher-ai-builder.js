@@ -32,6 +32,21 @@ function sanitizeForPrompt(value, maxLen) {
 }
 
 /**
+ * Sanitize source material for prompt inclusion.
+ * Like sanitizeForPrompt but preserves newlines and tabs (important for chapter structure).
+ */
+function sanitizeSourceForPrompt(value, maxLen) {
+  var len = maxLen || 40000;
+  if (value === null || value === undefined) return '';
+  // Normalize \r\n → \n, strip \r, remove control chars except \n and \t
+  return String(value)
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .slice(0, len);
+}
+
+/**
  * Query live student roster, goals, and enrollments from Supabase.
  * Returns a structured context string for injection into the Claude prompt.
  */
@@ -141,8 +156,8 @@ exports.handler = async function(event) {
     return jsonResponse(event, 503, { ok: false, error: 'AI Builder not configured — ANTHROPIC_API_KEY missing' }, {}, requestId);
   }
 
-  // Validate body size (100KB max)
-  var bodySizeCheck = validateBodySize(event.body, 100);
+  // Validate body size (200KB max — source alone can be ~40KB)
+  var bodySizeCheck = validateBodySize(event.body, 200);
   if (!bodySizeCheck.valid) {
     return jsonResponse(event, 413, { ok: false, error: bodySizeCheck.error }, {}, requestId);
   }
@@ -158,7 +173,7 @@ exports.handler = async function(event) {
   var week = sanitizeForPrompt(body.week, 10);
   var chapters = sanitizeForPrompt(body.chapters, 50);
   var theme = sanitizeForPrompt(body.theme, 100);
-  var source = sanitizeForPrompt(body.source, 40000);
+  var source = sanitizeSourceForPrompt(body.source, 40000);
   var scope = sanitizeForPrompt(body.scope, 50);
   var model = sanitizeForPrompt(body.model, 50) || 'claude-sonnet-4-20250514';
   var presentationScope = sanitizeForPrompt(body.presentationScope, 20);
@@ -319,3 +334,7 @@ exports.handler = async function(event) {
 
   return jsonResponse(event, 200, { ok: true, content: content }, {}, requestId);
 };
+
+// Exported for unit testing only
+exports._sanitizeForPrompt = sanitizeForPrompt;
+exports._sanitizeSourceForPrompt = sanitizeSourceForPrompt;
