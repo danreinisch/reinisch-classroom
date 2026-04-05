@@ -172,6 +172,7 @@ exports.handler = async function(event) {
   var taskType = sanitizeForPrompt(body.taskType, 20) || 'assignments';
   var week = sanitizeForPrompt(body.week, 10);
   var chapters = sanitizeForPrompt(body.chapters, 50);
+  var subject = sanitizeForPrompt(body.subject, 30) || 'ELA';
   var theme = sanitizeForPrompt(body.theme, 100);
   var source = sanitizeSourceForPrompt(body.source, 40000);
   var scope = sanitizeForPrompt(body.scope, 50);
@@ -231,8 +232,9 @@ exports.handler = async function(event) {
   var userLines = [
     'TASK TYPE: ' + taskType,
     'WEEK: ' + week,
+    'SUBJECT: ' + subject,
     chapters ? 'CHAPTERS: ' + chapters : '',
-    theme ? 'ELA THEME: ' + theme : '',
+    theme ? 'THEME: ' + theme : '',
     scope ? 'SCOPE: ' + scope : '',
   ].filter(Boolean);
 
