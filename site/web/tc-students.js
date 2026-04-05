@@ -2209,6 +2209,20 @@
           <label class="st-form-label">Expected Data Points/Quarter</label>
           <input type="number" class="st-form-input" name="expected_data_points" min="1" max="20" value="${goal.expected_data_points || 3}" />
         </div>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">
+              <input type="checkbox" name="addressed_in_class" value="true" ${goal.addressed_in_class !== false ? 'checked' : ''}>
+              In-Class: Include in class assignments
+            </label>
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">
+              <input type="checkbox" name="individual_delivery" value="true" ${goal.individual_delivery ? 'checked' : ''}>
+              Individual: Address through individual/pull-out work
+            </label>
+          </div>
+        </div>
         <div class="st-goal-actions">
           <button class="st-btn st-btn-primary save-goal-btn" data-goal-id="${goal.id}">Save</button>
           <button class="st-btn st-btn-secondary cancel-edit-btn" data-goal-id="${goal.id}">Cancel</button>
@@ -2875,6 +2889,8 @@
       class_context: goal.class_context,
       version: goal.version,
       status: goal.status,
+      addressed_in_class: form.querySelector('[name="addressed_in_class"]')?.checked !== false,
+      individual_delivery: form.querySelector('[name="individual_delivery"]')?.checked === true,
       observation_config: form.querySelector('[name="measurement_type"]').value === 'Observation' ? gatherObservationConfig(form) : null
     };
 
@@ -3358,6 +3374,20 @@
             ${FULL_CLASS_NAMES.map(cn => `<option value="${escapeHtml(cn)}">${escapeHtml(cn)}</option>`).join('')}
           </select>
         </div>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">
+              <input type="checkbox" name="addressed_in_class" value="true" checked>
+              In-Class: Include in class assignments
+            </label>
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">
+              <input type="checkbox" name="individual_delivery" value="true">
+              Individual: Address through individual/pull-out work
+            </label>
+          </div>
+        </div>
         <div class="st-modal-footer">
           <button type="button" class="st-btn st-btn-secondary" id="cancel-goal">Cancel</button>
           <button type="submit" class="st-btn st-btn-primary">Add Goal</button>
@@ -3403,6 +3433,8 @@
       class_context: formData.get('class_context') || null,
       status: 'active',
       version: 1,
+      addressed_in_class: form.querySelector('[name="addressed_in_class"]')?.checked !== false,
+      individual_delivery: form.querySelector('[name="individual_delivery"]')?.checked === true,
       observation_config: formData.get('measurement_type') === 'Observation' ? gatherObservationConfig(form) : null
     };
 

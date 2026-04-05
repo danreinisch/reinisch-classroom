@@ -39,6 +39,8 @@
     { key: 'data_collector',    label: 'Teacher to Collect Data',              editable: true,       type: 'text' },
     { key: 'data_collector_email', label: 'Teacher to Collect Data Email Address', editable: true,  type: 'text' },
     { key: 'measurement_type',  label: 'Measurement Type',                     editable: true,       type: 'select-custom', options: MEASUREMENT_TYPES },
+    { key: 'addressed_in_class', label: 'In-Class',                            editable: true,       type: 'select', options: ['Yes', 'No'] },
+    { key: 'individual_delivery', label: 'Individual Delivery',                editable: true,       type: 'select', options: ['Yes', 'No'] },
     { key: 'iep_due',           label: 'IEP Due',                              editable: true,       type: 'date', cascade: true },
     { key: 'eval_due',          label: 'Eval Due',                             editable: true,       type: 'date', cascade: true },
     { key: 'progress',          label: 'Progress %',                           editable: false,      type: 'progress' },
@@ -50,7 +52,7 @@
     'Student Code Name', 'IEP Goal', 'Student Code IEP Goal Code',
     'Student: Active/Inactive', 'Baseline', 'Mastery', 'Class', 'Goal Area',
     'Case Manager', 'Teacher to Collect Data', 'Teacher to Collect Data Email Address',
-    'Measurement Type', 'IEP Due', 'Eval Due', 'Notes',
+    'Measurement Type', 'In-Class', 'Individual Delivery', 'IEP Due', 'Eval Due', 'Notes',
   ];
 
   const SAVE_DEBOUNCE_MS = 1500;
@@ -1022,6 +1024,8 @@
       if (!row) continue;
       let finalVal = val;
       if (col.key === 'active') finalVal = val === 'Active';
+      if (col.key === 'addressed_in_class') finalVal = val === 'Yes';
+      if (col.key === 'individual_delivery') finalVal = val === 'Yes';
       if ((col.key === 'iep_due' || col.key === 'eval_due') && val) finalVal = toIsoDate(val) || val;
       const oldVal = col._custom ? getCustomVal(row, col.key) : row[col.key];
       if (String(oldVal ?? '') === String(finalVal ?? '')) continue;
@@ -1323,6 +1327,8 @@
           data_collector:       g.data_collector || '',
           data_collector_email: g.data_collector_email || '',
           measurement_type:     g.measurement_type || 'Percent',
+          addressed_in_class:   g.addressed_in_class !== false,
+          individual_delivery:  g.individual_delivery === true,
           iep_due:              stu.iep_due || '',
           eval_due:             stu.eval_due || '',
           notes:                g.notes || '',
@@ -1655,6 +1661,12 @@
     if (col.key === 'active') {
       const label = val ? 'Active' : 'Inactive';
       td.innerHTML = `<span style="color:${val ? '#22c55e' : '#f87171'}">${escapeHtml(label)}</span>`;
+    } else if (col.key === 'addressed_in_class') {
+      const label = val !== false ? 'Yes' : 'No';
+      td.innerHTML = `<span style="color:${val !== false ? '#22c55e' : '#f87171'}">${escapeHtml(label)}</span>`;
+    } else if (col.key === 'individual_delivery') {
+      const label = val ? 'Yes' : 'No';
+      td.innerHTML = `<span style="color:${val ? '#818cf8' : 'rgba(255,255,255,0.4)'}">${escapeHtml(label)}</span>`;
     } else if (col.key === 'iep_due' || col.key === 'eval_due') {
       td.textContent = formatDate(val);
     } else if (col.key === 'student_code') {
@@ -1957,7 +1969,7 @@
       for (const opt of (col.options || [])) {
         const o = document.createElement('option');
         o.value = opt; o.textContent = opt;
-        if (String(currentVal) === opt || (col.key === 'active' && (currentVal ? 'Active' : 'Inactive') === opt)) {
+        if (String(currentVal) === opt || (col.key === 'active' && (currentVal ? 'Active' : 'Inactive') === opt) || (col.key === 'addressed_in_class' && (currentVal !== false ? 'Yes' : 'No') === opt) || (col.key === 'individual_delivery' && (currentVal ? 'Yes' : 'No') === opt)) {
           o.selected = true;
         }
         editor.appendChild(o);
@@ -2074,6 +2086,8 @@
     // Convert active dropdown value
     let finalVal = newVal;
     if (col.key === 'active') finalVal = newVal === 'Active';
+    if (col.key === 'addressed_in_class') finalVal = newVal === 'Yes';
+    if (col.key === 'individual_delivery') finalVal = newVal === 'Yes';
     if (col.key === 'iep_due' || col.key === 'eval_due') finalVal = newVal || null;
 
     // Remember custom option for select-custom columns (built-in)
@@ -2264,6 +2278,8 @@
       .filter(c => c.key !== '_actions' && c.key !== 'progress')
       .map(c => {
         if (c.key === 'active') return row.active ? 'Active' : 'Inactive';
+        if (c.key === 'addressed_in_class') return row.addressed_in_class !== false ? 'Yes' : 'No';
+        if (c.key === 'individual_delivery') return row.individual_delivery ? 'Yes' : 'No';
         if (c._custom) return getCustomVal(row, c.key) || '';
         return row[c.key] || '';
       });
@@ -2633,6 +2649,8 @@
       iep_due:              null,
       eval_due:             null,
       notes:                '',
+      addressed_in_class:   true,
+      individual_delivery:  false,
       _goal_active:         true,
       _draft:               true,
     };
@@ -2677,6 +2695,8 @@
         class_context:       draftRow.class_context,
         case_manager:        draftRow.case_manager,
         notes:               draftRow.notes,
+        addressed_in_class:  draftRow.addressed_in_class !== false,
+        individual_delivery: draftRow.individual_delivery === true,
       });
       // Move from draft to allRows
       draftRow._draft = false;
@@ -2722,6 +2742,8 @@
         class_context:       row.class_context,
         case_manager:        row.case_manager,
         notes:               row.notes,
+        addressed_in_class:  row.addressed_in_class,
+        individual_delivery: row.individual_delivery,
       });
       flashCell(td);
       setStatusSaved();
@@ -2750,6 +2772,8 @@
         r.active ? 'Active' : 'Inactive',
         r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
         r.data_collector, r.data_collector_email, r.measurement_type,
+        r.addressed_in_class !== false ? 'Yes' : 'No',
+        r.individual_delivery ? 'Yes' : 'No',
         r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
         r.notes || '',
       ];
@@ -2779,6 +2803,8 @@
         baseline: r.baseline, mastery: r.mastery, class_context: r.class_context,
         measurement_type: r.measurement_type, data_collector: r.data_collector,
         data_collector_email: r.data_collector_email, case_manager: r.case_manager,
+        addressed_in_class: r.addressed_in_class !== false,
+        individual_delivery: r.individual_delivery === true,
         notes: r.notes || '',
       });
     }
@@ -2798,6 +2824,8 @@
         r.active ? 'Active' : 'Inactive',
         r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
         r.data_collector, r.data_collector_email, r.measurement_type,
+        r.addressed_in_class !== false ? 'Yes' : 'No',
+        r.individual_delivery ? 'Yes' : 'No',
         r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
         r.notes || '',
       ];
