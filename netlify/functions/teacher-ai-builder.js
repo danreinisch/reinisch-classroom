@@ -156,6 +156,26 @@ exports.handler = async function(event) {
     ? body.imageNames.slice(0, 12).map(function(n) { return sanitizeForPrompt(n, 80); })
     : [];
 
+  // Data Probe fields
+  var probeStudent = sanitizeForPrompt(body.probeStudent, 10);
+  var probeGoals = sanitizeForPrompt(body.probeGoals, 200);
+  var probeCount = parseInt(body.probeCount, 10);
+  if (isNaN(probeCount) || probeCount < 3) probeCount = 3;
+  if (probeCount > 10) probeCount = 10;
+
+  // Extra students (not in class roster)
+  var extraStudents = [];
+  if (Array.isArray(body.extraStudents)) {
+    var seen = {};
+    body.extraStudents.slice(0, 20).forEach(function(code) {
+      var cleaned = String(code).toUpperCase().replace(/[^A-Z0-9.]/g, '').slice(0, 10);
+      if (cleaned && !seen[cleaned]) {
+        seen[cleaned] = true;
+        extraStudents.push(cleaned);
+      }
+    });
+  }
+
   // Validate model selection to only allow known Claude models
   var allowedModels = ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'];
   if (allowedModels.indexOf(model) === -1) {
@@ -165,7 +185,11 @@ exports.handler = async function(event) {
   if (!week) {
     return jsonResponse(event, 400, { ok: false, error: 'week is required' }, {}, requestId);
   }
-  if (!source) {
+  if (taskType === 'dataProbe') {
+    if (!probeStudent) {
+      return jsonResponse(event, 400, { ok: false, error: 'probeStudent is required for dataProbe' }, {}, requestId);
+    }
+  } else if (!source) {
     return jsonResponse(event, 400, { ok: false, error: 'source material is required' }, {}, requestId);
   }
 
@@ -191,6 +215,18 @@ exports.handler = async function(event) {
     userLines.push('PRESENTATION SCOPE: ' + presentationScope);
   }
 
+  if (taskType === 'dataProbe') {
+    userLines.push('TARGET STUDENT: ' + probeStudent);
+    userLines.push('TARGET GOALS: ' + (probeGoals || 'auto-select'));
+    userLines.push('QUESTION COUNT: ' + probeCount);
+    userLines.push('TASK TYPE: dataProbe — Generate ' + probeCount + ' IEP-targeted MC/TF/FIB questions for ' + probeStudent + '. Focus on goals that need more data points. Include hints. Use the same format as regular assignment questions but do NOT include a Written Response.');
+  }
+
+  if (extraStudents.length > 0) {
+    userLines.push('ADDITIONAL STUDENTS (not in class roster): ' + extraStudents.join(', '));
+    userLines.push('Generate assignments for these students even if they do not appear in the live Supabase data. Use the GOAL_SKILL_MAP and WR_MAP from the system prompt for their formats. If a student code is not found in either the live data or the system prompt maps, generate DESE-only questions at complexity level 3.');
+  }
+
   if (imageNames.length > 0) {
     userLines.push('BACKGROUND IMAGES (' + imageNames.length + '): ' + imageNames.join(', '));
   }
@@ -199,9 +235,12 @@ exports.handler = async function(event) {
     userLines.push('LIBRARY REFERENCE: ' + sanitizeForPrompt(body.libraryRef.title, 200));
   }
 
-  userLines.push('');
-  userLines.push('SOURCE MATERIAL:');
-  userLines.push(source);
+  if (source) {
+    userLines.push('');
+    userLines.push('SOURCE MATERIAL:');
+    userLines.push(source);
+  }
+
   userLines.push('');
   userLines.push(studentContext);
 

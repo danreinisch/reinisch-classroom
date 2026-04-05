@@ -263,6 +263,7 @@
       }
 
       #aibImgSection { display: none; }
+      #aibProbeSection { display: none; }
     </style>
   </head>
   <body>
@@ -428,6 +429,9 @@
               <button class="aib-type-btn" type="button" data-type="both" id="typeBtnBoth">
                 ✨ Both
               </button>
+              <button class="aib-type-btn" type="button" data-type="dataProbe" id="typeBtnDataProbe">
+                🎯 Data Probe
+              </button>
             </div>
           </div>
 
@@ -473,9 +477,35 @@
                 </select>
               </div>
             </div>
+
+            <!-- Data Probe Configuration (visible only for Data Probe task type) -->
+            <div id="aibProbeSection" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rc-glass-border);">
+              <p class="aib-subtle" style="font-size: 12px; margin: 0 0 10px 0;">Generate 3–10 IEP-targeted questions for a specific student — no full assignment needed.</p>
+              <div class="aib-grid">
+                <div class="aib-field">
+                  <label for="aibProbeStudent">Target Student</label>
+                  <input type="text" id="aibProbeStudent" placeholder="e.g. S001" maxlength="10" />
+                </div>
+                <div class="aib-field">
+                  <label for="aibProbeGoals">Target Goal(s) <span class="aib-subtle" style="font-weight: normal;">(optional)</span></label>
+                  <input type="text" id="aibProbeGoals" placeholder="e.g. S001.11.1, S001.11.2" />
+                </div>
+                <div class="aib-field">
+                  <label for="aibProbeCount">Number of Questions</label>
+                  <input type="number" id="aibProbeCount" min="3" max="10" value="5" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Source Material -->
+          <!-- Additional Students -->
+          <div class="aib-card" id="aibExtraStudentsSection">
+            <h2 style="margin: 0 0 4px 0; font-size: 15px;">Additional Students <span class="aib-subtle" style="font-weight: normal; font-size: 12px;">(optional)</span></h2>
+            <p class="aib-subtle" style="font-size: 13px; margin: 0 0 10px 0;">Include students not in your classes (e.g., case-managed students in other teachers' rooms)</p>
+            <div class="aib-field">
+              <input type="text" id="aibExtraStudents" placeholder="e.g. S031, S032, S044" />
+            </div>
+          </div>
           <div class="aib-card">
             <h2 style="margin: 0 0 4px 0; font-size: 15px;">Source Material</h2>
             <p class="aib-subtle" style="font-size: 13px; margin: 0 0 10px 0;">Paste chapter text, summaries, or key events. This gives Claude the story content to write questions from.</p>
