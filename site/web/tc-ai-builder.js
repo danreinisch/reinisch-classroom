@@ -31,6 +31,16 @@
   const aibScope = document.getElementById('aibScope');
   const aibPresScope = document.getElementById('aibPresScope');
   const aibPresentation = document.getElementById('aibPresentation');
+  const aibAssignOptions = document.getElementById('aibAssignOptions');
+  const aibAssignDays = document.getElementById('aibAssignDays');
+  const aibAssignDifficulty = document.getElementById('aibAssignDifficulty');
+  const aibAssignFormat = document.getElementById('aibAssignFormat');
+  const aibAssignInstructions = document.getElementById('aibAssignInstructions');
+  const aibPresOptions = document.getElementById('aibPresOptions');
+  const aibPresSlides = document.getElementById('aibPresSlides');
+  const aibPresStyle = document.getElementById('aibPresStyle');
+  const aibPresAudience = document.getElementById('aibPresAudience');
+  const aibPresInstructions = document.getElementById('aibPresInstructions');
   const aibModel = document.getElementById('aibModel');
 
   const aibProbeSection = document.getElementById('aibProbeSection');
@@ -165,6 +175,11 @@
     const showPresScope = currentTaskType === 'presentations' || currentTaskType === 'both';
     aibPresScope.style.display = showPresScope ? 'block' : 'none';
 
+    const showAssignOpts = currentTaskType === 'assignments' || currentTaskType === 'both';
+    if (aibAssignOptions) aibAssignOptions.style.display = showAssignOpts ? 'block' : 'none';
+    const showPresOpts = currentTaskType === 'presentations' || currentTaskType === 'both';
+    if (aibPresOptions) aibPresOptions.style.display = showPresOpts ? 'block' : 'none';
+
     aibProbeSection.style.display = currentTaskType === 'dataProbe' ? 'block' : 'none';
   }
 
@@ -226,8 +241,10 @@
 
   function relativeTime(dateStr) {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '—';
     const now = new Date();
     const diffMs = now - date;
+    if (diffMs < 0) return 'just now';
     const diffMin = Math.floor(diffMs / 60000);
     const diffHr = Math.floor(diffMs / 3600000);
     const diffDay = Math.floor(diffMs / 86400000);
@@ -242,6 +259,16 @@
     const historyList = document.getElementById('aibHistoryList');
     if (!historyList) return;
     historyList.innerHTML = '';
+
+    // Helper: fetch content for this record, using cache
+    async function fetchContent(id) {
+      if (historyContentCache.has(id)) return historyContentCache.get(id);
+      const detailRes = await fetch('/.netlify/functions/teacher-ai-builder-history-detail?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
+      const detailData = await detailRes.json().catch(() => ({}));
+      if (!detailRes.ok || !detailData.ok) throw new Error(detailData.error || 'Failed to load content');
+      historyContentCache.set(id, detailData.content || '');
+      return historyContentCache.get(id);
+    }
 
     // Escape HTML entities to prevent XSS when injecting text into innerHTML
     function esc(str) {
@@ -297,16 +324,6 @@
 
       // Set preview text safely via textContent (empty until expanded)
 
-      // Helper: fetch content for this record, using cache
-      async function fetchContent(id) {
-        if (historyContentCache.has(id)) return historyContentCache.get(id);
-        const detailRes = await fetch('/.netlify/functions/teacher-ai-builder-history-detail?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
-        const detailData = await detailRes.json().catch(() => ({}));
-        if (!detailRes.ok || !detailData.ok) throw new Error(detailData.error || 'Failed to load content');
-        historyContentCache.set(id, detailData.content || '');
-        return historyContentCache.get(id);
-      }
-
       // Expand/collapse/copy toggle
       card.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
@@ -333,6 +350,12 @@
             }).catch((err) => {
               btn.textContent = 'Expand';
               btn.disabled = false;
+              if (previewEl2) {
+                previewEl2.textContent = '⚠ Failed to load — try again';
+                previewEl2.classList.add('expanded');
+                previewEl2.style.color = '#fca5a5';
+                setTimeout(function() { previewEl2.textContent = ''; previewEl2.classList.remove('expanded'); previewEl2.style.color = ''; }, 3000);
+              }
               console.warn('[tc-ai-builder] Failed to load content:', err.message);
             });
           }
@@ -698,6 +721,15 @@
           : undefined,
         extraStudents: extraStudents.length ? extraStudents : undefined,
       };
+
+      if (aibAssignDays && aibAssignDays.value.trim()) payload.assignDays = aibAssignDays.value.trim();
+      if (aibAssignDifficulty && aibAssignDifficulty.value) payload.assignDifficulty = aibAssignDifficulty.value;
+      if (aibAssignFormat && aibAssignFormat.value) payload.assignFormat = aibAssignFormat.value;
+      if (aibAssignInstructions && aibAssignInstructions.value.trim()) payload.assignInstructions = aibAssignInstructions.value.trim();
+      if (aibPresSlides && aibPresSlides.value.trim()) payload.presSlides = aibPresSlides.value.trim();
+      if (aibPresStyle && aibPresStyle.value) payload.presStyle = aibPresStyle.value;
+      if (aibPresAudience && aibPresAudience.value) payload.presAudience = aibPresAudience.value;
+      if (aibPresInstructions && aibPresInstructions.value.trim()) payload.presInstructions = aibPresInstructions.value.trim();
 
       // Add probe-specific fields
       if (taskType === 'dataProbe') {
