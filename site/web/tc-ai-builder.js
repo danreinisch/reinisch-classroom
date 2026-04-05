@@ -22,6 +22,7 @@
   const typeBtnAssignments = document.getElementById('typeBtnAssignments');
   const typeBtnPresentations = document.getElementById('typeBtnPresentations');
   const typeBtnBoth = document.getElementById('typeBtnBoth');
+  const typeBtnDataProbe = document.getElementById('typeBtnDataProbe');
 
   const aibWeek = document.getElementById('aibWeek');
   const aibChapters = document.getElementById('aibChapters');
@@ -30,6 +31,13 @@
   const aibPresScope = document.getElementById('aibPresScope');
   const aibPresentation = document.getElementById('aibPresentation');
   const aibModel = document.getElementById('aibModel');
+
+  const aibProbeSection = document.getElementById('aibProbeSection');
+  const aibProbeStudent = document.getElementById('aibProbeStudent');
+  const aibProbeGoals = document.getElementById('aibProbeGoals');
+  const aibProbeCount = document.getElementById('aibProbeCount');
+
+  const aibExtraStudents = document.getElementById('aibExtraStudents');
 
   const aibSource = document.getElementById('aibSource');
   const aibSourceFile = document.getElementById('aibSourceFile');
@@ -85,7 +93,7 @@
   }
 
   function updateTypeUI() {
-    [typeBtnAssignments, typeBtnPresentations, typeBtnBoth].forEach((btn) => {
+    [typeBtnAssignments, typeBtnPresentations, typeBtnBoth, typeBtnDataProbe].forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.type === currentTaskType);
     });
 
@@ -94,6 +102,8 @@
 
     const showPresScope = currentTaskType === 'presentations' || currentTaskType === 'both';
     aibPresScope.style.display = showPresScope ? 'block' : 'none';
+
+    aibProbeSection.style.display = currentTaskType === 'dataProbe' ? 'block' : 'none';
   }
 
   // ── Task Type Selector ──────────────────────────────────────────────────────
@@ -107,6 +117,7 @@
   typeBtnAssignments.addEventListener('click', handleTypeBtn);
   typeBtnPresentations.addEventListener('click', handleTypeBtn);
   typeBtnBoth.addEventListener('click', handleTypeBtn);
+  typeBtnDataProbe.addEventListener('click', handleTypeBtn);
 
   // ── Source File Upload ──────────────────────────────────────────────────────
 
@@ -250,11 +261,25 @@
     const taskType = currentTaskType;
     const presentationScope = aibPresentation.value;
 
+    // Parse extra students (comma-separated, trim, uppercase, deduplicate)
+    const extraStudentsRaw = (aibExtraStudents.value || '').trim();
+    const extraStudents = extraStudentsRaw
+      ? [...new Set(extraStudentsRaw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean))]
+      : [];
+
     if (!week) {
       showMsg(aibMsg, 'Please enter a week number.', 'err');
       return;
     }
-    if (!source) {
+
+    // Data Probe: probeStudent is required; source is NOT required
+    if (taskType === 'dataProbe') {
+      const probeStudent = (aibProbeStudent.value || '').trim();
+      if (!probeStudent) {
+        showMsg(aibMsg, 'Please enter a Target Student code for the Data Probe.', 'err');
+        return;
+      }
+    } else if (!source) {
       showMsg(aibMsg, 'Please provide source material (paste text or upload a file).', 'err');
       return;
     }
@@ -271,15 +296,23 @@
         week,
         chapters,
         theme,
-        source,
+        source: source || undefined,
         scope,
         model,
-        presentationScope: taskType !== 'assignments' ? presentationScope : undefined,
+        presentationScope: taskType !== 'assignments' && taskType !== 'dataProbe' ? presentationScope : undefined,
         imageNames: imageNames.length ? imageNames : undefined,
         libraryRef: selectedLibRef
           ? { title: selectedLibRef.title, id: selectedLibRef.id }
           : undefined,
+        extraStudents: extraStudents.length ? extraStudents : undefined,
       };
+
+      // Add probe-specific fields
+      if (taskType === 'dataProbe') {
+        payload.probeStudent = (aibProbeStudent.value || '').trim();
+        payload.probeGoals = (aibProbeGoals.value || '').trim();
+        payload.probeCount = parseInt(aibProbeCount.value, 10) || 5;
+      }
 
       setProgress(true, 'Calling Claude — this may take 30–60 seconds…');
 
@@ -303,10 +336,15 @@
       aibOutputCard.style.display = 'block';
 
       // Show relevant action buttons
-      aibSendToWorkBtn.style.display =
-        taskType === 'assignments' || taskType === 'both' ? 'inline-flex' : 'none';
-      aibDownloadZipBtn.style.display =
-        taskType === 'presentations' || taskType === 'both' ? 'inline-flex' : 'none';
+      if (taskType === 'dataProbe') {
+        aibSendToWorkBtn.style.display = 'inline-flex';
+        aibDownloadZipBtn.style.display = 'none';
+      } else {
+        aibSendToWorkBtn.style.display =
+          taskType === 'assignments' || taskType === 'both' ? 'inline-flex' : 'none';
+        aibDownloadZipBtn.style.display =
+          taskType === 'presentations' || taskType === 'both' ? 'inline-flex' : 'none';
+      }
 
       showMsg(aibMsg, 'Generation complete! Review and edit below.', 'ok');
       aibOutputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -335,9 +373,18 @@
     try {
       const week = (aibWeek.value || '').trim();
       const theme = (aibTheme.value || '').trim();
-      const title = ['Week', week, theme ? '— ' + theme : '', '— AI Generated']
-        .filter(Boolean)
-        .join(' ');
+      let title;
+      if (currentTaskType === 'dataProbe') {
+        const studentCode = (aibProbeStudent.value || '').trim().toUpperCase();
+        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        title = ['Data Probe', studentCode ? '— ' + studentCode : '', '— ' + dateStr]
+          .filter(Boolean)
+          .join(' ');
+      } else {
+        title = ['Week', week, theme ? '— ' + theme : '', '— AI Generated']
+          .filter(Boolean)
+          .join(' ');
+      }
 
       const WORK_DRAFTS_KEY = 'rc_tc_work_drafts_v1';
       const existingRaw = localStorage.getItem(WORK_DRAFTS_KEY);
