@@ -345,7 +345,7 @@
    * - All others (Percent, x/y, fraction, unset): show as integer percentage
    */
   function formatGoalValue(value, goal) {
-    if (value == null || isNaN(value)) return 'N/A';
+    if (value == null || Number.isNaN(value)) return 'N/A';
     const mt = (goal.measurement_type || '').toLowerCase();
     if (mt === 'observation') return '';
     if (mt === 'number') return value.toFixed(1);
@@ -1320,7 +1320,7 @@ ${narrative}`;
       if (goal.class_context) {
         contextParts.push(`Data collected in ${goal.class_context}`);
       }
-      if (goal.data_collector && goal.data_collector !== (student.primary_case_manager || '')) {
+      if (goal.data_collector && goal.data_collector !== (student.primary_case_manager ?? '')) {
         contextParts.push(`data collected by ${goal.data_collector}`);
       }
       if (contextParts.length > 0) {
