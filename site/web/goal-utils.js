@@ -55,6 +55,8 @@ export function formatGoalValue(value, measurementType, goal) {
 }
 
 
+/**
+ * Returns true if a goal should be considered active/open.
  * Accepts any status except 'closed' or 'archived' (case-insensitive).
  * Goals with a missing status are treated as active.
  * @param {object|null} goal
