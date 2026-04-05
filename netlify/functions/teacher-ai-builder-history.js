@@ -65,7 +65,7 @@ exports.handler = async function(event) {
   var schoolYear = getCurrentSchoolYear();
 
   // Build PostgREST query string
-  var filters = 'school_year=eq.' + encodeURIComponent(schoolYear);
+  var filters = 'or=(school_year.eq.' + encodeURIComponent(schoolYear) + ',school_year.is.null)';
 
   if (params.status) {
     // Validate status value against allowed values

@@ -185,6 +185,16 @@
   const aibHistoryRefreshBtn = document.getElementById('aibHistoryRefreshBtn');
   if (aibHistoryRefreshBtn) aibHistoryRefreshBtn.addEventListener('click', () => loadHistory());
 
+  // ── School year helper ───────────────────────────────────────────────────────
+
+  function getSchoolYear() {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1–12
+    const year = now.getFullYear();
+    const startYear = month >= 8 ? year : year - 1;
+    return startYear + '-' + (startYear + 1);
+  }
+
   // ── hashSource helper ────────────────────────────────────────────────────────
 
   async function hashSource(text) {
@@ -717,6 +727,7 @@
             content: aibOutput.value,
             student_codes: studentCodes,
             goal_codes: goalCodes,
+            school_year: getSchoolYear(),
           }),
         });
         console.log('[tc-ai-builder] Output auto-saved to history');
