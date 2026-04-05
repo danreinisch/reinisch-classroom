@@ -71,6 +71,9 @@
   // Cleanup function returned by initHtmlAssignmentBridge(); called in closeAssignmentViewer().
   let htmlBridgeCleanup = null;
 
+  // Keyboard handler for Escape-to-close the assignment panel; stored so it can be removed.
+  let assignmentPanelEscapeHandler = null;
+
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
   // ============================================================================
@@ -1508,6 +1511,14 @@
         closeAssignmentViewer();
       }
     });
+
+    // Escape key closes the panel (but not when an rcModal is open on top)
+    assignmentPanelEscapeHandler = function(e) {
+      if (e.key === 'Escape' && !document.querySelector('.rc-modal-backdrop')) {
+        closeAssignmentViewer();
+      }
+    };
+    document.addEventListener('keydown', assignmentPanelEscapeHandler);
     
     // Trigger animation
     requestAnimationFrame(() => {
@@ -2022,7 +2033,9 @@
           }
         }
 
-        await rcAlert('Assignment Submitted', 'Your answers have been saved! Your teacher will review them soon.');
+        await rcAlert('Assignment Submitted', hasAutoScore
+          ? `You scored ${Math.round(scoreTotal)}%! Your answers have been saved and your teacher will review them soon.`
+          : 'Your answers have been saved! Your teacher will review them soon.');
 
         // No retry — lock the existing DOM in place without re-rendering to
         // avoid a flash of blank content while the view rebuilds.
@@ -2654,7 +2667,9 @@
             }
           }
 
-          await rcAlert('Assignment Submitted', 'Your response has been saved! Your teacher will review it soon.');
+          await rcAlert('Assignment Submitted', hasAutoScore
+            ? `You scored ${Math.round(scoreTotal)}%! Your response has been saved and your teacher will review it soon.`
+            : 'Your response has been saved! Your teacher will review it soon.');
 
           // Lock the existing DOM in place without re-rendering to avoid a
           // flash of blank content while the view rebuilds.
@@ -2769,6 +2784,9 @@
       return data;
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to save answers:', err);
+      if (!submit) {
+        showToast('⚠️ Could not save — check your connection', 'error');
+      }
       // Don't alert - let the student continue working
       return null;
     }
@@ -3161,6 +3179,12 @@
     if (htmlBridgeCleanup) {
       htmlBridgeCleanup();
       htmlBridgeCleanup = null;
+    }
+
+    // Remove the Escape key listener added in openAssignmentViewer
+    if (assignmentPanelEscapeHandler) {
+      document.removeEventListener('keydown', assignmentPanelEscapeHandler);
+      assignmentPanelEscapeHandler = null;
     }
 
     const panel = document.getElementById('assignmentPanel');
