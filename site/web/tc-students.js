@@ -175,10 +175,24 @@
    * @param {string} goalId      goal UUID (used as id prefix)
    * @returns {{ html: string, hasData: boolean }}
    */
+  /**
+   * Build a collapsible accordion chart for per-question goal data points.
+   * Mirrors buildDotGridChart in student-portal-init.js.
+   * Groups data points by assignment_instance_id (one row per assignment/date).
+   * Defaults to showing 5 most recent assignments; "Show older" loads 5 more at a time.
+   * Each expanded row shows inline question cards with data-dp attributes so the
+   * existing setupTcDotGridPopup() glass popup continues to work unchanged.
+   *
+   * @param {Array}  dataPoints  rows from goal_data_points table for this goal
+   * @param {string} goalId      goal UUID (used as id prefix)
+   * @returns {{ html: string, hasData: boolean }}
+   */
   function buildTcDotGridChart(dataPoints, goalId) {
     if (!dataPoints || dataPoints.length === 0) {
       return { html: '', hasData: false };
     }
+
+    const PAGE_SIZE = 5;
 
     // Group by instance (assignment_instance_id or date as fallback)
     const groups = new Map();
@@ -190,27 +204,17 @@
       groups.get(key).points.push(pt);
     }
 
-    const sortedGroups = [...groups.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Sort groups newest first
+    const sortedGroups = [...groups.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const total = dataPoints.length;
     const correct = dataPoints.filter(p => p.is_correct === true).length;
     const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
     const assignmentCount = sortedGroups.length;
-    // Determine if any data point uses percentage scoring (score column populated)
     const hasScoreDots = dataPoints.some(p => p.score != null);
     const summaryText = hasScoreDots
       ? `${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`
       : `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
-
-    const ICON_R = 9;   // icon radius — 18px icons give clearer touch targets
-    const DOT_GAP = 30; // breathing room between dots
-    const ROW_H = 52;   // taller rows for readability
-    const LABEL_W = 64;
-    const PAD_RIGHT = 16;
-    const PAD_TOP = 10;
-    const MAX_DOTS = Math.max(...sortedGroups.map(g => g.points.length));
-    const chartW = LABEL_W + (MAX_DOTS * DOT_GAP) + PAD_RIGHT;
-    const chartH = PAD_TOP + sortedGroups.length * ROW_H + 4;
 
     const idBase = `tc-dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}`;
 
@@ -222,39 +226,71 @@
       return '#ef4444';
     }
 
-    let dotsSvg = '';
-    sortedGroups.forEach((group, rowIdx) => {
-      const y = PAD_TOP + rowIdx * ROW_H + ROW_H / 2;
-      const dateLabel = formatDate(group.date);
+    // Trend indicator: compare avg of 3 most recent vs. prior 3 assignments
+    let trendHtml = '';
+    if (sortedGroups.length >= 4) {
+      function groupAvgScore(grps) {
+        const pts = grps.flatMap(g => g.points);
+        if (!pts.length) return 0;
+        if (hasScoreDots) {
+          const scored = pts.filter(p => p.score != null);
+          return scored.length ? scored.reduce((s, p) => s + Number(p.score), 0) / scored.length : 0;
+        }
+        return (pts.filter(p => p.is_correct === true).length / pts.length) * 100;
+      }
+      const recentAvg = groupAvgScore(sortedGroups.slice(0, 3));
+      const priorAvg  = groupAvgScore(sortedGroups.slice(3, 6));
+      const diff = recentAvg - priorAvg;
+      if (diff > 5)       trendHtml = '<span class="st-acc-trend st-acc-trend--up">↗ improving</span>';
+      else if (diff < -5) trendHtml = '<span class="st-acc-trend st-acc-trend--down">↘ declining</span>';
+      else                trendHtml = '<span class="st-acc-trend st-acc-trend--flat">→ steady</span>';
+    }
 
-      if (rowIdx > 0) {
-        const sepY = PAD_TOP + rowIdx * ROW_H;
-        dotsSvg += `<line stroke="rgba(255,255,255,0.08)" stroke-width="1" x1="0" y1="${sepY}" x2="${chartW}" y2="${sepY}" />`;
+    // Build accordion rows
+    const rowsHtml = sortedGroups.map((group, rowIdx) => {
+      const dateLabel = formatDate(group.date);
+      const hidden = rowIdx >= PAGE_SIZE;
+
+      // Per-assignment score badge
+      const gTotal = group.points.length;
+      const gCorrect = group.points.filter(p => p.is_correct === true).length;
+      const gScored = group.points.filter(p => p.score != null);
+      let scoreHtml;
+      if (gScored.length > 0) {
+        const avgScore = Math.round(gScored.reduce((s, p) => s + Number(p.score), 0) / gScored.length);
+        scoreHtml = `<span class="st-acc-row-score" style="color:${scoreToColor(avgScore)}">${avgScore}%</span>`;
+      } else {
+        const gpct = gTotal > 0 ? Math.round((gCorrect / gTotal) * 100) : 0;
+        const scoreColor = gTotal > 0 ? scoreToColor(gpct) : '#94a3b8';
+        scoreHtml = `<span class="st-acc-row-score" style="color:${scoreColor}">${gCorrect}/${gTotal}</span>`;
       }
 
-      dotsSvg += `<text fill="rgba(255,255,255,0.55)" font-size="11" x="${LABEL_W - 6}" y="${y}" text-anchor="end" dominant-baseline="middle">${escapeHtml(dateLabel)}</text>`;
-
-      group.points.forEach((pt, qIdx) => {
-        const cx = LABEL_W + qIdx * DOT_GAP + ICON_R + 2;
+      // Per-question inline cards (each carries a data-dp attribute for the popup)
+      const cardsHtml = group.points.map((pt, qIdx) => {
         const useScore = pt.score != null;
-        let dotContent, dotLabel;
-
+        let cardClass, scoreDisplay, borderColor;
         if (useScore) {
-          // Percentage-based: filled circle with color scale
           const score = Number(pt.score);
-          const circleColor = scoreToColor(score);
-          dotLabel = `Q${qIdx + 1}: ${score}% — ${escapeHtml(dateLabel)}`;
-          dotContent = `<circle cx="${cx}" cy="${y}" r="${ICON_R}" fill="${circleColor}" style="pointer-events:none;" />`;
+          borderColor = scoreToColor(score);
+          scoreDisplay = `${score}%`;
+          cardClass = score >= 100 ? 'st-acc-q-card--perfect'
+                    : score >= 80  ? 'st-acc-q-card--high'
+                    : score >= 60  ? 'st-acc-q-card--mid'
+                    : 'st-acc-q-card--low';
         } else {
-          // Binary correct/incorrect: check/X icon
           const isCorrect = pt.is_correct === true;
-          const iconColor = isCorrect ? '#22c55e' : '#f87171';
-          const iconPaths = isCorrect ? DOT_CHECK_PATHS : DOT_X_PATHS;
-          dotLabel = `Q${qIdx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} — ${escapeHtml(dateLabel)}`;
-          dotContent = `<svg x="${cx - ICON_R}" y="${y - ICON_R}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none;overflow:visible">${iconPaths}</svg>`;
+          borderColor = isCorrect ? '#22c55e' : '#f87171';
+          scoreDisplay = isCorrect
+            ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`
+            : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
+          cardClass = isCorrect ? 'st-acc-q-card--correct' : 'st-acc-q-card--incorrect';
         }
 
-        // Use double quotes for data-dp: encodeURIComponent output never contains double quotes
+        // Show actual question text (truncated) instead of generic "Q#"
+        const qText = pt.question_text
+          ? (pt.question_text.length > 55 ? pt.question_text.substring(0, 55) + '…' : pt.question_text)
+          : `Question ${qIdx + 1}`;
+
         const dpVal = encodeURIComponent(JSON.stringify({
           qNum: qIdx + 1,
           question_text: pt.question_text || null,
@@ -265,14 +301,36 @@
           score: pt.score ?? null,
           date: pt.date,
         }));
-        // <g> with nested content — transparent <rect> provides larger touch target
-        dotsSvg += `<g data-dp="${dpVal}" role="button" tabindex="0" aria-label="${dotLabel}" style="cursor:pointer;">` +
-          `<rect x="${cx - 12}" y="${y - 12}" width="24" height="24" fill="transparent" style="pointer-events:all"/>` +
-          dotContent +
-          `<title>${dotLabel}</title>` +
-          `</g>`;
-      });
-    });
+
+        const shortLabel = pt.question_text ? pt.question_text.substring(0, 40) : `Question ${qIdx + 1}`;
+        const scoreLabel = useScore ? `${Number(pt.score)}%` : (pt.is_correct ? 'Correct' : 'Incorrect');
+        const ariaLabel = `Q${qIdx + 1}: ${shortLabel} — ${scoreLabel}`;
+
+        return `<button class="st-acc-q-card ${cardClass}" data-dp="${dpVal}" aria-label="${escapeHtml(ariaLabel)}" type="button" style="border-left-color:${borderColor}">` +
+          `<span class="st-acc-q-num">Q${qIdx + 1}</span>` +
+          `<span class="st-acc-q-text">${escapeHtml(qText)}</span>` +
+          `<span class="st-acc-q-score">${scoreDisplay}</span>` +
+          `</button>`;
+      }).join('');
+
+      return `<div class="st-acc-row${hidden ? ' st-acc-row--hidden' : ''}">` +
+        `<button class="st-acc-row-toggle" type="button" aria-expanded="false" aria-controls="${idBase}-body-${rowIdx}">` +
+          `<span class="st-acc-row-date">${escapeHtml(dateLabel)}</span>` +
+          `<span class="st-acc-row-meta">${gTotal} question${gTotal !== 1 ? 's' : ''}</span>` +
+          scoreHtml +
+          `<svg class="st-acc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>` +
+        `</button>` +
+        `<div class="st-acc-row-body" id="${idBase}-body-${rowIdx}" hidden>` +
+          `<div class="st-acc-q-cards">${cardsHtml}</div>` +
+        `</div>` +
+        `</div>`;
+    }).join('');
+
+    // "Show older" pagination button
+    const hiddenCount = Math.max(0, sortedGroups.length - PAGE_SIZE);
+    const showOlderBtn = hiddenCount > 0
+      ? `<button class="st-acc-show-older" type="button" data-acc-list="${idBase}-acc" data-loaded="${PAGE_SIZE}" data-total="${sortedGroups.length}">Show older assignments (${hiddenCount} more)</button>`
+      : '';
 
     // Legend: percentage scale when any dot uses score-based coloring, otherwise binary
     let legendHtml;
@@ -291,14 +349,16 @@
     }
 
     const html = `
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.45);margin-bottom:4px;">Per-Question Results</div>
-      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:8px;">${escapeHtml(summaryText)}</div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <svg id="${idBase}" viewBox="0 0 ${chartW} ${chartH}" width="${Math.min(chartW, 480)}" height="${chartH}" role="img" aria-label="${escapeHtml('Dot grid chart: ' + summaryText)}" style="display:block;min-width:200px;overflow:visible;">
-          ${dotsSvg}
-        </svg>
-      </div>
-      <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.55);">${legendHtml}</div>`;
+      <div class="st-acc-tc-wrap" style="margin-bottom:4px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.45);margin-bottom:4px;">Per-Question Results</div>
+        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:6px;">${escapeHtml(summaryText)}</div>
+        ${trendHtml ? `<div style="margin-bottom:8px;">${trendHtml}</div>` : ''}
+        <div class="st-acc-list" id="${idBase}-acc">
+          ${rowsHtml}
+        </div>
+        ${showOlderBtn}
+        <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:rgba(255,255,255,0.55);">${legendHtml}</div>
+      </div>`;
 
     return { html, hasData: true };
   }
@@ -2394,6 +2454,50 @@
           preview.style.display = isShowing ? '' : 'none';
           full.style.display = isShowing ? 'none' : '';
           e.target.textContent = isShowing ? 'Show more' : 'Show less';
+          e.stopPropagation();
+          return;
+        }
+
+        // Accordion assignment row expand/collapse
+        const accRowToggle = e.target.closest('.st-acc-row-toggle');
+        if (accRowToggle) {
+          const row = accRowToggle.closest('.st-acc-row');
+          if (row) {
+            const body = row.querySelector('.st-acc-row-body');
+            const wasExpanded = accRowToggle.getAttribute('aria-expanded') === 'true';
+            const nowExpanded = !wasExpanded;
+            accRowToggle.setAttribute('aria-expanded', String(nowExpanded));
+            if (body) body.hidden = !nowExpanded;
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        // "Show older assignments" pagination
+        const showOlderBtn = e.target.closest('.st-acc-show-older');
+        if (showOlderBtn) {
+          const accListId = showOlderBtn.dataset.accList;
+          const accList = accListId ? document.getElementById(accListId) : null;
+          if (accList) {
+            const PAGE_SIZE = 5;
+            const loaded = parseInt(showOlderBtn.dataset.loaded, 10) || PAGE_SIZE;
+            const total = parseInt(showOlderBtn.dataset.total, 10) || 0;
+            const hiddenRows = accList.querySelectorAll('.st-acc-row--hidden');
+            let shown = 0;
+            for (const r of hiddenRows) {
+              if (shown >= PAGE_SIZE) break;
+              r.classList.remove('st-acc-row--hidden');
+              shown++;
+            }
+            const newLoaded = Math.min(loaded + PAGE_SIZE, total);
+            showOlderBtn.dataset.loaded = String(newLoaded);
+            const remaining = total - newLoaded;
+            if (remaining <= 0) {
+              showOlderBtn.remove();
+            } else {
+              showOlderBtn.textContent = `Show older assignments (${remaining} more)`;
+            }
+          }
           e.stopPropagation();
           return;
         }
