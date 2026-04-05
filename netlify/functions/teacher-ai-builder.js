@@ -206,6 +206,15 @@ exports.handler = async function(event) {
     });
   }
 
+  var assignDays = sanitizeForPrompt(body.assignDays, 5);
+  var assignDifficulty = sanitizeForPrompt(body.assignDifficulty, 30);
+  var assignFormat = sanitizeForPrompt(body.assignFormat, 40);
+  var assignInstructions = sanitizeForPrompt(body.assignInstructions, 500);
+  var presSlides = sanitizeForPrompt(body.presSlides, 5);
+  var presStyle = sanitizeForPrompt(body.presStyle, 30);
+  var presAudience = sanitizeForPrompt(body.presAudience, 30);
+  var presInstructions = sanitizeForPrompt(body.presInstructions, 500);
+
   // Validate model selection to only allow known Claude models
   var allowedModels = ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'];
   if (allowedModels.indexOf(model) === -1) {
@@ -245,6 +254,15 @@ exports.handler = async function(event) {
   if ((taskType === 'presentations' || taskType === 'both') && presentationScope) {
     userLines.push('PRESENTATION SCOPE: ' + presentationScope);
   }
+
+  if (assignDays) userLines.push('ASSIGNMENT DAYS: ' + assignDays);
+  if (assignDifficulty) userLines.push('ASSIGNMENT DIFFICULTY: ' + assignDifficulty);
+  if (assignFormat) userLines.push('ASSIGNMENT FORMAT: ' + assignFormat);
+  if (assignInstructions) userLines.push('ASSIGNMENT INSTRUCTIONS: ' + assignInstructions);
+  if (presSlides) userLines.push('PRESENTATION SLIDES: ' + presSlides);
+  if (presStyle) userLines.push('PRESENTATION STYLE: ' + presStyle);
+  if (presAudience) userLines.push('PRESENTATION AUDIENCE: ' + presAudience);
+  if (presInstructions) userLines.push('PRESENTATION INSTRUCTIONS: ' + presInstructions);
 
   if (taskType === 'dataProbe') {
     userLines.push('TARGET STUDENT: ' + probeStudent);
