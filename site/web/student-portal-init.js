@@ -1992,7 +1992,8 @@
           const wantRetry = await rcConfirm(
             'Try Again?',
             `You scored ${Math.round(scoreTotal)}%. Would you like to retry the questions you got wrong? Your correct answers will be locked.`,
-            'Retry Incorrect Answers'
+            'Retry Incorrect Answers',
+            { cancelLabel: 'Submit Anyway' }
           );
           if (wantRetry) {
             // Enter (or update) retry mode
@@ -2628,7 +2629,8 @@
             const wantRetry = await rcConfirm(
               'Try Again?',
               `You scored ${Math.round(scoreTotal)}%. Would you like to retry?`,
-              'Retry'
+              'Retry',
+              { cancelLabel: 'Submit Anyway' }
             );
             if (wantRetry) {
               assignmentViewerState.isRetryMode = true;
