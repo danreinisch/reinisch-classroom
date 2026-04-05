@@ -30,7 +30,7 @@ export function parseObservationNotes(notes) {
  */
 export function formatObservationValue(entry, goal) { // eslint-disable-line no-unused-vars
   const parsed = parseObservationNotes(entry.notes);
-  if (!parsed) return entry.value != null ? `${parseFloat(entry.value).toFixed(0)}%` : '—';
+  if (!parsed) return entry.value != null ? String(parseFloat(entry.value).toFixed(0)) : '—';
 
   switch (parsed.category) {
     case 'session_outcome': {

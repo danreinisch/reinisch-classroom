@@ -51,6 +51,24 @@
   // parseObsNotes and formatObsValue are now provided by obs-utils.js
   // (imported as parseObservationNotes and formatObservationValue)
 
+  // Local measurement-type-aware value formatter (mirrors tc-reporting.js formatGoalValue)
+  function formatGoalValue(value, measurementType, goal) {
+    if (value == null) return 'N/A';
+    const type = (measurementType || 'Percent').toLowerCase();
+    if (type === 'observation') return 'N/A';
+    if (type === 'x/y' || type === 'fraction') {
+      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
+      if (denomMatch) {
+        const denom = parseInt(denomMatch[1]);
+        const numerator = Math.round(value * denom / 100);
+        return `${numerator}/${denom}`;
+      }
+      return value.toFixed(0) + '%';
+    }
+    if (type === 'number') return value.toFixed(1);
+    return value.toFixed(0) + '%';
+  }
+
   // Load data from Supabase or localStorage
   async function loadData() {
     try {
@@ -332,7 +350,7 @@
     const isObs = goal.measurement_type === 'Observation';
     const rows = entries.map(entry => {
       const scoreClass = isObs ? '' : scoreColorClass(entry.value);
-      const displayValue = isObs ? formatObservationValue(entry, goal) : `${entry.value}%`;
+      const displayValue = isObs ? formatObservationValue(entry, goal) : formatGoalValue(parseFloat(entry.value), goal.measurement_type, goal);
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
@@ -448,8 +466,8 @@
         <span>Baseline: <strong>${baseline}</strong></span>
         <span>Mastery: <strong>${mastery}</strong></span>
         <span>Target: <strong>${target}</strong></span>
-        <span>Current: <strong class="${currentClass}">${current != null ? current + '%' : 'N/A'}</strong></span>
-        <span>Rolling Avg: <strong class="${avgClass}">${avg != null ? avg + '%' : 'N/A'}</strong></span>
+        <span>Current: <strong class="${currentClass}">${current != null ? formatGoalValue(current, goal.measurement_type, goal) : 'N/A'}</strong></span>
+        <span>Rolling Avg: <strong class="${avgClass}">${avg != null ? formatGoalValue(avg, goal.measurement_type, goal) : 'N/A'}</strong></span>
         <span>Delta: <strong>${delta != null ? (delta >= 0 ? '+' : '') + delta : 'N/A'}</strong></span>
         <span>Trend: <strong>${trend}</strong></span>
       </div>
@@ -1380,8 +1398,8 @@
   <p><strong>Baseline:</strong> ${baseline}</p>
   <p><strong>Mastery:</strong> ${mastery}</p>
   <p><strong>Target:</strong> ${target}</p>
-  <p><strong>Current Value:</strong> ${current != null ? current + '%' : 'N/A'}</p>
-  <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? avg + '%' : 'N/A'}</p>
+  <p><strong>Current Value:</strong> ${current != null ? formatGoalValue(current, goal.measurement_type, goal) : 'N/A'}</p>
+  <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? formatGoalValue(avg, goal.measurement_type, goal) : 'N/A'}</p>
   <p><strong>Trend:</strong> ${escapeXml(trend)}</p>
   
   <h2>Data Points</h2>

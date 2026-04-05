@@ -130,6 +130,24 @@
     ]
   };
 
+  // Local measurement-type-aware value formatter (mirrors tc-reporting.js formatGoalValue)
+  function formatGoalValue(value, measurementType, goal) {
+    if (value == null) return 'N/A';
+    const type = (measurementType || 'Percent').toLowerCase();
+    if (type === 'observation') return 'N/A';
+    if (type === 'x/y' || type === 'fraction') {
+      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
+      if (denomMatch) {
+        const denom = parseInt(denomMatch[1]);
+        const numerator = Math.round(value * denom / 100);
+        return `${numerator}/${denom}`;
+      }
+      return value.toFixed(0) + '%';
+    }
+    if (type === 'number') return value.toFixed(1);
+    return value.toFixed(0) + '%';
+  }
+
   function createIcon(name, size = 16) {
     const shapes = ICON_PATHS[name];
     if (!shapes) {
@@ -4236,7 +4254,7 @@
         const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
         const progressCell = isParent
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
-          : (avg != null ? `${avg}%` : '—');
+          : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
         const target = goal.target != null ? esc(String(goal.target)) : '—';
         const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
         const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
@@ -4425,7 +4443,7 @@
         const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
         const progressCell = isParent
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
-          : (avg != null ? `${avg}%` : '—');
+          : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
         const target = goal.target != null ? esc(String(goal.target)) : '—';
         const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
         const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
@@ -4652,7 +4670,7 @@
           const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
           const progress = isParent
             ? (avg == null ? 'No data' : parseFloat(avg) >= 80 ? 'On track' : parseFloat(avg) >= 60 ? 'Making progress' : 'Needs support')
-            : (avg != null ? `${avg}%` : '—');
+            : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
           const dpCol = isParent ? '' : `<td>${pts.length} pts</td>`;
           return `<tr>
             <td>${esc(goal.code || goal.id || '—')}</td>
