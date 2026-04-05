@@ -14,6 +14,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
+  const { formatGoalValue } = await import('/web/goal-utils.js');
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -129,24 +130,6 @@
       { tag: 'path', d: 'M16 3.13a4 4 0 0 1 0 7.75' }
     ]
   };
-
-  // Local measurement-type-aware value formatter (mirrors tc-reporting.js formatGoalValue)
-  function formatGoalValue(value, measurementType, goal) {
-    if (value == null) return 'N/A';
-    const type = (measurementType || 'Percent').toLowerCase();
-    if (type === 'observation') return 'N/A';
-    if (type === 'x/y' || type === 'fraction') {
-      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
-      if (denomMatch) {
-        const denom = parseInt(denomMatch[1]);
-        const numerator = Math.round(value * denom / 100);
-        return `${numerator}/${denom}`;
-      }
-      return value.toFixed(0) + '%';
-    }
-    if (type === 'number') return value.toFixed(1);
-    return value.toFixed(0) + '%';
-  }
 
   function createIcon(name, size = 16) {
     const shapes = ICON_PATHS[name];

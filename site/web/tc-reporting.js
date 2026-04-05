@@ -15,7 +15,7 @@
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getSupabase } = await import("/web/supabase-client.js");
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
-  const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
+  const { parseGoalValue, isGoalActive, formatGoalValue } = await import("/web/goal-utils.js");
   const { parseObservationNotes } = await import("/web/obs-utils.js");
   const { buildItemsFromMeta } = await import("/web/shared-build-items.js");
 
@@ -91,32 +91,6 @@
     const div = document.createElement("div");
     div.textContent = String(text);
     return div.innerHTML;
-  }
-
-  /**
-   * Format a goal progress value based on measurement type.
-   * @param {number|null} value - The numeric value on a 0-100 scale (usually an average from getGoalProgressForQuarter)
-   * @param {string} measurementType - 'Percent', 'x/y', 'Number', 'Observation', etc.
-   * @param {object} goal - The goal object (for baseline/mastery context)
-   * @returns {string} Formatted display string
-   */
-  function formatGoalValue(value, measurementType, goal) {
-    if (value == null) return 'N/A';
-    const type = (measurementType || 'Percent').toLowerCase();
-    if (type === 'observation') return 'N/A'; // Observations don't have numeric averages
-    if (type === 'x/y' || type === 'fraction') {
-      // value is stored as a 0-100 percentage internally; convert back to x/y using the mastery denominator
-      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
-      if (denomMatch) {
-        const denom = parseInt(denomMatch[1]);
-        const numerator = Math.round(value * denom / 100);
-        return `${numerator}/${denom}`;
-      }
-      return value.toFixed(0) + '%'; // fallback to percent if can't parse denominator
-    }
-    if (type === 'number') return value.toFixed(1);
-    // Default: Percent
-    return value.toFixed(0) + '%';
   }
 
   /**
@@ -1583,6 +1557,9 @@ ${narrative}`;
     // --- Middle sentence (data summary) ---
     // Bug 10: guard against null avg (can happen when count > 0 but values failed to parse)
     if (avg == null) {
+      // avg can be null when count > 0 but all recorded values failed to parse (e.g.
+      // non-numeric entries).  Return a graceful fallback instead of crashing on
+      // avg.toFixed(0).
       return {
         narrative: `Data was collected for ${name} in the area of ${area} during ${quarter} (${count} data point${count !== 1 ? 's' : ''}), but values could not be calculated. Please verify the recorded data.` + _ctx,
         status: 'Not Making Progress',
@@ -1622,6 +1599,8 @@ ${narrative}`;
       : (goal.target != null && goal.target !== '') ? String(goal.target)
       : targetVal.toFixed(0);
     const targetStrClean = rawTargetStr.replace(/%$/, '');
+    // Goals without an explicit measurement_type are treated as Percent (the historical
+    // default).  Only Percent and Accuracy goals append a % suffix.
     const isPercentType = !goal.measurement_type || ['Percent', 'Accuracy'].includes(goal.measurement_type);
     const targetStr = isPercentType ? `${targetStrClean}%` : rawTargetStr;
     let closing;

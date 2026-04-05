@@ -8,7 +8,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
-  const { parseGoalValue } = await import('/web/goal-utils.js');
+  const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
   const { parseObservationNotes, formatObservationValue } = await import('/web/obs-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
@@ -50,24 +50,7 @@
 
   // parseObsNotes and formatObsValue are now provided by obs-utils.js
   // (imported as parseObservationNotes and formatObservationValue)
-
-  // Local measurement-type-aware value formatter (mirrors tc-reporting.js formatGoalValue)
-  function formatGoalValue(value, measurementType, goal) {
-    if (value == null) return 'N/A';
-    const type = (measurementType || 'Percent').toLowerCase();
-    if (type === 'observation') return 'N/A';
-    if (type === 'x/y' || type === 'fraction') {
-      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
-      if (denomMatch) {
-        const denom = parseInt(denomMatch[1]);
-        const numerator = Math.round(value * denom / 100);
-        return `${numerator}/${denom}`;
-      }
-      return value.toFixed(0) + '%';
-    }
-    if (type === 'number') return value.toFixed(1);
-    return value.toFixed(0) + '%';
-  }
+  // formatGoalValue is imported from goal-utils.js
 
   // Load data from Supabase or localStorage
   async function loadData() {
