@@ -14,6 +14,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
+  const { formatGoalValue } = await import('/web/goal-utils.js');
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -4236,7 +4237,7 @@
         const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
         const progressCell = isParent
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
-          : (avg != null ? `${avg}%` : '—');
+          : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
         const target = goal.target != null ? esc(String(goal.target)) : '—';
         const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
         const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
@@ -4425,7 +4426,7 @@
         const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
         const progressCell = isParent
           ? (avg == null ? 'No data yet' : parseFloat(avg) >= 80 ? '✅ On track' : parseFloat(avg) >= 60 ? '📈 Making progress' : '⚠️ Needs support')
-          : (avg != null ? `${avg}%` : '—');
+          : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
         const target = goal.target != null ? esc(String(goal.target)) : '—';
         const mastery = goal.mastery != null ? esc(String(goal.mastery)) : (goal.target != null ? esc(String(goal.target)) : '—');
         const baseline = goal.baseline != null ? esc(String(goal.baseline)) : '—';
@@ -4652,7 +4653,7 @@
           const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
           const progress = isParent
             ? (avg == null ? 'No data' : parseFloat(avg) >= 80 ? 'On track' : parseFloat(avg) >= 60 ? 'Making progress' : 'Needs support')
-            : (avg != null ? `${avg}%` : '—');
+            : (avg != null ? formatGoalValue(parseFloat(avg), goal.measurement_type, goal) : '—');
           const dpCol = isParent ? '' : `<td>${pts.length} pts</td>`;
           return `<tr>
             <td>${esc(goal.code || goal.id || '—')}</td>

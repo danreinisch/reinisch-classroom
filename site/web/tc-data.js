@@ -8,7 +8,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
-  const { parseGoalValue } = await import('/web/goal-utils.js');
+  const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
   const { parseObservationNotes, formatObservationValue } = await import('/web/obs-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
@@ -50,6 +50,7 @@
 
   // parseObsNotes and formatObsValue are now provided by obs-utils.js
   // (imported as parseObservationNotes and formatObservationValue)
+  // formatGoalValue is imported from goal-utils.js
 
   // Load data from Supabase or localStorage
   async function loadData() {
@@ -332,7 +333,7 @@
     const isObs = goal.measurement_type === 'Observation';
     const rows = entries.map(entry => {
       const scoreClass = isObs ? '' : scoreColorClass(entry.value);
-      const displayValue = isObs ? formatObservationValue(entry, goal) : `${entry.value}%`;
+      const displayValue = isObs ? formatObservationValue(entry, goal) : formatGoalValue(parseFloat(entry.value), goal.measurement_type, goal);
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
@@ -448,8 +449,8 @@
         <span>Baseline: <strong>${baseline}</strong></span>
         <span>Mastery: <strong>${mastery}</strong></span>
         <span>Target: <strong>${target}</strong></span>
-        <span>Current: <strong class="${currentClass}">${current != null ? current + '%' : 'N/A'}</strong></span>
-        <span>Rolling Avg: <strong class="${avgClass}">${avg != null ? avg + '%' : 'N/A'}</strong></span>
+        <span>Current: <strong class="${currentClass}">${current != null ? formatGoalValue(current, goal.measurement_type, goal) : 'N/A'}</strong></span>
+        <span>Rolling Avg: <strong class="${avgClass}">${avg != null ? formatGoalValue(avg, goal.measurement_type, goal) : 'N/A'}</strong></span>
         <span>Delta: <strong>${delta != null ? (delta >= 0 ? '+' : '') + delta : 'N/A'}</strong></span>
         <span>Trend: <strong>${trend}</strong></span>
       </div>
@@ -1380,8 +1381,8 @@
   <p><strong>Baseline:</strong> ${baseline}</p>
   <p><strong>Mastery:</strong> ${mastery}</p>
   <p><strong>Target:</strong> ${target}</p>
-  <p><strong>Current Value:</strong> ${current != null ? current + '%' : 'N/A'}</p>
-  <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? avg + '%' : 'N/A'}</p>
+  <p><strong>Current Value:</strong> ${current != null ? formatGoalValue(current, goal.measurement_type, goal) : 'N/A'}</p>
+  <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? formatGoalValue(avg, goal.measurement_type, goal) : 'N/A'}</p>
   <p><strong>Trend:</strong> ${escapeXml(trend)}</p>
   
   <h2>Data Points</h2>

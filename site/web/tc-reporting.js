@@ -15,7 +15,7 @@
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getSupabase } = await import("/web/supabase-client.js");
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
-  const { parseGoalValue, isGoalActive } = await import("/web/goal-utils.js");
+  const { parseGoalValue, isGoalActive, formatGoalValue } = await import("/web/goal-utils.js");
   const { parseObservationNotes } = await import("/web/obs-utils.js");
   const { buildItemsFromMeta } = await import("/web/shared-build-items.js");
 
@@ -91,32 +91,6 @@
     const div = document.createElement("div");
     div.textContent = String(text);
     return div.innerHTML;
-  }
-
-  /**
-   * Format a goal progress value based on measurement type.
-   * @param {number|null} value - The numeric value on a 0-100 scale (usually an average from getGoalProgressForQuarter)
-   * @param {string} measurementType - 'Percent', 'x/y', 'Number', 'Observation', etc.
-   * @param {object} goal - The goal object (for baseline/mastery context)
-   * @returns {string} Formatted display string
-   */
-  function formatGoalValue(value, measurementType, goal) {
-    if (value == null) return 'N/A';
-    const type = (measurementType || 'Percent').toLowerCase();
-    if (type === 'observation') return 'N/A'; // Observations don't have numeric averages
-    if (type === 'x/y' || type === 'fraction') {
-      // value is stored as a 0-100 percentage internally; convert back to x/y using the mastery denominator
-      const denomMatch = (goal?.mastery || goal?.target || '').match(/\/(\d+)/);
-      if (denomMatch) {
-        const denom = parseInt(denomMatch[1]);
-        const numerator = Math.round(value * denom / 100);
-        return `${numerator}/${denom}`;
-      }
-      return value.toFixed(0) + '%'; // fallback to percent if can't parse denominator
-    }
-    if (type === 'number') return value.toFixed(1);
-    // Default: Percent
-    return value.toFixed(0) + '%';
   }
 
   /**
@@ -604,7 +578,7 @@
             </div>
             <div class="rp-qs-stat">
               <span class="rp-qs-value">${overallAvg != null ? overallAvg + "%" : "N/A"}</span>
-              <span class="rp-qs-label">Avg Score</span>
+              <span class="rp-qs-label">Avg Score (%)</span>
             </div>
             <div class="rp-qs-stat">
               <span class="rp-qs-value">${totalDataPoints}</span>
@@ -943,8 +917,8 @@
     const dataPointsStr = dataPoints.length > 0
       ? dataPoints.map(dp => {
           const value = parseFloat(dp.value);
-          const formattedValue = !isNaN(value) ? value.toFixed(1) : 'N/A';
-          return `${formatDate(dp.date)} (${formattedValue}%)`;
+          const formattedValue = !isNaN(value) ? formatGoalValue(value, goal.measurement_type, goal) : 'N/A';
+          return `${formatDate(dp.date)} (${formattedValue})`;
         }).join(', ')
       : "No data collected";
 
@@ -1581,7 +1555,18 @@ ${narrative}`;
     }
 
     // --- Middle sentence (data summary) ---
-    const avgStr = avg.toFixed(0);
+    // Bug 10: guard against null avg (can happen when count > 0 but values failed to parse)
+    if (avg == null) {
+      // avg can be null when count > 0 but all recorded values failed to parse (e.g.
+      // non-numeric entries).  Return a graceful fallback instead of crashing on
+      // avg.toFixed(0).
+      return {
+        narrative: `Data was collected for ${name} in the area of ${area} during ${quarter} (${count} data point${count !== 1 ? 's' : ''}), but values could not be calculated. Please verify the recorded data.` + _ctx,
+        status: 'Not Making Progress',
+      };
+    }
+    // Bug 1: use formatGoalValue so x/y, Number, etc. display correctly (no hardcoded %)
+    const avgStr = formatGoalValue(avg, goal.measurement_type, goal);
     // Display the raw text baseline value (e.g. "1/5", "60%"); fall back to numeric string
     const baselineStr = (goal.baseline != null && goal.baseline !== '') ? String(goal.baseline) : baselineVal.toFixed(0);
     const countDesc = `${count} data point${count !== 1 ? "s" : ""}`;
@@ -1595,49 +1580,55 @@ ${narrative}`;
     let middle;
     if (dataLevel === "limited") {
       middle = pick([
-        `With ${countDesc} collected, ${name} achieved an average of ${avgStr}%, ${comparison}.`,
-        `Based on ${countDesc}, ${name} scored an average of ${avgStr}%, ${comparison}.`,
-        `Data from ${countDesc} this quarter shows an average score of ${avgStr}%, ${comparison}.`,
+        `With ${countDesc} collected, ${name} achieved an average of ${avgStr}, ${comparison}.`,
+        `Based on ${countDesc}, ${name} scored an average of ${avgStr}, ${comparison}.`,
+        `Data from ${countDesc} this quarter shows an average score of ${avgStr}, ${comparison}.`,
       ]);
     } else {
       middle = pick([
-        `With ${countDesc} collected, ${name} achieved an average of ${avgStr}%, ${comparison}.`,
-        `Across ${countDesc} this quarter, ${name} averaged ${avgStr}%, ${comparison}.`,
-        `Performance across ${countDesc} reflects an average of ${avgStr}%, ${comparison}.`,
+        `With ${countDesc} collected, ${name} achieved an average of ${avgStr}, ${comparison}.`,
+        `Across ${countDesc} this quarter, ${name} averaged ${avgStr}, ${comparison}.`,
+        `Performance across ${countDesc} reflects an average of ${avgStr}, ${comparison}.`,
       ]);
     }
 
     // --- Closing sentence (target proximity) ---
-    // Display the raw mastery text value (e.g. "80%", "3/5"); fall back to numeric string
-    const targetStr = (goal.mastery != null && goal.mastery !== '') ? String(goal.mastery)
+    // Bug 2: strip any trailing % already present in raw mastery/target fields to avoid
+    // double-suffix (e.g. "80%%"), then re-append % only for percent-like measurement types.
+    const rawTargetStr = (goal.mastery != null && goal.mastery !== '') ? String(goal.mastery)
       : (goal.target != null && goal.target !== '') ? String(goal.target)
       : targetVal.toFixed(0);
+    const targetStrClean = rawTargetStr.replace(/%$/, '');
+    // Goals without an explicit measurement_type are treated as Percent (the historical
+    // default).  Only Percent and Accuracy goals append a % suffix.
+    const isPercentType = !goal.measurement_type || ['Percent', 'Accuracy'].includes(goal.measurement_type);
+    const targetStr = isPercentType ? `${targetStrClean}%` : rawTargetStr;
     let closing;
     if (targetProx === "met") {
       closing = pick([
-        `${name} has met the target criterion of ${targetStr}% and is demonstrating mastery of this goal.`,
-        `With an average exceeding the ${targetStr}% criterion, ${name} has demonstrated mastery on this goal.`,
-        `${name} has achieved the annual goal target of ${targetStr}%, indicating successful mastery.`,
+        `${name} has met the target criterion of ${targetStr} and is demonstrating mastery of this goal.`,
+        `With an average exceeding the ${targetStr} criterion, ${name} has demonstrated mastery on this goal.`,
+        `${name} has achieved the annual goal target of ${targetStr}, indicating successful mastery.`,
       ]);
     } else if (targetProx === "approaching") {
       closing = pick([
-        `${name} is making adequate progress toward the annual target of ${targetStr}%.`,
-        `${name} is on track to meet the ${targetStr}% mastery criterion with continued support.`,
-        `With continued effort, ${name} is progressing toward the ${targetStr}% annual target.`,
+        `${name} is making adequate progress toward the annual target of ${targetStr}.`,
+        `${name} is on track to meet the ${targetStr} mastery criterion with continued support.`,
+        `With continued effort, ${name} is progressing toward the ${targetStr} annual target.`,
       ]);
     } else {
       // far from target
       if (trend === "declining") {
         closing = pick([
-          `Progress toward the ${targetStr}% annual criterion requires additional intervention and support.`,
-          `${name} continues to work toward the ${targetStr}% target; a review of current supports is recommended.`,
-          `Additional targeted intervention is recommended to help ${name} progress toward the ${targetStr}% criterion.`,
+          `Progress toward the ${targetStr} annual criterion requires additional intervention and support.`,
+          `${name} continues to work toward the ${targetStr} target; a review of current supports is recommended.`,
+          `Additional targeted intervention is recommended to help ${name} progress toward the ${targetStr} criterion.`,
         ]);
       } else {
         closing = pick([
-          `${name} continues to work toward the target criterion of ${targetStr}%. Continued practice and support are recommended.`,
-          `Additional instructional support will help ${name} reach the ${targetStr}% annual target.`,
-          `${name} is working toward the ${targetStr}% goal criterion and will benefit from continued focused instruction.`,
+          `${name} continues to work toward the target criterion of ${targetStr}. Continued practice and support are recommended.`,
+          `Additional instructional support will help ${name} reach the ${targetStr} annual target.`,
+          `${name} is working toward the ${targetStr} goal criterion and will benefit from continued focused instruction.`,
         ]);
       }
     }
@@ -3208,7 +3199,7 @@ ${narrative}`;
               </div>
               <div style="text-align:center; min-width:80px;">
                 <div style="font-size:22px; font-weight:bold; color:#1e3a5f;">${overallAvg != null ? overallAvg + "%" : "N/A"}</div>
-                <div style="color:#555;">Avg Score</div>
+                <div style="color:#555;">Avg Score (%)</div>
               </div>
               <div style="text-align:center; min-width:80px;">
                 <div style="font-size:22px; font-weight:bold; color:#1e3a5f;">${totalDataPoints}</div>
@@ -3262,7 +3253,7 @@ ${narrative}`;
 
             <div style="margin-bottom: 10px;">
               <strong>Snapshot of data collected:</strong><br/>
-              ${generateDataPointsList(dataPoints)}
+              ${generateDataPointsList(dataPoints, goal)}
             </div>
 
             <div style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-left: 3px solid #2563eb;">
@@ -4517,8 +4508,10 @@ ${narrative}`;
 
   /**
    * Generate formatted list of data points
+   * @param {Array} dataPoints
+   * @param {Object} [goal] - Optional goal object for measurement-type-aware formatting
    */
-  function generateDataPointsList(dataPoints) {
+  function generateDataPointsList(dataPoints, goal) {
     if (dataPoints.length === 0) {
       return "No data collected for this quarter.";
     }
@@ -4528,7 +4521,8 @@ ${narrative}`;
         const date = formatDate(dp.date);
         const value = parseFloat(dp.value) || 0;
         const source = dp.source || "Manual entry";
-        return `${index + 1}. ${date} — ${value}% (${source})`;
+        const displayValue = goal ? formatGoalValue(value, goal.measurement_type, goal) : `${value}%`;
+        return `${index + 1}. ${date} — ${displayValue} (${source})`;
       })
       .join("<br/>\n    ");
   }
@@ -4546,7 +4540,8 @@ ${narrative}`;
    * @returns {string} narrative text
    */
   function generateProgressNarrative(studentName, goal, quarter, avgValue, dataPointCount, prevData) {
-    const student = { name: studentName, code: studentName };
+    const actualStudent = studentsData.find(s => s.name === studentName || s.code === studentName);
+    const student = actualStudent || { name: studentName, code: studentName };
     const quarterData = {
       average: avgValue != null ? parseFloat(avgValue) : null,
       count: dataPointCount || 0,

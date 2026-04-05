@@ -146,7 +146,7 @@ test('preserves behavior names with special characters in rawData', () => {
 console.log('\n--- formatObservationValue ---');
 
 test('returns fallback for non-observation entry without notes', () => {
-  assert.strictEqual(formatObservationValue({ value: 80 }), '80%');
+  assert.strictEqual(formatObservationValue({ value: 80 }), '80');
   assert.strictEqual(formatObservationValue({ value: null }), '—');
   assert.strictEqual(formatObservationValue({}), '—');
 });
