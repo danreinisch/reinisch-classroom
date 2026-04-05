@@ -56,6 +56,14 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
   const seed = hashCode(goal.code || '');
   const pick = (arr) => arr[seed % arr.length];
 
+  // Contextual suffix appended to all narrative paths
+  const _ctxParts = [];
+  if (goal.class_context) _ctxParts.push(`Data collected in ${goal.class_context}`);
+  if (goal.data_collector && goal.data_collector !== (student.primary_case_manager || '')) {
+    _ctxParts.push(`data collected by ${goal.data_collector}`);
+  }
+  const _ctx = _ctxParts.length > 0 ? ' ' + _ctxParts.join('; ') + '.' : '';
+
   // ── Observation branch ──────────────────────────────────────────────────────
   if (goal.measurement_type === 'Observation') {
     const obsConfig = goal.observation_config || {};
@@ -72,7 +80,7 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
 
     if (count === 0) {
       return {
-        narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.`,
+        narrative: `No observation data was collected for ${name} in the area of ${area} during ${quarter}. Increased observation opportunities are recommended.` + _ctx,
         status: 'Not Making Progress',
       };
     }
@@ -101,7 +109,7 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
             `Observation data from ${quarter} indicates ${name} met the session target ${metCount} of ${validCount} time${validCount !== 1 ? 's' : ''}.`,
           ])
         : `No evaluable observation sessions were recorded for ${name} in ${area} during ${quarter}.`;
-      return { narrative, status };
+      return { narrative: narrative + _ctx, status };
     }
 
     if (category === 'prompt_count') {
@@ -119,13 +127,13 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
         `Across ${countDesc} in ${quarter}, ${name} averaged ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} per observation. The target maximum is ${targetMax} prompt${targetMax !== 1 ? 's' : ''}.`,
         `Data collected over ${countDesc} this quarter indicates ${name} needed an average of ${avgStr} prompt${avgStr !== '1.0' ? 's' : ''} (target: ${targetMax} or fewer).`,
       ]);
-      return { narrative, status };
+      return { narrative: narrative + _ctx, status };
     }
 
     // Fallback observation
     const avgStr2 = avg != null ? avg.toFixed(0) : '—';
     return {
-      narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr2}.`,
+      narrative: `${name} worked on the observational goal in the area of ${area} during ${quarter}, with ${count} recorded session${count !== 1 ? 's' : ''} and an average value of ${avgStr2}.` + _ctx,
       status: avg != null && avg >= targetVal ? 'Goal Met' : 'Progressing but Not Sufficient',
     };
   }
@@ -145,7 +153,7 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
       `It is recommended that data collection for this goal be prioritized in the upcoming quarter.`,
     ];
     return {
-      narrative: `${pick(openings)} ${pick(closings)}`,
+      narrative: `${pick(openings)} ${pick(closings)}` + _ctx,
       status: 'Not Making Progress',
     };
   }
@@ -274,7 +282,7 @@ function buildRichProgressNarrative(student, goal, quarterData, prevData, quarte
       : '';
 
   return {
-    narrative: `${opening} ${middle} ${closing}${caveat}`,
+    narrative: `${opening} ${middle} ${closing}${caveat}` + _ctx,
     status,
   };
 }
@@ -1013,6 +1021,166 @@ test('getGoalProgressForQuarter returns entries array', () => {
   assert.ok(
     fnSection.includes('entries'),
     'getGoalProgressForQuarter should return entries array for observation notes parsing'
+  );
+});
+
+// ── Issue 13: loadSettingsFromDb re-invokes load functions after hydration ───
+
+console.log('\n--- Issue 13: loadSettingsFromDb refresh after DB hydration ---');
+
+const spreadsheetSrc = (() => {
+  try {
+    return require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'site', 'web', 'tc-spreadsheet.js'), 'utf8'
+    );
+  } catch (_e) { return ''; }
+})();
+
+test('loadSettingsFromDb re-invokes load functions after hydrating localStorage', () => {
+  const fnIdx = spreadsheetSrc.indexOf('async function loadSettingsFromDb(');
+  assert.ok(fnIdx !== -1, 'loadSettingsFromDb not found in tc-spreadsheet.js');
+  const fnSection = spreadsheetSrc.slice(fnIdx, fnIdx + 2000);
+  assert.ok(
+    fnSection.includes('loadColWidths()'),
+    'loadSettingsFromDb should re-invoke loadColWidths() after hydration'
+  );
+  assert.ok(
+    fnSection.includes('loadCustomCols()'),
+    'loadSettingsFromDb should re-invoke loadCustomCols() after hydration'
+  );
+  assert.ok(
+    fnSection.includes('loadCellComments()'),
+    'loadSettingsFromDb should re-invoke loadCellComments() after hydration'
+  );
+  assert.ok(
+    fnSection.includes('loadCellTimestamps()'),
+    'loadSettingsFromDb should re-invoke loadCellTimestamps() after hydration'
+  );
+  assert.ok(
+    fnSection.includes('renderSpreadsheet'),
+    'loadSettingsFromDb should call renderSpreadsheet() after hydration'
+  );
+});
+
+test('loadSettingsFromDb only syncs back to DB when no keys were missing', () => {
+  const fnIdx = spreadsheetSrc.indexOf('async function loadSettingsFromDb(');
+  assert.ok(fnIdx !== -1, 'loadSettingsFromDb not found in tc-spreadsheet.js');
+  const fnSection = spreadsheetSrc.slice(fnIdx, fnIdx + 2000);
+  assert.ok(
+    fnSection.includes('syncSettingsToDb'),
+    'loadSettingsFromDb should call syncSettingsToDb() in the else (no missing keys) branch'
+  );
+});
+
+// ── Issue 14: buildRichProgressNarrative appends class_context / data_collector
+
+console.log('\n--- Issue 14: narrative context suffix (class_context / data_collector) ---');
+
+const goalWithCtx = { code: 'S001.1.1', goal_area: 'Reading Comprehension', baseline: 45, target: 80, class_context: 'Period 3 ELA', data_collector: 'Ms. Johnson' };
+const studentWithCM = { name: 'Maria Garcia', code: 'S001', primary_case_manager: 'Mr. Smith' };
+const goalWithCtxOnly = { code: 'S001.1.2', goal_area: 'Reading Comprehension', baseline: 45, target: 80, class_context: 'Period 3 ELA' };
+const goalWithDCOnly = { code: 'S001.1.3', goal_area: 'Math', baseline: 40, target: 80, data_collector: 'Ms. Johnson' };
+const goalNoCM = { code: 'S001.1.4', goal_area: 'Math', baseline: 40, target: 80, data_collector: 'Ms. Johnson' };
+const sufficientQ = { average: 72, count: 5, values: [68, 70, 72, 74, 78] };
+
+test('narrative appends class_context when present', () => {
+  const { narrative } = buildRichProgressNarrative(studentA, goalWithCtxOnly, sufficientQ, null, 'Q3');
+  assert.ok(
+    narrative.includes('Period 3 ELA'),
+    `Narrative should include class_context "Period 3 ELA": ${narrative}`
+  );
+  assert.ok(
+    narrative.includes('Data collected in Period 3 ELA'),
+    `Narrative should use "Data collected in" prefix: ${narrative}`
+  );
+});
+
+test('narrative appends data_collector when different from primary_case_manager', () => {
+  const { narrative } = buildRichProgressNarrative(studentWithCM, goalWithDCOnly, sufficientQ, null, 'Q3');
+  assert.ok(
+    narrative.includes('Ms. Johnson'),
+    `Narrative should include data_collector "Ms. Johnson": ${narrative}`
+  );
+  assert.ok(
+    narrative.includes('data collected by Ms. Johnson'),
+    `Narrative should use "data collected by" phrase: ${narrative}`
+  );
+});
+
+test('narrative omits data_collector when it matches primary_case_manager', () => {
+  const studentSameCM = { name: 'Maria Garcia', code: 'S001', primary_case_manager: 'Ms. Johnson' };
+  const { narrative } = buildRichProgressNarrative(studentSameCM, goalWithDCOnly, sufficientQ, null, 'Q3');
+  assert.ok(
+    !narrative.includes('data collected by Ms. Johnson'),
+    `Narrative should NOT mention data_collector when it matches case manager: ${narrative}`
+  );
+});
+
+test('narrative appends both class_context and data_collector when both present', () => {
+  const { narrative } = buildRichProgressNarrative(studentWithCM, goalWithCtx, sufficientQ, null, 'Q3');
+  assert.ok(
+    narrative.includes('Period 3 ELA') && narrative.includes('Ms. Johnson'),
+    `Narrative should include both class_context and data_collector: ${narrative}`
+  );
+  assert.ok(
+    narrative.includes('Data collected in Period 3 ELA; data collected by Ms. Johnson'),
+    `Narrative should join both parts with semicolon: ${narrative}`
+  );
+});
+
+test('narrative has no context suffix when class_context and data_collector are absent', () => {
+  const { narrative } = buildRichProgressNarrative(studentA, goalA, sufficientQ, null, 'Q3');
+  assert.ok(
+    !narrative.includes('Data collected in') && !narrative.includes('data collected by'),
+    `Narrative should not append context when fields are absent: ${narrative}`
+  );
+});
+
+test('context suffix appears on no-data path', () => {
+  const { narrative } = buildRichProgressNarrative(studentA, goalWithCtxOnly, noDataQ, null, 'Q3');
+  assert.ok(
+    narrative.includes('Period 3 ELA'),
+    `No-data narrative should include class_context: ${narrative}`
+  );
+});
+
+test('context suffix appears on limited-data path', () => {
+  const limitedWithCtx = { average: 70, count: 2, values: [68, 72] };
+  const { narrative } = buildRichProgressNarrative(studentA, goalWithCtxOnly, limitedWithCtx, null, 'Q3');
+  assert.ok(
+    narrative.includes('Period 3 ELA'),
+    `Limited-data narrative should include class_context: ${narrative}`
+  );
+});
+
+test('buildRichProgressNarrative in tc-reporting.js uses _ctxParts for class_context', () => {
+  const fnIdx = src.indexOf('function buildRichProgressNarrative(');
+  assert.ok(fnIdx !== -1, 'buildRichProgressNarrative not found in tc-reporting.js');
+  const fnSection = src.slice(fnIdx, fnIdx + 3000);
+  assert.ok(
+    fnSection.includes('_ctxParts'),
+    'buildRichProgressNarrative should declare _ctxParts for context suffix'
+  );
+  assert.ok(
+    fnSection.includes('goal.class_context'),
+    'buildRichProgressNarrative should check goal.class_context'
+  );
+  assert.ok(
+    fnSection.includes('goal.data_collector'),
+    'buildRichProgressNarrative should check goal.data_collector'
+  );
+  assert.ok(
+    fnSection.includes('_ctx'),
+    'buildRichProgressNarrative should append _ctx to narrative return values'
+  );
+});
+
+test('data_collector omitted when student has no primary_case_manager (falsy default)', () => {
+  const studentNoCM = { name: 'Alex Lee', code: 'S002' };
+  const { narrative } = buildRichProgressNarrative(studentNoCM, goalNoCM, sufficientQ, null, 'Q3');
+  assert.ok(
+    narrative.includes('data collected by Ms. Johnson'),
+    `Narrative should include data_collector when student has no primary_case_manager: ${narrative}`
   );
 });
 
