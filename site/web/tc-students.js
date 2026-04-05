@@ -223,7 +223,7 @@
     // Requires at least 6 groups so both halves have 3 full assignments to compare.
     let trendHtml = '';
     if (sortedGroups.length >= 6) {
-      function groupAvgScore(grps) {
+      const groupAvgScore = (grps) => {
         const pts = grps.flatMap(g => g.points);
         if (!pts.length) return 0;
         if (hasScoreDots) {
@@ -231,7 +231,7 @@
           return scored.length ? scored.reduce((s, p) => s + Number(p.score), 0) / scored.length : 0;
         }
         return (pts.filter(p => p.is_correct === true).length / pts.length) * 100;
-      }
+      };
       const recentAvg = groupAvgScore(sortedGroups.slice(0, 3));
       const priorAvg  = groupAvgScore(sortedGroups.slice(3, 6));
       const diff = recentAvg - priorAvg;
