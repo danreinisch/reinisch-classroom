@@ -150,11 +150,13 @@
    * @param {string} [confirmLabel='Confirm'] - Label for the confirm button
    * @param {object} [options={}] - Options
    * @param {boolean} [options.danger=false] - Use danger styling for the confirm button
+   * @param {string} [options.cancelLabel='Cancel'] - Label for the cancel button
    * @returns {Promise<boolean>} true if confirmed, false if cancelled
    */
   function rcConfirm(title, message, confirmLabel = 'Confirm', options = {}) {
     return new Promise((resolve) => {
       const isDanger = options.danger || false;
+      const cancelLabel = options.cancelLabel || 'Cancel';
       const confirmBtnClass = isDanger
         ? 'rc-modal-btn rc-modal-btn-danger'
         : 'rc-modal-btn rc-modal-btn-primary';
@@ -166,7 +168,7 @@
           <div class="rc-modal-title" id="rc-modal-title">${escapeHtml(title)}</div>
           <div class="rc-modal-message">${escapeHtml(message)}</div>
           <div class="rc-modal-actions">
-            <button class="rc-modal-btn" id="rc-modal-cancel-btn">Cancel</button>
+            <button class="rc-modal-btn" id="rc-modal-cancel-btn">${escapeHtml(cancelLabel)}</button>
             <button class="${confirmBtnClass}" id="rc-modal-confirm-btn">${escapeHtml(confirmLabel)}</button>
           </div>
         </div>
