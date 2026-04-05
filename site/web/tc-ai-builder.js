@@ -403,6 +403,11 @@
       ? [...new Set(extraStudentsRaw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean))]
       : [];
 
+    if (source.length > 40000) {
+      showMsg(aibMsg, 'Source material exceeds the 40,000 character limit (' + source.length.toLocaleString() + ' characters). Please shorten it before generating.', 'err');
+      return;
+    }
+
     if (!week) {
       showMsg(aibMsg, 'Please enter a week number.', 'err');
       return;
