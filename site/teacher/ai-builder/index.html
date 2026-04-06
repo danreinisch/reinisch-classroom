@@ -361,6 +361,7 @@
       /* ── History card styles ─────────────────────────────────────────────── */
       .aib-history-card {
         border: 1px solid var(--rc-glass-border);
+        border-left: 4px solid var(--rc-glass-border);
         border-radius: 14px;
         padding: 16px 18px;
         background: rgba(255, 255, 255, 0.02);
@@ -370,6 +371,22 @@
 
       .aib-history-card:hover {
         background: rgba(255, 255, 255, 0.04);
+      }
+
+      .aib-history-card[data-type="assignments"] {
+        border-left-color: rgba(99, 102, 241, 0.6);
+      }
+
+      .aib-history-card[data-type="presentations"] {
+        border-left-color: rgba(245, 158, 11, 0.6);
+      }
+
+      .aib-history-card[data-type="both"] {
+        border-left-color: rgba(139, 92, 246, 0.6);
+      }
+
+      .aib-history-card[data-type="dataProbe"] {
+        border-left-color: rgba(20, 184, 166, 0.6);
       }
 
       .aib-history-meta {
@@ -500,6 +517,56 @@
         margin: 0;
         font-size: 18px;
         font-weight: 600;
+      }
+
+      /* ── Stats bar ───────────────────────────────────────────────────────── */
+      .aib-stats-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .aib-stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--rc-glass-border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        text-align: center;
+      }
+
+      .aib-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .aib-stat-label {
+        font-size: 11px;
+        color: var(--rc-ink-dim);
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      /* ── Detail chips ────────────────────────────────────────────────────── */
+      .aib-detail-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .aib-detail-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 11px;
+        color: var(--rc-ink-dim);
       }
 
       .aib-filter-bar {
@@ -985,6 +1052,30 @@
               <button class="aib-btn" id="aibHistoryRefreshBtn" type="button">🔄 Refresh</button>
             </div>
 
+            <!-- Stats bar -->
+            <div class="aib-stats-bar" id="aibHistoryStats">
+              <div class="aib-stat-card">
+                <div class="aib-stat-value" id="aibStatTotal">—</div>
+                <div class="aib-stat-label">Total Generations</div>
+              </div>
+              <div class="aib-stat-card">
+                <div class="aib-stat-value" id="aibStatThisWeek">—</div>
+                <div class="aib-stat-label">This Week</div>
+              </div>
+              <div class="aib-stat-card">
+                <div class="aib-stat-value" id="aibStatAssignments">—</div>
+                <div class="aib-stat-label">Assignments</div>
+              </div>
+              <div class="aib-stat-card">
+                <div class="aib-stat-value" id="aibStatPresentations">—</div>
+                <div class="aib-stat-label">Presentations</div>
+              </div>
+              <div class="aib-stat-card">
+                <div class="aib-stat-value" id="aibStatProbes">—</div>
+                <div class="aib-stat-label">Data Probes</div>
+              </div>
+            </div>
+
             <!-- Filter bar -->
             <div class="aib-filter-bar">
               <label>
@@ -1012,13 +1103,34 @@
                 Week
                 <input type="text" id="aibHistoryWeek" placeholder="Filter by week…" />
               </label>
+              <label>
+                Type
+                <select id="aibHistoryType">
+                  <option value="">All</option>
+                  <option value="assignments">Assignments</option>
+                  <option value="presentations">Presentations</option>
+                  <option value="both">Both</option>
+                  <option value="dataProbe">Data Probe</option>
+                </select>
+              </label>
+              <label>
+                Sort
+                <select id="aibHistorySort">
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="week-desc">Week (High → Low)</option>
+                  <option value="week-asc">Week (Low → High)</option>
+                </select>
+              </label>
+              <button class="aib-btn" id="aibHistoryClearFilters" type="button" style="margin-left:auto;">✕ Clear</button>
             </div>
 
             <!-- History list — dynamically populated by renderHistoryCards() -->
             <div id="aibHistoryList">
               <div class="aib-manage-empty">
                 <div class="aib-manage-empty-icon">📋</div>
-                Click <strong>Refresh</strong> above to load your generation history, or generate your first assignment in the <strong>Create</strong> tab.
+                <p style="margin:0 0 8px 0;font-weight:500;">No generations yet</p>
+                <p style="margin:0;opacity:0.7;">Switch to the <strong>Create</strong> tab to generate your first AI-powered assignment, presentation, or data probe.</p>
               </div>
             </div>
 
