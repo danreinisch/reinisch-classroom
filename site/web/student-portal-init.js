@@ -3707,6 +3707,7 @@
   // ============================================================================
   // Book Reader Panel
   // ============================================================================
+  const DEFAULT_TTS_RATE = 0.92;
   let bookReaderState = null;
   let bookPanelEscapeHandler = null;
   let bookTtsUtterance = null;
@@ -3874,8 +3875,8 @@
           <div class="st-book-tts-settings" id="bookTtsSettings" style="display:none;">
             <div class="st-book-tts-settings-row">
               <label class="st-book-tts-settings-label">Speed</label>
-              <input type="range" id="bookTtsRate" class="st-book-tts-slider" min="0.5" max="1.5" step="0.05" value="0.92"/>
-              <span id="bookTtsRateVal">0.92×</span>
+              <input type="range" id="bookTtsRate" class="st-book-tts-slider" min="0.5" max="1.5" step="0.05" value="${DEFAULT_TTS_RATE}"/>
+              <span id="bookTtsRateVal">${DEFAULT_TTS_RATE}×</span>
             </div>
             <div class="st-book-tts-settings-row">
               <label class="st-book-tts-settings-label">Voice</label>
@@ -4032,7 +4033,7 @@
     if (!rateSlider || !voiceSelect) return;
 
     // Restore saved rate
-    const savedRate = localStorage.getItem('rc_book_tts_rate') || '0.92';
+    const savedRate = localStorage.getItem('rc_book_tts_rate') || String(DEFAULT_TTS_RATE);
     rateSlider.value = savedRate;
     if (rateVal) rateVal.textContent = parseFloat(savedRate).toFixed(2) + '×';
 
@@ -4098,7 +4099,7 @@
     }
     if (!paraData.length) return;
 
-    const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || '0.92');
+    const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || String(DEFAULT_TTS_RATE));
     const savedVoiceName = localStorage.getItem('rc_book_tts_voice') || null;
     const voice = pickBestVoice(savedVoiceName);
 
