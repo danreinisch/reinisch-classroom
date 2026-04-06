@@ -865,6 +865,81 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-read', 'READ.1 (from items) should be preserved when mapping has empty goal_codes');
   })();
 
+  await test('dese_codes from mappings take precedence over stale item-level dese_codes', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Item has a stale dese_code alongside a valid goal_code
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['MATH.1'], dese_codes: ['OLD-DESE'] }
+    ]);
+    // Mapping has the authoritative dese_code — should override the stale item-level one
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: ['ELA.1.A'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-math', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should be inserted for MATH.1 after dese_codes enrichment');
+    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-math', 'MATH.1 goal_progress created when dese_codes overridden by mapping');
+  })();
+
+  await test('item-level dese_codes are preserved when mapping has empty dese_codes', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Item has dese_codes that should be kept since the mapping has none
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['MATH.1'], dese_codes: ['KEEP-THIS'] }
+    ]);
+    // Mapping row exists but dese_codes is empty — item-level dese_codes must not be cleared
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: [] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-math', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should be inserted for MATH.1 when dese_codes fallback to item-level');
+    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-math', 'MATH.1 goal_progress created when mapping has empty dese_codes');
+  })();
+
+  await test('both goal_codes and dese_codes enriched simultaneously from mappings', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Item starts with empty goal_codes and dese_codes
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: [], dese_codes: [] }
+    ]);
+    // Mapping provides both goal_codes and dese_codes in a single pass
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: ['ELA.1.A'] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-math', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should be inserted when both goal_codes and dese_codes come from mappings');
+    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-math', 'MATH.1 goal_progress created — both fields enriched simultaneously from mappings');
+  })();
+
   await test('mappings lookup failure is non-fatal — items without goal_codes still produce no progress', async () => {
     reset();
     setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
