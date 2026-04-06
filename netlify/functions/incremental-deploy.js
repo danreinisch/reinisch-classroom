@@ -1043,6 +1043,7 @@ body{background:#0f172a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFo
 
 // ---------- Book pages JSON generator ----------
 const WORDS_PER_PAGE = 250;
+const MAX_CHAPTER_HEADING_LENGTH = 120; // Headings longer than this are likely body text
 const CHAPTER_RE = /^(chapter|part|section|prologue|epilogue|introduction)/i;
 
 function generateBookPagesJson(title, rawText) {
@@ -1073,7 +1074,7 @@ function generateBookPagesJson(title, rawText) {
     if (!trimmed) continue;
 
     // Chapter heading detection
-    if (CHAPTER_RE.test(trimmed) && trimmed.length < 120) {
+    if (CHAPTER_RE.test(trimmed) && trimmed.length < MAX_CHAPTER_HEADING_LENGTH) {
       // Start new page for chapter heading
       flushPage();
       currentChapter = trimmed;

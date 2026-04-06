@@ -3717,10 +3717,11 @@
    * Open the inline book reader for a resource with book-pages.json
    */
   async function openBookReader(link, title) {
-    // Fetch book-pages.json
+    // Fetch book-pages.json — ensure link ends with /
+    const base = link.endsWith('/') ? link : link + '/';
     let bookData;
     try {
-      const r = await fetch(link + 'book-pages.json');
+      const r = await fetch(base + 'book-pages.json');
       if (!r.ok) throw new Error('No book-pages.json');
       bookData = await r.json();
     } catch (err) {
@@ -3845,7 +3846,10 @@
       if (tocToggle) {
         tocToggle.addEventListener('click', function () {
           const sb = document.getElementById('bookSidebar');
-          if (sb) sb.classList.toggle('collapsed');
+          if (sb) {
+            sb.classList.toggle('collapsed');
+            sb.classList.toggle('open');
+          }
         });
       }
       renderBookToc(bookData);
@@ -3950,13 +3954,13 @@
     if (bookTtsActive) {
       stopBookTts();
     } else {
-      startBookTts(false);
+      startBookTts();
     }
   }
 
-  function startBookTts(autoAdvance) {
+  function startBookTts() {
     if (!window.speechSynthesis) {
-      alert('Text-to-speech is not supported in this browser.');
+      showToast('Text-to-speech is not supported in this browser.', 'error');
       return;
     }
     const state = bookReaderState;
@@ -3993,7 +3997,7 @@
       let charCount = 0;
       for (let i = 0; i < wordSpans.length; i++) {
         const wordText = wordSpans[i].textContent;
-        if (charCount + wordText.length > e.charIndex) {
+        if (charCount + wordText.length >= e.charIndex) {
           wordSpans[i].classList.add('tts-active');
           lastHighlightedSpan = wordSpans[i];
           // Scroll into view if needed
@@ -4016,7 +4020,7 @@
       if (state && state.currentPage < state.bookData.totalPages) {
         state.currentPage++;
         renderBookPage();
-        startBookTts(true);
+        startBookTts();
       }
     };
 
@@ -4107,8 +4111,9 @@
       cards.forEach(function (card) {
         const link = card.getAttribute('data-resource-link');
         const title = card.getAttribute('data-resource-title');
+        const base = link.endsWith('/') ? link : link + '/';
         // Attempt HEAD request first to avoid downloading the full file
-        fetch(link + 'book-pages.json', { method: 'HEAD' }).then(function (r) {
+        fetch(base + 'book-pages.json', { method: 'HEAD' }).then(function (r) {
           if (r.ok) {
             // Has book-pages.json — switch card to inline reader
             card.removeAttribute('href');
