@@ -486,7 +486,7 @@
               updateTypeUI();
             }
           }
-          if (aibCreatePanel) aibCreatePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (aibCreatePanel) aibCreatePanel.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
         } else if (action === 'reissue') {
           const loadAndReissue = async () => {
             btn.disabled = true;
@@ -499,13 +499,13 @@
               const o = lastOutputs.find((x) => x.id === id);
               if (o && aibIssueTitle) {
                 const reissueTitle = o.task_type === 'dataProbe'
-                  ? 'Data Probe — ' + (o.student_codes && o.student_codes[0] || '')
+                  ? 'Data Probe — ' + (o.student_codes?.[0] || '')
                   : 'Week ' + (o.week || '') + (o.theme ? ' — ' + o.theme : '') + ' — Re-Issued';
                 aibIssueTitle.value = reissueTitle;
               }
               if (aibIssueCard) aibIssueCard.style.display = 'block';
               if (aibCopyBtn) aibCopyBtn.style.display = 'inline-flex';
-              if (aibIssueCard) aibIssueCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              if (aibIssueCard) aibIssueCard.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
             } catch (err) {
               console.warn('[tc-ai-builder] Re-issue load failed:', err.message);
             } finally {
@@ -551,7 +551,7 @@
       lastOutputs = outputs;
 
       // Compute stats from unfiltered outputs
-      const currentWeek = parseInt((aibWeek || {}).value, 10) || 0;
+      const currentWeek = parseInt(aibWeek?.value, 10) || 0;
       const total = outputs.length;
       const thisWeek = outputs.filter((o) => parseInt(o.week, 10) === currentWeek).length;
       const assignments = outputs.filter((o) => o.task_type === 'assignments' || o.task_type === 'both').length;
