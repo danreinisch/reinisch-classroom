@@ -311,11 +311,14 @@ exports.handler = async (event) => {
                     items.forEach(item => {
                       const mapping = mappingsByItemId[item.id];
                       if (mapping) {
-                        if (!item.goal_codes || item.goal_codes.length === 0) {
-                          item.goal_codes = mapping.goal_codes || [];
+                        // assignment_item_mappings is the authoritative source for goal_codes
+                        // and dese_codes since PR #703. Always prefer mappings when a row exists,
+                        // even if assignment_items.goal_codes has a non-empty (but possibly stale) value.
+                        if (Array.isArray(mapping.goal_codes) && mapping.goal_codes.length > 0) {
+                          item.goal_codes = mapping.goal_codes;
                         }
-                        if (!item.dese_codes || item.dese_codes.length === 0) {
-                          item.dese_codes = mapping.dese_codes || [];
+                        if (Array.isArray(mapping.dese_codes) && mapping.dese_codes.length > 0) {
+                          item.dese_codes = mapping.dese_codes;
                         }
                       }
                     });

@@ -815,17 +815,42 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(capturedGoalProgressPosts[0].collected_by, 'auto');
   })();
 
-  await test('goal_codes on items take precedence over mappings', async () => {
+  await test('goal_codes from mappings take precedence over stale item-level codes', async () => {
     reset();
     setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
     fetchHandlers.submissionGet = () => makeOkResponse([]);
-    // Item already has a goal_code
+    // Item has a stale goal_code — should be overridden by the authoritative mapping
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['OLD.1'] }
+    ]);
+    // Mapping has the correct, authoritative code — should always win
+    fetchHandlers.itemMappings = () => makeOkResponse([
+      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: [] }
+    ]);
+    fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-math', code: 'MATH.1' }]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should use mapping goal_code');
+    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-math', 'MATH.1 (from mappings) should take precedence over OLD.1 (stale item-level code)');
+  })();
+
+  await test('item-level goal_codes are preserved when mapping row exists but has empty goal_codes', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Item has goal codes that should be kept since the mapping has none
     fetchHandlers.items = () => makeOkResponse([
       { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' }, goal_codes: ['READ.1'] }
     ]);
-    // Mapping has a different code — should NOT override the existing one
+    // Mapping row exists but goal_codes is empty — item-level codes must not be cleared
     fetchHandlers.itemMappings = () => makeOkResponse([
-      { item_id: 'item-1', goal_codes: ['MATH.1'], dese_codes: [] }
+      { item_id: 'item-1', goal_codes: [], dese_codes: [] }
     ]);
     fetchHandlers.goals = () => makeOkResponse([{ id: 'goal-read', code: 'READ.1' }]);
     const event = makePostEvent({
@@ -836,8 +861,8 @@ console.log('Running student-submit-answer function unit tests...\n');
     });
     const response = await handler(event);
     assert.strictEqual(response.statusCode, 200);
-    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should use existing item goal_code');
-    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-read', 'READ.1 (from items) should take precedence over MATH.1 (from mappings)');
+    assert.strictEqual(capturedGoalProgressPosts.length, 1, 'goal_progress should use item-level goal_code when mapping has empty goal_codes');
+    assert.strictEqual(capturedGoalProgressPosts[0].goal_id, 'goal-read', 'READ.1 (from items) should be preserved when mapping has empty goal_codes');
   })();
 
   await test('mappings lookup failure is non-fatal — items without goal_codes still produce no progress', async () => {
