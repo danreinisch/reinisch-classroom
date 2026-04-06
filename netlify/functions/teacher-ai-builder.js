@@ -255,14 +255,20 @@ exports.handler = async function(event) {
     userLines.push('PRESENTATION SCOPE: ' + presentationScope);
   }
 
-  if (assignDays) userLines.push('ASSIGNMENT DAYS: ' + assignDays);
-  if (assignDifficulty) userLines.push('ASSIGNMENT DIFFICULTY: ' + assignDifficulty);
-  if (assignFormat) userLines.push('ASSIGNMENT FORMAT: ' + assignFormat);
-  if (assignInstructions) userLines.push('ASSIGNMENT INSTRUCTIONS: ' + assignInstructions);
-  if (presSlides) userLines.push('PRESENTATION SLIDES: ' + presSlides);
-  if (presStyle) userLines.push('PRESENTATION STYLE: ' + presStyle);
-  if (presAudience) userLines.push('PRESENTATION AUDIENCE: ' + presAudience);
-  if (presInstructions) userLines.push('PRESENTATION INSTRUCTIONS: ' + presInstructions);
+  // Assignment fields — only for assignments/both
+  if (taskType === 'assignments' || taskType === 'both') {
+    if (assignDays) userLines.push('ASSIGNMENT DAYS: ' + assignDays);
+    if (assignDifficulty) userLines.push('ASSIGNMENT DIFFICULTY: ' + assignDifficulty);
+    if (assignFormat) userLines.push('ASSIGNMENT FORMAT: ' + assignFormat);
+    if (assignInstructions) userLines.push('ASSIGNMENT INSTRUCTIONS: ' + assignInstructions);
+  }
+  // Presentation fields — only for presentations/both
+  if (taskType === 'presentations' || taskType === 'both') {
+    if (presSlides) userLines.push('PRESENTATION SLIDES: ' + presSlides);
+    if (presStyle) userLines.push('PRESENTATION STYLE: ' + presStyle);
+    if (presAudience) userLines.push('PRESENTATION AUDIENCE: ' + presAudience);
+    if (presInstructions) userLines.push('PRESENTATION INSTRUCTIONS: ' + presInstructions);
+  }
 
   if (taskType === 'dataProbe') {
     userLines.push('TARGET STUDENT: ' + probeStudent);
