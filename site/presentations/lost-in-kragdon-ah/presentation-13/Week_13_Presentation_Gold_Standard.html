@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 13: Lost in Kragdon-ah - Chapters 38-40</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); background-attachment: fixed; color: #ffffff; overflow-x: hidden; }
+        .bg-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+        .bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; background-repeat: no-repeat; will-change: opacity; transform: translate3d(0,0,0); -webkit-transform: translate3d(0,0,0); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .bg-layer-a { opacity: 0.55; } .bg-layer-b { opacity: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 20px; background: rgba(0,0,0,0.55); border-radius: 20px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.2); }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); }
+        header h2 { font-size: 1.5em; color: #ffd700; margin-bottom: 10px; }
+        header p { font-size: 1.2em; color: #a0d2eb; }
+        .theme-banner { background: linear-gradient(90deg, rgba(231,76,60,0.5), rgba(241,196,15,0.5)); padding: 15px 30px; border-radius: 10px; margin-top: 20px; display: inline-block; border: 1px solid rgba(255,255,255,0.2); }
+        .theme-banner h3 { font-size: 1.3em; color: #ffffff; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 20px; }
+        .progress-bar .progress { height: 100%; background: linear-gradient(90deg, #e74c3c, #ffd700); border-radius: 3px; transition: width 0.5s ease; }
+        .slide { display: none; background: rgba(0,0,0,0.55); border-radius: 20px; padding: 40px; border: 1px solid rgba(255,255,255,0.15); min-height: 400px; margin-bottom: 20px; }
+        .slide.active { display: block; }
+        .slide h2 { font-size: 2em; color: #ffd700; margin-bottom: 10px; }
+        .slide h3 { font-size: 1.3em; color: #a0d2eb; margin-bottom: 20px; }
+        .slide h4 { font-size: 1.1em; color: #ffd700; margin-bottom: 10px; }
+        .slide p { font-size: 1.1em; line-height: 1.8; margin-bottom: 15px; }
+        .slide ul { margin-left: 20px; margin-bottom: 15px; }
+        .slide ul li { margin-bottom: 8px; line-height: 1.6; font-size: 1.05em; }
+        .nav-menu { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center; }
+        .nav-btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 1em; cursor: pointer; color: white; font-weight: bold; transition: opacity 0.3s ease; }
+        .nav-btn:hover { opacity: 0.85; }
+        .nav-btn.day1 { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .nav-btn.day2 { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .nav-btn.day3 { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .nav-btn.day4 { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .nav-btn.ref { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .highlight { background: rgba(255,215,0,0.12); border-left: 4px solid #ffd700; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .rule-box { background: rgba(52,152,219,0.15); border-left: 4px solid #3498db; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .example-box { background: rgba(46,204,113,0.12); border-left: 4px solid #2ecc71; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .warning-box { background: rgba(231,76,60,0.12); border-left: 4px solid #e74c3c; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .grammar-box { background: rgba(155,89,182,0.15); border-left: 4px solid #9b59b6; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .writing-structure { background: rgba(241,196,15,0.12); border-left: 4px solid #f1c40f; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .skill-card { background: rgba(243,156,18,0.12); border-left: 4px solid #f39c12; padding: 15px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .skill-card h4 { color: #f39c12; }
+        .cause-word { color: #e74c3c; font-weight: bold; }
+        .effect-word { color: #ffd700; font-weight: bold; }
+        .chain-arrow { color: #2ecc71; font-weight: bold; font-size: 1.3em; }
+        .compare-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .compare-table th, .compare-table td { padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.2); }
+        .compare-table th { background: rgba(255,215,0,0.2); color: #ffd700; }
+        .compare-table td { background: rgba(255,255,255,0.05); }
+        .slide-nav { display: flex; justify-content: center; gap: 20px; margin: 20px 0; }
+        .slide-nav button { padding: 12px 30px; border: none; border-radius: 10px; font-size: 1.1em; cursor: pointer; color: white; font-weight: bold; transition: opacity 0.3s ease; background: linear-gradient(135deg, #667eea, #764ba2); }
+        .slide-nav button:hover { opacity: 0.85; }
+        .slide-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+        footer { text-align: center; padding: 30px; margin-top: 30px; color: rgba(255,255,255,0.6); }
+        footer p { margin-bottom: 5px; }
+        footer a { color: #ffd700; }
+    </style>
+</head>
+<body>
+    <div class="bg-container"><div class="bg-layer bg-layer-a"></div><div class="bg-layer bg-layer-b"></div></div>
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 13: Chapters 38-40</h2>
+            <p>by Shawn Inmon</p>
+            <div class="theme-banner"><h3>ELA Theme: Cause and Effect</h3></div>
+        </header>
+        <div class="progress-bar"><div class="progress" id="progress"></div></div>
+
+        <!-- ═══ SLIDE 0: OVERVIEW ═══ -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 13 Overview</h2>
+            <h3>Cause and Effect</h3>
+            <div class="nav-menu">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 38</button>
+                <button class="nav-btn day2" onclick="goToSlide(10)">Day 2: Chapter 39</button>
+                <button class="nav-btn day3" onclick="goToSlide(19)">Day 3: Chapter 40</button>
+                <button class="nav-btn day4" onclick="goToSlide(26)">Day 4: Writing</button>
+                <button class="nav-btn ref" onclick="goToSlide(30)">Reference</button>
+            </div>
+            <div class="highlight" style="margin-top:30px">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 38 — Lasta-ah (Alex's plan, the moral dilemma, capturing the birds)</li>
+                    <li><strong>Day 2:</strong> Chapter 39 — The Battle of Lanta-ah (fire birds, gate breach, town hall assault)</li>
+                    <li><strong>Day 3:</strong> Chapter 40 — Draka-ak (the final fight, finding Lanta-eh, the cost of victory)</li>
+                    <li><strong>Day 4:</strong> Written Response — Tracing Cause-and-Effect Chains</li>
+                </ul>
+            </div>
+            <div class="rule-box">
+                <h4>Skills We Are Building</h4>
+                <p>A <span class="cause-word">CAUSE</span> is WHY something happens. An <span class="effect-word">EFFECT</span> is WHAT happens as a result. This week, every decision triggers consequences — and one effect often becomes the cause of the NEXT event, creating a <strong>chain reaction</strong>.</p>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDE 1-2: SKILL INTRO ═══ -->
+        <div class="slide" id="slide-1">
+            <h2>The Cause-and-Effect Chain</h2>
+            <div class="highlight">
+                <h4>Signal Words</h4>
+                <table class="compare-table">
+                    <tr><th>Cause Signal Words</th><th>Effect Signal Words</th></tr>
+                    <tr><td>because, since, due to, the reason, if, when, caused by</td><td>so, therefore, as a result, consequently, which led to, then</td></tr>
+                </table>
+            </div>
+            <div class="rule-box">
+                <h4>Preview: This Week's Master Chain</h4>
+                <p><span class="cause-word">Alex releases 47 birds with burning cloth</span> <span class="chain-arrow">→</span> <span class="effect-word">Birds fly home, light coops on fire</span> <span class="chain-arrow">→</span> <span class="effect-word">Fires spread (dry wood + summer)</span> <span class="chain-arrow">→</span> <span class="effect-word">Guards leave gate to fight fires</span> <span class="chain-arrow">→</span> <span class="effect-word">Alex walks through unguarded gate</span></p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Chain Reactions</h4>
+                <p>In a chain, one EFFECT becomes the CAUSE of the next event. Strong readers trace these links to understand how one decision can lead to massive consequences.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Real-Life Cause and Effect</h2>
+            <div class="example-box">
+                <p><span class="cause-word">CAUSE:</span> You stay up late playing video games.</p>
+                <p><span class="effect-word">EFFECT:</span> You oversleep and miss the bus.</p>
+                <p><span class="cause-word">THAT EFFECT BECOMES A CAUSE:</span> You miss the bus.</p>
+                <p><span class="effect-word">NEW EFFECT:</span> You are late to school and miss the test review.</p>
+            </div>
+            <div class="warning-box">
+                <p>In stories (and in life), effects often <strong>become the cause of the next event</strong>. Good readers trace these chains to understand how one small decision can lead to enormous consequences.</p>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 3-9: DAY 1 — CH38 ═══ -->
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Chapter 38 — Lasta-ah</h2>
+            <h3>Key Events</h3>
+            <div class="highlight">
+                <ul>
+                    <li>Alex decides NOT to charge in — <strong>patience over recklessness</strong></li>
+                    <li>No campfire — smoke <strong>could attract guards</strong></li>
+                    <li>Sees a traka-ta bird fly overhead <span class="chain-arrow">→</span> remembers <strong>Olga of Kiev</strong></li>
+                    <li>Wait 3 days for a <strong>traka-ta delivery cart</strong></li>
+                    <li>Senta-eh objects to killing an <strong>unarmed, innocent man</strong></li>
+                    <li>Alex's speech: <strong>"You can blame me and hate me later"</strong></li>
+                    <li>Capture <strong>47 birds</strong>, tie burning cloth to their legs</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Cause-and-Effect Chains</h2>
+            <div class="rule-box">
+                <h4>Chain #1: The Plan's Origin</h4>
+                <p><span class="cause-word">CAUSE:</span> Alex sees a traka-ta fly overhead toward the city</p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">EFFECT:</span> He remembers Olga of Kiev — uses birds to carry fire</p>
+            </div>
+            <div class="rule-box">
+                <h4>Chain #2: The Moral Dilemma</h4>
+                <p><span class="cause-word">CAUSE:</span> They need birds, but the delivery man is unarmed and innocent</p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">EFFECT:</span> Senta-eh objects — battle killing vs. murder feels different</p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">EFFECT:</span> Alex gives a speech demanding total commitment</p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">EFFECT:</span> Senta-eh agrees but feels "queasiness she had never felt in battle"</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: One Cause Can Have Multiple Effects</h4>
+                <p>The need for birds causes THREE things: Senta-eh's objection, Alex's speech, AND Senta-eh's moral conflict. A single cause can ripple outward in many directions.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Character Analysis Through Cause and Effect</h2>
+            <div class="example-box">
+                <h4>Senta-eh's Moral Code</h4>
+                <p><span class="cause-word">CAUSE:</span> Alex asks her to kill an unarmed delivery man</p>
+                <p><span class="effect-word">EFFECT:</span> She objects — this goes against her warrior code</p>
+                <p><strong>What this reveals:</strong> She has a clear line between justified battle killing and murder of an innocent. She agrees, but the "queasiness" shows the emotional cost.</p>
+            </div>
+            <div class="example-box">
+                <h4>Alex as Leader</h4>
+                <p><span class="cause-word">CAUSE:</span> His team doubts the plan</p>
+                <p><span class="effect-word">EFFECT:</span> He gives a speech demanding instant obedience</p>
+                <p><strong>What this reveals:</strong> Alex accepts responsibility — "You can blame me later" — knowing their only chance requires zero hesitation.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Vocabulary</h2>
+            <table class="compare-table">
+                <tr><th>Word</th><th>Context Clue</th><th>Meaning</th></tr>
+                <tr><td><strong>dubious</strong></td><td>Friends unconvinced by Alex's plan</td><td>Doubtful, not fully convinced</td></tr>
+                <tr><td><strong>dud</strong></td><td>If birds fly wrong direction, plan fails</td><td>A complete failure</td></tr>
+                <tr><td><strong>queasiness</strong></td><td>Senta-eh feels sick before killing an unarmed man</td><td>Sick feeling from moral conflict</td></tr>
+                <tr><td><strong>commenced</strong></td><td>An hour before their attack started</td><td>Began, started</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Author's Craft — Self-Doubt</h2>
+            <div class="grammar-box">
+                <p>The author includes Alex's inner thoughts: "Will this really work?" and "There are so many things that can go wrong."</p>
+                <p><span class="cause-word">CAUSE:</span> The author shows us Alex's private doubts</p>
+                <p><span class="effect-word">EFFECT on the READER:</span> We feel MORE tension — even HE is not sure the plan will work. Uncertainty creates suspense.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Authors Use Cause and Effect to Build Tension</h4>
+                <p>When a character doubts their own plan, the reader doubts it too. That doubt CAUSES us to keep reading — we need to know if it works.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: The No-Fire Decision</h2>
+            <div class="rule-box">
+                <p><span class="cause-word">CAUSE:</span> Alex decides NOT to build a campfire</p>
+                <p><span class="effect-word">EFFECT:</span> They stay hidden — no smoke for guards to investigate</p>
+                <p><span class="cause-word">What IF he HAD built a fire?</span></p>
+                <p><span class="effect-word">POSSIBLE EFFECT:</span> Guards see smoke → investigate → find the group → mission fails before it starts</p>
+            </div>
+            <div class="highlight">
+                <p><strong>Sometimes the most important cause-and-effect chains are the ones that DIDN'T happen.</strong> Alex's decision to NOT do something prevented a chain of disaster.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-9">
+            <h2>Day 1: Discussion</h2>
+            <div class="rule-box">
+                <ul>
+                    <li>What CAUSED Alex to think of the fire-bird plan? Trace the chain from the single moment of inspiration.</li>
+                    <li>What is the EFFECT of Alex's "no fire" decision on their safety?</li>
+                    <li>What CAUSES Senta-eh to feel queasiness? Why is this different from how she felt in battle?</li>
+                    <li>What would have been the EFFECT if the birds flew to the wrong city?</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 10-18: DAY 2 — CH39 ═══ -->
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Chapter 39 — The Battle of Lanta-ah</h2>
+            <h3>Key Events</h3>
+            <div class="highlight">
+                <ul>
+                    <li>47 burning birds released <span class="chain-arrow">→</span> fires erupt across the city</li>
+                    <li>Gate guards <strong>abandon their posts</strong> to fight fires</li>
+                    <li>Alex's group <strong>walks through the open gate</strong></li>
+                    <li>Plan works <strong>"too well"</strong> — the entire city catches fire</li>
+                    <li>The <strong>spy from the ship</strong> recognizes Senta-eh — she kills him</li>
+                    <li>Fight through guards at the town hall — <strong>two massive guard dogs</strong> attack</li>
+                    <li>Monda-ak is <strong>badly injured</strong> saving Alex from a guard dog</li>
+                    <li>They bar the doors — <strong>inside the town hall</strong></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: The Master Cause-and-Effect Chain</h2>
+            <div class="rule-box">
+                <p><span class="cause-word">Birds released with burning cloth</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Coops catch fire (wood + dry summer)</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Fires spread to nearby wooden buildings</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Citizens scream "Fire!" — total chaos</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Gate guards run to help fight fires</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Gate is unguarded — Alex walks through</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Spy recognizes them — Senta-eh kills him</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Guards notice — chase begins</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Race to town hall — fight through guards and dogs</span></p>
+            </div>
+            <div class="warning-box">
+                <p><strong>ONE decision (releasing the birds) created a chain of NINE events.</strong> That is cause and effect in action.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: "Working Too Well"</h2>
+            <h3>Unintended Consequences</h3>
+            <div class="example-box">
+                <p><span class="cause-word">Alex's INTENTION:</span> Light a few fires as a distraction</p>
+                <p><span class="effect-word">ACTUAL EFFECT:</span> The entire city burns — all buildings are wood, end of dry summer</p>
+            </div>
+            <div class="highlight">
+                <p><strong>Sometimes the EFFECT is much bigger than the CAUSE intended.</strong> Alex did not plan to destroy the city — but once 47 birds scattered to 47 locations in tinder-dry conditions, the fire was beyond anyone's control.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Unintended Consequences</h4>
+                <p>An unintended consequence is an EFFECT that was NOT planned or expected. The cause was deliberate, but the full effect went beyond what anyone predicted. This happens in stories AND in real life.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: The Spy — Cause-and-Effect Chain</h2>
+            <div class="rule-box">
+                <p><span class="cause-word">The suspicious man took a later boat home</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">He is on the streets during the chaos</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">He bumps into Senta-eh and recognizes her</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">He backs away and tries to run</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Senta-eh kills him before he can warn anyone</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Two guards notice — chase begins</span></p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Causes Can Come from EARLIER Chapters</h4>
+                <p>The spy was introduced chapters ago. His presence NOW creates a new chain. Strong readers connect events across the whole story, not just within one chapter.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Monda-ak's Sacrifice</h2>
+            <div class="example-box">
+                <p><span class="cause-word">CAUSE:</span> A massive guard dog launches at Alex</p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Monda-ak jumps and collides with it mid-air</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">The two dogs fight — enemy bites deep into Monda-ak's shoulder</span></p>
+                <p><span class="chain-arrow">→</span> <span class="cause-word">Alex sees his dog in danger</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">He crushes the enemy dog's spine with his hammer</span></p>
+            </div>
+            <div class="highlight">
+                <p><strong>What this reveals:</strong> Monda-ak and Alex protect each other without hesitation. Their bond is absolute loyalty — each is willing to be hurt to save the other.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Senta-eh as Elite Warrior</h2>
+            <div class="grammar-box">
+                <h4>Cause and Effect Shows Her Skill</h4>
+                <p><span class="cause-word">CAUSE:</span> Guards chase them through the streets</p>
+                <p><span class="effect-word">EFFECT:</span> She fires three arrows in under five seconds — two hit, slowing pursuit</p>
+                <p><span class="cause-word">CAUSE:</span> Town hall guards wear leather armor on upper body</p>
+                <p><span class="effect-word">EFFECT:</span> She adjusts aim to hit unprotected thighs — adapting instantly mid-battle</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Vocabulary</h2>
+            <table class="compare-table">
+                <tr><th>Word</th><th>Context Clue</th><th>Meaning</th></tr>
+                <tr><td><strong>disarray</strong></td><td>City in total chaos — fires, screaming</td><td>Complete confusion, nothing organized</td></tr>
+                <tr><td><strong>ensue</strong></td><td>Chaos would follow the fires</td><td>Happen as a result</td></tr>
+                <tr><td><strong>reinforcements</strong></td><td>Guards picking up more soldiers</td><td>Additional people sent to help</td></tr>
+                <tr><td><strong>tell-tale</strong></td><td>Sound of chains that reveals what they are</td><td>Immediately revealing or giving away</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-17">
+            <h2>Day 2: Author's Craft — Fast Sentences</h2>
+            <div class="grammar-box">
+                <p>During battle scenes, the author uses short, rapid sentences:</p>
+                <p><em>"Alex closed the gap. He raised his ax. The guard raised his own. Alex dropped low and sliced."</em></p>
+                <p><span class="cause-word">CAUSE:</span> The author chooses short sentences during combat</p>
+                <p><span class="effect-word">EFFECT on the READER:</span> We feel the speed and urgency — our heart rate matches the pace of the writing</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 2: Discussion</h2>
+            <div class="rule-box">
+                <ul>
+                    <li>Trace the FULL cause-and-effect chain from releasing the birds to entering the town hall.</li>
+                    <li>What is the UNINTENDED effect of the dry summer on Alex's plan?</li>
+                    <li>What CAUSES the spy to recognize Senta-eh? What is the EFFECT?</li>
+                    <li>What CAUSES Monda-ak's injury? What would have happened to Alex without him?</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 19-25: DAY 3 — CH40 ═══ -->
+        <div class="slide" id="slide-19">
+            <h2>Day 3: Chapter 40 — Draka-ak</h2>
+            <h3>Key Events</h3>
+            <div class="highlight">
+                <ul>
+                    <li>Two giant warriors attack — Alex <strong>throws one over the railing</strong> (30-foot fall)</li>
+                    <li>They find <strong>Draka-ak and Lanta-eh</strong> in the final room</li>
+                    <li>Lanta-eh is <strong>chained to the floor</strong></li>
+                    <li>Draka-ak: <strong>"Is this it?"</strong> — arrogant, underestimates them</li>
+                    <li>His weapon: a <strong>double-bladed scimitar</strong> on a wooden haft</li>
+                    <li>Alex is exhausted — the long fight <strong>favors the fresh Draka-ak</strong></li>
+                    <li>Alex <strong>fakes a stumble</strong> — Draka-ak rushes in — <strong>ax to the face</strong></li>
+                    <li>"Won a key battle, but there was <strong>more of the war to be fought</strong>"</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: The Final Fight — Cause and Effect</h2>
+            <div class="rule-box">
+                <p><span class="cause-word">Draka-ak is fresh; Alex is exhausted</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Fight favors Draka-ak — each blow gets closer</span></p>
+                <p><span class="chain-arrow">→</span> <span class="cause-word">Alex recognizes he will lose a long fight</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">He fakes a stumble to look weak</span></p>
+                <p><span class="chain-arrow">→</span> <span class="cause-word">Draka-ak sees "weakness" and rushes in</span></p>
+                <p><span class="chain-arrow">→</span> <span class="effect-word">Alex throws his ax into Draka-ak's face</span></p>
+            </div>
+            <div class="warning-box">
+                <p><strong>Alex used Draka-ak's own arrogance against him.</strong> The fake stumble CAUSED Draka-ak to drop his guard, which CAUSED his death. Intelligence defeated strength.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Character Traits Can Be CAUSES</h4>
+                <p>Draka-ak's arrogance is not just a personality trait — it is the CAUSE of his defeat. When a character flaw leads to a consequence, that is cause and effect driven by character.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Draka-ak's Arrogance</h2>
+            <div class="example-box">
+                <h4>"Wooden buildings and dead villagers can be easily replaced."</h4>
+                <p><span class="cause-word">CAUSE:</span> Alex says "Your city is burning"</p>
+                <p><span class="effect-word">EFFECT:</span> Draka-ak dismisses the loss — he does not value human life</p>
+                <p><strong>What this reveals:</strong> He sees people as replaceable resources. This single line tells us everything about what kind of ruler he is.</p>
+            </div>
+            <div class="example-box">
+                <h4>"Is this the entirety of the rescue force?"</h4>
+                <p><span class="cause-word">CAUSE:</span> He sees only three people and a dog</p>
+                <p><span class="effect-word">EFFECT:</span> He feels pity and contempt — cannot imagine losing to "primitives"</p>
+                <p><strong>What this reveals:</strong> His arrogance blinds him — and that blindness is what gets him killed.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Vocabulary</h2>
+            <table class="compare-table">
+                <tr><th>Word</th><th>Context Clue</th><th>Meaning</th></tr>
+                <tr><td><strong>aquiline</strong></td><td>Describes Draka-ak's curved nose (eagle-like)</td><td>Curved like an eagle's beak</td></tr>
+                <tr><td><strong>attrition</strong></td><td>Long fight where the more tired person loses</td><td>Wearing down over time</td></tr>
+                <tr><td><strong>volcanic eruption</strong></td><td>Blood spraying with extreme force (figurative)</td><td>Something bursting out explosively</td></tr>
+                <tr><td><strong>unscathed</strong></td><td>Werda-ak is the only one NOT injured</td><td>Without any injury at all</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: The Bigger Picture</h2>
+            <h3>"Won a Key Battle, But More War to Fight"</h3>
+            <div class="warning-box">
+                <p><span class="cause-word">What they accomplished:</span> Killed Draka-ak, found Lanta-eh, got the key</p>
+                <p><span class="effect-word">What they still face:</span> A burning city full of angry soldiers, injuries to Alex (face + arm), Senta-eh (four wounds), and Monda-ak (two wounds). Only Werda-ak is unscathed.</p>
+            </div>
+            <div class="highlight">
+                <p>The CAUSE (burning the city) created consequences that will follow them. Winning the battle does not mean winning the war.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Effects Can Be Delayed</h4>
+                <p>Not every effect happens immediately. The burning city will have consequences in FUTURE chapters — angry soldiers, a destroyed power structure, pursuit. Some cause-and-effect chains stretch across an entire story.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Author's Craft — "Bad Action Movie"</h2>
+            <div class="grammar-box">
+                <p>The author writes: "If it had been a bad action movie, the villain would have been holding the girl as a shield."</p>
+                <p><strong>Instead,</strong> Draka-ak stands confidently alone. He does not hide behind Lanta-eh.</p>
+                <p><span class="cause-word">WHY the author does this:</span> It shows Draka-ak is a REAL, confident villain — not a cliched movie villain. This makes the fight feel more dangerous because we know he believes he can win.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-25">
+            <h2>Day 3: Discussion</h2>
+            <div class="rule-box">
+                <ul>
+                    <li>What CAUSES Draka-ak to rush in for the kill? What is the EFFECT?</li>
+                    <li>What does "Wooden buildings can be easily replaced" CAUSE you to understand about him?</li>
+                    <li>Trace the cause-and-effect chain from Alex being exhausted to Draka-ak's death.</li>
+                    <li>What EFFECTS will the burning city have on the group's escape? (Predict!)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 26-29: DAY 4 — WRITING ═══ -->
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Writing With Cause and Effect</h2>
+            <div class="highlight">
+                <h4>Prompt</h4>
+                <p>Write about a <strong>cause-and-effect chain</strong> from Chapters 38-40. Start with one CAUSE, explain the EFFECT, then explain how that effect CAUSED something else. Use signal words like "because," "as a result," "which led to," or "therefore."</p>
+            </div>
+            <div class="writing-structure">
+                <h4>Paragraph Structure</h4>
+                <ul>
+                    <li><strong>Sentence 1:</strong> State the original CAUSE and its immediate EFFECT.</li>
+                    <li><strong>Sentence 2:</strong> Explain how that effect CAUSED something else to happen.</li>
+                    <li><strong>Sentence 3:</strong> Continue the chain one more step (or wrap up).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Sentence Starters</h2>
+            <div class="grammar-box">
+                <h4>Use These to Get Started</h4>
+                <p>"<span class="cause-word">Because</span> [cause], [effect] happened."</p>
+                <p>"[Event] happened, <span class="effect-word">which led to</span> [next event]."</p>
+                <p>"<span class="effect-word">As a result</span> of [cause], [effect] occurred."</p>
+                <p>"This <span class="cause-word">caused</span> [next event], which then..."</p>
+                <p>"<span class="effect-word">Therefore</span>, the final outcome was..."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Model Response</h2>
+            <div class="example-box">
+                <p style="line-height:2.0"><span class="cause-word">Because</span> Alex released 47 birds with burning cloth attached to their legs, fires broke out across the city <span class="effect-word">as a result</span> of the birds landing on wooden structures in tinder-dry conditions. <span class="cause-word">This caused</span> the gate guards to abandon their posts to help fight the fires, <span class="effect-word">which led to</span> Alex's group being able to walk through the unguarded gate without being stopped. <span class="effect-word">Therefore</span>, one creative decision set off a chain reaction that allowed three people and a dog to infiltrate a city of thousands.</p>
+            </div>
+            <div class="highlight">
+                <h4>What Makes This Strong</h4>
+                <ul>
+                    <li>Traces THREE steps in the chain (birds → fires → guards leave → group enters)</li>
+                    <li>Uses FOUR signal words (because, as a result, this caused, which led to, therefore)</li>
+                    <li>Explains WHY each step leads to the next</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Writing Checklist</h2>
+            <div class="highlight">
+                <h4>Cause-and-Effect Writing Checklist</h4>
+                <ul>
+                    <li>Did you identify a clear CAUSE?</li>
+                    <li>Did you explain the EFFECT?</li>
+                    <li>Did you show how the effect CAUSED something else? (chain)</li>
+                    <li>Did you use at least ONE signal word (because, so, as a result, which led to)?</li>
+                </ul>
+            </div>
+            <div class="rule-box">
+                <h4>Grammar Checklist</h4>
+                <ul>
+                    <li>Capital letter at the start of every sentence?</li>
+                    <li>Punctuation at the end of every sentence?</li>
+                    <li>Every sentence is COMPLETE? (Subject + Verb + Complete Thought)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 30-35: REFERENCE SECTION ═══ -->
+        <div class="slide" id="slide-30">
+            <h2>Reference: Vocabulary Glossary</h2>
+            <h3>All Words from Week 13</h3>
+            <table class="compare-table">
+                <tr><th>Word</th><th>Meaning</th><th>Chapter</th></tr>
+                <tr><td>dubious</td><td>Doubtful, not fully convinced</td><td>38</td></tr>
+                <tr><td>dud</td><td>A complete failure</td><td>38</td></tr>
+                <tr><td>queasiness</td><td>Sick feeling from moral conflict</td><td>38</td></tr>
+                <tr><td>commenced</td><td>Began, started</td><td>38</td></tr>
+                <tr><td>disarray</td><td>Complete confusion</td><td>39</td></tr>
+                <tr><td>ensue</td><td>Happen as a result</td><td>39</td></tr>
+                <tr><td>reinforcements</td><td>Additional people to help</td><td>39</td></tr>
+                <tr><td>tell-tale</td><td>Immediately revealing</td><td>39</td></tr>
+                <tr><td>aquiline</td><td>Curved like an eagle's beak</td><td>40</td></tr>
+                <tr><td>attrition</td><td>Wearing down over time</td><td>40</td></tr>
+                <tr><td>unscathed</td><td>Without any injury</td><td>40</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-31">
+            <h2>Reference: Skill Definitions</h2>
+            <div class="rule-box">
+                <h4>Cause and Effect</h4>
+                <p><strong>Cause:</strong> WHY something happens — the trigger, decision, or event that starts a chain.</p>
+                <p><strong>Effect:</strong> WHAT happens as a result — the consequence or outcome.</p>
+                <p><strong>Chain reaction:</strong> When one effect becomes the cause of the NEXT event, creating a linked sequence.</p>
+            </div>
+            <div class="rule-box">
+                <h4>Unintended Consequences</h4>
+                <p>An effect that was NOT planned or expected. The cause was deliberate, but the full outcome went beyond what anyone predicted. Example: Alex intended a distraction — he got a citywide inferno.</p>
+            </div>
+            <div class="rule-box">
+                <h4>Signal Words</h4>
+                <table class="compare-table">
+                    <tr><th>Cause Words</th><th>Effect Words</th></tr>
+                    <tr><td>because, since, due to, the reason, if, when, caused by</td><td>so, therefore, as a result, consequently, which led to, then</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-32">
+            <h2>Reference: Sentence Starters</h2>
+            <h3>Use These When You Are Stuck</h3>
+            <div class="writing-structure">
+                <h4>For Stating Cause</h4>
+                <p>"Because [event], _____."</p>
+                <p>"The reason [effect] happened was _____."</p>
+                <p>"Due to [event], _____."</p>
+            </div>
+            <div class="writing-structure">
+                <h4>For Stating Effect</h4>
+                <p>"As a result, _____."</p>
+                <p>"This caused _____ to happen."</p>
+                <p>"Which led to _____."</p>
+                <p>"Therefore, _____."</p>
+                <p>"Consequently, _____."</p>
+            </div>
+            <div class="writing-structure">
+                <h4>For Building a Chain</h4>
+                <p>"[Event] happened because [cause], which led to [next effect]."</p>
+                <p>"First, [cause]. As a result, [effect]. This then caused [next event]."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-33">
+            <h2>Reference: Step-by-Step Strategies</h2>
+            <div class="skill-card">
+                <h4>How to Identify Cause and Effect</h4>
+                <p>1) Find an EVENT in the text. 2) Ask: "WHY did this happen?" — that is the cause. 3) Ask: "WHAT happened because of it?" — that is the effect. 4) Check: Does the effect become a cause for something else? If yes, you have a chain.</p>
+            </div>
+            <div class="skill-card">
+                <h4>How to Trace a Chain</h4>
+                <p>1) Start with the FIRST decision or event. 2) Ask "What happened next BECAUSE of this?" 3) Write it down. 4) Now ask the SAME question about the new event. 5) Repeat until you reach the final outcome. 6) Count the links — the more links, the bigger the chain.</p>
+            </div>
+            <div class="skill-card">
+                <h4>How to Write About Cause and Effect</h4>
+                <p>1) State the original cause clearly. 2) Use a signal word (because, as a result, which led to). 3) State the effect. 4) If you can, show how that effect caused the NEXT thing. 5) Wrap up with the final outcome or consequence.</p>
+            </div>
+            <div class="skill-card">
+                <h4>How to Spot Unintended Consequences</h4>
+                <p>1) Identify what the character INTENDED to do. 2) Identify what ACTUALLY happened. 3) Compare: Was the result bigger, different, or worse than planned? 4) If yes, that is an unintended consequence.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-34">
+            <h2>Week 13 Complete Review</h2>
+            <div class="rule-box">
+                <table class="compare-table">
+                    <tr><th>Skill</th><th>What It Means</th><th>Example</th></tr>
+                    <tr><td>Cause and Effect</td><td>Why something happens → what happens</td><td>Birds carry fire → city burns</td></tr>
+                    <tr><td>Chain Reactions</td><td>One effect becomes the next cause</td><td>Fire → guards leave → gate open</td></tr>
+                    <tr><td>Unintended Consequences</td><td>Effects bigger than intended</td><td>Distraction → entire city destroyed</td></tr>
+                    <tr><td>Signal Words</td><td>Words that flag cause/effect</td><td>because, so, as a result, which led to</td></tr>
+                    <tr><td>Character Traits as Causes</td><td>Personality flaws trigger consequences</td><td>Arrogance → Draka-ak's death</td></tr>
+                </table>
+            </div>
+            <div class="highlight">
+                <h4>Key Story Facts from Week 13</h4>
+                <ul>
+                    <li>Alex's plan: 47 birds with burning cloth as a distraction</li>
+                    <li>Senta-eh objects to killing an innocent — agrees but feels the moral weight</li>
+                    <li>The entire city catches fire — the plan works "too well"</li>
+                    <li>The spy from the ship recognizes them — Senta-eh kills him</li>
+                    <li>Monda-ak is badly injured saving Alex from a guard dog</li>
+                    <li>Alex kills Draka-ak by faking weakness and throwing his ax</li>
+                    <li>Lanta-eh is found alive but chained — rescued after over a year</li>
+                    <li>The battle is won, but the war is far from over</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Mr. Reinisch &middot; Room 406 &middot; Winfield High School</p>
+            <p>Week 13: Lost in Kragdon-ah &mdash; Cause and Effect</p>
+            <p><a href="https://reinischclassroom.com">reinischclassroom.com</a></p>
+        </footer>
+    </div>
+
+    <script>
+        var currentSlide = 0;
+        var totalSlides = 35;
+        var currentBg = 0;
+        var bgImageUrls = [
+            'image1.jpg','image2.jpg','image3.jpg','image4.jpg',
+            'image5.jpg','image6.jpg','image7.jpg','image8.jpg',
+            'image9.jpg','image10.jpg','image11.jpg','image12.jpg'
+        ];
+        var totalBgImages = bgImageUrls.length;
+        var layerA = document.querySelector('.bg-layer-a');
+        var layerB = document.querySelector('.bg-layer-b');
+        var activeLayer = layerA;
+        var hiddenLayer = layerB;
+        bgImageUrls.forEach(function(url) { var img = new Image(); img.src = url; });
+        layerA.style.backgroundImage = "url('" + bgImageUrls[0] + "')";
+        layerA.style.opacity = '0.55';
+
+        function rotateBg() {
+            currentBg = (currentBg + 1) % totalBgImages;
+            var nextUrl = bgImageUrls[currentBg];
+            hiddenLayer.style.transition = 'none';
+            hiddenLayer.style.opacity = '0';
+            hiddenLayer.style.backgroundImage = "url('" + nextUrl + "')";
+            void hiddenLayer.offsetWidth;
+            requestAnimationFrame(function() {
+                hiddenLayer.style.transition = 'opacity 2.5s ease-in-out';
+                activeLayer.style.transition = 'opacity 2.5s ease-in-out';
+                hiddenLayer.style.opacity = '0.55';
+                activeLayer.style.opacity = '0';
+                var temp = activeLayer;
+                activeLayer = hiddenLayer;
+                hiddenLayer = temp;
+            });
+        }
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            var slides = document.querySelectorAll('.slide');
+            for (var i = 0; i < slides.length; i++) {
+                slides[i].classList.remove('active');
+                if (i === currentSlide) { slides[i].classList.add('active'); }
+            }
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            document.getElementById('progress').style.width = ((currentSlide + 1) / totalSlides * 100) + '%';
+        }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; updateSlide(); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; updateSlide(); } }
+        function goToSlide(n) { currentSlide = n; updateSlide(); }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'BUTTON') return;
+            var x = e.clientX;
+            if (x > window.innerWidth / 2) { nextSlide(); } else { prevSlide(); }
+        });
+        updateSlide();
+    </script>
+</body>
+</html>
