@@ -101,6 +101,7 @@
   let cachedGoals = [];
   const AIB_PREFS_KEY = 'rc_aib_prefs_v1';
   let savedScopeValue = null;
+  let lastOutputs = [];
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -203,6 +204,9 @@
   const aibHistoryStatus = document.getElementById('aibHistoryStatus');
   const aibHistorySubject = document.getElementById('aibHistorySubject');
   const aibHistoryWeek = document.getElementById('aibHistoryWeek');
+  const aibHistoryType = document.getElementById('aibHistoryType');
+  const aibHistorySort = document.getElementById('aibHistorySort');
+  const aibHistoryClearFilters = document.getElementById('aibHistoryClearFilters');
 
   if (aibHistoryStatus) aibHistoryStatus.addEventListener('change', loadHistory);
   if (aibHistorySubject) aibHistorySubject.addEventListener('change', loadHistory);
@@ -211,6 +215,18 @@
     aibHistoryWeek.addEventListener('input', () => {
       clearTimeout(weekDebounce);
       weekDebounce = setTimeout(loadHistory, 400);
+    });
+  }
+  if (aibHistoryType) aibHistoryType.addEventListener('change', () => renderHistoryCards(applyClientFilters(lastOutputs)));
+  if (aibHistorySort) aibHistorySort.addEventListener('change', () => renderHistoryCards(applyClientFilters(lastOutputs)));
+  if (aibHistoryClearFilters) {
+    aibHistoryClearFilters.addEventListener('click', () => {
+      if (aibHistoryStatus) aibHistoryStatus.value = '';
+      if (aibHistorySubject) aibHistorySubject.value = '';
+      if (aibHistoryWeek) aibHistoryWeek.value = '';
+      if (aibHistoryType) aibHistoryType.value = '';
+      if (aibHistorySort) aibHistorySort.value = 'newest';
+      loadHistory();
     });
   }
 
@@ -255,24 +271,71 @@
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  // Helper: fetch content for a history record, using cache
+  async function fetchContent(id) {
+    if (historyContentCache.has(id)) return historyContentCache.get(id);
+    const detailRes = await fetch('/.netlify/functions/teacher-ai-builder-history-detail?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
+    const detailData = await detailRes.json().catch(() => ({}));
+    if (!detailRes.ok || !detailData.ok) throw new Error(detailData.error || 'Failed to load content');
+    historyContentCache.set(id, detailData.content || '');
+    return historyContentCache.get(id);
+  }
+
+  // Escape HTML entities to prevent XSS when injecting text into innerHTML
+  function esc(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // Shorten model name: strip "claude-" prefix and date suffix
+  function shortModelName(model) {
+    if (!model) return '';
+    let s = String(model);
+    s = s.replace(/^claude-/i, '');
+    // Strip trailing date suffix like -20250514
+    s = s.replace(/-\d{8}$/, '');
+    // Capitalize first letter of each segment
+    return s.split('-').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  }
+
+  // Apply client-side type and sort filters to an outputs array
+  function applyClientFilters(outputs) {
+    let result = outputs.slice();
+    const typeEl = document.getElementById('aibHistoryType');
+    const sortEl = document.getElementById('aibHistorySort');
+    const typeVal = typeEl ? typeEl.value : '';
+    const sortVal = sortEl ? sortEl.value : 'newest';
+
+    if (typeVal) {
+      result = result.filter((o) => o.task_type === typeVal);
+    }
+
+    if (sortVal === 'oldest') {
+      result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    } else if (sortVal === 'week-desc') {
+      result.sort((a, b) => (parseInt(b.week, 10) || 0) - (parseInt(a.week, 10) || 0));
+    } else if (sortVal === 'week-asc') {
+      result.sort((a, b) => (parseInt(a.week, 10) || 0) - (parseInt(b.week, 10) || 0));
+    } else {
+      // newest first (default)
+      result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    return result;
+  }
+
   function renderHistoryCards(outputs) {
     const historyList = document.getElementById('aibHistoryList');
     if (!historyList) return;
     historyList.innerHTML = '';
 
-    // Helper: fetch content for this record, using cache
-    async function fetchContent(id) {
-      if (historyContentCache.has(id)) return historyContentCache.get(id);
-      const detailRes = await fetch('/.netlify/functions/teacher-ai-builder-history-detail?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
-      const detailData = await detailRes.json().catch(() => ({}));
-      if (!detailRes.ok || !detailData.ok) throw new Error(detailData.error || 'Failed to load content');
-      historyContentCache.set(id, detailData.content || '');
-      return historyContentCache.get(id);
-    }
-
-    // Escape HTML entities to prevent XSS when injecting text into innerHTML
-    function esc(str) {
-      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    if (!outputs || outputs.length === 0) {
+      historyList.innerHTML =
+        '<div class="aib-manage-empty">' +
+          '<div class="aib-manage-empty-icon">📋</div>' +
+          '<p style="margin:0 0 8px 0;font-weight:500;">No generations found for this school year.</p>' +
+          '<p style="margin:0;opacity:0.7;">Create your first assignment or presentation in the <strong>Create</strong> tab.</p>' +
+        '</div>';
+      return;
     }
 
     // Validate a value against an allowlist; return fallback if not in list
@@ -291,40 +354,56 @@
       // UUID format validation for use in element IDs and data attributes
       const safeId = /^[0-9a-f-_]{1,64}$/i.test(String(o.id || '')) ? String(o.id) : '';
 
+      card.dataset.type = taskType;
+
       const statusClass = 'aib-badge-' + status;
       const typeClass = 'aib-badge-' + taskType;
       const taskLabel = taskLabels[taskType];
-      const title = taskType === 'dataProbe'
-        ? 'Data Probe' + (o.student_codes && o.student_codes.length ? ' — ' + esc(o.student_codes[0]) : '')
-        : 'Week ' + esc(o.week) + (o.theme ? ' — ' + esc(o.theme) : '');
+
+      // Build title based on task type
+      let title;
+      if (taskType === 'dataProbe') {
+        title = 'Data Probe' + (o.student_codes && o.student_codes.length ? ' — ' + esc(o.student_codes[0]) : '');
+      } else if (taskType === 'presentations') {
+        title = 'Week ' + esc(o.week) + ' Presentation' + (o.theme ? ' — ' + esc(o.theme) : '');
+      } else {
+        title = 'Week ' + esc(o.week) + (o.theme ? ' — ' + esc(o.theme) : '');
+      }
 
       const studentCount = Array.isArray(o.student_codes) ? o.student_codes.length : 0;
       const goalCount = Array.isArray(o.goal_codes) ? o.goal_codes.length : 0;
+      const modelShort = shortModelName(o.model);
+
+      // Build detail chips
+      const chips =
+        '<span class="aib-detail-chip">👥 ' + studentCount + ' student' + (studentCount === 1 ? '' : 's') + '</span>' +
+        '<span class="aib-detail-chip">🎯 ' + goalCount + ' goal' + (goalCount === 1 ? '' : 's') + '</span>' +
+        (o.chapters ? '<span class="aib-detail-chip">📚 Ch. ' + esc(o.chapters) + '</span>' : '') +
+        (modelShort ? '<span class="aib-detail-chip">🤖 ' + esc(modelShort) + '</span>' : '') +
+        (o.scope ? '<span class="aib-detail-chip">🏫 ' + esc(o.scope) + '</span>' : '') +
+        (o.week ? '<span class="aib-detail-chip">📅 Week ' + esc(String(o.week)) + '</span>' : '');
+
+      // Show Re-Issue button only for task types that produce issuable content
+      const showReissue = taskType === 'assignments' || taskType === 'both' || taskType === 'dataProbe';
 
       card.innerHTML =
         '<div class="aib-history-meta">' +
           '<span class="aib-badge ' + typeClass + '">' + esc(taskLabel) + '</span>' +
           '<span class="aib-badge">' + esc(o.subject || 'ELA') + '</span>' +
           '<span class="aib-badge ' + statusClass + '">' + esc(status) + '</span>' +
-          (o.scope ? '<span style="font-size:12px;color:var(--rc-ink-dim);">' + esc(o.scope) + '</span>' : '') +
           '<span style="font-size:12px;color:var(--rc-ink-dim);margin-left:auto;">' + esc(relativeTime(o.created_at)) + '</span>' +
         '</div>' +
-        '<div class="aib-history-title">' + title + '</div>' +
-        '<div class="aib-history-stats">' +
-          '<span>' + studentCount + ' student' + (studentCount === 1 ? '' : 's') + '</span>' +
-          '<span>' + goalCount + ' goal' + (goalCount === 1 ? '' : 's') + '</span>' +
-          (o.chapters ? '<span>Ch. ' + esc(o.chapters) + '</span>' : '') +
-          (o.model ? '<span>' + esc(o.model) + '</span>' : '') +
-        '</div>' +
+        '<div class="aib-history-title" style="font-weight:600;font-size:16px;margin-bottom:8px;line-height:1.4;">' + title + '</div>' +
+        '<div class="aib-detail-chips">' + chips + '</div>' +
         (safeId ? '<div class="aib-history-preview" id="aibHistPreview_' + safeId + '"></div>' : '<div class="aib-history-preview"></div>') +
         '<div class="aib-history-actions">' +
-          (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="expand">Expand</button>' : '') +
-          '<button class="aib-btn" type="button"' + (safeId ? ' data-id="' + safeId + '"' : '') + ' data-action="copy">Copy Output</button>' +
+          (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="expand">🔍 Expand</button>' : '') +
+          '<button class="aib-btn" type="button"' + (safeId ? ' data-id="' + safeId + '"' : '') + ' data-action="copy">📋 Copy</button>' +
+          (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="regenerate">🔄 Regenerate</button>' : '') +
+          (safeId && showReissue ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="reissue">📤 Re-Issue</button>' : '') +
         '</div>';
 
-      // Set preview text safely via textContent (empty until expanded)
-
-      // Expand/collapse/copy toggle
+      // Expand/collapse/copy/regenerate/reissue handler
       card.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
@@ -336,7 +415,7 @@
           if (historyContentCache.has(id)) {
             previewEl2.classList.add('expanded');
             previewEl2.textContent = historyContentCache.get(id);
-            btn.textContent = 'Collapse';
+            btn.textContent = '🔼 Collapse';
             btn.dataset.action = 'collapse';
           } else {
             btn.disabled = true;
@@ -344,11 +423,11 @@
             fetchContent(id).then((content) => {
               previewEl2.classList.add('expanded');
               previewEl2.textContent = content;
-              btn.textContent = 'Collapse';
+              btn.textContent = '🔼 Collapse';
               btn.dataset.action = 'collapse';
               btn.disabled = false;
             }).catch((err) => {
-              btn.textContent = 'Expand';
+              btn.textContent = '🔍 Expand';
               btn.disabled = false;
               if (previewEl2) {
                 previewEl2.textContent = '⚠ Failed to load — try again';
@@ -364,7 +443,7 @@
           if (!previewEl2) return;
           previewEl2.classList.remove('expanded');
           previewEl2.textContent = '';
-          btn.textContent = 'Expand';
+          btn.textContent = '🔍 Expand';
           btn.dataset.action = 'expand';
         } else if (action === 'copy') {
           if (!id) return;
@@ -382,16 +461,59 @@
             btn.textContent = 'Loading…';
             fetchContent(id).then((content) => {
               btn.disabled = false;
-              btn.textContent = 'Copy Output';
+              btn.textContent = '📋 Copy';
               doCopy(content);
             }).catch((err) => {
               btn.disabled = false;
-              btn.textContent = 'Copy Output';
+              btn.textContent = '📋 Copy';
               console.warn('[tc-ai-builder] Failed to load content for copy:', err.message);
             });
           } else {
             doCopy(historyContentCache.get(id));
           }
+        } else if (action === 'regenerate') {
+          const o = lastOutputs.find((x) => x.id === id);
+          switchTab('create');
+          if (o) {
+            if (aibWeek && o.week) aibWeek.value = o.week;
+            if (aibChapters && o.chapters) aibChapters.value = o.chapters;
+            if (aibSubject && o.subject) aibSubject.value = o.subject;
+            if (aibTheme && o.theme) aibTheme.value = o.theme;
+            if (aibScope && o.scope) aibScope.value = o.scope;
+            if (aibModel && o.model) aibModel.value = o.model;
+            if (o.task_type) {
+              currentTaskType = o.task_type;
+              updateTypeUI();
+            }
+          }
+          if (aibCreatePanel) aibCreatePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (action === 'reissue') {
+          const loadAndReissue = async () => {
+            btn.disabled = true;
+            btn.textContent = 'Loading…';
+            try {
+              const content = await fetchContent(id);
+              switchTab('create');
+              if (aibOutput) aibOutput.value = content;
+              if (aibOutputCard) aibOutputCard.style.display = 'block';
+              const o = lastOutputs.find((x) => x.id === id);
+              if (o && aibIssueTitle) {
+                const reissueTitle = o.task_type === 'dataProbe'
+                  ? 'Data Probe — ' + (o.student_codes && o.student_codes[0] || '')
+                  : 'Week ' + (o.week || '') + (o.theme ? ' — ' + o.theme : '') + ' — Re-Issued';
+                aibIssueTitle.value = reissueTitle;
+              }
+              if (aibIssueCard) aibIssueCard.style.display = 'block';
+              if (aibCopyBtn) aibCopyBtn.style.display = 'inline-flex';
+              if (aibIssueCard) aibIssueCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+              console.warn('[tc-ai-builder] Re-issue load failed:', err.message);
+            } finally {
+              btn.disabled = false;
+              btn.textContent = '📤 Re-Issue';
+            }
+          };
+          loadAndReissue();
         }
       });
 
@@ -403,7 +525,7 @@
     const historyList = document.getElementById('aibHistoryList');
     if (!historyList) return;
 
-    historyList.innerHTML = '<div style="color: var(--rc-ink-dim); padding: 20px; text-align: center;">Loading history…</div>';
+    historyList.innerHTML = '<div style="color: var(--rc-ink-dim); padding: 20px; text-align: center;"><span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.15);border-top-color:rgba(34,197,94,0.8);border-radius:50%;animation:aib-spin 0.75s linear infinite;vertical-align:middle;margin-right:8px;"></span>Loading history…</div>';
 
     try {
       const params = new URLSearchParams();
@@ -424,12 +546,27 @@
       }
 
       const outputs = data.outputs || [];
-      if (outputs.length === 0) {
-        historyList.innerHTML = '<div style="color: var(--rc-ink-dim); padding: 40px 20px; text-align: center;">No generations yet. Create your first assignment or presentation in the <strong>Create</strong> tab.</div>';
-        return;
-      }
 
-      renderHistoryCards(outputs);
+      // Store unfiltered outputs for Regenerate/Re-Issue
+      lastOutputs = outputs;
+
+      // Compute stats from unfiltered outputs
+      const currentWeek = parseInt((aibWeek || {}).value, 10) || 0;
+      const total = outputs.length;
+      const thisWeek = outputs.filter((o) => parseInt(o.week, 10) === currentWeek).length;
+      const assignments = outputs.filter((o) => o.task_type === 'assignments' || o.task_type === 'both').length;
+      const presentations = outputs.filter((o) => o.task_type === 'presentations' || o.task_type === 'both').length;
+      const probes = outputs.filter((o) => o.task_type === 'dataProbe').length;
+
+      const setStatEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      setStatEl('aibStatTotal', total);
+      setStatEl('aibStatThisWeek', thisWeek);
+      setStatEl('aibStatAssignments', assignments);
+      setStatEl('aibStatPresentations', presentations);
+      setStatEl('aibStatProbes', probes);
+
+      // Apply client-side type/sort filters then render
+      renderHistoryCards(applyClientFilters(outputs));
     } catch (err) {
       historyList.innerHTML = '<div class="aib-msg err" style="display:block;">Failed to load history: ' + err.message + '</div>';
     }
