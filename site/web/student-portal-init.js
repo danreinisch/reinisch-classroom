@@ -3642,6 +3642,7 @@
       'dashboard': 'tabDashboard',
       'goals': 'tabGoals',
       'assignments': 'tabAssignments',
+      'resources': 'tabResources',
       'grades': 'tabGrades',
       'settings': 'tabSettings'
     };
@@ -3693,8 +3694,65 @@
       loadStudentGrades(studentCode).catch(err => {
         console.error(LOG_PREFIX, 'Failed to load student grades:', err);
       });
+
+      // Load resources
+      loadStudentResources().catch(err => {
+        console.error(LOG_PREFIX, 'Failed to load student resources:', err);
+      });
     } catch (err) {
       console.error(LOG_PREFIX, 'Error loading student data:', err);
+    }
+  }
+
+  /**
+   * Load and render student resources from site-state.json
+   */
+  async function loadStudentResources() {
+    const el = document.getElementById('resourcesContent');
+    if (!el) return;
+
+    try {
+      const res = await fetch('/assets/data/site-state.json');
+      if (!res.ok) throw new Error('Failed to load');
+      const state = await res.json();
+
+      const cat = state.categories && state.categories.student_resources;
+      if (!cat) {
+        el.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div><div class="st-resources-empty-msg">No resources available yet.</div><div style="font-size:14px;opacity:0.6;">Your teacher hasn\'t uploaded any reading materials.</div></div>';
+        return;
+      }
+
+      const titles = cat.titles || [];
+      const links = cat.links || [];
+
+      // Collect non-empty slots
+      const resources = [];
+      for (let i = 0; i < titles.length; i++) {
+        const title = (titles[i] || '').trim();
+        const link = (links[i] || '').trim();
+        if (title && link) {
+          resources.push({ title, link, index: i });
+        }
+      }
+
+      if (!resources.length) {
+        el.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div><div class="st-resources-empty-msg">No resources available yet.</div><div style="font-size:14px;opacity:0.6;">Your teacher hasn\'t uploaded any reading materials.</div></div>';
+        return;
+      }
+
+      // Build card grid
+      let html = '<div class="st-resources-grid">';
+      for (const r of resources) {
+        const svg = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
+        const safeTitle = r.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        html += '<a class="st-resource-card" href="' + r.link + '" target="_blank" rel="noopener">' + svg + '<div class="st-resource-card-title">' + safeTitle + '</div></a>';
+      }
+      html += '</div>';
+      el.innerHTML = html;
+
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load resources:', err);
+      el.innerHTML = '<div class="st-resources-empty"><div class="st-resources-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="st-resources-empty-msg">Unable to load resources</div><div style="font-size:14px;opacity:0.6;">Please try again later.</div></div>';
     }
   }
 
