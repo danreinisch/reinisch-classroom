@@ -102,6 +102,8 @@
   const AIB_PREFS_KEY = 'rc_aib_prefs_v1';
   let savedScopeValue = null;
   let lastOutputs = [];
+  let regeneratingFromId = null;
+  const selectedIds = new Set();
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -230,6 +232,90 @@
     });
   }
 
+  // ── Bulk action bar ─────────────────────────────────────────────────────────
+
+  const aibBulkBar = document.getElementById('aibBulkBar');
+  const aibBulkCount = document.getElementById('aibBulkCount');
+  const aibBulkArchive = document.getElementById('aibBulkArchive');
+  const aibBulkDelete = document.getElementById('aibBulkDelete');
+  const aibBulkClear = document.getElementById('aibBulkClear');
+
+  function updateBulkBar() {
+    if (!aibBulkBar) return;
+    const count = selectedIds.size;
+    if (count > 0) {
+      aibBulkBar.classList.add('visible');
+      if (aibBulkCount) aibBulkCount.textContent = count + ' selected';
+    } else {
+      aibBulkBar.classList.remove('visible');
+    }
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    document.querySelectorAll('.aib-card-checkbox').forEach((cb) => { cb.checked = false; });
+    updateBulkBar();
+  }
+
+  if (aibBulkClear) {
+    aibBulkClear.addEventListener('click', clearSelection);
+  }
+
+  if (aibBulkArchive) {
+    aibBulkArchive.addEventListener('click', async () => {
+      if (selectedIds.size === 0) return;
+      const ids = Array.from(selectedIds);
+      aibBulkArchive.disabled = true;
+      try {
+        const res = await fetch('/.netlify/functions/teacher-ai-builder-update', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ids: ids, status: 'archived' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          console.error('[tc-ai-builder] Bulk archive failed:', data.error || res.status);
+        } else {
+          clearSelection();
+          loadHistory();
+        }
+      } catch (err) {
+        console.error('[tc-ai-builder] Bulk archive error:', err.message);
+      } finally {
+        aibBulkArchive.disabled = false;
+      }
+    });
+  }
+
+  if (aibBulkDelete) {
+    aibBulkDelete.addEventListener('click', async () => {
+      if (selectedIds.size === 0) return;
+      if (!confirm('Permanently delete ' + selectedIds.size + ' generation(s)? This cannot be undone.')) return;
+      const ids = Array.from(selectedIds);
+      aibBulkDelete.disabled = true;
+      try {
+        const res = await fetch('/.netlify/functions/teacher-ai-builder-update', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ids: ids }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          console.error('[tc-ai-builder] Bulk delete failed:', data.error || res.status);
+        } else {
+          clearSelection();
+          loadHistory();
+        }
+      } catch (err) {
+        console.error('[tc-ai-builder] Bulk delete error:', err.message);
+      } finally {
+        aibBulkDelete.disabled = false;
+      }
+    });
+  }
+
   // ── School year helper ───────────────────────────────────────────────────────
 
   function getSchoolYear() {
@@ -341,6 +427,7 @@
     // Validate a value against an allowlist; return fallback if not in list
     const allowedStatuses = ['active', 'superseded', 'archived'];
     const allowedTypes = ['assignments', 'presentations', 'both', 'dataProbe'];
+    const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     const taskLabels = { assignments: 'Assignments', presentations: 'Presentations', both: 'Both', dataProbe: 'Data Probe' };
 
@@ -353,8 +440,11 @@
       const status = allowedStatuses.includes(o.status) ? o.status : 'active';
       // UUID format validation for use in element IDs and data attributes
       const safeId = /^[0-9a-f-_]{1,64}$/i.test(String(o.id || '')) ? String(o.id) : '';
+      // Full UUID validation for superseded_by link
+      const supersededByUuid = o.superseded_by && UUID_PATTERN.test(String(o.superseded_by)) ? String(o.superseded_by) : '';
 
       card.dataset.type = taskType;
+      card.dataset.status = status;
 
       const statusClass = 'aib-badge-' + status;
       const typeClass = 'aib-badge-' + taskType;
@@ -386,14 +476,21 @@
       // Show Re-Issue button only for task types that produce issuable content
       const showReissue = taskType === 'assignments' || taskType === 'both' || taskType === 'dataProbe';
 
+      // Superseded-by link text
+      const supersededLink = (status === 'superseded' && supersededByUuid)
+        ? '<span class="aib-superseded-link">↪ Superseded by newer version</span>'
+        : '';
+
       card.innerHTML =
         '<div class="aib-history-meta">' +
+          (safeId ? '<input type="checkbox" class="aib-card-checkbox" data-id="' + safeId + '" aria-label="Select this card">' : '') +
           '<span class="aib-badge ' + typeClass + '">' + esc(taskLabel) + '</span>' +
           '<span class="aib-badge">' + esc(o.subject || 'ELA') + '</span>' +
           '<span class="aib-badge ' + statusClass + '">' + esc(status) + '</span>' +
           '<span style="font-size:12px;color:var(--rc-ink-dim);margin-left:auto;">' + esc(relativeTime(o.created_at)) + '</span>' +
         '</div>' +
         '<div class="aib-history-title" style="font-weight:600;font-size:16px;margin-bottom:8px;line-height:1.4;">' + title + '</div>' +
+        supersededLink +
         '<div class="aib-detail-chips">' + chips + '</div>' +
         (safeId ? '<div class="aib-history-preview" id="aibHistPreview_' + safeId + '"></div>' : '<div class="aib-history-preview"></div>') +
         '<div class="aib-history-actions">' +
@@ -401,10 +498,30 @@
           '<button class="aib-btn" type="button"' + (safeId ? ' data-id="' + safeId + '"' : '') + ' data-action="copy">📋 Copy</button>' +
           (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="regenerate">🔄 Regenerate</button>' : '') +
           (safeId && showReissue ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="reissue">📤 Re-Issue</button>' : '') +
+          (safeId && status !== 'archived' ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="archive">🗄️ Archive</button>' : '') +
+          (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="delete">🗑️ Delete</button>' : '') +
         '</div>';
 
-      // Expand/collapse/copy/regenerate/reissue handler
+      // Checkbox handler — add/remove from selectedIds and update bulk bar
+      const checkbox = card.querySelector('.aib-card-checkbox');
+      if (checkbox) {
+        // Reflect current selection state (e.g. after re-render)
+        checkbox.checked = selectedIds.has(safeId);
+        checkbox.addEventListener('change', (e) => {
+          e.stopPropagation();
+          if (checkbox.checked) {
+            selectedIds.add(safeId);
+          } else {
+            selectedIds.delete(safeId);
+          }
+          updateBulkBar();
+        });
+      }
+
+      // Expand/collapse/copy/regenerate/reissue/archive/delete handler
       card.addEventListener('click', (e) => {
+        // Don't intercept checkbox clicks
+        if (e.target.classList.contains('aib-card-checkbox')) return;
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
         const action = btn.dataset.action;
@@ -473,6 +590,7 @@
           }
         } else if (action === 'regenerate') {
           const o = lastOutputs.find((x) => x.id === id);
+          regeneratingFromId = id;
           switchTab('create');
           if (o) {
             if (aibWeek && o.week) aibWeek.value = o.week;
@@ -514,6 +632,52 @@
             }
           };
           loadAndReissue();
+        } else if (action === 'archive') {
+          if (!confirm('Archive this generation? It will be hidden from the default view.')) return;
+          btn.disabled = true;
+          btn.textContent = 'Archiving…';
+          fetch('/.netlify/functions/teacher-ai-builder-update', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ ids: [id], status: 'archived' }),
+          }).then((res) => res.json().catch(() => ({}))).then((data) => {
+            if (data && data.ok) {
+              loadHistory();
+            } else {
+              btn.disabled = false;
+              btn.textContent = '🗄️ Archive';
+              console.error('[tc-ai-builder] Archive failed:', data && data.error);
+            }
+          }).catch((err) => {
+            btn.disabled = false;
+            btn.textContent = '🗄️ Archive';
+            console.error('[tc-ai-builder] Archive error:', err.message);
+          });
+        } else if (action === 'delete') {
+          if (!confirm('Permanently delete this generation? This cannot be undone.')) return;
+          btn.disabled = true;
+          btn.textContent = 'Deleting…';
+          fetch('/.netlify/functions/teacher-ai-builder-update', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ ids: [id] }),
+          }).then((res) => res.json().catch(() => ({}))).then((data) => {
+            if (data && data.ok) {
+              selectedIds.delete(id);
+              updateBulkBar();
+              loadHistory();
+            } else {
+              btn.disabled = false;
+              btn.textContent = '🗑️ Delete';
+              console.error('[tc-ai-builder] Delete failed:', data && data.error);
+            }
+          }).catch((err) => {
+            btn.disabled = false;
+            btn.textContent = '🗑️ Delete';
+            console.error('[tc-ai-builder] Delete error:', err.message);
+          });
         }
       });
 
@@ -961,7 +1125,24 @@
           console.warn('[tc-ai-builder] Auto-save to history failed:', saveData.error || saveRes.status);
           showMsg(aibMsg, 'Generation complete! (Note: history could not be saved.)', 'ok');
         } else {
-          console.log('[tc-ai-builder] Output auto-saved to history');
+          console.log('[tc-ai-builder] Output auto-saved to history, id=' + saveData.id);
+          // Auto-supersede the source record when regenerating
+          if (regeneratingFromId && saveData.id) {
+            const fromId = regeneratingFromId;
+            regeneratingFromId = null;
+            fetch('/.netlify/functions/teacher-ai-builder-update', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ ids: [fromId], status: 'superseded', superseded_by: saveData.id }),
+            }).then((r) => r.json().catch(() => ({}))).then((d) => {
+              if (!d.ok) console.warn('[tc-ai-builder] Auto-supersede failed:', d.error);
+            }).catch((e) => {
+              console.warn('[tc-ai-builder] Auto-supersede error:', e.message);
+            });
+          } else {
+            regeneratingFromId = null;
+          }
         }
       } catch (saveErr) {
         console.warn('[tc-ai-builder] Auto-save failed (non-critical):', saveErr.message);
