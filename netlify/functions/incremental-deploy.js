@@ -111,6 +111,15 @@ async function handleUpload(body, remainingTTL){
       const readerHtml = generateReaderPage(finalTitle, primaryFile);
       blobs.set(`${slotDir}/index.html`, Buffer.from(readerHtml));
 
+      // For TXT files, also generate book-pages.json for inline reader
+      if (primaryFile && primaryFile.toLowerCase().endsWith('.txt')) {
+        const txtBuf = blobs.get(`${slotDir}/${primaryFile}`);
+        if (txtBuf) {
+          const bookJson = generateBookPagesJson(finalTitle, txtBuf.toString('utf8'));
+          blobs.set(`${slotDir}/book-pages.json`, Buffer.from(JSON.stringify(bookJson)));
+        }
+      }
+
       state.categories[category].titles[slot - 1] = finalTitle;
       state.categories[category].links[slot - 1]  = `/${unit.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
       state.updated = new Date().toISOString();
@@ -1030,6 +1039,75 @@ body{background:#0f172a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFo
 <\/script>
 </body>
 </html>`;
+}
+
+// ---------- Book pages JSON generator ----------
+const WORDS_PER_PAGE = 250;
+const MAX_CHAPTER_HEADING_LENGTH = 120; // Headings longer than this are likely body text
+const CHAPTER_RE = /^(chapter|part|section|prologue|epilogue|introduction)/i;
+
+function generateBookPagesJson(title, rawText) {
+  const lines = rawText.split(/\r?\n/);
+  const pages = [];
+  const chapters = [];
+
+  // Current page state
+  let currentChapter = '';
+  let currentParagraphs = [];
+  let currentWordCount = 0;
+
+  function flushPage() {
+    if (currentParagraphs.length === 0) return;
+    pages.push({
+      pageNum: pages.length + 1,
+      chapter: currentChapter,
+      paragraphs: currentParagraphs.slice()
+    });
+    currentParagraphs = [];
+    currentWordCount = 0;
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Empty line = paragraph break (flush paragraph, not page)
+    if (!trimmed) continue;
+
+    // Chapter heading detection
+    if (CHAPTER_RE.test(trimmed) && trimmed.length < MAX_CHAPTER_HEADING_LENGTH) {
+      // Start new page for chapter heading
+      flushPage();
+      currentChapter = trimmed;
+      chapters.push({ label: trimmed, startPage: pages.length + 1 });
+      // Add the heading as first paragraph of new page
+      currentParagraphs.push([trimmed]);
+      currentWordCount += trimmed.split(/\s+/).length;
+      continue;
+    }
+
+    // Regular paragraph — split into words
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (!words.length) continue;
+
+    // Check if adding this paragraph would exceed the page limit
+    if (currentWordCount + words.length > WORDS_PER_PAGE && currentParagraphs.length > 0) {
+      flushPage();
+    }
+
+    currentParagraphs.push(words);
+    currentWordCount += words.length;
+  }
+
+  // Flush any remaining content
+  flushPage();
+
+  return {
+    title,
+    totalPages: pages.length,
+    wordsPerPage: WORDS_PER_PAGE,
+    chapters,
+    pages
+  };
 }
 
 function generateDownloadPage(title, filename) {

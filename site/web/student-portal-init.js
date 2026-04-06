@@ -3704,6 +3704,362 @@
     }
   }
 
+  // ============================================================================
+  // Book Reader Panel
+  // ============================================================================
+  let bookReaderState = null;
+  let bookPanelEscapeHandler = null;
+  let bookTtsUtterance = null;
+  let bookTtsActive = false;
+  let bookTtsPaused = false;
+
+  /**
+   * Open the inline book reader for a resource with book-pages.json
+   */
+  async function openBookReader(link, title) {
+    // Fetch book-pages.json — ensure link ends with /
+    const base = link.endsWith('/') ? link : link + '/';
+    let bookData;
+    try {
+      const r = await fetch(base + 'book-pages.json');
+      if (!r.ok) throw new Error('No book-pages.json');
+      bookData = await r.json();
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Could not load book-pages.json:', err);
+      window.open(link, '_blank', 'noopener');
+      return;
+    }
+
+    // Stop any existing TTS
+    stopBookTts();
+
+    // Restore saved page from localStorage
+    const storageKey = 'rc_book_page_' + encodeURIComponent(link);
+    const savedPage = parseInt(localStorage.getItem(storageKey) || '1', 10);
+
+    bookReaderState = {
+      bookData,
+      currentPage: (savedPage >= 1 && savedPage <= bookData.totalPages) ? savedPage : 1,
+      storageKey,
+      resuming: savedPage > 1
+    };
+
+    // Build UI
+    const backdrop = document.createElement('div');
+    backdrop.className = 'st-panel-backdrop';
+    backdrop.id = 'bookPanelBackdrop';
+
+    const panel = document.createElement('div');
+    panel.className = 'st-book-panel';
+    panel.id = 'bookPanel';
+
+    renderBookPanel(panel, bookData, title);
+
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+
+    backdrop.addEventListener('click', function (e) {
+      if (e.target === backdrop) closeBookReader();
+    });
+
+    bookPanelEscapeHandler = function (e) {
+      if (e.key === 'Escape' && !document.querySelector('.rc-modal-backdrop')) closeBookReader();
+      if (e.key === 'ArrowRight') navigateBookPage(1);
+      if (e.key === 'ArrowLeft') navigateBookPage(-1);
+    };
+    document.addEventListener('keydown', bookPanelEscapeHandler);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('open');
+      panel.classList.add('open');
+    });
+
+    // Show resume toast
+    if (bookReaderState.resuming) {
+      showToast(`📖 Resuming from page ${bookReaderState.currentPage}`);
+    }
+  }
+
+  function closeBookReader() {
+    stopBookTts();
+
+    if (bookPanelEscapeHandler) {
+      document.removeEventListener('keydown', bookPanelEscapeHandler);
+      bookPanelEscapeHandler = null;
+    }
+
+    const panel = document.getElementById('bookPanel');
+    const backdrop = document.getElementById('bookPanelBackdrop');
+
+    if (panel) {
+      panel.classList.remove('open');
+      setTimeout(() => panel.remove(), PANEL_TRANSITION_MS);
+    }
+    if (backdrop) {
+      backdrop.classList.remove('open');
+      setTimeout(() => backdrop.remove(), PANEL_TRANSITION_MS);
+    }
+
+    bookReaderState = null;
+  }
+
+  function renderBookPanel(panel, bookData, title) {
+    const safeTitle = escapeHtml(title || bookData.title || 'Book');
+    const hasSidebar = bookData.chapters && bookData.chapters.length > 0;
+    panel.innerHTML = `
+      <div class="st-book-panel-header">
+        <button class="st-panel-back-btn" id="bookBackBtn" style="margin-bottom:0;flex-shrink:0;">← Back</button>
+        <h2 class="st-book-panel-title">${safeTitle}</h2>
+        ${hasSidebar ? `<button class="st-book-nav-btn" id="bookTocToggle" title="Toggle chapters">☰ Chapters</button>` : ''}
+        <button class="st-panel-close-btn" id="bookCloseBtn">✕</button>
+      </div>
+      <div class="st-book-body">
+        ${hasSidebar ? `<aside class="st-book-sidebar" id="bookSidebar">
+          <div class="st-book-sidebar-heading">Chapters</div>
+          <div id="bookTocList"></div>
+        </aside>` : ''}
+        <div class="st-book-content" id="bookContent"></div>
+      </div>
+      <div class="st-book-nav">
+        <button class="st-book-nav-btn" id="bookPrevBtn">← Previous</button>
+        <div class="st-book-page-info" id="bookPageInfo"></div>
+        <button class="st-book-nav-btn" id="bookNextBtn">Next →</button>
+        <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
+        <div class="st-book-tts-controls" id="bookTtsControls" style="display:none;">
+          <button class="st-book-nav-btn" id="bookTtsPause">⏸ Pause</button>
+          <button class="st-book-nav-btn" id="bookTtsStop">⏹ Stop</button>
+        </div>
+      </div>
+    `;
+
+    // Wire events
+    panel.querySelector('#bookBackBtn').addEventListener('click', closeBookReader);
+    panel.querySelector('#bookCloseBtn').addEventListener('click', closeBookReader);
+    panel.querySelector('#bookPrevBtn').addEventListener('click', () => navigateBookPage(-1));
+    panel.querySelector('#bookNextBtn').addEventListener('click', () => navigateBookPage(1));
+    panel.querySelector('#bookTtsBtn').addEventListener('click', toggleBookTts);
+    panel.querySelector('#bookTtsPause').addEventListener('click', pauseResumeBookTts);
+    panel.querySelector('#bookTtsStop').addEventListener('click', stopBookTts);
+
+    if (hasSidebar) {
+      const tocToggle = panel.querySelector('#bookTocToggle');
+      if (tocToggle) {
+        tocToggle.addEventListener('click', function () {
+          const sb = document.getElementById('bookSidebar');
+          if (sb) {
+            sb.classList.toggle('collapsed');
+            sb.classList.toggle('open');
+          }
+        });
+      }
+      renderBookToc(bookData);
+    }
+
+    renderBookPage();
+  }
+
+  function renderBookToc(bookData) {
+    const tocList = document.getElementById('bookTocList');
+    if (!tocList) return;
+    const state = bookReaderState;
+    if (!bookData.chapters || !bookData.chapters.length) return;
+
+    let html = '';
+    for (let i = 0; i < bookData.chapters.length; i++) {
+      const ch = bookData.chapters[i];
+      html += `<button class="st-book-toc-item" data-page="${ch.startPage}">${escapeHtml(ch.label)}</button>`;
+    }
+    tocList.innerHTML = html;
+
+    tocList.querySelectorAll('.st-book-toc-item').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const pg = parseInt(btn.getAttribute('data-page'), 10);
+        if (pg >= 1 && pg <= bookReaderState.bookData.totalPages) {
+          stopBookTts();
+          bookReaderState.currentPage = pg;
+          renderBookPage();
+        }
+      });
+    });
+  }
+
+  function renderBookPage() {
+    const state = bookReaderState;
+    if (!state) return;
+
+    const { bookData, currentPage } = state;
+    const pageObj = bookData.pages[currentPage - 1];
+
+    // Save progress
+    localStorage.setItem(state.storageKey, String(currentPage));
+
+    // Update page info
+    const pageInfo = document.getElementById('bookPageInfo');
+    if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${bookData.totalPages}`;
+
+    // Update nav buttons
+    const prevBtn = document.getElementById('bookPrevBtn');
+    const nextBtn = document.getElementById('bookNextBtn');
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= bookData.totalPages;
+
+    // Update TOC active state
+    if (bookData.chapters && bookData.chapters.length > 0) {
+      // Find the chapter for this page
+      let activeChapter = bookData.chapters[0];
+      for (const ch of bookData.chapters) {
+        if (ch.startPage <= currentPage) activeChapter = ch;
+      }
+      document.querySelectorAll('.st-book-toc-item').forEach(function (btn) {
+        const pg = parseInt(btn.getAttribute('data-page'), 10);
+        btn.classList.toggle('active', pg === activeChapter.startPage);
+      });
+    }
+
+    // Render page content
+    const content = document.getElementById('bookContent');
+    if (!content) return;
+
+    if (!pageObj) {
+      content.innerHTML = '<p style="opacity:0.5">Page not found.</p>';
+      return;
+    }
+
+    let wordIdx = 0;
+    let html = '';
+    for (const para of (pageObj.paragraphs || [])) {
+      html += '<p>';
+      for (let wi = 0; wi < para.length; wi++) {
+        if (wi > 0) html += ' ';
+        html += `<span class="st-book-word" data-word-idx="${wordIdx}">${escapeHtml(para[wi])}</span>`;
+        wordIdx++;
+      }
+      html += '</p>';
+    }
+    content.innerHTML = html || '<p style="opacity:0.5">No content.</p>';
+    content.scrollTop = 0;
+  }
+
+  function navigateBookPage(delta) {
+    const state = bookReaderState;
+    if (!state) return;
+    const newPage = state.currentPage + delta;
+    if (newPage < 1 || newPage > state.bookData.totalPages) return;
+    stopBookTts();
+    state.currentPage = newPage;
+    renderBookPage();
+  }
+
+  function toggleBookTts() {
+    if (bookTtsActive) {
+      stopBookTts();
+    } else {
+      startBookTts();
+    }
+  }
+
+  function startBookTts() {
+    if (!window.speechSynthesis) {
+      showToast('Text-to-speech is not supported in this browser.', 'error');
+      return;
+    }
+    const state = bookReaderState;
+    if (!state) return;
+
+    const content = document.getElementById('bookContent');
+    if (!content) return;
+
+    const wordSpans = Array.from(content.querySelectorAll('.st-book-word'));
+    const pageText = wordSpans.map(s => s.textContent).join(' ');
+    if (!pageText.trim()) return;
+
+    stopBookTts();
+
+    const utterance = new SpeechSynthesisUtterance(pageText);
+    utterance.rate = 0.9;
+    bookTtsUtterance = utterance;
+    bookTtsActive = true;
+    bookTtsPaused = false;
+
+    // Update UI
+    const ttsBtn = document.getElementById('bookTtsBtn');
+    const ttsControls = document.getElementById('bookTtsControls');
+    if (ttsBtn) ttsBtn.classList.add('tts-active');
+    if (ttsControls) ttsControls.style.display = 'flex';
+
+    let lastHighlightedSpan = null;
+
+    utterance.onboundary = function (e) {
+      if (e.name !== 'word') return;
+      // Remove previous highlight
+      if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
+      // Map charIndex to word span
+      let charCount = 0;
+      for (let i = 0; i < wordSpans.length; i++) {
+        const wordText = wordSpans[i].textContent;
+        if (charCount + wordText.length >= e.charIndex) {
+          wordSpans[i].classList.add('tts-active');
+          lastHighlightedSpan = wordSpans[i];
+          // Scroll into view if needed
+          wordSpans[i].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          break;
+        }
+        charCount += wordText.length + 1; // +1 for space
+      }
+    };
+
+    utterance.onend = function () {
+      if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
+      bookTtsActive = false;
+      bookTtsPaused = false;
+      bookTtsUtterance = null;
+      if (ttsBtn) ttsBtn.classList.remove('tts-active');
+      if (ttsControls) ttsControls.style.display = 'none';
+
+      // Auto-advance to next page if applicable
+      if (state && state.currentPage < state.bookData.totalPages) {
+        state.currentPage++;
+        renderBookPage();
+        startBookTts();
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function pauseResumeBookTts() {
+    if (!window.speechSynthesis) return;
+    const pauseBtn = document.getElementById('bookTtsPause');
+    if (bookTtsPaused) {
+      window.speechSynthesis.resume();
+      bookTtsPaused = false;
+      if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
+    } else {
+      window.speechSynthesis.pause();
+      bookTtsPaused = true;
+      if (pauseBtn) pauseBtn.textContent = '▶ Resume';
+    }
+  }
+
+  function stopBookTts() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    bookTtsActive = false;
+    bookTtsPaused = false;
+    bookTtsUtterance = null;
+
+    const ttsBtn = document.getElementById('bookTtsBtn');
+    const ttsControls = document.getElementById('bookTtsControls');
+    const pauseBtn = document.getElementById('bookTtsPause');
+    if (ttsBtn) ttsBtn.classList.remove('tts-active');
+    if (ttsControls) ttsControls.style.display = 'none';
+    if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
+
+    // Remove any active word highlights
+    document.querySelectorAll('.st-book-word.tts-active').forEach(function (el) {
+      el.classList.remove('tts-active');
+    });
+  }
+
   /**
    * Load and render student resources from site-state.json
    */
@@ -3745,10 +4101,34 @@
       for (const r of resources) {
         const svg = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
         const safeTitle = r.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        html += '<a class="st-resource-card" href="' + r.link + '" target="_blank" rel="noopener">' + svg + '<div class="st-resource-card-title">' + safeTitle + '</div></a>';
+        html += '<a class="st-resource-card" href="' + r.link + '" target="_blank" rel="noopener" data-resource-link="' + r.link + '" data-resource-title="' + safeTitle + '">' + svg + '<div class="st-resource-card-title">' + safeTitle + '</div><div class="st-resource-card-badge" style="display:none;font-size:12px;margin-top:6px;opacity:0.75;">📖 Read inline</div></a>';
       }
       html += '</div>';
       el.innerHTML = html;
+
+      // After rendering, check each card for book-pages.json (async, non-blocking)
+      const cards = el.querySelectorAll('.st-resource-card[data-resource-link]');
+      cards.forEach(function (card) {
+        const link = card.getAttribute('data-resource-link');
+        const title = card.getAttribute('data-resource-title');
+        const base = link.endsWith('/') ? link : link + '/';
+        // Attempt HEAD request first to avoid downloading the full file
+        fetch(base + 'book-pages.json', { method: 'HEAD' }).then(function (r) {
+          if (r.ok) {
+            // Has book-pages.json — switch card to inline reader
+            card.removeAttribute('href');
+            card.removeAttribute('target');
+            card.removeAttribute('rel');
+            card.style.cursor = 'pointer';
+            const badge = card.querySelector('.st-resource-card-badge');
+            if (badge) badge.style.display = 'block';
+            card.addEventListener('click', function (e) {
+              e.preventDefault();
+              openBookReader(link, title);
+            });
+          }
+        }).catch(function () { /* no book-pages.json, leave as external link */ });
+      });
 
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load resources:', err);

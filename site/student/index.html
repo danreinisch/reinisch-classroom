@@ -1379,6 +1379,264 @@
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.20);
       }
 
+      /* =====================================================================
+         Book Reader Panel
+         ===================================================================== */
+      .st-book-panel {
+        position: relative;
+        width: min(1100px, 92vw);
+        height: min(88vh, 800px);
+        background: var(--rc-panel);
+        border: 1px solid var(--rc-glass-border);
+        border-radius: var(--rc-radius-lg);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        opacity: 0;
+        transform: scale(0.96);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      .st-book-panel.open {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .st-book-panel-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--rc-glass-border);
+        flex-shrink: 0;
+      }
+
+      .st-book-panel-title {
+        flex: 1;
+        font-size: 17px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+      }
+
+      .st-book-body {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .st-book-sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        background: rgba(0, 0, 0, 0.25);
+        border-right: 1px solid var(--rc-glass-border);
+        overflow-y: auto;
+        padding: 12px 0;
+        transition: margin-left 0.3s ease;
+      }
+
+      .st-book-sidebar.collapsed {
+        margin-left: -240px;
+      }
+
+      .st-book-sidebar-heading {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: rgba(255, 255, 255, 0.4);
+        padding: 0 14px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        margin-bottom: 6px;
+      }
+
+      .st-book-toc-item {
+        display: block;
+        padding: 8px 14px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        border-left: 3px solid transparent;
+        transition: all 0.15s;
+        line-height: 1.4;
+      }
+
+      .st-book-toc-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #f1f5f9;
+      }
+
+      .st-book-toc-item.active {
+        border-left-color: #3b82f6;
+        color: #93c5fd;
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .st-book-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 28px 40px;
+        background: #1e293b;
+      }
+
+      .st-book-content p {
+        line-height: 1.8;
+        margin-bottom: 1em;
+        font-size: 16px;
+        color: #e2e8f0;
+        max-width: 72ch;
+      }
+
+      .st-book-word {
+        display: inline;
+        border-radius: 3px;
+        transition: background 0.1s ease, box-shadow 0.1s ease;
+      }
+
+      .st-book-word.tts-active {
+        background: rgba(59, 130, 246, 0.3);
+        border-radius: 4px;
+        padding: 1px 2px;
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+      }
+
+      .st-book-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        border-top: 1px solid var(--rc-glass-border);
+        background: rgba(15, 23, 42, 0.6);
+        flex-shrink: 0;
+        flex-wrap: wrap;
+      }
+
+      .st-book-nav-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        color: #f1f5f9;
+        padding: 8px 16px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .st-book-nav-btn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+      }
+
+      .st-book-nav-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      .st-book-nav-btn.tts-active {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.4);
+        color: #93c5fd;
+      }
+
+      .st-book-page-info {
+        flex: 1;
+        text-align: center;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.65);
+        white-space: nowrap;
+      }
+
+      .st-book-tts-controls {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* Light theme overrides for book reader */
+      [data-theme="light"] .st-book-panel {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--ink);
+      }
+
+      [data-theme="light"] .st-book-sidebar {
+        background: #f3f4f6;
+        border-color: var(--border);
+      }
+
+      [data-theme="light"] .st-book-toc-item {
+        color: #374151;
+      }
+
+      [data-theme="light"] .st-book-toc-item:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: #111827;
+      }
+
+      [data-theme="light"] .st-book-toc-item.active {
+        color: #2563eb;
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      [data-theme="light"] .st-book-content {
+        background: #f8fafc;
+      }
+
+      [data-theme="light"] .st-book-content p {
+        color: #1e293b;
+      }
+
+      [data-theme="light"] .st-book-nav {
+        background: #f1f5f9;
+      }
+
+      [data-theme="light"] .st-book-nav-btn {
+        background: #e2e8f0;
+        border-color: #cbd5e1;
+        color: #1e293b;
+      }
+
+      [data-theme="light"] .st-book-nav-btn:hover:not(:disabled) {
+        background: #d1d5db;
+      }
+
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+        .st-book-panel {
+          width: 100vw;
+          height: 100vh;
+          border-radius: 0;
+          max-height: none;
+        }
+
+        .st-book-sidebar {
+          position: absolute;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          z-index: 10;
+          width: 240px;
+          margin-left: -240px;
+          background: rgba(15, 23, 42, 0.97);
+        }
+
+        .st-book-sidebar.open {
+          margin-left: 0;
+          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .st-book-content {
+          padding: 16px;
+        }
+      }
+
       /* Day tabs */
       .st-day-tabs {
         display: flex;
