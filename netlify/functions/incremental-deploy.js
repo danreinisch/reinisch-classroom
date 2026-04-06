@@ -120,6 +120,19 @@ async function handleUpload(body, remainingTTL){
         }
       }
 
+      // For JSON files (Pandoc AST), generate book-pages.json for inline reader
+      if (primaryFile && primaryFile.toLowerCase().endsWith('.json')) {
+        const jsonBuf = blobs.get(`${slotDir}/${primaryFile}`);
+        if (jsonBuf) {
+          try {
+            const bookJson = parsePandocJsonToBookPages(finalTitle, jsonBuf.toString('utf8'));
+            blobs.set(`${slotDir}/book-pages.json`, Buffer.from(JSON.stringify(bookJson)));
+          } catch (e) {
+            console.warn('Could not parse Pandoc JSON for book-pages.json:', e.message);
+          }
+        }
+      }
+
       state.categories[category].titles[slot - 1] = finalTitle;
       state.categories[category].links[slot - 1]  = `/${unit.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
       state.updated = new Date().toISOString();
@@ -1103,6 +1116,237 @@ function generateBookPagesJson(title, rawText) {
 
   return {
     title,
+    totalPages: pages.length,
+    wordsPerPage: WORDS_PER_PAGE,
+    chapters,
+    pages
+  };
+}
+
+// ---------- Pandoc JSON AST parser ----------
+function extractMetaString(metaValue) {
+  if (!metaValue) return '';
+  if (metaValue.t === 'MetaInlines') {
+    const parts = [];
+    for (const el of (metaValue.c || [])) {
+      if (el.t === 'Str') parts.push(el.c);
+    }
+    return parts.join(' ').trim();
+  }
+  if (metaValue.t === 'MetaString') return metaValue.c || '';
+  if (metaValue.t === 'MetaList') {
+    return (metaValue.c || []).map(extractMetaString).filter(Boolean).join(', ');
+  }
+  if (metaValue.t === 'MetaBlocks') {
+    const parts = [];
+    for (const block of (metaValue.c || [])) {
+      if (block.t === 'Para' || block.t === 'Plain') {
+        const words = [];
+        for (const el of (block.c || [])) {
+          if (el.t === 'Str') words.push(el.c);
+        }
+        if (words.length) parts.push(words.join(' '));
+      }
+    }
+    return parts.join(' ').trim();
+  }
+  return '';
+}
+
+function parsePandocJsonToBookPages(title, jsonString) {
+  let doc;
+  try { doc = JSON.parse(jsonString); } catch (e) { throw new Error('Invalid JSON: ' + e.message); }
+  if (!doc['pandoc-api-version'] || !Array.isArray(doc.blocks)) {
+    throw new Error('Not a valid Pandoc JSON AST (missing pandoc-api-version or blocks)');
+  }
+
+  // Extract title/author from meta
+  let bookTitle = title;
+  let bookAuthor = '';
+  if (doc.meta) {
+    const mt = extractMetaString(doc.meta.title);
+    if (mt) bookTitle = mt;
+    const ma = extractMetaString(doc.meta.author);
+    if (ma) bookAuthor = ma;
+  }
+
+  // Flatten Pandoc inline elements into a words array
+  function flattenInlines(inlines, words) {
+    if (!Array.isArray(inlines)) return;
+    for (let i = 0; i < inlines.length; i++) {
+      const el = inlines[i];
+      if (!el || !el.t) continue;
+      switch (el.t) {
+        case 'Str':
+          if (el.c) words.push(el.c);
+          break;
+        case 'Space':
+        case 'SoftBreak':
+        case 'LineBreak':
+          break; // word separators — Str elements are already individual tokens
+        case 'Span': {
+          const attrs = el.c[0] || [null, [], []];
+          const classes = attrs[1] || [];
+          const spanInlines = el.c[1] || [];
+          if (classes.includes('first-in-chapter1') || classes.includes('drop-cap')) {
+            // Drop-cap: collect the letter from the Span, then glue the next sibling Str
+            const spanWords = [];
+            flattenInlines(spanInlines, spanWords);
+            const letter = spanWords.join('');
+            if (letter && i + 1 < inlines.length && inlines[i + 1].t === 'Str') {
+              i++;
+              words.push(letter + inlines[i].c);
+            } else if (letter) {
+              words.push(letter);
+            }
+          } else {
+            flattenInlines(spanInlines, words);
+          }
+          break;
+        }
+        case 'Emph':
+        case 'Strong':
+        case 'Strikeout':
+        case 'Superscript':
+        case 'Subscript':
+        case 'SmallCaps':
+          flattenInlines(el.c || [], words);
+          break;
+        case 'Quoted':
+          flattenInlines(el.c[1] || [], words);
+          break;
+        case 'Link':
+          flattenInlines(el.c[1] || [], words);
+          break;
+        case 'Code':
+          if (el.c && el.c[1]) words.push(el.c[1]);
+          break;
+        case 'Math':
+          if (el.c && el.c[1]) words.push(el.c[1]);
+          break;
+        case 'RawInline':
+        case 'Image':
+        case 'Note':
+          break; // skip decorative
+        default:
+          // Generic fallback: recurse if c[1] is an inline array
+          if (Array.isArray(el.c)) {
+            if (el.c.length >= 2 && Array.isArray(el.c[1]) && el.c[1].length > 0 && el.c[1][0] && el.c[1][0].t) {
+              flattenInlines(el.c[1], words);
+            } else if (el.c.length > 0 && el.c[0] && el.c[0].t) {
+              flattenInlines(el.c, words);
+            }
+          }
+      }
+    }
+  }
+
+  const pages = [];
+  const chapters = [];
+  let currentChapter = '';
+  let currentParagraphs = [];
+  let currentWordCount = 0;
+  let foundFirstHeader = false;
+  let skipSection = false; // true while inside a ToC-like section
+
+  function flushPage() {
+    if (currentParagraphs.length === 0) return;
+    pages.push({
+      pageNum: pages.length + 1,
+      chapter: currentChapter,
+      paragraphs: currentParagraphs.slice()
+    });
+    currentParagraphs = [];
+    currentWordCount = 0;
+  }
+
+  function processBlock(block) {
+    if (!block || !block.t) return;
+    switch (block.t) {
+      case 'Header': {
+        const level = block.c[0];
+        if (level !== 1) break; // only level-1 headers drive chapter pagination
+        const inlines = block.c[2] || [];
+        const words = [];
+        flattenInlines(inlines, words);
+        const headerText = words.join(' ').trim();
+        // Entering a new level-1 header ends any prior skipSection
+        skipSection = false;
+        // If ToC header, skip its content until next level-1 header
+        if (/^(table of contents|contents)$/i.test(headerText)) {
+          skipSection = true;
+          foundFirstHeader = true;
+          break;
+        }
+        // Real chapter
+        flushPage();
+        foundFirstHeader = true;
+        currentChapter = headerText;
+        chapters.push({ label: headerText, startPage: pages.length + 1 });
+        currentParagraphs.push([headerText]);
+        currentWordCount += words.filter(Boolean).length;
+        break;
+      }
+      case 'Para':
+      case 'Plain': {
+        if (!foundFirstHeader || skipSection) break;
+        const words = [];
+        flattenInlines(block.c || [], words);
+        const filtered = words.filter(Boolean);
+        if (!filtered.length) break;
+        if (currentWordCount + filtered.length > WORDS_PER_PAGE && currentParagraphs.length > 0) {
+          flushPage();
+        }
+        currentParagraphs.push(filtered);
+        currentWordCount += filtered.length;
+        break;
+      }
+      case 'Div': {
+        const children = block.c[1];
+        if (!Array.isArray(children)) break;
+        // Only recurse if the Div contains meaningful content
+        if (children.some(b => b.t === 'Header' || b.t === 'Para' || b.t === 'Plain' || b.t === 'Div' || b.t === 'BulletList' || b.t === 'OrderedList' || b.t === 'BlockQuote')) {
+          for (const child of children) processBlock(child);
+        }
+        break;
+      }
+      case 'BlockQuote':
+        for (const child of (block.c || [])) processBlock(child);
+        break;
+      case 'BulletList': {
+        if (!foundFirstHeader || skipSection) break;
+        for (const item of (block.c || [])) {
+          if (Array.isArray(item)) for (const b of item) processBlock(b);
+        }
+        break;
+      }
+      case 'OrderedList': {
+        if (!foundFirstHeader || skipSection) break;
+        const items = block.c[1] || [];
+        for (const item of items) {
+          if (Array.isArray(item)) for (const b of item) processBlock(b);
+        }
+        break;
+      }
+      case 'Image':
+      case 'RawBlock':
+      case 'Table':
+      case 'HorizontalRule':
+      case 'Null':
+        break; // skip decorative
+      default:
+        break;
+    }
+  }
+
+  for (const block of doc.blocks) {
+    processBlock(block);
+  }
+  flushPage();
+
+  return {
+    title: bookTitle,
+    author: bookAuthor,
     totalPages: pages.length,
     wordsPerPage: WORDS_PER_PAGE,
     chapters,

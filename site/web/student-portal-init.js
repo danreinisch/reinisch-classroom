@@ -3712,6 +3712,50 @@
   let bookTtsUtterance = null;
   let bookTtsActive = false;
   let bookTtsPaused = false;
+  let bookTtsTimeout = null;
+  let _cachedTtsVoice = null;
+  let _cachedTtsVoiceName = null;
+
+  // Re-cache on voiceschanged (voices may not be available at load time)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.addEventListener('voiceschanged', function () {
+      _cachedTtsVoice = null;
+      _cachedTtsVoiceName = null;
+    });
+  }
+
+  function pickBestVoice(preferredName) {
+    if (!window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    const english = voices.filter(function (v) { return v.lang && v.lang.startsWith('en'); });
+    if (!english.length) return null;
+
+    // Honor explicit user preference
+    if (preferredName) {
+      const match = english.find(function (v) { return v.name === preferredName; });
+      if (match) return match;
+    }
+
+    // Return cached voice if preference hasn't changed
+    const cacheKey = preferredName || '';
+    if (_cachedTtsVoice && _cachedTtsVoiceName === cacheKey) return _cachedTtsVoice;
+
+    const priorities = [
+      function (v) { return /Google (US|UK) English/i.test(v.name); },
+      function (v) { return /Samantha.*Enhanced|Alex.*Enhanced|Daniel.*Enhanced/i.test(v.name); },
+      function (v) { return /Microsoft.*(Online|Neural)/i.test(v.name); },
+      function (v) { return /enhanced|premium/i.test(v.name); }
+    ];
+    let best = null;
+    for (const pred of priorities) {
+      best = english.find(pred) || null;
+      if (best) break;
+    }
+    if (!best) best = english[0] || null;
+    _cachedTtsVoice = best;
+    _cachedTtsVoiceName = cacheKey;
+    return best;
+  }
 
   /**
    * Open the inline book reader for a resource with book-pages.json
@@ -3824,7 +3868,21 @@
         <button class="st-book-nav-btn" id="bookPrevBtn">← Previous</button>
         <div class="st-book-page-info" id="bookPageInfo"></div>
         <button class="st-book-nav-btn" id="bookNextBtn">Next →</button>
-        <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
+        <div class="st-book-tts-wrapper" style="position:relative;display:flex;align-items:center;gap:6px;">
+          <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
+          <button class="st-book-nav-btn st-book-tts-settings-btn" id="bookTtsSettingsBtn" title="TTS settings" style="padding:8px 10px;">⚙️</button>
+          <div class="st-book-tts-settings" id="bookTtsSettings" style="display:none;">
+            <div class="st-book-tts-settings-row">
+              <label class="st-book-tts-settings-label">Speed</label>
+              <input type="range" id="bookTtsRate" class="st-book-tts-slider" min="0.5" max="1.5" step="0.05" value="0.92"/>
+              <span id="bookTtsRateVal">0.92×</span>
+            </div>
+            <div class="st-book-tts-settings-row">
+              <label class="st-book-tts-settings-label">Voice</label>
+              <select id="bookTtsVoice" class="st-book-tts-voice-select"></select>
+            </div>
+          </div>
+        </div>
         <div class="st-book-tts-controls" id="bookTtsControls" style="display:none;">
           <button class="st-book-nav-btn" id="bookTtsPause">⏸ Pause</button>
           <button class="st-book-nav-btn" id="bookTtsStop">⏹ Stop</button>
@@ -3840,6 +3898,23 @@
     panel.querySelector('#bookTtsBtn').addEventListener('click', toggleBookTts);
     panel.querySelector('#bookTtsPause').addEventListener('click', pauseResumeBookTts);
     panel.querySelector('#bookTtsStop').addEventListener('click', stopBookTts);
+
+    // TTS settings popover
+    const settingsBtn = panel.querySelector('#bookTtsSettingsBtn');
+    const settingsPopover = panel.querySelector('#bookTtsSettings');
+    if (settingsBtn && settingsPopover) {
+      settingsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = settingsPopover.style.display !== 'none';
+        settingsPopover.style.display = isOpen ? 'none' : 'block';
+        if (!isOpen) populateTtsSettingsPopover(settingsPopover);
+      });
+      document.addEventListener('click', function hideTtsSettings(e) {
+        if (!settingsPopover.contains(e.target) && e.target !== settingsBtn) {
+          settingsPopover.style.display = 'none';
+        }
+      });
+    }
 
     if (hasSidebar) {
       const tocToggle = panel.querySelector('#bookTocToggle');
@@ -3950,6 +4025,42 @@
     renderBookPage();
   }
 
+  function populateTtsSettingsPopover(container) {
+    const rateSlider = container.querySelector('#bookTtsRate');
+    const rateVal = container.querySelector('#bookTtsRateVal');
+    const voiceSelect = container.querySelector('#bookTtsVoice');
+    if (!rateSlider || !voiceSelect) return;
+
+    // Restore saved rate
+    const savedRate = localStorage.getItem('rc_book_tts_rate') || '0.92';
+    rateSlider.value = savedRate;
+    if (rateVal) rateVal.textContent = parseFloat(savedRate).toFixed(2) + '×';
+
+    rateSlider.oninput = function () {
+      const v = parseFloat(rateSlider.value).toFixed(2);
+      if (rateVal) rateVal.textContent = v + '×';
+      localStorage.setItem('rc_book_tts_rate', v);
+    };
+
+    // Populate voice list
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const english = voices.filter(function (v) { return v.lang && v.lang.startsWith('en'); });
+    const savedVoice = localStorage.getItem('rc_book_tts_voice') || '';
+    voiceSelect.innerHTML = '<option value="">Auto (best available)</option>';
+    for (const v of english) {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = v.name + ' (' + v.lang + ')';
+      if (v.name === savedVoice) opt.selected = true;
+      voiceSelect.appendChild(opt);
+    }
+    voiceSelect.onchange = function () {
+      localStorage.setItem('rc_book_tts_voice', voiceSelect.value);
+      _cachedTtsVoice = null; // reset cache so next read uses the new preference
+      _cachedTtsVoiceName = null;
+    };
+  }
+
   function toggleBookTts() {
     if (bookTtsActive) {
       stopBookTts();
@@ -3969,19 +4080,31 @@
     const content = document.getElementById('bookContent');
     if (!content) return;
 
-    const wordSpans = Array.from(content.querySelectorAll('.st-book-word'));
-    const pageText = wordSpans.map(s => s.textContent).join(' ');
-    if (!pageText.trim()) return;
+    const allWordSpans = Array.from(content.querySelectorAll('.st-book-word'));
+    if (!allWordSpans.length) return;
 
     stopBookTts();
 
-    const utterance = new SpeechSynthesisUtterance(pageText);
-    utterance.rate = 0.9;
-    bookTtsUtterance = utterance;
+    // Build per-paragraph data: text, wordOffset (start of this para in allWordSpans), spanCount
+    const paragraphEls = Array.from(content.querySelectorAll('p'));
+    const paraData = [];
+    let globalOffset = 0;
+    for (const p of paragraphEls) {
+      const spans = Array.from(p.querySelectorAll('.st-book-word'));
+      if (!spans.length) continue;
+      const text = spans.map(function (s) { return s.textContent; }).join(' ');
+      paraData.push({ text, wordOffset: globalOffset, spanCount: spans.length });
+      globalOffset += spans.length;
+    }
+    if (!paraData.length) return;
+
+    const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || '0.92');
+    const savedVoiceName = localStorage.getItem('rc_book_tts_voice') || null;
+    const voice = pickBestVoice(savedVoiceName);
+
     bookTtsActive = true;
     bookTtsPaused = false;
 
-    // Update UI
     const ttsBtn = document.getElementById('bookTtsBtn');
     const ttsControls = document.getElementById('bookTtsControls');
     if (ttsBtn) ttsBtn.classList.add('tts-active');
@@ -3989,42 +4112,69 @@
 
     let lastHighlightedSpan = null;
 
-    utterance.onboundary = function (e) {
-      if (e.name !== 'word') return;
-      // Remove previous highlight
-      if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
-      // Map charIndex to word span
-      let charCount = 0;
-      for (let i = 0; i < wordSpans.length; i++) {
-        const wordText = wordSpans[i].textContent;
-        if (charCount + wordText.length >= e.charIndex) {
-          wordSpans[i].classList.add('tts-active');
-          lastHighlightedSpan = wordSpans[i];
-          // Scroll into view if needed
-          wordSpans[i].scrollIntoView({ block: 'nearest', inline: 'nearest' });
-          break;
+    function speakPara(idx) {
+      if (!bookTtsActive || idx >= paraData.length) {
+        // All paragraphs done
+        if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
+        bookTtsActive = false;
+        bookTtsPaused = false;
+        bookTtsUtterance = null;
+        if (ttsBtn) ttsBtn.classList.remove('tts-active');
+        if (ttsControls) ttsControls.style.display = 'none';
+        // Auto-advance to next page
+        if (state && state.currentPage < state.bookData.totalPages) {
+          state.currentPage++;
+          renderBookPage();
+          startBookTts();
         }
-        charCount += wordText.length + 1; // +1 for space
+        return;
       }
-    };
 
-    utterance.onend = function () {
-      if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
-      bookTtsActive = false;
-      bookTtsPaused = false;
-      bookTtsUtterance = null;
-      if (ttsBtn) ttsBtn.classList.remove('tts-active');
-      if (ttsControls) ttsControls.style.display = 'none';
+      const { text, wordOffset, spanCount } = paraData[idx];
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = rate;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      if (voice) utterance.voice = voice;
+      bookTtsUtterance = utterance;
 
-      // Auto-advance to next page if applicable
-      if (state && state.currentPage < state.bookData.totalPages) {
-        state.currentPage++;
-        renderBookPage();
-        startBookTts();
-      }
-    };
+      utterance.onboundary = function (e) {
+        if (e.name !== 'word') return;
+        if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
+        // Map charIndex within this paragraph's text to the correct global word span
+        let charCount = 0;
+        for (let i = 0; i < spanCount; i++) {
+          const span = allWordSpans[wordOffset + i];
+          if (!span) break;
+          const wLen = span.textContent.length;
+          if (charCount + wLen >= e.charIndex) {
+            span.classList.add('tts-active');
+            lastHighlightedSpan = span;
+            span.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            break;
+          }
+          charCount += wLen + 1; // +1 for space separator
+        }
+      };
 
-    window.speechSynthesis.speak(utterance);
+      utterance.onend = function () {
+        if (!bookTtsActive) return;
+        // 300ms natural pause between paragraphs
+        bookTtsTimeout = setTimeout(function () {
+          speakPara(idx + 1);
+        }, 300);
+      };
+
+      utterance.onerror = function (e) {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        console.warn(LOG_PREFIX, 'TTS error:', e.error);
+        if (bookTtsActive) speakPara(idx + 1);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    speakPara(0);
   }
 
   function pauseResumeBookTts() {
@@ -4043,6 +4193,7 @@
 
   function stopBookTts() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
     bookTtsActive = false;
     bookTtsPaused = false;
     bookTtsUtterance = null;
