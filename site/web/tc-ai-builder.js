@@ -102,6 +102,8 @@
   const AIB_PREFS_KEY = 'rc_aib_prefs_v1';
   let savedScopeValue = null;
   let lastOutputs = [];
+  let regeneratingFromId = null;
+  const selectedIds = new Set();
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -341,6 +343,7 @@
     // Validate a value against an allowlist; return fallback if not in list
     const allowedStatuses = ['active', 'superseded', 'archived'];
     const allowedTypes = ['assignments', 'presentations', 'both', 'dataProbe'];
+    const UUID_RE_LOCAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     const taskLabels = { assignments: 'Assignments', presentations: 'Presentations', both: 'Both', dataProbe: 'Data Probe' };
 
@@ -355,6 +358,7 @@
       const safeId = /^[0-9a-f-_]{1,64}$/i.test(String(o.id || '')) ? String(o.id) : '';
 
       card.dataset.type = taskType;
+      card.dataset.status = status;
 
       const statusClass = 'aib-badge-' + status;
       const typeClass = 'aib-badge-' + taskType;
@@ -386,14 +390,19 @@
       // Show Re-Issue button only for task types that produce issuable content
       const showReissue = taskType === 'assignments' || taskType === 'both' || taskType === 'dataProbe';
 
+      // Validate superseded_by UUID for safe display
+      const safeSupersededBy = o.superseded_by && UUID_RE_LOCAL.test(String(o.superseded_by)) ? String(o.superseded_by) : '';
+
       card.innerHTML =
         '<div class="aib-history-meta">' +
+          (safeId ? '<input type="checkbox" class="aib-card-checkbox" data-id="' + safeId + '" aria-label="Select this card" />' : '') +
           '<span class="aib-badge ' + typeClass + '">' + esc(taskLabel) + '</span>' +
           '<span class="aib-badge">' + esc(o.subject || 'ELA') + '</span>' +
           '<span class="aib-badge ' + statusClass + '">' + esc(status) + '</span>' +
           '<span style="font-size:12px;color:var(--rc-ink-dim);margin-left:auto;">' + esc(relativeTime(o.created_at)) + '</span>' +
         '</div>' +
         '<div class="aib-history-title" style="font-weight:600;font-size:16px;margin-bottom:8px;line-height:1.4;">' + title + '</div>' +
+        (safeSupersededBy ? '<span class="aib-superseded-link">↪ Superseded by newer version</span>' : '') +
         '<div class="aib-detail-chips">' + chips + '</div>' +
         (safeId ? '<div class="aib-history-preview" id="aibHistPreview_' + safeId + '"></div>' : '<div class="aib-history-preview"></div>') +
         '<div class="aib-history-actions">' +
@@ -401,10 +410,26 @@
           '<button class="aib-btn" type="button"' + (safeId ? ' data-id="' + safeId + '"' : '') + ' data-action="copy">📋 Copy</button>' +
           (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="regenerate">🔄 Regenerate</button>' : '') +
           (safeId && showReissue ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="reissue">📤 Re-Issue</button>' : '') +
+          (safeId && status !== 'archived' ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="archive">🗄️ Archive</button>' : '') +
+          (safeId ? '<button class="aib-btn" type="button" data-id="' + safeId + '" data-action="delete">🗑️ Delete</button>' : '') +
         '</div>';
 
-      // Expand/collapse/copy/regenerate/reissue handler
-      card.addEventListener('click', (e) => {
+      // Expand/collapse/copy/regenerate/reissue/archive/delete/checkbox handler
+      card.addEventListener('click', async (e) => {
+        // Handle checkbox separately (it's a change on input, but click bubbles here)
+        const checkbox = e.target.closest('.aib-card-checkbox');
+        if (checkbox) {
+          const cbId = checkbox.dataset.id;
+          if (!cbId) return;
+          if (checkbox.checked) {
+            selectedIds.add(cbId);
+          } else {
+            selectedIds.delete(cbId);
+          }
+          updateBulkBar();
+          return;
+        }
+
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
         const action = btn.dataset.action;
@@ -472,6 +497,7 @@
             doCopy(historyContentCache.get(id));
           }
         } else if (action === 'regenerate') {
+          regeneratingFromId = id;
           const o = lastOutputs.find((x) => x.id === id);
           switchTab('create');
           if (o) {
@@ -514,10 +540,141 @@
             }
           };
           loadAndReissue();
+        } else if (action === 'archive') {
+          const confirmed = await rcConfirm('Archive Generation', 'Archive this generation? It will be hidden from active view but not deleted.', 'Archive');
+          if (!confirmed) return;
+          btn.disabled = true;
+          btn.textContent = '…';
+          try {
+            const archiveRes = await fetch('/.netlify/functions/teacher-ai-builder-update', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ ids: [id], status: 'archived' }),
+            });
+            const archiveData = await archiveRes.json().catch(() => ({}));
+            if (!archiveRes.ok || !archiveData.ok) {
+              console.warn('[tc-ai-builder] Archive failed:', archiveData.error || archiveRes.status);
+            }
+          } catch (err) {
+            console.warn('[tc-ai-builder] Archive error:', err.message);
+          }
+          loadHistory();
+        } else if (action === 'delete') {
+          const confirmed = await rcConfirm('Delete Generation', 'Permanently delete this generation? This cannot be undone.', 'Delete', { danger: true });
+          if (!confirmed) return;
+          btn.disabled = true;
+          btn.textContent = '…';
+          try {
+            const deleteRes = await fetch('/.netlify/functions/teacher-ai-builder-update', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ ids: [id] }),
+            });
+            const deleteData = await deleteRes.json().catch(() => ({}));
+            if (!deleteRes.ok || !deleteData.ok) {
+              console.warn('[tc-ai-builder] Delete failed:', deleteData.error || deleteRes.status);
+            }
+          } catch (err) {
+            console.warn('[tc-ai-builder] Delete error:', err.message);
+          }
+          // Remove from selectedIds if present
+          selectedIds.delete(id);
+          updateBulkBar();
+          loadHistory();
         }
       });
 
       historyList.appendChild(card);
+    });
+  }
+
+  // ── Bulk bar helpers ─────────────────────────────────────────────────────────
+
+  function updateBulkBar() {
+    const bar = document.getElementById('aibBulkBar');
+    const countEl = document.getElementById('aibBulkCount');
+    if (!bar) return;
+    if (selectedIds.size > 0) {
+      bar.classList.add('visible');
+      if (countEl) countEl.textContent = selectedIds.size + ' selected';
+    } else {
+      bar.classList.remove('visible');
+    }
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    // Uncheck all visible checkboxes
+    const checkboxes = document.querySelectorAll('.aib-card-checkbox');
+    checkboxes.forEach((cb) => { cb.checked = false; });
+    updateBulkBar();
+  }
+
+  const aibBulkArchive = document.getElementById('aibBulkArchive');
+  const aibBulkDelete = document.getElementById('aibBulkDelete');
+  const aibBulkClear = document.getElementById('aibBulkClear');
+
+  if (aibBulkClear) {
+    aibBulkClear.addEventListener('click', clearSelection);
+  }
+
+  if (aibBulkArchive) {
+    aibBulkArchive.addEventListener('click', async () => {
+      if (selectedIds.size === 0) return;
+      const count = selectedIds.size;
+      const confirmed = await rcConfirm('Archive Selected', 'Archive ' + count + ' generation' + (count === 1 ? '' : 's') + '? They will be hidden from active view but not deleted.', 'Archive');
+      if (!confirmed) return;
+      aibBulkArchive.disabled = true;
+      try {
+        const ids = Array.from(selectedIds);
+        const res = await fetch('/.netlify/functions/teacher-ai-builder-update', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ids, status: 'archived' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          console.warn('[tc-ai-builder] Bulk archive failed:', data.error || res.status);
+        }
+      } catch (err) {
+        console.warn('[tc-ai-builder] Bulk archive error:', err.message);
+      } finally {
+        aibBulkArchive.disabled = false;
+      }
+      clearSelection();
+      loadHistory();
+    });
+  }
+
+  if (aibBulkDelete) {
+    aibBulkDelete.addEventListener('click', async () => {
+      if (selectedIds.size === 0) return;
+      const count = selectedIds.size;
+      const confirmed = await rcConfirm('Delete Selected', 'Permanently delete ' + count + ' generation' + (count === 1 ? '' : 's') + '? This cannot be undone.', 'Delete', { danger: true });
+      if (!confirmed) return;
+      aibBulkDelete.disabled = true;
+      try {
+        const ids = Array.from(selectedIds);
+        const res = await fetch('/.netlify/functions/teacher-ai-builder-update', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ids }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          console.warn('[tc-ai-builder] Bulk delete failed:', data.error || res.status);
+        }
+      } catch (err) {
+        console.warn('[tc-ai-builder] Bulk delete error:', err.message);
+      } finally {
+        aibBulkDelete.disabled = false;
+      }
+      clearSelection();
+      loadHistory();
     });
   }
 
@@ -962,6 +1119,25 @@
           showMsg(aibMsg, 'Generation complete! (Note: history could not be saved.)', 'ok');
         } else {
           console.log('[tc-ai-builder] Output auto-saved to history');
+          // Auto-supersede the source record if this was a Regenerate action
+          const newSavedId = saveData.id;
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (regeneratingFromId && newSavedId && uuidPattern.test(String(regeneratingFromId)) && uuidPattern.test(String(newSavedId))) {
+            const oldId = regeneratingFromId;
+            regeneratingFromId = null;
+            try {
+              await fetch('/.netlify/functions/teacher-ai-builder-update', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ ids: [oldId], status: 'superseded', superseded_by: newSavedId }),
+              });
+            } catch (supersedeErr) {
+              console.warn('[tc-ai-builder] Auto-supersede failed (non-critical):', supersedeErr.message);
+            }
+          } else {
+            regeneratingFromId = null;
+          }
         }
       } catch (saveErr) {
         console.warn('[tc-ai-builder] Auto-save failed (non-critical):', saveErr.message);
