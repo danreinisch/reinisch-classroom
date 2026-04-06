@@ -1212,9 +1212,18 @@ function parsePandocJsonToBookPages(title, jsonString) {
         case 'SmallCaps':
           flattenInlines(el.c || [], words);
           break;
-        case 'Quoted':
+        case 'Quoted': {
+          const qType = el.c[0] && el.c[0].t;
+          const openQ = qType === 'SingleQuote' ? '\u2018' : '\u201C';
+          const closeQ = qType === 'SingleQuote' ? '\u2019' : '\u201D';
+          const startIdx = words.length;
           flattenInlines(el.c[1] || [], words);
+          if (words.length > startIdx) {
+            words[startIdx] = openQ + words[startIdx];
+            words[words.length - 1] = words[words.length - 1] + closeQ;
+          }
           break;
+        }
         case 'Link':
           flattenInlines(el.c[1] || [], words);
           break;
@@ -1265,7 +1274,18 @@ function parsePandocJsonToBookPages(title, jsonString) {
     switch (block.t) {
       case 'Header': {
         const level = block.c[0];
-        if (level !== 1) break; // only level-1 headers drive chapter pagination
+        if (level !== 1) {
+          // Level-2+ headers: render as sub-headings within the current chapter
+          if (!foundFirstHeader || skipSection) break;
+          const subInlines = block.c[2] || [];
+          const subWords = [];
+          flattenInlines(subInlines, subWords);
+          const subText = subWords.join(' ').trim();
+          if (!subText) break;
+          currentParagraphs.push(['## ' + subText]);
+          currentWordCount += subWords.filter(Boolean).length;
+          break;
+        }
         const inlines = block.c[2] || [];
         const words = [];
         flattenInlines(inlines, words);

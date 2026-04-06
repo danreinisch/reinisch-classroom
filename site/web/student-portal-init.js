@@ -3869,6 +3869,16 @@
         <button class="st-book-nav-btn" id="bookPrevBtn">← Previous</button>
         <div class="st-book-page-info" id="bookPageInfo"></div>
         <button class="st-book-nav-btn" id="bookNextBtn">Next →</button>
+        <div class="st-book-font-controls" style="display:flex;align-items:center;gap:4px;">
+          <button class="st-book-nav-btn" id="bookFontDecBtn" title="Decrease font size" style="padding:8px 10px;font-weight:700;">A−</button>
+          <button class="st-book-nav-btn" id="bookFontIncBtn" title="Increase font size" style="padding:8px 10px;font-weight:700;">A+</button>
+        </div>
+        <div class="st-book-mode-btns" style="display:flex;align-items:center;gap:2px;">
+          <button class="st-book-nav-btn st-book-mode-btn" data-mode="default" title="Default mode" style="padding:8px 10px;">🌙</button>
+          <button class="st-book-nav-btn st-book-mode-btn" data-mode="warm" title="Warm (sepia) mode" style="padding:8px 10px;">📖</button>
+          <button class="st-book-nav-btn st-book-mode-btn" data-mode="contrast" title="High contrast mode" style="padding:8px 10px;">◑</button>
+          <button class="st-book-nav-btn st-book-mode-btn" data-mode="light" title="Light mode" style="padding:8px 10px;">☀️</button>
+        </div>
         <div class="st-book-tts-wrapper" style="position:relative;display:flex;align-items:center;gap:6px;">
           <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
           <button class="st-book-nav-btn st-book-tts-settings-btn" id="bookTtsSettingsBtn" title="TTS settings" style="padding:8px 10px;">⚙️</button>
@@ -3899,6 +3909,35 @@
     panel.querySelector('#bookTtsBtn').addEventListener('click', toggleBookTts);
     panel.querySelector('#bookTtsPause').addEventListener('click', pauseResumeBookTts);
     panel.querySelector('#bookTtsStop').addEventListener('click', stopBookTts);
+
+    // Font size controls
+    const FONT_MIN = 14, FONT_MAX = 28, FONT_STEP = 2, FONT_DEFAULT = 18;
+    const bookContent = panel.querySelector('#bookContent');
+    let currentFontSize = parseInt(localStorage.getItem('rc_book_font_size') || String(FONT_DEFAULT), 10);
+    function applyFontSize(size) {
+      currentFontSize = Math.min(FONT_MAX, Math.max(FONT_MIN, size));
+      if (bookContent) bookContent.style.fontSize = currentFontSize + 'px';
+      localStorage.setItem('rc_book_font_size', String(currentFontSize));
+    }
+    applyFontSize(currentFontSize);
+    panel.querySelector('#bookFontDecBtn').addEventListener('click', function () { applyFontSize(currentFontSize - FONT_STEP); });
+    panel.querySelector('#bookFontIncBtn').addEventListener('click', function () { applyFontSize(currentFontSize + FONT_STEP); });
+
+    // Reading mode controls
+    const savedMode = localStorage.getItem('rc_book_reading_mode') || 'default';
+    panel.setAttribute('data-book-mode', savedMode);
+    panel.querySelectorAll('.st-book-mode-btn').forEach(function (btn) {
+      const mode = btn.getAttribute('data-mode');
+      btn.classList.toggle('st-book-mode-btn-active', mode === savedMode);
+      btn.addEventListener('click', function () {
+        const m = btn.getAttribute('data-mode');
+        panel.setAttribute('data-book-mode', m);
+        localStorage.setItem('rc_book_reading_mode', m);
+        panel.querySelectorAll('.st-book-mode-btn').forEach(function (b) {
+          b.classList.toggle('st-book-mode-btn-active', b.getAttribute('data-mode') === m);
+        });
+      });
+    });
 
     // TTS settings popover
     const settingsBtn = panel.querySelector('#bookTtsSettingsBtn');
@@ -3968,6 +4007,7 @@
 
     // Save progress
     localStorage.setItem(state.storageKey, String(currentPage));
+    localStorage.setItem(state.storageKey + '_total', String(bookData.totalPages));
 
     // Update page info
     const pageInfo = document.getElementById('bookPageInfo');
@@ -4004,13 +4044,21 @@
     let wordIdx = 0;
     let html = '';
     for (const para of (pageObj.paragraphs || [])) {
-      html += '<p>';
-      for (let wi = 0; wi < para.length; wi++) {
-        if (wi > 0) html += ' ';
-        html += `<span class="st-book-word" data-word-idx="${wordIdx}">${escapeHtml(para[wi])}</span>`;
+      const firstWord = para[0] || '';
+      if (para.length === 1 && firstWord.startsWith('## ')) {
+        // Sub-heading paragraph
+        const headingText = firstWord.slice(3);
+        html += `<h3 class="st-book-subheading"><span class="st-book-word" data-word-idx="${wordIdx}">${escapeHtml(headingText)}</span></h3>`;
         wordIdx++;
+      } else {
+        html += '<p>';
+        for (let wi = 0; wi < para.length; wi++) {
+          if (wi > 0) html += ' ';
+          html += `<span class="st-book-word" data-word-idx="${wordIdx}">${escapeHtml(para[wi])}</span>`;
+          wordIdx++;
+        }
+        html += '</p>';
       }
-      html += '</p>';
     }
     content.innerHTML = html || '<p style="opacity:0.5">No content.</p>';
     content.scrollTop = 0;
@@ -4087,7 +4135,7 @@
     stopBookTts();
 
     // Build per-paragraph data: text, wordOffset (start of this para in allWordSpans), spanCount
-    const paragraphEls = Array.from(content.querySelectorAll('p'));
+    const paragraphEls = Array.from(content.querySelectorAll('p, h3.st-book-subheading'));
     const paraData = [];
     let globalOffset = 0;
     for (const p of paragraphEls) {
@@ -4253,7 +4301,7 @@
       for (const r of resources) {
         const svg = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
         const safeTitle = r.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        html += '<a class="st-resource-card" href="' + r.link + '" target="_blank" rel="noopener" data-resource-link="' + r.link + '" data-resource-title="' + safeTitle + '">' + svg + '<div class="st-resource-card-title">' + safeTitle + '</div><div class="st-resource-card-badge" style="display:none;font-size:12px;margin-top:6px;opacity:0.75;">📖 Read inline</div></a>';
+        html += '<a class="st-resource-card" href="' + r.link + '" target="_blank" rel="noopener" data-resource-link="' + r.link + '" data-resource-title="' + safeTitle + '">' + svg + '<div class="st-resource-card-title">' + safeTitle + '</div><div class="st-resource-card-badge" style="display:none;font-size:12px;margin-top:6px;opacity:0.75;">📖 Read inline</div><div class="st-resource-progress" style="display:none;margin-top:8px;"></div></a>';
       }
       html += '</div>';
       el.innerHTML = html;
@@ -4278,6 +4326,20 @@
               e.preventDefault();
               openBookReader(link, title);
             });
+            // Show reading progress if available
+            const storageKey = 'rc_book_page_' + encodeURIComponent(link);
+            const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
+            const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
+            if (savedPage > 0 && savedTotal > 0) {
+              const pct = Math.round(savedPage / savedTotal * 100);
+              const progressEl = card.querySelector('.st-resource-progress');
+              if (progressEl) {
+                progressEl.innerHTML =
+                  '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' \u00b7 ' + pct + '% read</div>' +
+                  '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
+                progressEl.style.display = 'block';
+              }
+            }
           }
         }).catch(function () { /* no book-pages.json, leave as external link */ });
       });
