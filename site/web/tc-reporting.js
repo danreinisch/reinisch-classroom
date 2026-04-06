@@ -3500,7 +3500,7 @@ ${narrative}`;
           <div class="rp-ev-mode-group" id="tab6AudienceGroup">${audienceBtns}</div>
         </div>
         <div class="rp-filter-group">
-          <div class="rp-ev-ctrl-label">Date Range</div>
+          <label class="rp-ev-ctrl-label" for="tab6DateRange">Date Range</label>
           <select id="tab6DateRange" class="rp-select">
             ${dateRangeHtml}
           </select>
