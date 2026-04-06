@@ -83,6 +83,7 @@ exports.handler = async function(event) {
   }
 
   var ids = body.ids;
+  // ids have been validated against UUID_RE above — safe to interpolate into PostgREST query
   var idFilter = '/rest/v1/ai_builder_outputs?id=in.(' + ids.join(',') + ')';
 
   if (event.httpMethod === 'DELETE') {

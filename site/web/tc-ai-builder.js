@@ -441,7 +441,8 @@
       // UUID format validation for use in element IDs and data attributes
       const safeId = /^[0-9a-f-_]{1,64}$/i.test(String(o.id || '')) ? String(o.id) : '';
       // Full UUID validation for superseded_by link
-      const supersededByUuid = o.superseded_by && UUID_PATTERN.test(String(o.superseded_by)) ? String(o.superseded_by) : '';
+      const supersededByStr = String(o.superseded_by || '');
+      const supersededByUuid = supersededByStr && UUID_PATTERN.test(supersededByStr) ? supersededByStr : '';
 
       card.dataset.type = taskType;
       card.dataset.status = status;
@@ -1123,6 +1124,7 @@
         const saveData = await saveRes.json().catch(() => ({}));
         if (!saveRes.ok || !saveData.ok) {
           console.warn('[tc-ai-builder] Auto-save to history failed:', saveData.error || saveRes.status);
+          regeneratingFromId = null;
           showMsg(aibMsg, 'Generation complete! (Note: history could not be saved.)', 'ok');
         } else {
           console.log('[tc-ai-builder] Output auto-saved to history, id=' + saveData.id);
@@ -1145,6 +1147,7 @@
           }
         }
       } catch (saveErr) {
+        regeneratingFromId = null;
         console.warn('[tc-ai-builder] Auto-save failed (non-critical):', saveErr.message);
       }
     } catch (err) {
