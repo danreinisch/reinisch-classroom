@@ -105,6 +105,9 @@
   let regeneratingFromId = null;
   const selectedIds = new Set();
 
+  // UUID format validation pattern (reused throughout)
+  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   function showMsg(el, text, type) {
@@ -343,7 +346,6 @@
     // Validate a value against an allowlist; return fallback if not in list
     const allowedStatuses = ['active', 'superseded', 'archived'];
     const allowedTypes = ['assignments', 'presentations', 'both', 'dataProbe'];
-    const UUID_RE_LOCAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     const taskLabels = { assignments: 'Assignments', presentations: 'Presentations', both: 'Both', dataProbe: 'Data Probe' };
 
@@ -391,7 +393,7 @@
       const showReissue = taskType === 'assignments' || taskType === 'both' || taskType === 'dataProbe';
 
       // Validate superseded_by UUID for safe display
-      const safeSupersededBy = o.superseded_by && UUID_RE_LOCAL.test(String(o.superseded_by)) ? String(o.superseded_by) : '';
+      const safeSupersededBy = o.superseded_by && UUID_PATTERN.test(String(o.superseded_by)) ? String(o.superseded_by) : '';
 
       card.innerHTML =
         '<div class="aib-history-meta">' +
@@ -1121,8 +1123,7 @@
           console.log('[tc-ai-builder] Output auto-saved to history');
           // Auto-supersede the source record if this was a Regenerate action
           const newSavedId = saveData.id;
-          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (regeneratingFromId && newSavedId && uuidPattern.test(String(regeneratingFromId)) && uuidPattern.test(String(newSavedId))) {
+          if (regeneratingFromId && newSavedId && UUID_PATTERN.test(String(regeneratingFromId)) && UUID_PATTERN.test(String(newSavedId))) {
             const oldId = regeneratingFromId;
             regeneratingFromId = null;
             try {
