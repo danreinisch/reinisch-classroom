@@ -1213,9 +1213,9 @@ function parsePandocJsonToBookPages(title, jsonString) {
           flattenInlines(el.c || [], words);
           break;
         case 'Quoted': {
-          const qType = el.c[0] && el.c[0].t;
-          const openQ = qType === 'SingleQuote' ? '\u2018' : '\u201C';
-          const closeQ = qType === 'SingleQuote' ? '\u2019' : '\u201D';
+          const quoteType = el.c[0] && el.c[0].t;
+          const openQ = quoteType === 'SingleQuote' ? '\u2018' : '\u201C';
+          const closeQ = quoteType === 'SingleQuote' ? '\u2019' : '\u201D';
           const startIdx = words.length;
           flattenInlines(el.c[1] || [], words);
           if (words.length > startIdx) {

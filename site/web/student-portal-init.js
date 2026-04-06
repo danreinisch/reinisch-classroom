@@ -3870,7 +3870,7 @@
         <div class="st-book-page-info" id="bookPageInfo"></div>
         <button class="st-book-nav-btn" id="bookNextBtn">Next →</button>
         <div class="st-book-font-controls" style="display:flex;align-items:center;gap:4px;">
-          <button class="st-book-nav-btn" id="bookFontDecBtn" title="Decrease font size" style="padding:8px 10px;font-weight:700;">A−</button>
+          <button class="st-book-nav-btn" id="bookFontDecBtn" title="Decrease font size" style="padding:8px 10px;font-weight:700;">A-</button>
           <button class="st-book-nav-btn" id="bookFontIncBtn" title="Increase font size" style="padding:8px 10px;font-weight:700;">A+</button>
         </div>
         <div class="st-book-mode-btns" style="display:flex;align-items:center;gap:2px;">
@@ -4331,12 +4331,10 @@
             const savedPage = parseInt(localStorage.getItem(storageKey) || '0', 10);
             const savedTotal = parseInt(localStorage.getItem(storageKey + '_total') || '0', 10);
             if (savedPage > 0 && savedTotal > 0) {
-              const pct = Math.round(savedPage / savedTotal * 100);
+              const pct = Math.round(savedPage / Math.max(1, savedTotal) * 100);
               const progressEl = card.querySelector('.st-resource-progress');
               if (progressEl) {
-                progressEl.innerHTML =
-                  '<div class="st-resource-progress-text">Page ' + savedPage + ' of ' + savedTotal + ' \u00b7 ' + pct + '% read</div>' +
-                  '<div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:' + pct + '%"></div></div>';
+                progressEl.innerHTML = `<div class="st-resource-progress-text">Page ${savedPage} of ${savedTotal} \u00b7 ${pct}% read</div><div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:${pct}%"></div></div>`;
                 progressEl.style.display = 'block';
               }
             }

@@ -1520,11 +1520,11 @@
         color: #e0f0ff;
       }
 
-      /* Active state for reading mode buttons */
-      .st-book-mode-btn-active {
-        background: rgba(59, 130, 246, 0.2) !important;
-        border-color: rgba(59, 130, 246, 0.5) !important;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+      /* Active state for reading mode buttons — use double-class for higher specificity than .st-book-nav-btn */
+      .st-book-mode-btn.st-book-mode-btn-active {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
       }
 
       /* ---- Reading mode: Warm (sepia) ---- */
@@ -1781,9 +1781,9 @@
         background: #d1d5db;
       }
 
-      [data-theme="light"] .st-book-mode-btn-active {
-        background: #bfdbfe !important;
-        border-color: #3b82f6 !important;
+      [data-theme="light"] .st-book-mode-btn.st-book-mode-btn-active {
+        background: #bfdbfe;
+        border-color: #3b82f6;
       }
 
       /* Mobile responsive */
