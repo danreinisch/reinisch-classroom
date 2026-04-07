@@ -1242,7 +1242,7 @@ ${narrative}`;
     );
     const rangedInstances = studentInstances.filter((inst) => {
       const d = new Date(inst.assigned_at || inst.created_at || '');
-      return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+      return !isNaN(d.getTime()) && (d >= startDate && d <= endDate);
     });
     const total = rangedInstances.length;
     let completed = 0;
