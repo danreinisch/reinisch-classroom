@@ -1510,6 +1510,7 @@
     card.appendChild(instanceBadge);
 
     if (assignment.series && !assignment.series.startsWith('http')) {
+      // Skip URL values (e.g. linked resources) — only show human-readable series/class names
       const seriesEl = document.createElement('div');
       seriesEl.style.cssText = 'margin-bottom:8px; display:inline-flex; align-items:center; gap:6px;';
       const seriesIcon = createIcon('users', 12);
@@ -1550,7 +1551,7 @@
     issueBtn.dataset.id = assignment.id || '';
     issueBtn.style.cssText = 'flex:1; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:6px;';
     issueBtn.appendChild(createIcon('arrowRight', 14));
-    issueBtn.appendChild(document.createTextNode(' Launch'));
+    issueBtn.appendChild(document.createTextNode('Launch'));
     btnRow.appendChild(issueBtn);
     card.appendChild(btnRow);
 
@@ -3098,6 +3099,7 @@
       if (filters.finalized.dateTo.trim()) {
         const toDate = new Date(filters.finalized.dateTo);
         if (!isNaN(toDate.getTime())) {
+          // Set to end of the "To" day so the filter is fully inclusive
           toDate.setHours(23, 59, 59, 999);
           finalizedList = finalizedList.filter(a => {
             const d = getFinalizationDate(a, instancesData, submissionsData);
