@@ -1520,6 +1520,10 @@
         color: #e0f0ff;
       }
 
+      .st-book-word.tts-read {
+        color: rgba(147, 197, 253, 0.7);
+      }
+
       /* Active state for reading mode buttons — use double-class for higher specificity than .st-book-nav-btn */
       .st-book-mode-btn.st-book-mode-btn-active {
         background: rgba(59, 130, 246, 0.2);
@@ -1548,6 +1552,10 @@
         color: #fff8e7;
       }
 
+      .st-book-panel[data-book-mode="warm"] .st-book-word.tts-read {
+        color: rgba(212, 180, 131, 0.65);
+      }
+
       /* ---- Reading mode: High Contrast ---- */
       .st-book-panel[data-book-mode="contrast"] .st-book-content {
         background: #000;
@@ -1569,6 +1577,10 @@
         color: #000;
       }
 
+      .st-book-panel[data-book-mode="contrast"] .st-book-word.tts-read {
+        color: rgba(255, 255, 255, 0.55);
+      }
+
       /* ---- Reading mode: Light ---- */
       .st-book-panel[data-book-mode="light"] .st-book-content {
         background: #faf8f4;
@@ -1588,6 +1600,10 @@
         background: rgba(59, 130, 246, 0.25);
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
         color: #1e3a8a;
+      }
+
+      .st-book-panel[data-book-mode="light"] .st-book-word.tts-read {
+        color: rgba(100, 116, 139, 0.7);
       }
 
       .st-book-nav {
