@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Return to Counting Money – 6-Day Assignment</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
+.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
+.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
+.header p{font-size:0.95rem;color:#8b949e;}
+.day-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;background:#0d1117;border-bottom:1px solid #21262d;}
+.day-tab{flex-shrink:0;padding:8px 20px;border:2px solid #30363d;border-radius:10px;background:#161b22;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.day-tab:hover{border-color:#14b8a6;color:#14b8a6;}
+.day-tab.active{border-color:#14b8a6;background:rgba(20,184,166,0.12);color:#14b8a6;}
+.day-tab.done{border-color:#22c55e;color:#22c55e;}
+.day-panel{display:none;padding:20px 24px 80px;}
+.day-panel.active{display:block;}
+.day-heading{font-size:1.2rem;font-weight:700;color:#e6edf3;margin-bottom:6px;}
+.day-sub{font-size:0.85rem;color:#8b949e;margin-bottom:20px;}
+.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:20px 0 10px;}
+.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
+.q-card:focus-within{border-color:#14b8a6;}
+.q-card.correct{border-color:#22c55e;}
+.q-card.incorrect{border-color:#ef4444;}
+.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
+.q-prompt{font-size:1rem;font-weight:400;color:#e6edf3;line-height:1.5;margin-bottom:12px;}
+.money-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 14px;}
+.coin-wrap{cursor:pointer;display:inline-block;transition:transform 0.15s;position:relative;}
+.coin-wrap:hover{transform:translateY(-3px);}
+.bill-wrap{display:inline-block;transition:transform 0.15s;}
+.bill-wrap:hover{transform:translateY(-3px);}
+.sep{width:2px;height:44px;background:#30363d;border-radius:1px;margin:0 4px;align-self:center;}
+.q-input-row{display:flex;align-items:center;gap:10px;}
+.dollar-label{font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:#5eead4;font-weight:700;}
+.q-input{font-family:'JetBrains Mono',monospace;font-size:1.1rem;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:8px 14px;color:#e6edf3;width:120px;outline:none;transition:border-color 0.2s;}
+.q-input:focus{border-color:#14b8a6;}
+.q-feedback{font-size:0.8rem;margin-top:6px;display:none;}
+.q-card.correct .q-feedback{display:block;color:#22c55e;}
+.q-card.incorrect .q-feedback{display:block;color:#ef4444;}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;}
+.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
+.score-display span{color:#14b8a6;font-weight:700;}
+.btn-row{display:flex;gap:10px;}
+.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-save{background:#30363d;color:#e6edf3;}
+.btn-save:hover{background:#484f58;}
+.btn-submit{background:#14b8a6;color:#0d1117;}
+.btn-submit:hover{background:#0d9488;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Return to Counting Money</h1>
+  <p>6-Day Assignment &nbsp;·&nbsp; Fill in the dollar amount for each group of coins and bills</p>
+</div>
+
+<div class="day-tabs">
+  <button class="day-tab active" onclick="showDay(0)">Day 1</button>
+  <button class="day-tab" onclick="showDay(1)">Day 2</button>
+  <button class="day-tab" onclick="showDay(2)">Day 3</button>
+  <button class="day-tab" onclick="showDay(3)">Day 4</button>
+  <button class="day-tab" onclick="showDay(4)">Day 5</button>
+  <button class="day-tab" onclick="showDay(5)">Day 6</button>
+</div>
+
+<!-- ═══════════════════════ DAY 1 ═══════════════════════ -->
+<div class="day-panel active" id="day0">
+  <div class="day-heading">Day 1 – Counting Coins</div>
+  <div class="day-sub">Count each group of coins and write the total amount.</div>
+
+  <div class="q-card" data-qref="D1Q1" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q0">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="4 quarters">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q1" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q2" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q1">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="3 dimes, 2 nickels">
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <div class="sep"></div>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q2" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q3" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q2">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="2 quarters, 1 dime, 1 nickel">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="nickel"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q3" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q4" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q3">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="1 quarter, 3 pennies">
+      <span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q4" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q5" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q4">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="2 dimes, 4 pennies">
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q5" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q6" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q5">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="3 quarters, 2 dimes">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q6" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q7" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q6">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="5 nickels, 3 pennies">
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q7" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q8" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q7">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="1 quarter, 2 dimes, 1 nickel, 2 pennies">
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q8" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q9" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q8">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="4 dimes, 3 nickels">
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <div class="sep"></div>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q9" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q10" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d0q9">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Count the coins shown below. What is the total?</div>
+    <div class="money-row" aria-label="2 quarters, 1 dime, 2 nickels, 3 pennies">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D1Q10" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DAY 2 ═══════════════════════ -->
+<div class="day-panel" id="day1">
+  <div class="day-heading">Day 2 – Adding Coins</div>
+  <div class="day-sub">Part A: Quarters and Dimes &nbsp;|&nbsp; Part B: Nickels and Pennies</div>
+
+  <div class="part-label">Part A – Quarters &amp; Dimes</div>
+
+  <div class="q-card" data-qref="D2Q1" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qa0">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="3 quarters, 1 dime">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q1" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q2" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qa1">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="2 quarters, 3 dimes">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q2" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q3" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qa2">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="4 quarters, 2 dimes">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q3" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q4" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qa3">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="1 quarter, 4 dimes">
+      <span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q4" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q5" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qa4">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="3 quarters, 4 dimes">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q5" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="part-label">Part B – Nickels &amp; Pennies</div>
+
+  <div class="q-card" data-qref="D2Q6" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qb0">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="6 nickels, 4 pennies">
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q6" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q7" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qb1">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="4 nickels, 7 pennies">
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q7" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q8" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qb2">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="3 nickels, 9 pennies">
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q8" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q9" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qb3">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="8 nickels, 2 pennies">
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q9" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q10" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d1qb4">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">How much money is shown?</div>
+    <div class="money-row" aria-label="5 nickels, 5 pennies">
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <div class="sep"></div>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D2Q10" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DAY 3 ═══════════════════════ -->
+<div class="day-panel" id="day2">
+  <div class="day-heading">Day 3 – Mixed Coins</div>
+  <div class="day-sub">Part A: Mixed coins &nbsp;|&nbsp; Part B: Coins with bills</div>
+
+  <div class="part-label">Part A – Mixed Coins</div>
+
+  <div class="q-card" data-qref="D3Q1" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qa0">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="1 quarter, 2 dimes, 3 nickels, 2 pennies">
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q1" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q2" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qa1">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="2 quarters, 1 dime, 2 nickels, 4 pennies">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q2" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q3" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qa2">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="3 quarters, 2 dimes, 1 nickel, 3 pennies">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q3" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q4" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qa3">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="1 quarter, 3 dimes, 4 nickels, 1 penny">
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q4" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q5" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qa4">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="4 quarters, 1 dime, 1 nickel, 5 pennies">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span>
+      <span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q5" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="part-label">Part B – Coins with Bills</div>
+
+  <div class="q-card" data-qref="D3Q6" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qb0">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Count the bill and coins. What is the total?</div>
+    <div class="money-row" aria-label="$1 bill, 2 quarters">
+      <span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q6" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q7" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qb1">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">Count the bill and coins. What is the total?</div>
+    <div class="money-row" aria-label="$1 bill, 3 dimes, 1 nickel">
+      <span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q7" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q8" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qb2">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">Count the bill and coins. What is the total?</div>
+    <div class="money-row" aria-label="$5 bill, 1 quarter, 2 dimes">
+      <span data-bill="5"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q8" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q9" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qb3">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Count the bill and coins. What is the total?</div>
+    <div class="money-row" aria-label="$1 bill, 1 quarter, 1 dime, 1 nickel, 1 penny">
+      <span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span>
+      <span data-coin="nickel"></span>
+      <span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q9" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q10" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d2qb4">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Count the bill and coins. What is the total?</div>
+    <div class="money-row" aria-label="$5 bill, 3 quarters, 2 pennies">
+      <span data-bill="5"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D3Q10" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DAY 4 ═══════════════════════ -->
+<div class="day-panel" id="day3">
+  <div class="day-heading">Day 4 – Bills and Coins Together</div>
+  <div class="day-sub">Count the bills and coins to find the total amount.</div>
+
+  <div class="q-card" data-qref="D4Q1" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q0">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$1 bill, $1 bill, 3 quarters">
+      <span data-bill="1"></span><span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q1" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q2" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q1">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$5 bill, 2 dimes, 1 nickel">
+      <span data-bill="5"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q2" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q3" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q2">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$10 bill, 1 quarter, 3 pennies">
+      <span data-bill="10"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q3" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q4" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q3">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$1 bill, $5 bill, 2 quarters, 1 dime">
+      <span data-bill="1"></span><span data-bill="5"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q4" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q5" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q4">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$20 bill, 3 dimes, 2 nickels, 4 pennies">
+      <span data-bill="20"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q5" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q6" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q5">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$5 bill, $1 bill, 4 quarters">
+      <span data-bill="5"></span><span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q6" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q7" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q6">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$10 bill, $5 bill, 2 dimes, 3 pennies">
+      <span data-bill="10"></span><span data-bill="5"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q7" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q8" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q7">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$1 bill, 1 quarter, 2 dimes, 2 nickels, 1 penny">
+      <span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q8" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q9" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q8">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$20 bill, $1 bill, 3 quarters, 1 nickel">
+      <span data-bill="20"></span><span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="nickel"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q9" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q10" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d3q9">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">What is the total amount shown?</div>
+    <div class="money-row" aria-label="$10 bill, $5 bill, $1 bill, 2 quarters, 3 dimes, 2 pennies">
+      <span data-bill="10"></span><span data-bill="5"></span><span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D4Q10" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DAY 5 ═══════════════════════ -->
+<div class="day-panel" id="day4">
+  <div class="day-heading">Day 5 – Making Change</div>
+  <div class="day-sub">Read each shopping problem and write how much change you would receive.</div>
+
+  <div class="q-card" data-qref="D5Q1" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q0">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">You pay $1.00 for an item that costs $0.75. How much change do you get back?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q1" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q2" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q1">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">You pay $5.00 for a snack that costs $3.50. How much change do you get back?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q2" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q3" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q2">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">You pay $10.00 for a book that costs $7.25. How much change do you get back?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q3" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q4" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q3">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">A drink costs $1.35. You give the cashier $2.00. How much change do you receive?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q4" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q5" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q4">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">You buy lunch for $4.60. You pay with a $5.00 bill. What is your change?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q5" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q6" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q5">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">A magazine costs $3.99. You pay with $5.00. How much change will you get?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q6" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q7" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q6">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">You pay $20.00 for groceries that cost $14.78. What is your change?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q7" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q8" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q7">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">A bus pass costs $2.50. You hand the driver $3.00. How much change do you get?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q8" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q9" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q8">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">You buy a pen for $0.89. You pay with $1.00. How much change do you receive?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q9" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D5Q10" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d4q9">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">A bottle of water costs $1.25. You pay with $2.00. What is your change?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D5Q10" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DAY 6 ═══════════════════════ -->
+<div class="day-panel" id="day5">
+  <div class="day-heading">Day 6 – Review &amp; Application</div>
+  <div class="day-sub">Part A: Coin counting review &nbsp;|&nbsp; Part B: Bills and coins &nbsp;|&nbsp; Part C: Word problems</div>
+
+  <div class="part-label">Part A – Coin Counting Review</div>
+
+  <div class="q-card" data-qref="D6Q1" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qa0">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="3 quarters, 2 dimes, 1 penny">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q1" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q2" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qa1">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="2 quarters, 3 nickels, 6 pennies">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q2" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q3" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qa2">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="1 quarter, 4 dimes, 2 nickels, 3 pennies">
+      <span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q3" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q4" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qa3">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Count all the coins. What is the total?</div>
+    <div class="money-row" aria-label="4 quarters, 3 dimes, 2 nickels, 4 pennies">
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q4" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="part-label">Part B – Bills and Coins</div>
+
+  <div class="q-card" data-qref="D6Q5" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qb0">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">What is the total amount?</div>
+    <div class="money-row" aria-label="$5 bill, $1 bill, 3 quarters, 1 dime">
+      <span data-bill="5"></span><span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q5" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q6" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qb1">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">What is the total amount?</div>
+    <div class="money-row" aria-label="$10 bill, 2 quarters, 2 dimes, 3 pennies">
+      <span data-bill="10"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span><span data-coin="quarter"></span>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q6" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q7" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qb2">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">What is the total amount?</div>
+    <div class="money-row" aria-label="$20 bill, $5 bill, 1 quarter, 3 nickels, 2 pennies">
+      <span data-bill="20"></span><span data-bill="5"></span>
+      <div class="sep"></div>
+      <span data-coin="quarter"></span>
+      <span data-coin="nickel"></span><span data-coin="nickel"></span><span data-coin="nickel"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q7" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q8" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qb3">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">What is the total amount?</div>
+    <div class="money-row" aria-label="$1 bill, $1 bill, $1 bill, 2 dimes, 4 pennies">
+      <span data-bill="1"></span><span data-bill="1"></span><span data-bill="1"></span>
+      <div class="sep"></div>
+      <span data-coin="dime"></span><span data-coin="dime"></span>
+      <span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span><span data-coin="penny"></span>
+    </div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q8" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="part-label">Part C – Word Problems</div>
+
+  <div class="q-card" data-qref="D6Q9" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qc0">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Maria has 2 quarters, 3 dimes, and 4 pennies in her pocket. How much money does she have?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q9" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q10" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qc1">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Jake pays for a $0.85 candy with 1 dollar. The cashier gives him back 1 dime and 1 nickel. Is that the correct change?  Write the change amount you should receive.</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q10" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q11" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qc2">
+    <div class="q-num">Question 11</div>
+    <div class="q-prompt">You have a $5 bill and 3 quarters. You want to buy a sandwich that costs $5.50. Do you have enough? How much money do you have in total?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q11" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D6Q12" data-goal="S008.11.1;S016.11.4" data-points="1" data-answer-type="constructed" id="d5qc3">
+    <div class="q-num">Question 12</div>
+    <div class="q-prompt">You earn $20 doing chores. You spend $8.75 at the store. How much money do you have left?</div>
+    <div class="q-input-row"><span class="dollar-label">$</span><input class="q-input" type="text" placeholder="0.00" name="D6Q12" autocomplete="off" inputmode="decimal"></div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ BOTTOM BAR ═══════════════════════ -->
+<div class="bottom-bar">
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">62</span></div>
+  <div class="btn-row">
+    <button class="btn btn-save" onclick="autosave()">Save Progress</button>
+    <button class="btn btn-submit" onclick="submitAll()">Submit Assignment</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var COIN_DATA = {
+    quarter: { r: 28, fill: '#C0C0C0', stroke: '#888', label: '25¢', w: 66, h: 66 },
+    dime:    { r: 22, fill: '#D4D4D4', stroke: '#999', label: '10¢', w: 54, h: 54 },
+    nickel:  { r: 26, fill: '#C0C0C0', stroke: '#888', label: '5¢',  w: 62, h: 62 },
+    penny:   { r: 26, fill: '#b87333', stroke: '#8B5A2B', label: '1¢', w: 62, h: 62 }
+  };
+
+  var BILL_NAMES = { 1: 'ONE', 5: 'FIVE', 10: 'TEN', 20: 'TWENTY' };
+
+  function makeCoinSVG(type) {
+    var c = COIN_DATA[type];
+    var cx = c.w / 2, cy = c.h / 2;
+    return '<svg width="' + c.w + '" height="' + c.h + '" viewBox="0 0 ' + c.w + ' ' + c.h + '" aria-hidden="true">'
+      + '<circle cx="' + cx + '" cy="' + cy + '" r="' + c.r + '" fill="' + c.fill + '" stroke="' + c.stroke + '" stroke-width="2"/>'
+      + '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="#333" font-family="Outfit,sans-serif" font-weight="700" font-size="11">' + c.label + '</text>'
+      + '</svg>';
+  }
+
+  function makeBillSVG(value) {
+    var name = BILL_NAMES[value] || '';
+    return '<svg width="100" height="46" viewBox="0 0 140 64" aria-hidden="true">'
+      + '<rect x="2" y="2" width="136" height="60" rx="6" fill="#2d5a27" stroke="#1a3a18" stroke-width="2"/>'
+      + '<rect x="7" y="7" width="126" height="50" rx="3" fill="none" stroke="#4a8a42" stroke-width="1" stroke-dasharray="3 2"/>'
+      + '<text x="70" y="29" text-anchor="middle" fill="#c5e8c0" font-family="Outfit,sans-serif" font-weight="800" font-size="22">$' + value + '</text>'
+      + '<text x="70" y="50" text-anchor="middle" fill="#8ab885" font-family="Outfit,sans-serif" font-size="10">' + name + '</text>'
+      + '</svg>';
+  }
+
+  function renderMoney() {
+    document.querySelectorAll('[data-coin]').forEach(function (el) {
+      el.className = 'coin-wrap';
+      el.innerHTML = makeCoinSVG(el.dataset.coin);
+      el.title = el.dataset.coin + ' (' + COIN_DATA[el.dataset.coin].label + ')';
+    });
+    document.querySelectorAll('[data-bill]').forEach(function (el) {
+      el.className = 'bill-wrap';
+      el.innerHTML = makeBillSVG(el.dataset.bill);
+      el.title = '$' + el.dataset.bill + ' bill';
+    });
+  }
+
+  function showDay(index) {
+    document.querySelectorAll('.day-panel').forEach(function (p, i) {
+      p.classList.toggle('active', i === index);
+    });
+    document.querySelectorAll('.day-tab').forEach(function (t, i) {
+      t.classList.toggle('active', i === index);
+    });
+  }
+  window.showDay = showDay;
+
+  function getAnswers() {
+    var answers = {};
+    document.querySelectorAll('.q-input').forEach(function (inp) {
+      var val = inp.value.trim();
+      if (val) answers[inp.name] = val;
+    });
+    return answers;
+  }
+
+  function updateCount() {
+    var filled = 0;
+    document.querySelectorAll('.q-input').forEach(function (inp) {
+      if (inp.value.trim()) filled++;
+    });
+    var el = document.getElementById('answeredCount');
+    if (el) el.textContent = String(filled);
+  }
+
+  function postMsg(type) {
+    var answers = getAnswers();
+    if (Object.keys(answers).length === 0) {
+      alert('Please answer at least one question before saving.');
+      return;
+    }
+    window.parent.postMessage({ type: type, answers: answers }, '*');
+  }
+
+  function autosave() { postMsg('rc-assignment-autosave'); }
+  function submitAll() {
+    if (!confirm('Are you sure you want to submit your assignment? You cannot change your answers after submitting.')) return;
+    postMsg('rc-assignment-submit');
+  }
+  window.autosave = autosave;
+  window.submitAll = submitAll;
+
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.classList.contains('q-input')) updateCount();
+  });
+
+  renderMoney();
+  updateCount();
+}());
+</script>
+</body>
+</html>
