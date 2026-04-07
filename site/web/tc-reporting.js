@@ -656,6 +656,31 @@
     // Grades section
     html += renderGradesForQuarter(tab1State.studentCode, quarterRange);
 
+    // AI Narrative section
+    html += `
+      <div class="rp-ai-narrative-section" id="aiNarrativeSection">
+        <div class="rp-ai-narrative-header">
+          <h3 class="rp-section-heading" style="margin:0;">✨ AI Progress Narrative</h3>
+          <div class="rp-ai-narrative-controls">
+            <label for="tab1NarrativeAudience" style="font-size:13px; opacity:0.85;">Audience:</label>
+            <select id="tab1NarrativeAudience" class="rp-select" style="min-width:120px;">
+              <option value="admin">Admin / IEP Team</option>
+              <option value="parent">Parent / Guardian</option>
+            </select>
+            <button class="tc-btn tc-btn-primary" id="btnGenerateNarrative" type="button">✨ Generate Narrative</button>
+          </div>
+        </div>
+        <div id="aiNarrativeResult" style="display:none;">
+          <textarea id="aiNarrativeText" class="rp-narrative-edit" rows="10" style="width:100%; margin-top:12px; font-size:14px; line-height:1.6;"></textarea>
+          <div class="rp-ai-narrative-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="tc-btn tc-btn-small" id="btnCopyNarrative" type="button">📋 Copy</button>
+            <button class="tc-btn tc-btn-small" id="btnRegenerateNarrative" type="button">🔄 Regenerate</button>
+          </div>
+        </div>
+        <div id="aiNarrativeError" style="display:none;" class="rp-error"></div>
+      </div>
+    `;
+
     // Export buttons
     html += `
       <div class="rp-export-actions">
@@ -1187,6 +1212,154 @@ ${narrative}`;
         });
       });
     });
+
+    // Attach AI narrative generation listeners (iep-progress template only)
+    const btnGenerateNarrative = $('btnGenerateNarrative');
+    const btnCopyNarrative = $('btnCopyNarrative');
+    const btnRegenerateNarrative = $('btnRegenerateNarrative');
+
+    /**
+     * Build the goals payload for the AI narrative API.
+     */
+    function buildNarrativeGoalsPayload() {
+      const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+      return studentGoals.map((goal) => {
+        const gp = getGoalProgressForQuarter(goal.code, tab1State.studentCode, quarterRange);
+        const prevGp = prevQuarterRange
+          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
+          : null;
+
+        let trend = 'neutral';
+        if (gp.average != null && prevGp && prevGp.average != null) {
+          if (gp.average > prevGp.average) trend = 'up';
+          else if (gp.average < prevGp.average) trend = 'down';
+        }
+
+        return {
+          code: goal.code,
+          description: goal.desc || '',
+          area: goal.goal_area || '',
+          baseline: goal.baseline || '',
+          target: goal.mastery || goal.target || '',
+          currentValue: gp.average != null ? Math.round(gp.average * 10) / 10 : null,
+          trend: trend,
+          dataPoints: gp.entries.map((e) => ({ date: e.date, value: e.value })),
+        };
+      });
+    }
+
+    /**
+     * Build the assignment stats payload for the AI narrative API.
+     */
+    function buildNarrativeAssignmentsPayload() {
+      if (!quarterRange.start || !quarterRange.end) return null;
+      const startDate = new Date(quarterRange.start);
+      const endDate = new Date(quarterRange.end);
+      const studentInstances = instancesData.filter((inst) => {
+        if (inst.student_code !== tab1State.studentCode && inst.student_id !== tab1State.studentCode) return false;
+        if (!inst.assigned_at) return false;
+        const d = new Date(inst.assigned_at);
+        return d >= startDate && d <= endDate;
+      });
+      const total = studentInstances.length;
+      let completed = 0;
+      let totalScore = 0;
+      let scoredCount = 0;
+      studentInstances.forEach((inst) => {
+        const sub = submissionsData.find((s) => s.instance_id === inst.id);
+        if (sub) {
+          completed++;
+          if (sub.score_total != null) {
+            totalScore += parseFloat(sub.score_total) || 0;
+            scoredCount++;
+          }
+        }
+      });
+      return {
+        total,
+        completed,
+        averageScore: scoredCount > 0 ? Math.round((totalScore / scoredCount) * 10) / 10 : null,
+      };
+    }
+
+    async function requestNarrative() {
+      const btn = $('btnGenerateNarrative');
+      const regenBtn = $('btnRegenerateNarrative');
+      const resultDiv = $('aiNarrativeResult');
+      const errorDiv = $('aiNarrativeError');
+      const textArea = $('aiNarrativeText');
+      const audienceSelect = $('tab1NarrativeAudience');
+
+      if (!btn) return;
+
+      // Disable buttons and show loading state
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating…';
+      if (regenBtn) regenBtn.disabled = true;
+      if (resultDiv) resultDiv.style.display = 'none';
+      if (errorDiv) errorDiv.style.display = 'none';
+
+      try {
+        const goalsPayload = buildNarrativeGoalsPayload();
+        const assignmentsPayload = buildNarrativeAssignmentsPayload();
+        const audience = (audienceSelect && audienceSelect.value) || 'admin';
+
+        const res = await fetch('/.netlify/functions/teacher-ai-report-narrative', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentCode: tab1State.studentCode,
+            studentName: student.name || student.code,
+            goals: goalsPayload,
+            assignments: assignmentsPayload,
+            quarter: getQuarterLabel(tab1State.quarter),
+            audience: audience,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.ok && data.narrative) {
+          if (textArea) textArea.value = data.narrative;
+          if (resultDiv) resultDiv.style.display = 'block';
+        } else {
+          if (errorDiv) {
+            errorDiv.textContent = '⚠️ ' + (data.error || 'Narrative generation failed. Please try again.');
+            errorDiv.style.display = 'block';
+          }
+        }
+      } catch (err) {
+        console.error('[tc-reporting] AI narrative request failed:', err);
+        if (errorDiv) {
+          errorDiv.textContent = '⚠️ Network error. Please check your connection and try again.';
+          errorDiv.style.display = 'block';
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '✨ Generate Narrative';
+        }
+        if (regenBtn) regenBtn.disabled = false;
+      }
+    }
+
+    if (btnGenerateNarrative) {
+      btnGenerateNarrative.addEventListener('click', requestNarrative);
+    }
+    if (btnCopyNarrative) {
+      btnCopyNarrative.addEventListener('click', () => {
+        const textArea = $('aiNarrativeText');
+        if (!textArea || !textArea.value) return;
+        navigator.clipboard.writeText(textArea.value).then(() => {
+          showToast('✅ Narrative copied to clipboard!');
+        }).catch(async err => {
+          console.error('Failed to copy narrative:', err);
+          await rcAlert('Error', 'Failed to copy to clipboard');
+        });
+      });
+    }
+    if (btnRegenerateNarrative) {
+      btnRegenerateNarrative.addEventListener('click', requestNarrative);
+    }
     } catch (err) {
       renderTabErrorCard(container, renderTab1, err);
     }
