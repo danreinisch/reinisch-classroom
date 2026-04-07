@@ -782,7 +782,7 @@
     // Auto-Grade button — visible when there are unreviewed submissions with unscored items
     if (autoGradeBtn) {
       autoGradeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>';
-      autoGradeBtn.append(` \uD83E\uDD16 Auto-Grade All (${autoGradeCount})`);
+      autoGradeBtn.append(` 🤖 Auto-Grade All (${autoGradeCount})`);
       autoGradeBtn.disabled = autoGradeCount === 0;
       autoGradeBtn.setAttribute('aria-label', `Auto-grade all unreviewed submissions with AI (${autoGradeCount})`);
       autoGradeBtn.style.display = '';
@@ -791,7 +791,7 @@
     // Finalize All Reviewed button — visible only when there are reviewed submissions
     if (finalizeReviewedBtn) {
       finalizeReviewedBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-      finalizeReviewedBtn.append(` \u2705 Finalize All Reviewed (${reviewedCount})`);
+      finalizeReviewedBtn.append(` ✅ Finalize All Reviewed (${reviewedCount})`);
       finalizeReviewedBtn.disabled = reviewedCount === 0;
       finalizeReviewedBtn.setAttribute('aria-label', `Finalize all reviewed submissions (${reviewedCount})`);
       finalizeReviewedBtn.style.display = reviewedCount > 0 ? '' : 'none';
@@ -2035,7 +2035,7 @@
             });
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
           const gradedAt = new Date().toISOString();
-          const gradedBy = localStorage.getItem('rc_teacher_name') || 'AI Auto-Grade';
+          const gradedBy = localStorage.getItem('rc_teacher_name') || 'Teacher (AI-Assisted)';
 
           await db.upsertSubmission({
             id: submission.id,
