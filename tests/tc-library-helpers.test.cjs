@@ -242,10 +242,13 @@ function computeLane(assignment, allInstances) {
   const instances = allInstances.filter(i => i.assignment_id === assignment.id);
   if (instances.length === 0) {
     if (assignment.active === false) return 'finalized';
+    if (assignment.finalized_at) return 'finalized';
     return 'upcoming';
   }
   // Per-assignment: if the teacher marked the assignment inactive, it's finalized
   if (assignment.active === false) return 'finalized';
+  // Explicitly finalized via timestamp (e.g. teacher pressed "Finalize")
+  if (assignment.finalized_at) return 'finalized';
   const anyActive = instances.some(i =>
     ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
   );
@@ -326,6 +329,48 @@ test('mix of Graded and Reviewed → Finalized', () => {
     { assignment_id: 'A1', status: 'Reviewed' }
   ];
   assert.strictEqual(computeLane({ id: 'A1' }, inst), 'finalized');
+});
+
+test('finalized_at present + no instances → Finalized', () => {
+  assert.strictEqual(
+    computeLane({ id: 'A1', finalized_at: '2025-01-01T00:00:00Z' }, []),
+    'finalized'
+  );
+});
+
+test('finalized_at present + active instances → still Finalized (timestamp wins)', () => {
+  const inst = [
+    { assignment_id: 'A1', status: 'Submitted' },
+    { assignment_id: 'A1', status: 'In Progress' }
+  ];
+  assert.strictEqual(
+    computeLane({ id: 'A1', finalized_at: '2025-01-01T00:00:00Z' }, inst),
+    'finalized'
+  );
+});
+
+test('finalized_at present + active=true → Finalized (timestamp wins over active flag)', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Assigned' }];
+  assert.strictEqual(
+    computeLane({ id: 'A1', active: true, finalized_at: '2025-03-01T12:00:00Z' }, inst),
+    'finalized'
+  );
+});
+
+test('finalized_at null → not finalized by that field', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Assigned' }];
+  assert.strictEqual(
+    computeLane({ id: 'A1', finalized_at: null }, inst),
+    'current'
+  );
+});
+
+test('finalized_at empty string → not finalized by that field', () => {
+  const inst = [{ assignment_id: 'A1', status: 'Assigned' }];
+  assert.strictEqual(
+    computeLane({ id: 'A1', finalized_at: '' }, inst),
+    'current'
+  );
 });
 
 test('Reviewed with active instances → Current', () => {
