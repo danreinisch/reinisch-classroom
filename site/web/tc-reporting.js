@@ -1369,6 +1369,8 @@ ${narrative}`;
     const endStr = quarterRange.end instanceof Date ? quarterRange.end.toISOString().slice(0, 10) : String(quarterRange.end || '');
 
     try {
+      const audienceSelect = $("tab3AiTrendsAudience");
+      const audience = audienceSelect ? audienceSelect.value : 'admin';
       const res = await fetch('/.netlify/functions/teacher-ai-analyze-trends', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1378,6 +1380,7 @@ ${narrative}`;
           goals: classGoals.slice(0, 50),
           dateRange: { start: startStr, end: endStr },
           dataPoints: dataPointsPayload,
+          audience: audience,
         }),
         credentials: 'same-origin',
       });
@@ -1752,6 +1755,9 @@ ${narrative}`;
           setTimeout(() => { btnCopyNarrative.textContent = original; }, 2000);
         }).catch((err) => {
           console.error('[tc-reporting] Failed to copy narrative:', err);
+          const original = btnCopyNarrative.textContent;
+          btnCopyNarrative.textContent = '❌ Copy failed';
+          setTimeout(() => { btnCopyNarrative.textContent = original; }, 2000);
         });
       });
     }
@@ -2916,9 +2922,14 @@ ${narrative}`;
       <div style="margin-top:20px;padding:16px;border:2px solid #c4b5fd;border-radius:8px;background:#faf5ff;">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <strong style="color:#6d28d9;">✨ AI Trend Analysis</strong>
+          <label for="tab3AiTrendsAudience" style="color:#6d28d9;font-weight:600;">Audience:</label>
+          <select id="tab3AiTrendsAudience" class="rp-select" style="width:auto;margin:0 8px;">
+            <option value="admin">Administrator / IEP Team</option>
+            <option value="parent">Parent / Guardian</option>
+          </select>
           <button class="tc-btn" id="tab3BtnAnalyzeTrends" type="button">✨ Analyze Trends</button>
         </div>
-        <span id="tab3AiTrendsStatus" style="display:none;margin-top:8px;display:none;color:#555;font-style:italic;"></span>
+        <span id="tab3AiTrendsStatus" style="display:none;margin-top:8px;color:#555;font-style:italic;"></span>
         <div id="tab3AiTrendsResult" style="display:none;margin-top:12px;">
           <textarea id="tab3AiTrendsText" rows="10" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.6;border:1px solid #c4b5fd;border-radius:4px;padding:8px;background:#fff;resize:vertical;"></textarea>
           <div style="margin-top:8px;display:flex;gap:8px;">
@@ -2997,6 +3008,9 @@ ${narrative}`;
           setTimeout(() => { btnCopyTrends.textContent = original; }, 2000);
         }).catch((err) => {
           console.error('[tc-reporting] Failed to copy trend analysis:', err);
+          const original = btnCopyTrends.textContent;
+          btnCopyTrends.textContent = '❌ Copy failed';
+          setTimeout(() => { btnCopyTrends.textContent = original; }, 2000);
         });
       });
     }
@@ -3509,7 +3523,7 @@ ${narrative}`;
           <strong style="color:#6d28d9;">✨ AI Compliance Notes</strong>
           <button class="tc-btn" id="tab4BtnDraftNotes" type="button">✨ Draft Compliance Notes</button>
         </div>
-        <span id="tab4AiNotesStatus" style="display:none;margin-top:8px;display:none;color:#555;font-style:italic;"></span>
+        <span id="tab4AiNotesStatus" style="display:none;margin-top:8px;color:#555;font-style:italic;"></span>
         <div id="tab4AiNotesResult" style="display:none;margin-top:12px;">
           <textarea id="tab4AiNotesText" rows="12" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.6;border:1px solid #c4b5fd;border-radius:4px;padding:8px;background:#fff;resize:vertical;"></textarea>
           <div style="margin-top:8px;display:flex;gap:8px;">
@@ -3578,6 +3592,9 @@ ${narrative}`;
           setTimeout(() => { btnCopyNotes.textContent = original; }, 2000);
         }).catch((err) => {
           console.error('[tc-reporting] Failed to copy compliance notes:', err);
+          const original = btnCopyNotes.textContent;
+          btnCopyNotes.textContent = '❌ Copy failed';
+          setTimeout(() => { btnCopyNotes.textContent = original; }, 2000);
         });
       });
     }
@@ -5186,6 +5203,9 @@ ${narrative}`;
             setTimeout(() => { btnCopySummary.textContent = original; }, 2000);
           }).catch((err) => {
             console.error('[tc-reporting] Failed to copy executive summary:', err);
+            const original = btnCopySummary.textContent;
+            btnCopySummary.textContent = '❌ Copy failed';
+            setTimeout(() => { btnCopySummary.textContent = original; }, 2000);
           });
         });
       }
