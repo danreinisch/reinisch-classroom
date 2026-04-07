@@ -661,6 +661,7 @@
         <button class="tc-btn" id="btnCopyAllSpedTrack" type="button">📋 Copy All Goals for SpedTrack</button>
         <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
         <button class="tc-btn" id="btnExportDOCX" type="button">📄 Export as DOCX</button>
+        <button class="tc-btn" id="btnCopyEmailBody" type="button">📋 Copy as Email Body</button>
       </div>
       </div>
     `;
@@ -768,6 +769,7 @@
     html += `
       <div class="rp-export-actions">
         <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
+        <button class="tc-btn" id="btnCopyEmailBody" type="button">📋 Copy as Email Body</button>
       </div>
       </div>
     `;
@@ -873,6 +875,7 @@
     html += `
       <div class="rp-export-actions">
         <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
+        <button class="tc-btn" id="btnCopyEmailBody" type="button">📋 Copy as Email Body</button>
       </div>
       </div>
     `;
@@ -932,6 +935,83 @@ Status: ${richStatus}
 
 Progress Summary:
 ${narrative}`;
+  }
+
+  /**
+   * Build plain-text email body for a Tab 1 IEP Quarterly Progress report.
+   * For parent-audience reports, raw scores are omitted (isParent flag).
+   * @param {Object} student - student object
+   * @param {Array} studentGoals - active IEP goals for this student
+   * @param {Object} quarterRange - { start, end } date range
+   * @param {boolean} isParent - whether to use parent-friendly (simplified) view
+   * @returns {string} plain-text email body
+   */
+  function buildTab1EmailBodyText(student, studentGoals, quarterRange, isParent) {
+    const quarterLabel = getQuarterLabel(tab1State.quarter);
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const studentName = student.name || student.code;
+    const lines = [];
+
+    // Header
+    lines.push('IEP Quarterly Progress Update');
+    lines.push(`Student: ${studentName}`);
+    lines.push(`Reporting Period: ${quarterLabel}`);
+    lines.push(`Date: ${todayLabel}`);
+    lines.push('');
+    lines.push('─'.repeat(50));
+    lines.push('');
+
+    // IEP Goal Progress — FERPA: only this student's goals
+    lines.push('IEP GOAL PROGRESS');
+    lines.push('');
+
+    if (studentGoals.length === 0) {
+      lines.push('  No active IEP goals found for this student.');
+    } else {
+      const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+      for (const goal of studentGoals) {
+        const gp = getGoalProgressForQuarter(goal.code, tab1State.studentCode, quarterRange);
+        const prevGp = prevQuarterRange
+          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
+          : null;
+        const { status, narrative } = buildRichProgressNarrative(student, goal, gp, prevGp, tab1State.quarter);
+
+        // Progress display — respect isParent flag
+        let progressText;
+        if (isParent) {
+          if (gp.average == null) {
+            progressText = 'No data yet';
+          } else if (gp.average >= 80) {
+            progressText = 'On track';
+          } else if (gp.average >= 60) {
+            progressText = 'Making progress';
+          } else {
+            progressText = 'Needs support';
+          }
+        } else {
+          progressText = gp.average != null
+            ? formatGoalValue(gp.average, goal.measurement_type, goal)
+            : 'No data';
+        }
+
+        const areaLabel = goal.goal_area || goal.area || '';
+        lines.push(`\u2022 ${goal.code}${areaLabel ? ` \u2014 ${areaLabel}` : ''}`);
+        if (goal.desc) lines.push(`  ${goal.desc}`);
+        lines.push(`  Progress: ${progressText}  |  Status: ${status}`);
+        if (!isParent) {
+          lines.push(`  ${narrative}`);
+          lines.push(`  Data points: ${gp.count}`);
+        }
+        lines.push('');
+      }
+    }
+
+    lines.push('─'.repeat(50));
+    lines.push('');
+    lines.push('Please contact me if you have any questions about this progress update.');
+    lines.push('');
+
+    return lines.join('\n');
   }
 
   /**
@@ -1171,6 +1251,24 @@ ${narrative}`;
         }).catch(async err => {
           console.error('Failed to copy:', err);
           await rcAlert('Error', 'Failed to copy to clipboard');
+        });
+      });
+    }
+
+    const btnCopyEmailBody = $("btnCopyEmailBody");
+    if (btnCopyEmailBody) {
+      const isParentView = tab1State.template === 'parent-summary';
+      btnCopyEmailBody.addEventListener('click', () => {
+        const emailText = buildTab1EmailBodyText(student, studentGoals, quarterRange, isParentView);
+        navigator.clipboard.writeText(emailText).then(() => {
+          const original = btnCopyEmailBody.textContent;
+          btnCopyEmailBody.textContent = '\u2713 Copied!';
+          setTimeout(() => { btnCopyEmailBody.textContent = original; }, 2000);
+        }).catch((err) => {
+          console.error('[tc-reporting] Failed to copy email body:', err);
+          const original = btnCopyEmailBody.textContent;
+          btnCopyEmailBody.textContent = 'Copy failed';
+          setTimeout(() => { btnCopyEmailBody.textContent = original; }, 2000);
         });
       });
     }
@@ -3904,6 +4002,151 @@ ${narrative}`;
   }
 
   /**
+   * Build plain-text email body for a student's evidence report (Tab 6).
+   * Extracts key information from already-computed report data and formats
+   * it as clean plain text suitable for pasting into an email.
+   * For parent-audience reports, raw scores are omitted (respects isParent flag).
+   * @param {Object} student - student object
+   * @param {Object} quarterRange - { start, end } date range
+   * @param {boolean} isParent - whether to use parent-friendly (simplified) view
+   * @returns {string} plain-text email body
+   */
+  function buildEvidenceEmailBodyText(student, quarterRange, isParent) {
+    const periodLabel = getTab6PeriodLabel();
+    const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const studentName = student.name || student.code;
+    const lines = [];
+
+    // Header
+    lines.push('Student Progress Update');
+    lines.push(`Student: ${studentName}`);
+    lines.push(`Report Period: ${periodLabel}`);
+    lines.push(`Date: ${todayLabel}`);
+    lines.push('');
+    lines.push('─'.repeat(50));
+    lines.push('');
+
+    // IEP Goal Progress — FERPA: only this student's goals
+    const activeGoals = goalsData.filter(
+      (g) => g.student_code === student.code && isGoalActive(g)
+    );
+    lines.push('IEP GOAL PROGRESS');
+    lines.push('');
+
+    if (activeGoals.length === 0) {
+      lines.push('  No active IEP goals found for this student.');
+    } else {
+      // Determine previous period for trend calculation
+      const dr = tab6State.dateRange;
+      let prevRange = null;
+      if (dr === 'current-quarter') {
+        prevRange = getPreviousQuarterRange(getCurrentQuarter());
+      } else if (dr === 'Q1' || dr === 'Q2' || dr === 'Q3' || dr === 'Q4') {
+        prevRange = getPreviousQuarterRange(dr);
+      }
+
+      for (const goal of activeGoals) {
+        const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const prevData = prevRange ? getGoalProgressForQuarter(goal.code, student.code, prevRange) : null;
+
+        // Trend
+        let trendText = 'No data';
+        if (data.average != null) {
+          if (!prevData || prevData.average == null) {
+            trendText = 'New data';
+          } else if (data.average > prevData.average) {
+            trendText = 'Improving \u2191';
+          } else if (data.average < prevData.average) {
+            trendText = 'Declining \u2193';
+          } else {
+            trendText = 'Maintaining \u2192';
+          }
+        }
+
+        // Progress display — respect isParent flag
+        let progressText;
+        if (isParent) {
+          if (data.average == null) {
+            progressText = 'No data yet';
+          } else if (data.average >= 80) {
+            progressText = 'On track';
+          } else if (data.average >= 60) {
+            progressText = 'Making progress';
+          } else {
+            progressText = 'Needs support';
+          }
+        } else {
+          progressText = data.average != null
+            ? formatGoalValue(data.average, goal.measurement_type, goal)
+            : 'No data';
+        }
+
+        const areaLabel = goal.goal_area || goal.area || goal.skill_area || '';
+        lines.push(`\u2022 ${goal.code}${areaLabel ? ` \u2014 ${areaLabel}` : ''}`);
+        if (goal.desc) lines.push(`  ${goal.desc}`);
+        lines.push(`  Progress: ${progressText}  |  Trend: ${trendText}`);
+        if (!isParent) lines.push(`  Data points this period: ${data.count}`);
+        lines.push('');
+      }
+    }
+
+    lines.push('─'.repeat(50));
+    lines.push('');
+
+    // Assignment Summary
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    const rangedInstances = studentInstances.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      if (isNaN(d.getTime())) return true;
+      return d >= startDate && d <= endDate;
+    });
+
+    const scores = rangedInstances
+      .map((inst) => {
+        const sub = submissionsData.find(
+          (s) => s.instance_id === inst.id || (s.assignment_instances && s.assignment_instances.id === inst.id)
+        );
+        return sub?.score_total ?? sub?.score ?? null;
+      })
+      .filter((s) => s != null);
+
+    const totalAssignments = rangedInstances.length;
+    const gradedCount = scores.length;
+    const avgScore = gradedCount > 0
+      ? (scores.reduce((a, b) => a + b, 0) / gradedCount).toFixed(1)
+      : null;
+    const completionRate = totalAssignments > 0 ? Math.round((gradedCount / totalAssignments) * 100) : null;
+
+    lines.push('ASSIGNMENT SUMMARY');
+    lines.push('');
+    lines.push(`  Total assignments this period: ${totalAssignments}`);
+    if (completionRate != null) {
+      lines.push(`  Completion rate: ${completionRate}%`);
+    }
+    if (!isParent && avgScore != null) {
+      lines.push(`  Average score: ${avgScore}%`);
+    }
+    if (activeGoals.length > 0) {
+      const goalsOnTrack = activeGoals.filter((goal) => {
+        const data = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        return data.average != null && data.average >= 70;
+      }).length;
+      lines.push(`  Goals on track: ${goalsOnTrack} of ${activeGoals.length}`);
+    }
+    lines.push('');
+    lines.push('─'.repeat(50));
+    lines.push('');
+    lines.push('Please contact me if you have any questions about this progress update.');
+    lines.push('');
+
+    return lines.join('\n');
+  }
+
+  /**
    * Generate and render the evidence report for selected students
    */
   async function generateEvidenceReport() {
@@ -3981,6 +4224,7 @@ ${narrative}`;
         <button class="tc-btn" id="tab6PrintBtn" type="button">🖨️ Print / PDF</button>
         <button class="tc-btn" id="tab6PrintWindowBtn" type="button">🗗 Open in New Window</button>
         <button class="tc-btn" id="tab6CsvBtn" type="button">📊 Export CSV</button>
+        <button class="tc-btn" id="tab6CopyEmailBtn" type="button">📋 Copy as Email Body</button>
       </div>
     `;
 
@@ -4002,6 +4246,27 @@ ${narrative}`;
     const csvBtn = $("tab6CsvBtn");
     if (csvBtn) {
       csvBtn.addEventListener('click', () => exportEvidenceCSV(targetStudents, quarterRange));
+    }
+
+    const copyEmailBtn = $("tab6CopyEmailBtn");
+    if (copyEmailBtn) {
+      copyEmailBtn.addEventListener('click', () => {
+        // Build email text for all target students (FERPA: one section per student)
+        const sep = '\n\n' + '\u2550'.repeat(50) + '\n\n';
+        const emailText = targetStudents
+          .map((student) => buildEvidenceEmailBodyText(student, quarterRange, isParent))
+          .join(sep);
+        navigator.clipboard.writeText(emailText).then(() => {
+          const original = copyEmailBtn.textContent;
+          copyEmailBtn.textContent = '\u2713 Copied!';
+          setTimeout(() => { copyEmailBtn.textContent = original; }, 2000);
+        }).catch((err) => {
+          console.error('[tc-reporting] Failed to copy email body:', err);
+          const original = copyEmailBtn.textContent;
+          copyEmailBtn.textContent = 'Copy failed';
+          setTimeout(() => { copyEmailBtn.textContent = original; }, 2000);
+        });
+      });
     }
   }
 
