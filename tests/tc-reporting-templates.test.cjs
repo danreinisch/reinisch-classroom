@@ -17,6 +17,10 @@ const src = fs.readFileSync(srcPath, 'utf8');
 const modalSrc = fs.readFileSync(modalPath, 'utf8');
 const html = fs.readFileSync(htmlPath, 'utf8');
 
+// Search window sizes for source-scan tests
+const RENDER_TAB5_SEARCH_SIZE = 5000;
+const RENDER_TAB6_SEARCH_SIZE = 14000;
+
 // ── Test runner ───────────────────────────────────────────────────────────────
 
 let passed = 0;
@@ -51,7 +55,7 @@ function makeMockStorage(opts = {}) {
       delete store[key];
     },
     clear() {
-      Object.keys(store).forEach((k) => delete store[k]);
+      for (const k in store) delete store[k];
     },
     _store: store,
   };
@@ -289,43 +293,43 @@ console.log('\n--- Tab 6 template UI in renderTab6 ---');
 test('renderTab6 includes tab6TemplateSelect dropdown', () => {
   const fnIdx = src.indexOf('function renderTab6(');
   assert.ok(fnIdx !== -1, 'renderTab6 not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   assert.ok(fnSection.includes('tab6TemplateSelect'), 'renderTab6 should include tab6TemplateSelect');
 });
 
 test('renderTab6 includes tab6SaveTemplateBtn', () => {
   const fnIdx = src.indexOf('function renderTab6(');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   assert.ok(fnSection.includes('tab6SaveTemplateBtn'), 'renderTab6 should include tab6SaveTemplateBtn');
 });
 
 test('renderTab6 includes tab6DeleteTemplateBtn', () => {
   const fnIdx = src.indexOf('function renderTab6(');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   assert.ok(fnSection.includes('tab6DeleteTemplateBtn'), 'renderTab6 should include tab6DeleteTemplateBtn');
 });
 
 test('renderTab6 calls buildTemplateOptionsHtml', () => {
   const fnIdx = src.indexOf('function renderTab6(');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   assert.ok(fnSection.includes('buildTemplateOptionsHtml()'), 'renderTab6 should call buildTemplateOptionsHtml()');
 });
 
 test('renderTab6 template save uses rcPrompt', () => {
   const fnIdx = src.indexOf('function renderTab6(');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   assert.ok(fnSection.includes('rcPrompt'), 'renderTab6 template save should use rcPrompt');
 });
 
 test('renderTab6 template delete uses rcConfirm with danger', () => {
   const fnIdx = src.indexOf('function renderTab6(');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   assert.ok(fnSection.includes('danger: true') || fnSection.includes("danger:true"), 'renderTab6 delete should use danger confirm');
 });
 
 test('renderTab6 template section appears before selection mode', () => {
   const fnIdx = src.indexOf('function renderTab6(');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB6_SEARCH_SIZE);
   const templatePos = fnSection.indexOf('tab6TemplateSelect');
   const modePos = fnSection.indexOf('tab6ModeGroup');
   assert.ok(templatePos < modePos, 'Template row should appear before Selection Mode row in renderTab6');
@@ -359,25 +363,25 @@ console.log('\n--- Tab 5 template wiring in renderTab5 ---');
 test('renderTab5 populates batchTemplateSelect', () => {
   const fnIdx = src.indexOf('function renderTab5(');
   assert.ok(fnIdx !== -1, 'renderTab5 not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB5_SEARCH_SIZE);
   assert.ok(fnSection.includes('batchTemplateSelect'), 'renderTab5 should handle batchTemplateSelect');
 });
 
 test('renderTab5 wires batchSaveTemplateBtn', () => {
   const fnIdx = src.indexOf('function renderTab5(');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB5_SEARCH_SIZE);
   assert.ok(fnSection.includes('batchSaveTemplateBtn'), 'renderTab5 should wire batchSaveTemplateBtn');
 });
 
 test('renderTab5 wires batchDeleteTemplateBtn', () => {
   const fnIdx = src.indexOf('function renderTab5(');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB5_SEARCH_SIZE);
   assert.ok(fnSection.includes('batchDeleteTemplateBtn'), 'renderTab5 should wire batchDeleteTemplateBtn');
 });
 
 test('renderTab5 applies quarter from template when loading', () => {
   const fnIdx = src.indexOf('function renderTab5(');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB5_SEARCH_SIZE);
   assert.ok(
     fnSection.includes("tab5State.quarter = quarter") || fnSection.includes("tab5State.quarter=quarter"),
     'renderTab5 should apply quarter from loaded template'
@@ -386,7 +390,7 @@ test('renderTab5 applies quarter from template when loading', () => {
 
 test('renderTab5 derives quarter from dateRange (Q1-Q4) when loading cross-tab template', () => {
   const fnIdx = src.indexOf('function renderTab5(');
-  const fnSection = src.slice(fnIdx, fnIdx + 5000);
+  const fnSection = src.slice(fnIdx, fnIdx + RENDER_TAB5_SEARCH_SIZE);
   assert.ok(
     fnSection.includes("tpl.dateRange"),
     'renderTab5 should check tpl.dateRange as a fallback quarter source'

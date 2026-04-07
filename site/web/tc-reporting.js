@@ -3063,6 +3063,7 @@ ${narrative}`;
 
   const REPORT_TEMPLATES_KEY = 'rc_report_templates';
   const MAX_REPORT_TEMPLATES = 20;
+  const VALID_QUARTER_VALUES = ['Q1', 'Q2', 'Q3', 'Q4'];
 
   /**
    * Load all saved report templates from localStorage.
@@ -3179,7 +3180,7 @@ ${narrative}`;
         const tpl = loadReportTemplates().find((t) => t.name === name);
         if (!tpl) return;
         // Derive quarter from template — direct field or a Q1-Q4 dateRange
-        const quarter = tpl.quarter || (['Q1', 'Q2', 'Q3', 'Q4'].includes(tpl.dateRange) ? tpl.dateRange : null);
+        const quarter = tpl.quarter || (VALID_QUARTER_VALUES.includes(tpl.dateRange) ? tpl.dateRange : null);
         if (quarter) {
           tab5State.quarter = quarter;
           const qSel = $("batchQuarterSelect");
