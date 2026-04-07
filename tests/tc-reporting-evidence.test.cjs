@@ -81,6 +81,13 @@ function getTab6DateRange(tab6State) {
     start: tab6State.customStart || '2000-01-01',
     end: tab6State.customEnd || '2099-12-31',
   };
+  // Semester / full-year ranges (using 2025-2026 school year for tests)
+  const extendedRanges = {
+    'semester-1': { start: '2025-08-01', end: '2026-01-31' },
+    'semester-2': { start: '2026-02-01', end: '2026-06-30' },
+    'full-year':  { start: '2025-08-01', end: '2026-06-30' },
+  };
+  if (extendedRanges[dr]) return extendedRanges[dr];
   const ranges = {
     Q1: { start: '2025-08-16', end: '2025-10-17' },
     Q2: { start: '2025-10-18', end: '2025-12-19' },
@@ -222,6 +229,62 @@ test('Q3 date range has correct boundaries', () => {
   const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'Q3' });
   const range = getTab6DateRange(state);
   assert.ok(range.start.startsWith('2026-01'), `Expected Q3 start in Jan, got ${range.start}`);
+});
+
+test('semester-1 date range starts in August', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-1' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.start.startsWith('2025-08'), `Expected Semester 1 start in Aug, got ${range.start}`);
+});
+
+test('semester-1 date range ends in January', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-1' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.end.startsWith('2026-01'), `Expected Semester 1 end in Jan, got ${range.end}`);
+});
+
+test('semester-2 date range starts in February', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-2' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.start.startsWith('2026-02'), `Expected Semester 2 start in Feb, got ${range.start}`);
+});
+
+test('semester-2 date range ends in June', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-2' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.end.startsWith('2026-06'), `Expected Semester 2 end in Jun, got ${range.end}`);
+});
+
+test('full-year date range starts in August', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'full-year' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.start.startsWith('2025-08'), `Expected Full Year start in Aug, got ${range.start}`);
+});
+
+test('full-year date range ends in June', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'full-year' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.end.startsWith('2026-06'), `Expected Full Year end in Jun, got ${range.end}`);
+});
+
+test('semester-1 start is before semester-1 end', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-1' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.start < range.end, 'Semester 1 start must be before end');
+});
+
+test('semester-2 start is before semester-2 end', () => {
+  const state = Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-2' });
+  const range = getTab6DateRange(state);
+  assert.ok(range.start < range.end, 'Semester 2 start must be before end');
+});
+
+test('full-year spans both semesters', () => {
+  const s1 = getTab6DateRange(Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-1' }));
+  const s2 = getTab6DateRange(Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'semester-2' }));
+  const fy = getTab6DateRange(Object.assign({}, DEFAULT_TAB6_STATE, { dateRange: 'full-year' }));
+  assert.ok(fy.start <= s1.start, 'Full Year start should be at or before Semester 1 start');
+  assert.ok(fy.end >= s2.end, 'Full Year end should be at or after Semester 2 end');
 });
 
 // ── 4. Score color helper ─────────────────────────────────────────────────────
@@ -564,6 +627,36 @@ test('generateEvidenceReport function declared in tc-reporting.js', () => {
 
 test('exportEvidenceCSV function declared in tc-reporting.js', () => {
   assert.ok(src.includes('function exportEvidenceCSV('), 'exportEvidenceCSV not found');
+});
+
+// ── 17. Semester / full-year date range options ───────────────────────────────
+
+console.log('\n--- Semester / full-year date range options (source checks) ---');
+
+test('tc-reporting.js includes semester-1 option in date range selector', () => {
+  assert.ok(src.includes("'semester-1'"), "tc-reporting.js should include 'semester-1' value");
+});
+
+test('tc-reporting.js includes semester-2 option in date range selector', () => {
+  assert.ok(src.includes("'semester-2'"), "tc-reporting.js should include 'semester-2' value");
+});
+
+test('tc-reporting.js includes full-year option in date range selector', () => {
+  assert.ok(src.includes("'full-year'"), "tc-reporting.js should include 'full-year' value");
+});
+
+test('tc-reporting.js handles semester-1 in getTab6DateRange', () => {
+  assert.ok(
+    src.includes("dr === 'semester-1'") || src.includes('getSchoolYearDateRange'),
+    'getTab6DateRange should handle semester-1'
+  );
+});
+
+test('tc-reporting.js imports getSchoolYearDateRange from quarter-utils', () => {
+  assert.ok(
+    src.includes('getSchoolYearDateRange'),
+    'tc-reporting.js should import and use getSchoolYearDateRange'
+  );
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────

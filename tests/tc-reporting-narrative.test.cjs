@@ -398,6 +398,128 @@ test('quarter date ranges advance by 1 year for following school year', () => {
   assert.strictEqual(q1Next.end.getFullYear(), 2026);
 });
 
+// ── Semester / full-year date ranges (2025-2026 school year) ─────────────────
+
+console.log('\n--- Semester / full-year date ranges (2025-2026 school year) ---');
+
+// Mirror of getSchoolYearDateRange logic from quarter-utils.js
+function getSchoolYearDateRange(period, referenceDate) {
+  const now = referenceDate || new Date();
+  const schoolYear = getSchoolYear(now);
+  if (period === 'semester-1') {
+    return { start: new Date(schoolYear, 7, 1), end: new Date(schoolYear + 1, 0, 31) };
+  }
+  if (period === 'semester-2') {
+    return { start: new Date(schoolYear + 1, 1, 1), end: new Date(schoolYear + 1, 5, 30) };
+  }
+  if (period === 'full-year') {
+    return { start: new Date(schoolYear, 7, 1), end: new Date(schoolYear + 1, 5, 30) };
+  }
+  return null;
+}
+
+test('Semester 1 starts Aug 1 of school year', () => {
+  const range = getSchoolYearDateRange('semester-1', jan2026);
+  assert.strictEqual(range.start.getFullYear(), 2025);
+  assert.strictEqual(range.start.getMonth(), 7); // August
+  assert.strictEqual(range.start.getDate(), 1);
+});
+
+test('Semester 1 ends Jan 31 of following calendar year', () => {
+  const range = getSchoolYearDateRange('semester-1', jan2026);
+  assert.strictEqual(range.end.getFullYear(), 2026);
+  assert.strictEqual(range.end.getMonth(), 0); // January
+  assert.strictEqual(range.end.getDate(), 31);
+});
+
+test('Semester 2 starts Feb 1 of following calendar year', () => {
+  const range = getSchoolYearDateRange('semester-2', jan2026);
+  assert.strictEqual(range.start.getFullYear(), 2026);
+  assert.strictEqual(range.start.getMonth(), 1); // February
+  assert.strictEqual(range.start.getDate(), 1);
+});
+
+test('Semester 2 ends Jun 30 of following calendar year', () => {
+  const range = getSchoolYearDateRange('semester-2', jan2026);
+  assert.strictEqual(range.end.getFullYear(), 2026);
+  assert.strictEqual(range.end.getMonth(), 5); // June
+  assert.strictEqual(range.end.getDate(), 30);
+});
+
+test('Full Year starts Aug 1 of school year', () => {
+  const range = getSchoolYearDateRange('full-year', jan2026);
+  assert.strictEqual(range.start.getFullYear(), 2025);
+  assert.strictEqual(range.start.getMonth(), 7); // August
+  assert.strictEqual(range.start.getDate(), 1);
+});
+
+test('Full Year ends Jun 30 of following calendar year', () => {
+  const range = getSchoolYearDateRange('full-year', jan2026);
+  assert.strictEqual(range.end.getFullYear(), 2026);
+  assert.strictEqual(range.end.getMonth(), 5); // June
+  assert.strictEqual(range.end.getDate(), 30);
+});
+
+test('Full Year start equals Semester 1 start', () => {
+  const s1 = getSchoolYearDateRange('semester-1', jan2026);
+  const fy = getSchoolYearDateRange('full-year', jan2026);
+  assert.deepStrictEqual(fy.start, s1.start);
+});
+
+test('Full Year end equals Semester 2 end', () => {
+  const s2 = getSchoolYearDateRange('semester-2', jan2026);
+  const fy = getSchoolYearDateRange('full-year', jan2026);
+  assert.deepStrictEqual(fy.end, s2.end);
+});
+
+test('Semester 1 end is before Semester 2 start', () => {
+  const s1 = getSchoolYearDateRange('semester-1', jan2026);
+  const s2 = getSchoolYearDateRange('semester-2', jan2026);
+  assert.ok(s1.end < s2.start, 'Semester 1 end should be before Semester 2 start');
+});
+
+test('school year date ranges advance by 1 for following year', () => {
+  const aug2026 = new Date(2026, 7, 20); // Aug 20, 2026 = 2026-2027 school year
+  const range = getSchoolYearDateRange('semester-1', aug2026);
+  assert.strictEqual(range.start.getFullYear(), 2026);
+  assert.strictEqual(range.end.getFullYear(), 2027);
+});
+
+test('getSchoolYearDateRange returns null for unknown period', () => {
+  const range = getSchoolYearDateRange('unknown-period', jan2026);
+  assert.strictEqual(range, null);
+});
+
+test('quarter-utils.js exports getSchoolYearDateRange', () => {
+  const quarterUtilsSrc = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'site', 'web', 'quarter-utils.js'), 'utf8'
+  );
+  assert.ok(
+    quarterUtilsSrc.includes('export function getSchoolYearDateRange'),
+    'quarter-utils.js should export getSchoolYearDateRange'
+  );
+});
+
+test('quarter-utils.js exports getPeriodLabel', () => {
+  const quarterUtilsSrc = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'site', 'web', 'quarter-utils.js'), 'utf8'
+  );
+  assert.ok(
+    quarterUtilsSrc.includes('export function getPeriodLabel'),
+    'quarter-utils.js should export getPeriodLabel'
+  );
+});
+
+test('quarter-utils.js exports getDateRangeForPeriod', () => {
+  const quarterUtilsSrc = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'site', 'web', 'quarter-utils.js'), 'utf8'
+  );
+  assert.ok(
+    quarterUtilsSrc.includes('export function getDateRangeForPeriod'),
+    'quarter-utils.js should export getDateRangeForPeriod'
+  );
+});
+
 // ── Narrative engine — no data scenario ──────────────────────────────────────
 
 console.log('\n--- Narrative engine: no data scenario ---');

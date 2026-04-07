@@ -223,3 +223,66 @@ export function getQuarterLabel(quarter) {
   };
   return labels[quarter] || quarter;
 }
+
+/**
+ * Return the { start: Date, end: Date } for a school-year period.
+ * Supports 'semester-1', 'semester-2', and 'full-year'.
+ *
+ * Semester 1: Aug 1 → Jan 31
+ * Semester 2: Feb 1 → Jun 30
+ * Full Year:  Aug 1 → Jun 30
+ *
+ * @param {"semester-1"|"semester-2"|"full-year"} period
+ * @param {Date} [referenceDate] - Optional date to determine school year (defaults to now)
+ * @returns {{ start: Date, end: Date }|null}
+ */
+export function getSchoolYearDateRange(period, referenceDate) {
+  const now = referenceDate || new Date();
+  const schoolYear = getSchoolYear(now);
+
+  if (period === 'semester-1') {
+    return {
+      start: new Date(schoolYear, 7, 1),      // Aug 1
+      end: new Date(schoolYear + 1, 0, 31),   // Jan 31
+    };
+  }
+  if (period === 'semester-2') {
+    return {
+      start: new Date(schoolYear + 1, 1, 1),  // Feb 1
+      end: new Date(schoolYear + 1, 5, 30),   // Jun 30
+    };
+  }
+  if (period === 'full-year') {
+    return {
+      start: new Date(schoolYear, 7, 1),      // Aug 1
+      end: new Date(schoolYear + 1, 5, 30),   // Jun 30
+    };
+  }
+  return null;
+}
+
+/**
+ * Return a human-readable label for any reporting period.
+ * Handles quarter labels (Q1–Q4) and extended periods (semester-1, semester-2, full-year).
+ * @param {string} period
+ * @returns {string}
+ */
+export function getPeriodLabel(period) {
+  if (period === 'semester-1') return 'Semester 1 (Aug–Jan)';
+  if (period === 'semester-2') return 'Semester 2 (Feb–Jun)';
+  if (period === 'full-year') return 'Full Year (Aug–Jun)';
+  return getQuarterLabel(period);
+}
+
+/**
+ * Return the { start: Date, end: Date } for any reporting period.
+ * Handles quarter values (Q1–Q4) and extended periods (semester-1, semester-2, full-year).
+ * @param {string} period
+ * @returns {{ start: Date, end: Date }|null}
+ */
+export function getDateRangeForPeriod(period) {
+  if (period === 'semester-1' || period === 'semester-2' || period === 'full-year') {
+    return getSchoolYearDateRange(period);
+  }
+  return getQuarterDateRange(period);
+}
