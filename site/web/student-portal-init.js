@@ -4461,8 +4461,11 @@
       return;
     }
 
-    // Inline cleanup — avoid speechSynthesis.cancel() to prevent Chrome from
-    // silently dropping the next utterance queued in the same execution frame.
+    // Cancel any stale speech in the queue, then clean up state.
+    // We'll defer the actual speak() call via setTimeout to give Chrome
+    // time to process the cancellation (cancel + speak in the same frame
+    // causes Chrome to silently drop the utterance).
+    window.speechSynthesis.cancel();
     if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
     bookTtsActive = false;
     bookTtsPaused = false;
@@ -4608,7 +4611,12 @@
       }
     }
 
-    speakPara(0);
+    // Defer first speak() to a new execution frame so Chrome's speech queue
+    // has time to process the cancel() we called at the top of startBookTts().
+    setTimeout(function () {
+      if (!bookTtsActive) return; // user may have stopped during the delay
+      speakPara(0);
+    }, 50);
   }
 
   function pauseResumeBookTts() {
