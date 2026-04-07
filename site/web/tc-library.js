@@ -2789,7 +2789,7 @@
       'display:flex; align-items:center; gap:10px;',
       'padding:14px 20px;',
       'background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);',
-      'border-radius:10px; cursor:pointer; user-select:none;',
+      'border-radius:' + (filters.reserve.presentationsExpanded ? '10px 10px 0 0' : '10px') + '; cursor:pointer; user-select:none;',
       'transition:background .15s ease;'
     ].join('');
     header.setAttribute('aria-expanded', String(filters.reserve.presentationsExpanded));
@@ -2901,13 +2901,12 @@
       // Update header border-radius
       header.style.borderRadius = filters.reserve.presentationsExpanded ? '10px 10px 0 0' : '10px';
       content.style.display = filters.reserve.presentationsExpanded ? 'block' : 'none';
-      if (filters.reserve.presentationsExpanded) renderPresGrid();
     });
 
     return wrapper;
   }
 
-
+  function renderReserveTab() {
     const container = $('reserveTab');
     if (!container) return;
     try {
