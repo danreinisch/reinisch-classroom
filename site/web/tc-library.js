@@ -145,6 +145,11 @@
       { tag: 'polyline', points: '14 2 14 8 20 8' },
       { tag: 'line', x1: '16', y1: '13', x2: '8', y2: '13' },
       { tag: 'line', x1: '14', y1: '17', x2: '8', y2: '17' }
+    ],
+    alertTriangle: [
+      { tag: 'path', d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' },
+      { tag: 'line', x1: '12', y1: '9', x2: '12', y2: '13' },
+      { tag: 'line', x1: '12', y1: '17', x2: '12.01', y2: '17' }
     ]
   };
 
@@ -409,6 +414,7 @@
     renderTabContent();
     renderLoadingSkeleton();
     await loadAssignments();
+    updateMissingWorkBadge();
     await loadLessons();
     const skeleton = document.getElementById('tcLibSkeleton');
     if (skeleton) skeleton.remove();
@@ -439,7 +445,12 @@
     };
 
     tabsContainer.appendChild(makeTabBtn('reserve',   'clipboard',   'Reserve',       true));
-    tabsContainer.appendChild(makeTabBtn('active',    'refreshCw',   'Active',        false));
+    const activeTabBtn = makeTabBtn('active', 'refreshCw', 'Active', false);
+    const missingWorkBadge = document.createElement('span');
+    missingWorkBadge.id = 'activeMissingBadge';
+    missingWorkBadge.style.cssText = 'background:#ef4444; color:white; border-radius:9999px; font-size:10px; font-weight:700; padding:1px 6px; min-width:18px; text-align:center; line-height:1.6; display:none;';
+    activeTabBtn.appendChild(missingWorkBadge);
+    tabsContainer.appendChild(activeTabBtn);
     tabsContainer.appendChild(makeTabBtn('finalized', 'checkCircle', 'Finalized',     false));
     tabsContainer.appendChild(makeTabBtn('overview',  'barChart',    'Overview',      false));
     tabsContainer.appendChild(makeTabBtn('lessons',   'bookOpen',    'Lessons',       false));
@@ -1620,7 +1631,69 @@
   }
 
   /**
-   * Create a styled class name badge span element.
+   * Computes which students are missing work across all active assignments.
+   * Cross-references active assignments × classEnrollmentsData × instancesData.
+   * Returns an array of { studentCode, studentName, className, missingAssignments }
+   * for students who have at least one missing assignment.
+   * A student is "missing" if they have no instance, or their instance status is 'Assigned'.
+   */
+  function computeMissingWork() {
+    const activeList = assignmentsData.filter(a => computeLane(a, instancesData) === 'current');
+    // Map: studentCode → { studentCode, studentName, className, missingAssignments: [] }
+    const studentMap = new Map();
+
+    for (const assignment of activeList) {
+      const className = inferClassName(assignment);
+      if (!className) continue;
+
+      const enrolledStudents = classEnrollmentsData.filter(
+        e => e.class_name === className && e.active !== false
+      );
+
+      for (const enrolled of enrolledStudents) {
+        const studentCode = enrolled.student_code;
+        if (!studentCode) continue;
+        const studentName = enrolled.student_name || enrolled.name || studentCode;
+
+        const instance = instancesData.find(
+          i => i.assignment_id === assignment.id && i.student_code === studentCode
+        );
+
+        // Missing: no instance exists, or student hasn't started (status 'Assigned')
+        if (!instance || instance.status === 'Assigned') {
+          if (!studentMap.has(studentCode)) {
+            studentMap.set(studentCode, { studentCode, studentName, className, missingAssignments: [] });
+          }
+          studentMap.get(studentCode).missingAssignments.push(assignment);
+        }
+      }
+    }
+
+    return [...studentMap.values()];
+  }
+
+  /**
+   * Updates the missing work badge on the Active tab button.
+   * Shows the count of students with missing work, or hides the badge when zero.
+   */
+  function updateMissingWorkBadge() {
+    const badge = document.getElementById('activeMissingBadge');
+    if (!badge) return;
+    if (classEnrollmentsData.length === 0) {
+      badge.style.display = 'none';
+      return;
+    }
+    const missingStudents = computeMissingWork();
+    const count = missingStudents.length;
+    if (count === 0) {
+      badge.style.display = 'none';
+    } else {
+      badge.textContent = String(count);
+      badge.style.display = 'inline';
+    }
+  }
+
+  /**
    * @param {string} className
    * @returns {HTMLElement}
    */
@@ -2660,6 +2733,247 @@
 
   // ── Active Tab ────────────────────────────────────────────────────────────────
 
+  /**
+   * Opens the Missing Work Report modal — student-centric view of incomplete
+   * assignments across all active assignments × class enrollments.
+   */
+  function renderMissingWorkModal() {
+    const triggerEl = document.activeElement;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'missingWorkOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'missingWorkTitle');
+    overlay.style.cssText = [
+      'position:fixed; top:0; left:0; right:0; bottom:0;',
+      'background:rgba(0,0,0,.80); backdrop-filter:blur(4px);',
+      'display:flex; align-items:center; justify-content:center;',
+      'z-index:10000; padding:24px;'
+    ].join('');
+
+    function closeModal() {
+      overlay.remove();
+      document.removeEventListener('keydown', onMissingWorkKeyDown);
+      if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
+    }
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width:900px; width:100%; max-height:90vh; overflow-y:auto; padding:32px;';
+
+    // Header row
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:start; margin-bottom:24px;';
+
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'missingWorkTitle';
+    titleEl.style.cssText = 'margin:0; font-size:22px; display:flex; align-items:center; gap:10px;';
+    const titleIcon = document.createElement('span');
+    titleIcon.style.cssText = 'color:#f59e0b; display:inline-flex; align-items:center;';
+    titleIcon.appendChild(createIcon('alertTriangle', 20));
+    titleEl.appendChild(titleIcon);
+    titleEl.appendChild(document.createTextNode(' Missing Work Report'));
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tc-btn';
+    closeBtn.setAttribute('aria-label', 'Close dialog');
+    closeBtn.style.cssText = 'padding:8px 16px; flex-shrink:0;';
+    closeBtn.appendChild(createIcon('x', 14));
+    closeBtn.appendChild(document.createTextNode(' Close'));
+
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(closeBtn);
+    card.appendChild(headerRow);
+
+    // No enrollment data
+    if (classEnrollmentsData.length === 0) {
+      const info = document.createElement('div');
+      info.style.cssText = 'padding:32px 24px; text-align:center; color:rgba(255,255,255,.55); font-size:14px;';
+      info.textContent = 'No class enrollment data available. Enrollment data is needed to detect missing work.';
+      card.appendChild(info);
+    } else {
+      const missingWork = computeMissingWork();
+
+      if (missingWork.length === 0) {
+        // All caught up
+        const successWrap = document.createElement('div');
+        successWrap.style.cssText = 'padding:48px 24px; text-align:center;';
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:12px; color:#4ade80;';
+        iconWrap.appendChild(createIcon('checkCircle', 40));
+        successWrap.appendChild(iconWrap);
+        const successMsg = document.createElement('div');
+        successMsg.style.cssText = 'font-size:18px; color:rgba(255,255,255,.80);';
+        successMsg.textContent = 'All students are up to date!';
+        successWrap.appendChild(successMsg);
+        card.appendChild(successWrap);
+      } else {
+        // Summary banner
+        const uniqueAssignments = new Set();
+        missingWork.forEach(s => s.missingAssignments.forEach(a => uniqueAssignments.add(a.id)));
+        const summary = document.createElement('div');
+        summary.style.cssText = [
+          'background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.25);',
+          'border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:14px;',
+          'display:flex; align-items:center; gap:8px; color:#f59e0b;'
+        ].join('');
+        const summaryIcon = document.createElement('span');
+        summaryIcon.style.cssText = 'flex-shrink:0; display:inline-flex;';
+        summaryIcon.appendChild(createIcon('alertTriangle', 16));
+        summary.appendChild(summaryIcon);
+        const summaryText = document.createElement('span');
+        summaryText.textContent = missingWork.length + ' student' + (missingWork.length !== 1 ? 's' : '') +
+          ' have missing work across ' + uniqueAssignments.size + ' assignment' + (uniqueAssignments.size !== 1 ? 's' : '');
+        summary.appendChild(summaryText);
+        card.appendChild(summary);
+
+        // Group by class
+        const classMissingMap = new Map();
+        missingWork.forEach(s => {
+          if (!classMissingMap.has(s.className)) classMissingMap.set(s.className, []);
+          classMissingMap.get(s.className).push(s);
+        });
+
+        const sortedClasses = [...classMissingMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+        sortedClasses.forEach(([className, students]) => {
+          const classId = 'missing-class-' + className.replace(/[^a-zA-Z0-9]/g, '_');
+          const defaultExpanded = isHierarchyExpanded(classId, true);
+
+          const sectionWrapper = document.createElement('div');
+          sectionWrapper.style.cssText = 'margin-bottom:8px;';
+
+          const sectionHeader = document.createElement('div');
+          sectionHeader.style.cssText = [
+            'display:flex; align-items:center; gap:8px;',
+            'padding:8px 12px;',
+            'background:rgba(255,255,255,.04);',
+            'border:1px solid rgba(255,255,255,.07);',
+            'border-radius:6px; cursor:pointer; user-select:none;',
+            'margin-bottom:' + (defaultExpanded ? '4px' : '0') + ';'
+          ].join('');
+
+          const toggleArrow = document.createElement('span');
+          toggleArrow.style.cssText = 'font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(' + (defaultExpanded ? '0deg' : '-90deg') + ');';
+          toggleArrow.textContent = '\u25be';
+
+          const sectionTitle = document.createElement('span');
+          sectionTitle.style.cssText = 'font-size:14px; font-weight:600; flex:1;';
+          sectionTitle.textContent = className;
+
+          const sectionBadge = document.createElement('span');
+          sectionBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40);';
+          sectionBadge.textContent = students.length + ' student' + (students.length !== 1 ? 's' : '');
+
+          sectionHeader.appendChild(toggleArrow);
+          sectionHeader.appendChild(sectionTitle);
+          sectionHeader.appendChild(sectionBadge);
+
+          const sectionContent = document.createElement('div');
+          sectionContent.style.cssText = 'display:' + (defaultExpanded ? 'block' : 'none') + '; padding-left:8px;';
+
+          // Build table content
+          const table = document.createElement('table');
+          table.style.cssText = 'width:100%; border-collapse:collapse; font-size:13px;';
+
+          const thead = document.createElement('thead');
+          const theadRow = document.createElement('tr');
+          ['Student', '# Missing', 'Missing Assignments'].forEach(colLabel => {
+            const th = document.createElement('th');
+            th.style.cssText = 'text-align:left; padding:6px 12px; color:rgba(255,255,255,.50); font-size:12px; border-bottom:1px solid rgba(255,255,255,.07); font-weight:500;';
+            th.textContent = colLabel;
+            theadRow.appendChild(th);
+          });
+          thead.appendChild(theadRow);
+          table.appendChild(thead);
+
+          const tbody = document.createElement('tbody');
+          const sortedStudents = [...students].sort((a, b) => b.missingAssignments.length - a.missingAssignments.length);
+          sortedStudents.forEach((s, idx) => {
+            const isWarning = s.missingAssignments.length >= 3;
+            const tr = document.createElement('tr');
+            tr.style.cssText = (isWarning
+              ? 'background:rgba(245,158,11,.10);'
+              : (idx % 2 === 1 ? 'background:rgba(255,255,255,.02);' : '')) +
+              'border-bottom:1px solid rgba(255,255,255,.04);';
+
+            const tdName = document.createElement('td');
+            tdName.style.cssText = 'padding:8px 12px; font-weight:500;';
+            tdName.textContent = s.studentName;
+
+            const tdCount = document.createElement('td');
+            tdCount.style.cssText = 'padding:8px 12px; white-space:nowrap;';
+            const countSpan = document.createElement('span');
+            countSpan.style.cssText = 'font-weight:700; color:' + (isWarning ? '#f59e0b' : '#f87171') + ';';
+            countSpan.textContent = String(s.missingAssignments.length);
+            tdCount.appendChild(countSpan);
+
+            const tdTitles = document.createElement('td');
+            tdTitles.style.cssText = 'padding:8px 12px;';
+            const titlesWrap = document.createElement('div');
+            titlesWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+            s.missingAssignments.forEach(a => {
+              const pill = document.createElement('span');
+              pill.style.cssText = 'background:rgba(248,113,113,.12); color:#f87171; padding:2px 8px; border-radius:12px; font-size:11px;';
+              pill.textContent = a.title || 'Untitled';
+              titlesWrap.appendChild(pill);
+            });
+            tdTitles.appendChild(titlesWrap);
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdCount);
+            tr.appendChild(tdTitles);
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          sectionContent.appendChild(table);
+
+          // Toggle handler — manipulates DOM directly (no full tab re-render)
+          sectionHeader.addEventListener('click', () => {
+            const isExpanded = sectionContent.style.display !== 'none';
+            const nowExpanded = !isExpanded;
+            hierarchyExpandState.set(classId, nowExpanded);
+            saveFilters();
+            sectionContent.style.display = nowExpanded ? 'block' : 'none';
+            toggleArrow.style.transform = 'rotate(' + (nowExpanded ? '0deg' : '-90deg') + ')';
+            sectionHeader.style.marginBottom = nowExpanded ? '4px' : '0';
+          });
+
+          sectionWrapper.appendChild(sectionHeader);
+          sectionWrapper.appendChild(sectionContent);
+          card.appendChild(sectionWrapper);
+        });
+      }
+    }
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    closeBtn.focus();
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+    function onMissingWorkKeyDown(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      } else if (e.key === 'Tab') {
+        const focusable = card.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', onMissingWorkKeyDown);
+  }
+
   function renderActiveTab() {
     const container = $('activeTab');
     if (!container) return;
@@ -2671,7 +2985,7 @@
 
       // Filter bar (class + search)
       const filterBar = document.createElement('div');
-      filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+      filterBar.style.cssText = 'margin-bottom:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
       const classBtnWrap = document.createElement('div');
       classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
@@ -2696,11 +3010,24 @@
       searchInput.value = filters.assignments.searchQuery;
       searchInput.style.cssText = 'flex:1; min-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
       filterBar.appendChild(searchInput);
+
+      // Missing Work button
+      const missingWorkBtn = document.createElement('button');
+      missingWorkBtn.className = 'tc-btn';
+      missingWorkBtn.style.cssText = 'white-space:nowrap; display:flex; align-items:center; gap:6px;';
+      const mwIcon = document.createElement('span');
+      mwIcon.style.cssText = 'color:#f59e0b; display:inline-flex; align-items:center;';
+      mwIcon.appendChild(createIcon('alertTriangle', 14));
+      missingWorkBtn.appendChild(mwIcon);
+      missingWorkBtn.appendChild(document.createTextNode('Missing Work'));
+      missingWorkBtn.addEventListener('click', () => renderMissingWorkModal());
+      filterBar.appendChild(missingWorkBtn);
+
       container.appendChild(filterBar);
 
       // Count / status row
       const countEl = document.createElement('div');
-      countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
+      countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:16px;';
       countEl.textContent = activeList.length === 0 ? 'No active assignments' :
         `${activeList.length} active assignment${activeList.length !== 1 ? 's' : ''}`;
       container.appendChild(countEl);
@@ -2723,11 +3050,112 @@
         return;
       }
 
-      const grid = document.createElement('div');
-      grid.className = 'tc-lib-grid';
-      grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
-      activeList.forEach(a => grid.appendChild(renderActiveCard(a)));
-      container.appendChild(grid);
+      // ── Week grouping ────────────────────────────────────────────────────────
+      const currentWeekLabel = getWeekLabel(new Date());
+
+      // Group assignments by week of their earliest instance assigned_at (or assignment created_at)
+      const weekMap = new Map(); // weekLabel → { assignments: [], mondayMs: number }
+      activeList.forEach(a => {
+        // Determine reference date: earliest instance assigned_at (or created_at), fallback to assignment created_at
+        const instDates = instancesData
+          .filter(i => i.assignment_id === a.id)
+          .map(i => i.assigned_at || i.created_at)
+          .filter(Boolean)
+          .map(d => new Date(d).getTime())
+          .filter(t => !isNaN(t));
+        const refDate = instDates.length > 0
+          ? new Date(Math.min(...instDates))
+          : (a.created_at ? new Date(a.created_at) : new Date());
+        const weekLabel = getWeekLabel(refDate);
+
+        if (!weekMap.has(weekLabel)) {
+          // Compute Monday timestamp for sorting
+          const d = new Date(refDate);
+          const dow = d.getDay();
+          const offset = dow === 0 ? -6 : 1 - dow;
+          const monday = new Date(d);
+          monday.setDate(d.getDate() + offset);
+          monday.setHours(0, 0, 0, 0);
+          weekMap.set(weekLabel, { assignments: [], mondayMs: monday.getTime() });
+        }
+        weekMap.get(weekLabel).assignments.push(a);
+      });
+
+      // Sort weeks newest-first
+      const sortedWeeks = [...weekMap.entries()].sort((a, b) => b[1].mondayMs - a[1].mondayMs);
+      const weeksContainer = document.createElement('div');
+      weeksContainer.style.cssText = 'display:flex; flex-direction:column; gap:8px;';
+
+      sortedWeeks.forEach(([weekLabel, { assignments: weekAssignments }]) => {
+        const isCurrentWeek = weekLabel === currentWeekLabel;
+        const weekId = 'active-week-' + weekLabel.replace(/[^a-zA-Z0-9]/g, '_');
+        const weekExpanded = isHierarchyExpanded(weekId, isCurrentWeek);
+
+        const weekWrapper = document.createElement('div');
+        weekWrapper.style.cssText = 'margin-bottom:2px;';
+
+        const weekHeader = document.createElement('div');
+        weekHeader.className = 'tc-hier-node';
+        weekHeader.dataset.hierNode = weekId;
+        weekHeader.style.cssText = [
+          'display:flex; align-items:center; gap:8px;',
+          'padding:8px 14px;',
+          'background:rgba(255,255,255,.03);',
+          'border:1px solid rgba(255,255,255,.07);',
+          'border-radius:7px; cursor:pointer; user-select:none;',
+          'margin-bottom:' + (weekExpanded ? '6px' : '0') + ';'
+        ].join('');
+
+        const weekToggle = document.createElement('span');
+        weekToggle.style.cssText = 'font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(' + (weekExpanded ? '0deg' : '-90deg') + ');';
+        weekToggle.textContent = '\u25be';
+
+        const weekIconWrap = document.createElement('span');
+        weekIconWrap.style.cssText = 'display:inline-flex; align-items:center; color:rgba(96,165,250,.70);';
+        weekIconWrap.appendChild(createIcon(weekExpanded ? 'folderOpen' : 'folder', 14));
+
+        const weekTitle = document.createElement('span');
+        weekTitle.style.cssText = 'font-size:14px; font-weight:600; flex:1;';
+        weekTitle.textContent = weekLabel;
+
+        if (isCurrentWeek) {
+          const currentPill = document.createElement('span');
+          currentPill.style.cssText = 'background:rgba(52,211,153,.15); color:#34d399; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;';
+          currentPill.textContent = 'Current Week';
+          weekHeader.appendChild(weekToggle);
+          weekHeader.appendChild(weekIconWrap);
+          weekHeader.appendChild(weekTitle);
+          weekHeader.appendChild(currentPill);
+        } else {
+          weekHeader.appendChild(weekToggle);
+          weekHeader.appendChild(weekIconWrap);
+          weekHeader.appendChild(weekTitle);
+        }
+
+        const weekBadge = document.createElement('span');
+        weekBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-left:4px;';
+        weekBadge.textContent = String(weekAssignments.length);
+        weekHeader.appendChild(weekBadge);
+
+        weekHeader.addEventListener('click', () => toggleHierarchy(weekId));
+
+        const weekContent = document.createElement('div');
+        weekContent.style.cssText = 'display:' + (weekExpanded ? 'block' : 'none') + ';';
+
+        if (weekExpanded) {
+          const grid = document.createElement('div');
+          grid.className = 'tc-lib-grid';
+          grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
+          weekAssignments.forEach(a => grid.appendChild(renderActiveCard(a)));
+          weekContent.appendChild(grid);
+        }
+
+        weekWrapper.appendChild(weekHeader);
+        weekWrapper.appendChild(weekContent);
+        weeksContainer.appendChild(weekWrapper);
+      });
+
+      container.appendChild(weeksContainer);
 
       updateActiveClassFilter();
     } catch (err) {
