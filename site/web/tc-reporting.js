@@ -3290,7 +3290,7 @@ ${narrative}`;
         saveBatchTemplates(templates);
         const sel = $("tab5TemplateSelect");
         if (sel) {
-          sel.dataset.listenerAttached = '';
+          delete sel.dataset.listenerAttached;
           wireTab5Templates();
         }
       });
@@ -3302,7 +3302,7 @@ ${narrative}`;
       batchDeleteBtn.addEventListener('click', () => {
         const sel = $("tab5TemplateSelect");
         const idx = sel ? parseInt(sel.value, 10) : NaN;
-        if (isNaN(idx) || !sel || sel.value === '') {
+        if (isNaN(idx)) {
           rcAlert('No Template Selected', 'Please select a template from the dropdown to delete it.');
           return;
         }
@@ -3310,7 +3310,7 @@ ${narrative}`;
         if (templates[idx]) {
           templates.splice(idx, 1);
           saveBatchTemplates(templates);
-          sel.dataset.listenerAttached = '';
+          delete sel.dataset.listenerAttached;
           wireTab5Templates();
         }
       });
@@ -4000,7 +4000,7 @@ ${narrative}`;
       templateDeleteBtn.addEventListener('click', () => {
         const sel = $("tab6TemplateSelect");
         const idx = sel ? parseInt(sel.value, 10) : NaN;
-        if (isNaN(idx) || sel.value === '') {
+        if (isNaN(idx)) {
           rcAlert('No Template Selected', 'Please select a template from the dropdown to delete it.');
           return;
         }
