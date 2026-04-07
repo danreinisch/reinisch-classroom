@@ -90,7 +90,7 @@ exports.handler = async (event) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  let audioBuffer;
+  let audioBuffer = null;
   try {
     const openAiRes = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',

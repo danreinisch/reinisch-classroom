@@ -4553,7 +4553,7 @@
 
           // Word highlighting via timeupdate
           audio.ontimeupdate = function () {
-            if (!audio.duration) return;
+            if (!audio.duration || !spanCount) return;
             const wordDuration = audio.duration / spanCount;
             const currentWordIdx = Math.min(
               Math.floor(audio.currentTime / wordDuration),
@@ -4626,7 +4626,9 @@
   function pauseResumeBookTts() {
     const pauseBtn = document.getElementById('bookTtsPause');
     if (bookTtsPaused) {
-      if (bookTtsAudio) bookTtsAudio.play().catch(function () {});
+      if (bookTtsAudio) bookTtsAudio.play().catch(function (err) {
+        console.warn(LOG_PREFIX, 'Audio resume failed:', err);
+      });
       bookTtsPaused = false;
       if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
     } else {
