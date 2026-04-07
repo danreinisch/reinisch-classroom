@@ -150,6 +150,10 @@
       { tag: 'path', d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' },
       { tag: 'line', x1: '12', y1: '9', x2: '12', y2: '13' },
       { tag: 'line', x1: '12', y1: '17', x2: '12.01', y2: '17' }
+    ],
+    copy: [
+      { tag: 'rect', x: '9', y: '9', width: '13', height: '13', rx: '2', ry: '2' },
+      { tag: 'path', d: 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1' }
     ]
   };
 
@@ -252,6 +256,10 @@
           sortColumn: filters.finalized.sortColumn,
           sortDirection: filters.finalized.sortDirection
         },
+        reserve: {
+          presentationsExpanded: filters.reserve.presentationsExpanded,
+          presentationsSearch: filters.reserve.presentationsSearch
+        },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
       };
@@ -320,6 +328,15 @@
         }
       }
 
+      if (data.reserve && typeof data.reserve === 'object') {
+        if (typeof data.reserve.presentationsExpanded === 'boolean') {
+          filters.reserve.presentationsExpanded = data.reserve.presentationsExpanded;
+        }
+        if (typeof data.reserve.presentationsSearch === 'string') {
+          filters.reserve.presentationsSearch = data.reserve.presentationsSearch;
+        }
+      }
+
       if (Array.isArray(data.collapsedLanes)) {
         collapsedLanes.clear();
         data.collapsedLanes.forEach(id => {
@@ -379,6 +396,10 @@
       viewMode: "tree",
       sortColumn: "date",
       sortDirection: "desc"
+    },
+    reserve: {
+      presentationsExpanded: false,
+      presentationsSearch: ""
     }
   };
 
@@ -1564,6 +1585,46 @@
     issueBtn.appendChild(createIcon('arrowRight', 14));
     issueBtn.appendChild(document.createTextNode('Launch'));
     btnRow.appendChild(issueBtn);
+
+    const dupBtn = document.createElement('button');
+    dupBtn.className = 'tc-btn';
+    dupBtn.title = 'Create a copy of this assignment';
+    dupBtn.setAttribute('aria-label', 'Duplicate ' + (assignment.title || 'Untitled'));
+    dupBtn.style.cssText = 'font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:6px;';
+    dupBtn.appendChild(createIcon('copy', 14));
+    dupBtn.appendChild(document.createTextNode('Duplicate'));
+    dupBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+      const newDraft = {
+        id: newId,
+        title: (assignment.title || 'Untitled') + ' (Copy)',
+        className: assignment.series || '',
+        batchId: null,
+        assignment: {
+          kind: assignment.type || 'file',
+          text: assignment.page || assignment.meta || '',
+        },
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+      };
+      try {
+        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
+        drafts.unshift(newDraft);
+        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
+      } catch (err) {
+        console.error('[tc-library] Failed to save duplicate draft:', err);
+        showToast('Could not save duplicate \u2014 storage may be full.', '#ef4444', '#fff');
+        return;
+      }
+      showToast('Assignment duplicated \u2014 new draft created');
+      renderReserveTab();
+    });
+    btnRow.appendChild(dupBtn);
     card.appendChild(btnRow);
 
     if (instances.length === 0) {
@@ -2621,7 +2682,231 @@
 
   // ── Reserve Tab ──────────────────────────────────────────────────────────────
 
-  function renderReserveTab() {
+  /**
+   * Renders a single presentation card for the Presentations & Lessons section.
+   */
+  function renderPresentationCard(presentation, section, unit) {
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding:20px;';
+
+    // Header row: title + type badge
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;';
+    const titleEl = document.createElement('h3');
+    titleEl.style.cssText = 'margin:0; font-size:15px; flex:1; line-height:1.3;';
+    titleEl.textContent = presentation.title || presentation.name || 'Untitled';
+    const typeBadge = document.createElement('span');
+    typeBadge.style.cssText = 'background:rgba(168,85,247,.20);color:#c084fc;padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;flex-shrink:0;';
+    typeBadge.textContent = 'Presentation';
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(typeBadge);
+    card.appendChild(headerRow);
+
+    // Context label: section > unit
+    const contextEl = document.createElement('div');
+    contextEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.50); margin-bottom:14px;';
+    const sectionName = section.title || section.name || '';
+    const unitName = unit.title || unit.name || '';
+    contextEl.textContent = sectionName + (unitName ? ' \u203a ' + unitName : '');
+    card.appendChild(contextEl);
+
+    // Button row
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:8px;';
+
+    const presTitle = presentation.title || presentation.name || 'Untitled';
+    const presUrl = presentation.url || ('/assets/content/lessons/' + (presentation.path || ''));
+
+    // Stage button
+    const stageBtn = document.createElement('button');
+    stageBtn.className = 'tc-btn';
+    stageBtn.title = 'Stage as a draft assignment';
+    stageBtn.setAttribute('aria-label', 'Stage ' + presTitle);
+    stageBtn.style.cssText = 'flex:1; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:6px;';
+    stageBtn.appendChild(createIcon('clipboardPlus', 14));
+    stageBtn.appendChild(document.createTextNode('Stage'));
+    stageBtn.addEventListener('click', () => {
+      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+      const newDraft = {
+        id: newId,
+        title: presTitle,
+        className: '',
+        batchId: null,
+        assignment: {
+          kind: 'link',
+          text: presUrl,
+        },
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+      };
+      try {
+        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
+        drafts.unshift(newDraft);
+        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
+      } catch (err) {
+        console.error('[tc-library] Failed to stage presentation:', err);
+        showToast('Could not save draft \u2014 storage may be full.', '#ef4444', '#fff');
+        return;
+      }
+      showToast('\u201c' + presTitle + '\u201d staged as a draft assignment');
+      renderReserveTab();
+    });
+    btnRow.appendChild(stageBtn);
+
+    // Preview button
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'tc-btn';
+    previewBtn.title = 'Preview this presentation';
+    previewBtn.setAttribute('aria-label', 'Preview ' + presTitle);
+    previewBtn.style.cssText = 'font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:6px;';
+    previewBtn.appendChild(createIcon('arrowRight', 14));
+    previewBtn.appendChild(document.createTextNode('Preview'));
+    previewBtn.addEventListener('click', () => {
+      window.open(presUrl, '_blank');
+    });
+    btnRow.appendChild(previewBtn);
+
+    card.appendChild(btnRow);
+    return card;
+  }
+
+  /**
+   * Builds the collapsible "Presentations & Lessons" section for the Reserve tab.
+   */
+  function renderPresentationsSection() {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-top:24px;';
+
+    // ── Section header (toggle) ───────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.style.cssText = [
+      'display:flex; align-items:center; gap:10px;',
+      'padding:14px 20px;',
+      'background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);',
+      'border-radius:10px; cursor:pointer; user-select:none;',
+      'transition:background .15s ease;'
+    ].join('');
+    header.setAttribute('aria-expanded', String(filters.reserve.presentationsExpanded));
+
+    const chevronWrap = document.createElement('span');
+    chevronWrap.style.cssText = 'display:inline-flex; align-items:center; flex-shrink:0;';
+    chevronWrap.appendChild(createIcon(
+      filters.reserve.presentationsExpanded ? 'chevronDown' : 'chevronRight', 16
+    ));
+
+    const headerTitle = document.createElement('span');
+    headerTitle.style.cssText = 'font-size:18px; font-weight:600;';
+    headerTitle.textContent = 'Presentations & Lessons';
+
+    header.appendChild(chevronWrap);
+    header.appendChild(createIcon('bookOpen', 18));
+    header.appendChild(headerTitle);
+    wrapper.appendChild(header);
+
+    // ── Collapsible content ───────────────────────────────────────────────────
+    const content = document.createElement('div');
+    content.style.cssText = [
+      'padding:16px 20px;',
+      'background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.10); border-top:none;',
+      'border-radius:0 0 10px 10px;',
+      'display:' + (filters.reserve.presentationsExpanded ? 'block' : 'none') + ';'
+    ].join('');
+
+    // Search input
+    const searchWrap = document.createElement('div');
+    searchWrap.style.cssText = 'margin-bottom:14px;';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search presentations\u2026';
+    searchInput.value = filters.reserve.presentationsSearch;
+    searchInput.style.cssText = [
+      'width:100%; padding:8px 12px; box-sizing:border-box;',
+      'background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15);',
+      'border-radius:8px; color:white; font-size:13px;'
+    ].join('');
+    searchInput.addEventListener('input', () => {
+      filters.reserve.presentationsSearch = searchInput.value;
+      saveFilters();
+      renderPresGrid();
+    });
+    searchWrap.appendChild(searchInput);
+    content.appendChild(searchWrap);
+
+    // Grid
+    const presGrid = document.createElement('div');
+    presGrid.className = 'tc-lib-grid';
+    content.appendChild(presGrid);
+
+    function renderPresGrid() {
+      while (presGrid.firstChild) presGrid.removeChild(presGrid.firstChild);
+
+      if (!lessonsData || !Array.isArray(lessonsData.sections) || lessonsData.sections.length === 0) {
+        const noData = document.createElement('div');
+        noData.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.50); grid-column:1/-1;';
+        noData.textContent = 'No lessons index available.';
+        presGrid.appendChild(noData);
+        return;
+      }
+
+      const searchQ = (filters.reserve.presentationsSearch || '').toLowerCase();
+
+      // Build flat list of all presentations
+      const allPres = [];
+      lessonsData.sections.forEach(section => {
+        (section.units || []).forEach(unit => {
+          (unit.presentations || []).forEach(pres => {
+            allPres.push({ presentation: pres, section, unit });
+          });
+        });
+      });
+
+      const filtered = searchQ
+        ? allPres.filter(({ presentation }) =>
+            (presentation.title || presentation.name || '').toLowerCase().includes(searchQ)
+          )
+        : allPres;
+
+      if (filtered.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.style.cssText = 'padding:24px; text-align:center; color:rgba(255,255,255,.50); grid-column:1/-1;';
+        noResults.textContent = searchQ ? 'No presentations match your search.' : 'No presentations found.';
+        presGrid.appendChild(noResults);
+        return;
+      }
+
+      filtered.forEach(({ presentation, section, unit }) => {
+        presGrid.appendChild(renderPresentationCard(presentation, section, unit));
+      });
+    }
+
+    renderPresGrid();
+    wrapper.appendChild(content);
+
+    // ── Toggle handler ────────────────────────────────────────────────────────
+    header.addEventListener('click', () => {
+      filters.reserve.presentationsExpanded = !filters.reserve.presentationsExpanded;
+      saveFilters();
+      header.setAttribute('aria-expanded', String(filters.reserve.presentationsExpanded));
+      // Swap chevron icon
+      while (chevronWrap.firstChild) chevronWrap.removeChild(chevronWrap.firstChild);
+      chevronWrap.appendChild(createIcon(
+        filters.reserve.presentationsExpanded ? 'chevronDown' : 'chevronRight', 16
+      ));
+      // Update header border-radius
+      header.style.borderRadius = filters.reserve.presentationsExpanded ? '10px 10px 0 0' : '10px';
+      content.style.display = filters.reserve.presentationsExpanded ? 'block' : 'none';
+      if (filters.reserve.presentationsExpanded) renderPresGrid();
+    });
+
+    return wrapper;
+  }
+
+
     const container = $('reserveTab');
     if (!container) return;
     try {
@@ -2711,6 +2996,10 @@
           div.appendChild(renderUpcomingLane(reserveList));
         })
       );
+
+      // Presentations & Lessons collapsible section
+      container.appendChild(renderPresentationsSection());
+
       updateActiveClassFilter();
     } catch (err) {
       console.error('[tc-library] Error rendering Reserve tab:', err);
