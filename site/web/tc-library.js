@@ -220,6 +220,11 @@
         lessons: {
           searchQuery: filters.lessons.searchQuery
         },
+        finalized: {
+          classFilter: filters.finalized.classFilter,
+          studentFilter: filters.finalized.studentFilter,
+          weekFilter: filters.finalized.weekFilter
+        },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
       };
@@ -261,6 +266,18 @@
         }
       }
 
+      if (data.finalized && typeof data.finalized === 'object') {
+        if (typeof data.finalized.classFilter === 'string') {
+          filters.finalized.classFilter = data.finalized.classFilter;
+        }
+        if (typeof data.finalized.studentFilter === 'string') {
+          filters.finalized.studentFilter = data.finalized.studentFilter;
+        }
+        if (typeof data.finalized.weekFilter === 'string') {
+          filters.finalized.weekFilter = data.finalized.weekFilter;
+        }
+      }
+
       if (Array.isArray(data.collapsedLanes)) {
         collapsedLanes.clear();
         data.collapsedLanes.forEach(id => {
@@ -283,7 +300,7 @@
 
   // ── State ─────────────────────────────────────────────────────────────────────
 
-  let _currentTab = "assignments";
+  let _currentTab = "reserve";
   let assignmentsData = [];
   let instancesData = [];
   let submissionsData = [];
@@ -310,6 +327,11 @@
     },
     lessons: {
       searchQuery: ""
+    },
+    finalized: {
+      classFilter: "All Classes",
+      studentFilter: "",
+      weekFilter: ""
     }
   };
 
@@ -349,7 +371,7 @@
     const skeleton = document.getElementById('tcLibSkeleton');
     if (skeleton) skeleton.remove();
     attachEventListeners();
-    switchTab("assignments");
+    switchTab("reserve");
   }
 
   // ── Tab Bar ───────────────────────────────────────────────────────────────────
@@ -362,35 +384,24 @@
     tabsContainer.className = 'tc-lib-tabs';
     tabsContainer.setAttribute('role', 'tablist');
 
-    const assignmentsBtn = document.createElement('button');
-    assignmentsBtn.className = 'tc-btn tc-lib-tab-btn';
-    assignmentsBtn.dataset.tab = 'assignments';
-    assignmentsBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
-    assignmentsBtn.setAttribute('role', 'tab');
-    assignmentsBtn.setAttribute('aria-selected', 'true');
-    assignmentsBtn.appendChild(createIcon('fileText'));
-    assignmentsBtn.appendChild(document.createTextNode(' Assignments'));
-    tabsContainer.appendChild(assignmentsBtn);
+    const makeTabBtn = (tabId, iconName, label, selected) => {
+      const btn = document.createElement('button');
+      btn.className = 'tc-btn tc-lib-tab-btn';
+      btn.dataset.tab = tabId;
+      btn.style.cssText = 'display:flex; align-items:center; gap:8px;';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+      btn.appendChild(createIcon(iconName));
+      btn.appendChild(document.createTextNode(' ' + label));
+      return btn;
+    };
 
-    const lessonsBtn = document.createElement('button');
-    lessonsBtn.className = 'tc-btn tc-lib-tab-btn';
-    lessonsBtn.dataset.tab = 'lessons';
-    lessonsBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
-    lessonsBtn.setAttribute('role', 'tab');
-    lessonsBtn.setAttribute('aria-selected', 'false');
-    lessonsBtn.appendChild(createIcon('bookOpen'));
-    lessonsBtn.appendChild(document.createTextNode(' Lessons'));
-    tabsContainer.appendChild(lessonsBtn);
-
-    const recallLibBtn = document.createElement('button');
-    recallLibBtn.className = 'tc-btn tc-lib-tab-btn';
-    recallLibBtn.dataset.tab = 'recallLibrary';
-    recallLibBtn.style.cssText = 'display:flex; align-items:center; gap:8px;';
-    recallLibBtn.setAttribute('role', 'tab');
-    recallLibBtn.setAttribute('aria-selected', 'false');
-    recallLibBtn.appendChild(createIcon('refreshCw'));
-    recallLibBtn.appendChild(document.createTextNode(' Recall Library'));
-    tabsContainer.appendChild(recallLibBtn);
+    tabsContainer.appendChild(makeTabBtn('reserve',   'clipboard',   'Reserve',   false));
+    tabsContainer.appendChild(makeTabBtn('active',    'refreshCw',   'Active',    false));
+    tabsContainer.appendChild(makeTabBtn('finalized', 'checkCircle', 'Finalized', false));
+    tabsContainer.appendChild(makeTabBtn('overview',  'barChart',    'Overview',  false));
+    tabsContainer.appendChild(makeTabBtn('lessons',   'bookOpen',    'Lessons',   false));
+    tabsContainer.appendChild(makeTabBtn('recallLibrary', 'refreshCw', 'Recall Library', false));
 
     const spacer = document.createElement('div');
     spacer.style.cssText = 'flex:1;';
@@ -427,24 +438,24 @@
   function renderTabContent() {
     const main = $("tcLibraryMain");
     if (!main) return;
-    const assignmentsTab = document.createElement('div');
-    assignmentsTab.id = 'assignmentsTab';
-    assignmentsTab.className = 'tc-lib-tab-content';
-    assignmentsTab.setAttribute('role', 'tabpanel');
-    assignmentsTab.style.display = 'none';
-    const lessonsTab = document.createElement('div');
-    lessonsTab.id = 'lessonsTab';
-    lessonsTab.className = 'tc-lib-tab-content';
-    lessonsTab.setAttribute('role', 'tabpanel');
-    lessonsTab.style.display = 'none';
-    const recallLibraryTab = document.createElement('div');
-    recallLibraryTab.id = 'recallLibraryTab';
-    recallLibraryTab.className = 'tc-lib-tab-content';
-    recallLibraryTab.setAttribute('role', 'tabpanel');
-    recallLibraryTab.style.display = 'none';
-    main.appendChild(assignmentsTab);
-    main.appendChild(lessonsTab);
-    main.appendChild(recallLibraryTab);
+
+    const makePanel = (id) => {
+      const div = document.createElement('div');
+      div.id = id;
+      div.className = 'tc-lib-tab-content';
+      div.setAttribute('role', 'tabpanel');
+      div.style.display = 'none';
+      return div;
+    };
+
+    main.appendChild(makePanel('reserveTab'));
+    main.appendChild(makePanel('activeTab'));
+    main.appendChild(makePanel('finalizedTab'));
+    main.appendChild(makePanel('overviewTab'));
+    main.appendChild(makePanel('lessonsTab'));
+    main.appendChild(makePanel('recallLibraryTab'));
+    // Keep the legacy assignments tab for backward compatibility
+    main.appendChild(makePanel('assignmentsTab'));
   }
 
   function switchTab(tabName) {
@@ -454,19 +465,48 @@
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-    const assignmentsTab = $("assignmentsTab");
-    const lessonsTab = $("lessonsTab");
-    const recallLibraryTab = $("recallLibraryTab");
-    if (assignmentsTab) assignmentsTab.style.display = tabName === "assignments" ? "block" : "none";
-    if (lessonsTab) lessonsTab.style.display = tabName === "lessons" ? "block" : "none";
-    if (recallLibraryTab) recallLibraryTab.style.display = tabName === "recallLibrary" ? "block" : "none";
-    if (tabName === "assignments") {
-      renderAssignmentsTab();
-    } else if (tabName === "lessons") {
-      renderLessonsTab();
-    } else if (tabName === "recallLibrary") {
-      renderRecallLibraryTab();
+    const allTabIds = ['reserveTab', 'activeTab', 'finalizedTab', 'overviewTab', 'lessonsTab', 'recallLibraryTab', 'assignmentsTab'];
+    allTabIds.forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'none';
+    });
+    const tabMap = {
+      reserve:       'reserveTab',
+      active:        'activeTab',
+      finalized:     'finalizedTab',
+      overview:      'overviewTab',
+      lessons:       'lessonsTab',
+      recallLibrary: 'recallLibraryTab',
+      assignments:   'assignmentsTab'
+    };
+    const panelId = tabMap[tabName];
+    if (panelId) {
+      const panel = $(panelId);
+      if (panel) panel.style.display = 'block';
     }
+    if (tabName === 'reserve') {
+      renderReserveTab();
+    } else if (tabName === 'active') {
+      renderActiveTab();
+    } else if (tabName === 'finalized') {
+      renderFinalizedTab();
+    } else if (tabName === 'overview') {
+      renderOverviewTab();
+    } else if (tabName === 'lessons') {
+      renderLessonsTab();
+    } else if (tabName === 'recallLibrary') {
+      renderRecallLibraryTab();
+    } else if (tabName === 'assignments') {
+      renderAssignmentsTab();
+    }
+  }
+
+  /**
+   * Re-renders the currently active tab. Used by event handlers that need
+   * to refresh the view after a data change.
+   */
+  function refreshCurrentTab() {
+    switchTab(_currentTab);
   }
 
   // ── Data Loading ──────────────────────────────────────────────────────────────
@@ -835,10 +875,13 @@
     const instances = allInstances.filter(i => i.assignment_id === assignment.id);
     if (instances.length === 0) {
       if (assignment.active === false) return 'finalized';
+      if (assignment.finalized_at) return 'finalized';
       return 'upcoming';
     }
     // Per-assignment: if the teacher marked the assignment inactive, it's finalized
     if (assignment.active === false) return 'finalized';
+    // Explicitly finalized via timestamp (e.g. teacher pressed "Finalize")
+    if (assignment.finalized_at) return 'finalized';
     const anyActive = instances.some(i =>
       ['Assigned', 'In Progress', 'Submitted'].includes(i.status)
     );
@@ -1105,7 +1148,7 @@
   function toggleLane(laneId) {
     if (collapsedLanes.has(laneId)) { collapsedLanes.delete(laneId); }
     else { collapsedLanes.add(laneId); }
-    renderAssignmentsTab();
+    refreshCurrentTab();
   }
 
   function isHierarchyExpanded(nodeId, defaultExpanded) {
@@ -1116,7 +1159,7 @@
   function toggleHierarchy(nodeId) {
     const current = hierarchyExpandState.has(nodeId) ? hierarchyExpandState.get(nodeId) : true;
     hierarchyExpandState.set(nodeId, !current);
-    renderAssignmentsTab();
+    refreshCurrentTab();
   }
 
   // ── Lane Section Wrapper ──────────────────────────────────────────────────────
@@ -1297,7 +1340,7 @@
           if (idx !== -1) assignmentsData[idx].active = false;
         });
         selectedUpcoming.clear();
-        renderAssignmentsTab();
+        refreshCurrentTab();
         showToast(count + ' assignment' + (count !== 1 ? 's' : '') + ' ' + actionLabel);
       } catch (err) {
         console.error('[tc-library] ' + logTag + ' failed:', err);
@@ -1487,7 +1530,7 @@
           await db.updateAssignment(assignment.id, { active: false });
           const idx = assignmentsData.findIndex(a => a.id === assignment.id);
           if (idx !== -1) assignmentsData[idx].active = false;
-          renderAssignmentsTab();
+          refreshCurrentTab();
           showToast('Assignment deleted');
         } catch (err) {
           console.error('[tc-library] Failed to delete assignment:', err);
@@ -1910,7 +1953,7 @@
           await db.updateAssignment(assignment.id, { active: false });
           const idx = assignmentsData.findIndex(a => a.id === assignment.id);
           if (idx !== -1) assignmentsData[idx].active = false;
-          renderAssignmentsTab();
+          refreshCurrentTab();
           showToast('Assignment archived');
         } catch (err) {
           console.error('[tc-library] Failed to archive:', err);
@@ -1936,7 +1979,7 @@
           await db.updateAssignment(assignment.id, { active: true });
           const idx = assignmentsData.findIndex(a => a.id === assignment.id);
           if (idx !== -1) assignmentsData[idx].active = true;
-          renderAssignmentsTab();
+          refreshCurrentTab();
           showToast('Assignment unarchived');
         } catch (err) {
           console.error('[tc-library] Failed to unarchive:', err);
@@ -2365,7 +2408,7 @@
         filters.assignments.searchQuery = '';
         filters.assignments.typeFilter = 'All';
         saveFilters();
-        renderAssignmentsTab();
+        refreshCurrentTab();
       });
       filterBar.appendChild(clearBtn);
     }
@@ -2458,6 +2501,553 @@
   }
 
   // ── Sync Status Badge ─────────────────────────────────────────────────────────
+
+  // ── Reserve Tab ──────────────────────────────────────────────────────────────
+
+  function renderReserveTab() {
+    const container = $('reserveTab');
+    if (!container) return;
+    try {
+      container.innerHTML = '';
+
+      const filtered = filterAssignments();
+      const reserveList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+
+      // Filter bar
+      const filterBar = document.createElement('div');
+      filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+
+      const classBtnWrap = document.createElement('div');
+      classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
+      const allClassBtn = document.createElement('button');
+      allClassBtn.className = 'tc-lib-class-filter tc-btn';
+      allClassBtn.dataset.class = 'All Classes';
+      allClassBtn.textContent = 'All Classes';
+      classBtnWrap.appendChild(allClassBtn);
+      CANON_CLASSES.forEach(cls => {
+        const btn = document.createElement('button');
+        btn.className = 'tc-lib-class-filter tc-btn';
+        btn.dataset.class = cls;
+        btn.textContent = cls;
+        classBtnWrap.appendChild(btn);
+      });
+      filterBar.appendChild(classBtnWrap);
+
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.id = 'assignmentSearch';
+      searchInput.placeholder = 'Search assignments...';
+      searchInput.value = filters.assignments.searchQuery;
+      searchInput.style.cssText = 'flex:1; min-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+      filterBar.appendChild(searchInput);
+
+      const typeFilter = document.createElement('select');
+      typeFilter.id = 'assignmentTypeFilter';
+      typeFilter.style.cssText = 'padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+      ASSIGNMENT_TYPE_OPTIONS.forEach(([val, label]) => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = label;
+        typeFilter.appendChild(opt);
+      });
+      typeFilter.value = filters.assignments.typeFilter;
+      filterBar.appendChild(typeFilter);
+
+      const sortSelect = document.createElement('select');
+      sortSelect.id = 'assignmentSortBy';
+      sortSelect.style.cssText = 'padding:8px 12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+      ASSIGNMENT_SORT_OPTIONS.forEach(([val, label]) => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = label;
+        sortSelect.appendChild(opt);
+      });
+      sortSelect.value = filters.assignments.sortBy;
+      filterBar.appendChild(sortSelect);
+
+      const hasActiveFilters = Boolean(filters.assignments.searchQuery.trim()) || filters.assignments.typeFilter !== 'All';
+      if (hasActiveFilters) {
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'tc-btn';
+        clearBtn.title = 'Clear filters';
+        clearBtn.style.opacity = '0.7';
+        clearBtn.textContent = '\u00d7 Clear';
+        clearBtn.addEventListener('click', () => {
+          filters.assignments.searchQuery = '';
+          filters.assignments.typeFilter = 'All';
+          saveFilters();
+          renderReserveTab();
+        });
+        filterBar.appendChild(clearBtn);
+      }
+      container.appendChild(filterBar);
+
+      // Count label
+      const countEl = document.createElement('div');
+      countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
+      countEl.textContent = reserveList.length === 0 ? 'No reserved assignments' :
+        `${reserveList.length} assignment${reserveList.length !== 1 ? 's' : ''} in reserve`;
+      container.appendChild(countEl);
+
+      container.appendChild(
+        renderLaneSection('upcoming', 'clipboard', 'Reserve', reserveList.length, (div) => {
+          div.appendChild(renderUpcomingLane(reserveList));
+        })
+      );
+      updateActiveClassFilter();
+    } catch (err) {
+      console.error('[tc-library] Error rendering Reserve tab:', err);
+      container.innerHTML = '';
+      const errCard = document.createElement('div');
+      errCard.className = 'tc-card';
+      errCard.style.cssText = 'padding:32px; text-align:center; color:rgba(255,255,255,.7);';
+      const p = document.createElement('p');
+      p.textContent = 'Something went wrong rendering this section.';
+      errCard.appendChild(p);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'tc-btn';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.addEventListener('click', () => renderReserveTab());
+      errCard.appendChild(retryBtn);
+      container.appendChild(errCard);
+    }
+  }
+
+  // ── Active Tab ────────────────────────────────────────────────────────────────
+
+  function renderActiveTab() {
+    const container = $('activeTab');
+    if (!container) return;
+    try {
+      container.innerHTML = '';
+
+      const filtered = filterAssignments();
+      const activeList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+
+      // Filter bar (class + search)
+      const filterBar = document.createElement('div');
+      filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+
+      const classBtnWrap = document.createElement('div');
+      classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
+      const allClassBtn = document.createElement('button');
+      allClassBtn.className = 'tc-lib-class-filter tc-btn';
+      allClassBtn.dataset.class = 'All Classes';
+      allClassBtn.textContent = 'All Classes';
+      classBtnWrap.appendChild(allClassBtn);
+      CANON_CLASSES.forEach(cls => {
+        const btn = document.createElement('button');
+        btn.className = 'tc-lib-class-filter tc-btn';
+        btn.dataset.class = cls;
+        btn.textContent = cls;
+        classBtnWrap.appendChild(btn);
+      });
+      filterBar.appendChild(classBtnWrap);
+
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.id = 'assignmentSearch';
+      searchInput.placeholder = 'Search assignments...';
+      searchInput.value = filters.assignments.searchQuery;
+      searchInput.style.cssText = 'flex:1; min-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
+      filterBar.appendChild(searchInput);
+      container.appendChild(filterBar);
+
+      // Count / status row
+      const countEl = document.createElement('div');
+      countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
+      countEl.textContent = activeList.length === 0 ? 'No active assignments' :
+        `${activeList.length} active assignment${activeList.length !== 1 ? 's' : ''}`;
+      container.appendChild(countEl);
+
+      if (activeList.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:48px 24px; text-align:center;';
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:12px; color:rgba(255,255,255,.40);';
+        iconWrap.appendChild(createIcon('refreshCw', 40));
+        const msg = document.createElement('div');
+        msg.style.cssText = 'font-size:15px; color:rgba(255,255,255,.50);';
+        msg.textContent = filters.assignments.classFilter !== 'All Classes' || filters.assignments.searchQuery
+          ? 'No active assignments match the current filters.'
+          : 'No active assignments. Issue an assignment from the Reserve tab.';
+        empty.appendChild(iconWrap);
+        empty.appendChild(msg);
+        container.appendChild(empty);
+        updateActiveClassFilter();
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'tc-lib-grid';
+      grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
+      activeList.forEach(a => grid.appendChild(renderActiveCard(a)));
+      container.appendChild(grid);
+
+      updateActiveClassFilter();
+    } catch (err) {
+      console.error('[tc-library] Error rendering Active tab:', err);
+      container.innerHTML = '';
+      const errCard = document.createElement('div');
+      errCard.className = 'tc-card';
+      errCard.style.cssText = 'padding:32px; text-align:center; color:rgba(255,255,255,.7);';
+      const p = document.createElement('p');
+      p.textContent = 'Something went wrong rendering this section.';
+      errCard.appendChild(p);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'tc-btn';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.addEventListener('click', () => renderActiveTab());
+      errCard.appendChild(retryBtn);
+      container.appendChild(errCard);
+    }
+  }
+
+  /**
+   * Renders a card for an active assignment with missing-student detection.
+   */
+  function renderActiveCard(assignment) {
+    const stats = getAssignmentStats(assignment, instancesData, submissionsData);
+    const instances = instancesData.filter(i => i.assignment_id === assignment.id);
+    const dueDates = instances.map(i => i.due_at).filter(Boolean);
+    const nearestDue = dueDates.length > 0
+      ? new Date(Math.min(...dueDates.map(d => new Date(d).getTime())))
+      : null;
+
+    // Missing-student detection
+    const className = inferClassName(assignment);
+    const enrolledStudents = className
+      ? classEnrollmentsData.filter(e => e.class_name === className && e.active !== false)
+      : [];
+    const assignedCodes = new Set(instances.map(i => i.student_code).filter(Boolean));
+    const missingStudents = enrolledStudents.filter(e => !assignedCodes.has(e.student_code));
+    const notStarted = instances.filter(i => i.status === 'Assigned');
+
+    const card = document.createElement('div');
+    card.className = 'tc-card assignment-card';
+    card.dataset.id = assignment.id || '';
+    card.style.cssText = 'padding:20px; cursor:pointer;';
+
+    // Header
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;';
+    const titleEl = document.createElement('h3');
+    titleEl.style.cssText = 'margin:0; font-size:16px; flex:1; line-height:1.3;';
+    titleEl.textContent = assignment.title || 'Untitled';
+    const typePill = document.createElement('span');
+    typePill.style.cssText = 'background:rgba(96,165,250,.20);color:#60a5fa;padding:3px 10px;border-radius:12px;font-size:12px;white-space:nowrap;flex-shrink:0;';
+    typePill.textContent = getAssignmentTypeLabel(assignment) || (assignment.type || 'file');
+    headerRow.appendChild(titleEl);
+    headerRow.appendChild(typePill);
+    card.appendChild(headerRow);
+
+    if (className) {
+      const classEl = document.createElement('div');
+      classEl.style.cssText = 'margin-bottom:8px; display:inline-flex; align-items:center; gap:4px;';
+      const classIcon = createIcon('users', 12);
+      classIcon.style.cssText = 'flex-shrink:0; color:#60a5fa;';
+      classEl.appendChild(classIcon);
+      classEl.appendChild(createClassBadgeSpan(className));
+      card.appendChild(classEl);
+    }
+
+    if (nearestDue) {
+      const dueEl = document.createElement('div');
+      dueEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:8px; display:inline-flex; align-items:center; gap:4px;';
+      const calIcon = createIcon('calendar', 13);
+      calIcon.style.cssText = 'flex-shrink:0;';
+      dueEl.appendChild(calIcon);
+      dueEl.appendChild(document.createTextNode('Due: ' + nearestDue.toLocaleDateString()));
+      card.appendChild(dueEl);
+    }
+
+    // Submission progress bar
+    const progressRow = document.createElement('div');
+    progressRow.style.cssText = 'margin-bottom:10px;';
+    const total = stats.studentCount;
+    const submitted = stats.submittedCount + stats.gradedCount;
+    const progressLabel = document.createElement('div');
+    progressLabel.style.cssText = 'font-size:12px; color:rgba(255,255,255,.50); margin-bottom:5px;';
+    progressLabel.textContent = `${submitted} / ${total} submitted`;
+    progressRow.appendChild(progressLabel);
+    const barOuter = document.createElement('div');
+    barOuter.style.cssText = 'height:4px; background:rgba(255,255,255,.10); border-radius:2px; overflow:hidden;';
+    const barInner = document.createElement('div');
+    const pct = total > 0 ? Math.round((submitted / total) * 100) : 0;
+    barInner.style.cssText = `height:100%; width:${pct}%; background:rgba(52,211,153,.70); border-radius:2px; transition:width .3s ease;`;
+    barOuter.appendChild(barInner);
+    progressRow.appendChild(barOuter);
+    card.appendChild(progressRow);
+
+    // Missing student alerts
+    if (missingStudents.length > 0) {
+      const alertEl = document.createElement('div');
+      alertEl.style.cssText = 'background:rgba(251,191,36,.10); border:1px solid rgba(251,191,36,.25); border-radius:8px; padding:8px 12px; margin-bottom:10px;';
+      const alertHeader = document.createElement('div');
+      alertHeader.style.cssText = 'display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#fbbf24; margin-bottom:4px;';
+      alertHeader.appendChild(createIcon('users', 12));
+      alertHeader.appendChild(document.createTextNode(
+        missingStudents.length + ' student' + (missingStudents.length !== 1 ? 's' : '') + ' not assigned'
+      ));
+      alertEl.appendChild(alertHeader);
+      const names = missingStudents.slice(0, 4).map(e => e.student_name || e.student_code).join(', ');
+      const overflow = missingStudents.length > 4 ? ` +${missingStudents.length - 4} more` : '';
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:11px; color:rgba(255,255,255,.50);';
+      nameEl.textContent = names + overflow;
+      alertEl.appendChild(nameEl);
+      card.appendChild(alertEl);
+    } else if (notStarted.length > 0) {
+      const alertEl = document.createElement('div');
+      alertEl.style.cssText = 'background:rgba(96,165,250,.08); border:1px solid rgba(96,165,250,.20); border-radius:8px; padding:8px 12px; margin-bottom:10px;';
+      const alertHeader = document.createElement('div');
+      alertHeader.style.cssText = 'display:flex; align-items:center; gap:6px; font-size:12px; color:rgba(96,165,250,.80);';
+      alertHeader.appendChild(createIcon('users', 12));
+      alertHeader.appendChild(document.createTextNode(
+        notStarted.length + ' student' + (notStarted.length !== 1 ? 's' : '') + ' haven\'t started'
+      ));
+      alertEl.appendChild(alertHeader);
+      card.appendChild(alertEl);
+    }
+
+    // Action buttons
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:8px; margin-top:4px;';
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'tc-btn';
+    viewBtn.style.cssText = 'flex:1; font-size:13px;';
+    viewBtn.textContent = 'View Details';
+    viewBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showAssignmentDetail(assignment.id);
+    });
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'tc-btn issue-btn';
+    issueBtn.dataset.id = assignment.id || '';
+    issueBtn.style.cssText = 'font-size:13px; padding:6px 12px;';
+    issueBtn.textContent = '+ Issue';
+    btnRow.appendChild(viewBtn);
+    btnRow.appendChild(issueBtn);
+    card.appendChild(btnRow);
+    return card;
+  }
+
+  // ── Finalized Tab ─────────────────────────────────────────────────────────────
+
+  function renderFinalizedTab() {
+    const container = $('finalizedTab');
+    if (!container) return;
+    try {
+      container.innerHTML = '';
+
+      // Multi-axis filter bar
+      const filterBar = document.createElement('div');
+      filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+
+      // Class filter pills
+      const classBtnWrap = document.createElement('div');
+      classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
+      const allClassBtn = document.createElement('button');
+      allClassBtn.className = 'tc-lib-fin-class-filter tc-btn';
+      allClassBtn.dataset.class = 'All Classes';
+      allClassBtn.textContent = 'All Classes';
+      if (filters.finalized.classFilter === 'All Classes') allClassBtn.classList.add('active');
+      classBtnWrap.appendChild(allClassBtn);
+      CANON_CLASSES.forEach(cls => {
+        const btn = document.createElement('button');
+        btn.className = 'tc-lib-fin-class-filter tc-btn';
+        btn.dataset.class = cls;
+        btn.textContent = cls;
+        if (filters.finalized.classFilter === cls) btn.classList.add('active');
+        classBtnWrap.appendChild(btn);
+      });
+      filterBar.appendChild(classBtnWrap);
+
+      // Student name filter
+      const studentInput = document.createElement('input');
+      studentInput.type = 'text';
+      studentInput.id = 'finalizedStudentFilter';
+      studentInput.placeholder = 'Filter by student...';
+      studentInput.value = filters.finalized.studentFilter;
+      studentInput.style.cssText = 'flex:1; min-width:160px; max-width:220px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px;';
+      filterBar.appendChild(studentInput);
+
+      // Week filter
+      const weekInput = document.createElement('input');
+      weekInput.type = 'text';
+      weekInput.id = 'finalizedWeekFilter';
+      weekInput.placeholder = 'Filter by week...';
+      weekInput.value = filters.finalized.weekFilter;
+      weekInput.style.cssText = 'min-width:140px; max-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px;';
+      filterBar.appendChild(weekInput);
+
+      // Clear filters
+      const hasFilters = filters.finalized.classFilter !== 'All Classes' ||
+        filters.finalized.studentFilter.trim() || filters.finalized.weekFilter.trim();
+      if (hasFilters) {
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'tc-btn';
+        clearBtn.style.opacity = '0.7';
+        clearBtn.textContent = '\u00d7 Clear';
+        clearBtn.addEventListener('click', () => {
+          filters.finalized.classFilter = 'All Classes';
+          filters.finalized.studentFilter = '';
+          filters.finalized.weekFilter = '';
+          saveFilters();
+          renderFinalizedTab();
+        });
+        filterBar.appendChild(clearBtn);
+      }
+      container.appendChild(filterBar);
+
+      // Get all finalized assignments and apply filters
+      let finalizedList = sortAssignments(
+        assignmentsData.filter(a => computeLane(a, instancesData) === 'finalized')
+      );
+
+      // Apply class filter
+      if (filters.finalized.classFilter !== 'All Classes') {
+        finalizedList = finalizedList.filter(a => {
+          const cls = inferClassName(a);
+          return cls === filters.finalized.classFilter ||
+            a.series === filters.finalized.classFilter;
+        });
+      }
+
+      // Apply student filter (cross-reference instances by student_code/student_name)
+      const studentQuery = filters.finalized.studentFilter.trim().toLowerCase();
+      if (studentQuery) {
+        finalizedList = finalizedList.filter(a => {
+          const instances = instancesData.filter(i => i.assignment_id === a.id);
+          return instances.some(inst => {
+            const enroll = classEnrollmentsData.find(e => e.student_code === inst.student_code);
+            const name = (enroll ? enroll.student_name : inst.student_code || '').toLowerCase();
+            return name.includes(studentQuery) || (inst.student_code || '').toLowerCase().includes(studentQuery);
+          });
+        });
+      }
+
+      // Apply week filter
+      const weekQuery = filters.finalized.weekFilter.trim().toLowerCase();
+      if (weekQuery) {
+        finalizedList = finalizedList.filter(a => {
+          const date = getFinalizationDate(a, instancesData, submissionsData);
+          const weekLabel = getWeekLabel(date).toLowerCase();
+          const monthLabel = getMonthLabel(date).toLowerCase();
+          return weekLabel.includes(weekQuery) || monthLabel.includes(weekQuery);
+        });
+      }
+
+      // Count label
+      const countEl = document.createElement('div');
+      countEl.setAttribute('aria-live', 'polite');
+      countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
+      const total = assignmentsData.filter(a => computeLane(a, instancesData) === 'finalized').length;
+      countEl.textContent = finalizedList.length === total
+        ? `${total} finalized assignment${total !== 1 ? 's' : ''}`
+        : `Showing ${finalizedList.length} of ${total} finalized assignment${total !== 1 ? 's' : ''}`;
+      container.appendChild(countEl);
+
+      if (finalizedList.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:48px 24px; text-align:center;';
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'display:flex; justify-content:center; margin-bottom:12px; color:rgba(255,255,255,.40);';
+        iconWrap.appendChild(createIcon('checkCircle', 40));
+        const msg = document.createElement('div');
+        msg.style.cssText = 'font-size:15px; color:rgba(255,255,255,.50);';
+        msg.textContent = hasFilters
+          ? 'No finalized assignments match the current filters.'
+          : 'No finalized assignments yet.';
+        empty.appendChild(iconWrap);
+        empty.appendChild(msg);
+        container.appendChild(empty);
+        return;
+      }
+
+      container.appendChild(
+        renderLaneSection('finalized', 'checkCircle', 'Finalized', finalizedList.length, (div) => {
+          div.appendChild(renderFinalizedLane(finalizedList));
+        })
+      );
+    } catch (err) {
+      console.error('[tc-library] Error rendering Finalized tab:', err);
+      container.innerHTML = '';
+      const errCard = document.createElement('div');
+      errCard.className = 'tc-card';
+      errCard.style.cssText = 'padding:32px; text-align:center; color:rgba(255,255,255,.7);';
+      const p = document.createElement('p');
+      p.textContent = 'Something went wrong rendering this section.';
+      errCard.appendChild(p);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'tc-btn';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.addEventListener('click', () => renderFinalizedTab());
+      errCard.appendChild(retryBtn);
+      container.appendChild(errCard);
+    }
+  }
+
+  // ── Overview Tab ──────────────────────────────────────────────────────────────
+
+  function renderOverviewTab() {
+    const container = $('overviewTab');
+    if (!container) return;
+    try {
+      container.innerHTML = '';
+
+      // Sync status row
+      const statusRow = document.createElement('div');
+      statusRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:14px; color:rgba(255,255,255,.60);';
+      statusRow.appendChild(document.createTextNode('Status:\u00a0'));
+      statusRow.appendChild(getSyncStatusBadge());
+      container.appendChild(statusRow);
+
+      // KPI grid
+      const kpis = calculateAssignmentKPIs();
+      const kpiGrid = document.createElement('div');
+      kpiGrid.className = 'tc-lib-kpi-grid';
+      const makeKpiLabel = (iconName, text) => {
+        const span = document.createElement('span');
+        span.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
+        span.appendChild(createIcon(iconName, 14));
+        span.appendChild(document.createTextNode(text));
+        return span;
+      };
+      kpiGrid.appendChild(renderKPI(makeKpiLabel('clipboard', 'Reserve'), kpis.upcomingCount));
+      kpiGrid.appendChild(renderKPI(makeKpiLabel('refreshCw', 'Active'), kpis.currentCount, '#60a5fa'));
+      kpiGrid.appendChild(renderKPI(makeKpiLabel('checkCircle', 'Finalized'), kpis.finalizedCount, '#4ade80'));
+      const avgColor = kpis.avgScore != null ? scoreColor(kpis.avgScore) : 'rgba(255,255,255,.40)';
+      kpiGrid.appendChild(renderKPI(makeKpiLabel('barChart', 'Avg Score'), kpis.avgScore != null ? kpis.avgScore + '%' : null, avgColor));
+      container.appendChild(kpiGrid);
+
+      // Analytics section
+      const filtered = filterAssignments();
+      const upcomingList  = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      const currentList   = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+      const finalizedList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'finalized'));
+      container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
+    } catch (err) {
+      console.error('[tc-library] Error rendering Overview tab:', err);
+      container.innerHTML = '';
+      const errCard = document.createElement('div');
+      errCard.className = 'tc-card';
+      errCard.style.cssText = 'padding:32px; text-align:center; color:rgba(255,255,255,.7);';
+      const p = document.createElement('p');
+      p.textContent = 'Something went wrong rendering this section.';
+      errCard.appendChild(p);
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'tc-btn';
+      retryBtn.textContent = 'Retry';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.addEventListener('click', () => renderOverviewTab());
+      errCard.appendChild(retryBtn);
+      container.appendChild(errCard);
+    }
+  }
 
   function getSyncStatusBadge() {
     const span = document.createElement('span');
@@ -2680,12 +3270,22 @@
       if (tabBtn) switchTab(tabBtn.dataset.tab);
     });
 
-    // Class filter buttons
+    // Class filter buttons (shared between reserve/active tabs)
     document.addEventListener('click', (e) => {
       const filterBtn = e.target.closest('.tc-lib-class-filter');
       if (filterBtn) {
         filters.assignments.classFilter = filterBtn.dataset.class;
-        renderAssignmentsTab();
+        refreshCurrentTab();
+        saveFilters();
+      }
+    });
+
+    // Finalized tab class filter buttons
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tc-lib-fin-class-filter');
+      if (btn) {
+        filters.finalized.classFilter = btn.dataset.class;
+        renderFinalizedTab();
         saveFilters();
       }
     });
@@ -2712,21 +3312,33 @@
     document.addEventListener('input', (e) => {
       if (e.target.id === 'assignmentSearch') {
         filters.assignments.searchQuery = e.target.value;
-        renderAssignmentsTab();
+        refreshCurrentTab();
+        saveFilters();
+      }
+      // Finalized tab student filter
+      if (e.target.id === 'finalizedStudentFilter') {
+        filters.finalized.studentFilter = e.target.value;
+        renderFinalizedTab();
+        saveFilters();
+      }
+      // Finalized tab week filter
+      if (e.target.id === 'finalizedWeekFilter') {
+        filters.finalized.weekFilter = e.target.value;
+        renderFinalizedTab();
         saveFilters();
       }
     });
 
-    // Type filter
+    // Type filter / sort (reserve/assignments tab)
     document.addEventListener('change', (e) => {
       if (e.target.id === 'assignmentTypeFilter') {
         filters.assignments.typeFilter = e.target.value;
-        renderAssignmentsTab();
+        refreshCurrentTab();
         saveFilters();
       }
       if (e.target.id === 'assignmentSortBy') {
         filters.assignments.sortBy = e.target.value;
-        renderAssignmentsTab();
+        refreshCurrentTab();
         saveFilters();
       }
     });
@@ -2969,7 +3581,7 @@
             const idx = assignmentsData.findIndex(a => a.id === assignment.id);
             if (idx !== -1) assignmentsData[idx].active = false;
             closeModal();
-            renderAssignmentsTab();
+            refreshCurrentTab();
             showToast('Assignment deleted');
           } catch (err) {
             console.error('[tc-library] Failed to delete assignment:', err);
@@ -2996,7 +3608,7 @@
             const idx = assignmentsData.findIndex(a => a.id === assignment.id);
             if (idx !== -1) assignmentsData[idx].active = false;
             closeModal();
-            renderAssignmentsTab();
+            refreshCurrentTab();
             showToast('Assignment archived');
           } catch (err) {
             console.error('[tc-library] Failed to archive:', err);
