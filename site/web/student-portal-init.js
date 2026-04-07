@@ -4464,10 +4464,11 @@
     if (!paraData.length) return;
 
     const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || String(DEFAULT_TTS_RATE));
-    var OPENAI_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
-    var rawVoice = localStorage.getItem('rc_book_tts_voice') || 'nova';
-    var savedVoiceName = OPENAI_VOICES.indexOf(rawVoice) !== -1 ? rawVoice : 'nova';
-    if (OPENAI_VOICES.indexOf(rawVoice) === -1) {
+    const OPENAI_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+    const rawVoice = localStorage.getItem('rc_book_tts_voice') || 'nova';
+    const isValidVoice = OPENAI_VOICES.includes(rawVoice);
+    const savedVoiceName = isValidVoice ? rawVoice : 'nova';
+    if (!isValidVoice) {
       localStorage.setItem('rc_book_tts_voice', 'nova');
     }
 
