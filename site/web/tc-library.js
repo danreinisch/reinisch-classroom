@@ -128,6 +128,23 @@
       { tag: 'circle', cx: '9', cy: '7', r: '4' },
       { tag: 'path', d: 'M23 21v-2a4 4 0 0 0-3-3.87' },
       { tag: 'path', d: 'M16 3.13a4 4 0 0 1 0 7.75' }
+    ],
+    table: [
+      { tag: 'rect', x: '3', y: '3', width: '18', height: '18', rx: '2', ry: '2' },
+      { tag: 'line', x1: '3', y1: '9', x2: '21', y2: '9' },
+      { tag: 'line', x1: '3', y1: '15', x2: '21', y2: '15' },
+      { tag: 'line', x1: '9', y1: '3', x2: '9', y2: '21' }
+    ],
+    printer: [
+      { tag: 'path', d: 'M6 9V2h12v7' },
+      { tag: 'path', d: 'M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2' },
+      { tag: 'rect', x: '6', y: '14', width: '12', height: '8' }
+    ],
+    fileCsv: [
+      { tag: 'path', d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' },
+      { tag: 'polyline', points: '14 2 14 8 20 8' },
+      { tag: 'line', x1: '16', y1: '13', x2: '8', y2: '13' },
+      { tag: 'line', x1: '14', y1: '17', x2: '8', y2: '17' }
     ]
   };
 
@@ -223,7 +240,12 @@
         finalized: {
           classFilter: filters.finalized.classFilter,
           studentFilter: filters.finalized.studentFilter,
-          weekFilter: filters.finalized.weekFilter
+          weekFilter: filters.finalized.weekFilter,
+          dateFrom: filters.finalized.dateFrom,
+          dateTo: filters.finalized.dateTo,
+          viewMode: filters.finalized.viewMode,
+          sortColumn: filters.finalized.sortColumn,
+          sortDirection: filters.finalized.sortDirection
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -275,6 +297,21 @@
         }
         if (typeof data.finalized.weekFilter === 'string') {
           filters.finalized.weekFilter = data.finalized.weekFilter;
+        }
+        if (typeof data.finalized.dateFrom === 'string') {
+          filters.finalized.dateFrom = data.finalized.dateFrom;
+        }
+        if (typeof data.finalized.dateTo === 'string') {
+          filters.finalized.dateTo = data.finalized.dateTo;
+        }
+        if (typeof data.finalized.viewMode === 'string') {
+          filters.finalized.viewMode = data.finalized.viewMode;
+        }
+        if (typeof data.finalized.sortColumn === 'string') {
+          filters.finalized.sortColumn = data.finalized.sortColumn;
+        }
+        if (typeof data.finalized.sortDirection === 'string') {
+          filters.finalized.sortDirection = data.finalized.sortDirection;
         }
       }
 
@@ -331,7 +368,12 @@
     finalized: {
       classFilter: "All Classes",
       studentFilter: "",
-      weekFilter: ""
+      weekFilter: "",
+      dateFrom: "",
+      dateTo: "",
+      viewMode: "tree",
+      sortColumn: "date",
+      sortDirection: "desc"
     }
   };
 
@@ -1467,13 +1509,13 @@
     }
     card.appendChild(instanceBadge);
 
-    if (assignment.series) {
+    if (assignment.series && !assignment.series.startsWith('http')) {
       const seriesEl = document.createElement('div');
-      seriesEl.style.cssText = 'color:rgba(255,255,255,.60); font-size:13px; margin-bottom:6px; display:inline-flex; align-items:center; gap:4px;';
-      const seriesIcon = createIcon('bookOpen', 13);
-      seriesIcon.style.cssText = 'flex-shrink:0;';
+      seriesEl.style.cssText = 'margin-bottom:8px; display:inline-flex; align-items:center; gap:6px;';
+      const seriesIcon = createIcon('users', 12);
+      seriesIcon.style.cssText = 'flex-shrink:0; color:#60a5fa;';
       seriesEl.appendChild(seriesIcon);
-      seriesEl.appendChild(document.createTextNode(assignment.series));
+      seriesEl.appendChild(createClassBadgeSpan(assignment.series));
       card.appendChild(seriesEl);
     }
 
@@ -1506,8 +1548,9 @@
     const issueBtn = document.createElement('button');
     issueBtn.className = 'tc-btn issue-btn';
     issueBtn.dataset.id = assignment.id || '';
-    issueBtn.style.cssText = 'flex:1; font-size:13px;';
-    issueBtn.textContent = 'Issue to Class';
+    issueBtn.style.cssText = 'flex:1; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:6px;';
+    issueBtn.appendChild(createIcon('arrowRight', 14));
+    issueBtn.appendChild(document.createTextNode(' Launch'));
     btnRow.appendChild(issueBtn);
     card.appendChild(btnRow);
 
@@ -2842,7 +2885,76 @@
     try {
       container.innerHTML = '';
 
-      // Multi-axis filter bar
+      // Declare early so export/print closures capture the variable binding
+      let finalizedList = [];
+
+      // ── Toolbar: view toggle + export buttons ──────────────────────────────
+      const toolbarRow = document.createElement('div');
+      toolbarRow.style.cssText = 'margin-bottom:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
+
+      // View toggle group
+      const viewToggleWrap = document.createElement('div');
+      viewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
+
+      const treeViewBtn = document.createElement('button');
+      treeViewBtn.className = 'tc-btn';
+      treeViewBtn.setAttribute('aria-pressed', filters.finalized.viewMode === 'tree' ? 'true' : 'false');
+      treeViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.finalized.viewMode === 'tree' ? 'background:rgba(96,165,250,.18);' : '');
+      treeViewBtn.appendChild(createIcon('folderOpen', 14));
+      treeViewBtn.appendChild(document.createTextNode(' Tree View'));
+      treeViewBtn.addEventListener('click', () => {
+        if (filters.finalized.viewMode !== 'tree') {
+          filters.finalized.viewMode = 'tree';
+          saveFilters();
+          renderFinalizedTab();
+        }
+      });
+
+      const tableViewBtn = document.createElement('button');
+      tableViewBtn.className = 'tc-btn';
+      tableViewBtn.setAttribute('aria-pressed', filters.finalized.viewMode === 'table' ? 'true' : 'false');
+      tableViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.finalized.viewMode === 'table' ? 'background:rgba(96,165,250,.18);' : '');
+      tableViewBtn.appendChild(createIcon('table', 14));
+      tableViewBtn.appendChild(document.createTextNode(' Table View'));
+      tableViewBtn.addEventListener('click', () => {
+        if (filters.finalized.viewMode !== 'table') {
+          filters.finalized.viewMode = 'table';
+          saveFilters();
+          renderFinalizedTab();
+        }
+      });
+
+      viewToggleWrap.appendChild(treeViewBtn);
+      viewToggleWrap.appendChild(tableViewBtn);
+      toolbarRow.appendChild(viewToggleWrap);
+
+      const toolbarSpacer = document.createElement('div');
+      toolbarSpacer.style.flex = '1';
+      toolbarRow.appendChild(toolbarSpacer);
+
+      // Export CSV button
+      const exportCsvBtn = document.createElement('button');
+      exportCsvBtn.className = 'tc-btn';
+      exportCsvBtn.style.cssText = 'display:inline-flex; align-items:center; gap:6px; font-size:13px;';
+      exportCsvBtn.appendChild(createIcon('fileCsv', 14));
+      exportCsvBtn.appendChild(document.createTextNode(' Export CSV'));
+      exportCsvBtn.addEventListener('click', () => exportFinalizedCSV(finalizedList));
+      toolbarRow.appendChild(exportCsvBtn);
+
+      // Print button
+      const printBtn = document.createElement('button');
+      printBtn.className = 'tc-btn';
+      printBtn.style.cssText = 'display:inline-flex; align-items:center; gap:6px; font-size:13px;';
+      printBtn.appendChild(createIcon('printer', 14));
+      printBtn.appendChild(document.createTextNode(' Print'));
+      printBtn.addEventListener('click', () => printFinalizedReport(finalizedList));
+      toolbarRow.appendChild(printBtn);
+
+      container.appendChild(toolbarRow);
+
+      // ── Multi-axis filter bar ──────────────────────────────────────────────
       const filterBar = document.createElement('div');
       filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
@@ -2883,9 +2995,40 @@
       weekInput.style.cssText = 'min-width:140px; max-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px;';
       filterBar.appendChild(weekInput);
 
-      // Clear filters
+      // Date range filter (From – To)
+      const dateRangeWrap = document.createElement('div');
+      dateRangeWrap.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
+      const dateIcon = document.createElement('span');
+      dateIcon.style.cssText = 'display:inline-flex; align-items:center; color:rgba(255,255,255,.40);';
+      dateIcon.setAttribute('aria-hidden', 'true');
+      dateIcon.appendChild(createIcon('calendar', 13));
+      dateRangeWrap.appendChild(dateIcon);
+      const dateFromInput = document.createElement('input');
+      dateFromInput.type = 'date';
+      dateFromInput.id = 'finalizedDateFrom';
+      dateFromInput.value = filters.finalized.dateFrom;
+      dateFromInput.setAttribute('aria-label', 'From date');
+      dateFromInput.style.cssText = 'padding:7px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px; color-scheme:dark;';
+      dateRangeWrap.appendChild(dateFromInput);
+      const dateSep = document.createElement('span');
+      dateSep.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px;';
+      dateSep.textContent = '\u2013';
+      dateRangeWrap.appendChild(dateSep);
+      const dateToInput = document.createElement('input');
+      dateToInput.type = 'date';
+      dateToInput.id = 'finalizedDateTo';
+      dateToInput.value = filters.finalized.dateTo;
+      dateToInput.setAttribute('aria-label', 'To date');
+      dateToInput.style.cssText = 'padding:7px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px; color-scheme:dark;';
+      dateRangeWrap.appendChild(dateToInput);
+      filterBar.appendChild(dateRangeWrap);
+
+      // Clear filters button
       const hasFilters = filters.finalized.classFilter !== 'All Classes' ||
-        filters.finalized.studentFilter.trim() || filters.finalized.weekFilter.trim();
+        filters.finalized.studentFilter.trim() ||
+        filters.finalized.weekFilter.trim() ||
+        filters.finalized.dateFrom.trim() ||
+        filters.finalized.dateTo.trim();
       if (hasFilters) {
         const clearBtn = document.createElement('button');
         clearBtn.className = 'tc-btn';
@@ -2895,6 +3038,8 @@
           filters.finalized.classFilter = 'All Classes';
           filters.finalized.studentFilter = '';
           filters.finalized.weekFilter = '';
+          filters.finalized.dateFrom = '';
+          filters.finalized.dateTo = '';
           saveFilters();
           renderFinalizedTab();
         });
@@ -2902,8 +3047,8 @@
       }
       container.appendChild(filterBar);
 
-      // Get all finalized assignments and apply filters
-      let finalizedList = sortAssignments(
+      // ── Compute and filter finalized list ─────────────────────────────────
+      finalizedList = sortAssignments(
         assignmentsData.filter(a => computeLane(a, instancesData) === 'finalized')
       );
 
@@ -2940,6 +3085,27 @@
         });
       }
 
+      // Apply date range filter
+      if (filters.finalized.dateFrom.trim()) {
+        const fromDate = new Date(filters.finalized.dateFrom);
+        if (!isNaN(fromDate.getTime())) {
+          finalizedList = finalizedList.filter(a => {
+            const d = getFinalizationDate(a, instancesData, submissionsData);
+            return d >= fromDate;
+          });
+        }
+      }
+      if (filters.finalized.dateTo.trim()) {
+        const toDate = new Date(filters.finalized.dateTo);
+        if (!isNaN(toDate.getTime())) {
+          toDate.setHours(23, 59, 59, 999);
+          finalizedList = finalizedList.filter(a => {
+            const d = getFinalizationDate(a, instancesData, submissionsData);
+            return d <= toDate;
+          });
+        }
+      }
+
       // Count label
       const countEl = document.createElement('div');
       countEl.setAttribute('aria-live', 'polite');
@@ -2967,11 +3133,19 @@
         return;
       }
 
-      container.appendChild(
-        renderLaneSection('finalized', 'checkCircle', 'Finalized', finalizedList.length, (div) => {
-          div.appendChild(renderFinalizedLane(finalizedList));
-        })
-      );
+      if (filters.finalized.viewMode === 'table') {
+        const tableWrap = document.createElement('div');
+        tableWrap.className = 'tc-card';
+        tableWrap.style.cssText = 'padding:0; overflow-x:auto;';
+        tableWrap.appendChild(renderFinalizedTable(finalizedList));
+        container.appendChild(tableWrap);
+      } else {
+        container.appendChild(
+          renderLaneSection('finalized', 'checkCircle', 'Finalized', finalizedList.length, (div) => {
+            div.appendChild(renderFinalizedLane(finalizedList));
+          })
+        );
+      }
     } catch (err) {
       console.error('[tc-library] Error rendering Finalized tab:', err);
       container.innerHTML = '';
@@ -2989,6 +3163,397 @@
       errCard.appendChild(retryBtn);
       container.appendChild(errCard);
     }
+  }
+
+  // ── Finalized Table View ──────────────────────────────────────────────────────
+
+  function renderFinalizedTable(assignments) {
+    const col = filters.finalized.sortColumn || 'date';
+    const dir = filters.finalized.sortDirection || 'desc';
+
+    const sorted = [...assignments].sort((a, b) => {
+      let aVal, bVal;
+      switch (col) {
+        case 'title':
+          aVal = (a.title || '').toLowerCase();
+          bVal = (b.title || '').toLowerCase();
+          break;
+        case 'class':
+          aVal = (inferClassName(a) || '').toLowerCase();
+          bVal = (inferClassName(b) || '').toLowerCase();
+          break;
+        case 'students': {
+          const sa = getAssignmentStats(a, instancesData, submissionsData);
+          const sb = getAssignmentStats(b, instancesData, submissionsData);
+          aVal = sa.studentCount;
+          bVal = sb.studentCount;
+          break;
+        }
+        case 'avgScore': {
+          const sa = getAssignmentStats(a, instancesData, submissionsData);
+          const sb = getAssignmentStats(b, instancesData, submissionsData);
+          aVal = sa.avgScore != null ? sa.avgScore : -1;
+          bVal = sb.avgScore != null ? sb.avgScore : -1;
+          break;
+        }
+        case 'status':
+          aVal = a.active === false ? 'archived' : 'active';
+          bVal = b.active === false ? 'archived' : 'active';
+          break;
+        default: // 'date'
+          aVal = getFinalizationDate(a, instancesData, submissionsData).getTime();
+          bVal = getFinalizationDate(b, instancesData, submissionsData).getTime();
+          break;
+      }
+      if (aVal < bVal) return dir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%; border-collapse:collapse; font-size:14px;';
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    headerRow.style.cssText = 'background:rgba(255,255,255,.04);';
+
+    const cols = [
+      { key: 'title', label: 'Title' },
+      { key: 'class', label: 'Class' },
+      { key: 'students', label: 'Students' },
+      { key: 'avgScore', label: 'Avg Score' },
+      { key: 'date', label: 'Date Finalized' },
+      { key: 'status', label: 'Status' }
+    ];
+
+    cols.forEach(({ key, label }) => {
+      const th = document.createElement('th');
+      th.style.cssText = 'padding:10px 14px; text-align:left; font-weight:600; font-size:13px; color:rgba(255,255,255,.70); cursor:pointer; user-select:none; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,.10);';
+      const thInner = document.createElement('span');
+      thInner.style.cssText = 'display:inline-flex; align-items:center; gap:4px;';
+      thInner.appendChild(document.createTextNode(label));
+      if (col === key) {
+        const indicator = document.createElement('span');
+        indicator.style.cssText = 'font-size:10px; color:#60a5fa;';
+        indicator.textContent = dir === 'asc' ? '\u25b2' : '\u25bc';
+        thInner.appendChild(indicator);
+      }
+      th.appendChild(thInner);
+      th.addEventListener('click', () => {
+        if (filters.finalized.sortColumn === key) {
+          filters.finalized.sortDirection = filters.finalized.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          filters.finalized.sortColumn = key;
+          filters.finalized.sortDirection = 'asc';
+        }
+        saveFilters();
+        renderFinalizedTab();
+      });
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    sorted.forEach((a, idx) => {
+      const stats = getAssignmentStats(a, instancesData, submissionsData);
+      const className = inferClassName(a);
+      const finalDate = getFinalizationDate(a, instancesData, submissionsData);
+      const isArchived = a.active === false;
+      const instances = instancesData.filter(i => i.assignment_id === a.id);
+      const studentCodes = [...new Set(instances.map(i => i.student_code).filter(Boolean))];
+
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'cursor:pointer; transition:background .1s ease;'
+        + (idx % 2 === 1 ? 'background:rgba(255,255,255,.02);' : '');
+      tr.addEventListener('mouseenter', () => { tr.style.background = 'rgba(96,165,250,.08)'; });
+      tr.addEventListener('mouseleave', () => { tr.style.background = idx % 2 === 1 ? 'rgba(255,255,255,.02)' : ''; });
+      tr.addEventListener('click', () => showAssignmentDetail(a.id));
+
+      const cellStyle = 'padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.06); vertical-align:middle;';
+
+      // Title
+      const tdTitle = document.createElement('td');
+      tdTitle.style.cssText = cellStyle;
+      const titleSpan = document.createElement('span');
+      titleSpan.style.cssText = 'font-weight:500; color:white;';
+      titleSpan.textContent = a.title || 'Untitled';
+      tdTitle.appendChild(titleSpan);
+      tr.appendChild(tdTitle);
+
+      // Class
+      const tdClass = document.createElement('td');
+      tdClass.style.cssText = cellStyle;
+      if (className) {
+        tdClass.appendChild(createClassBadgeSpan(className));
+      } else {
+        tdClass.style.color = 'rgba(255,255,255,.30)';
+        tdClass.textContent = '\u2014';
+      }
+      tr.appendChild(tdClass);
+
+      // Students
+      const tdStudents = document.createElement('td');
+      tdStudents.style.cssText = cellStyle;
+      if (studentCodes.length > 0) {
+        const badgesWrap = document.createElement('div');
+        badgesWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; align-items:center;';
+        studentCodes.slice(0, 3).forEach(code => {
+          const enroll = classEnrollmentsData.find(e => e.student_code === code);
+          const name = enroll ? (enroll.student_name || code) : code;
+          const badge = document.createElement('span');
+          badge.style.cssText = 'background:rgba(52,211,153,.12); color:#34d399; padding:2px 8px; border-radius:8px; font-size:11px; cursor:pointer; white-space:nowrap;';
+          badge.textContent = name;
+          badge.title = 'View student detail';
+          badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showStudentDetail(code, name);
+          });
+          badgesWrap.appendChild(badge);
+        });
+        if (studentCodes.length > 3) {
+          const moreSpan = document.createElement('span');
+          moreSpan.style.cssText = 'color:rgba(255,255,255,.40); font-size:11px;';
+          moreSpan.textContent = '+' + (studentCodes.length - 3) + ' more';
+          badgesWrap.appendChild(moreSpan);
+        }
+        tdStudents.appendChild(badgesWrap);
+      } else {
+        tdStudents.style.color = 'rgba(255,255,255,.30)';
+        tdStudents.textContent = '\u2014';
+      }
+      tr.appendChild(tdStudents);
+
+      // Avg Score
+      const tdScore = document.createElement('td');
+      tdScore.style.cssText = cellStyle;
+      if (stats.avgScore != null) {
+        const scoreSpan = document.createElement('span');
+        scoreSpan.style.cssText = `font-weight:600; color:${scoreColor(stats.avgScore)};`;
+        scoreSpan.textContent = stats.avgScore + '%';
+        tdScore.appendChild(scoreSpan);
+      } else {
+        tdScore.style.color = 'rgba(255,255,255,.30)';
+        tdScore.textContent = '\u2014';
+      }
+      tr.appendChild(tdScore);
+
+      // Date Finalized
+      const tdDate = document.createElement('td');
+      tdDate.style.cssText = cellStyle + 'color:rgba(255,255,255,.60); white-space:nowrap;';
+      tdDate.textContent = finalDate.toLocaleDateString();
+      tr.appendChild(tdDate);
+
+      // Status
+      const tdStatus = document.createElement('td');
+      tdStatus.style.cssText = cellStyle;
+      const statusBadge = document.createElement('span');
+      if (isArchived) {
+        statusBadge.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.40); padding:2px 10px; border-radius:8px; font-size:12px;';
+        statusBadge.textContent = 'Archived';
+      } else {
+        statusBadge.style.cssText = 'background:rgba(52,211,153,.12); color:#34d399; padding:2px 10px; border-radius:8px; font-size:12px;';
+        statusBadge.textContent = 'Active';
+      }
+      tdStatus.appendChild(statusBadge);
+      tr.appendChild(tdStatus);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return table;
+  }
+
+  // ── Student Detail Modal ──────────────────────────────────────────────────────
+
+  function showStudentDetail(studentCode, studentName) {
+    const triggerEl = document.activeElement;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'studentDetailOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'studentDetailModalTitle');
+    overlay.style.cssText = [
+      'position:fixed; top:0; left:0; right:0; bottom:0;',
+      'background:rgba(0,0,0,.80); backdrop-filter:blur(4px);',
+      'display:flex; align-items:center; justify-content:center;',
+      'z-index:10000; padding:24px;'
+    ].join('');
+
+    function closeStudentModal() {
+      overlay.remove();
+      document.removeEventListener('keydown', handleKeyDown);
+      if (triggerEl && triggerEl.focus) triggerEl.focus();
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') { e.preventDefault(); closeStudentModal(); }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeStudentModal(); });
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding:28px; max-width:720px; width:100%; max-height:80vh; overflow-y:auto; position:relative;';
+    card.addEventListener('click', e => e.stopPropagation());
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tc-btn';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.style.cssText = 'position:absolute; top:16px; right:16px; padding:6px 8px;';
+    closeBtn.appendChild(createIcon('x', 16));
+    closeBtn.addEventListener('click', closeStudentModal);
+    card.appendChild(closeBtn);
+
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'studentDetailModalTitle';
+    titleEl.style.cssText = 'margin:0 0 4px 0; font-size:20px;';
+    titleEl.textContent = studentName || studentCode;
+    card.appendChild(titleEl);
+
+    const codeEl = document.createElement('div');
+    codeEl.style.cssText = 'font-size:13px; color:rgba(255,255,255,.50); margin-bottom:20px;';
+    codeEl.textContent = 'Code: ' + studentCode;
+    card.appendChild(codeEl);
+
+    // All finalized assignments for this student
+    const finalizedForStudent = assignmentsData.filter(a => {
+      if (computeLane(a, instancesData) !== 'finalized') return false;
+      return instancesData.some(i => i.assignment_id === a.id && i.student_code === studentCode);
+    });
+
+    // Compute per-student scores
+    const studentScores = finalizedForStudent.map(a => {
+      const instIds = new Set(
+        instancesData.filter(i => i.assignment_id === a.id && i.student_code === studentCode).map(i => i.id)
+      );
+      const sub = submissionsData.find(s => {
+        const iid = s.instance_id || (s.assignment_instances && s.assignment_instances.id);
+        return instIds.has(iid) && (s.score_total != null || s.score != null);
+      });
+      return sub ? (sub.score_total != null ? sub.score_total : sub.score) : null;
+    }).filter(v => v != null);
+
+    const avgScore = studentScores.length > 0
+      ? Math.round(studentScores.reduce((a, b) => a + b, 0) / studentScores.length)
+      : null;
+
+    // Summary stats grid
+    const summaryGrid = document.createElement('div');
+    summaryGrid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;';
+
+    const makeStatCell = (label, value, valueColor) => {
+      const cell = document.createElement('div');
+      cell.style.cssText = 'background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:14px;';
+      const labelEl = document.createElement('div');
+      labelEl.style.cssText = 'font-size:11px; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;';
+      labelEl.textContent = label;
+      const valueEl = document.createElement('div');
+      valueEl.style.cssText = 'font-size:20px; font-weight:600;' + (valueColor ? 'color:' + valueColor + ';' : '');
+      valueEl.textContent = value;
+      cell.appendChild(labelEl);
+      cell.appendChild(valueEl);
+      return cell;
+    };
+
+    summaryGrid.appendChild(makeStatCell('Total Finalized', String(finalizedForStudent.length)));
+    if (avgScore != null) {
+      summaryGrid.appendChild(makeStatCell('Avg Score', avgScore + '%', scoreColor(avgScore)));
+    }
+    card.appendChild(summaryGrid);
+
+    if (finalizedForStudent.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.style.cssText = 'text-align:center; padding:24px; color:rgba(255,255,255,.40); font-size:14px;';
+      emptyMsg.textContent = 'No finalized assignments found for this student.';
+      card.appendChild(emptyMsg);
+    } else {
+      const sectionTitle = document.createElement('div');
+      sectionTitle.style.cssText = 'font-size:12px; font-weight:600; color:rgba(255,255,255,.50); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;';
+      sectionTitle.textContent = 'Finalized Assignments';
+      card.appendChild(sectionTitle);
+
+      const tableWrap = document.createElement('div');
+      tableWrap.style.cssText = 'overflow-x:auto;';
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%; border-collapse:collapse; font-size:13px;';
+
+      const thead = document.createElement('thead');
+      const hRow = document.createElement('tr');
+      ['Title', 'Score', 'Date Finalized', 'Class'].forEach(colLabel => {
+        const th = document.createElement('th');
+        th.style.cssText = 'padding:8px 12px; text-align:left; font-size:12px; color:rgba(255,255,255,.50); border-bottom:1px solid rgba(255,255,255,.10); white-space:nowrap;';
+        th.textContent = colLabel;
+        hRow.appendChild(th);
+      });
+      thead.appendChild(hRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      finalizedForStudent.forEach((a, idx) => {
+        const instIds = new Set(
+          instancesData.filter(i => i.assignment_id === a.id && i.student_code === studentCode).map(i => i.id)
+        );
+        const sub = submissionsData.find(s => {
+          const iid = s.instance_id || (s.assignment_instances && s.assignment_instances.id);
+          return instIds.has(iid) && (s.score_total != null || s.score != null);
+        });
+        const score = sub ? (sub.score_total != null ? sub.score_total : sub.score) : null;
+        const finalDate = getFinalizationDate(a, instancesData, submissionsData);
+        const className = inferClassName(a);
+
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'cursor:pointer;' + (idx % 2 === 1 ? 'background:rgba(255,255,255,.02);' : '');
+        tr.addEventListener('click', () => {
+          closeStudentModal();
+          showAssignmentDetail(a.id);
+        });
+
+        const cs = 'padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle;';
+
+        const tdTitle = document.createElement('td');
+        tdTitle.style.cssText = cs;
+        tdTitle.textContent = a.title || 'Untitled';
+        tr.appendChild(tdTitle);
+
+        const tdScore = document.createElement('td');
+        tdScore.style.cssText = cs;
+        if (score != null) {
+          tdScore.style.color = scoreColor(score);
+          tdScore.style.fontWeight = '600';
+          tdScore.textContent = score + '%';
+        } else {
+          tdScore.style.color = 'rgba(255,255,255,.30)';
+          tdScore.textContent = '\u2014';
+        }
+        tr.appendChild(tdScore);
+
+        const tdDate = document.createElement('td');
+        tdDate.style.cssText = cs + 'color:rgba(255,255,255,.60); white-space:nowrap;';
+        tdDate.textContent = finalDate.toLocaleDateString();
+        tr.appendChild(tdDate);
+
+        const tdClass = document.createElement('td');
+        tdClass.style.cssText = cs;
+        if (className) {
+          tdClass.appendChild(createClassBadgeSpan(className));
+        } else {
+          tdClass.style.color = 'rgba(255,255,255,.30)';
+          tdClass.textContent = '\u2014';
+        }
+        tr.appendChild(tdClass);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+      card.appendChild(tableWrap);
+    }
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    closeBtn.focus();
   }
 
   // ── Overview Tab ──────────────────────────────────────────────────────────────
@@ -3339,6 +3904,17 @@
       if (e.target.id === 'assignmentSortBy') {
         filters.assignments.sortBy = e.target.value;
         refreshCurrentTab();
+        saveFilters();
+      }
+      // Finalized tab date range filters
+      if (e.target.id === 'finalizedDateFrom') {
+        filters.finalized.dateFrom = e.target.value;
+        renderFinalizedTab();
+        saveFilters();
+      }
+      if (e.target.id === 'finalizedDateTo') {
+        filters.finalized.dateTo = e.target.value;
+        renderFinalizedTab();
         saveFilters();
       }
     });
@@ -5314,6 +5890,102 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     console.log("[tc-library] Library exported successfully");
+  }
+
+  function exportFinalizedCSV(filteredList) {
+    const escCsv = (v) => {
+      const s = String(v != null ? v : '');
+      return (s.includes(',') || s.includes('"') || s.includes('\n'))
+        ? '"' + s.replace(/"/g, '""') + '"'
+        : s;
+    };
+    const rows = [['Title', 'Class', 'Student Count', 'Avg Score (%)', 'Date Finalized', 'Status']];
+    filteredList.forEach(a => {
+      const stats = getAssignmentStats(a, instancesData, submissionsData);
+      const className = inferClassName(a) || '';
+      const finalDate = getFinalizationDate(a, instancesData, submissionsData);
+      const status = a.active === false ? 'Archived' : 'Active';
+      rows.push([
+        a.title || 'Untitled',
+        className,
+        String(stats.studentCount),
+        stats.avgScore != null ? String(stats.avgScore) : '',
+        finalDate.toLocaleDateString(),
+        status
+      ]);
+    });
+    const csv = rows.map(row => row.map(escCsv).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finalized-assignments-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('CSV exported');
+  }
+
+  function printFinalizedReport(filteredList) {
+    const esc = (v) => {
+      if (!v && v !== 0) return '';
+      const d = document.createElement('div');
+      d.textContent = String(v);
+      return d.innerHTML;
+    };
+    const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const filterParts = [];
+    if (filters.finalized.classFilter !== 'All Classes') filterParts.push('Class: ' + filters.finalized.classFilter);
+    if (filters.finalized.studentFilter.trim()) filterParts.push('Student: ' + filters.finalized.studentFilter.trim());
+    if (filters.finalized.weekFilter.trim()) filterParts.push('Week: ' + filters.finalized.weekFilter.trim());
+    if (filters.finalized.dateFrom.trim()) filterParts.push('From: ' + filters.finalized.dateFrom);
+    if (filters.finalized.dateTo.trim()) filterParts.push('To: ' + filters.finalized.dateTo);
+    const filterSummary = filterParts.length > 0 ? filterParts.join(' | ') : 'All finalized assignments';
+    const rows = filteredList.map(a => {
+      const stats = getAssignmentStats(a, instancesData, submissionsData);
+      const className = inferClassName(a) || '\u2014';
+      const finalDate = getFinalizationDate(a, instancesData, submissionsData);
+      const status = a.active === false ? 'Archived' : 'Active';
+      return `<tr>
+        <td>${esc(a.title || 'Untitled')}</td>
+        <td>${esc(className)}</td>
+        <td>${esc(stats.studentCount)}</td>
+        <td>${stats.avgScore != null ? esc(stats.avgScore + '%') : '\u2014'}</td>
+        <td>${esc(finalDate.toLocaleDateString())}</td>
+        <td>${esc(status)}</td>
+      </tr>`;
+    }).join('');
+    const docHtml = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Finalized Assignments Report</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#fff;color:#111;margin:0;padding:24px;}
+  h1{font-size:22px;margin:0 0 6px 0;}
+  .meta{font-size:13px;color:#555;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px;}
+  table{border-collapse:collapse;width:100%;}
+  th,td{padding:9px 12px;border:1px solid #ddd;text-align:left;}
+  th{background:#f5f5f5;font-weight:600;}
+  tr:nth-child(even){background:#fafafa;}
+  @media print{body{padding:0;} table{page-break-inside:auto;} tr{page-break-inside:avoid;}}
+</style>
+</head><body>
+<h1>Finalized Assignments Report</h1>
+<div class="meta">Generated: ${esc(generatedDate)} &nbsp;|&nbsp; Filters: ${esc(filterSummary)} &nbsp;|&nbsp; Total: ${filteredList.length}</div>
+<table>
+  <thead><tr><th>Title</th><th>Class</th><th>Students</th><th>Avg Score (%)</th><th>Date Finalized</th><th>Status</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`;
+    const win = window.open('', '_blank');
+    if (!win) {
+      showToast('Could not open print window \u2014 please allow popups.', '#ef4444', '#fff');
+      return;
+    }
+    win.document.write(docHtml);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
   }
 
   // ── Start ─────────────────────────────────────────────────────────────────────

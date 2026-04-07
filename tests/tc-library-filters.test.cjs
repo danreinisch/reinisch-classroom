@@ -141,6 +141,23 @@ const ICON_PATHS = {
   x: [
     { tag: 'line', x1: '18', y1: '6', x2: '6', y2: '18' },
     { tag: 'line', x1: '6', y1: '6', x2: '18', y2: '18' }
+  ],
+  table: [
+    { tag: 'rect', x: '3', y: '3', width: '18', height: '18', rx: '2', ry: '2' },
+    { tag: 'line', x1: '3', y1: '9', x2: '21', y2: '9' },
+    { tag: 'line', x1: '3', y1: '15', x2: '21', y2: '15' },
+    { tag: 'line', x1: '9', y1: '3', x2: '9', y2: '21' }
+  ],
+  printer: [
+    { tag: 'path', d: 'M6 9V2h12v7' },
+    { tag: 'path', d: 'M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2' },
+    { tag: 'rect', x: '6', y: '14', width: '12', height: '8' }
+  ],
+  fileCsv: [
+    { tag: 'path', d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' },
+    { tag: 'polyline', points: '14 2 14 8 20 8' },
+    { tag: 'line', x1: '16', y1: '13', x2: '8', y2: '13' },
+    { tag: 'line', x1: '14', y1: '17', x2: '8', y2: '17' }
   ]
 };
 
@@ -186,7 +203,17 @@ function injectStyles(doc) {
 function makeFilterContext(storage) {
   const filters = {
     assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', sortBy: 'newest' },
-    lessons: { searchQuery: '' }
+    lessons: { searchQuery: '' },
+    finalized: {
+      classFilter: 'All Classes',
+      studentFilter: '',
+      weekFilter: '',
+      dateFrom: '',
+      dateTo: '',
+      viewMode: 'tree',
+      sortColumn: 'date',
+      sortDirection: 'desc'
+    }
   };
   const collapsedLanes = new Set(['analytics']);
   const hierarchyExpandState = new Map();
@@ -201,6 +228,16 @@ function makeFilterContext(storage) {
           sortBy: filters.assignments.sortBy
         },
         lessons: { searchQuery: filters.lessons.searchQuery },
+        finalized: {
+          classFilter: filters.finalized.classFilter,
+          studentFilter: filters.finalized.studentFilter,
+          weekFilter: filters.finalized.weekFilter,
+          dateFrom: filters.finalized.dateFrom,
+          dateTo: filters.finalized.dateTo,
+          viewMode: filters.finalized.viewMode,
+          sortColumn: filters.finalized.sortColumn,
+          sortDirection: filters.finalized.sortDirection
+        },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
       };
@@ -225,6 +262,16 @@ function makeFilterContext(storage) {
       }
       if (data.lessons && typeof data.lessons === 'object') {
         if (typeof data.lessons.searchQuery === 'string') filters.lessons.searchQuery = data.lessons.searchQuery;
+      }
+      if (data.finalized && typeof data.finalized === 'object') {
+        if (typeof data.finalized.classFilter === 'string') filters.finalized.classFilter = data.finalized.classFilter;
+        if (typeof data.finalized.studentFilter === 'string') filters.finalized.studentFilter = data.finalized.studentFilter;
+        if (typeof data.finalized.weekFilter === 'string') filters.finalized.weekFilter = data.finalized.weekFilter;
+        if (typeof data.finalized.dateFrom === 'string') filters.finalized.dateFrom = data.finalized.dateFrom;
+        if (typeof data.finalized.dateTo === 'string') filters.finalized.dateTo = data.finalized.dateTo;
+        if (typeof data.finalized.viewMode === 'string') filters.finalized.viewMode = data.finalized.viewMode;
+        if (typeof data.finalized.sortColumn === 'string') filters.finalized.sortColumn = data.finalized.sortColumn;
+        if (typeof data.finalized.sortDirection === 'string') filters.finalized.sortDirection = data.finalized.sortDirection;
       }
       if (Array.isArray(data.collapsedLanes)) {
         collapsedLanes.clear();
@@ -342,6 +389,91 @@ test('save then load produces same typeFilter', () => {
   const ctx2 = makeFilterContext(storage);
   ctx2.loadFilters();
   assert.strictEqual(ctx2.filters.assignments.typeFilter, 'file');
+});
+
+test('finalized: save viewMode table → load → viewMode restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.viewMode = 'table';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.viewMode, 'table');
+});
+
+test('finalized: save sortColumn/sortDirection → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.sortColumn = 'title';
+  ctx.filters.finalized.sortDirection = 'asc';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.sortColumn, 'title');
+  assert.strictEqual(ctx2.filters.finalized.sortDirection, 'asc');
+});
+
+test('finalized: save dateFrom/dateTo → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.dateFrom = '2026-01-01';
+  ctx.filters.finalized.dateTo = '2026-03-31';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.dateFrom, '2026-01-01');
+  assert.strictEqual(ctx2.filters.finalized.dateTo, '2026-03-31');
+});
+
+test('finalized: save classFilter/studentFilter/weekFilter → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.classFilter = 'Language Arts';
+  ctx.filters.finalized.studentFilter = 'Alice';
+  ctx.filters.finalized.weekFilter = 'Week 11';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.classFilter, 'Language Arts');
+  assert.strictEqual(ctx2.filters.finalized.studentFilter, 'Alice');
+  assert.strictEqual(ctx2.filters.finalized.weekFilter, 'Week 11');
+});
+
+test('finalized: viewMode as number → not applied, keeps default tree', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    finalized: { viewMode: 42, sortColumn: 'date', sortDirection: 'desc', classFilter: 'All Classes', studentFilter: '', weekFilter: '', dateFrom: '', dateTo: '' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.finalized.viewMode, 'tree');
+});
+
+test('finalized: dateFrom as number → not applied, keeps default empty', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    finalized: { viewMode: 'tree', sortColumn: 'date', sortDirection: 'desc', classFilter: 'All Classes', studentFilter: '', weekFilter: '', dateFrom: 99, dateTo: '' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.finalized.dateFrom, '');
+});
+
+test('finalized: defaults are preserved when finalized block is absent', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', sortBy: 'newest' },
+    lessons: { searchQuery: '' },
+    collapsedLanes: [],
+    hierarchyExpandState: []
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.finalized.viewMode, 'tree');
+  assert.strictEqual(ctx.filters.finalized.sortColumn, 'date');
+  assert.strictEqual(ctx.filters.finalized.sortDirection, 'desc');
+  assert.strictEqual(ctx.filters.finalized.dateFrom, '');
+  assert.strictEqual(ctx.filters.finalized.dateTo, '');
 });
 
 
@@ -621,7 +753,8 @@ test('icons referenced in codebase exist in ICON_PATHS', () => {
     'fileText', 'bookOpen', 'clipboard', 'clipboardPlus', 'refreshCw',
     'checkCircle', 'inbox', 'upload', 'download', 'search',
     'filter', 'chevronDown', 'chevronRight', 'folder', 'folderOpen',
-    'barChart', 'arrowRight', 'x'
+    'barChart', 'arrowRight', 'x',
+    'table', 'printer', 'fileCsv'
   ];
   requiredIcons.forEach(name => {
     assert.ok(Object.prototype.hasOwnProperty.call(ICON_PATHS, name), `"${name}" missing from ICON_PATHS`);
