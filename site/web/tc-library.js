@@ -396,12 +396,12 @@
       return btn;
     };
 
-    tabsContainer.appendChild(makeTabBtn('reserve',   'clipboard',   'Reserve',   false));
-    tabsContainer.appendChild(makeTabBtn('active',    'refreshCw',   'Active',    false));
-    tabsContainer.appendChild(makeTabBtn('finalized', 'checkCircle', 'Finalized', false));
-    tabsContainer.appendChild(makeTabBtn('overview',  'barChart',    'Overview',  false));
-    tabsContainer.appendChild(makeTabBtn('lessons',   'bookOpen',    'Lessons',   false));
-    tabsContainer.appendChild(makeTabBtn('recallLibrary', 'refreshCw', 'Recall Library', false));
+    tabsContainer.appendChild(makeTabBtn('reserve',   'clipboard',   'Reserve',       true));
+    tabsContainer.appendChild(makeTabBtn('active',    'refreshCw',   'Active',        false));
+    tabsContainer.appendChild(makeTabBtn('finalized', 'checkCircle', 'Finalized',     false));
+    tabsContainer.appendChild(makeTabBtn('overview',  'barChart',    'Overview',      false));
+    tabsContainer.appendChild(makeTabBtn('lessons',   'bookOpen',    'Lessons',       false));
+    tabsContainer.appendChild(makeTabBtn('recallLibrary', 'inbox',   'Recall Library', false));
 
     const spacer = document.createElement('div');
     spacer.style.cssText = 'flex:1;';
