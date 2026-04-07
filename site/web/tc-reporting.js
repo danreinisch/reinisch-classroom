@@ -3110,10 +3110,25 @@ ${narrative}`;
       return;
     }
 
+    const _progContainer = $('tab5ProgressContainer');
+    const _progLabel = $('tab5ProgressLabel');
+    const _progFill = $('tab5ProgressFill');
+    const _progBar = $('tab5ProgressBar');
+    const _total = activeStudents.length;
+    if (_progContainer) _progContainer.style.display = '';
+    if (_progBar) _progBar.setAttribute('aria-valuemax', _total);
+
     // Generate HTML for all students
     let allStudentReportsHTML = "";
+    let errorCount = 0;
 
-    activeStudents.forEach((student, index) => {
+    for (let index = 0; index < _total; index++) {
+      const student = activeStudents[index];
+      if (_progLabel) _progLabel.textContent = `Generating report ${index + 1} of ${_total}...`;
+      if (_progFill) _progFill.style.width = `${Math.round((index / _total) * 100)}%`;
+      if (_progBar) _progBar.setAttribute('aria-valuenow', index + 1);
+      await new Promise(r => setTimeout(r, 0));
+      try {
       // Get student's goals
       const studentGoals = goalsData.filter(
         (g) => g.student_code === student.code && isGoalActive(g)
@@ -3121,7 +3136,7 @@ ${narrative}`;
 
       if (studentGoals.length === 0) {
         // Skip students with no goals
-        return;
+        continue;
       }
 
       // Get student's grade from enrollments
@@ -3271,7 +3286,21 @@ ${narrative}`;
       });
 
       allStudentReportsHTML += `</div>`; // Close student section
-    });
+      } catch (err) {
+        console.error(`[tc-reporting] Error generating report for ${student.code}:`, err);
+        errorCount++;
+      }
+    }
+
+    // Update progress to complete state
+    if (_progContainer) {
+      const done = _total - errorCount;
+      if (_progLabel) _progLabel.textContent = errorCount > 0
+        ? `Complete — ${done} of ${_total} reports generated (${errorCount} error${errorCount !== 1 ? 's' : ''})`
+        : `Complete — ${_total} report${_total !== 1 ? 's' : ''} generated`;
+      if (_progFill) _progFill.style.width = '100%';
+      if (_progBar) { _progBar.setAttribute('aria-valuenow', String(_total)); _progBar.setAttribute('aria-valuetext', 'Complete'); }
+    }
 
     // Open print window
     const printWindow = window.open("", "_blank");
