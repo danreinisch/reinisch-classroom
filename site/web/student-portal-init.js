@@ -4461,7 +4461,16 @@
       return;
     }
 
-    stopBookTts();
+    // Inline cleanup — avoid speechSynthesis.cancel() to prevent Chrome from
+    // silently dropping the next utterance queued in the same execution frame.
+    if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
+    bookTtsActive = false;
+    bookTtsPaused = false;
+    bookTtsUtterance = null;
+    document.querySelectorAll('.st-book-word.tts-active, .st-book-word.tts-read').forEach(function (el) {
+      el.classList.remove('tts-active');
+      el.classList.remove('tts-read');
+    });
 
     // Build per-paragraph data: text, wordOffset (start of this para in allWordSpans), spanCount
     const paragraphEls = Array.from(content.querySelectorAll('p, h3.st-book-subheading'));
@@ -4486,15 +4495,10 @@
       voice = pickBestVoice(savedVoiceName);
     }
 
-    // If voices still not available, defer start until voiceschanged fires
-    if (!voice && window.speechSynthesis.getVoices().length === 0) {
-      window.speechSynthesis.addEventListener('voiceschanged', function onVoicesReady() {
-        startBookTts();
-      }, { once: true });
-      return;
-    }
-    // voice may still be null here — that's OK, we just won't set utterance.voice
-    // and the browser will use its default voice
+    // If voices still not available, just proceed with voice=null.
+    // Deferring to voiceschanged loses the user-gesture context and Chrome
+    // silently blocks the speech. The browser will use its default voice.
+    // voice may still be null here — that's OK.
 
     bookTtsActive = true;
     bookTtsPaused = false;
@@ -4509,7 +4513,10 @@
     function speakPara(idx) {
       if (!bookTtsActive || idx >= paraData.length) {
         // All paragraphs done (or TTS was manually stopped)
-        if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
+        if (lastHighlightedSpan) {
+          lastHighlightedSpan.classList.remove('tts-active');
+          lastHighlightedSpan.classList.add('tts-read');
+        }
         bookTtsUtterance = null;
         // Auto-advance only when page finished naturally (not manually stopped)
         const pageFinished = bookTtsActive && idx >= paraData.length;
@@ -4552,7 +4559,10 @@
 
       utterance.onboundary = function (e) {
         if (e.name !== 'word') return;
-        if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
+        if (lastHighlightedSpan) {
+          lastHighlightedSpan.classList.remove('tts-active');
+          lastHighlightedSpan.classList.add('tts-read');
+        }
         // Map charIndex within this paragraph's text to the correct global word span
         let charCount = 0;
         for (let i = 0; i < spanCount; i++) {
@@ -4584,6 +4594,18 @@
       };
 
       window.speechSynthesis.speak(utterance);
+
+      // Immediately highlight first word as a visual cue that TTS started
+      var firstSpan = allWordSpans[wordOffset];
+      if (firstSpan) {
+        if (lastHighlightedSpan) {
+          lastHighlightedSpan.classList.remove('tts-active');
+          lastHighlightedSpan.classList.add('tts-read');
+        }
+        firstSpan.classList.add('tts-active');
+        lastHighlightedSpan = firstSpan;
+        firstSpan.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
     }
 
     speakPara(0);
@@ -4617,9 +4639,10 @@
     if (ttsControls) ttsControls.style.display = 'none';
     if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
 
-    // Remove any active word highlights
-    document.querySelectorAll('.st-book-word.tts-active').forEach(function (el) {
+    // Remove any active/read word highlights
+    document.querySelectorAll('.st-book-word.tts-active, .st-book-word.tts-read').forEach(function (el) {
       el.classList.remove('tts-active');
+      el.classList.remove('tts-read');
     });
   }
 
