@@ -1639,7 +1639,7 @@
    */
   function computeMissingWork() {
     const activeList = assignmentsData.filter(a => computeLane(a, instancesData) === 'current');
-    // Map: studentCode → { studentCode, studentName, className, missingAssignments: [], inProgressAssignments: [] }
+    // Map: studentCode → { studentCode, studentName, className, missingAssignments: [] }
     const studentMap = new Map();
 
     for (const assignment of activeList) {
@@ -1659,24 +1659,17 @@
           i => i.assignment_id === assignment.id && i.student_code === studentCode
         );
 
-        const isMissing = !instance || instance.status === 'Assigned';
-        const isInProgress = instance && instance.status === 'In Progress';
-        if (isMissing || isInProgress) {
+        // Missing: no instance exists, or student hasn't started (status 'Assigned')
+        if (!instance || instance.status === 'Assigned') {
           if (!studentMap.has(studentCode)) {
-            studentMap.set(studentCode, { studentCode, studentName, className, missingAssignments: [], inProgressAssignments: [] });
+            studentMap.set(studentCode, { studentCode, studentName, className, missingAssignments: [] });
           }
-          const entry = studentMap.get(studentCode);
-          if (isMissing) {
-            entry.missingAssignments.push(assignment);
-          } else {
-            entry.inProgressAssignments.push(assignment);
-          }
+          studentMap.get(studentCode).missingAssignments.push(assignment);
         }
       }
     }
 
-    // Only return students who actually have missing assignments
-    return [...studentMap.values()].filter(s => s.missingAssignments.length > 0);
+    return [...studentMap.values()];
   }
 
   /**
@@ -3060,10 +3053,10 @@
       // ── Week grouping ────────────────────────────────────────────────────────
       const currentWeekLabel = getWeekLabel(new Date());
 
-      // Group assignments by week of created_at (or earliest instance date)
+      // Group assignments by week of their earliest instance assigned_at (or assignment created_at)
       const weekMap = new Map(); // weekLabel → { assignments: [], mondayMs: number }
       activeList.forEach(a => {
-        // Determine reference date: earliest instance created_at, fallback to assignment created_at
+        // Determine reference date: earliest instance assigned_at (or created_at), fallback to assignment created_at
         const instDates = instancesData
           .filter(i => i.assignment_id === a.id)
           .map(i => i.assigned_at || i.created_at)
