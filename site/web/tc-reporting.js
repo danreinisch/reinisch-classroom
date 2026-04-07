@@ -663,6 +663,29 @@
         <button class="tc-btn" id="btnExportDOCX" type="button">📄 Export as DOCX</button>
         <button class="tc-btn" id="btnCopyEmailBody" type="button">📋 Copy as Email Body</button>
       </div>
+    `;
+
+    // AI Narrative section
+    html += `
+      <div class="rp-ai-narrative-section" id="aiNarrativeSection">
+        <h3 class="rp-section-heading">✨ AI-Generated Narrative</h3>
+        <div class="rp-ai-narrative-controls">
+          <label for="aiNarrativeAudience"><strong>Audience:</strong></label>
+          <select id="aiNarrativeAudience" class="rp-select" style="width:auto;margin:0 8px;">
+            <option value="admin">Administrator / IEP Team</option>
+            <option value="parent">Parent / Guardian</option>
+          </select>
+          <button class="tc-btn" id="btnGenerateNarrative" type="button" data-student-code="${escapeHtml(student.code)}">✨ Generate Narrative</button>
+        </div>
+        <div id="aiNarrativeStatus" style="display:none;margin:8px 0;color:#555;font-style:italic;"></div>
+        <div id="aiNarrativeResult" style="display:none;margin-top:10px;">
+          <textarea id="aiNarrativeText" class="rp-narrative-edit" rows="8" style="width:100%;"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button class="tc-btn tc-btn-small" id="btnCopyNarrative" type="button">📋 Copy</button>
+            <button class="tc-btn tc-btn-small" id="btnRegenerateNarrative" type="button">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
       </div>
     `;
 
@@ -1073,6 +1096,105 @@ ${narrative}`;
   }
 
   /**
+   * Handle AI narrative generation for a student's IEP goals.
+   * Called from Tab 1 when the "✨ Generate Narrative" button is clicked.
+   * Must be declared at IIFE root — never inside try/catch or if blocks.
+   */
+  async function handleGenerateNarrative(student, studentGoals, quarterRange, audience, isRegenerate) {
+    const statusEl = $("aiNarrativeStatus");
+    const resultEl = $("aiNarrativeResult");
+    const textareaEl = $("aiNarrativeText");
+    const btnGen = $("btnGenerateNarrative");
+    const btnRegen = $("btnRegenerateNarrative");
+
+    if (!statusEl || !resultEl || !textareaEl) return;
+
+    // Show loading state
+    statusEl.style.display = '';
+    statusEl.textContent = isRegenerate ? '🔄 Regenerating narrative…' : '✨ Generating narrative…';
+    resultEl.style.display = 'none';
+    if (btnGen) btnGen.disabled = true;
+    if (btnRegen) btnRegen.disabled = true;
+
+    // Build goals payload from current state
+    const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+    const goalsPayload = studentGoals.map((goal) => {
+      const gp = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+      const prevGp = prevQuarterRange
+        ? getGoalProgressForQuarter(goal.code, student.code, prevQuarterRange)
+        : null;
+      const trend = getTrendIndicator(gp, prevGp);
+      const currentDisplay = goal.measurement_type === 'Observation'
+        ? (gp.count > 0 ? 'Data collected' : 'No data')
+        : (gp.average != null ? String(gp.average.toFixed(1)) : 'No data');
+      return {
+        code: goal.code || '',
+        area: goal.goal_area || '',
+        description: goal.desc || '',
+        baseline: String(goal.baseline || ''),
+        target: String(goal.mastery || goal.target || ''),
+        currentValue: currentDisplay,
+        trend: trend,
+        dataCount: gp.count || 0,
+      };
+    });
+
+    // Build scores payload from cached submissions
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const scoresPayload = [];
+    studentInstances.slice(0, 15).forEach((inst) => {
+      const sub = submissionsData.find((s) => s.instance_id === inst.id);
+      if (sub && sub.score_total != null) {
+        const asgn = assignmentsData.find((a) => a.id === inst.assignment_id);
+        scoresPayload.push({
+          title: asgn ? (asgn.title || '') : '',
+          score: sub.score_total,
+          date: sub.submitted_at ? sub.submitted_at.slice(0, 10) : '',
+          type: asgn ? (asgn.type || '') : '',
+        });
+      }
+    });
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-report-narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCode: student.code,
+          studentName: student.name || student.code,
+          goals: goalsPayload,
+          quarterLabel: getPeriodLabel(tab1State.quarter),
+          scores: scoresPayload,
+          audience: audience,
+        }),
+        credentials: 'same-origin',
+      });
+
+      const data = await res.json().catch(() => ({ ok: false, error: 'Invalid response' }));
+
+      if (!data.ok) {
+        statusEl.textContent = '❌ Error: ' + (data.error || 'Generation failed');
+        if (btnGen) btnGen.disabled = false;
+        if (btnRegen) btnRegen.disabled = false;
+        return;
+      }
+
+      statusEl.style.display = 'none';
+      textareaEl.value = data.narrative || '';
+      resultEl.style.display = '';
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    } catch (err) {
+      console.error('[tc-reporting] handleGenerateNarrative failed:', err);
+      statusEl.textContent = '❌ Network error: ' + err.message;
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    }
+  }
+
+  /**
    * TAB 1: IEP Quarterly Progress Report
    */
   function renderTab1() {
@@ -1287,6 +1409,39 @@ ${narrative}`;
         });
       });
     });
+
+    // Attach AI narrative button listeners (only for IEP progress template)
+    const btnGenNarrative = $("btnGenerateNarrative");
+    if (btnGenNarrative) {
+      btnGenNarrative.addEventListener('click', () => {
+        const audienceSelect = $("aiNarrativeAudience");
+        const audience = audienceSelect ? audienceSelect.value : 'admin';
+        handleGenerateNarrative(student, studentGoals, quarterRange, audience, false);
+      });
+    }
+    const btnRegenNarrative = $("btnRegenerateNarrative");
+    if (btnRegenNarrative) {
+      btnRegenNarrative.addEventListener('click', () => {
+        const audienceSelect = $("aiNarrativeAudience");
+        const audience = audienceSelect ? audienceSelect.value : 'admin';
+        handleGenerateNarrative(student, studentGoals, quarterRange, audience, true);
+      });
+    }
+    const btnCopyNarrative = $("btnCopyNarrative");
+    if (btnCopyNarrative) {
+      btnCopyNarrative.addEventListener('click', () => {
+        const textarea = $("aiNarrativeText");
+        const text = textarea ? textarea.value : '';
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btnCopyNarrative.textContent;
+          btnCopyNarrative.textContent = '✓ Copied!';
+          setTimeout(() => { btnCopyNarrative.textContent = original; }, 2000);
+        }).catch((err) => {
+          console.error('[tc-reporting] Failed to copy narrative:', err);
+        });
+      });
+    }
     } catch (err) {
       renderTabErrorCard(container, renderTab1, err);
     }
