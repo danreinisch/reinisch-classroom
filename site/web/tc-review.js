@@ -1827,7 +1827,7 @@
           });
           if (!finalizeRes.ok) {
             const finalizeErr = await finalizeRes.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(finalizeErr.error || `Finalize failed: ${finalizeRes.status}`);
+            throw new Error(finalizeErr.error || `Failed to finalize submission: ${finalizeRes.status}`);
           }
           await triggerGoalProgressUpdates(submission, items, answers);
 
@@ -1982,7 +1982,7 @@
                   }
 
                   // Persist the score via teacher-review-save
-                  await fetch('/.netlify/functions/teacher-review-save', {
+                  const saveScoreRes = await fetch('/.netlify/functions/teacher-review-save', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
@@ -1994,6 +1994,10 @@
                       teacherNote: suggestData.suggested_note || '',
                     }),
                   });
+                  if (!saveScoreRes.ok) {
+                    const saveScoreErr = await saveScoreRes.json().catch(() => ({ error: 'Unknown error' }));
+                    console.warn('[tc-review] Save score failed:', submission.id, item.id, saveScoreErr.error);
+                  }
                 }
               }
             } catch (itemErr) {
@@ -2081,7 +2085,7 @@
           });
           if (!gradeRes.ok) {
             const gradeErr = await gradeRes.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(gradeErr.error || `Grade save failed: ${gradeRes.status}`);
+            throw new Error(gradeErr.error || `Failed to save grade for submission: ${gradeRes.status}`);
           }
 
           // Update local cache
