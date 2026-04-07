@@ -723,6 +723,8 @@
     const barEl = $('rvBatchBar');
     const finalizeBtn = $('rvBtnFinalizeAll');
     const markBtn = $('rvBtnMarkAllReviewed');
+    const autoGradeBtn = $('rvBtnAutoGrade');
+    const finalizeReviewedBtn = $('rvBtnFinalizeAllReviewed');
     if (!barEl || !finalizeBtn || !markBtn) return;
 
     const queue = buildReviewQueue();
@@ -743,10 +745,27 @@
       if (allScored) finalizableCount++;
     }
 
+    // Count auto-gradeable: unreviewed submissions with unscored constructed items
+    let autoGradeCount = 0;
+    for (const submission of unreviewed) {
+      const assignmentId = resolveAssignmentId(submission);
+      if (!assignmentId) continue;
+      const items = assignmentItemsCache[assignmentId] || [];
+      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      if (constructedItems.length === 0) continue;
+      const answers = submissionAnswersCache[submission.id] || [];
+      const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
+      if (hasUnscored) autoGradeCount++;
+    }
+
     const markableCount = unreviewed.length;
 
-    // Show bar only if there are unreviewed submissions
-    barEl.style.display = markableCount > 0 ? 'flex' : 'none';
+    // Count reviewed submissions for the Finalize All Reviewed button
+    const reviewedSubmissions = submissionsData.filter(s => s.review_status === 'reviewed');
+    const reviewedCount = reviewedSubmissions.length;
+
+    // Show bar if there are unreviewed submissions OR reviewed submissions
+    barEl.style.display = (markableCount > 0 || reviewedCount > 0) ? 'flex' : 'none';
 
     // SAFETY: static SVG, no user data
     finalizeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
@@ -759,6 +778,24 @@
     markBtn.append(` Mark All Reviewed (${markableCount})`);
     markBtn.disabled = markableCount === 0;
     markBtn.setAttribute('aria-label', `Mark all as reviewed (${markableCount})`);
+
+    // Auto-Grade button — visible when there are unreviewed submissions with unscored items
+    if (autoGradeBtn) {
+      autoGradeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>';
+      autoGradeBtn.append(` \uD83E\uDD16 Auto-Grade All (${autoGradeCount})`);
+      autoGradeBtn.disabled = autoGradeCount === 0;
+      autoGradeBtn.setAttribute('aria-label', `Auto-grade all unreviewed submissions with AI (${autoGradeCount})`);
+      autoGradeBtn.style.display = '';
+    }
+
+    // Finalize All Reviewed button — visible only when there are reviewed submissions
+    if (finalizeReviewedBtn) {
+      finalizeReviewedBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      finalizeReviewedBtn.append(` \u2705 Finalize All Reviewed (${reviewedCount})`);
+      finalizeReviewedBtn.disabled = reviewedCount === 0;
+      finalizeReviewedBtn.setAttribute('aria-label', `Finalize all reviewed submissions (${reviewedCount})`);
+      finalizeReviewedBtn.style.display = reviewedCount > 0 ? '' : 'none';
+    }
   }
 
   // Render the UI
@@ -1260,7 +1297,9 @@
           ${gradeSummaryDisplay}
         </div>
         <div class="rv-note-input-group">
-          <label>Feedback:</label>
+          <label>Feedback: <button class="rv-btn rv-btn-suggest rv-btn-suggest-feedback"
+            data-submission-id="${escapeHtml(submission.id)}"
+            aria-label="Get AI-suggested overall feedback for this submission">✨ Suggest Feedback</button></label>
           <textarea class="rv-grade-feedback-input rv-note-input" rows="3"
                     placeholder="Feedback for student (optional)..."
                     data-submission-id="${escapeHtml(submission.id)}">${escapeHtml(currentFeedback)}</textarea>
@@ -1427,6 +1466,20 @@
       });
     }
 
+    const autoGradeBtn = $('rvBtnAutoGrade');
+    if (autoGradeBtn) {
+      autoGradeBtn.addEventListener('click', async () => {
+        await handleAutoGradeAll();
+      });
+    }
+
+    const finalizeAllReviewedBtn = $('rvBtnFinalizeAllReviewed');
+    if (finalizeAllReviewedBtn) {
+      finalizeAllReviewedBtn.addEventListener('click', async () => {
+        await handleFinalizeAllReviewed();
+      });
+    }
+
     // Queue container - event delegation
     const queueContainer = $('rvQueue');
     if (queueContainer) {
@@ -1455,7 +1508,11 @@
         // Handle AI suggest button click
         const suggestBtn = e.target.closest('.rv-btn-suggest');
         if (suggestBtn) {
-          await handleAiSuggest(suggestBtn);
+          if (suggestBtn.classList.contains('rv-btn-suggest-feedback')) {
+            await handleAiSuggestFeedback(suggestBtn);
+          } else {
+            await handleAiSuggest(suggestBtn);
+          }
           return;
         }
 
@@ -1722,6 +1779,406 @@
     const skippedMsg = skipped.length > 0 ? ` (${skipped.length} skipped — unscored written responses)` : '';
     showToast(`Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed${skippedMsg}`, '#22c55e', '#0b1220');
     await render();
+  }
+
+  // Handle "Finalize All Reviewed" batch action
+  async function handleFinalizeAllReviewed() {
+    const reviewed = submissionsData.filter(s => s.review_status === 'reviewed');
+    if (reviewed.length === 0) return;
+
+    if (!await rcConfirm('Finalize All Reviewed', `Finalize ${reviewed.length} reviewed submission${reviewed.length !== 1 ? 's' : ''}? This will lock grades and trigger IEP goal progress updates.`, 'Finalize')) return;
+
+    let processed = 0;
+    finalizingInProgress = true;
+    try {
+      for (const submission of reviewed) {
+        try {
+          const assignmentId = resolveAssignmentId(submission);
+          if (syntheticAssignmentIds.has(assignmentId)) continue;
+          const items = assignmentItemsCache[assignmentId] || [];
+          const answers = submissionAnswersCache[submission.id] || [];
+          const scoreAuto = answers.length > 0
+            ? items.filter(i => isAutoScoredItem(i, answers))
+                .reduce((sum, item) => {
+                  const ans = answers.find(a => a.item_id === item.id);
+                  return sum + (Number(ans?.earned_points) || 0);
+                }, 0)
+            : (Number(submission.score_auto) || 0);
+          let scoreManual = 0;
+          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers))
+            .forEach(item => {
+              const answer = answers.find(a => a.item_id === item.id);
+              if (answer) scoreManual += Number(answer.earned_points) || 0;
+            });
+          const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
+
+          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
+          await triggerGoalProgressUpdates(submission, items, answers);
+
+          // Archive submission for DESE compliance (non-fatal)
+          try {
+            const archiveRes = await fetch(ARCHIVE_SUBMISSION_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ submission_id: submission.id }),
+            });
+            const archiveData = await archiveRes.json();
+            if (!archiveData.ok) {
+              console.warn('[tc-review] Archive returned non-ok:', archiveData);
+            } else {
+              console.log('[tc-review] Archived submission:', archiveData.archive_id);
+            }
+          } catch (archiveErr) {
+            console.warn('[tc-review] Archive failed (non-fatal):', archiveErr);
+          }
+
+          submission.score_auto = scoreAuto;
+          submission.score_manual = scoreManual;
+          submission.score_total = scoreTotal;
+          submission.review_status = 'finalized';
+          delete submissionAnswersCache[submission.id];
+          expandedSubmissions.delete(submission.id);
+          processed++;
+        } catch (err) {
+          console.error('[tc-review] Finalize all reviewed error:', submission.id, err);
+        }
+      }
+    } finally {
+      finalizingInProgress = false;
+    }
+
+    showToast(`Finalized ${processed} submission${processed !== 1 ? 's' : ''}`, '#22c55e', '#0b1220');
+    await render();
+  }
+
+  // Handle "Auto-Grade All" batch action — AI-suggests scores and feedback for all unreviewed submissions
+  async function handleAutoGradeAll() {
+    const queue = buildReviewQueue();
+    const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
+
+    // Find submissions with unscored constructed items
+    const toAutoGrade = [];
+    for (const submission of unreviewed) {
+      const assignmentId = resolveAssignmentId(submission);
+      if (!assignmentId || syntheticAssignmentIds.has(assignmentId)) continue;
+      const items = assignmentItemsCache[assignmentId] || [];
+      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      if (constructedItems.length === 0) continue;
+      const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
+      const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
+      if (hasUnscored) toAutoGrade.push(submission);
+    }
+
+    if (toAutoGrade.length === 0) {
+      showToast('No submissions need auto-grading', '#f59e0b', '#0b1220');
+      return;
+    }
+
+    if (!await rcConfirm(
+      'Auto-Grade All',
+      `Auto-grade ${toAutoGrade.length} submission${toAutoGrade.length !== 1 ? 's' : ''} using AI? This will suggest scores for written responses and generate overall feedback. Submissions will move to the Reviewed tab where you can adjust before finalizing.`,
+      'Auto-Grade'
+    )) return;
+
+    let processed = 0;
+    let failed = 0;
+
+    // Show a live progress toast
+    const progressEl = document.createElement('div');
+    progressEl.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e40af;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;';
+    progressEl.textContent = `Auto-grading… 0/${toAutoGrade.length}`;
+    document.body.appendChild(progressEl);
+
+    finalizingInProgress = true;
+    try {
+      for (const submission of toAutoGrade) {
+        try {
+          const assignmentId = resolveAssignmentId(submission);
+          const items = assignmentItemsCache[assignmentId] || [];
+          const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
+          const constructedItems = items.filter(item => item.answer_type === 'constructed');
+          const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+          const assignmentTitle = instance?.settings?.title || '';
+
+          // Step 1: AI-suggest score for each unscored constructed item
+          for (const item of constructedItems) {
+            if (isAutoScoredItem(item, answers)) continue; // already scored
+
+            const answer = answers.find(a => a.item_id === item.id);
+            const rawAnswer = answer?.raw_answer;
+            const studentResponse = (typeof rawAnswer === 'object' && rawAnswer !== null && rawAnswer.value !== undefined)
+              ? rawAnswer.value
+              : (typeof rawAnswer === 'string' ? rawAnswer : (instance?.settings?.writing_response || ''));
+            if (!studentResponse || String(studentResponse).trim() === '') continue;
+
+            const maxPoints = item.points || 5;
+            const itemLabel = item.item_ref || item.ref || '';
+            const goalCodes = item.goal_codes || [];
+            let goalDescriptions = [];
+            if (goalCodes.length > 0) {
+              const studentObj = studentsData.find(s => s.code === instance?.student_code);
+              const studentId = studentObj?.id;
+              if (studentId) {
+                const goals = await ensureGoalsLoaded(studentId);
+                goalDescriptions = goalCodes.map(code => {
+                  const goal = goals.find(g => g.code === code);
+                  if (!goal) return '';
+                  const desc = goal.description || goal.desc || '';
+                  const area = goal.area || goal.skill_area || '';
+                  return area ? `${area} — ${desc}` : desc;
+                }).filter(Boolean);
+              }
+            }
+
+            try {
+              const suggestRes = await fetch('/.netlify/functions/teacher-ai-suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  student_response: String(studentResponse),
+                  rubric_tiers: generateRubricTiers(maxPoints),
+                  max_points: maxPoints,
+                  item_label: itemLabel,
+                  goal_codes: goalCodes,
+                  goal_descriptions: goalDescriptions,
+                }),
+              });
+              if (suggestRes.ok) {
+                const suggestData = await suggestRes.json();
+                if (suggestData.ok && suggestData.suggested_score != null) {
+                  // Save the AI-suggested score to the cache so subsequent steps use it
+                  if (answer) {
+                    answer.earned_points = suggestData.suggested_score;
+                    if (suggestData.suggested_note) answer.teacher_note = suggestData.suggested_note;
+                  } else {
+                    const newAnswer = {
+                      item_id: item.id,
+                      submission_id: submission.id,
+                      earned_points: suggestData.suggested_score,
+                      teacher_note: suggestData.suggested_note || '',
+                    };
+                    answers.push(newAnswer);
+                    submissionAnswersCache[submission.id] = answers;
+                  }
+
+                  // Persist the score via db
+                  await db.updateSubmissionAnswer({
+                    submissionId: submission.id,
+                    itemId: item.id,
+                    earnedPoints: suggestData.suggested_score,
+                    teacherNote: suggestData.suggested_note || '',
+                  });
+                }
+              }
+            } catch (itemErr) {
+              console.warn('[tc-review] Auto-grade item error:', submission.id, item.id, itemErr);
+            }
+          }
+
+          // Step 2: Build item summaries for the feedback endpoint
+          const latestAnswers = submissionAnswersCache[submission.id] || answers;
+          const itemSummaries = items.map(item => {
+            const answer = latestAnswers.find(a => a.item_id === item.id);
+            return {
+              label: item.item_ref || item.ref || 'Item',
+              type: item.answer_type || 'auto',
+              earned: answer?.earned_points != null ? Number(answer.earned_points) : null,
+              max: item.points || 0,
+              teacher_note: answer?.teacher_note || '',
+            };
+          }).filter(s => s.earned != null || s.type === 'constructed');
+
+          const totalEarned = itemSummaries.reduce((sum, s) => sum + (s.earned || 0), 0);
+          const totalPossible = items.reduce((sum, i) => sum + (i.points || 0), 0);
+          const totalPercent = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
+
+          // Step 3: AI-suggest overall feedback
+          let suggestedFeedback = '';
+          try {
+            const feedbackRes = await fetch('/.netlify/functions/teacher-ai-suggest-feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                assignment_title: assignmentTitle,
+                total_score: totalEarned,
+                total_possible: totalPossible,
+                total_percent: totalPercent,
+                item_summaries: itemSummaries,
+                student_code: instance?.student_code || '',
+              }),
+            });
+            if (feedbackRes.ok) {
+              const feedbackData = await feedbackRes.json();
+              if (feedbackData.ok && feedbackData.suggested_feedback) {
+                suggestedFeedback = feedbackData.suggested_feedback;
+              }
+            }
+          } catch (fbErr) {
+            console.warn('[tc-review] Auto-grade feedback error:', submission.id, fbErr);
+          }
+
+          // Step 4: Save grade + feedback and mark as reviewed
+          const scoreAuto = latestAnswers.length > 0
+            ? items.filter(i => isAutoScoredItem(i, latestAnswers))
+                .reduce((sum, item) => {
+                  const ans = latestAnswers.find(a => a.item_id === item.id);
+                  return sum + (Number(ans?.earned_points) || 0);
+                }, 0)
+            : (Number(submission.score_auto) || 0);
+          let scoreManual = 0;
+          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, latestAnswers))
+            .forEach(item => {
+              const answer = latestAnswers.find(a => a.item_id === item.id);
+              if (answer) scoreManual += Number(answer.earned_points) || 0;
+            });
+          const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
+          const gradedAt = new Date().toISOString();
+          const gradedBy = localStorage.getItem('rc_teacher_name') || 'AI Auto-Grade';
+
+          await db.upsertSubmission({
+            id: submission.id,
+            score_auto: scoreAuto,
+            score_manual: scoreManual,
+            score_total: scoreTotal,
+            status: 'Graded',
+            graded_at: gradedAt,
+            graded_by: gradedBy,
+            feedback: suggestedFeedback,
+            instance_id: submission.instance_id,
+          });
+
+          // Update local cache
+          submission.score_auto = scoreAuto;
+          submission.score_manual = scoreManual;
+          submission.score_total = scoreTotal;
+          submission.review_status = 'reviewed';
+          submission.graded_at = gradedAt;
+          submission.graded_by = gradedBy;
+          if (suggestedFeedback) submission.feedback = suggestedFeedback;
+
+          expandedSubmissions.delete(submission.id);
+          processed++;
+        } catch (err) {
+          console.error('[tc-review] Auto-grade error:', submission.id, err);
+          failed++;
+        }
+
+        // Update progress
+        progressEl.textContent = `Auto-grading… ${processed + failed}/${toAutoGrade.length}`;
+      }
+    } finally {
+      finalizingInProgress = false;
+      progressEl.remove();
+    }
+
+    const summaryMsg = failed > 0
+      ? `Auto-graded ${processed}/${toAutoGrade.length}. ${failed} failed (see console).`
+      : `Auto-graded ${processed} submission${processed !== 1 ? 's' : ''}`;
+    showToast(summaryMsg, failed > 0 ? '#f59e0b' : '#22c55e', '#0b1220');
+    await render();
+  }
+
+  // Handle AI-suggested overall feedback for a submission
+  async function handleAiSuggestFeedback(button) {
+    const submissionId = button.dataset.submissionId;
+
+    // Find the feedback textarea
+    const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${CSS.escape(submissionId)}"]`);
+    if (!feedbackInput) return;
+
+    const submission = submissionsData.find(s => s.id === submissionId);
+    if (!submission) return;
+
+    const assignmentId = resolveAssignmentId(submission);
+    const items = assignmentItemsCache[assignmentId] || [];
+    const answers = submissionAnswersCache[submissionId] || [];
+    const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+    const assignmentTitle = instance?.settings?.title || '';
+
+    // Build item summaries
+    const itemSummaries = items.map(item => {
+      const answer = answers.find(a => a.item_id === item.id);
+      return {
+        label: item.item_ref || item.ref || 'Item',
+        type: item.answer_type || 'auto',
+        earned: answer?.earned_points != null ? Number(answer.earned_points) : null,
+        max: item.points || 0,
+        teacher_note: answer?.teacher_note || '',
+      };
+    });
+
+    const totalEarned = itemSummaries.reduce((sum, s) => sum + (s.earned || 0), 0);
+    const totalPossible = items.reduce((sum, i) => sum + (i.points || 0), 0);
+    const totalPercent = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
+
+    // Remove any previous rationale/error messages below this button
+    const prevMsg = button.nextElementSibling;
+    if (prevMsg && (prevMsg.classList.contains('rv-ai-rationale') || prevMsg.classList.contains('rv-ai-error'))) {
+      prevMsg.remove();
+    }
+
+    const originalText = button.textContent.trim();
+    button.textContent = '⏳ Thinking...';
+    button.disabled = true;
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-suggest-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          assignment_title: assignmentTitle,
+          total_score: totalEarned,
+          total_possible: totalPossible,
+          total_percent: totalPercent,
+          item_summaries: itemSummaries,
+          student_code: instance?.student_code || '',
+        }),
+      });
+
+      if (!res.ok) {
+        let errText = 'Could not get suggestion — please write feedback manually';
+        if (res.status === 503) {
+          errText = 'AI suggestions not configured — ask admin to add OPENAI_API_KEY';
+        }
+        const errDiv = document.createElement('div');
+        errDiv.className = 'rv-ai-error';
+        errDiv.setAttribute('role', 'alert');
+        errDiv.textContent = errText;
+        button.insertAdjacentElement('afterend', errDiv);
+        return;
+      }
+
+      const data = await res.json();
+      const { suggested_feedback, rationale } = data;
+
+      if (suggested_feedback) {
+        feedbackInput.value = suggested_feedback;
+        feedbackInput.classList.add('rv-ai-suggested');
+        setTimeout(() => feedbackInput.classList.remove('rv-ai-suggested'), 2000);
+      }
+
+      if (rationale) {
+        const rationaleDiv = document.createElement('div');
+        rationaleDiv.className = 'rv-ai-rationale';
+        rationaleDiv.setAttribute('role', 'status');
+        rationaleDiv.textContent = `AI rationale: ${rationale}`;
+        button.insertAdjacentElement('afterend', rationaleDiv);
+        setTimeout(() => { rationaleDiv.classList.add('rv-ai-rationale-fading'); }, 10000);
+      }
+    } catch (err) {
+      console.error('[tc-review] AI suggest feedback error:', err);
+      const errDiv = document.createElement('div');
+      errDiv.className = 'rv-ai-error';
+      errDiv.setAttribute('role', 'alert');
+      errDiv.textContent = 'Could not get suggestion — please write feedback manually';
+      button.insertAdjacentElement('afterend', errDiv);
+    } finally {
+      button.textContent = originalText;
+      button.disabled = false;
+    }
   }
 
   // Handle AI-suggested grade for a constructed-response item
