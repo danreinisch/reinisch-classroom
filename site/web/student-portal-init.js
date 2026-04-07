@@ -3971,6 +3971,11 @@
     backdrop.appendChild(panel);
     document.body.appendChild(backdrop);
 
+    // Render TOC and first page now that the panel is in the DOM so that
+    // document.getElementById() lookups inside these functions resolve correctly.
+    renderBookToc(bookData);
+    renderBookPage();
+
     backdrop.addEventListener('click', function (e) {
       if (e.target === backdrop) closeBookReader();
     });
@@ -4215,10 +4220,7 @@
           }
         });
       }
-      renderBookToc(bookData);
     }
-
-    renderBookPage();
   }
 
   /**
@@ -4264,7 +4266,10 @@
     const tocList = document.getElementById('bookTocList');
     if (!tocList) return;
     const state = bookReaderState;
-    if (!bookData.chapters || !bookData.chapters.length) return;
+    if (!bookData.chapters || !bookData.chapters.length) {
+      tocList.innerHTML = '<p style="padding:8px 12px;opacity:0.5;font-size:13px;">No chapters found</p>';
+      return;
+    }
 
     let html = '';
     for (let i = 0; i < bookData.chapters.length; i++) {
@@ -4450,7 +4455,11 @@
     if (!content) return;
 
     const allWordSpans = Array.from(content.querySelectorAll('.st-book-word'));
-    if (!allWordSpans.length) return;
+    if (!allWordSpans.length) {
+      // Page content not yet rendered (chunk still loading) — inform the user
+      showToast('⏳ Page is still loading. Please try again in a moment.');
+      return;
+    }
 
     stopBookTts();
 
@@ -4499,28 +4508,36 @@
 
     function speakPara(idx) {
       if (!bookTtsActive || idx >= paraData.length) {
-        // All paragraphs done
+        // All paragraphs done (or TTS was manually stopped)
         if (lastHighlightedSpan) lastHighlightedSpan.classList.remove('tts-active');
-        bookTtsActive = false;
-        bookTtsPaused = false;
         bookTtsUtterance = null;
-        if (ttsBtn) ttsBtn.classList.remove('tts-active');
-        if (ttsControls) ttsControls.style.display = 'none';
-        // Auto-advance to next page
-        if (state && state.currentPage < state.bookData.totalPages) {
+        // Auto-advance only when page finished naturally (not manually stopped)
+        const pageFinished = bookTtsActive && idx >= paraData.length;
+        if (pageFinished && state && state.currentPage < state.bookData.totalPages) {
           state.currentPage++;
-          // For chunked books, wait for the chunk to load before rendering and starting TTS;
-          // otherwise give renderBookPage() a tick to finish DOM updates.
           const nextChunk = findChunkForPage(state.bookData, state.currentPage);
           if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
+            // Chunk not cached — clear TTS UI while chunk loads, restart after
+            bookTtsActive = false;
+            bookTtsPaused = false;
+            if (ttsBtn) ttsBtn.classList.remove('tts-active');
+            if (ttsControls) ttsControls.style.display = 'none';
             fetchBookChunk(nextChunk.id).then(function () {
               renderBookPage();
               startBookTts();
             });
           } else {
+            // Chunk already cached — keep TTS UI active for seamless page transition
+            bookTtsPaused = false;
             renderBookPage();
-            setTimeout(startBookTts, 100);
+            setTimeout(startBookTts, 150);
           }
+        } else {
+          // Truly done or manually stopped — clear all TTS state
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
         }
         return;
       }

@@ -1093,7 +1093,11 @@ function writeBookBlobs(slotDir, bookJson, blobs) {
 const WORDS_PER_PAGE = 250;
 const PAGES_PER_CHUNK = 50; // pages per chunk file for large books
 const MAX_CHAPTER_HEADING_LENGTH = 120; // Headings longer than this are likely body text
-const CHAPTER_RE = /^(chapter|part|section|prologue|epilogue|introduction)/i;
+// Matches h3 headers that act as chapter/section markers.
+// Pattern 1: keyword (chapter/part/section/etc.) anywhere in the heading
+// Pattern 2: heading that is purely a number ("1", "2.", "42")
+// Pattern 3: heading that is purely roman numerals ("I", "II", "XIV")
+const CHAPTER_RE = /\b(chapter|part|section|prologue|epilogue|introduction)\b|^\s*\d+\.?\s*$|^\s*[ivxlcdm]+\.?\s*$/i;
 
 function generateBookPagesJson(title, rawText) {
   const lines = rawText.split(/\r?\n/);
@@ -1294,7 +1298,6 @@ function parsePandocJsonToBookPages(title, jsonString) {
   let currentChapter = '';
   let currentParagraphs = [];
   let currentWordCount = 0;
-  let foundFirstHeader = false;
   let skipSection = false; // true while inside a ToC-like section
   let inGlossary = false;  // true while processing the Glossary section
   const glossaryEntries = []; // { term, definition }
@@ -1342,19 +1345,16 @@ function parsePandocJsonToBookPages(title, jsonString) {
           // If ToC header, skip its content until next chapter header
           if (/^(table of contents|contents)$/i.test(headerText)) {
             skipSection = true;
-            foundFirstHeader = true;
             break;
           }
           // If Glossary header, switch to glossary-collection mode
           if (/^glossary$/i.test(headerText)) {
             flushPage();
-            foundFirstHeader = true;
             inGlossary = true;
             break;
           }
           // Real chapter
           flushPage();
-          foundFirstHeader = true;
           currentChapter = headerText;
           chapters.push({ label: headerText, startPage: pages.length + 1 });
           currentParagraphs.push([headerText]);
