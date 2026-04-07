@@ -26,7 +26,7 @@
   const styleEl = document.createElement('style');
   styleEl.textContent = `
 /* ── Observation Tray ─────────────────────────────────────────────────── */
-.obs-tray-backdrop { position: fixed; inset: 0; z-index: 9990; }
+.obs-tray-backdrop { position: fixed; inset: 0; z-index: 9990; background: rgba(5,7,9,0.5); opacity: 0; transition: opacity 0.15s ease; }
 .obs-tray {
   position: fixed;
   top: calc(var(--tc-topbar-h, 56px) + 8px);
@@ -104,6 +104,8 @@
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; cursor: pointer; user-select: none;
   transition: background 0.12s;
+  background: none; border: none; width: 100%; text-align: left;
+  color: inherit; font: inherit;
 }
 .obs-card-header:hover { background: rgba(255,255,255,0.04); }
 .obs-card-chevron { transition: transform 0.2s; flex-shrink: 0; color: rgba(255,255,255,0.4); }
@@ -199,8 +201,9 @@
   let trayEl = null;
   let trayBackdropEl = null;
   let isTrayOpen = false;
-  // Set of "studentCode|goalCode" for goals recorded today (populated from Supabase on init)
-  const todayRecordedSet = new Set();
+  // Set of "studentCode|goalCode|date" for goals recorded today (populated from Supabase on init)
+  let todayRecordedSet = new Set();
+  let todayRecordedDate = null;
 
   // ─── localStorage Queue ───────────────────────────────────────────────────
   const QUEUE_KEY = 'rc_obs_pending';
@@ -266,8 +269,8 @@
 
   // ─── Duplicate Check (date-only, no period label) ─────────────────────────
   function isAlreadyRecorded(studentCode, goalCode, date) {
-    // Check Supabase pre-load set first
-    if (todayRecordedSet.has(`${studentCode}|${goalCode}`)) return true;
+    // Check Supabase pre-load set first (keyed with date to avoid midnight staleness)
+    if (todayRecordedSet.has(`${studentCode}|${goalCode}|${date}`)) return true;
     // Then check localStorage queue
     const queue = readQueue();
     return queue.some(e =>
@@ -360,7 +363,7 @@
 
     replaceOrPushToQueue(queueEntry);
     // Mark in the recorded set so future checks reflect this immediately
-    todayRecordedSet.add(`${goal.student_code}|${goal.code}`);
+    todayRecordedSet.add(`${goal.student_code}|${goal.code}|${date}`);
     if (onSave) onSave();
 
     // Attempt Supabase save
@@ -879,8 +882,10 @@
     cardEl.className = 'obs-goal-card';
 
     // ── Card header (always visible) ──
-    const header = document.createElement('div');
+    const header = document.createElement('button');
+    header.type = 'button';
     header.className = 'obs-card-header';
+    header.setAttribute('aria-expanded', isRecorded ? 'false' : 'true');
 
     const chevron = document.createElement('span');
     chevron.className = 'obs-card-chevron';
@@ -950,6 +955,7 @@
 
     const applyExpanded = (expanded) => {
       isExpanded = expanded;
+      header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       if (expanded) {
         chevron.classList.add('open');
         body.style.display = '';
@@ -1040,6 +1046,8 @@
     trayBackdropEl.className = 'obs-tray-backdrop';
     trayBackdropEl.addEventListener('click', closeTray);
     document.body.appendChild(trayBackdropEl);
+    // Trigger fade-in after paint
+    requestAnimationFrame(() => { trayBackdropEl.style.opacity = '1'; });
 
     // Tray panel
     trayEl = document.createElement('div');
@@ -1222,13 +1230,14 @@
       let count = 0;
       for (const entry of (entries || [])) {
         if (entry.student_code && entry.goal_code) {
-          const key = `${entry.student_code}|${entry.goal_code}`;
+          const key = `${entry.student_code}|${entry.goal_code}|${date}`;
           if (!todayRecordedSet.has(key)) {
             todayRecordedSet.add(key);
             count++;
           }
         }
       }
+      todayRecordedDate = date;
       if (count > 0) {
         console.log('[tc-observation] Pre-loaded', count, 'already-recorded goal(s) from Supabase for today');
       }
@@ -1248,6 +1257,13 @@
 
   // Reload data every 5 minutes
   const _dataInterval = setInterval(async () => {
+    // If the date has changed since the last Supabase load, clear the stale set
+    // so midnight-stale entries don't hide newly-required observations.
+    if (todayRecordedDate !== null && todayStr() !== todayRecordedDate) {
+      todayRecordedSet = new Set();
+      todayRecordedDate = null;
+      console.log('[tc-observation] New day detected — cleared todayRecordedSet');
+    }
     await loadData();
     await loadTodaySupabaseEntries();
     await syncQueue();
