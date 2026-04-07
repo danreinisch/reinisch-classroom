@@ -3973,7 +3973,76 @@
       .st-badge.blue { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); color: #93c5fd; }
       .st-badge.purple { border-color: rgba(168,85,247,0.4); background: rgba(168,85,247,0.08); color: #d8b4fe; }
 
-      /* Feature 11: Vocabulary */
+      /* Streak Banner */
+      .st-streak-banner {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        border-radius: var(--rc-radius-lg);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(251,146,60,0.4);
+        background: rgba(251,146,60,0.1);
+      }
+      .st-streak-banner-fire {
+        font-size: 32px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .st-streak-banner-text {
+        flex: 1;
+      }
+      .st-streak-banner-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fdba74;
+        margin-bottom: 2px;
+      }
+      .st-streak-banner-sub {
+        font-size: 13px;
+        opacity: 0.7;
+      }
+      .st-streak-banner.st-streak-zero {
+        border-color: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.03);
+      }
+      .st-streak-banner.st-streak-zero .st-streak-banner-title {
+        color: var(--rc-ink-dim, #cbd5e1);
+      }
+
+      /* Performance Trend Chart */
+      .st-perf-chart-section .st-goal-chart-container {
+        margin-bottom: 4px;
+      }
+      .st-perf-chart-svg {
+        display: block;
+        max-width: 100%;
+      }
+      .st-perf-chart-ref {
+        fill: none;
+        stroke: rgba(251,146,60,0.55);
+        stroke-width: 1.5;
+        stroke-dasharray: 5 4;
+      }
+      .st-perf-chart-ref-label {
+        fill: rgba(251,146,60,0.8);
+        font-size: 9px;
+      }
+      .st-perf-chart-legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        opacity: 0.65;
+        margin-top: 8px;
+      }
+      .st-perf-chart-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
       .st-vocab-section {
         margin-bottom: 20px;
         border: 1px solid rgba(59,130,246,0.25);
@@ -4308,6 +4377,8 @@
                 <div id="dueSoonBanner"></div>
                 <!-- Feature 10: Badges (will be populated by JS) -->
                 <div id="badgesContainer"></div>
+                <!-- Streak banner (populated by JS after grades load) -->
+                <div id="dashStreakBanner"></div>
                 <div class="st-summary-cards">
                   <div class="st-summary-card">
                     <div class="st-summary-icon">
@@ -4364,6 +4435,16 @@
                     Recent Assignments
                   </h2>
                   <div id="dashRecentAssignments"><p style="opacity:0.7;">Loading...</p></div>
+                </section>
+                <!-- Performance trend chart (populated by JS after grades load) -->
+                <section class="st-section st-perf-chart-section" id="dashPerfChartSection" style="display:none;">
+                  <h2>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    Performance Trend
+                  </h2>
+                  <div id="dashPerfChart"></div>
                 </section>
                 <section class="st-section">
                   <h2>
