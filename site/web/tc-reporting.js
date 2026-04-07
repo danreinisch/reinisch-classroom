@@ -494,7 +494,7 @@
           <div class="rp-report-meta">
             <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
             <div><strong>Code:</strong> ${escapeHtml(student.code)}</div>
-            <div><strong>Quarter:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
+            <div><strong>Reporting Period:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
             <div><strong>Eval Due:</strong> ${formatDate(student.eval_due)}</div>
           </div>
         </div>
@@ -785,7 +785,7 @@
           <h2>Admin Summary — ${escapeHtml(student.code)}</h2>
           <div class="rp-report-meta">
             <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
-            <div><strong>Quarter:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
+            <div><strong>Reporting Period:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
             <div><strong>Case Manager:</strong> ${escapeHtml(student.primary_case_manager || "N/A")}</div>
           </div>
         </div>
