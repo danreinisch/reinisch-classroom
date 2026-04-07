@@ -1302,7 +1302,7 @@ function parsePandocJsonToBookPages(title, jsonString) {
     pages.push({
       pageNum: pages.length + 1,
       chapter: currentChapter,
-      paragraphs: currentParagraphs
+      paragraphs: currentParagraphs.slice()
     });
     currentParagraphs = [];
     currentWordCount = 0;

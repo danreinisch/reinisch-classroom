@@ -4330,9 +4330,11 @@
         const s = bookReaderState;
         if (s && s.currentPage === currentPage) renderBookPage();
       });
-      // Prefetch previous chunk in background
-      const prevChunk = currentPage > 1 ? findChunkForPage(bookData, currentPage - 1) : null;
-      if (prevChunk && !_bookChunkCache.has(prevChunk.id)) fetchBookChunk(prevChunk.id);
+      // Prefetch the next chunk in background while the current one loads
+      const nextChunkDuringLoad = currentPage < bookData.totalPages ? findChunkForPage(bookData, currentPage + 1) : null;
+      if (nextChunkDuringLoad && nextChunkDuringLoad.id !== chunk.id && !_bookChunkCache.has(nextChunkDuringLoad.id)) {
+        fetchBookChunk(nextChunkDuringLoad.id);
+      }
       return;
     }
 
