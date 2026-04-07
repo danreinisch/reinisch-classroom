@@ -14,7 +14,7 @@
   // Import data adapter and Supabase client
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getSupabase } = await import("/web/supabase-client.js");
-  const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
+  const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel, getSchoolYearDateRange, getPeriodLabel, getDateRangeForPeriod } = await import("/web/quarter-utils.js");
   const { parseGoalValue, isGoalActive, formatGoalValue } = await import("/web/goal-utils.js");
   const { parseObservationNotes } = await import("/web/obs-utils.js");
   const { buildItemsFromMeta } = await import("/web/shared-build-items.js");
@@ -494,8 +494,7 @@
           <div class="rp-report-meta">
             <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
             <div><strong>Code:</strong> ${escapeHtml(student.code)}</div>
-            <div><strong>Quarter:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
-            <div><strong>IEP Due:</strong> ${formatDate(student.iep_due)}</div>
+            <div><strong>Quarter:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
             <div><strong>Eval Due:</strong> ${formatDate(student.eval_due)}</div>
           </div>
         </div>
@@ -558,7 +557,7 @@
       }).join("");
       html += `
         <div class="rp-quarter-summary">
-          <div class="rp-quarter-summary-title">Quarterly IEP Progress Summary — ${escapeHtml(getQuarterLabel(tab1State.quarter))}</div>
+          <div class="rp-quarter-summary-title">Quarterly IEP Progress Summary — ${escapeHtml(getPeriodLabel(tab1State.quarter))}</div>
           <div class="rp-quarter-summary-stats">
             <div class="rp-qs-stat">
               <span class="rp-qs-value">${studentGoals.length}</span>
@@ -678,7 +677,7 @@
         <div class="rp-report-header">
           <h2>Progress Report for ${escapeHtml(student.name || student.code)}</h2>
           <div class="rp-report-meta">
-            <div><strong>Reporting Period:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
+            <div><strong>Reporting Period:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
             <div><strong>Next IEP Review:</strong> ${formatDate(student.iep_due)}</div>
           </div>
         </div>
@@ -786,7 +785,7 @@
           <h2>Admin Summary — ${escapeHtml(student.code)}</h2>
           <div class="rp-report-meta">
             <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
-            <div><strong>Quarter:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
+            <div><strong>Quarter:</strong> ${getPeriodLabel(tab1State.quarter)}</div>
             <div><strong>Case Manager:</strong> ${escapeHtml(student.primary_case_manager || "N/A")}</div>
           </div>
         </div>
@@ -892,8 +891,8 @@
     const goalProgressData = getGoalProgressForQuarter(goalCode, studentCode, quarterRange);
     const dataPoints = getGoalDataPoints(goalCode, studentCode, quarterRange);
 
-    const quarterLabel = getQuarterLabel(tab1State.quarter);
-    const quarterDates = getQuarterDateRange(tab1State.quarter);
+    const quarterLabel = getPeriodLabel(tab1State.quarter);
+    const quarterDates = getDateRangeForPeriod(tab1State.quarter);
     const current = formatGoalValue(goalProgressData.average, goal.measurement_type, goal);
     const baseline = goal.baseline || "N/A";
     const target = goal.target || "N/A";
@@ -1025,6 +1024,9 @@ ${narrative}`;
             <option value="Q2" ${tab1State.quarter === "Q2" ? "selected" : ""}>${getQuarterLabel("Q2")}</option>
             <option value="Q3" ${tab1State.quarter === "Q3" ? "selected" : ""}>${getQuarterLabel("Q3")}</option>
             <option value="Q4" ${tab1State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
+            <option value="semester-1" ${tab1State.quarter === "semester-1" ? "selected" : ""}>Semester 1 (Aug–Jan)</option>
+            <option value="semester-2" ${tab1State.quarter === "semester-2" ? "selected" : ""}>Semester 2 (Feb–Jun)</option>
+            <option value="full-year" ${tab1State.quarter === "full-year" ? "selected" : ""}>Full Year (Aug–Jun)</option>
           </select>
         </div>
         <div class="rp-filter-group">
@@ -1085,7 +1087,7 @@ ${narrative}`;
     }
 
     // Get quarter date range
-    const quarterRange = getQuarterDateRange(tab1State.quarter);
+    const quarterRange = getDateRangeForPeriod(tab1State.quarter);
 
     // Get student's goals
     const studentGoals = goalsData.filter(
@@ -2757,6 +2759,9 @@ ${narrative}`;
             <option value="Q2" ${tab4State.quarter === "Q2" ? "selected" : ""}>${getQuarterLabel("Q2")}</option>
             <option value="Q3" ${tab4State.quarter === "Q3" ? "selected" : ""}>${getQuarterLabel("Q3")}</option>
             <option value="Q4" ${tab4State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
+            <option value="semester-1" ${tab4State.quarter === "semester-1" ? "selected" : ""}>Semester 1 (Aug–Jan)</option>
+            <option value="semester-2" ${tab4State.quarter === "semester-2" ? "selected" : ""}>Semester 2 (Feb–Jun)</option>
+            <option value="full-year" ${tab4State.quarter === "full-year" ? "selected" : ""}>Full Year (Aug–Jun)</option>
           </select>
         </div>
       </div>
@@ -2772,9 +2777,7 @@ ${narrative}`;
       filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
     }
 
-    const quarterRange = getQuarterDateRange(tab4State.quarter);
-
-    // Calculate compliance metrics
+    const quarterRange = getDateRangeForPeriod(tab4State.quarter);
     const allGoals = [];
     filteredStudents.forEach((student) => {
       const studentGoals = goalsData.filter(
@@ -3025,7 +3028,7 @@ ${narrative}`;
       filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
     }
 
-    const quarterRange = getQuarterDateRange(tab4State.quarter);
+    const quarterRange = getDateRangeForPeriod(tab4State.quarter);
 
     filteredStudents.forEach((student) => {
       const studentGoals = goalsData.filter(
@@ -3093,8 +3096,8 @@ ${narrative}`;
    */
   async function generateBatchReports() {
     const quarter = tab5State.quarter;
-    const quarterRange = getQuarterDateRange(quarter);
-    const quarterLabel = getQuarterLabel(quarter);
+    const quarterRange = getDateRangeForPeriod(quarter);
+    const quarterLabel = getPeriodLabel(quarter);
 
     // Get school year
     const now = new Date();
@@ -3452,6 +3455,9 @@ ${narrative}`;
       { value: 'Q2', label: getQuarterLabel('Q2') },
       { value: 'Q3', label: getQuarterLabel('Q3') },
       { value: 'Q4', label: getQuarterLabel('Q4') },
+      { value: 'semester-1', label: 'Semester 1 (Aug–Jan)' },
+      { value: 'semester-2', label: 'Semester 2 (Feb–Jun)' },
+      { value: 'full-year', label: 'Full Year (Aug–Jun)' },
       { value: 'all-time', label: 'All Time' },
       { value: 'custom', label: 'Custom Range...' },
     ];
@@ -3628,6 +3634,7 @@ ${narrative}`;
     if (dr === 'current-quarter') return getQuarterDateRange(getCurrentQuarter());
     if (dr === 'all-time') return { start: '2000-01-01', end: '2099-12-31' };
     if (dr === 'custom') return { start: tab6State.customStart || '2000-01-01', end: tab6State.customEnd || '2099-12-31' };
+    if (dr === 'semester-1' || dr === 'semester-2' || dr === 'full-year') return getSchoolYearDateRange(dr);
     // Q1..Q4
     return getQuarterDateRange(dr);
   }
@@ -3640,6 +3647,9 @@ ${narrative}`;
     if (dr === 'all-time') return 'All Time';
     if (dr === 'custom') return `${tab6State.customStart || '?'} – ${tab6State.customEnd || '?'}`;
     if (dr === 'current-quarter') return getQuarterLabel(getCurrentQuarter());
+    if (dr === 'semester-1') return 'Semester 1 (Aug–Jan)';
+    if (dr === 'semester-2') return 'Semester 2 (Feb–Jun)';
+    if (dr === 'full-year') return 'Full Year (Aug–Jun)';
     return getQuarterLabel(dr);
   }
 
