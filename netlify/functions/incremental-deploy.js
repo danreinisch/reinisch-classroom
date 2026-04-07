@@ -1455,13 +1455,41 @@ function parsePandocJsonToBookPages(title, jsonString) {
   }
   flushPage();
 
+  // Post-processing: remove pages whose paragraphs are all empty/whitespace
+  const filteredPages = pages.filter(function (pg) {
+    return pg.paragraphs.some(function (para) {
+      const text = (Array.isArray(para) ? para : (para.words || [])).join(' ');
+      return text.trim().length > 0;
+    });
+  });
+
+  // Renumber remaining pages sequentially
+  for (let i = 0; i < filteredPages.length; i++) {
+    filteredPages[i].pageNum = i + 1;
+  }
+
+  // Update chapter startPage references to reflect new numbering
+  for (const ch of chapters) {
+    if (ch.startPage != null) {
+      // Find first page still in filteredPages that belongs to this chapter
+      let newStart = null;
+      for (let i = 0; i < filteredPages.length; i++) {
+        if (filteredPages[i].chapter === ch.label) {
+          newStart = filteredPages[i].pageNum;
+          break;
+        }
+      }
+      if (newStart !== null) ch.startPage = newStart;
+    }
+  }
+
   const result = {
     title: bookTitle,
     author: bookAuthor,
-    totalPages: pages.length,
+    totalPages: filteredPages.length,
     wordsPerPage: WORDS_PER_PAGE,
     chapters,
-    pages
+    pages: filteredPages
   };
   if (glossaryEntries.length > 0) result.glossary = glossaryEntries;
   return result;
