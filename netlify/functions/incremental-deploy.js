@@ -116,7 +116,7 @@ async function handleUpload(body, remainingTTL){
         const txtBuf = blobs.get(`${slotDir}/${primaryFile}`);
         if (txtBuf) {
           const bookJson = generateBookPagesJson(finalTitle, txtBuf.toString('utf8'));
-          blobs.set(`${slotDir}/book-pages.json`, Buffer.from(JSON.stringify(bookJson)));
+          writeBookBlobs(slotDir, bookJson, blobs);
         }
       }
 
@@ -126,7 +126,7 @@ async function handleUpload(body, remainingTTL){
         if (jsonBuf) {
           try {
             const bookJson = parsePandocJsonToBookPages(finalTitle, jsonBuf.toString('utf8'));
-            blobs.set(`${slotDir}/book-pages.json`, Buffer.from(JSON.stringify(bookJson)));
+            writeBookBlobs(slotDir, bookJson, blobs);
           } catch (e) {
             console.warn('Could not parse Pandoc JSON for book-pages.json:', e.message);
           }
@@ -1054,8 +1054,44 @@ body{background:#0f172a;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFo
 </html>`;
 }
 
+// ---------- Book blobs writer (handles chunking for large books) ----------
+function writeBookBlobs(slotDir, bookJson, blobs) {
+  if (bookJson.totalPages > PAGES_PER_CHUNK) {
+    // Build chunks
+    const chunks = [];
+    for (let i = 0; i < bookJson.totalPages; i += PAGES_PER_CHUNK) {
+      const chunkIdx = Math.floor(i / PAGES_PER_CHUNK);
+      const chunkId = String(chunkIdx + 1).padStart(3, '0');
+      const startPage = i + 1;
+      const endPage = Math.min(i + PAGES_PER_CHUNK, bookJson.totalPages);
+      chunks.push({ id: chunkId, startPage, endPage });
+      const chunkData = {
+        chunkId,
+        startPage,
+        endPage,
+        pages: bookJson.pages.slice(i, i + PAGES_PER_CHUNK)
+      };
+      blobs.set(`${slotDir}/book-chunk-${chunkId}.json`, Buffer.from(JSON.stringify(chunkData)));
+    }
+    const index = {
+      title: bookJson.title,
+      author: bookJson.author,
+      totalPages: bookJson.totalPages,
+      wordsPerPage: bookJson.wordsPerPage,
+      chapters: bookJson.chapters,
+      chunked: true,
+      chunks
+    };
+    if (bookJson.glossary) index.glossary = bookJson.glossary;
+    blobs.set(`${slotDir}/book-index.json`, Buffer.from(JSON.stringify(index)));
+  } else {
+    blobs.set(`${slotDir}/book-pages.json`, Buffer.from(JSON.stringify(bookJson)));
+  }
+}
+
 // ---------- Book pages JSON generator ----------
 const WORDS_PER_PAGE = 250;
+const PAGES_PER_CHUNK = 50; // pages per chunk file for large books
 const MAX_CHAPTER_HEADING_LENGTH = 120; // Headings longer than this are likely body text
 const CHAPTER_RE = /^(chapter|part|section|prologue|epilogue|introduction)/i;
 
@@ -1266,14 +1302,19 @@ function parsePandocJsonToBookPages(title, jsonString) {
     pages.push({
       pageNum: pages.length + 1,
       chapter: currentChapter,
-      paragraphs: currentParagraphs.slice()
+      paragraphs: currentParagraphs
     });
     currentParagraphs = [];
     currentWordCount = 0;
   }
 
-  function processBlock(block) {
-    if (!block || !block.t) return;
+  // Iterative block processor — avoids deep recursion on large Pandoc ASTs
+  const blockStack = [];
+  for (let i = doc.blocks.length - 1; i >= 0; i--) blockStack.push(doc.blocks[i]);
+
+  while (blockStack.length > 0) {
+    const block = blockStack.pop();
+    if (!block || !block.t) continue;
     switch (block.t) {
       case 'Header': {
         const level = block.c[0];
@@ -1358,19 +1399,23 @@ function parsePandocJsonToBookPages(title, jsonString) {
       case 'Div': {
         const children = block.c[1];
         if (!Array.isArray(children)) break;
-        // Only recurse if the Div contains meaningful content
+        // Only push children if the Div contains meaningful content
         if (children.some(b => b.t === 'Header' || b.t === 'Para' || b.t === 'Plain' || b.t === 'Div' || b.t === 'BulletList' || b.t === 'OrderedList' || b.t === 'BlockQuote')) {
-          for (const child of children) processBlock(child);
+          for (let i = children.length - 1; i >= 0; i--) blockStack.push(children[i]);
         }
         break;
       }
-      case 'BlockQuote':
-        for (const child of (block.c || [])) processBlock(child);
+      case 'BlockQuote': {
+        const children = block.c || [];
+        for (let i = children.length - 1; i >= 0; i--) blockStack.push(children[i]);
         break;
+      }
       case 'BulletList': {
         if (!foundFirstHeader || skipSection) break;
         for (const item of (block.c || [])) {
-          if (Array.isArray(item)) for (const b of item) processBlock(b);
+          if (Array.isArray(item)) {
+            for (let i = item.length - 1; i >= 0; i--) blockStack.push(item[i]);
+          }
         }
         break;
       }
@@ -1378,7 +1423,9 @@ function parsePandocJsonToBookPages(title, jsonString) {
         if (!foundFirstHeader || skipSection) break;
         const items = block.c[1] || [];
         for (const item of items) {
-          if (Array.isArray(item)) for (const b of item) processBlock(b);
+          if (Array.isArray(item)) {
+            for (let i = item.length - 1; i >= 0; i--) blockStack.push(item[i]);
+          }
         }
         break;
       }
@@ -1391,10 +1438,6 @@ function parsePandocJsonToBookPages(title, jsonString) {
       default:
         break;
     }
-  }
-
-  for (const block of doc.blocks) {
-    processBlock(block);
   }
   // Flush any pending glossary term
   if (pendingGlossaryTerm) {

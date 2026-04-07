@@ -3731,6 +3731,8 @@
   let _bookLink = '';              // current book link (used for localStorage keys)
   let _bookGlossaryMap = null;     // Map<normalized_term, definition>
   let _knownBookResources = [];    // populated by loadStudentResources; each: { link, title, chapters, totalPages }
+  let _bookSelectionChangeHandler = null; // stored so it can be removed on close
+  const _bookChunkCache = new Map(); // chunkId -> chunkData (pages array)
 
   // Re-cache on voiceschanged (voices may not be available at load time)
   if (window.speechSynthesis) {
@@ -3888,21 +3890,51 @@
    * Open the inline book reader for a resource with book-pages.json
    */
   async function openBookReader(link, title, targetPage) {
-    // Fetch book-pages.json — ensure link ends with /
+    // Fetch book data — ensure link ends with /
     const base = link.endsWith('/') ? link : link + '/';
+
+    // Show a temporary loading backdrop immediately for feedback on slow connections
+    let loadBackdrop = document.getElementById('bookLoadBackdrop');
+    if (!loadBackdrop) {
+      loadBackdrop = document.createElement('div');
+      loadBackdrop.id = 'bookLoadBackdrop';
+      loadBackdrop.className = 'st-panel-backdrop';
+      loadBackdrop.innerHTML = '<div style="color:#e8edf5;font-size:16px;text-align:center;padding:40px;"><div style="font-size:32px;margin-bottom:12px;">📖</div><div>Loading book…</div></div>';
+      document.body.appendChild(loadBackdrop);
+      requestAnimationFrame(() => loadBackdrop.classList.add('open'));
+    }
+
     let bookData;
     try {
-      const r = await fetch(base + 'book-pages.json');
-      if (!r.ok) throw new Error('No book-pages.json');
-      bookData = await r.json();
+      // Try chunked index first; fall back to legacy book-pages.json
+      let r = await fetch(base + 'book-index.json');
+      if (r.ok) {
+        bookData = await r.json();
+      } else {
+        r = await fetch(base + 'book-pages.json');
+        if (!r.ok) throw new Error('No book data found');
+        bookData = await r.json();
+      }
     } catch (err) {
-      console.error(LOG_PREFIX, 'Could not load book-pages.json:', err);
+      console.error(LOG_PREFIX, 'Could not load book data:', err);
+      if (loadBackdrop) { loadBackdrop.classList.remove('open'); setTimeout(() => loadBackdrop.remove(), 300); }
       window.open(link, '_blank', 'noopener');
       return;
     }
 
+    // Remove loading backdrop
+    if (loadBackdrop) { loadBackdrop.classList.remove('open'); setTimeout(() => loadBackdrop.remove(), 300); }
+
     // Stop any existing TTS
     stopBookTts();
+
+    // Clear chunk cache on new book open
+    _bookChunkCache.clear();
+
+    // For chunked books, pre-populate a sparse pages array (filled as chunks load)
+    if (bookData.chunked && bookData.chunks) {
+      bookData.pages = new Array(bookData.totalPages);
+    }
 
     // Restore saved page from localStorage
     const storageKey = 'rc_book_page_' + encodeURIComponent(link);
@@ -3968,6 +4000,11 @@
     if (bookPanelEscapeHandler) {
       document.removeEventListener('keydown', bookPanelEscapeHandler);
       bookPanelEscapeHandler = null;
+    }
+
+    if (_bookSelectionChangeHandler) {
+      document.removeEventListener('selectionchange', _bookSelectionChangeHandler);
+      _bookSelectionChangeHandler = null;
     }
 
     const panel = document.getElementById('bookPanel');
@@ -4077,10 +4114,11 @@
     }
 
     // Hide selection toolbar when selection clears
-    document.addEventListener('selectionchange', function () {
+    _bookSelectionChangeHandler = function () {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed) hideSelectionToolbar();
-    });
+    };
+    document.addEventListener('selectionchange', _bookSelectionChangeHandler);
 
     // Bookmark button
     const bookmarkBtn = panel.querySelector('#bookBookmarkBtn');
@@ -4176,6 +4214,45 @@
     renderBookPage();
   }
 
+  /**
+   * Find which chunk contains the given page number (1-based).
+   * Returns the chunk descriptor or null for non-chunked books.
+   */
+  function findChunkForPage(bookData, pageNum) {
+    if (!bookData.chunked || !bookData.chunks) return null;
+    for (const chunk of bookData.chunks) {
+      if (pageNum >= chunk.startPage && pageNum <= chunk.endPage) return chunk;
+    }
+    return null;
+  }
+
+  /**
+   * Fetch a book chunk and populate the sparse pages array.
+   * Returns true on success, false on failure.
+   */
+  async function fetchBookChunk(chunkId) {
+    if (_bookChunkCache.has(chunkId)) return true;
+    const base = _bookLink.endsWith('/') ? _bookLink : _bookLink + '/';
+    try {
+      const r = await fetch(base + 'book-chunk-' + chunkId + '.json');
+      if (!r.ok) throw new Error('Chunk not found: ' + chunkId);
+      const chunkData = await r.json();
+      _bookChunkCache.set(chunkId, true);
+      // Populate the sparse pages array
+      const state = bookReaderState;
+      if (state && state.bookData && Array.isArray(chunkData.pages)) {
+        const offset = chunkData.startPage - 1;
+        for (let i = 0; i < chunkData.pages.length; i++) {
+          state.bookData.pages[offset + i] = chunkData.pages[i];
+        }
+      }
+      return true;
+    } catch (e) {
+      console.error(LOG_PREFIX, 'Failed to load book chunk', chunkId, e);
+      return false;
+    }
+  }
+
   function renderBookToc(bookData) {
     const tocList = document.getElementById('bookTocList');
     if (!tocList) return;
@@ -4206,7 +4283,6 @@
     if (!state) return;
 
     const { bookData, currentPage } = state;
-    const pageObj = bookData.pages[currentPage - 1];
 
     // Save progress
     localStorage.setItem(state.storageKey, String(currentPage));
@@ -4239,6 +4315,28 @@
     const content = document.getElementById('bookContent');
     if (!content) return;
 
+    // For chunked books: check if the needed chunk is loaded
+    const chunk = findChunkForPage(bookData, currentPage);
+    if (chunk && !_bookChunkCache.has(chunk.id)) {
+      // Show loading state, then fetch the chunk and re-render
+      content.innerHTML = '<p style="opacity:0.5;text-align:center;padding:24px;">⏳ Loading page…</p>';
+      fetchBookChunk(chunk.id).then(function (ok) {
+        if (!ok) {
+          const c = document.getElementById('bookContent');
+          if (c) c.innerHTML = '<p style="opacity:0.5;color:#f87171;">Could not load this section. Please try again.</p>';
+          return;
+        }
+        // Re-render now that the chunk is loaded
+        const s = bookReaderState;
+        if (s && s.currentPage === currentPage) renderBookPage();
+      });
+      // Prefetch previous chunk in background
+      const prevChunk = currentPage > 1 ? findChunkForPage(bookData, currentPage - 1) : null;
+      if (prevChunk && !_bookChunkCache.has(prevChunk.id)) fetchBookChunk(prevChunk.id);
+      return;
+    }
+
+    const pageObj = bookData.pages[currentPage - 1];
     if (!pageObj) {
       content.innerHTML = '<p style="opacity:0.5">Page not found.</p>';
       return;
@@ -4269,6 +4367,12 @@
     applyGlossaryTerms(content);
     applyPageHighlights(content, currentPage);
     updateBookmarkButton();
+
+    // Prefetch next chunk in background while reading current chunk
+    const nextChunk = currentPage < bookData.totalPages ? findChunkForPage(bookData, currentPage + 1) : null;
+    if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
+      fetchBookChunk(nextChunk.id);
+    }
   }
 
   function navigateBookPage(delta) {
@@ -4576,13 +4680,16 @@
     popup.style.left = left + 'px';
     popup.style.top = top + 'px';
 
-    // Close button
-    popup.querySelector('.st-word-popup-close').addEventListener('click', closeWordPopup);
-
-    // Close on outside click
+    // Close button — also removes the outside-click listener
     function onOutsideClick(e) {
       if (!popup.contains(e.target)) { closeWordPopup(); document.removeEventListener('click', onOutsideClick); }
     }
+    popup.querySelector('.st-word-popup-close').addEventListener('click', function () {
+      document.removeEventListener('click', onOutsideClick);
+      closeWordPopup();
+    });
+
+    // Close on outside click
     setTimeout(function () { document.addEventListener('click', onOutsideClick); }, 50);
 
     // Read it button
