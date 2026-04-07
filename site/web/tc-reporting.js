@@ -557,7 +557,7 @@
       }).join("");
       html += `
         <div class="rp-quarter-summary">
-          <div class="rp-quarter-summary-title">Quarterly IEP Progress Summary — ${escapeHtml(getPeriodLabel(tab1State.quarter))}</div>
+          <div class="rp-quarter-summary-title" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><span>Quarterly IEP Progress Summary — ${escapeHtml(getPeriodLabel(tab1State.quarter))}</span><button class="tc-btn tc-btn-small" id="btnGenerateAllNarratives" type="button" style="margin-left:auto;">✨ Generate All Narratives</button></div>
           <div class="rp-quarter-summary-stats">
             <div class="rp-qs-stat">
               <span class="rp-qs-value">${studentGoals.length}</span>
@@ -644,6 +644,17 @@
               <button class="tc-btn tc-btn-small copy-spedtrack-btn" data-goal-code="${escapeHtml(goal.code)}" data-student-code="${escapeHtml(student.code)}">
                 📋 Copy for SpedTrack
               </button>
+              <button class="tc-btn tc-btn-small rp-ai-narrative-btn" data-goal-code="${escapeHtml(goal.code)}" style="margin-left:8px;">
+                ✨ Generate Narrative
+              </button>
+            </div>
+            <div class="rp-ai-narrative-area" data-goal-code="${escapeHtml(goal.code)}" style="display:none;margin-top:12px;">
+              <div class="rp-ai-narrative-error" style="display:none;color:#e57373;margin-bottom:8px;"></div>
+              <textarea class="rp-ai-narrative-text" rows="5" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);color:inherit;padding:8px;border-radius:4px;font-family:inherit;font-size:0.9em;resize:vertical;" placeholder="AI-generated narrative will appear here..."></textarea>
+              <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+                <button class="tc-btn tc-btn-small rp-ai-copy-btn" data-goal-code="${escapeHtml(goal.code)}">📋 Copy</button>
+                <button class="tc-btn tc-btn-small rp-ai-regen-btn" data-goal-code="${escapeHtml(goal.code)}">🔄 Regenerate</button>
+              </div>
             </div>
           </div>
         `;
@@ -1185,6 +1196,190 @@ ${narrative}`;
           showToast('✅ Copied to clipboard!');
         }).catch(async err => {
           console.error('Failed to copy:', err);
+          await rcAlert('Error', 'Failed to copy to clipboard');
+        });
+      });
+    });
+
+    // ── AI Narrative helpers ──────────────────────────────────────────────────
+
+    /**
+     * Collect goal payload for AI narrative request.
+     */
+    function buildNarrativePayload(goalCodes) {
+      const targets = goalCodes
+        ? studentGoals.filter(g => goalCodes.includes(g.code))
+        : studentGoals;
+
+      const goals = targets.map(g => {
+        const gp = getGoalProgressForQuarter(g.code, tab1State.studentCode, quarterRange);
+        const prevQR = getPreviousQuarterRange(tab1State.quarter);
+        const prevGp = prevQR ? getGoalProgressForQuarter(g.code, tab1State.studentCode, prevQR) : null;
+        let trendDir = 'Unknown';
+        if (gp.average != null && prevGp && prevGp.average != null) {
+          trendDir = gp.average > prevGp.average ? 'Improving' : gp.average < prevGp.average ? 'Declining' : 'Maintaining';
+        } else if (gp.average != null) {
+          trendDir = 'New Data';
+        }
+        return {
+          code: g.code,
+          area: g.goal_area || '',
+          description: g.desc || '',
+          baseline: g.baseline || '',
+          target: g.mastery || g.target || '',
+          current_value: gp.average != null ? Math.round(gp.average) : null,
+          trend: trendDir,
+          data_count: gp.count,
+        };
+      });
+
+      // Build scores from studentInstances in the quarter range
+      const studentInstances = instancesData.filter(inst => {
+        if (inst.student_code !== tab1State.studentCode && inst.student_id !== tab1State.studentCode) return false;
+        if (!inst.assigned_at) return false;
+        const d = new Date(inst.assigned_at);
+        return quarterRange.start && quarterRange.end
+          ? d >= new Date(quarterRange.start) && d <= new Date(quarterRange.end)
+          : false;
+      });
+      const scores = studentInstances.slice(0, 15).map(inst => {
+        const assignment = assignmentsData.find(a => a.id === inst.assignment_id);
+        const submission = submissionsData.find(s => s.instance_id === inst.id);
+        return {
+          assignment_title: assignment ? (assignment.title || '') : '',
+          score: submission && submission.score_total != null ? submission.score_total : null,
+          date: inst.assigned_at ? inst.assigned_at.slice(0, 10) : '',
+          type: assignment ? (assignment.type || '') : '',
+        };
+      }).filter(s => s.score != null);
+
+      return {
+        student_code: tab1State.studentCode,
+        quarter_label: getPeriodLabel(tab1State.quarter),
+        goals,
+        scores,
+        trend_data: null,
+      };
+    }
+
+    /**
+     * Apply AI narratives to the textarea elements.
+     */
+    function applyNarrativesToUI(narratives) {
+      narratives.forEach(n => {
+        const area = document.querySelector(`.rp-ai-narrative-area[data-goal-code="${CSS.escape(n.goal_code)}"]`);
+        if (!area) return;
+        const textarea = area.querySelector('.rp-ai-narrative-text');
+        const errEl = area.querySelector('.rp-ai-narrative-error');
+        if (textarea) textarea.value = n.narrative_text;
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        area.style.display = 'block';
+      });
+    }
+
+    /**
+     * Generate AI narratives for a set of goal codes (or all if null).
+     */
+    async function generateNarratives(goalCodes, triggerBtn) {
+      const payload = buildNarrativePayload(goalCodes);
+      if (payload.goals.length === 0) return;
+
+      // Update button state
+      const origLabel = triggerBtn ? triggerBtn.textContent : '';
+      if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.textContent = 'Generating…';
+      }
+
+      // Show areas for targeted goals
+      payload.goals.forEach(g => {
+        const area = document.querySelector(`.rp-ai-narrative-area[data-goal-code="${CSS.escape(g.code)}"]`);
+        if (area) {
+          const errEl = area.querySelector('.rp-ai-narrative-error');
+          const textarea = area.querySelector('.rp-ai-narrative-text');
+          if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+          if (textarea) textarea.value = '';
+          area.style.display = 'block';
+        }
+      });
+
+      try {
+        const res = await fetch('/.netlify/functions/teacher-ai-report-narrative', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          const errMsg = data.error || 'AI generation failed';
+          payload.goals.forEach(g => {
+            const area = document.querySelector(`.rp-ai-narrative-area[data-goal-code="${CSS.escape(g.code)}"]`);
+            if (!area) return;
+            const errEl = area.querySelector('.rp-ai-narrative-error');
+            if (errEl) { errEl.textContent = '⚠️ ' + errMsg; errEl.style.display = 'block'; }
+          });
+          return;
+        }
+
+        applyNarrativesToUI(data.narratives || []);
+
+        const count = (data.narratives || []).length;
+        if (count > 0) showToast('✅ Generated ' + count + ' narrative' + (count !== 1 ? 's' : '') + '!');
+      } catch (err) {
+        console.error('[tc-reporting] AI narrative error:', err);
+        payload.goals.forEach(g => {
+          const area = document.querySelector(`.rp-ai-narrative-area[data-goal-code="${CSS.escape(g.code)}"]`);
+          if (!area) return;
+          const errEl = area.querySelector('.rp-ai-narrative-error');
+          if (errEl) { errEl.textContent = '⚠️ Network error: ' + err.message; errEl.style.display = 'block'; }
+        });
+      } finally {
+        if (triggerBtn) {
+          triggerBtn.disabled = false;
+          triggerBtn.textContent = origLabel;
+        }
+      }
+    }
+
+    // "✨ Generate All Narratives" button
+    const btnGenAll = $('btnGenerateAllNarratives');
+    if (btnGenAll) {
+      btnGenAll.addEventListener('click', () => generateNarratives(null, btnGenAll));
+    }
+
+    // Per-goal "✨ Generate Narrative" buttons
+    document.querySelectorAll('.rp-ai-narrative-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const goalCode = e.currentTarget.dataset.goalCode;
+        generateNarratives([goalCode], e.currentTarget);
+      });
+    });
+
+    // Per-goal "🔄 Regenerate" buttons
+    document.querySelectorAll('.rp-ai-regen-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const goalCode = e.currentTarget.dataset.goalCode;
+        const genBtn = document.querySelector(`.rp-ai-narrative-btn[data-goal-code="${CSS.escape(goalCode)}"]`);
+        generateNarratives([goalCode], genBtn);
+      });
+    });
+
+    // Per-goal "📋 Copy" buttons
+    document.querySelectorAll('.rp-ai-copy-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const goalCode = e.currentTarget.dataset.goalCode;
+        const area = document.querySelector(`.rp-ai-narrative-area[data-goal-code="${CSS.escape(goalCode)}"]`);
+        const textarea = area ? area.querySelector('.rp-ai-narrative-text') : null;
+        if (!textarea || !textarea.value.trim()) {
+          showToast('ℹ️ No narrative to copy yet.');
+          return;
+        }
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          showToast('✅ Narrative copied to clipboard!');
+        }).catch(async err => {
+          console.error('Failed to copy narrative:', err);
           await rcAlert('Error', 'Failed to copy to clipboard');
         });
       });
