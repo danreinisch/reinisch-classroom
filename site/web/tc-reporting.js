@@ -3651,7 +3651,8 @@ ${narrative}`;
           <div class="rp-ev-mode-group" id="tab6DataSourceGroup">${dataSourceBtns}</div>
         </div>
         <div style="display:flex;align-items:flex-end;grid-column:span 1;">
-          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="width:100%;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
+          <button class="tc-btn" id="tab6PreviewBtn" type="button">👁️ Preview</button>
+          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="flex:1;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
         </div>
       </div>
       <div id="tab6ReportOutput"></div>
@@ -3751,9 +3752,93 @@ ${narrative}`;
         });
       });
     }
+    $("tab6PreviewBtn")?.addEventListener('click', generateTab6Preview);
     } catch (err) {
       renderTabErrorCard(container, renderTab6, err);
     }
+  }
+
+  /**
+   * Generate and render a lightweight preview card for Tab 6.
+   * Shows a quick summary (student names, date range, counts) without building full evidence HTML.
+   */
+  function generateTab6Preview() {
+    const output = $("tab6ReportOutput");
+    if (!output) return;
+
+    const quarterRange = getTab6DateRange();
+    const periodLabel = getTab6PeriodLabel();
+    const isParent = tab6State.audienceMode === 'parent';
+    const audienceLabel = isParent ? 'Parent' : 'Admin';
+    const formatLabel = tab6State.outputFormat === 'zip' ? '📦 ZIP Download' : '🖨️ Print / PDF';
+
+    // Determine target students
+    let targetStudents = [];
+    if (tab6State.selectionMode === 'all') {
+      targetStudents = studentsData.filter((s) => s.active !== false);
+    } else if (tab6State.selectionMode === 'multi') {
+      targetStudents = studentsData.filter((s) => tab6State.selectedStudents.includes(s.code));
+    } else {
+      const s = studentsData.find((s) => s.code === tab6State.studentCode);
+      if (s) targetStudents = [s];
+    }
+
+    if (targetStudents.length === 0) {
+      output.innerHTML = '<div class="rp-empty">No students selected. Please select at least one student.</div>';
+      return;
+    }
+
+    const startDate = new Date(quarterRange.start || '2000-01-01');
+    const endDate = new Date(quarterRange.end || '2099-12-31');
+
+    // Count assignments in range for target students
+    const targetCodes = new Set(targetStudents.map((s) => s.code));
+    const assignmentCount = instancesData.filter((inst) => {
+      if (!targetCodes.has(inst.student_code) && !targetCodes.has(inst.student_id)) return false;
+      if (!inst.assigned_at) return false;
+      const d = new Date(inst.assigned_at);
+      return d >= startDate && d <= endDate;
+    }).length;
+
+    // Count IEP goals for target students
+    const goalCount = goalsData.filter((g) => targetCodes.has(g.student_code)).length;
+
+    const studentNames = targetStudents.map((s) => escapeHtml(s.name || s.code)).join(', ');
+    const studentCodes = targetStudents.map((s) => escapeHtml(s.code)).join(', ');
+
+    output.innerHTML = `
+      <div class="tc-card" style="margin-top:16px;padding:20px;">
+        <h3 style="margin:0 0 12px;font-size:1.1em;font-weight:700;">👁️ Report Preview</h3>
+        <div style="margin-bottom:8px;"><strong>Student(s):</strong> ${studentNames}</div>
+        <div style="margin-bottom:8px;"><strong>Code(s):</strong> ${studentCodes}</div>
+        <div style="margin-bottom:16px;"><strong>Date Range:</strong> ${escapeHtml(periodLabel)}</div>
+        <div class="rp-kpis" style="margin-bottom:16px;">
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Assignments Found</div>
+            <div class="rp-kpi-value">${assignmentCount}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">IEP Goals</div>
+            <div class="rp-kpi-value">${goalCount}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Audience</div>
+            <div class="rp-kpi-value">${escapeHtml(audienceLabel)}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Format</div>
+            <div class="rp-kpi-value">${escapeHtml(formatLabel)}</div>
+          </div>
+        </div>
+        <button class="tc-btn" id="tab6PreviewGenerateBtn" type="button" style="font-weight:700;">Looks good — Generate Full Report</button>
+      </div>
+    `;
+
+    $("tab6PreviewGenerateBtn")?.addEventListener('click', () => {
+      generateEvidenceReport().catch((err) => {
+        console.error('[tc-reporting] Error generating evidence report:', err);
+      });
+    });
   }
 
   /**
