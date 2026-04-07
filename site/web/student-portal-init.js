@@ -1969,6 +1969,11 @@
       ${submitQuestionsHtml}
       ${bottomDayTabsHtml}
     `;
+
+    // Inject book deep-link buttons into hint content areas
+    container.querySelectorAll('.st-hint-content').forEach(function (hintEl) {
+      injectBookDeepLinks(hintEl);
+    });
     
     // Attach choice handlers (only if not read-only and question is not retry-locked)
     if (!isReadOnly) {
@@ -2543,6 +2548,11 @@
       </div>
       ${bottomDayTabsHtml}
     `;
+
+    // Inject book deep-link buttons into writing hint content areas
+    container.querySelectorAll('.st-hint-content').forEach(function (hintEl) {
+      injectBookDeepLinks(hintEl);
+    });
     
     // Attach builder toggle handler
     const toggleBtn = container.querySelector('#builderToggleBtn');
@@ -3720,6 +3730,7 @@
   const _wordDefCache = new Map(); // session-level dictionary API cache
   let _bookLink = '';              // current book link (used for localStorage keys)
   let _bookGlossaryMap = null;     // Map<normalized_term, definition>
+  let _knownBookResources = [];    // populated by loadStudentResources; each: { link, title, chapters, totalPages }
 
   // Re-cache on voiceschanged (voices may not be available at load time)
   if (window.speechSynthesis) {
@@ -3762,10 +3773,121 @@
     return best;
   }
 
+  // ============================================================================
+  // Book Deep-link Helpers
+  // ============================================================================
+
+  const _NUMBER_WORDS = {
+    one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,
+    eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,
+    seventeen:17,eighteen:18,nineteen:19,twenty:20,'twenty-one':21,
+    'twenty-two':22,'twenty-three':23,'twenty-four':24,'twenty-five':25,
+    'twenty-six':26,'twenty-seven':27,'twenty-eight':28,'twenty-nine':29,
+    thirty:30,'thirty-one':31,'thirty-two':32,'thirty-three':33,'thirty-four':34,
+    'thirty-five':35,'thirty-six':36,'thirty-seven':37,'thirty-eight':38,
+    'thirty-nine':39,forty:40,'forty-one':41,'forty-two':42,'forty-three':43,
+    'forty-four':44,'forty-five':45,'forty-six':46,'forty-seven':47,
+    'forty-eight':48,'forty-nine':49,fifty:50
+  };
+
+  // Pre-computed regex part for number words (longest-first to avoid partial matches)
+  const _NUM_WORDS_RE_PART = Object.keys(_NUMBER_WORDS)
+    .sort(function (a, b) { return b.length - a.length; }).join('|');
+
+  const BOOK_EMOJI = '\uD83D\uDCDA';
+
+  /**
+   * Detect a book chapter or page reference in hint text.
+   * Returns { type: 'chapter'|'page', value: number, label: string } or null.
+   */
+  function detectBookReference(text) {
+    if (!text) return null;
+    // Chapter N / Ch. N — numeric or written-out word
+    const chapterRe = new RegExp('\\b(?:chapter|ch\\.?)\\s+(' + '\\d+|' + _NUM_WORDS_RE_PART + ')\\b', 'i');
+    const chapterMatch = text.match(chapterRe);
+    if (chapterMatch) {
+      const raw = chapterMatch[1].toLowerCase();
+      const num = parseInt(raw, 10) || _NUMBER_WORDS[raw] || null;
+      if (num) return { type: 'chapter', value: num, label: chapterMatch[0] };
+    }
+    // Page N / pg. N / pg N / p. N
+    const pageRe = /\b(?:page|pg\.?|p\.)\s*(\d+)\b/i;
+    const pageMatch = text.match(pageRe);
+    if (pageMatch) {
+      const num = parseInt(pageMatch[1], 10);
+      if (num > 0) return { type: 'page', value: num, label: pageMatch[0] };
+    }
+    return null;
+  }
+
+  /**
+   * Find the best matching known book resource for a detected reference.
+   * Returns { resource, targetPage } or null.
+   * Uses the first known book resource; single-book-per-class is the common case.
+   */
+  function findBookForReference(ref) {
+    if (!_knownBookResources.length) return null;
+    const resource = _knownBookResources[0];
+    if (ref.type === 'page') {
+      const pg = Math.max(1, Math.min(ref.value, resource.totalPages || ref.value));
+      return { resource, targetPage: pg };
+    }
+    if (ref.type === 'chapter') {
+      const chapters = resource.chapters || [];
+      // Match by 1-indexed position first
+      if (chapters[ref.value - 1]) {
+        return { resource, targetPage: chapters[ref.value - 1].startPage };
+      }
+      // Fuzzy match by name using the original label text (e.g. "chapter one" inside "Chapter One | Alex's Oath")
+      const refLabel = ref.label.toLowerCase();
+      for (var ci = 0; ci < chapters.length; ci++) {
+        if ((chapters[ci].name || '').toLowerCase().includes(refLabel)) {
+          return { resource, targetPage: chapters[ci].startPage };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Scan a hint element for book chapter/page references and append a subtle
+   * "📖 Go to …" button linking into the book reader.
+   */
+  function injectBookDeepLinks(element) {
+    if (!element || !_knownBookResources.length) return;
+    if (element.querySelector('.st-hint-book-link')) return; // already injected
+    const ref = detectBookReference(element.textContent || '');
+    if (!ref) return;
+    const match = findBookForReference(ref);
+    if (!match) return;
+    const { resource, targetPage } = match;
+    const label = ref.type === 'chapter'
+      ? BOOK_EMOJI + ' Go to ' + ref.label
+      : BOOK_EMOJI + ' Go to Page ' + ref.value;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'st-hint-book-link';
+    btn.textContent = label;
+    btn.setAttribute('data-book-link', resource.link);
+    btn.setAttribute('data-book-title', resource.title);
+    btn.setAttribute('data-target-page', String(targetPage));
+    btn.title = 'Open "' + resource.title + '" in the book reader';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openBookReader(
+        this.getAttribute('data-book-link'),
+        this.getAttribute('data-book-title'),
+        parseInt(this.getAttribute('data-target-page'), 10) || 1
+      );
+    });
+    element.appendChild(btn);
+  }
+
   /**
    * Open the inline book reader for a resource with book-pages.json
    */
-  async function openBookReader(link, title) {
+  async function openBookReader(link, title, targetPage) {
     // Fetch book-pages.json — ensure link ends with /
     const base = link.endsWith('/') ? link : link + '/';
     let bookData;
@@ -3785,12 +3907,19 @@
     // Restore saved page from localStorage
     const storageKey = 'rc_book_page_' + encodeURIComponent(link);
     const savedPage = parseInt(localStorage.getItem(storageKey) || '1', 10);
+    const useTarget = targetPage != null && !isNaN(targetPage);
+    let startPage;
+    if (useTarget) {
+      startPage = Math.max(1, Math.min(targetPage, bookData.totalPages));
+    } else {
+      startPage = (savedPage >= 1 && savedPage <= bookData.totalPages) ? savedPage : 1;
+    }
 
     bookReaderState = {
       bookData,
-      currentPage: (savedPage >= 1 && savedPage <= bookData.totalPages) ? savedPage : 1,
+      currentPage: startPage,
       storageKey,
-      resuming: savedPage > 1
+      resuming: !useTarget && savedPage > 1
     };
     _bookLink = link;
     _bookGlossaryMap = buildGlossaryMap(bookData);
@@ -4944,6 +5073,16 @@
                 progressEl.innerHTML = `<div class="st-resource-progress-text">Page ${savedPage} of ${savedTotal} \u00b7 ${pct}% read</div><div class="st-resource-progress-bar"><div class="st-resource-progress-fill" style="width:${pct}%"></div></div>`;
                 progressEl.style.display = 'block';
               }
+            }
+            // Populate _knownBookResources for hint deep-links (fetch full JSON)
+            if (!_knownBookResources.find(function (x) { return x.link === link; })) {
+              fetch(base + 'book-pages.json').then(function (r2) {
+                return r2.ok ? r2.json() : null;
+              }).then(function (bd) {
+                if (bd && bd.chapters && !_knownBookResources.find(function (x) { return x.link === link; })) {
+                  _knownBookResources.push({ link: link, title: title, chapters: bd.chapters, totalPages: bd.totalPages || 0 });
+                }
+              }).catch(function () {});
             }
           }
         }).catch(function () { /* no book-pages.json, leave as external link */ });
