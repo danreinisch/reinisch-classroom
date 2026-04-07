@@ -1970,12 +1970,14 @@
                   if (answer) {
                     answer.earned_points = suggestData.suggested_score;
                     if (suggestData.suggested_note) answer.teacher_note = suggestData.suggested_note;
+                    if (suggestData.rationale) answer.rationale = suggestData.rationale;
                   } else {
                     const newAnswer = {
                       item_id: item.id,
                       submission_id: submission.id,
                       earned_points: suggestData.suggested_score,
                       teacher_note: suggestData.suggested_note || '',
+                      rationale: suggestData.rationale || '',
                     };
                     answers.push(newAnswer);
                     submissionAnswersCache[submission.id] = answers;
@@ -1992,6 +1994,7 @@
                       itemId: item.id,
                       earnedPoints: suggestData.suggested_score,
                       teacherNote: suggestData.suggested_note || '',
+                      rationale: suggestData.rationale || '',
                     }),
                   });
                   if (!saveScoreRes.ok) {
@@ -2317,8 +2320,16 @@
         setTimeout(() => noteInput.classList.remove('rv-ai-suggested'), 2000);
       }
 
-      // Show inline rationale
+      // Save rationale to answer cache and DOM so it persists when teacher clicks Save
       if (rationale) {
+        scoreInput.dataset.aiRationale = rationale;
+        const cachedAnswers = submissionAnswersCache[submissionId];
+        if (cachedAnswers) {
+          const cachedAnswer = cachedAnswers.find(a => String(a.item_id) === String(itemId) || String(a.assignment_item_id) === String(itemId));
+          if (cachedAnswer) cachedAnswer.rationale = rationale;
+        }
+
+        // Show inline rationale in teacher UI
         const rationaleDiv = document.createElement('div');
         rationaleDiv.className = 'rv-ai-rationale';
         rationaleDiv.setAttribute('role', 'status');
@@ -2353,6 +2364,7 @@
     
     const earnedPoints = parseFloat(scoreInput.value) || 0;
     const teacherNote = noteInput ? noteInput.value.trim() : '';
+    const aiRationale = scoreInput.dataset.aiRationale || '';
 
     // Bug A fix: synthetic item IDs (e.g. "synthetic_WP_4") cannot be stored as bigint.
     // Backfill the assignment first, then resolve to the real DB item ID.
@@ -2424,7 +2436,8 @@
         submissionId,
         itemId: resolvedItemId,
         earnedPoints,
-        teacherNote
+        teacherNote,
+        rationale: aiRationale,
       });
       
       // Clear cache to force reload
