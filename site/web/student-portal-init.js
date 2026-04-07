@@ -5973,6 +5973,15 @@
   }
 
   /**
+   * Check whether a submission has a valid (non-null, parseable) submitted_at date.
+   * @param {{ submitted_at: string|null }} s
+   * @returns {boolean}
+   */
+  function hasValidSubmittedAt(s) {
+    return Boolean(s.submitted_at) && !isNaN(new Date(s.submitted_at).getTime());
+  }
+
+  /**
    * Build a performance trend SVG line chart for the student's recent graded submissions.
    * Plots score_total (%) over time using submitted_at as the x-axis.
    * Shows up to 15 most recent graded submissions, with a 70% passing reference line.
@@ -5980,11 +5989,6 @@
    * @param {Array} graded - Graded submissions (score_total != null, submitted_at set)
    * @returns {string} HTML string containing SVG chart and legend, or empty message string
    */
-  /** @param {{ submitted_at: string|null }} s @returns {boolean} */
-  function hasValidSubmittedAt(s) {
-    return Boolean(s.submitted_at) && !isNaN(new Date(s.submitted_at).getTime());
-  }
-
   function buildScoreTrendSVG(graded) {
     const PASSING_THRESHOLD = 70;
     const MAX_POINTS = 15;
@@ -6024,8 +6028,8 @@
 
     // 70% passing reference line
     const refY = toY(PASSING_THRESHOLD).toFixed(1);
-    const refLine = `<line class="st-perf-chart-ref" x1="${PAD.left}" y1="${refY}" x2="${W - PAD.right}" y2="${refY}" />`;
-    const refLabel = `<text class="st-perf-chart-ref-label" x="${W - PAD.right + 2}" y="${refY}" dy="4" font-size="9">${PASSING_THRESHOLD}%</text>`;
+    const refLine = `<line class="st-perf-chart-reference" x1="${PAD.left}" y1="${refY}" x2="${W - PAD.right}" y2="${refY}" />`;
+    const refLabel = `<text class="st-perf-chart-reference-label" aria-hidden="true" x="${W - PAD.right + 2}" y="${refY}" dy="4" font-size="9">${PASSING_THRESHOLD}%</text>`;
 
     // Data dots with tooltips
     const dots = points.map(p => {
@@ -6049,7 +6053,7 @@
           ${refLabel}
           <polyline class="st-chart-line" points="${polyline}" />
           ${dots}
-          <text class="st-chart-latest-label" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestScore)}</text>
+          <text class="st-chart-latest-label" aria-hidden="true" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestScore)}</text>
           <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="start">${escapeHtml(firstLabel)}</text>
           <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
           <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${(PAD.top + chartH).toFixed(1)}" font-size="9" text-anchor="end" dy="4">0%</text>
