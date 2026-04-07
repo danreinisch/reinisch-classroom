@@ -1469,6 +1469,15 @@
                 </p>
 
                 <div class="rp-filters">
+                  <div class="rp-filter-group" style="flex-wrap:wrap;gap:8px;align-items:center;">
+                    <label style="width:100%;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:.7;">Saved Templates</label>
+                    <select id="tab5TemplateSelect" class="rp-select" style="flex:1;min-width:140px;">
+                      <option value="">-- Load Template --</option>
+                    </select>
+                    <button class="rp-ev-mode-btn" id="tab5TemplateDeleteBtn" type="button" title="Delete selected template">🗑️ Delete</button>
+                    <input type="text" id="tab5TemplateNameInput" class="rp-select" placeholder="Template name…" style="flex:1;min-width:120px;">
+                    <button class="rp-ev-mode-btn" id="tab5TemplateSaveBtn" type="button" title="Save current settings as template">💾 Save</button>
+                  </div>
                   <div class="rp-filter-group">
                     <label for="batchQuarterSelect">Quarter</label>
                     <select id="batchQuarterSelect" class="rp-select">
