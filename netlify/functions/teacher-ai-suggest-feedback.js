@@ -105,8 +105,8 @@ exports.handler = async (event) => {
     return jsonResponse(event, 503, { ok: false, error: 'AI suggestions not configured' }, {}, requestId);
   }
 
-  // Validate body size (10KB max)
-  const bodySizeCheck = validateBodySize(event.body, 10);
+  // Validate body size (25KB max — item_summaries can be large for assignments with many items)
+  const bodySizeCheck = validateBodySize(event.body, 25);
   if (!bodySizeCheck.valid) {
     console.log(`[teacher-ai-suggest-feedback] [${requestId}] Body too large: ${bodySizeCheck.error}`);
     return jsonResponse(event, 400, { ok: false, error: 'Request body too large' }, {}, requestId);

@@ -154,6 +154,12 @@
   to = "/site/web/student-portal-init.js"
   status = 200
 
+# Redirect for teacher-ai-suggest-feedback function (mirrors teacher-ai-suggest pattern)
+[[redirects]]
+  from = "/api/teacher-ai-suggest-feedback"
+  to = "/.netlify/functions/teacher-ai-suggest-feedback"
+  status = 200
+
 # Edge Functions Configuration
 # Student entry redirect - server-side redirect to hub (preserves deep links)
 [[edge_functions]]
