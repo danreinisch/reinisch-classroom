@@ -3514,8 +3514,9 @@ ${narrative}`;
           <div class="rp-ev-ctrl-label">Data Source</div>
           <div class="rp-ev-mode-group" id="tab6DataSourceGroup">${dataSourceBtns}</div>
         </div>
-        <div style="display:flex;align-items:flex-end;grid-column:span 1;">
-          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="width:100%;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
+        <div style="display:flex;align-items:flex-end;gap:8px;grid-column:span 1;">
+          <button class="tc-btn" id="tab6PreviewBtn" type="button" style="flex:0 0 auto;justify-content:center;padding:10px 16px;font-weight:700;">👁️ Preview</button>
+          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="flex:1;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
         </div>
       </div>
       <div id="tab6ReportOutput"></div>
@@ -3605,6 +3606,16 @@ ${narrative}`;
         renderTab6();
       });
     });
+
+    // Wire up preview button
+    const previewBtn = $("tab6PreviewBtn");
+    if (previewBtn) {
+      previewBtn.addEventListener('click', () => {
+        previewEvidenceReport().catch((err) => {
+          console.error('[tc-reporting] Error previewing evidence report:', err);
+        });
+      });
+    }
 
     // Wire up generate button
     const generateBtn = $("tab6GenerateBtn");
@@ -3859,6 +3870,137 @@ ${narrative}`;
         ${statsHtml}
       </div>
     `;
+  }
+
+  /**
+   * Render a lightweight preview summary card for the evidence report selection.
+   * Shows key metrics without generating full evidence HTML.
+   */
+  async function previewEvidenceReport() {
+    const output = $("tab6ReportOutput");
+    if (!output) return;
+
+    const quarterRange = getTab6DateRange();
+
+    // Resolve target students (same logic as generateEvidenceReport)
+    let targetStudents = [];
+    if (tab6State.selectionMode === 'single') {
+      if (!tab6State.studentCode) {
+        output.innerHTML = '<div class="rp-empty">No student selected. Please select a student before previewing.</div>';
+        return;
+      }
+      const student = studentsData.find((s) => s.code === tab6State.studentCode);
+      if (!student) {
+        output.innerHTML = '<div class="rp-empty">Student not found.</div>';
+        return;
+      }
+      targetStudents = [student];
+    } else if (tab6State.selectionMode === 'multi') {
+      if (tab6State.selectedStudents.length === 0) {
+        output.innerHTML = '<div class="rp-empty">No students selected. Please select at least one student before previewing.</div>';
+        return;
+      }
+      targetStudents = studentsData.filter(
+        (s) => tab6State.selectedStudents.includes(s.code) && s.active !== false
+      );
+    } else {
+      targetStudents = studentsData.filter((s) => s.active !== false);
+      if (targetStudents.length === 0) {
+        output.innerHTML = '<div class="rp-empty">No active students found.</div>';
+        return;
+      }
+    }
+
+    // Format date range nicely: "Feb 1, 2026 — Jun 30, 2026"
+    // Append T12:00:00 so the date is parsed at noon local time, avoiding
+    // off-by-one display issues when the browser's timezone is behind UTC.
+    const fmtOpts = { month: 'short', day: 'numeric', year: 'numeric' };
+    const startLabel = new Date(quarterRange.start + 'T12:00:00').toLocaleDateString('en-US', fmtOpts);
+    const endLabel = new Date(quarterRange.end + 'T12:00:00').toLocaleDateString('en-US', fmtOpts);
+    const dateRangeLabel = `${startLabel} — ${endLabel}`;
+
+    // Compute aggregate counts across all target students
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+
+    let totalAssignments = 0;
+    let totalGoals = 0;
+    for (const student of targetStudents) {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+      const ranged = studentInstances.filter((inst) => {
+        const d = new Date(inst.assigned_at || inst.created_at || '');
+        // Include assignments with missing/unparseable dates (consistent with
+        // buildStudentEvidenceHtml behaviour — undated work is not excluded).
+        if (isNaN(d.getTime())) return true;
+        return d >= startDate && d <= endDate;
+      });
+      totalAssignments += ranged.length;
+      totalGoals += goalsData.filter(
+        (g) => g.student_code === student.code && isGoalActive(g)
+      ).length;
+    }
+
+    // Audience and format labels
+    const audienceLabels = { parent: 'Parent', admin: 'Admin' };
+    const audienceLabel = audienceLabels[tab6State.audienceMode] || escapeHtml(tab6State.audienceMode);
+    const formatLabel = tab6State.outputFormat === 'zip' ? '📦 ZIP Download' : '🖨️ Print / PDF';
+
+    // Student name list
+    const studentSummary = targetStudents.length === 1
+      ? `${escapeHtml(targetStudents[0].name || targetStudents[0].code)} (${escapeHtml(targetStudents[0].code)})`
+      : `${escapeHtml(String(targetStudents.length))} students`;
+
+    const noDataMsg = totalAssignments === 0 && totalGoals === 0
+      ? `<div class="rp-empty" style="margin-top:12px;">⚠️ No data found for the selected criteria. Try adjusting the date range or student selection.</div>`
+      : '';
+
+    output.innerHTML = `
+      <div class="tc-card" style="margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px;">👁️ Report Preview</div>
+        <div style="font-size:13px;opacity:0.7;margin-bottom:16px;">Review your selection before generating the full report.</div>
+        <div class="rp-kpis" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));">
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Student(s)</div>
+            <div style="font-size:15px;font-weight:700;margin-top:6px;">${studentSummary}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Date Range</div>
+            <div style="font-size:13px;font-weight:600;margin-top:6px;">${escapeHtml(dateRangeLabel)}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Assignments</div>
+            <div class="rp-kpi-value">${escapeHtml(String(totalAssignments))}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">IEP Goals</div>
+            <div class="rp-kpi-value">${escapeHtml(String(totalGoals))}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Audience</div>
+            <div style="font-size:15px;font-weight:700;margin-top:6px;">${escapeHtml(audienceLabel)}</div>
+          </div>
+          <div class="rp-kpi-card">
+            <div class="rp-kpi-label">Output Format</div>
+            <div style="font-size:13px;font-weight:600;margin-top:6px;">${escapeHtml(formatLabel)}</div>
+          </div>
+        </div>
+        ${noDataMsg}
+        <div style="margin-top:16px;">
+          <button class="tc-btn" id="tab6PreviewGenerateBtn" type="button" style="font-weight:700;">✅ Looks good — Generate Full Report</button>
+        </div>
+      </div>
+    `;
+
+    const previewGenerateBtn = $("tab6PreviewGenerateBtn");
+    if (previewGenerateBtn) {
+      previewGenerateBtn.addEventListener('click', () => {
+        generateEvidenceReport().catch((err) => {
+          console.error('[tc-reporting] Error generating evidence report:', err);
+        });
+      });
+    }
   }
 
   /**

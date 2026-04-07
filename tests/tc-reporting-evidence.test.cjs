@@ -566,6 +566,38 @@ test('exportEvidenceCSV function declared in tc-reporting.js', () => {
   assert.ok(src.includes('function exportEvidenceCSV('), 'exportEvidenceCSV not found');
 });
 
+test('previewEvidenceReport function declared in tc-reporting.js', () => {
+  assert.ok(src.includes('async function previewEvidenceReport('), 'previewEvidenceReport not found');
+});
+
+test('tab6PreviewBtn button rendered in renderTab6', () => {
+  assert.ok(src.includes('id="tab6PreviewBtn"'), 'tab6PreviewBtn not found in renderTab6 HTML');
+});
+
+test('tab6PreviewBtn wired to previewEvidenceReport in renderTab6', () => {
+  assert.ok(src.includes('previewEvidenceReport()'), 'previewEvidenceReport() call not found in renderTab6');
+});
+
+test('preview card renders rp-kpis grid', () => {
+  assert.ok(src.includes('class="rp-kpis"'), 'rp-kpis class not found in preview card');
+});
+
+test('preview card renders rp-kpi-card items', () => {
+  assert.ok(src.includes('class="rp-kpi-card"'), 'rp-kpi-card class not found in preview card');
+});
+
+test('preview card includes Looks good Generate Full Report button', () => {
+  assert.ok(src.includes('tab6PreviewGenerateBtn'), 'tab6PreviewGenerateBtn not found in previewEvidenceReport');
+});
+
+test('preview shows no-data message when no assignments or goals found', () => {
+  assert.ok(src.includes('No data found for the selected criteria'), 'no-data message not found in previewEvidenceReport');
+});
+
+test('preview shows no-student message when no student selected', () => {
+  assert.ok(src.includes('No student selected'), 'no-student message not found in previewEvidenceReport');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
