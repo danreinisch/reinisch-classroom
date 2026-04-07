@@ -4443,9 +4443,9 @@ ${narrative}`;
       });
       studentInstances.forEach(function(inst) {
         var d = new Date(inst.assigned_at || inst.created_at || '');
-        if (isNaN(d.getTime()) || (d >= startDate && d <= endDate)) {
-          totalAssignments++;
-        }
+        // Include if no date (matches buildStudentEvidenceHtml behavior), or if within range
+        if (isNaN(d.getTime())) { totalAssignments++; return; }
+        if (d >= startDate && d <= endDate) { totalAssignments++; }
       });
     });
 
