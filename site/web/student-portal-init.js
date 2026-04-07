@@ -3760,9 +3760,10 @@
 
     const priorities = [
       function (v) { return /Google (US|UK) English/i.test(v.name); },
+      function (v) { return /Natural/i.test(v.name); },
       function (v) { return /Samantha.*Enhanced|Alex.*Enhanced|Daniel.*Enhanced/i.test(v.name); },
-      function (v) { return /Microsoft.*(Online|Neural)/i.test(v.name); },
-      function (v) { return /enhanced|premium/i.test(v.name); }
+      function (v) { return /enhanced|premium/i.test(v.name); },
+      function (v) { return /Microsoft.*(Online|Neural)/i.test(v.name); }
     ];
     let best = null;
     for (const pred of priorities) {
@@ -4106,10 +4107,16 @@
 
       // Text selection toolbar
       bookContent.addEventListener('mouseup', function () {
-        setTimeout(handleTextSelection, 10);
+        setTimeout(function () {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed) handleTextSelection();
+        }, 10);
       });
       bookContent.addEventListener('touchend', function () {
-        setTimeout(handleTextSelection, 10);
+        setTimeout(function () {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed) handleTextSelection();
+        }, 10);
       });
     }
 
@@ -4937,7 +4944,7 @@
     const range = sel.getRangeAt(0);
     if (!content.contains(range.commonAncestorContainer)) return;
     const selectedText = sel.toString().trim();
-    if (!selectedText) return;
+    if (!selectedText || selectedText.length < 2) return;
 
     // Build toolbar
     const rect = range.getBoundingClientRect();
