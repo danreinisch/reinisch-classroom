@@ -1796,7 +1796,7 @@
           const assignmentId = resolveAssignmentId(submission);
           if (syntheticAssignmentIds.has(assignmentId)) continue;
           const items = assignmentItemsCache[assignmentId] || [];
-          const answers = submissionAnswersCache[submission.id] || [];
+          const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
           const scoreAuto = answers.length > 0
             ? items.filter(i => isAutoScoredItem(i, answers))
                 .reduce((sum, item) => {
