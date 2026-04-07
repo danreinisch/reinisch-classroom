@@ -3730,7 +3730,7 @@
   let bookTtsActive = false;
   let bookTtsPaused = false;
   let bookTtsTimeout = null;
-  var _ttsStarting = false;
+  let _ttsStarting = false;
   let _cachedTtsVoice = null;
   let _cachedTtsVoiceName = null;
   // New feature state
@@ -4579,7 +4579,8 @@
       if (voice) utterance.voice = voice;
       bookTtsUtterance = utterance;
 
-      var _started = false;
+      let _started = false;
+      let _watchdog;
 
       utterance.onstart = function () {
         _started = true;
@@ -4644,14 +4645,14 @@
 
       // Watchdog: if utterance doesn't start within 2 seconds, the voice may be
       // broken. Cancel and retry with browser default voice (voice=null).
-      var _watchdog = setTimeout(function () {
+      _watchdog = setTimeout(function () {
         if (!_started && bookTtsActive) {
           console.warn(LOG_PREFIX, 'TTS watchdog: utterance did not start after 2s, retrying with default voice');
           clearInterval(keepAlive);
           window.speechSynthesis.cancel();
           setTimeout(function () {
             if (!bookTtsActive) return;
-            var retryUtterance = new SpeechSynthesisUtterance(text);
+            const retryUtterance = new SpeechSynthesisUtterance(text);
             retryUtterance.rate = rate;
             retryUtterance.pitch = 1.0;
             retryUtterance.volume = 1.0;
