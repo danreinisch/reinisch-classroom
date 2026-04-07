@@ -33,8 +33,23 @@ function sanitizeField(value, maxLen) {
 
 /**
  * Build the system prompt for the goal trend analyzer.
+ * Adjusts tone based on audience: 'admin' (default) = professional IEP language;
+ * 'parent' = accessible language focused on student progress.
  */
-function buildTrendsSystemPrompt() {
+function buildTrendsSystemPrompt(audience) {
+  if (audience === 'parent') {
+    return 'You are helping a teacher write a progress update for a parent or guardian about their child\'s IEP goals. ' +
+      'Use clear, simple, encouraging language that a non-specialist can understand -- avoid jargon. ' +
+      'Write 3-5 focused paragraphs. ' +
+      'Paragraph 1: Give a general overview of how the student is doing across their goals -- what is going well and what still needs work. ' +
+      'Paragraph 2: Describe which goals the student is on track to meet and which may need extra support, using plain language. ' +
+      'Paragraph 3: Note any connections between different goal areas if relevant (e.g., reading and writing improving together). ' +
+      'Paragraph 4: Share what the teacher plans to do to help the student continue making progress. ' +
+      'Optional Paragraph 5: Mention any data gaps or patterns worth noting in plain terms. ' +
+      'Be specific but accessible. Do not fabricate data. ' +
+      'Output only the paragraphs -- no headers, no bullet points, no preamble or postamble. ' +
+      'Separate each paragraph with a single blank line.';
+  }
   return 'You are a professional IEP (Individualized Education Program) data analyst specializing in student progress trend analysis. ' +
     'Your role is to analyze goal progress data and identify meaningful patterns, risks, and instructional opportunities. ' +
     'Write 3-5 focused paragraphs using professional IEP team language. ' +
@@ -154,9 +169,10 @@ exports.handler = async function(event) {
   var goals = Array.isArray(body.goals) ? body.goals.slice(0, 50) : [];
   var dateRange = body.dateRange && typeof body.dateRange === 'object' ? body.dateRange : null;
   var dataPoints = Array.isArray(body.dataPoints) ? body.dataPoints.slice(0, 200) : [];
+  var audience = (body.audience === 'parent' || body.audience === 'admin') ? body.audience : 'admin';
 
   // Build the prompt
-  var systemPrompt = buildTrendsSystemPrompt();
+  var systemPrompt = buildTrendsSystemPrompt(audience);
   var userMessage = buildTrendsUserMessage(studentName, studentCode, goals, dateRange, dataPoints);
 
   console.log('[teacher-ai-analyze-trends] [' + requestId + '] Calling Anthropic API for ' + studentCode + ' (' + goals.length + ' goals, ' + dataPoints.length + ' data points)');
