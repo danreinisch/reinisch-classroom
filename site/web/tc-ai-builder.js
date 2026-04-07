@@ -197,7 +197,13 @@
     if (aibTabManage) aibTabManage.classList.toggle('active', !isCreate);
     if (aibCreatePanel) aibCreatePanel.style.display = isCreate ? '' : 'none';
     if (aibManagePanel) aibManagePanel.style.display = isCreate ? 'none' : '';
-    if (!isCreate) loadHistory();
+    if (!isCreate) {
+      if (regeneratingFromId) {
+        regeneratingFromId = null;
+        hideMsg(aibMsg);
+      }
+      loadHistory();
+    }
   }
 
   if (aibTabCreate) aibTabCreate.addEventListener('click', () => switchTab('create'));
@@ -236,6 +242,16 @@
   }
 
   // ── School year helper ───────────────────────────────────────────────────────
+
+  // Compute current calendar week (Sunday-start, Jan 1 = week 1)
+  function getCurrentCalendarWeek() {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const nowDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDay = Date.UTC(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((nowDay - startDay) / 86400000);
+    return Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7);
+  }
 
   function getSchoolYear() {
     const now = new Date();
@@ -514,6 +530,7 @@
               updateTypeUI();
             }
           }
+          showMsg(aibMsg, '🔄 Regenerating — the next generation will supersede the previous version.', 'info');
           if (aibCreatePanel) aibCreatePanel.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
         } else if (action === 'reissue') {
           const loadAndReissue = async () => {
@@ -710,7 +727,7 @@
       lastOutputs = outputs;
 
       // Compute stats from unfiltered outputs
-      const currentWeek = parseInt(aibWeek?.value, 10) || 0;
+      const currentWeek = getCurrentCalendarWeek();
       const total = outputs.length;
       const thisWeek = outputs.filter((o) => parseInt(o.week, 10) === currentWeek).length;
       const assignments = outputs.filter((o) => o.task_type === 'assignments' || o.task_type === 'both').length;
@@ -758,6 +775,10 @@
     const btn = e.currentTarget;
     currentTaskType = btn.dataset.type;
     updateTypeUI();
+    if (regeneratingFromId) {
+      regeneratingFromId = null;
+      hideMsg(aibMsg);
+    }
   }
 
   typeBtnAssignments.addEventListener('click', handleTypeBtn);
@@ -1118,6 +1139,7 @@
         const saveData = await saveRes.json().catch(() => ({}));
         if (!saveRes.ok || !saveData.ok) {
           console.warn('[tc-ai-builder] Auto-save to history failed:', saveData.error || saveRes.status);
+          regeneratingFromId = null;
           showMsg(aibMsg, 'Generation complete! (Note: history could not be saved.)', 'ok');
         } else {
           console.log('[tc-ai-builder] Output auto-saved to history');
@@ -1142,9 +1164,11 @@
         }
       } catch (saveErr) {
         console.warn('[tc-ai-builder] Auto-save failed (non-critical):', saveErr.message);
+        regeneratingFromId = null;
       }
     } catch (err) {
       console.error('[tc-ai-builder] Generation error:', err);
+      regeneratingFromId = null;
       showMsg(aibMsg, 'Error: ' + err.message, 'err');
     } finally {
       aibGenerateBtn.disabled = false;
