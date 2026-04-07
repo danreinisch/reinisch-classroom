@@ -147,7 +147,7 @@
       { tag: 'line', x1: '14', y1: '17', x2: '8', y2: '17' }
     ],
     alertTriangle: [
-      { tag: 'path', d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0-3.42 0z' },
+      { tag: 'path', d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' },
       { tag: 'line', x1: '12', y1: '9', x2: '12', y2: '13' },
       { tag: 'line', x1: '12', y1: '17', x2: '12.01', y2: '17' }
     ]
@@ -1659,16 +1659,18 @@
           i => i.assignment_id === assignment.id && i.student_code === studentCode
         );
 
-        if (!instance || instance.status === 'Assigned') {
+        const isMissing = !instance || instance.status === 'Assigned';
+        const isInProgress = instance && instance.status === 'In Progress';
+        if (isMissing || isInProgress) {
           if (!studentMap.has(studentCode)) {
             studentMap.set(studentCode, { studentCode, studentName, className, missingAssignments: [], inProgressAssignments: [] });
           }
-          studentMap.get(studentCode).missingAssignments.push(assignment);
-        } else if (instance.status === 'In Progress') {
-          if (!studentMap.has(studentCode)) {
-            studentMap.set(studentCode, { studentCode, studentName, className, missingAssignments: [], inProgressAssignments: [] });
+          const entry = studentMap.get(studentCode);
+          if (isMissing) {
+            entry.missingAssignments.push(assignment);
+          } else {
+            entry.inProgressAssignments.push(assignment);
           }
-          studentMap.get(studentCode).inProgressAssignments.push(assignment);
         }
       }
     }
