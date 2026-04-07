@@ -3125,7 +3125,7 @@ ${narrative}`;
     for (let index = 0; index < _total; index++) {
       const student = activeStudents[index];
       if (_progLabel) _progLabel.textContent = `Generating report ${index + 1} of ${_total}...`;
-      if (_progFill) _progFill.style.width = `${Math.round((index / _total) * 100)}%`;
+      if (_progFill) _progFill.style.width = `${Math.round(((index + 1) / _total) * 100)}%`;
       if (_progBar) _progBar.setAttribute('aria-valuenow', index + 1);
       await new Promise(r => setTimeout(r, 0));
       try {
@@ -3299,7 +3299,10 @@ ${narrative}`;
         ? `Complete — ${done} of ${_total} reports generated (${errorCount} error${errorCount !== 1 ? 's' : ''})`
         : `Complete — ${_total} report${_total !== 1 ? 's' : ''} generated`;
       if (_progFill) _progFill.style.width = '100%';
-      if (_progBar) { _progBar.setAttribute('aria-valuenow', String(_total)); _progBar.setAttribute('aria-valuetext', 'Complete'); }
+      if (_progBar) {
+        _progBar.setAttribute('aria-valuenow', String(_total));
+        _progBar.setAttribute('aria-valuetext', 'Complete');
+      }
     }
 
     // Open print window
