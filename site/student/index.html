@@ -2565,6 +2565,32 @@
         display: block;
       }
 
+      /* Book deep-link button inside hints */
+      .st-hint-book-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px dashed rgba(59, 130, 246, 0.3);
+        border-radius: 6px;
+        color: #60a5fa;
+        font-size: 12px;
+        padding: 3px 8px;
+        margin-left: 6px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+        vertical-align: middle;
+        text-decoration: none;
+        min-height: 28px;
+        line-height: 1.4;
+        font-family: inherit;
+      }
+
+      .st-hint-book-link:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.5);
+      }
+
       /* TTS (Text-to-Speech) buttons */
       .st-tts-btn {
         background: none;
@@ -3748,6 +3774,15 @@
         background: rgba(168,85,247,0.06);
         border-color: rgba(168,85,247,0.2);
         color: #7c3aed;
+      }
+      [data-theme="light"] .st-hint-book-link {
+        background: rgba(37, 99, 235, 0.07);
+        border-color: rgba(37, 99, 235, 0.3);
+        color: #2563eb;
+      }
+      [data-theme="light"] .st-hint-book-link:hover {
+        background: rgba(37, 99, 235, 0.13);
+        border-color: rgba(37, 99, 235, 0.5);
       }
       [data-theme="light"] .st-btn {
         color: var(--ink);
