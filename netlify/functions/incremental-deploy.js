@@ -1363,14 +1363,14 @@ function parsePandocJsonToBookPages(title, jsonString) {
         }
 
         // Sub-heading (level 3 not matching CHAPTER_RE, or level 4+)
-        if (!foundFirstHeader || skipSection) break;
+        if (skipSection) break;
         currentParagraphs.push(['## ' + headerText]);
         currentWordCount += hWords.filter(Boolean).length;
         break;
       }
       case 'Para':
       case 'Plain': {
-        if (!foundFirstHeader || skipSection) break;
+        if (skipSection) break;
         const words = [];
         flattenInlines(block.c || [], words);
         const filtered = words.filter(Boolean);
@@ -1421,7 +1421,7 @@ function parsePandocJsonToBookPages(title, jsonString) {
         break;
       }
       case 'BulletList': {
-        if (!foundFirstHeader || skipSection) break;
+        if (skipSection) break;
         for (const item of (block.c || [])) {
           if (Array.isArray(item)) {
             for (let i = item.length - 1; i >= 0; i--) blockStack.push(item[i]);
@@ -1430,7 +1430,7 @@ function parsePandocJsonToBookPages(title, jsonString) {
         break;
       }
       case 'OrderedList': {
-        if (!foundFirstHeader || skipSection) break;
+        if (skipSection) break;
         const items = block.c[1] || [];
         for (const item of items) {
           if (Array.isArray(item)) {

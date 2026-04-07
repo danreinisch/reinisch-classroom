@@ -4509,8 +4509,18 @@
         // Auto-advance to next page
         if (state && state.currentPage < state.bookData.totalPages) {
           state.currentPage++;
-          renderBookPage();
-          startBookTts();
+          // For chunked books, wait for the chunk to load before rendering and starting TTS;
+          // otherwise give renderBookPage() a tick to finish DOM updates.
+          const nextChunk = findChunkForPage(state.bookData, state.currentPage);
+          if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
+            fetchBookChunk(nextChunk.id).then(function () {
+              renderBookPage();
+              startBookTts();
+            });
+          } else {
+            renderBookPage();
+            setTimeout(startBookTts, 100);
+          }
         }
         return;
       }
