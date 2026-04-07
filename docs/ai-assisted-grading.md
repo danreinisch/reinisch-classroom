@@ -2,13 +2,16 @@
 
 ## Overview
 
-The AI-Assisted Grading Suggestions feature helps teachers score constructed-response items on the
-Review page. When a teacher clicks **✨ Suggest Grade** on a response card, the system sends the
-student's written answer and the item's rubric to an AI model, which returns a suggested score and
-a feedback note focused specifically on that written response. The teacher reviews both fields,
-edits them as needed, and clicks **Save Grade** as normal.
+The Review page has four AI-assisted features that work together to streamline grading:
 
-**Key design principle:** The AI suggestion never auto-saves. Teachers always have the final word.
+1. **✨ Suggest Grade** — Per-item AI scoring for constructed-response questions
+2. **✨ Suggest Feedback** — AI-generated holistic assignment feedback in the Grade section
+3. **🤖 Auto-Grade All** — Batch AI grading for all "Needs Review" submissions in one click
+4. **✅ Finalize All Reviewed** — Batch finalize for all submissions in the "Reviewed" tab
+
+**Key design principle:** AI suggestions never auto-save without explicit teacher action. Teachers
+always have the final word. The Auto-Grade All and Finalize All Reviewed actions each require a
+confirmation step before proceeding.
 
 ### Two-Layer Feedback Model
 
@@ -19,15 +22,37 @@ The Review page supports two separate feedback layers:
    question: what was demonstrated, what could be improved, and any specific guidance. It is
    3–4 sentences and does not address the overall assignment.
 
-2. **Overall Assignment Feedback** — in the Grade section at the bottom of the page, written by
-   the teacher after all items have been scored. This is where holistic comments about the full
-   assignment belong.
+2. **Overall Assignment Feedback** — in the Grade section at the bottom of the page. The
+   **✨ Suggest Feedback** button fills this with a holistic comment that covers the full assignment
+   (score summary, trends across items, and specific guidance). The teacher reviews and edits before
+   saving.
 
-The AI only fills the per-item Teacher Note. Overall assignment feedback is always written by the
-teacher.
+The `✨ Suggest Grade` button is only shown for **constructed-response** items (fill-in-blank /
+written response). It does not appear on MCQ, boolean, or multi-select items, which are scored
+automatically.
 
-The button is only shown for **constructed-response** items (fill-in-blank / written response). It
-does not appear on MCQ, boolean, or multi-select items, which are scored automatically.
+---
+
+## Recommended Workflow
+
+```
+Submissions arrive in "Needs Review" tab
+        ↓
+Option A — Manual review:
+  Open each submission → score written responses → ✨ Suggest Feedback → Save Grade → Finalize
+        ↓
+Option B — AI-batch workflow:
+  Click "🤖 Auto-Grade All" (batch action bar next to "Needs Review" tab)
+        ↓
+  AI scores all written responses + generates overall feedback
+  Submissions move to "Reviewed" tab
+        ↓
+  Teacher scans "Reviewed" tab, edits any grades/feedback as needed
+        ↓
+  Click "✅ Finalize All Reviewed" to finalize all at once
+```
+
+
 
 ---
 
@@ -41,6 +66,8 @@ does not appear on MCQ, boolean, or multi-select items, which are scored automat
 ---
 
 ## How It Works
+
+### ✨ Suggest Grade (per-item)
 
 ```
 Teacher clicks "✨ Suggest Grade" on a constructed-response card
@@ -61,6 +88,76 @@ Returns { suggested_score, suggested_note, rationale }
         ↓
 tc-review.js populates Score input + Teacher Note textarea
   (teacher edits and saves manually — no auto-save)
+```
+
+### ✨ Suggest Feedback (overall assignment)
+
+A **✨ Suggest Feedback** button appears next to the "Feedback:" label in the Grade section for
+each expanded submission. It generates a holistic comment covering the full assignment — score
+summary, observations across items, and specific guidance for the student.
+
+```
+Teacher clicks "✨ Suggest Feedback" in the Grade section
+        ↓
+tc-review.js collects:
+  • assignment_title  — from instance settings
+  • total_score       — sum of earned points across all items
+  • total_possible    — sum of max points across all items
+  • total_percent     — percentage score (0–100)
+  • item_summaries    — array of { label, type, earned, max, teacher_note } per item
+  • student_code      — opaque student identifier (no PII)
+        ↓
+POST /.netlify/functions/teacher-ai-suggest-feedback
+        ↓
+Backend builds prompt → calls gpt-4o-mini → returns holistic feedback
+        ↓
+Returns { suggested_feedback }
+        ↓
+tc-review.js populates the Feedback textarea
+  (teacher edits and saves manually — no auto-save)
+```
+
+### 🤖 Auto-Grade All (batch)
+
+The **🤖 Auto-Grade All** button appears in the batch action bar next to the "Needs Review" tab.
+It processes every submission with `review_status` of `pending` or `in_progress` that has unscored
+constructed-response items.
+
+```
+Teacher clicks "🤖 Auto-Grade All" → confirms prompt
+        ↓
+For each qualifying submission:
+  Step 1: For each unscored constructed item:
+    POST /.netlify/functions/teacher-ai-suggest
+      → score is saved via POST /.netlify/functions/teacher-review-save (action: save_score)
+      → answer cache is updated with suggested score + teacher note
+  Step 2: Build item_summaries from updated answers
+  Step 3: POST /.netlify/functions/teacher-ai-suggest-feedback
+      → holistic feedback generated
+  Step 4: POST /.netlify/functions/teacher-review-save (action: save_grade)
+      → saves scoreAuto, scoreManual, scoreTotal, feedback; sets review_status → "reviewed"
+        ↓
+All processed submissions move to the "Reviewed" tab
+Progress toast updates as each submission completes
+```
+
+### ✅ Finalize All Reviewed (batch)
+
+The **✅ Finalize All Reviewed** button appears in the batch action bar when the "Reviewed" tab
+is selected (it is hidden on other tabs). It locks grades and triggers IEP goal progress updates
+for every submission with `review_status === 'reviewed'`.
+
+```
+Teacher clicks "✅ Finalize All Reviewed" → confirms prompt
+        ↓
+For each "reviewed" submission:
+  Compute scoreAuto, scoreManual, scoreTotal from cached answers
+  POST /.netlify/functions/teacher-review-save (action: finalize)
+    → sets review_status → "finalized", saves scores
+  triggerGoalProgressUpdates() → writes goal data points to Supabase
+  POST to archive endpoint for DESE compliance (non-fatal)
+        ↓
+All processed submissions move to the "Finalized" tab
 ```
 
 ### IEP Goal Context
@@ -94,12 +191,24 @@ the item's point value:
 
 Only the following data is sent to the OpenAI API:
 
+**Suggest Grade (per-item):**
+
 | Data sent | Example |
 |---|---|
 | Student's written response text | `"The slope of the line is 2 because…"` |
 | Rubric tier definitions | `"5 — Exemplary: Thorough, evidence-based"` |
 | Item label | `"Q6"` |
 | IEP goal descriptions | `"Math Computation — Student will identify slope and intercept"` |
+
+**Suggest Feedback / Auto-Grade (overall):**
+
+| Data sent | Example |
+|---|---|
+| Assignment title | `"Week 4 Reading Comprehension"` |
+| Score summary | `total_score: 18, total_possible: 25, total_percent: 72` |
+| Per-item summaries | `{ label: "Q6", type: "constructed", earned: 2, max: 5 }` |
+| Teacher notes (if any) | `"Partial credit — addresses topic but lacks evidence"` |
+| Opaque student code | `"STU_ABCD"` |
 
 **What is never sent:**
 
@@ -122,11 +231,13 @@ details.
 |---|---|
 | Model | `gpt-4o-mini` |
 | Temperature | `0.3` (for consistent scoring) |
-| Avg input tokens / request | ~400–600 |
-| Avg output tokens / request | ~200–350 |
-| Cost per suggestion | ~$0.0002 |
-| 16 items × 25 students | ~$0.04 per full class assignment |
-| Monthly estimate (4 assignments) | ~$0.16 / month |
+| Avg input tokens / request (suggest grade) | ~400–600 |
+| Avg output tokens / request (suggest grade) | ~200–350 |
+| Avg input tokens / request (suggest feedback) | ~600–900 |
+| Avg output tokens / request (suggest feedback) | ~150–250 |
+| Cost per suggestion | ~$0.0002–$0.0004 |
+| Auto-Grade All: 16 items × 25 students | ~$0.08–$0.12 per full class assignment |
+| Monthly estimate (4 assignments) | ~$0.35 / month |
 
 Cost is essentially negligible on an existing OpenAI subscription.
 
@@ -148,10 +259,13 @@ Cost is essentially negligible on an existing OpenAI subscription.
 
 ### Backend
 
+#### `teacher-ai-suggest` — per-item scoring
+
 **File:** `netlify/functions/teacher-ai-suggest.js`
 
 - **Method:** `POST /.netlify/functions/teacher-ai-suggest`
 - **Auth:** Teacher session cookie (`tc`) required — uses existing `requireTeacher()` pattern
+- **Body size limit:** 10KB
 - **Request body:**
 
 ```json
@@ -171,8 +285,40 @@ Cost is essentially negligible on an existing OpenAI subscription.
 {
   "ok": true,
   "suggested_score": 4,
-  "suggested_note": "You correctly identified the rise-over-run relationship to find the slope. Your explanation shows solid understanding of how the slope value affects the steepness of the line. To strengthen your response, consider also explaining what the y-intercept represents and where it appears in the equation. Adding that connection would make your answer complete.",
+  "suggested_note": "You correctly identified the rise-over-run relationship…",
   "rationale": "Student correctly identifies rise-over-run but omits intercept."
+}
+```
+
+#### `teacher-ai-suggest-feedback` — overall assignment feedback
+
+**File:** `netlify/functions/teacher-ai-suggest-feedback.js`
+
+- **Method:** `POST /.netlify/functions/teacher-ai-suggest-feedback`
+- **Auth:** Teacher session cookie (`tc`) required
+- **Body size limit:** 25KB (large assignments with many items can exceed 10KB)
+- **Request body:**
+
+```json
+{
+  "assignment_title": "Week 4 Reading Comprehension",
+  "total_score": 18,
+  "total_possible": 25,
+  "total_percent": 72,
+  "item_summaries": [
+    { "label": "Q1", "type": "auto", "earned": 3, "max": 3, "teacher_note": "" },
+    { "label": "Q6", "type": "constructed", "earned": 2, "max": 5, "teacher_note": "Partial credit…" }
+  ],
+  "student_code": "STU_ABCD"
+}
+```
+
+- **Response body:**
+
+```json
+{
+  "ok": true,
+  "suggested_feedback": "You demonstrated solid understanding of the main topic…"
 }
 ```
 
@@ -182,14 +328,20 @@ Cost is essentially negligible on an existing OpenAI subscription.
 
 - `generateRubricTiers(maxPoints)` — Builds rubric tier array for the AI prompt
 - `ensureGoalsLoaded(studentId)` — Fetches and caches student IEP goals from Supabase
-- `handleAiSuggest(button)` — Click handler: collects context, calls backend, populates fields
+- `handleAiSuggest(button)` — Click handler for ✨ Suggest Grade: collects context, calls
+  `teacher-ai-suggest`, populates Score + Teacher Note fields
+- `handleAiSuggestFeedback(button)` — Click handler for ✨ Suggest Feedback: collects item
+  summaries, calls `teacher-ai-suggest-feedback`, populates the Feedback textarea
+- `handleAutoGradeAll()` — Batch handler: iterates "Needs Review" submissions, calls both
+  endpoints, saves results via `teacher-review-save` (`save_score` then `save_grade`)
+- `handleFinalizeAllReviewed()` — Batch handler: iterates "Reviewed" submissions, finalizes via
+  `teacher-review-save` (`finalize`), triggers goal progress updates
 
 ### Tests
 
-- `tests/teacher-ai-suggest.test.cjs` — Unit tests for the backend function (auth, validation,
-  OpenAI mocking, score clamping, error handling, goal context in prompts)
+- `tests/teacher-ai-suggest.test.cjs` — Unit tests for the per-item suggest backend
 - `tests/teacher-ai-suggest-goals.test.cjs` — Unit tests for goal description resolution and
   `ensureGoalsLoaded` caching logic
+- `tests/teacher-ai-suggest-feedback.test.cjs` — Unit tests for the feedback suggest backend
+  (auth, validation, OpenAI mocking, body size limit, goal context injection, edge cases)
 - `tests/ai-suggest-integration.test.cjs` — Integration tests covering end-to-end data flow
-  (full flow with/without IEP goals, score clamping, graceful degradation, rubric tier generation,
-  response format validation)

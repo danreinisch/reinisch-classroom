@@ -706,6 +706,44 @@
       html { font-size: 28px; }
     }
 
+    /* Auto-Grade All button — purple/AI gradient to signal AI-powered batch action */
+    .rv-btn-autograde {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(99, 102, 241, 0.12));
+      border-color: rgba(168, 85, 247, 0.35);
+      color: #c4b5fd;
+    }
+    .rv-btn-autograde:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.28), rgba(99, 102, 241, 0.2));
+      border-color: rgba(168, 85, 247, 0.55);
+      color: #ddd6fe;
+    }
+
+    /* Finalize All Reviewed button — green tint to match the finalize/success theme */
+    .rv-btn-finalize-reviewed {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: rgba(34, 197, 94, 0.3);
+      color: #86efac;
+    }
+    .rv-btn-finalize-reviewed:hover:not(:disabled) {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.5);
+      color: #bbf7d0;
+    }
+
+    /* Progress indicator for Auto-Grade batch operation */
+    .rv-autograde-progress {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e40af;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 9999;
+    }
+
     /* AI Suggest Button */
     .rv-btn-suggest {
       background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.1));
@@ -958,7 +996,7 @@
             Mark All Reviewed (0)
           </button>
           <button class="rv-btn rv-btn-batch rv-btn-autograde" id="rvBtnAutoGrade" disabled aria-label="Auto-grade all unreviewed submissions with AI">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path></svg>
             🤖 Auto-Grade All (0)
           </button>
           <button class="rv-btn rv-btn-batch rv-btn-finalize-reviewed" id="rvBtnFinalizeAllReviewed" disabled style="display:none;" aria-label="Finalize all reviewed submissions">

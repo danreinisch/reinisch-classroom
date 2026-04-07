@@ -1812,7 +1812,23 @@
             });
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
+          const finalizeRes = await fetch('/.netlify/functions/teacher-review-save', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'finalize',
+              submissionId: submission.id,
+              scoreAuto,
+              scoreManual,
+              scoreTotal,
+              instanceId: submission.instance_id,
+            }),
+          });
+          if (!finalizeRes.ok) {
+            const finalizeErr = await finalizeRes.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(finalizeErr.error || `Failed to finalize submission: ${finalizeRes.status}`);
+          }
           await triggerGoalProgressUpdates(submission, items, answers);
 
           // Archive submission for DESE compliance (non-fatal)
@@ -1854,7 +1870,10 @@
   // Handle "Auto-Grade All" batch action — AI-suggests scores and feedback for all unreviewed submissions
   async function handleAutoGradeAll() {
     const queue = buildReviewQueue();
-    const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
+    const unreviewed = queue.filter(s => {
+      const status = s.review_status || 'pending';
+      return status === 'pending' || status === 'in_progress';
+    });
 
     // Find submissions with unscored constructed items
     const toAutoGrade = [];
@@ -1885,7 +1904,7 @@
 
     // Show a live progress toast
     const progressEl = document.createElement('div');
-    progressEl.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e40af;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;';
+    progressEl.className = 'rv-autograde-progress';
     progressEl.textContent = `Auto-grading… 0/${toAutoGrade.length}`;
     document.body.appendChild(progressEl);
 
@@ -1908,7 +1927,7 @@
             const rawAnswer = answer?.raw_answer;
             const studentResponse = (typeof rawAnswer === 'object' && rawAnswer !== null && rawAnswer.value !== undefined)
               ? rawAnswer.value
-              : (typeof rawAnswer === 'string' ? rawAnswer : (instance?.settings?.writing_response || ''));
+              : (typeof rawAnswer === 'string' ? rawAnswer : '');
             if (!studentResponse || String(studentResponse).trim() === '') continue;
 
             const maxPoints = item.points || 5;
@@ -1962,13 +1981,23 @@
                     submissionAnswersCache[submission.id] = answers;
                   }
 
-                  // Persist the score via db
-                  await db.updateSubmissionAnswer({
-                    submissionId: submission.id,
-                    itemId: item.id,
-                    earnedPoints: suggestData.suggested_score,
-                    teacherNote: suggestData.suggested_note || '',
+                  // Persist the score via teacher-review-save
+                  const saveScoreRes = await fetch('/.netlify/functions/teacher-review-save', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      action: 'save_score',
+                      submissionId: submission.id,
+                      itemId: item.id,
+                      earnedPoints: suggestData.suggested_score,
+                      teacherNote: suggestData.suggested_note || '',
+                    }),
                   });
+                  if (!saveScoreRes.ok) {
+                    const saveScoreErr = await saveScoreRes.json().catch(() => ({ error: 'Unknown error' }));
+                    console.warn('[tc-review] Save score failed:', submission.id, item.id, saveScoreErr.error);
+                  }
                 }
               }
             } catch (itemErr) {
@@ -2037,17 +2066,27 @@
           const gradedAt = new Date().toISOString();
           const gradedBy = localStorage.getItem('rc_teacher_name') || 'Teacher (AI-Assisted)';
 
-          await db.upsertSubmission({
-            id: submission.id,
-            score_auto: scoreAuto,
-            score_manual: scoreManual,
-            score_total: scoreTotal,
-            status: 'Graded',
-            graded_at: gradedAt,
-            graded_by: gradedBy,
-            feedback: suggestedFeedback,
-            instance_id: submission.instance_id,
+          const gradeRes = await fetch('/.netlify/functions/teacher-review-save', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'save_grade',
+              submissionId: submission.id,
+              scoreAuto,
+              scoreManual,
+              scoreTotal,
+              status: 'Graded',
+              gradedAt,
+              gradedBy,
+              feedback: suggestedFeedback,
+              instanceId: submission.instance_id,
+            }),
           });
+          if (!gradeRes.ok) {
+            const gradeErr = await gradeRes.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(gradeErr.error || `Failed to save grade for submission: ${gradeRes.status}`);
+          }
 
           // Update local cache
           submission.score_auto = scoreAuto;
