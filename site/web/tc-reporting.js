@@ -1667,7 +1667,7 @@ ${narrative}`;
    */
   function renderGradesForQuarter(studentCode, quarterRange) {
     if (!quarterRange.start || !quarterRange.end) {
-      return '<div class="rp-grades-section"><h3>Grades This Quarter</h3><div class="rp-empty">Invalid quarter range.</div></div>';
+      return '<div class="rp-grades-section"><h3 class="rp-section-heading" style="margin-top:24px;">Grades This Quarter</h3><div class="rp-empty">Invalid quarter range.</div></div>';
     }
 
     const startDate = new Date(quarterRange.start);
@@ -1682,12 +1682,12 @@ ${narrative}`;
     });
 
     if (studentInstances.length === 0) {
-      return '<div class="rp-grades-section"><h3>Grades This Quarter</h3><div class="rp-empty">No assignments found for this quarter.</div></div>';
+      return '<div class="rp-grades-section"><h3 class="rp-section-heading" style="margin-top:24px;">Grades This Quarter</h3><div class="rp-empty">No assignments found for this quarter.</div></div>';
     }
 
     // Build grades table
     let html =
-      '<div class="rp-grades-section"><h3>Grades This Quarter</h3><table class="rp-table"><caption>Grades This Quarter</caption><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
+      '<div class="rp-grades-section"><h3 class="rp-section-heading" style="margin-top:24px;">Grades This Quarter</h3><table class="rp-table"><caption>Grades This Quarter</caption><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
 
     let totalScore = 0;
     let scoredCount = 0;
@@ -1769,31 +1769,31 @@ ${narrative}`;
       <head>
         <title>IEP Progress Report</title>
         <style>
-          body { font-family: 'Calibri', Arial, sans-serif; margin: 40px; color: #000; background: #fff; }
-          h2 { font-size: 24pt; margin-bottom: 10px; }
-          h3 { font-size: 18pt; margin-top: 20px; margin-bottom: 10px; }
-          .rp-report-meta { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-          .rp-report-meta div { margin: 3px 0; }
-          .rp-goal-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; }
-          .rp-goal-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
-          .rp-goal-code { font-weight: bold; margin-right: 10px; }
+          body { font-family: 'Calibri', Georgia, Arial, sans-serif; margin: 0.75in 1in; color: #000; background: #fff; font-size: 11pt; line-height: 1.5; }
+          h2 { font-size: 20pt; font-weight: 700; margin: 0 0 12px 0; letter-spacing: -0.02em; }
+          h3 { font-size: 14pt; font-weight: 700; margin: 18pt 0 8pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; }
+          .rp-report-meta { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; }
+          .rp-report-meta div { margin: 3px 0; font-size: 10.5pt; }
+          .rp-goal-card { border: 1px solid #ccc; border-left: 3px solid #2563eb; padding: 14px 16px; margin-bottom: 14px; page-break-inside: avoid; border-radius: 4px; }
+          .rp-goal-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .rp-goal-code { font-weight: 700; color: #1e3a5f; margin-right: 10px; }
           .rp-goal-area { color: #666; }
-          .rp-goal-desc { margin: 10px 0; }
-          .rp-goal-targets { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 10px 0; }
+          .rp-goal-desc { margin: 8px 0; line-height: 1.6; }
+          .rp-goal-targets { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 10px 0; font-size: 10pt; }
           .rp-goal-narrative, .rp-goal-status { margin: 10px 0; }
-          .rp-narrative-edit { width: 100%; border: 1px solid #ccc; padding: 8px; font-family: inherit; }
-          .rp-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          .rp-table th, .rp-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-          .rp-table th { background-color: #f0f0f0; font-weight: bold; }
-          .rp-grades-summary { margin: 15px 0; display: flex; gap: 30px; }
-          .rp-trend-up { color: green; }
-          .rp-trend-down { color: red; }
-          .rp-trend-neutral { color: gray; }
+          .rp-narrative-edit { width: 100%; border: 1px solid #ccc; padding: 8px; font-family: inherit; font-size: 10.5pt; }
+          .rp-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt; }
+          .rp-table th, .rp-table td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+          .rp-table th { background-color: #f0f0f0; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; }
+          .rp-grades-summary { margin: 14px 0; display: flex; gap: 30px; font-size: 10.5pt; }
+          .rp-trend-up { color: #15803d; }
+          .rp-trend-down { color: #dc2626; }
+          .rp-trend-neutral { color: #6b7280; }
         </style>
       </head>
       <body>
         ${cleanedContent}
-        <p style="margin-top: 30px; font-size: 10pt; color: #666;"><em>Generated on ${generatedDate}</em></p>
+        <p style="margin-top: 30px; font-size: 9pt; color: #666;"><em>Generated on ${generatedDate}</em></p>
       </body>
       </html>
     `;
@@ -1852,18 +1852,24 @@ ${narrative}`;
   <meta charset="utf-8">
   <title>IEP Progress Report</title>
   <style>
-    body { font-family: 'Calibri', Arial, sans-serif; margin: 40px; }
-    h1 { font-size: 24pt; font-weight: bold; margin-bottom: 20px; }
-    h2 { font-size: 18pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; }
-    p { margin: 5px 0; }
-    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-    th { background-color: #f0f0f0; font-weight: bold; }
+    body { font-family: 'Calibri', Georgia, Arial, sans-serif; margin: 1in; font-size: 11pt; line-height: 1.5; color: #000; }
+    h1 { font-size: 20pt; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.02em; }
+    h2 { font-size: 16pt; font-weight: 700; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    h3 { font-size: 13pt; font-weight: 700; margin-top: 16px; margin-bottom: 8px; }
+    p { margin: 5px 0; line-height: 1.5; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10pt; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: 700; }
+    .rp-goal-card { border: 1px solid #ccc; border-left: 3px solid #2563eb; padding: 12px 14px; margin-bottom: 12px; }
+    .rp-goal-code { font-weight: 700; color: #1e3a5f; }
+    .rp-trend-up { color: #15803d; }
+    .rp-trend-down { color: #dc2626; }
+    .rp-trend-neutral { color: #6b7280; }
   </style>
 </head>
 <body>
   ${cleanedContent}
-  <p style="margin-top: 30px;"><em>Generated on ${escapeXml(generatedDate)}</em></p>
+  <p style="margin-top: 30px; font-size: 9pt; color: #666;"><em>Generated on ${escapeXml(generatedDate)}</em></p>
 </body>
 </html>
     `;
@@ -1963,7 +1969,7 @@ ${narrative}`;
           </div>
         </div>
 
-        <h3>IEP Goals Overview</h3>
+        <h3 class="rp-section-heading">IEP Goals Overview</h3>
     `;
 
     if (studentGoals.length === 0) {
@@ -2406,7 +2412,7 @@ ${narrative}`;
     }
 
     if (relevantAssignments.length === 0 && assignmentsData.length === 0) {
-      return '<h3>Assignment Performance</h3><div class="rp-empty">No assignments found.</div>';
+      return '<h3 class="rp-section-heading">Assignment Performance</h3><div class="rp-empty">No assignments found.</div>';
     }
 
     const typeFilterHtml = `
@@ -2423,7 +2429,7 @@ ${narrative}`;
       </div>`;
 
     if (relevantAssignments.length === 0) {
-      return `<h3>Assignment Performance</h3>${typeFilterHtml}<div class="rp-empty">No assignments match the current filter.</div>`;
+      return `<h3 class="rp-section-heading">Assignment Performance</h3>${typeFilterHtml}<div class="rp-empty">No assignments match the current filter.</div>`;
     }
 
     const assignmentStats = relevantAssignments
@@ -2470,7 +2476,7 @@ ${narrative}`;
       .join("");
 
     return `
-      <h3>Assignment Performance</h3>
+      <h3 class="rp-section-heading">Assignment Performance</h3>
       ${typeFilterHtml}
       <div class="rp-table-container">
         <table class="rp-table rp-sortable">
@@ -2497,7 +2503,7 @@ ${narrative}`;
    */
   function renderStudentPerformanceTable(students, quarterRange) {
     if (students.length === 0) {
-      return '<h3>Student Performance</h3><div class="rp-empty">No students found.</div>';
+      return '<h3 class="rp-section-heading">Student Performance</h3><div class="rp-empty">No students found.</div>';
     }
 
     const studentStats = students.map((student) => {
@@ -2552,7 +2558,7 @@ ${narrative}`;
       .join("");
 
     return `
-      <h3>Student Performance</h3>
+      <h3 class="rp-section-heading">Student Performance</h3>
       <div class="rp-table-container">
         <table class="rp-table rp-sortable">
           <caption>Student Performance</caption>
@@ -2577,10 +2583,10 @@ ${narrative}`;
    */
   function renderQuarterComparison(students) {
     if (students.length === 0) {
-      return '<h3>📊 Quarter Comparison</h3><div class="rp-empty">No students to compare.</div>';
+      return '<h3 class="rp-section-heading">📊 Quarter Comparison</h3><div class="rp-empty">No students to compare.</div>';
     }
 
-    let html = '<h3>📊 Quarter Comparison - Goal Progress Across Quarters</h3>';
+    let html = '<h3 class="rp-section-heading">📊 Quarter Comparison — Goal Progress Across Quarters</h3>';
     
     // Build comparison table
     html += `
@@ -3290,21 +3296,29 @@ ${narrative}`;
         <title>Quarterly Progress Reports - ${quarterLabel}</title>
         <style>
           body { 
-            font-family: 'Calibri', Arial, sans-serif; 
-            margin: 40px; 
+            font-family: 'Calibri', Georgia, Arial, sans-serif; 
+            margin: 0.75in 1in; 
             color: #000; 
             background: #fff; 
-            font-size: 14px;
+            font-size: 11pt;
             line-height: 1.5;
           }
           .print-header {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #000;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #1e3a5f;
           }
           .print-header h1 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
+            margin: 0 0 8px 0;
+            font-size: 22pt;
+            font-weight: 700;
+            color: #1e3a5f;
+            letter-spacing: -0.02em;
+          }
+          .print-header div {
+            font-size: 10.5pt;
+            color: #444;
+            margin: 2px 0;
           }
           .print-btn {
             position: fixed;
@@ -3316,23 +3330,25 @@ ${narrative}`;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
           }
           .print-btn:hover {
             background: #2563eb;
           }
           .student-section {
-            margin-bottom: 40px;
+            margin-bottom: 48px;
           }
           @media print {
+            body { margin: 0.75in 1in; }
             .print-btn {
               display: none;
             }
             .student-section {
               page-break-inside: avoid;
             }
+            h2, h3 { page-break-after: avoid; }
           }
         </style>
       </head>
@@ -3474,32 +3490,32 @@ ${narrative}`;
     container.innerHTML = `
       <div class="rp-ev-controls">
         <div class="rp-filter-group">
-          <label>Selection Mode:</label>
+          <div class="rp-ev-ctrl-label">Selection Mode</div>
           <div class="rp-ev-mode-group" id="tab6ModeGroup">${modeBtns}</div>
         </div>
         ${singleSelector}
         ${multiPanel}
         <div class="rp-filter-group">
-          <label>Audience:</label>
+          <div class="rp-ev-ctrl-label">Audience</div>
           <div class="rp-ev-mode-group" id="tab6AudienceGroup">${audienceBtns}</div>
         </div>
         <div class="rp-filter-group">
-          <label for="tab6DateRange">Date Range:</label>
+          <label class="rp-ev-ctrl-label" for="tab6DateRange">Date Range</label>
           <select id="tab6DateRange" class="rp-select">
             ${dateRangeHtml}
           </select>
         </div>
         ${customRangeHtml}
         <div class="rp-filter-group">
-          <label>Output Format:</label>
+          <div class="rp-ev-ctrl-label">Output Format</div>
           <div class="rp-ev-mode-group" id="tab6FormatGroup">${outputFormatBtns}</div>
         </div>
         <div class="rp-filter-group">
-          <label>Data Source:</label>
+          <div class="rp-ev-ctrl-label">Data Source</div>
           <div class="rp-ev-mode-group" id="tab6DataSourceGroup">${dataSourceBtns}</div>
         </div>
-        <div style="display:flex;align-items:flex-end;">
-          <button class="tc-btn" id="tab6GenerateBtn" type="button">Generate Report</button>
+        <div style="display:flex;align-items:flex-end;grid-column:span 1;">
+          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="width:100%;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
         </div>
       </div>
       <div id="tab6ReportOutput"></div>

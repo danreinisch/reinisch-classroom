@@ -9,7 +9,7 @@
     <style>
       .tc-stack {
         display: grid;
-        gap: 14px;
+        gap: 20px;
       }
       .tc-kpis {
         display: grid;
@@ -29,20 +29,25 @@
 
       .tc-card {
         border-radius: 14px;
-        padding: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px 24px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
         background: rgba(0, 0, 0, 0.18);
         backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
       }
       .tc-kpi-label {
-        font-size: 12px;
-        opacity: 0.8;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        font-weight: 600;
+        opacity: 0.65;
       }
       .tc-kpi-value {
-        font-size: 28px;
+        font-size: 38px;
         font-weight: 900;
         line-height: 1.1;
         margin-top: 6px;
+        letter-spacing: -0.03em;
       }
       .tc-row {
         display: flex;
@@ -64,11 +69,16 @@
         vertical-align: top;
       }
       .tc-table thead th {
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        opacity: 0.85;
+        letter-spacing: 0.06em;
+        font-weight: 700;
         border-top: none;
+        background: rgba(255, 255, 255, 0.07);
+        padding: 10px 12px;
+      }
+      .tc-table tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.018);
       }
       .tc-pill {
         display: inline-flex;
@@ -110,12 +120,13 @@
       /* Reporting page specific styles */
       .rp-tabs {
         display: flex;
-        gap: 4px;
+        gap: 2px;
         margin-bottom: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+        padding: 0 4px;
       }
       .rp-tab {
-        padding: 10px 18px;
+        padding: 12px 22px;
         cursor: pointer;
         border: none;
         background: none;
@@ -125,14 +136,17 @@
         font-size: 14px;
         font-weight: 500;
         transition: all 0.2s;
+        border-radius: 8px 8px 0 0;
       }
       .rp-tab:hover {
         opacity: 0.8;
       }
       .rp-tab.active {
         opacity: 1;
-        border-bottom-color: #3b82f6;
+        border-bottom: 3px solid #3b82f6;
         color: #93c5fd;
+        background: rgba(59, 130, 246, 0.10);
+        font-weight: 600;
       }
       .rp-tab-content {
         display: none;
@@ -147,6 +161,10 @@
         margin-bottom: 20px;
         flex-wrap: wrap;
         align-items: flex-end;
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
       }
       .rp-filter-group {
         display: flex;
@@ -156,6 +174,8 @@
       .rp-filter-group label {
         font-size: 12px;
         opacity: 0.8;
+        font-weight: 600;
+        letter-spacing: 0.03em;
       }
       .rp-select {
         padding: 8px 12px;
@@ -165,10 +185,12 @@
         color: inherit;
         font-size: 14px;
         min-width: 200px;
+        transition: border-color 0.15s;
       }
       .rp-select:focus {
         outline: none;
         border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
       }
 
       .rp-empty {
@@ -186,14 +208,17 @@
 
       .rp-report-card {
         border-radius: 14px;
-        padding: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 28px 32px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
         background: rgba(0, 0, 0, 0.18);
         backdrop-filter: blur(10px);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
       }
       .rp-report-header h2 {
         margin: 0 0 16px 0;
-        font-size: 24px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
       }
       .rp-report-meta {
         display: grid;
@@ -203,6 +228,7 @@
         padding: 16px;
         background: rgba(255, 255, 255, 0.04);
         border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
       }
       .rp-report-meta div {
         font-size: 14px;
@@ -214,10 +240,11 @@
         margin: 20px 0;
       }
       .rp-goal-card {
-        padding: 16px;
+        padding: 20px 22px;
         background: rgba(255, 255, 255, 0.04);
-        border-radius: 10px;
+        border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.08);
+        border-left: 3px solid rgba(59, 130, 246, 0.5);
       }
       .rp-goal-header {
         display: flex;
@@ -232,7 +259,8 @@
       }
       .rp-goal-code {
         font-weight: 700;
-        font-size: 14px;
+        font-size: 15px;
+        color: #93c5fd;
       }
       .rp-goal-area {
         opacity: 0.7;
@@ -242,7 +270,7 @@
         margin: 10px 0;
         opacity: 0.9;
         font-size: 13px;
-        line-height: 1.55;
+        line-height: 1.7;
         overflow-wrap: break-word;
         word-break: break-word;
       }
@@ -311,13 +339,13 @@
       /* Quarterly IEP Progress Summary panel */
       .rp-quarter-summary {
         margin: 20px 0;
-        padding: 16px 20px;
+        padding: 22px 26px;
         background: rgba(59, 130, 246, 0.12);
         border: 1px solid rgba(59, 130, 246, 0.3);
-        border-radius: 10px;
+        border-radius: 14px;
       }
       .rp-quarter-summary-title {
-        font-size: 15px;
+        font-size: 17px;
         font-weight: 700;
         margin-bottom: 14px;
         color: rgba(147, 197, 253, 1);
@@ -335,16 +363,18 @@
         min-width: 72px;
       }
       .rp-qs-value {
-        font-size: 26px;
-        font-weight: 700;
+        font-size: 34px;
+        font-weight: 800;
         line-height: 1;
         margin-bottom: 4px;
+        letter-spacing: -0.02em;
       }
       .rp-qs-label {
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        opacity: 0.7;
+        letter-spacing: 0.07em;
+        opacity: 0.6;
+        font-weight: 600;
         text-align: center;
       }
       .rp-qs-on-track .rp-qs-value { color: rgba(34, 197, 94, 0.9); }
@@ -376,7 +406,7 @@
       .rp-qs-goal-code {
         font-weight: 700;
         font-size: 13px;
-        color: rgba(147, 197, 253, 1);
+        color: #93c5fd;
         white-space: nowrap;
       }
       .rp-qs-goal-desc {
@@ -392,8 +422,8 @@
         margin-left: auto;
         font-size: 11px;
         font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 10px;
+        padding: 3px 10px;
+        border-radius: 12px;
         white-space: nowrap;
       }
       .rp-qs-goal-status--met { background: rgba(22, 163, 74, 0.85); color: #fff; }
@@ -443,20 +473,23 @@
       }
       .rp-table th,
       .rp-table td {
-        padding: 10px;
+        padding: 10px 14px;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         text-align: left;
       }
       .rp-table thead th {
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        opacity: 0.85;
+        letter-spacing: 0.06em;
+        font-weight: 700;
         border-top: none;
-        font-weight: 600;
+        background: rgba(255, 255, 255, 0.07);
       }
       .rp-table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .rp-table tbody tr:nth-child(even) td {
+        background: rgba(255, 255, 255, 0.02);
       }
       .rp-table-container {
         overflow-x: auto;
@@ -465,7 +498,9 @@
       .rp-export-actions {
         display: flex;
         gap: 12px;
-        margin-top: 20px;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
       }
 
       .rp-kpis {
@@ -485,28 +520,34 @@
         }
       }
       .rp-kpi-card {
-        padding: 16px;
+        padding: 20px 22px;
         background: rgba(255, 255, 255, 0.04);
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-left: 3px solid rgba(59, 130, 246, 0.45);
       }
       .rp-kpi-label {
-        font-size: 12px;
-        opacity: 0.8;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        font-weight: 600;
+        opacity: 0.65;
       }
       .rp-kpi-value {
-        font-size: 28px;
+        font-size: 38px;
         font-weight: 900;
         line-height: 1.1;
         margin-top: 6px;
+        letter-spacing: -0.03em;
       }
 
       .rp-summary-card {
-        border-radius: 14px;
-        padding: 20px;
+        border-radius: 16px;
+        padding: 28px 32px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: rgba(0, 0, 0, 0.18);
         backdrop-filter: blur(10px);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
       }
       .rp-summary-header {
         display: flex;
@@ -516,13 +557,15 @@
       }
       .rp-summary-header h2 {
         margin: 0;
-        font-size: 24px;
+        font-size: 26px;
+        font-weight: 700;
       }
       .rp-summary-identity {
         margin-bottom: 24px;
         padding: 16px;
         background: rgba(255, 255, 255, 0.04);
-        border-radius: 8px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
       }
       .rp-summary-row {
         display: grid;
@@ -657,6 +700,12 @@
         body {
           background: #fff;
           color: #000;
+          margin: 0.75in 1in;
+        }
+        h3 {
+          font-size: 15pt;
+          font-weight: 700;
+          margin: 16pt 0 8pt;
         }
         .rp-ev-confidential-banner {
           display: block !important;
@@ -821,37 +870,65 @@
           word-break: break-word !important;
           overflow-wrap: break-word !important;
         }
+        .rp-goal-card {
+          border: 1px solid #ccc !important;
+          background: #fff !important;
+          color: #000 !important;
+          page-break-inside: avoid;
+        }
+        .rp-kpi-card {
+          background: #f8f9fa !important;
+          border: 1px solid #ccc !important;
+          color: #000 !important;
+        }
+        .rp-quarter-summary {
+          background: #f0f4ff !important;
+          border: 1px solid #b8c9f0 !important;
+          color: #000 !important;
+        }
       }
 
       /* Evidence tab styles */
       .rp-ev-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: flex-end;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
         margin-bottom: 20px;
-        padding: 16px;
+        padding: 22px 24px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.10);
-        border-radius: 10px;
+        border-radius: 14px;
+      }
+      .rp-ev-ctrl-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        opacity: 0.55;
+        margin-bottom: 6px;
       }
       .rp-ev-mode-group {
         display: flex;
         gap: 6px;
       }
       .rp-ev-mode-btn {
-        padding: 6px 14px;
+        padding: 7px 16px;
         border: 1px solid rgba(255, 255, 255, 0.2);
         background: rgba(255, 255, 255, 0.06);
         color: inherit;
         border-radius: 6px;
         cursor: pointer;
         font-size: 13px;
-        transition: background 0.15s;
+        transition: all 0.15s;
+      }
+      .rp-ev-mode-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.10);
+        border-color: rgba(255, 255, 255, 0.3);
       }
       .rp-ev-mode-btn.active {
-        background: rgba(59, 130, 246, 0.4);
-        border-color: rgba(59, 130, 246, 0.7);
+        background: rgba(59, 130, 246, 0.45);
+        border-color: rgba(59, 130, 246, 0.8);
+        font-weight: 600;
       }
       .rp-ev-multi-list {
         max-height: 300px;
@@ -889,57 +966,62 @@
         margin-bottom: 40px;
       }
       .rp-ev-profile-card {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 16px;
+        background: rgba(59, 130, 246, 0.07);
+        border: 1px solid rgba(59, 130, 246, 0.22);
+        border-radius: 14px;
+        padding: 22px 26px;
+        margin-bottom: 20px;
       }
       .rp-ev-profile-header {
-        font-size: 18px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        margin-bottom: 10px;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        margin-bottom: 14px;
         text-transform: uppercase;
-        opacity: 0.95;
+        color: rgba(147, 197, 253, 0.95);
+        opacity: 1;
       }
       .rp-ev-profile-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px 20px;
-        font-size: 13px;
+        gap: 8px 24px;
+        font-size: 13.5px;
         opacity: 0.9;
       }
       .rp-ev-confidential-banner {
         background: rgba(234, 179, 8, 0.15);
         border: 1px solid rgba(234, 179, 8, 0.4);
         border-radius: 6px;
-        padding: 6px 14px;
-        font-size: 12px;
+        padding: 8px 16px;
+        font-size: 13px;
         font-weight: 600;
-        margin-top: 12px;
+        margin-top: 16px;
         text-align: center;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.06em;
         color: #fbbf24;
       }
       .rp-ev-section-title {
-        font-size: 15px;
-        font-weight: 600;
-        margin: 20px 0 10px 0;
-        padding-bottom: 6px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-        opacity: 0.9;
+        font-size: 13px;
+        font-weight: 700;
+        margin: 24px 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.14);
+        opacity: 1;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(147, 197, 253, 0.9);
       }
       .rp-ev-assignment-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.09);
-        border-radius: 8px;
-        padding: 14px 16px;
-        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-left: 3px solid rgba(59, 130, 246, 0.45);
+        border-radius: 0 10px 10px 0;
+        padding: 16px 20px;
+        margin-bottom: 14px;
       }
       .rp-ev-assignment-title {
-        font-weight: 600;
-        font-size: 14px;
+        font-weight: 700;
+        font-size: 15px;
         margin-bottom: 6px;
       }
       .rp-ev-assignment-meta {
@@ -949,6 +1031,7 @@
         display: flex;
         gap: 16px;
         flex-wrap: wrap;
+        line-height: 1.6;
       }
       .rp-ev-tag-row {
         font-size: 12px;
@@ -965,11 +1048,11 @@
       }
       .rp-ev-answers-label {
         font-size: 11px;
-        font-weight: 600;
-        opacity: 0.7;
-        margin-bottom: 6px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        opacity: 0.65;
+        margin-bottom: 8px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
       }
       .rp-ev-q-summary {
         font-size: 13px;
@@ -978,10 +1061,10 @@
         opacity: 0.9;
       }
       .rp-ev-q-card {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 6px;
-        padding: 10px 12px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 8px;
+        padding: 12px 14px;
         margin-bottom: 8px;
       }
       .rp-ev-q-header {
@@ -992,9 +1075,10 @@
         margin-bottom: 6px;
       }
       .rp-ev-q-label {
-        font-weight: 600;
+        font-weight: 700;
         font-size: 13px;
         white-space: nowrap;
+        color: rgba(147, 197, 253, 0.85);
       }
       .rp-ev-q-badges {
         display: flex;
@@ -1003,9 +1087,10 @@
       }
       .rp-ev-badge {
         font-size: 11px;
-        padding: 1px 6px;
+        padding: 2px 8px;
         border-radius: 10px;
         white-space: nowrap;
+        font-weight: 600;
       }
       .rp-ev-badge-dese {
         background: rgba(59,130,246,0.2);
@@ -1030,8 +1115,8 @@
         font-size: 13px;
       }
       .rp-ev-choice {
-        padding: 3px 8px;
-        border-radius: 4px;
+        padding: 4px 10px;
+        border-radius: 5px;
         opacity: 0.8;
       }
       .rp-ev-choice-correct {
@@ -1113,16 +1198,17 @@
         margin-top: 5px;
       }
       .rp-ev-stats-card {
-        background: rgba(59, 130, 246, 0.07);
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin-top: 16px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.22);
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-top: 22px;
       }
       .rp-ev-stats-title {
-        font-weight: 600;
-        margin-bottom: 10px;
+        font-weight: 700;
+        margin-bottom: 14px;
         font-size: 14px;
+        letter-spacing: 0.03em;
       }
       .rp-ev-stats-grid {
         display: grid;
@@ -1134,6 +1220,16 @@
         border: none;
         margin: 30px 0;
         border-top: 2px dashed rgba(255, 255, 255, 0.15);
+      }
+
+      /* Section heading utility */
+      .rp-section-heading {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 24px 0 14px;
+        letter-spacing: -0.01em;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
     </style>
   </head>
@@ -1366,7 +1462,7 @@
             <!-- Tab 5: Batch Reports -->
             <div class="rp-tab-content" data-tab="batch-reports" role="tabpanel">
               <div class="tc-card">
-                <h2 style="margin: 0 0 16px 0">📋 Generate Quarterly Progress Reports</h2>
+                <h2 class="rp-section-heading" style="margin-top:0">📋 Generate Quarterly Progress Reports</h2>
                 <p style="opacity: 0.8; margin-bottom: 20px">
                   Generate printable quarterly progress reports for all active students on your caseload.
                   Reports include goal descriptions, baselines, targets, progress data, and narrative summaries.
