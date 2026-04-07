@@ -1093,6 +1093,10 @@ function writeBookBlobs(slotDir, bookJson, blobs) {
 const WORDS_PER_PAGE = 250;
 const PAGES_PER_CHUNK = 50; // pages per chunk file for large books
 const MAX_CHAPTER_HEADING_LENGTH = 120; // Headings longer than this are likely body text
+// Matches h3 headers that act as chapter/section markers.
+// Pattern 1: keyword (chapter/part/section/etc.) anywhere in the heading
+// Pattern 2: heading that is purely a number ("1", "2.", "42")
+// Pattern 3: heading that is purely roman numerals ("I", "II", "XIV")
 const CHAPTER_RE = /\b(chapter|part|section|prologue|epilogue|introduction)\b|^\s*\d+\.?\s*$|^\s*[ivxlcdm]+\.?\s*$/i;
 
 function generateBookPagesJson(title, rawText) {
