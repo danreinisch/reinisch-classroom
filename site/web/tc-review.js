@@ -1613,6 +1613,7 @@
 
   // Handle "Finalize All Scored" batch action
   async function handleFinalizeAllScored() {
+    if (finalizingInProgress) return;
     const queue = buildReviewQueue();
     const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
 
@@ -1701,6 +1702,7 @@
 
   // Handle "Mark All Reviewed" batch action
   async function handleMarkAllReviewed() {
+    if (finalizingInProgress) return;
     const queue = buildReviewQueue();
     const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
 
@@ -1783,6 +1785,7 @@
 
   // Handle "Finalize All Reviewed" batch action
   async function handleFinalizeAllReviewed() {
+    if (finalizingInProgress) return;
     const reviewed = submissionsData.filter(s => s.review_status === 'reviewed');
     if (reviewed.length === 0) return;
 
@@ -1869,6 +1872,7 @@
 
   // Handle "Auto-Grade All" batch action — AI-suggests scores and feedback for all unreviewed submissions
   async function handleAutoGradeAll() {
+    if (finalizingInProgress) return;
     const queue = buildReviewQueue();
     const unreviewed = queue.filter(s => {
       const status = s.review_status || 'pending';
@@ -2135,7 +2139,7 @@
 
     const assignmentId = resolveAssignmentId(submission);
     const items = assignmentItemsCache[assignmentId] || [];
-    const answers = submissionAnswersCache[submissionId] || [];
+    const answers = submissionAnswersCache[submissionId] || await getSubmissionAnswers(submissionId);
     const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
     const assignmentTitle = instance?.settings?.title || '';
 
