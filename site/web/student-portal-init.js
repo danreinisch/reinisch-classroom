@@ -4494,7 +4494,8 @@
     }
 
     const entry = data[0];
-    const phonetic = entry.phonetic || (entry.phonetics && entry.phonetics.find(p => p.text) && entry.phonetics.find(p => p.text).text) || '';
+    const phoneticsMatch = entry.phonetics && entry.phonetics.find(p => p.text);
+    const phonetic = entry.phonetic || (phoneticsMatch && phoneticsMatch.text) || '';
     const meanings = (entry.meanings || []).slice(0, 2);
 
     let defHtml = '';
@@ -4629,8 +4630,14 @@
     // Find word spans in selection
     const allSpans = Array.from(content.querySelectorAll('.st-book-word'));
     const range = sel.getRangeAt(0);
+    const hasIntersects = typeof range.intersectsNode === 'function';
     const selectedSpans = allSpans.filter(function (s) {
-      return range.intersectsNode ? range.intersectsNode(s) : range.compareBoundaryPoints(Range.END_TO_START, (() => { const r = document.createRange(); r.selectNode(s); return r; })()) <= 0;
+      if (hasIntersects) return range.intersectsNode(s);
+      // Fallback: span end >= range start && span start <= range end
+      const sr = document.createRange();
+      sr.selectNode(s);
+      return sr.compareBoundaryPoints(Range.START_TO_END, range) >= 0 &&
+             sr.compareBoundaryPoints(Range.END_TO_START, range) <= 0;
     });
     if (!selectedSpans.length) return;
 
