@@ -5980,12 +5980,17 @@
    * @param {Array} graded - Graded submissions (score_total != null, submitted_at set)
    * @returns {string} HTML string containing SVG chart and legend, or empty message string
    */
+  /** @param {{ submitted_at: string|null }} s @returns {boolean} */
+  function hasValidSubmittedAt(s) {
+    return Boolean(s.submitted_at) && !isNaN(new Date(s.submitted_at).getTime());
+  }
+
   function buildScoreTrendSVG(graded) {
     const PASSING_THRESHOLD = 70;
     const MAX_POINTS = 15;
 
     const sorted = [...graded]
-      .filter(s => s.submitted_at && !isNaN(new Date(s.submitted_at).getTime()))
+      .filter(hasValidSubmittedAt)
       .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at))
       .slice(-MAX_POINTS);
 
@@ -6024,9 +6029,9 @@
 
     // Data dots with tooltips
     const dots = points.map(p => {
-      const scoreDisplay = Math.round(p.s.score_total) + '%';
+      const scoreText = Math.round(p.s.score_total) + '%';
       const dateDisplay = formatDate(p.s.submitted_at);
-      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" role="img" aria-label="${escapeHtml(dateDisplay)}: ${escapeHtml(scoreDisplay)}"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreDisplay)}</title></circle>`;
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}</title></circle>`;
     }).join('');
 
     // Latest value label
@@ -6109,9 +6114,9 @@
     if (!container || !section) return;
 
     const chartHtml = buildScoreTrendSVG(graded);
-    // buildScoreTrendSVG returns an empty-state div when there isn't enough data;
-    // only show the section when we have a real chart (≥ 2 points produces a <div> starting with whitespace then <div class="st-goal-chart-container">)
-    const hasChart = graded.filter(s => s.submitted_at && !isNaN(new Date(s.submitted_at).getTime())).length >= 2;
+    // Show the section only when there are at least 2 submissions with valid dates.
+    // Uses the same hasValidSubmittedAt guard as buildScoreTrendSVG.
+    const hasChart = graded.filter(hasValidSubmittedAt).length >= 2;
     if (hasChart) {
       section.style.display = '';
     } else {
