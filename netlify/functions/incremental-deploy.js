@@ -1257,6 +1257,9 @@ function parsePandocJsonToBookPages(title, jsonString) {
   let currentWordCount = 0;
   let foundFirstHeader = false;
   let skipSection = false; // true while inside a ToC-like section
+  let inGlossary = false;  // true while processing the Glossary section
+  const glossaryEntries = []; // { term, definition }
+  let pendingGlossaryTerm = null; // term text waiting for its definition paragraph
 
   function flushPage() {
     if (currentParagraphs.length === 0) return;
@@ -1290,12 +1293,21 @@ function parsePandocJsonToBookPages(title, jsonString) {
         const words = [];
         flattenInlines(inlines, words);
         const headerText = words.join(' ').trim();
-        // Entering a new level-1 header ends any prior skipSection
+        // Entering a new level-1 header ends any prior skipSection / glossary mode
         skipSection = false;
+        inGlossary = false;
+        pendingGlossaryTerm = null;
         // If ToC header, skip its content until next level-1 header
         if (/^(table of contents|contents)$/i.test(headerText)) {
           skipSection = true;
           foundFirstHeader = true;
+          break;
+        }
+        // If Glossary header, switch to glossary-collection mode
+        if (/^glossary$/i.test(headerText)) {
+          flushPage();
+          foundFirstHeader = true;
+          inGlossary = true;
           break;
         }
         // Real chapter
@@ -1314,6 +1326,28 @@ function parsePandocJsonToBookPages(title, jsonString) {
         flattenInlines(block.c || [], words);
         const filtered = words.filter(Boolean);
         if (!filtered.length) break;
+        // In glossary mode, parse entries
+        if (inGlossary) {
+          const rawText = filtered.join(' ');
+          // Check for inline "Term — Definition" or "Term: Definition" pattern
+          const inlineMatch = rawText.match(/^(.+?)\s*(?:—|-{1,2}|:)\s+(.+)$/);
+          if (inlineMatch) {
+            if (pendingGlossaryTerm) {
+              // flush pending term with no definition
+              glossaryEntries.push({ term: pendingGlossaryTerm, definition: '' });
+              pendingGlossaryTerm = null;
+            }
+            glossaryEntries.push({ term: inlineMatch[1].trim(), definition: inlineMatch[2].trim() });
+          } else if (pendingGlossaryTerm) {
+            // Previous para was a bare term; this para is the definition
+            glossaryEntries.push({ term: pendingGlossaryTerm, definition: rawText });
+            pendingGlossaryTerm = null;
+          } else {
+            // Treat this para as a standalone term (definition may follow)
+            pendingGlossaryTerm = rawText;
+          }
+          break;
+        }
         if (currentWordCount + filtered.length > WORDS_PER_PAGE && currentParagraphs.length > 0) {
           flushPage();
         }
@@ -1362,9 +1396,13 @@ function parsePandocJsonToBookPages(title, jsonString) {
   for (const block of doc.blocks) {
     processBlock(block);
   }
+  // Flush any pending glossary term
+  if (pendingGlossaryTerm) {
+    glossaryEntries.push({ term: pendingGlossaryTerm, definition: '' });
+  }
   flushPage();
 
-  return {
+  const result = {
     title: bookTitle,
     author: bookAuthor,
     totalPages: pages.length,
@@ -1372,6 +1410,8 @@ function parsePandocJsonToBookPages(title, jsonString) {
     chapters,
     pages
   };
+  if (glossaryEntries.length > 0) result.glossary = glossaryEntries;
+  return result;
 }
 
 function generateDownloadPage(title, filename) {
