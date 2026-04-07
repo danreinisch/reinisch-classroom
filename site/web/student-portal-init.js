@@ -1882,6 +1882,11 @@
       const teacherNoteHtml = (isGraded && subAnswer && subAnswer.teacher_note)
         ? `<div class="st-teacher-note">📝 <strong>Teacher note:</strong> ${escapeHtml(subAnswer.teacher_note)}</div>`
         : '';
+
+      // AI rationale (shown in graded mode when AI-assisted grading was used)
+      const aiRationaleHtml = (isGraded && subAnswer && subAnswer.rationale)
+        ? `<div class="st-ai-rationale">🤖 <strong>AI feedback:</strong> ${escapeHtml(subAnswer.rationale)}</div>`
+        : '';
       
       const hintHtml = q.hint ? `
         <div class="st-hint-section">
@@ -1903,6 +1908,7 @@
           ${answerInputHtml}
           ${earnedPointsHtml}
           ${teacherNoteHtml}
+          ${aiRationaleHtml}
           ${hintHtml}
         </div>
       `;
