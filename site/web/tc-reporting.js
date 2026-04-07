@@ -3182,15 +3182,30 @@ ${narrative}`;
    * @returns {boolean} success
    */
   function saveReportTemplate(name, config) {
+    // Only persist known template fields to avoid storing unintended properties
+    const entry = {
+      name,
+      tab: config.tab || '',
+      quarter: config.quarter || null,
+      selectionMode: config.selectionMode || null,
+      studentCode: config.studentCode !== undefined ? config.studentCode : null,
+      selectedStudents: Array.isArray(config.selectedStudents) ? config.selectedStudents.slice() : [],
+      audienceMode: config.audienceMode || null,
+      dateRange: config.dateRange || null,
+      customStart: config.customStart || null,
+      customEnd: config.customEnd || null,
+      outputFormat: config.outputFormat || null,
+      dataSource: config.dataSource || null,
+    };
     const templates = loadReportTemplates();
     const existingIdx = templates.findIndex((t) => t.name === name);
     if (existingIdx !== -1) {
-      templates[existingIdx] = Object.assign({ name }, config);
+      templates[existingIdx] = entry;
     } else {
       if (templates.length >= 20) {
         return false;
       }
-      templates.push(Object.assign({ name }, config));
+      templates.push(entry);
     }
     try {
       localStorage.setItem('rc_report_templates', JSON.stringify(templates));
@@ -3935,8 +3950,16 @@ ${narrative}`;
         const tpl = loadReportTemplates().find((t) => t.name === tplName);
         if (tpl) {
           if (tpl.selectionMode) tab6State.selectionMode = tpl.selectionMode;
-          if (tpl.studentCode !== undefined) tab6State.studentCode = tpl.studentCode;
-          if (Array.isArray(tpl.selectedStudents)) tab6State.selectedStudents = tpl.selectedStudents.slice();
+          // Validate studentCode still exists in current dataset
+          if (tpl.studentCode !== undefined) {
+            const validCode = tpl.studentCode && studentsData.some((s) => s.code === tpl.studentCode);
+            tab6State.studentCode = validCode ? tpl.studentCode : null;
+          }
+          // Validate selectedStudents against current dataset
+          if (Array.isArray(tpl.selectedStudents)) {
+            const validCodes = new Set(studentsData.map((s) => s.code));
+            tab6State.selectedStudents = tpl.selectedStudents.filter((c) => validCodes.has(c));
+          }
           if (tpl.audienceMode) tab6State.audienceMode = tpl.audienceMode;
           if (tpl.dateRange) tab6State.dateRange = tpl.dateRange;
           tab6State.customStart = tpl.customStart || null;
