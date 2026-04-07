@@ -1,7 +1,8 @@
 // tc-observation.js
-// End-of-period observation pop-up engine for the Teacher Center.
-// Automatically shows a data-collection modal when class periods are about to end
-// and there are students with observational goals in that period.
+// Always-visible observation tray for the Teacher Center.
+// Teachers click the clipboard icon in the topbar to open a lightweight tray
+// showing all observation goals for today, grouped by student, with inline
+// data-entry forms. No schedule dependency — records one entry per goal per day.
 
 (async () => {
   'use strict';
@@ -9,55 +10,141 @@
   // Only run on Teacher Center pages
   if (!location.pathname.startsWith('/teacher/')) return;
 
-  console.log('[tc-observation] Initializing observation engine');
-
-  // ─── Configuration ────────────────────────────────────────────────────────
-  // How many seconds before period end to trigger the observation popup.
-  // 600 = 10 minutes, giving a wider window than the original 5 minutes.
-  const POPUP_TRIGGER_SECONDS = 600;
+  console.log('[tc-observation] Initializing observation tray');
 
   // ─── SVG Icon Constants ───────────────────────────────────────────────────
   const OBS_MET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
   const OBS_NOT_MET_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
   const OBS_NOT_ADDRESSED_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
   const OBS_NOT_APPLICABLE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
-  const OBS_CLOCK_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
   const OBS_CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
   const OBS_CLIPBOARD_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>';
+  const OBS_CHEVRON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>';
+  const OBS_CLOSE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
   // ─── Inject Styles ────────────────────────────────────────────────────────
   const styleEl = document.createElement('style');
   styleEl.textContent = `
-/* Observation pop-up overlay */
-.obs-overlay { position: fixed; inset: 0; background: rgba(5,7,9,0.75); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.obs-modal { background: var(--rc-bg, #0b1220); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; max-width: 640px; width: 95vw; max-height: 85vh; overflow-y: auto; padding: 24px; color: var(--rc-ink, #e8edf4); }
-.obs-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.obs-header-text { display: flex; flex-direction: column; }
-.obs-header-title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-.obs-header-subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-.obs-countdown { font-variant-numeric: tabular-nums; font-weight: 700; }
+/* ── Observation Tray ─────────────────────────────────────────────────── */
+.obs-tray-backdrop { position: fixed; inset: 0; z-index: 9990; }
+.obs-tray {
+  position: fixed;
+  top: calc(var(--tc-topbar-h, 56px) + 8px);
+  right: 12px;
+  width: min(480px, calc(100vw - 24px));
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--rc-bg, #0b1220);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  color: var(--rc-ink, #e8edf4);
+  z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  backdrop-filter: blur(12px);
+  transform-origin: top right;
+  animation: obs-tray-slide-in 0.18s ease;
+}
+@keyframes obs-tray-slide-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.obs-tray-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.obs-tray-title { font-weight: 700; font-size: 14px; flex: 1; }
+.obs-tray-close-btn {
+  padding: 4px; border: none; background: none;
+  color: rgba(255,255,255,0.5); cursor: pointer;
+  border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+}
+.obs-tray-close-btn:hover { background: rgba(255,255,255,0.08); color: var(--rc-ink, #e8edf4); }
+.obs-tray-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+.obs-tray-empty { padding: 28px 0; text-align: center; color: rgba(255,255,255,0.35); font-size: 13px; }
+.obs-tray-footer {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px; color: rgba(255,255,255,0.5);
+  display: flex; align-items: center; gap: 6px;
+}
+/* ── Topbar Icon ──────────────────────────────────────────────────────── */
+.obs-tray-icon-btn {
+  position: relative; display: inline-flex;
+  align-items: center; justify-content: center;
+  transition: opacity 0.2s;
+}
+.obs-tray-icon-btn:hover { opacity: 0.85; }
+.obs-tray-badge {
+  position: absolute; top: -4px; right: -6px;
+  min-width: 16px; height: 16px;
+  border-radius: 8px; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; line-height: 1; pointer-events: none;
+}
+.obs-tray-badge.has-unrecorded { background: #ef4444; color: #fff; }
+.obs-tray-badge.all-done { background: #22c55e; color: #fff; font-size: 11px; }
+/* ── Student Section ──────────────────────────────────────────────────── */
 .obs-student-section { margin-bottom: 20px; }
-.obs-student-name { font-weight: 700; font-size: 15px; margin-bottom: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-.obs-goal-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.obs-student-name {
+  font-weight: 700; font-size: 14px;
+  margin-bottom: 8px; padding: 4px 0 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+/* ── Goal Cards ───────────────────────────────────────────────────────── */
+.obs-goal-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+}
+.obs-card-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; cursor: pointer; user-select: none;
+  transition: background 0.12s;
+}
+.obs-card-header:hover { background: rgba(255,255,255,0.04); }
+.obs-card-chevron { transition: transform 0.2s; flex-shrink: 0; color: rgba(255,255,255,0.4); }
+.obs-card-chevron.open { transform: rotate(90deg); }
+.obs-card-title { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.obs-card-code { font-weight: 600; font-size: 13px; }
+.obs-card-area { font-size: 12px; color: rgba(255,255,255,0.55); }
+.obs-card-cat-badge {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  background: rgba(99,102,241,0.15); color: #818cf8; white-space: nowrap;
+}
+.obs-card-status { font-size: 12px; color: #22c55e; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.obs-card-body { padding: 2px 14px 14px; }
+/* ── Goal form internals (reused from previous version) ─────────────── */
 .obs-goal-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
 .obs-goal-desc { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 10px; }
 .obs-response-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.obs-response-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: rgba(255,255,255,0.04); color: var(--rc-ink, #e8edf4); cursor: pointer; font-size: 13px; min-height: 44px; min-width: 44px; transition: all 0.15s; }
+.obs-response-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; background: rgba(255,255,255,0.04);
+  color: var(--rc-ink, #e8edf4); cursor: pointer;
+  font-size: 13px; min-height: 44px; min-width: 44px; transition: all 0.15s;
+}
 .obs-response-btn:hover { background: rgba(255,255,255,0.08); }
-.obs-response-btn.active[data-response="met"] { background: rgba(34,197,94,0.15); border-color: #22c55e; color: #22c55e; }
-.obs-response-btn.active[data-response="not_met"] { background: rgba(239,68,68,0.15); border-color: #ef4444; color: #ef4444; }
-.obs-response-btn.active[data-response="not_addressed"] { background: rgba(107,114,128,0.15); border-color: #6b7280; color: #6b7280; }
-.obs-response-btn.active[data-response="not_applicable"] { background: rgba(156,163,175,0.15); border-color: #9ca3af; color: #9ca3af; }
+.obs-response-btn.active[data-response="met"]           { background: rgba(34,197,94,0.15);  border-color: #22c55e; color: #22c55e; }
+.obs-response-btn.active[data-response="not_met"]       { background: rgba(239,68,68,0.15);  border-color: #ef4444; color: #ef4444; }
+.obs-response-btn.active[data-response="not_addressed"] { background: rgba(107,114,128,0.15);border-color: #6b7280; color: #6b7280; }
+.obs-response-btn.active[data-response="not_applicable"]{ background: rgba(156,163,175,0.15);border-color: #9ca3af; color: #9ca3af; }
 .obs-rolling { font-size: 12px; margin-top: 6px; color: rgba(255,255,255,0.5); }
 .obs-rolling.on-track { color: #22c55e; }
-.obs-rolling.close { color: #f59e0b; }
-.obs-rolling.behind { color: #ef4444; }
-.obs-note-input { width: 100%; padding: 6px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(255,255,255,0.04); color: var(--rc-ink, #e8edf4); font-size: 12px; margin-top: 6px; box-sizing: border-box; }
-.obs-save-indicator { font-size: 12px; color: #22c55e; }
-.obs-save-indicator.offline { color: #f59e0b; }
-.obs-dismiss-btn { padding: 10px 24px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: rgba(255,255,255,0.04); color: var(--rc-ink, #e8edf4); cursor: pointer; font-size: 14px; }
-.obs-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
-/* Prompt count buttons */
+.obs-rolling.close     { color: #f59e0b; }
+.obs-rolling.behind    { color: #ef4444; }
+.obs-note-input {
+  width: 100%; padding: 6px 10px; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; background: rgba(255,255,255,0.04);
+  color: var(--rc-ink, #e8edf4); font-size: 12px; margin-top: 6px; box-sizing: border-box;
+}
+.obs-save-indicator        { font-size: 12px; color: #22c55e; min-height: 18px; margin-top: 4px; }
+.obs-save-indicator.offline{ color: #f59e0b; }
+/* Prompt count */
 .obs-prompt-btn { min-width: 48px; text-align: center; justify-content: center; }
 .obs-prompt-btn.active { background: rgba(34,197,94,0.15); border-color: #22c55e; }
 .obs-prompt-btn.active.over-target { background: rgba(239,68,68,0.15); border-color: #ef4444; }
@@ -66,36 +153,25 @@
 .obs-checklist-item input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: #22c55e; }
 .obs-checklist-summary { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
 .obs-not-addressed-btn { font-size: 12px; margin-top: 6px; }
-/* Tally inputs */
+/* Tally */
 .obs-tally-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .obs-tally-input { width: 60px; padding: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(255,255,255,0.04); color: var(--rc-ink, #e8edf4); font-size: 16px; }
-.obs-tally-label { font-size: 13px; color: rgba(255,255,255,0.6); }
+.obs-tally-label  { font-size: 13px; color: rgba(255,255,255,0.6); }
 .obs-tally-result { font-size: 13px; font-weight: 600; margin-top: 4px; }
-.obs-no-opp-link { font-size: 12px; color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer; text-decoration: underline; margin-top: 4px; padding: 0; }
-.obs-no-opp-btns { margin-top: 8px; }
+.obs-no-opp-link  { font-size: 12px; color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer; text-decoration: underline; margin-top: 4px; padding: 0; }
+.obs-no-opp-btns  { margin-top: 8px; }
 .obs-already-recorded { font-size: 12px; color: #22c55e; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-.obs-edit-link { font-size: 12px; color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
-.obs-completion-summary { font-size: 12px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 4px; }
-.obs-done-btn { padding: 10px 20px; border: 1px solid #22c55e; border-radius: 10px; background: rgba(34,197,94,0.1); color: #22c55e; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
-.obs-done-btn:hover { background: rgba(34,197,94,0.2); }
-@media (max-width: 640px) {
-  .obs-modal { max-width: 100vw; border-radius: 0; }
-}
+.obs-edit-link    { font-size: 12px; color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
 @media (max-width: 480px) {
-  .obs-modal { padding: 16px; }
+  .obs-tray { right: 0; border-radius: 0 0 12px 12px; }
   .obs-response-row { flex-direction: column; }
   .obs-tally-input { width: 50px; }
 }
-/* Notification icon in topbar */
-.obs-notif-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; opacity: 0.75; transition: opacity 0.2s; }
-.obs-notif-btn:hover { opacity: 1; }
-.obs-notif-badge { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none; }
 `;
   document.head.appendChild(styleEl);
 
   // ─── Imports ──────────────────────────────────────────────────────────────
   const { db } = await import('/web/data-adapter.js');
-  const { getSchedule, getCurrentPeriod } = await import('/web/class-schedule.js');
   const { buildObservationNotes, parseObservationNotes } = await import('/web/obs-utils.js');
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -116,63 +192,18 @@
       + String(d.getDate()).padStart(2, '0');
   }
 
-  function fmtSeconds(s) {
-    if (s <= 0) return 'Period ended';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return m + ':' + String(sec).padStart(2, '0');
-  }
-
   // ─── State ────────────────────────────────────────────────────────────────
   let allGoals = [];
   let allStudents = [];
-  let allEnrollments = [];
-  let schedule = null;
-  const shownPopups = new Set(); // "YYYY-MM-DD|Period Label"
-  let activeOverlay = null;
-  let countdownInterval = null;
-  let activePopupPeriodLabel = null; // period label of the currently open popup
-  let lastInClassPeriodLabel = null; // tracks period transitions for missed-popup detection
-  const missedPeriods = [];          // [{key, date, periodLabel, goals}]
-  let notifIconEl = null;            // notification icon DOM element
-  let missedPopupAutoCloseTimer = null; // auto-close timer for missed-period popups (Issue 5)
-  let missedPopupDoneObs = null;        // MutationObserver watching done button (Issue 5)
-  let _firstCheck = true;               // diagnostic: log extra detail on first checkPeriod() call
+  let trayIconEl = null;
+  let trayEl = null;
+  let trayBackdropEl = null;
+  let isTrayOpen = false;
+  // Set of "studentCode|goalCode" for goals recorded today (populated from Supabase on init)
+  const todayRecordedSet = new Set();
 
   // ─── localStorage Queue ───────────────────────────────────────────────────
   const QUEUE_KEY = 'rc_obs_pending';
-
-  // ─── sessionStorage — Missed Periods Persistence ─────────────────────────
-  const MISSED_PERIODS_KEY = 'rc_obs_missed_periods';
-
-  function readMissedPeriodsFromStorage() {
-    try {
-      return JSON.parse(sessionStorage.getItem(MISSED_PERIODS_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  function writeMissedPeriodsToStorage() {
-    try {
-      sessionStorage.setItem(MISSED_PERIODS_KEY, JSON.stringify(missedPeriods));
-    } catch (err) {
-      console.warn('[tc-observation] sessionStorage write failed:', err.message);
-    }
-  }
-
-  // ─── Time Helper ──────────────────────────────────────────────────────────
-  // Converts an "HH:MM" time string to total seconds since midnight.
-  // Returns 0 for any invalid input so callers can safely guard with !endSecs.
-  function parseTimeToSeconds(hhmm) {
-    if (!hhmm) return 0;
-    const parts = String(hhmm).split(':');
-    if (parts.length !== 2) return 0;
-    const h = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return 0;
-    return h * 3600 + m * 60;
-  }
 
   function readQueue() {
     try {
@@ -222,152 +253,36 @@
           percent: entry.value,
           method: 'Observation',
           by_name: 'Teacher',
-          via: 'observation_popup',
+          via: 'observation_tray',
           notes: entry.notes || ''
         });
         markSynced(entry.saved_at, entry.student_code, entry.goal_code);
       } catch (err) {
-        // Silently fail — will retry on next sync cycle
         console.warn('[tc-observation] Sync failed for', entry.goal_code, err.message);
       }
     }
     pruneQueue();
   }
 
-  // ─── Data Loading ─────────────────────────────────────────────────────────
-  async function loadData() {
-    try {
-      const [goals, students, enrollments, sched] = await Promise.all([
-        db.listGoalsAll(),
-        db.listStudents(),
-        db.listClassEnrollments(),
-        getSchedule()
-      ]);
-
-      const rawGoals = goals || [];
-      const obsTypeGoals = rawGoals.filter(g => g.measurement_type === 'Observation');
-      const withConfig = obsTypeGoals.filter(g => g.observation_config != null);
-      const withPeriods = withConfig.filter(g =>
-        Array.isArray(g.observation_config.class_periods) &&
-        g.observation_config.class_periods.length > 0
-      );
-
-      allGoals = withConfig;
-      allStudents = students || [];
-      allEnrollments = enrollments || [];
-      schedule = sched;
-
-      console.group('[tc-observation] loadData: data summary');
-      console.log('Total goals (all types):', rawGoals.length);
-      console.log('  → measurement_type === "Observation":', obsTypeGoals.length);
-      console.log('  → have non-null observation_config:', withConfig.length);
-      console.log('  → have non-empty class_periods:', withPeriods.length);
-      if (withConfig.length > 0) {
-        console.group('Observation goals detail');
-        for (const g of withConfig) {
-          console.log(
-            `goal=${g.code} student=${g.student_code}`,
-            `category=${g.observation_config?.category ?? '(none)'}`,
-            `class_periods=${JSON.stringify(g.observation_config?.class_periods ?? [])}`
-          );
-        }
-        console.groupEnd();
-      }
-      if (!sched) {
-        console.warn('[tc-observation] ⚠️ No class schedule configured. Go to Settings → Class Schedule to set up your period times.');
-      } else if (!Array.isArray(sched.periods) || sched.periods.length === 0) {
-        console.warn('[tc-observation] ⚠️ Schedule loaded but schedule.periods is empty. Go to Settings → Class Schedule to add period times.');
-      } else {
-        console.log('Schedule loaded successfully —', sched.periods.length, 'period(s):');
-        console.group('Schedule periods');
-        for (const p of sched.periods) {
-          console.log(`label="${p.label}" start=${p.start} end=${p.end}`);
-        }
-        console.groupEnd();
-      }
-      console.log('Total students loaded:', allStudents.length);
-      console.log('Total enrollments loaded:', allEnrollments.length);
-      console.groupEnd();
-
-      // ── Period label cross-reference check ───────────────────────────────
-      if (sched && Array.isArray(sched.periods) && sched.periods.length > 0 && withConfig.length > 0) {
-        const scheduledLabels = new Set(sched.periods.map(p => p.label));
-        const referencedLabels = new Set(
-          withConfig.flatMap(g => g.observation_config?.class_periods ?? [])
-        );
-
-        const orphaned = [...referencedLabels].filter(l => !scheduledLabels.has(l));
-        const uncovered = [...scheduledLabels].filter(l => !referencedLabels.has(l));
-
-        console.group('[tc-observation] Period label cross-reference check');
-        if (orphaned.length > 0) {
-          console.warn(
-            '⚠️ Orphaned period references (in goals but NOT in schedule) — these goals will NEVER trigger a popup:',
-            orphaned
-          );
-          console.warn('  Schedule has:', [...scheduledLabels]);
-          console.warn('  Goals reference:', [...referencedLabels]);
-        } else {
-          console.log('✓ All goal class_periods match a schedule label');
-        }
-        if (uncovered.length > 0) {
-          console.log('Uncovered schedule periods (no observation goals assigned):', uncovered);
-        } else {
-          console.log('✓ Every schedule period has at least one observation goal');
-        }
-        console.groupEnd();
-      }
-    } catch (err) {
-      console.warn('[tc-observation] Data load error:', err.message);
-    }
-  }
-
-  // ─── Rolling Progress ─────────────────────────────────────────────────────
-  async function loadRollingProgress(goal) {
-    try {
-      const config = goal.observation_config || {};
-      const window_ = config.target_window || 5;
-
-      // Load recent progress entries for this goal
-      const entries = await db.listGoalProgress({
-        goalCodes: [goal.code],
-        studentCodes: [goal.student_code],
-        limit: window_ * 3
-      });
-
-      if (!entries || entries.length === 0) return { met: 0, window: window_, target: config.target_met || 3 };
-
-      // Sort descending and take last N
-      const sorted = entries
-        .filter(e => e.value !== null)
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, window_);
-
-      const metCount = sorted.filter(e => e.value === 100).length;
-      return { met: metCount, window: sorted.length, target: config.target_met || 3 };
-    } catch {
-      return null;
-    }
-  }
-
-  // ─── Duplicate Check ──────────────────────────────────────────────────────
-  function isAlreadyRecorded(studentCode, goalCode, date, periodLabel) {
+  // ─── Duplicate Check (date-only, no period label) ─────────────────────────
+  function isAlreadyRecorded(studentCode, goalCode, date) {
+    // Check Supabase pre-load set first
+    if (todayRecordedSet.has(`${studentCode}|${goalCode}`)) return true;
+    // Then check localStorage queue
     const queue = readQueue();
     return queue.some(e =>
       e.student_code === studentCode &&
       e.goal_code === goalCode &&
-      e.date === date &&
-      e.period_label === periodLabel
+      e.date === date
     );
   }
 
-  function getQueueEntry(studentCode, goalCode, date, periodLabel) {
+  function getQueueEntry(studentCode, goalCode, date) {
     const queue = readQueue();
     return queue.find(e =>
       e.student_code === studentCode &&
       e.goal_code === goalCode &&
-      e.date === date &&
-      e.period_label === periodLabel
+      e.date === date
     ) || null;
   }
 
@@ -376,8 +291,7 @@
     const idx = queue.findIndex(e =>
       e.student_code === entry.student_code &&
       e.goal_code === entry.goal_code &&
-      e.date === entry.date &&
-      e.period_label === entry.period_label
+      e.date === entry.date
     );
     if (idx >= 0) {
       queue[idx] = entry;
@@ -387,8 +301,6 @@
     writeQueue(queue);
   }
 
-  // buildNotes is now provided by obs-utils.js (imported as buildObservationNotes)
-
   // ─── Calculate Value ──────────────────────────────────────────────────────
   function calcValue(category, responseData) {
     const { response, successful, opportunities, promptCount, checkedBehaviors, subBehaviors } = responseData;
@@ -396,15 +308,15 @@
     if (category === 'session_outcome') {
       if (response === 'met') return 100;
       if (response === 'not_met') return 0;
-      return null; // not_addressed / not_applicable
+      return null;
     }
 
     if (category === 'tally') {
-      if (response) return null; // special status button (not_addressed etc.)
+      if (response) return null;
       const s = Number(successful) || 0;
       const o = Number(opportunities) || 0;
       if (o === 0) return null;
-      return Math.round((s / o) * 10000) / 100; // percentage with 2 decimal places
+      return Math.round((s / o) * 10000) / 100;
     }
 
     if (category === 'prompt_count') {
@@ -415,14 +327,14 @@
       if (!subBehaviors || subBehaviors.length === 0) return null;
       if (response === 'not_addressed') return null;
       const checked = (checkedBehaviors || []).filter(Boolean).length;
-      return Math.round((checked / subBehaviors.length) * 10000) / 100; // percentage with 2 decimal places
+      return Math.round((checked / subBehaviors.length) * 10000) / 100;
     }
 
     return null;
   }
 
   // ─── Save Observation ─────────────────────────────────────────────────────
-  async function saveObservation(goal, responseData, noteText, periodLabel, saveIndicatorEl, onSave) {
+  async function saveObservation(goal, responseData, noteText, saveIndicatorEl, onSave) {
     const category = goal.observation_config?.category;
     const value = calcValue(category, responseData);
     const notes = buildObservationNotes(category, responseData, noteText);
@@ -432,8 +344,7 @@
       '[tc-observation] saveObservation: goal=', goal.code,
       'student=', goal.student_code,
       'category=', category,
-      'value=', value,
-      'period=', periodLabel
+      'value=', value
     );
 
     const savedAt = new Date().toISOString();
@@ -443,12 +354,13 @@
       date,
       value,
       notes,
-      period_label: periodLabel,
       saved_at: savedAt,
       synced: false
     };
 
     replaceOrPushToQueue(queueEntry);
+    // Mark in the recorded set so future checks reflect this immediately
+    todayRecordedSet.add(`${goal.student_code}|${goal.code}`);
     if (onSave) onSave();
 
     // Attempt Supabase save
@@ -460,11 +372,11 @@
         percent: value,
         method: 'Observation',
         by_name: 'Teacher',
-        via: 'observation_popup',
+        via: 'observation_tray',
         notes
       });
       markSynced(savedAt, goal.student_code, goal.code);
-      console.log('[tc-observation] Supabase save succeeded: goal=', goal.code, 'student=', goal.student_code);
+      console.log('[tc-observation] Supabase save succeeded: goal=', goal.code);
       if (saveIndicatorEl) {
         saveIndicatorEl.textContent = 'Auto-saved ✓';
         saveIndicatorEl.className = 'obs-save-indicator';
@@ -478,12 +390,36 @@
     }
   }
 
-  // ─── Render Category Form ─────────────────────────────────────────────────
-  function renderSessionOutcomeForm(goal, cardEl, saveIndicatorEl, periodLabel, preRecorded, onSave) {
+  // ─── Rolling Progress ─────────────────────────────────────────────────────
+  async function loadRollingProgress(goal) {
+    try {
+      const config = goal.observation_config || {};
+      const window_ = config.target_window || 5;
+      const entries = await db.listGoalProgress({
+        goalCodes: [goal.code],
+        studentCodes: [goal.student_code],
+        limit: window_ * 3
+      });
+      if (!entries || entries.length === 0) return { met: 0, window: window_, target: config.target_met || 3 };
+      const sorted = entries
+        .filter(e => e.value !== null)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, window_);
+      const metCount = sorted.filter(e => e.value === 100).length;
+      return { met: metCount, window: sorted.length, target: config.target_met || 3 };
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── Render Category Forms ────────────────────────────────────────────────
+  // All 4 forms take (goal, cardEl, saveIndicatorEl, preRecorded, onSave)
+  // periodLabel has been removed — we now use date-only dedup.
+
+  function renderSessionOutcomeForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
     const config = goal.observation_config || {};
     const container = document.createElement('div');
 
-    // Already recorded badge
     let badgeEl = null;
     if (preRecorded) {
       badgeEl = document.createElement('div');
@@ -496,20 +432,18 @@
       container.appendChild(badgeEl);
     }
 
-    // Form wrapper (hidden when preRecorded, revealed by Edit)
     const formWrapper = document.createElement('div');
     if (preRecorded) formWrapper.style.display = 'none';
 
-    // Response buttons
     const row = document.createElement('div');
     row.className = 'obs-response-row';
     row.setAttribute('role', 'radiogroup');
     row.setAttribute('aria-label', 'Session outcome');
     const buttons = [
-      { label: 'Met', response: 'met', ariaLabel: 'Mark as Met', svg: OBS_MET_SVG },
-      { label: 'Not Met', response: 'not_met', ariaLabel: 'Mark as Not Met', svg: OBS_NOT_MET_SVG },
-      { label: 'Not Addressed', response: 'not_addressed', ariaLabel: 'Mark as Not Addressed', svg: OBS_NOT_ADDRESSED_SVG },
-      { label: 'Not Applicable', response: 'not_applicable', ariaLabel: 'Mark as Not Applicable', svg: OBS_NOT_APPLICABLE_SVG }
+      { label: 'Met',          response: 'met',          ariaLabel: 'Mark as Met',          svg: OBS_MET_SVG },
+      { label: 'Not Met',      response: 'not_met',      ariaLabel: 'Mark as Not Met',      svg: OBS_NOT_MET_SVG },
+      { label: 'Not Addressed',response: 'not_addressed',ariaLabel: 'Mark as Not Addressed',svg: OBS_NOT_ADDRESSED_SVG },
+      { label: 'Not Applicable',response: 'not_applicable',ariaLabel: 'Mark as Not Applicable',svg: OBS_NOT_APPLICABLE_SVG }
     ];
 
     let selectedResponse = null;
@@ -530,23 +464,19 @@
         btn.classList.add('active');
         btn.setAttribute('aria-checked', 'true');
         selectedResponse = response;
-        await saveObservation(goal, { response }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave);
       });
       row.appendChild(btn);
     });
     formWrapper.appendChild(row);
 
-    // Rolling progress (async)
     const rollingEl = document.createElement('div');
     rollingEl.className = 'obs-rolling';
     rollingEl.textContent = 'Loading progress…';
     formWrapper.appendChild(rollingEl);
 
     loadRollingProgress(goal).then(prog => {
-      if (!prog) {
-        rollingEl.textContent = '';
-        return;
-      }
+      if (!prog) { rollingEl.textContent = ''; return; }
       const { met, window: w, target } = prog;
       rollingEl.textContent = `Rolling: ${met} of last ${w} → target ${target} of ${config.target_window || w}`;
       const diff = met - target;
@@ -555,27 +485,24 @@
       else rollingEl.className = 'obs-rolling behind';
     });
 
-    // Note input
     const noteInput = document.createElement('input');
     noteInput.type = 'text';
     noteInput.className = 'obs-note-input';
     noteInput.placeholder = 'Optional note…';
     noteInput.addEventListener('change', async () => {
       if (selectedResponse) {
-        await saveObservation(goal, { response: selectedResponse }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response: selectedResponse }, noteInput.value, saveIndicatorEl, onSave);
       }
     });
     formWrapper.appendChild(noteInput);
     container.appendChild(formWrapper);
 
-    // Wire up Edit button
     if (preRecorded && badgeEl) {
       const editBtn = badgeEl.querySelector('.obs-edit-link');
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        // Pre-populate from queue
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr(), periodLabel);
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'session_outcome') {
           const matchingBtn = row.querySelector(`[data-response="${parsed.rawData}"]`);
@@ -597,7 +524,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderTallyForm(goal, cardEl, saveIndicatorEl, periodLabel, preRecorded, onSave) {
+  function renderTallyForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
     const container = document.createElement('div');
 
     let badgeEl = null;
@@ -615,34 +542,26 @@
     const formWrapper = document.createElement('div');
     if (preRecorded) formWrapper.style.display = 'none';
 
-    // Tally inputs
     const tallyRow = document.createElement('div');
     tallyRow.className = 'obs-tally-row';
 
     const succInput = document.createElement('input');
-    succInput.type = 'number';
-    succInput.min = '0';
-    succInput.className = 'obs-tally-input';
-    succInput.placeholder = '0';
+    succInput.type = 'number'; succInput.min = '0';
+    succInput.className = 'obs-tally-input'; succInput.placeholder = '0';
 
     const ofLabel = document.createElement('span');
-    ofLabel.className = 'obs-tally-label';
-    ofLabel.textContent = 'of';
+    ofLabel.className = 'obs-tally-label'; ofLabel.textContent = 'of';
 
     const oppInput = document.createElement('input');
-    oppInput.type = 'number';
-    oppInput.min = '0';
-    oppInput.className = 'obs-tally-input';
-    oppInput.placeholder = '0';
+    oppInput.type = 'number'; oppInput.min = '0';
+    oppInput.className = 'obs-tally-input'; oppInput.placeholder = '0';
 
     const oppLabel = document.createElement('span');
-    oppLabel.className = 'obs-tally-label';
-    oppLabel.textContent = 'opportunities';
+    oppLabel.className = 'obs-tally-label'; oppLabel.textContent = 'opportunities';
 
     tallyRow.append(succInput, ofLabel, oppInput, oppLabel);
     formWrapper.appendChild(tallyRow);
 
-    // Percentage display
     const resultEl = document.createElement('div');
     resultEl.className = 'obs-tally-result';
     formWrapper.appendChild(resultEl);
@@ -655,7 +574,7 @@
       if (o > 0) {
         const pct = Math.round((s / o) * 100);
         resultEl.textContent = `${pct}%`;
-        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave);
       } else {
         resultEl.textContent = '';
       }
@@ -664,7 +583,6 @@
     succInput.addEventListener('change', updateTally);
     oppInput.addEventListener('change', updateTally);
 
-    // No opportunities toggle
     const noOppLink = document.createElement('button');
     noOppLink.className = 'obs-no-opp-link';
     noOppLink.textContent = 'No opportunities today?';
@@ -675,10 +593,10 @@
     noOppBtns.style.display = 'none';
 
     [
-      { label: 'Met', response: 'met', svg: OBS_MET_SVG },
-      { label: 'Not Met', response: 'not_met', svg: OBS_NOT_MET_SVG },
-      { label: 'Not Addressed', response: 'not_addressed', svg: OBS_NOT_ADDRESSED_SVG },
-      { label: 'Not Applicable', response: 'not_applicable', svg: OBS_NOT_APPLICABLE_SVG }
+      { label: 'Met',          response: 'met',          svg: OBS_MET_SVG },
+      { label: 'Not Met',      response: 'not_met',      svg: OBS_NOT_MET_SVG },
+      { label: 'Not Addressed',response: 'not_addressed',svg: OBS_NOT_ADDRESSED_SVG },
+      { label: 'Not Applicable',response: 'not_applicable',svg: OBS_NOT_APPLICABLE_SVG }
     ].forEach(({ label, response, svg }) => {
       const btn = document.createElement('button');
       btn.className = 'obs-response-btn';
@@ -689,7 +607,7 @@
         noOppBtns.querySelectorAll('.obs-response-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         noOppResponse = response;
-        await saveObservation(goal, { response }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave);
       });
       noOppBtns.appendChild(btn);
     });
@@ -697,10 +615,8 @@
     noOppLink.addEventListener('click', () => {
       noOppBtns.style.display = noOppBtns.style.display === 'none' ? 'flex' : 'none';
     });
-
     formWrapper.appendChild(noOppBtns);
 
-    // Note input
     const noteInput = document.createElement('input');
     noteInput.type = 'text';
     noteInput.className = 'obs-note-input';
@@ -709,21 +625,20 @@
       const s = Number(succInput.value) || 0;
       const o = Number(oppInput.value) || 0;
       if (noOppResponse) {
-        await saveObservation(goal, { response: noOppResponse }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response: noOppResponse }, noteInput.value, saveIndicatorEl, onSave);
       } else if (o > 0) {
-        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave);
       }
     });
     formWrapper.appendChild(noteInput);
     container.appendChild(formWrapper);
 
-    // Wire up Edit button
     if (preRecorded && badgeEl) {
       const editBtn = badgeEl.querySelector('.obs-edit-link');
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr(), periodLabel);
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'tally') {
           const parts = parsed.rawData.split('/');
@@ -743,7 +658,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderPromptCountForm(goal, cardEl, saveIndicatorEl, periodLabel, preRecorded, onSave) {
+  function renderPromptCountForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
     const config = goal.observation_config || {};
     const maxPrompts = config.target_max_prompts ?? 2;
     const container = document.createElement('div');
@@ -778,44 +693,38 @@
       btn.textContent = String(val);
       btn.setAttribute('aria-label', `${val} prompts`);
       btn.addEventListener('click', async () => {
-        row.querySelectorAll('.obs-prompt-btn').forEach(b => {
-          b.classList.remove('active', 'over-target');
-        });
+        row.querySelectorAll('.obs-prompt-btn').forEach(b => b.classList.remove('active', 'over-target'));
         const numVal = val === '4+' ? 4 : Number(val);
         btn.classList.add('active');
         if (numVal > maxPrompts) btn.classList.add('over-target');
         selectedCount = numVal;
-
         statusEl.textContent = `Target: ${maxPrompts} or fewer prompts`;
         statusEl.style.color = numVal <= maxPrompts ? '#22c55e' : '#ef4444';
-
-        await saveObservation(goal, { promptCount: numVal }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { promptCount: numVal }, noteInput.value, saveIndicatorEl, onSave);
       });
       row.appendChild(btn);
     });
     formWrapper.appendChild(row);
     formWrapper.appendChild(statusEl);
 
-    // Note input
     const noteInput = document.createElement('input');
     noteInput.type = 'text';
     noteInput.className = 'obs-note-input';
     noteInput.placeholder = 'Optional note…';
     noteInput.addEventListener('change', async () => {
       if (selectedCount !== null) {
-        await saveObservation(goal, { promptCount: selectedCount }, noteInput.value, periodLabel, saveIndicatorEl, onSave);
+        await saveObservation(goal, { promptCount: selectedCount }, noteInput.value, saveIndicatorEl, onSave);
       }
     });
     formWrapper.appendChild(noteInput);
     container.appendChild(formWrapper);
 
-    // Wire up Edit button
     if (preRecorded && badgeEl) {
       const editBtn = badgeEl.querySelector('.obs-edit-link');
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr(), periodLabel);
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'prompt_count') {
           const preCount = parseInt(parsed.rawData, 10);
@@ -840,7 +749,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderBehaviorChecklistForm(goal, cardEl, saveIndicatorEl, periodLabel, preRecorded, onSave) {
+  function renderBehaviorChecklistForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
     const config = goal.observation_config || {};
     const subBehaviors = Array.isArray(config.sub_behaviors) ? config.sub_behaviors : [];
     const container = document.createElement('div');
@@ -886,7 +795,6 @@
         goal,
         { checkedBehaviors: checkedStates, subBehaviors },
         noteInput.value,
-        periodLabel,
         saveIndicatorEl,
         onSave
       );
@@ -895,7 +803,6 @@
     subBehaviors.forEach((sb, idx) => {
       const item = document.createElement('label');
       item.className = 'obs-checklist-item';
-
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.addEventListener('change', async () => {
@@ -903,7 +810,6 @@
         updateSummary();
         await saveChecklist();
       });
-
       item.appendChild(cb);
       item.appendChild(document.createTextNode(sb));
       formWrapper.appendChild(item);
@@ -911,7 +817,6 @@
 
     formWrapper.appendChild(summaryEl);
 
-    // Not Addressed button
     const notAddressedBtn = document.createElement('button');
     notAddressedBtn.className = 'obs-response-btn obs-not-addressed-btn';
     notAddressedBtn.dataset.response = 'not_addressed';
@@ -923,14 +828,12 @@
         goal,
         { response: 'not_addressed', checkedBehaviors: checkedStates, subBehaviors },
         noteInput.value,
-        periodLabel,
         saveIndicatorEl,
         onSave
       );
     });
     formWrapper.appendChild(notAddressedBtn);
 
-    // Note input
     const noteInput = document.createElement('input');
     noteInput.type = 'text';
     noteInput.className = 'obs-note-input';
@@ -939,13 +842,12 @@
     formWrapper.appendChild(noteInput);
     container.appendChild(formWrapper);
 
-    // Wire up Edit button
     if (preRecorded && badgeEl) {
       const editBtn = badgeEl.querySelector('.obs-edit-link');
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr(), periodLabel);
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'checklist') {
           if (parsed.rawData === 'not_addressed') {
@@ -953,12 +855,9 @@
           } else {
             const items = parsed.rawData ? parsed.rawData.split(',') : [];
             const cbs = formWrapper.querySelectorAll('input[type="checkbox"]');
-            items.forEach((item, idx) => {
+            items.forEach((item, index) => {
               const isMet = item.endsWith('=met');
-              if (isMet && cbs[idx]) {
-                cbs[idx].checked = true;
-                checkedStates[idx] = true;
-              }
+              if (isMet && cbs[index]) { cbs[index].checked = true; checkedStates[index] = true; }
             });
             updateSummary();
           }
@@ -970,73 +869,114 @@
     cardEl.appendChild(container);
   }
 
-  // ─── Build Pop-Up Content ─────────────────────────────────────────────────
-  function buildPopupContent(periodLabel, goalsForPeriod, studentsMap, overlayEl) {
-    const modal = document.createElement('div');
-    modal.className = 'obs-modal';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-labelledby', 'obs-modal-title');
-    modal.setAttribute('tabindex', '-1');
+  // ─── Build Goal Card ──────────────────────────────────────────────────────
+  function buildGoalCard(goal, date, onAnyRecorded) {
+    const config = goal.observation_config || {};
+    const category = config.category;
+    const isRecorded = isAlreadyRecorded(goal.student_code, goal.code, date);
 
-    // Header
+    const cardEl = document.createElement('div');
+    cardEl.className = 'obs-goal-card';
+
+    // ── Card header (always visible) ──
     const header = document.createElement('div');
-    header.className = 'obs-header';
-    header.innerHTML = OBS_CLOCK_SVG;
+    header.className = 'obs-card-header';
 
-    const headerText = document.createElement('div');
-    headerText.className = 'obs-header-text';
+    const chevron = document.createElement('span');
+    chevron.className = 'obs-card-chevron';
+    chevron.innerHTML = OBS_CHEVRON_SVG;
 
-    const titleEl = document.createElement('div');
-    titleEl.className = 'obs-header-title';
-    titleEl.id = 'obs-modal-title';
-    titleEl.innerHTML = escapeHtml(periodLabel) + ' — ending in <span class="obs-countdown" id="obs-countdown">…</span>';
+    const titlePart = document.createElement('span');
+    titlePart.className = 'obs-card-title';
+    titlePart.innerHTML =
+      `<span class="obs-card-code">${escapeHtml(goal.code)}</span>` +
+      `<span class="obs-card-area">${escapeHtml(goal.goal_area || '')}</span>`;
 
-    const subtitleEl = document.createElement('div');
-    subtitleEl.className = 'obs-header-subtitle';
-    subtitleEl.textContent = 'Observational Data Collection';
+    const catBadge = document.createElement('span');
+    catBadge.className = 'obs-card-cat-badge';
+    catBadge.textContent = category ? category.replace(/_/g, ' ') : '';
 
-    headerText.appendChild(titleEl);
-    headerText.appendChild(subtitleEl);
-    header.appendChild(headerText);
-    modal.appendChild(header);
+    const statusBadge = document.createElement('span');
+    statusBadge.className = 'obs-card-status';
+    if (isRecorded) {
+      statusBadge.innerHTML = OBS_CHECK_SVG + ' Recorded';
+    }
 
-    // Save indicator (shared)
+    header.appendChild(chevron);
+    header.appendChild(titlePart);
+    header.appendChild(catBadge);
+    header.appendChild(statusBadge);
+    cardEl.appendChild(header);
+
+    // ── Card body (collapsible) ──
+    const body = document.createElement('div');
+    body.className = 'obs-card-body';
+
     const saveIndicatorEl = document.createElement('div');
     saveIndicatorEl.className = 'obs-save-indicator';
-    saveIndicatorEl.style.minHeight = '18px';
 
-    // Completion tracking elements (defined early for updateCompletion closure)
-    const totalGoals = goalsForPeriod.length;
-    const date = todayStr();
+    // onSave callback — updates card status and collapses if newly recorded
+    const onSave = () => {
+      const nowRecorded = isAlreadyRecorded(goal.student_code, goal.code, date);
+      if (nowRecorded && !statusBadge.innerHTML) {
+        statusBadge.innerHTML = OBS_CHECK_SVG + ' Recorded';
+      }
+      if (nowRecorded) {
+        applyExpanded(false);
+      }
+      onAnyRecorded();
+    };
 
-    const completionSummaryEl = document.createElement('span');
-    completionSummaryEl.className = 'obs-completion-summary';
+    if (category === 'session_outcome') {
+      renderSessionOutcomeForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+    } else if (category === 'tally') {
+      renderTallyForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+    } else if (category === 'prompt_count') {
+      renderPromptCountForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+    } else if (category === 'behavior_checklist') {
+      renderBehaviorChecklistForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+    } else {
+      const unknownMsg = document.createElement('div');
+      unknownMsg.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.4);padding:4px 0;';
+      unknownMsg.textContent = `Unknown category: ${escapeHtml(category || '(none)')}`;
+      body.appendChild(unknownMsg);
+    }
 
-    const doneBtn = document.createElement('button');
-    doneBtn.className = 'obs-done-btn';
-    doneBtn.style.display = 'none';
-    doneBtn.innerHTML = OBS_CHECK_SVG + ' Done — Save &amp; Close';
-    doneBtn.addEventListener('click', closePopup);
+    body.appendChild(saveIndicatorEl);
+    cardEl.appendChild(body);
 
-    const updateCompletion = () => {
-      const nowRecorded = goalsForPeriod.filter(g =>
-        isAlreadyRecorded(g.student_code, g.code, date, periodLabel)
-      ).length;
-      if (nowRecorded >= totalGoals) {
-        completionSummaryEl.innerHTML = OBS_CHECK_SVG + ' All goals recorded';
-        completionSummaryEl.style.color = '#22c55e';
-        doneBtn.style.display = '';
+    // ── Collapse/expand logic ──
+    let isExpanded = !isRecorded; // Unrecorded starts expanded
+
+    const applyExpanded = (expanded) => {
+      isExpanded = expanded;
+      if (expanded) {
+        chevron.classList.add('open');
+        body.style.display = '';
       } else {
-        completionSummaryEl.textContent = `${nowRecorded} of ${totalGoals} goals recorded`;
-        completionSummaryEl.style.color = 'rgba(255,255,255,0.6)';
-        doneBtn.style.display = 'none';
+        chevron.classList.remove('open');
+        body.style.display = 'none';
       }
     };
+    applyExpanded(isExpanded);
+
+    header.addEventListener('click', () => applyExpanded(!isExpanded));
+
+    return cardEl;
+  }
+
+  // ─── Build Tray Content ───────────────────────────────────────────────────
+  function countUnrecorded(date) {
+    return allGoals.filter(g => !isAlreadyRecorded(g.student_code, g.code, date)).length;
+  }
+
+  function buildTrayContent(date, onAnyRecorded) {
+    const studentsMap = new Map(allStudents.map(s => [s.code, s]));
+    const fragment = document.createDocumentFragment();
 
     // Group goals by student
     const byStudent = new Map();
-    for (const goal of goalsForPeriod) {
+    for (const goal of allGoals) {
       if (!byStudent.has(goal.student_code)) byStudent.set(goal.student_code, []);
       byStudent.get(goal.student_code).push(goal);
     }
@@ -1050,521 +990,180 @@
 
       const nameEl = document.createElement('div');
       nameEl.className = 'obs-student-name';
-      nameEl.textContent = `▸ ${studentName} (${studentCode})`;
+      nameEl.textContent = `${studentName} (${studentCode})`;
       section.appendChild(nameEl);
 
       for (const goal of goals) {
-        const config = goal.observation_config || {};
-        const category = config.category;
-        const isRecorded = isAlreadyRecorded(studentCode, goal.code, date, periodLabel);
-
-        const card = document.createElement('div');
-        card.className = 'obs-goal-card';
-
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'obs-goal-title';
-        titleDiv.textContent = `${goal.code} — ${goal.goal_area || 'Goal'}`;
-        card.appendChild(titleDiv);
-
-        if (goal.desc) {
-          const descDiv = document.createElement('div');
-          descDiv.className = 'obs-goal-desc';
-          // Truncate long descriptions
-          const desc = goal.desc.length > 120 ? goal.desc.slice(0, 120) + '…' : goal.desc;
-          descDiv.textContent = desc;
-          card.appendChild(descDiv);
-        }
-
-        if (category === 'session_outcome') {
-          renderSessionOutcomeForm(goal, card, saveIndicatorEl, periodLabel, isRecorded, updateCompletion);
-        } else if (category === 'tally') {
-          renderTallyForm(goal, card, saveIndicatorEl, periodLabel, isRecorded, updateCompletion);
-        } else if (category === 'prompt_count') {
-          renderPromptCountForm(goal, card, saveIndicatorEl, periodLabel, isRecorded, updateCompletion);
-        } else if (category === 'behavior_checklist') {
-          renderBehaviorChecklistForm(goal, card, saveIndicatorEl, periodLabel, isRecorded, updateCompletion);
-        }
-
-        section.appendChild(card);
+        section.appendChild(buildGoalCard(goal, date, onAnyRecorded));
       }
 
-      modal.appendChild(section);
+      fragment.appendChild(section);
     }
 
-    // Initial completion count
-    updateCompletion();
+    return fragment;
+  }
+
+  // ─── Tray Badge ───────────────────────────────────────────────────────────
+  function updateTrayBadge() {
+    if (!trayIconEl) return;
+    const badge = trayIconEl.querySelector('.obs-tray-badge');
+    if (!badge) return;
+
+    if (allGoals.length === 0) {
+      badge.style.display = 'none';
+      return;
+    }
+
+    const date = todayStr();
+    const unrecorded = countUnrecorded(date);
+
+    if (unrecorded === 0) {
+      badge.className = 'obs-tray-badge all-done';
+      badge.innerHTML = OBS_CHECK_SVG;
+      badge.style.display = '';
+    } else {
+      badge.className = 'obs-tray-badge has-unrecorded';
+      badge.textContent = String(unrecorded);
+      badge.style.display = '';
+    }
+  }
+
+  // ─── Open / Close Tray ───────────────────────────────────────────────────
+  function openTray() {
+    if (isTrayOpen) return;
+    isTrayOpen = true;
+
+    const date = todayStr();
+
+    // Semi-transparent backdrop — click outside closes tray
+    trayBackdropEl = document.createElement('div');
+    trayBackdropEl.className = 'obs-tray-backdrop';
+    trayBackdropEl.addEventListener('click', closeTray);
+    document.body.appendChild(trayBackdropEl);
+
+    // Tray panel
+    trayEl = document.createElement('div');
+    trayEl.className = 'obs-tray';
+    trayEl.setAttribute('role', 'dialog');
+    trayEl.setAttribute('aria-modal', 'true');
+    trayEl.setAttribute('aria-label', 'Observation Goals');
+    trayEl.setAttribute('tabindex', '-1');
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'obs-tray-header';
+
+    const title = document.createElement('div');
+    title.className = 'obs-tray-title';
+    // Parse today's date string (YYYY-MM-DD) to build the display title consistently
+    const [yyyy, mm, dd] = date.split('-').map(Number);
+    const dateDisplay = new Date(yyyy, mm - 1, dd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    title.innerHTML = OBS_CLIPBOARD_SVG + ' <span>Observation Goals — ' + escapeHtml(dateDisplay) + '</span>';
+    title.querySelector('svg').style.cssText = 'vertical-align:middle;margin-right:6px;opacity:0.7;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'obs-tray-close-btn tc-btn';
+    closeBtn.setAttribute('aria-label', 'Close observation tray');
+    closeBtn.innerHTML = OBS_CLOSE_SVG;
+    closeBtn.addEventListener('click', closeTray);
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    trayEl.appendChild(header);
+
+    // Body (scrollable)
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'obs-tray-body';
+
+    if (allGoals.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'obs-tray-empty';
+      empty.textContent = 'No observation goals configured for your students.';
+      bodyEl.appendChild(empty);
+    } else {
+      const onAnyRecorded = () => {
+        updateTrayBadge();
+        updateFooterText();
+      };
+      bodyEl.appendChild(buildTrayContent(date, onAnyRecorded));
+    }
+    trayEl.appendChild(bodyEl);
 
     // Footer
-    const footer = document.createElement('div');
-    footer.className = 'obs-footer';
-    footer.appendChild(saveIndicatorEl);
-    footer.appendChild(completionSummaryEl);
-    footer.appendChild(doneBtn);
-
-    const dismissBtn = document.createElement('button');
-    dismissBtn.className = 'obs-dismiss-btn';
-    dismissBtn.textContent = 'Dismiss';
-    dismissBtn.setAttribute('aria-label', 'Dismiss observation data collection');
-    dismissBtn.addEventListener('click', () => {
-      closePopup();
-    });
-    footer.appendChild(dismissBtn);
-    modal.appendChild(footer);
-
-    // Keyboard accessibility: Escape + Tab trap
-    modal.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closePopup();
-        return;
+    const footerEl = document.createElement('div');
+    footerEl.className = 'obs-tray-footer';
+    const updateFooterText = () => {
+      const total = allGoals.length;
+      const recorded = total - countUnrecorded(date);
+      if (recorded >= total && total > 0) {
+        footerEl.innerHTML = OBS_CHECK_SVG + ` <span style="color:#22c55e;">${recorded} of ${total} recorded — all done!</span>`;
+      } else {
+        footerEl.textContent = total > 0 ? `${recorded} of ${total} recorded` : '';
       }
+    };
+    updateFooterText();
+    trayEl.appendChild(footerEl);
+
+    document.body.appendChild(trayEl);
+
+    // Keyboard: Escape closes tray; Tab stays within tray
+    trayEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeTray(); return; }
       if (e.key === 'Tab') {
-        const focusable = [...modal.querySelectorAll(
+        const focusable = [...trayEl.querySelectorAll(
           'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )];
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
         if (e.shiftKey) {
-          if (document.activeElement === first || !modal.contains(document.activeElement)) {
-            e.preventDefault();
-            last.focus();
+          if (document.activeElement === first || !trayEl.contains(document.activeElement)) {
+            e.preventDefault(); last.focus();
           }
         } else {
-          if (document.activeElement === last || !modal.contains(document.activeElement)) {
-            e.preventDefault();
-            first.focus();
+          if (document.activeElement === last || !trayEl.contains(document.activeElement)) {
+            e.preventDefault(); first.focus();
           }
         }
       }
     });
 
-    overlayEl.appendChild(modal);
+    // Focus the tray
+    trayEl.focus();
   }
 
-  // ─── Show / Close Pop-Up ──────────────────────────────────────────────────
-  function showPopup(periodInfo) {
-    const { period, remainingSeconds } = periodInfo;
-    const periodLabel = period.label;
-    const date = todayStr();
-    const popupKey = `${date}|${periodLabel}`;
-
-    if (shownPopups.has(popupKey)) {
-      console.log('[tc-observation] showPopup: suppressed (already shown this session) —', periodLabel);
-      return;
-    }
-    shownPopups.add(popupKey);
-
-    // Find goals for this period — log match details
-    console.group('[tc-observation] showPopup: goal-period matching for "' + periodLabel + '"');
-    const goalsForPeriod = [];
-    for (const g of allGoals) {
-      const cfg = g.observation_config;
-      const periods = cfg?.class_periods ?? [];
-      if (Array.isArray(periods) && periods.includes(periodLabel)) {
-        goalsForPeriod.push(g);
-        console.log(`  ✓ MATCH  goal=${g.code} student=${g.student_code} class_periods=${JSON.stringify(periods)}`);
-      } else {
-        console.log(
-          `  ✗ NO MATCH  goal=${g.code} student=${g.student_code}`,
-          `class_periods=${JSON.stringify(periods)} — does not include "${periodLabel}"`
-        );
-      }
-    }
-    console.log(`Total matched: ${goalsForPeriod.length} / ${allGoals.length}`);
-
-    if (goalsForPeriod.length === 0) {
-      console.warn('[tc-observation] showPopup: no observation goals for period —', periodLabel);
-      console.groupEnd();
-      return;
-    }
-
-    // Check if ALL goals already have data; if so, don't show — log per-goal allRecorded check
-    console.group('allRecorded check per goal');
-    const recordedFlags = goalsForPeriod.map(g => {
-      const recorded = isAlreadyRecorded(g.student_code, g.code, date, periodLabel);
-      console.log(`  goal=${g.code} student=${g.student_code} already recorded=${recorded}`);
-      return recorded;
-    });
-    const allRecorded = recordedFlags.every(Boolean);
-    console.log('allRecorded (all goals recorded):', allRecorded);
-    console.groupEnd();
-    console.groupEnd();
-
-    if (allRecorded) {
-      console.log('[tc-observation] showPopup: suppressed (all goals already recorded) —', periodLabel);
-      return;
-    }
-
-    console.log(
-      '[tc-observation] showPopup: opening popup for', periodLabel,
-      '—', goalsForPeriod.length, 'goals,', fmtSeconds(remainingSeconds), 'remaining'
-    );
-
-    activePopupPeriodLabel = periodLabel;
-
-    // Build student map
-    const studentsMap = new Map(allStudents.map(s => [s.code, s]));
-
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'obs-overlay';
-    overlay.setAttribute('role', 'presentation');
-
-    buildPopupContent(periodLabel, goalsForPeriod, studentsMap, overlay);
-    document.body.appendChild(overlay);
-    activeOverlay = overlay;
-
-    // Focus the modal for keyboard accessibility
-    const modal = overlay.querySelector('.obs-modal');
-    if (modal) modal.focus();
-
-    // Start countdown with color transitions
-    let remaining = remainingSeconds;
-    const countdownEl = overlay.querySelector('#obs-countdown');
-    const titleEl = overlay.querySelector('#obs-modal-title');
-
-    const setCountdownColor = (secs) => {
-      if (!countdownEl) return;
-      if (secs <= 0) countdownEl.style.color = 'rgba(255,255,255,0.4)';
-      else if (secs > 120) countdownEl.style.color = '#22c55e';
-      else if (secs > 60) countdownEl.style.color = '#f59e0b';
-      else countdownEl.style.color = '#ef4444';
-    };
-
-    if (countdownEl) {
-      countdownEl.textContent = fmtSeconds(remaining);
-      setCountdownColor(remaining);
-    }
-
-    let periodEnded = false;
-    if (countdownInterval) clearInterval(countdownInterval);
-    countdownInterval = setInterval(() => {
-      remaining--;
-      if (countdownEl) {
-        countdownEl.textContent = fmtSeconds(remaining);
-        setCountdownColor(remaining);
-      }
-      if (remaining <= 0 && !periodEnded) {
-        periodEnded = true;
-        if (titleEl) {
-          titleEl.innerHTML = escapeHtml(periodLabel) + ' — <span style="color:rgba(255,255,255,0.5);font-weight:400;">Period ended — finish recording</span>';
-        }
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-      }
-    }, 1000);
+  function closeTray() {
+    if (!isTrayOpen) return;
+    isTrayOpen = false;
+    if (trayBackdropEl) { trayBackdropEl.remove(); trayBackdropEl = null; }
+    if (trayEl) { trayEl.remove(); trayEl = null; }
+    // Return focus to icon
+    if (trayIconEl) trayIconEl.focus();
   }
 
-  function closePopup() {
-    console.log('[tc-observation] closePopup: popup dismissed for period —', activePopupPeriodLabel || '(unknown)');
-
-    const closedPeriodLabel = activePopupPeriodLabel;
-
-    // Issue 5: Cancel any pending auto-close timer and disconnect the done-button observer
-    // so they don't fire after the popup has already been closed manually.
-    if (missedPopupAutoCloseTimer) {
-      clearTimeout(missedPopupAutoCloseTimer);
-      missedPopupAutoCloseTimer = null;
-    }
-    if (missedPopupDoneObs) {
-      missedPopupDoneObs.disconnect();
-      missedPopupDoneObs = null;
-    }
-
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
-    }
-    if (activeOverlay) {
-      activeOverlay.remove();
-      activeOverlay = null;
-    }
-
-    // Issue 1: After removing the overlay, check if the closed period is a missed-period
-    // entry. If so, remove it from the missed list and update the badge. This enables
-    // cycling — the teacher opens one missed period, closes it (recorded or not), and the
-    // badge decrements so the next click shows the next oldest missed period.
-    if (closedPeriodLabel) {
-      const date = todayStr();
-      const missedKey = `${date}|${closedPeriodLabel}`;
-      const wasMissed = missedPeriods.some(m => m.key === missedKey);
-
-      if (wasMissed) {
-        // Missed-period popup was closed — remove it from the notification list.
-        // The goals data has already been saved (or is still pending); removing from the
-        // list just dismisses the notification so the teacher can cycle to the next one.
-        console.log(
-          '[tc-observation] closePopup: removing missed period', closedPeriodLabel,
-          'from notification list'
-        );
-        removeMissedPeriod(missedKey);
-      } else {
-        // Regular (live) popup close — check if any goals are still unrecorded and add
-        // them to the missed list so the teacher can come back via the notification icon.
-        const unrecordedGoals = allGoals.filter(g => {
-          const cfg = g.observation_config;
-          return Array.isArray(cfg?.class_periods) &&
-                 cfg.class_periods.includes(closedPeriodLabel) &&
-                 !isAlreadyRecorded(g.student_code, g.code, date, closedPeriodLabel);
-        });
-        if (unrecordedGoals.length > 0) {
-          console.log(
-            '[tc-observation] closePopup:', unrecordedGoals.length,
-            'goals still unrecorded for', closedPeriodLabel, '— adding to missed list'
-          );
-          addMissedPeriod(date, closedPeriodLabel, unrecordedGoals);
-        } else {
-          // All recorded — remove from missed list in case it was there
-          removeMissedPeriod(missedKey);
-        }
-      }
-    }
-
-    // Issue 1: Reset activePopupPeriodLabel at the end (after all missed-period logic)
-    activePopupPeriodLabel = null;
-  }
-
-  // ─── Timer Engine ─────────────────────────────────────────────────────────
-  async function checkPeriod() {
-    if (!schedule) {
-      console.log('[tc-observation] checkPeriod: no schedule loaded yet');
-      return;
-    }
-    if (!allGoals.length) {
-      console.log('[tc-observation] checkPeriod: no observation goals configured');
-      return;
-    }
-
-    const now = new Date();
-    const periodInfo = getCurrentPeriod(schedule, now);
-
-    if (_firstCheck) {
-      _firstCheck = false;
-      const queue = readQueue();
-      const goalsForCurrentPeriod = periodInfo.status === 'in-class'
-        ? allGoals.filter(g => {
-            const cfg = g.observation_config;
-            return Array.isArray(cfg?.class_periods) &&
-                   cfg.class_periods.includes(periodInfo.period.label);
-          })
-        : [];
-      console.group('[tc-observation] checkPeriod: FIRST CHECK diagnostic');
-      console.log('Current time:', now.toString());
-      console.log('Day of week:', ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()]);
-      const schoolDays = schedule.schoolDays ?? schedule.school_days ?? null;
-      console.log(
-        'Is school day per schedule.schoolDays:',
-        Array.isArray(schoolDays)
-          ? `${schoolDays.includes(now.getDay())} (schoolDays=${JSON.stringify(schoolDays)})`
-          : '(schoolDays not defined on schedule)'
-      );
-      console.log('getCurrentPeriod() result:', JSON.stringify({
-        status: periodInfo.status,
-        periodLabel: periodInfo.period?.label ?? null,
-        remainingSeconds: periodInfo.remainingSeconds ?? null
-      }));
-      if (periodInfo.status === 'in-class') {
-        console.log(
-          'remainingSeconds > POPUP_TRIGGER_SECONDS?',
-          periodInfo.remainingSeconds > POPUP_TRIGGER_SECONDS,
-          `(${periodInfo.remainingSeconds} > ${POPUP_TRIGGER_SECONDS})`
-        );
-        console.log('Goals matching current period:', goalsForCurrentPeriod.length);
-      }
-      console.log('shownPopups:', [...shownPopups]);
-      console.log(
-        'localStorage queue (rc_obs_pending): total=', queue.length,
-        'synced=', queue.filter(e => e.synced).length,
-        'unsynced=', queue.filter(e => !e.synced).length
-      );
-      console.groupEnd();
-    }
-
-    // Detect period-end transitions: if we were in a period and now we're not,
-    // check whether there are unrecorded goals for that period.
-    if (lastInClassPeriodLabel && periodInfo.status !== 'in-class') {
-      const endedLabel = lastInClassPeriodLabel;
-      lastInClassPeriodLabel = null;
-      const date = todayStr();
-      const unrecordedGoals = allGoals.filter(g => {
-        const cfg = g.observation_config;
-        return Array.isArray(cfg?.class_periods) &&
-               cfg.class_periods.includes(endedLabel) &&
-               !isAlreadyRecorded(g.student_code, g.code, date, endedLabel);
-      });
-      if (unrecordedGoals.length > 0) {
-        console.log(
-          '[tc-observation] checkPeriod: period ended with', unrecordedGoals.length,
-          'unrecorded goals for', endedLabel, '— adding to missed list'
-        );
-        addMissedPeriod(date, endedLabel, unrecordedGoals);
-      }
-    }
-
-    console.log(
-      '[tc-observation] checkPeriod: status=', periodInfo.status,
-      periodInfo.status === 'in-class'
-        ? `remaining=${fmtSeconds(periodInfo.remainingSeconds)} period="${periodInfo.period.label}"`
-        : ''
-    );
-
-    if (periodInfo.status !== 'in-class') return;
-
-    lastInClassPeriodLabel = periodInfo.period.label;
-
-    if (periodInfo.remainingSeconds > POPUP_TRIGGER_SECONDS) return;
-
-    // Don't show a new popup if one is already open
-    if (activeOverlay) {
-      console.log('[tc-observation] checkPeriod: overlay already open — suppressing');
-      return;
-    }
-
-    showPopup(periodInfo);
-  }
-
-  // ─── Missed Period Tracking ───────────────────────────────────────────────
-
-  function addMissedPeriod(date, periodLabel, goals) {
-    const key = `${date}|${periodLabel}`;
-    const existing = missedPeriods.findIndex(m => m.key === key);
-    if (existing < 0) {
-      missedPeriods.push({ key, date, periodLabel, goals });
-    } else {
-      missedPeriods[existing].goals = goals; // refresh with current unrecorded list
-    }
-    writeMissedPeriodsToStorage(); // Issue 2: persist across navigations
-    updateNotifBadge();
-  }
-
-  function removeMissedPeriod(key) {
-    const idx = missedPeriods.findIndex(m => m.key === key);
-    if (idx >= 0) {
-      missedPeriods.splice(idx, 1);
-      writeMissedPeriodsToStorage(); // Issue 2: persist across navigations
-      updateNotifBadge();
-    }
-  }
-
-  function updateNotifBadge() {
-    if (!notifIconEl) return;
-    const count = missedPeriods.length;
-    const badge = notifIconEl.querySelector('.obs-notif-badge');
-    if (count === 0) {
-      notifIconEl.style.display = 'none';
-      if (badge) badge.style.display = 'none';
-    } else {
-      notifIconEl.style.display = '';
-      if (badge) {
-        badge.textContent = String(count);
-        badge.style.display = '';
-      }
-    }
-    console.log('[tc-observation] updateNotifBadge: pending missed periods =', count);
-  }
-
-  // ─── Missed Period Popup ──────────────────────────────────────────────────
-
-  function showMissedPopup(missed) {
-    if (activeOverlay) return; // Don't open if a popup is already visible
-
-    const { periodLabel, goals } = missed;
-    console.log('[tc-observation] showMissedPopup:', periodLabel, '—', goals.length, 'goals');
-
-    activePopupPeriodLabel = periodLabel;
-
-    const studentsMap = new Map(allStudents.map(s => [s.code, s]));
-
-    const overlay = document.createElement('div');
-    overlay.className = 'obs-overlay';
-    overlay.setAttribute('role', 'presentation');
-
-    buildPopupContent(periodLabel, goals, studentsMap, overlay);
-    document.body.appendChild(overlay);
-    activeOverlay = overlay;
-
-    // Focus the modal for keyboard accessibility
-    const modal = overlay.querySelector('.obs-modal');
-    if (modal) modal.focus();
-
-    // Update title to show period ended (no live countdown needed)
-    const titleEl = overlay.querySelector('#obs-modal-title');
-    const countdownEl = overlay.querySelector('#obs-countdown');
-    if (titleEl) {
-      titleEl.textContent = '';
-      titleEl.appendChild(document.createTextNode(periodLabel + ' — '));
-      const endedSpan = document.createElement('span');
-      endedSpan.style.cssText = 'color:rgba(255,255,255,0.5);font-weight:400;';
-      endedSpan.textContent = 'period ended — finish recording';
-      titleEl.appendChild(endedSpan);
-    }
-    if (countdownEl) countdownEl.style.display = 'none';
-
-    // Issue 5: Auto-close this missed-period popup when all goals are recorded.
-    // Watch the "Done" button — when it becomes visible, all goals are recorded.
-    // Show the existing "All goals recorded" indicator (already in the footer) and
-    // automatically close after ~1.5 s so the badge decrements and the teacher can
-    // cycle to the next missed period.
-    //
-    // buildPopupContent() controls the done button exclusively via style.display
-    // ('none' = hidden, '' = visible), so checking style.display !== 'none' is correct.
-    const doneBtn = overlay.querySelector('.obs-done-btn');
-    if (doneBtn) {
-      const scheduleAutoClose = () => {
-        if (missedPopupAutoCloseTimer) return; // Already scheduled
-        console.log('[tc-observation] showMissedPopup: all goals recorded — auto-closing in 1.5s');
-        missedPopupAutoCloseTimer = setTimeout(() => {
-          missedPopupAutoCloseTimer = null;
-          closePopup();
-        }, 1500);
-      };
-
-      // Check immediately in case all goals were already recorded before the popup opened
-      if (doneBtn.style.display !== 'none') {
-        scheduleAutoClose();
-      } else {
-        // Watch for the done button becoming visible (triggered by updateCompletion).
-        // The observer reference is stored so closePopup() can disconnect it if the
-        // teacher manually dismisses before all goals are recorded.
-        missedPopupDoneObs = new MutationObserver(() => {
-          if (doneBtn.style.display !== 'none') {
-            if (missedPopupDoneObs) {
-              missedPopupDoneObs.disconnect();
-              missedPopupDoneObs = null;
-            }
-            scheduleAutoClose();
-          }
-        });
-        missedPopupDoneObs.observe(doneBtn, { attributes: true, attributeFilter: ['style'] });
-      }
-    }
-  }
-
-  // ─── Notification Icon ────────────────────────────────────────────────────
-
-  function injectNotifIcon() {
+  // ─── Inject Topbar Icon ───────────────────────────────────────────────────
+  function injectTrayIcon() {
     const topbar = document.querySelector('.tc-topbar');
     if (!topbar) return;
 
     const btn = document.createElement('button');
-    btn.className = 'tc-btn obs-notif-btn';
-    btn.setAttribute('aria-label', 'Pending observation entries');
-    btn.title = 'Pending observation entries';
-    btn.style.display = 'none'; // Hidden until there are missed periods
-    btn.innerHTML = OBS_CLIPBOARD_SVG + '<span class="obs-notif-badge" style="display:none;"></span>';
+    btn.className = 'tc-btn obs-tray-icon-btn';
+    btn.setAttribute('aria-label', 'Observation goals');
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.title = 'Observation goals';
+    btn.innerHTML = OBS_CLIPBOARD_SVG + '<span class="obs-tray-badge" style="display:none;"></span>';
 
     btn.addEventListener('click', () => {
-      if (missedPeriods.length === 0) return;
-      // Open the most recently missed period
-      showMissedPopup(missedPeriods[missedPeriods.length - 1]);
+      if (isTrayOpen) closeTray();
+      else openTray();
     });
 
-    notifIconEl = btn;
+    trayIconEl = btn;
 
     const tryInsert = () => {
       const signOutBtn = topbar.querySelector('.tc-btn[aria-label="Sign out"]');
       if (signOutBtn) {
-        // Transfer auto-margin so the notif icon starts the right-aligned group
+        // Transfer the auto-margin so the icon starts the right-aligned group
         signOutBtn.style.marginLeft = '';
         btn.style.marginLeft = 'auto';
         topbar.insertBefore(btn, signOutBtn);
@@ -1574,7 +1173,7 @@
     };
 
     if (!tryInsert()) {
-      // Sign Out button not yet added by teacher-shell.js; watch for it
+      // Sign Out button not yet added by teacher-shell.js; wait for it
       const observer = new MutationObserver(() => {
         if (tryInsert()) observer.disconnect();
       });
@@ -1582,104 +1181,93 @@
     }
   }
 
-  // ─── Missed Period Init Scan ──────────────────────────────────────────────
-  // Issue 4: On init, scan today's schedule for periods that have already ended
-  // but have unrecorded observation goals. This handles the case where the teacher
-  // was away for an entire period — the notification icon will appear immediately.
+  // ─── Data Loading ─────────────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const [goals, students] = await Promise.all([
+        db.listGoalsAll(),
+        db.listStudents()
+      ]);
 
-  function scanForMissedPeriodsOnInit() {
-    if (!schedule || !allGoals.length) {
-      console.log('[tc-observation] scanMissed: skipped — no schedule or goals loaded');
-      return;
+      const rawGoals = goals || [];
+      const obsTypeGoals = rawGoals.filter(g => g.measurement_type === 'Observation');
+      const withConfig = obsTypeGoals.filter(g => g.observation_config != null);
+
+      allGoals = withConfig;
+      allStudents = students || [];
+
+      console.log(
+        '[tc-observation] loadData: total goals=', rawGoals.length,
+        'observation=', obsTypeGoals.length,
+        'with config=', withConfig.length
+      );
+    } catch (err) {
+      console.warn('[tc-observation] loadData error:', err.message);
     }
+  }
 
-    const { periods, schoolDays } = schedule;
-    if (!Array.isArray(periods) || periods.length === 0) return;
-
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    if (Array.isArray(schoolDays) && !schoolDays.includes(dayOfWeek)) {
-      console.log('[tc-observation] scanMissed: not a school day — skipping');
-      return;
-    }
-
-    const nowSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  // ─── Pre-load Today's Supabase Entries ────────────────────────────────────
+  // Populates todayRecordedSet so the tray accurately reflects recorded state
+  // even if localStorage was cleared or the teacher is on a different device.
+  async function loadTodaySupabaseEntries() {
+    if (allGoals.length === 0) return;
     const date = todayStr();
-    let foundCount = 0;
-
-    for (const period of periods) {
-      const endSecs = parseTimeToSeconds(period.end);
-      if (!endSecs || nowSecs < endSecs) continue; // Period hasn't ended yet
-
-      const key = `${date}|${period.label}`;
-      if (missedPeriods.some(m => m.key === key)) continue; // Already in list (from sessionStorage)
-
-      const unrecordedGoals = allGoals.filter(g => {
-        const cfg = g.observation_config;
-        return Array.isArray(cfg?.class_periods) &&
-               cfg.class_periods.includes(period.label) &&
-               !isAlreadyRecorded(g.student_code, g.code, date, period.label);
+    try {
+      const goalCodes = allGoals.map(g => g.code);
+      const entries = await db.listGoalProgress({
+        startDate: date,
+        endDate: date,
+        goalCodes
       });
-
-      if (unrecordedGoals.length > 0) {
-        console.log(
-          '[tc-observation] scanMissed: period', period.label,
-          'ended with', unrecordedGoals.length, 'unrecorded goals — adding to missed list'
-        );
-        addMissedPeriod(date, period.label, unrecordedGoals);
-        foundCount++;
+      let count = 0;
+      for (const entry of (entries || [])) {
+        if (entry.student_code && entry.goal_code) {
+          const key = `${entry.student_code}|${entry.goal_code}`;
+          if (!todayRecordedSet.has(key)) {
+            todayRecordedSet.add(key);
+            count++;
+          }
+        }
       }
-    }
-
-    if (foundCount > 0) {
-      console.log('[tc-observation] scanMissed: added', foundCount, 'missed period(s) to notification list');
-    } else {
-      console.log('[tc-observation] scanMissed: no new missed periods found');
+      if (count > 0) {
+        console.log('[tc-observation] Pre-loaded', count, 'already-recorded goal(s) from Supabase for today');
+      }
+    } catch (err) {
+      console.warn('[tc-observation] Could not pre-load today\'s Supabase entries:', err.message);
     }
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   await loadData();
+  await loadTodaySupabaseEntries();
   await syncQueue();
 
-  // Inject the notification icon into the topbar
-  injectNotifIcon();
-
-  // Issue 2: Hydrate missed periods from sessionStorage so the notification icon
-  // survives full page navigations within the same browser session.
-  const _storedMissed = readMissedPeriodsFromStorage();
-  if (_storedMissed.length > 0) {
-    console.log('[tc-observation] Init: restored', _storedMissed.length, 'missed period(s) from sessionStorage');
-    for (const entry of _storedMissed) {
-      missedPeriods.push(entry);
-    }
-    updateNotifBadge(); // Show the badge immediately for restored entries
-  }
-
-  // Issue 4: Scan for periods that already ended today with unrecorded goals.
-  // Must run after data is loaded and sessionStorage is hydrated (to avoid duplicates).
-  scanForMissedPeriodsOnInit();
-
-  // Start timer loop (check every 30 seconds)
-  const _checkInterval = setInterval(checkPeriod, 30_000);
-  checkPeriod(); // Also check immediately on load
+  // Inject the tray icon into the topbar
+  injectTrayIcon();
+  updateTrayBadge();
 
   // Reload data every 5 minutes
   const _dataInterval = setInterval(async () => {
     await loadData();
+    await loadTodaySupabaseEntries();
     await syncQueue();
+    updateTrayBadge();
+    // If tray is open, refresh its content
+    if (isTrayOpen) {
+      closeTray();
+      openTray();
+    }
   }, 5 * 60_000);
 
   // Attempt queue sync every 60 seconds
   const _syncInterval = setInterval(syncQueue, 60_000);
 
-  // Expose cleanup for potential future use (e.g., SPA navigation)
+  // Expose cleanup (e.g. for SPA navigation)
   window._obsCleanup = () => {
-    clearInterval(_checkInterval);
     clearInterval(_dataInterval);
     clearInterval(_syncInterval);
-    closePopup();
+    closeTray();
   };
 
-  console.log('[tc-observation] Engine ready, watching', allGoals.length, 'observational goals, trigger window:', POPUP_TRIGGER_SECONDS, 'seconds');
+  console.log('[tc-observation] Tray ready —', allGoals.length, 'observation goal(s) configured');
 })();
