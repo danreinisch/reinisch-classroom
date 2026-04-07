@@ -1,0 +1,96 @@
+{
+  "pandoc-api-version": [1, 23, 1],
+  "meta": {
+    "title": {
+      "t": "MetaInlines",
+      "c": [{"t": "Str", "c": "Lost in Kragdon-ah"}]
+    },
+    "author": {
+      "t": "MetaList",
+      "c": [
+        {
+          "t": "MetaInlines",
+          "c": [{"t": "Str", "c": "Shawn"}, {"t": "Space"}, {"t": "Str", "c": "Inmon"}]
+        }
+      ]
+    },
+    "publisher": {
+      "t": "MetaInlines",
+      "c": [{"t": "Str", "c": "Pertime"}, {"t": "Space"}, {"t": "Str", "c": "Publishing"}]
+    },
+    "date": {
+      "t": "MetaInlines",
+      "c": [{"t": "Str", "c": "2020-06-28"}]
+    },
+    "subject": {
+      "t": "MetaList",
+      "c": [
+        {"t": "MetaInlines", "c": [{"t": "Str", "c": "Adventure"}]},
+        {"t": "MetaInlines", "c": [{"t": "Str", "c": "Time"}, {"t": "Space"}, {"t": "Str", "c": "Travel"}]},
+        {"t": "MetaInlines", "c": [{"t": "Str", "c": "Dystopian"}]}
+      ]
+    },
+    "lang": {
+      "t": "MetaInlines",
+      "c": [{"t": "Str", "c": "en"}]
+    }
+  },
+  "blocks": [
+    {
+      "t": "Header",
+      "c": [1, ["lost-in-kragdon-ah", [], []], [{"t": "Str", "c": "Lost in Kragdon-ah"}]]
+    },
+    {
+      "t": "Para",
+      "c": [
+        {"t": "Str", "c": "By"},
+        {"t": "Space"},
+        {"t": "Str", "c": "Shawn"},
+        {"t": "Space"},
+        {"t": "Str", "c": "Inmon"}
+      ]
+    },
+    {
+      "t": "Para",
+      "c": [
+        {"t": "Str", "c": "This"},
+        {"t": "Space"},
+        {"t": "Str", "c": "is"},
+        {"t": "Space"},
+        {"t": "Str", "c": "a"},
+        {"t": "Space"},
+        {"t": "Str", "c": "placeholder."},
+        {"t": "Space"},
+        {"t": "Str", "c": "Upload"},
+        {"t": "Space"},
+        {"t": "Str", "c": "the"},
+        {"t": "Space"},
+        {"t": "Str", "c": "full"},
+        {"t": "Space"},
+        {"t": "Str", "c": "Pandoc"},
+        {"t": "Space"},
+        {"t": "Str", "c": "JSON"},
+        {"t": "Space"},
+        {"t": "Str", "c": "file"},
+        {"t": "Space"},
+        {"t": "Str", "c": "via"},
+        {"t": "Space"},
+        {"t": "Str", "c": "the"},
+        {"t": "Space"},
+        {"t": "Str", "c": "admin"},
+        {"t": "Space"},
+        {"t": "Str", "c": "interface"},
+        {"t": "Space"},
+        {"t": "Str", "c": "to"},
+        {"t": "Space"},
+        {"t": "Str", "c": "enable"},
+        {"t": "Space"},
+        {"t": "Str", "c": "the"},
+        {"t": "Space"},
+        {"t": "Str", "c": "inline"},
+        {"t": "Space"},
+        {"t": "Str", "c": "reader."}
+      ]
+    }
+  ]
+}
