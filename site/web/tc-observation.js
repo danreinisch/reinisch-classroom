@@ -855,9 +855,9 @@
           } else {
             const items = parsed.rawData ? parsed.rawData.split(',') : [];
             const cbs = formWrapper.querySelectorAll('input[type="checkbox"]');
-            items.forEach((item, i) => {
+            items.forEach((item, index) => {
               const isMet = item.endsWith('=met');
-              if (isMet && cbs[i]) { cbs[i].checked = true; checkedStates[i] = true; }
+              if (isMet && cbs[index]) { cbs[index].checked = true; checkedStates[index] = true; }
             });
             updateSummary();
           }
@@ -1055,7 +1055,9 @@
 
     const title = document.createElement('div');
     title.className = 'obs-tray-title';
-    const dateDisplay = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    // Parse today's date string (YYYY-MM-DD) to build the display title consistently
+    const [yyyy, mm, dd] = date.split('-').map(Number);
+    const dateDisplay = new Date(yyyy, mm - 1, dd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     title.innerHTML = OBS_CLIPBOARD_SVG + ' <span>Observation Goals — ' + escapeHtml(dateDisplay) + '</span>';
     title.querySelector('svg').style.cssText = 'vertical-align:middle;margin-right:6px;opacity:0.7;';
 
