@@ -3716,6 +3716,10 @@
   let bookTtsTimeout = null;
   let _cachedTtsVoice = null;
   let _cachedTtsVoiceName = null;
+  // New feature state
+  const _wordDefCache = new Map(); // session-level dictionary API cache
+  let _bookLink = '';              // current book link (used for localStorage keys)
+  let _bookGlossaryMap = null;     // Map<normalized_term, definition>
 
   // Re-cache on voiceschanged (voices may not be available at load time)
   if (window.speechSynthesis) {
@@ -3788,6 +3792,8 @@
       storageKey,
       resuming: savedPage > 1
     };
+    _bookLink = link;
+    _bookGlossaryMap = buildGlossaryMap(bookData);
 
     // Build UI
     const backdrop = document.createElement('div');
@@ -3827,6 +3833,8 @@
 
   function closeBookReader() {
     stopBookTts();
+    closeWordPopup();
+    hideSelectionToolbar();
 
     if (bookPanelEscapeHandler) {
       document.removeEventListener('keydown', bookPanelEscapeHandler);
@@ -3851,6 +3859,7 @@
   function renderBookPanel(panel, bookData, title) {
     const safeTitle = escapeHtml(title || bookData.title || 'Book');
     const hasSidebar = bookData.chapters && bookData.chapters.length > 0;
+    const hasGlossary = Array.isArray(bookData.glossary) && bookData.glossary.length > 0;
     panel.innerHTML = `
       <div class="st-book-panel-header">
         <button class="st-panel-back-btn" id="bookBackBtn" style="margin-bottom:0;flex-shrink:0;">← Back</button>
@@ -3879,6 +3888,11 @@
           <button class="st-book-nav-btn st-book-mode-btn" data-mode="contrast" title="High contrast mode" style="padding:8px 10px;">◑</button>
           <button class="st-book-nav-btn st-book-mode-btn" data-mode="light" title="Light mode" style="padding:8px 10px;">☀️</button>
         </div>
+        <div style="position:relative;">
+          <button class="st-book-nav-btn" id="bookBookmarkBtn" title="Bookmark this page" style="padding:8px 10px;">🔖</button>
+          <div class="st-book-bookmarks-panel" id="bookBookmarksPanel" style="display:none;"></div>
+        </div>
+        ${hasGlossary ? `<button class="st-book-nav-btn" id="bookGlossaryBtn" title="Glossary" style="padding:8px 10px;">📚 Glossary</button>` : ''}
         <div class="st-book-tts-wrapper" style="position:relative;display:flex;align-items:center;gap:6px;">
           <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
           <button class="st-book-nav-btn st-book-tts-settings-btn" id="bookTtsSettingsBtn" title="TTS settings" style="padding:8px 10px;">⚙️</button>
@@ -3910,9 +3924,69 @@
     panel.querySelector('#bookTtsPause').addEventListener('click', pauseResumeBookTts);
     panel.querySelector('#bookTtsStop').addEventListener('click', stopBookTts);
 
+    // Double-click word lookup
+    const bookContent = panel.querySelector('#bookContent');
+    if (bookContent) {
+      bookContent.addEventListener('dblclick', function (e) {
+        const wordEl = e.target.closest('.st-book-word');
+        if (!wordEl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rawWord = wordEl.textContent || '';
+        const cleanWord = rawWord.replace(/[^a-zA-Z'-]/g, '').toLowerCase();
+        if (!cleanWord) return;
+        showWordPopup(cleanWord, rawWord, e.clientX, e.clientY, wordEl);
+      });
+
+      // Text selection toolbar
+      bookContent.addEventListener('mouseup', function () {
+        setTimeout(handleTextSelection, 10);
+      });
+      bookContent.addEventListener('touchend', function () {
+        setTimeout(handleTextSelection, 10);
+      });
+    }
+
+    // Hide selection toolbar when selection clears
+    document.addEventListener('selectionchange', function () {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) hideSelectionToolbar();
+    });
+
+    // Bookmark button
+    const bookmarkBtn = panel.querySelector('#bookBookmarkBtn');
+    const bookmarksPanel = panel.querySelector('#bookBookmarksPanel');
+    if (bookmarkBtn) {
+      bookmarkBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = bookmarksPanel && bookmarksPanel.style.display !== 'none';
+        if (isOpen) {
+          if (bookmarksPanel) bookmarksPanel.style.display = 'none';
+        } else {
+          toggleBookmark(bookmarkBtn, bookmarksPanel);
+        }
+      });
+      document.addEventListener('click', function hideBookmarkPanel(e) {
+        if (bookmarksPanel && !bookmarksPanel.contains(e.target) && e.target !== bookmarkBtn) {
+          bookmarksPanel.style.display = 'none';
+        }
+      });
+    }
+    updateBookmarkButton();
+
+    // Glossary button
+    if (hasGlossary) {
+      const glossaryBtn = panel.querySelector('#bookGlossaryBtn');
+      if (glossaryBtn) {
+        glossaryBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          showGlossaryPanel();
+        });
+      }
+    }
+
     // Font size controls
     const FONT_MIN = 14, FONT_MAX = 28, FONT_STEP = 2, FONT_DEFAULT = 18;
-    const bookContent = panel.querySelector('#bookContent');
     let currentFontSize = parseInt(localStorage.getItem('rc_book_font_size') || String(FONT_DEFAULT), 10);
     function applyFontSize(size) {
       currentFontSize = Math.min(FONT_MAX, Math.max(FONT_MIN, size));
@@ -4062,6 +4136,10 @@
     }
     content.innerHTML = html || '<p style="opacity:0.5">No content.</p>';
     content.scrollTop = 0;
+    // Apply glossary term underlines and persistent highlights
+    applyGlossaryTerms(content);
+    applyPageHighlights(content, currentPage);
+    updateBookmarkButton();
   }
 
   function navigateBookPage(delta) {
@@ -4257,6 +4335,528 @@
     // Remove any active word highlights
     document.querySelectorAll('.st-book-word.tts-active').forEach(function (el) {
       el.classList.remove('tts-active');
+    });
+  }
+
+  // ============================================================================
+  // Feature: Word lookup popup
+  // ============================================================================
+
+  const WORD_PREFIXES = {
+    'un': 'not', 're': 'again', 'pre': 'before', 'dis': 'not/opposite',
+    'mis': 'wrongly', 'over': 'too much', 'under': 'too little', 'out': 'surpassing',
+    'inter': 'between', 'trans': 'across', 'super': 'above', 'semi': 'half',
+    'anti': 'against', 'non': 'not', 'multi': 'many', 'bi': 'two', 'tri': 'three'
+  };
+  const WORD_SUFFIXES = {
+    'ing': 'action/process', 'tion': 'state/action', 'sion': 'state/action',
+    'ment': 'result/state', 'ness': 'state/quality', 'able': 'capable of',
+    'ible': 'capable of', 'ful': 'full of', 'less': 'without', 'ous': 'having quality of',
+    'ive': 'tending to', 'al': 'relating to', 'ly': 'in a manner', 'er': 'one who/more',
+    'est': 'most', 'ed': 'past tense', 'en': 'made of/cause to', 'ize': 'to make',
+    'ify': 'to make'
+  };
+
+  function analyzeWordMorphology(word) {
+    const w = word.toLowerCase().replace(/[^a-z]/g, '');
+    const found = { prefixes: [], suffixes: [] };
+    // Check prefixes (longest match first)
+    const prefixKeys = Object.keys(WORD_PREFIXES).sort((a, b) => b.length - a.length);
+    for (const p of prefixKeys) {
+      if (w.startsWith(p) && w.length > p.length + 2) {
+        found.prefixes.push({ affix: p + '-', meaning: WORD_PREFIXES[p] });
+        break; // one prefix at a time
+      }
+    }
+    // Check suffixes (longest match first)
+    const suffixKeys = Object.keys(WORD_SUFFIXES).sort((a, b) => b.length - a.length);
+    for (const s of suffixKeys) {
+      if (w.endsWith(s) && w.length > s.length + 2) {
+        found.suffixes.push({ affix: '-' + s, meaning: WORD_SUFFIXES[s] });
+        break; // one suffix at a time
+      }
+    }
+    return found;
+  }
+
+  async function fetchWordDefinition(word) {
+    const key = word.toLowerCase();
+    if (_wordDefCache.has(key)) return _wordDefCache.get(key);
+    try {
+      const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(key));
+      if (!r.ok) { _wordDefCache.set(key, null); return null; }
+      const data = await r.json();
+      _wordDefCache.set(key, data);
+      return data;
+    } catch (e) {
+      _wordDefCache.set(key, null);
+      return null;
+    }
+  }
+
+  function closeWordPopup() {
+    const existing = document.getElementById('bookWordPopup');
+    if (existing) existing.remove();
+  }
+
+  async function showWordPopup(cleanWord, displayWord, clientX, clientY, wordEl) {
+    closeWordPopup();
+
+    // Check if word is highlighted — offer remove option
+    const isHighlighted = wordEl.classList.contains('st-book-word-highlighted');
+
+    const popup = document.createElement('div');
+    popup.id = 'bookWordPopup';
+    popup.className = 'st-word-popup-card';
+
+    // Initial loading state
+    const morph = analyzeWordMorphology(cleanWord);
+    const glossaryDef = _bookGlossaryMap ? _bookGlossaryMap.get(cleanWord.toLowerCase()) : null;
+
+    popup.innerHTML = `
+      <div class="st-word-popup-header">
+        <span class="st-word-popup-word">${escapeHtml(displayWord)}</span>
+        <button class="st-word-popup-close" aria-label="Close">✕</button>
+      </div>
+      <div class="st-word-popup-body">
+        <div class="st-word-popup-spinner" id="wordPopupSpinner">Looking up...</div>
+        <div id="wordPopupContent" style="display:none;"></div>
+        ${morph.prefixes.length || morph.suffixes.length ? `
+          <div class="st-word-popup-morphology">
+            ${morph.prefixes.map(p => `<span class="st-word-popup-badge st-word-popup-badge-prefix">Prefix: ${escapeHtml(p.affix)} <em>(${escapeHtml(p.meaning)})</em></span>`).join('')}
+            ${morph.suffixes.map(s => `<span class="st-word-popup-badge st-word-popup-badge-suffix">Suffix: ${escapeHtml(s.affix)} <em>(${escapeHtml(s.meaning)})</em></span>`).join('')}
+          </div>` : ''}
+        ${glossaryDef ? `<div class="st-word-popup-glossary"><strong>📚 Glossary:</strong> ${escapeHtml(glossaryDef)}</div>` : ''}
+        <div class="st-word-popup-actions">
+          <button class="st-word-popup-readit" id="wordPopupReadIt">🔊 Read it</button>
+          ${isHighlighted ? `<button class="st-word-popup-remove-hl" id="wordPopupRemoveHl">Remove highlight</button>` : ''}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(popup);
+
+    // Position popup near click, clamped to viewport
+    const pw = popup.offsetWidth || 320;
+    const ph = popup.offsetHeight || 280;
+    let left = clientX + 10;
+    let top = clientY + 10;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+    if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+    if (left < 8) left = 8;
+    if (top < 8) top = 8;
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+
+    // Close button
+    popup.querySelector('.st-word-popup-close').addEventListener('click', closeWordPopup);
+
+    // Close on outside click
+    function onOutsideClick(e) {
+      if (!popup.contains(e.target)) { closeWordPopup(); document.removeEventListener('click', onOutsideClick); }
+    }
+    setTimeout(function () { document.addEventListener('click', onOutsideClick); }, 50);
+
+    // Read it button
+    const readItBtn = popup.querySelector('#wordPopupReadIt');
+    if (readItBtn) {
+      readItBtn.addEventListener('click', function () {
+        if (!window.speechSynthesis) return;
+        const utt = new SpeechSynthesisUtterance(cleanWord);
+        utt.rate = 0.75;
+        utt.voice = pickBestVoice(localStorage.getItem('rc_book_tts_voice'));
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utt);
+      });
+    }
+
+    // Remove highlight button
+    const removeHlBtn = popup.querySelector('#wordPopupRemoveHl');
+    if (removeHlBtn) {
+      removeHlBtn.addEventListener('click', function () {
+        const widx = parseInt(wordEl.getAttribute('data-word-idx'), 10);
+        removeHighlightContaining(widx);
+        closeWordPopup();
+      });
+    }
+
+    // Fetch definition asynchronously
+    const data = await fetchWordDefinition(cleanWord);
+    const spinner = document.getElementById('wordPopupSpinner');
+    const contentEl = document.getElementById('wordPopupContent');
+    if (!spinner || !contentEl) return; // popup was closed
+
+    spinner.style.display = 'none';
+    contentEl.style.display = 'block';
+
+    if (!data || !Array.isArray(data) || !data[0]) {
+      contentEl.innerHTML = '<div class="st-word-popup-no-result">No definition found.</div>';
+      return;
+    }
+
+    const entry = data[0];
+    const phonetic = entry.phonetic || (entry.phonetics && entry.phonetics.find(p => p.text) && entry.phonetics.find(p => p.text).text) || '';
+    const meanings = (entry.meanings || []).slice(0, 2);
+
+    let defHtml = '';
+    if (phonetic) defHtml += `<div class="st-word-popup-phonetic">${escapeHtml(phonetic)}</div>`;
+    for (const m of meanings) {
+      defHtml += `<div class="st-word-popup-pos">${escapeHtml(m.partOfSpeech || '')}</div>`;
+      const defs = (m.definitions || []).slice(0, 2);
+      for (const d of defs) {
+        defHtml += `<div class="st-word-popup-def">${escapeHtml(d.definition || '')}</div>`;
+      }
+    }
+    contentEl.innerHTML = defHtml || '<div class="st-word-popup-no-result">No definition found.</div>';
+
+    // Re-position after content fills in
+    const newPh = popup.offsetHeight;
+    let newTop = clientY + 10;
+    if (newTop + newPh > window.innerHeight - 8) newTop = window.innerHeight - newPh - 8;
+    if (newTop < 8) newTop = 8;
+    popup.style.top = newTop + 'px';
+  }
+
+  // ============================================================================
+  // Feature: Glossary
+  // ============================================================================
+
+  function buildGlossaryMap(bookData) {
+    if (!Array.isArray(bookData.glossary) || !bookData.glossary.length) return null;
+    const map = new Map();
+    for (const entry of bookData.glossary) {
+      if (entry.term) map.set(entry.term.toLowerCase(), entry.definition || '');
+    }
+    return map.size ? map : null;
+  }
+
+  function applyGlossaryTerms(content) {
+    if (!_bookGlossaryMap || !_bookGlossaryMap.size) return;
+    content.querySelectorAll('.st-book-word').forEach(function (span) {
+      const w = span.textContent.toLowerCase().replace(/[^a-z'-]/g, '');
+      if (_bookGlossaryMap.has(w)) {
+        span.classList.add('st-book-word-glossary');
+        span.title = _bookGlossaryMap.get(w);
+      }
+    });
+  }
+
+  function showGlossaryPanel() {
+    const existing = document.getElementById('bookGlossaryModal');
+    if (existing) { existing.remove(); return; }
+
+    const state = bookReaderState;
+    if (!state || !Array.isArray(state.bookData.glossary)) return;
+    const entries = state.bookData.glossary;
+
+    const modal = document.createElement('div');
+    modal.id = 'bookGlossaryModal';
+    modal.className = 'st-glossary-panel';
+    modal.innerHTML = `
+      <div class="st-glossary-header">
+        <span class="st-glossary-title">📚 Glossary</span>
+        <input class="st-glossary-search" id="glossarySearch" type="text" placeholder="Search terms..." aria-label="Search glossary"/>
+        <button class="st-glossary-close" id="glossaryClose" aria-label="Close glossary">✕</button>
+      </div>
+      <div class="st-glossary-list" id="glossaryList"></div>
+    `;
+    document.body.appendChild(modal);
+
+    function renderGlossaryList(filter) {
+      const list = modal.querySelector('#glossaryList');
+      const f = (filter || '').toLowerCase();
+      const filtered = entries.filter(e => !f || e.term.toLowerCase().includes(f) || (e.definition || '').toLowerCase().includes(f));
+      if (!filtered.length) { list.innerHTML = '<div class="st-glossary-empty">No matching terms.</div>'; return; }
+      list.innerHTML = filtered.map(e => `<div class="st-glossary-entry"><div class="st-glossary-term">${escapeHtml(e.term)}</div><div class="st-glossary-def">${escapeHtml(e.definition || '')}</div></div>`).join('');
+    }
+    renderGlossaryList('');
+
+    modal.querySelector('#glossaryClose').addEventListener('click', function () { modal.remove(); });
+    modal.querySelector('#glossarySearch').addEventListener('input', function (e) { renderGlossaryList(e.target.value); });
+
+    // Close on outside click
+    function onOutside(e) { if (!modal.contains(e.target)) { modal.remove(); document.removeEventListener('click', onOutside); } }
+    setTimeout(function () { document.addEventListener('click', onOutside); }, 50);
+  }
+
+  // ============================================================================
+  // Feature: Text selection — copy + highlight toolbar
+  // ============================================================================
+
+  const HIGHLIGHT_COLORS = [
+    { name: 'yellow', color: 'rgba(253,224,71,0.55)', label: '🟡' },
+    { name: 'green',  color: 'rgba(74,222,128,0.45)', label: '🟢' },
+    { name: 'blue',   color: 'rgba(96,165,250,0.45)', label: '🔵' },
+    { name: 'pink',   color: 'rgba(249,168,212,0.55)', label: '🩷' }
+  ];
+
+  function getHighlightKey(link) {
+    return 'rc_book_highlights_' + encodeURIComponent(link || _bookLink);
+  }
+
+  function loadHighlights(link) {
+    try { return JSON.parse(localStorage.getItem(getHighlightKey(link)) || '[]'); } catch (e) { return []; }
+  }
+
+  function saveHighlights(link, data) {
+    localStorage.setItem(getHighlightKey(link), JSON.stringify(data));
+  }
+
+  function applyPageHighlights(content, pageNum) {
+    if (!_bookLink) return;
+    const highlights = loadHighlights(_bookLink);
+    const pageHls = highlights.filter(h => h.page === pageNum);
+    if (!pageHls.length) return;
+    const colorMap = Object.fromEntries(HIGHLIGHT_COLORS.map(c => [c.name, c.color]));
+    for (const hl of pageHls) {
+      for (let idx = hl.startWordIdx; idx <= hl.endWordIdx; idx++) {
+        const span = content.querySelector(`[data-word-idx="${idx}"]`);
+        if (span) {
+          span.classList.add('st-book-word-highlighted');
+          span.style.setProperty('--hl-color', colorMap[hl.color] || colorMap.yellow);
+        }
+      }
+    }
+  }
+
+  function addHighlight(color) {
+    const state = bookReaderState;
+    if (!state || !_bookLink) return;
+    const content = document.getElementById('bookContent');
+    if (!content) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+
+    // Find word spans in selection
+    const allSpans = Array.from(content.querySelectorAll('.st-book-word'));
+    const range = sel.getRangeAt(0);
+    const selectedSpans = allSpans.filter(function (s) {
+      return range.intersectsNode ? range.intersectsNode(s) : range.compareBoundaryPoints(Range.END_TO_START, (() => { const r = document.createRange(); r.selectNode(s); return r; })()) <= 0;
+    });
+    if (!selectedSpans.length) return;
+
+    const indices = selectedSpans.map(s => parseInt(s.getAttribute('data-word-idx'), 10)).filter(n => !isNaN(n));
+    const startWordIdx = Math.min(...indices);
+    const endWordIdx = Math.max(...indices);
+    const page = state.currentPage;
+
+    const highlights = loadHighlights(_bookLink);
+    highlights.push({ page, startWordIdx, endWordIdx, color: color || 'yellow' });
+    saveHighlights(_bookLink, highlights);
+
+    applyPageHighlights(content, page);
+    sel.removeAllRanges();
+    hideSelectionToolbar();
+  }
+
+  function removeHighlightContaining(wordIdx) {
+    const state = bookReaderState;
+    if (!state || !_bookLink) return;
+    const page = state.currentPage;
+    const highlights = loadHighlights(_bookLink);
+    const updated = highlights.filter(h => !(h.page === page && h.startWordIdx <= wordIdx && h.endWordIdx >= wordIdx));
+    saveHighlights(_bookLink, updated);
+    const content = document.getElementById('bookContent');
+    if (content) {
+      content.querySelectorAll('.st-book-word-highlighted').forEach(function (s) { s.classList.remove('st-book-word-highlighted'); s.style.removeProperty('--hl-color'); });
+      applyPageHighlights(content, page);
+    }
+  }
+
+  function hideSelectionToolbar() {
+    const tb = document.getElementById('bookSelectionToolbar');
+    if (tb) tb.remove();
+  }
+
+  function handleTextSelection() {
+    hideSelectionToolbar();
+    const content = document.getElementById('bookContent');
+    if (!content) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (!content.contains(range.commonAncestorContainer)) return;
+    const selectedText = sel.toString().trim();
+    if (!selectedText) return;
+
+    // Build toolbar
+    const rect = range.getBoundingClientRect();
+    const toolbar = document.createElement('div');
+    toolbar.id = 'bookSelectionToolbar';
+    toolbar.className = 'st-selection-toolbar';
+
+    const colorDotsHtml = HIGHLIGHT_COLORS.map(c =>
+      `<button class="st-sel-color-dot" data-color="${c.name}" style="background:${c.color};" title="Highlight ${c.name}" aria-label="Highlight ${c.name}"></button>`
+    ).join('');
+
+    toolbar.innerHTML = `
+      <button class="st-sel-toolbar-btn" id="selCopyBtn">📋 Copy</button>
+      <button class="st-sel-toolbar-btn" id="selHighlightBtn">🖊 Highlight</button>
+      <div class="st-sel-colors" id="selColors" style="display:none;">${colorDotsHtml}</div>
+    `;
+    document.body.appendChild(toolbar);
+
+    // Position above selection
+    let left = rect.left + rect.width / 2 - 80;
+    let top = rect.top + window.scrollY - 50;
+    if (left < 8) left = 8;
+    if (left + 200 > window.innerWidth - 8) left = window.innerWidth - 208;
+    if (top < 8) top = rect.bottom + window.scrollY + 8;
+    toolbar.style.left = left + 'px';
+    toolbar.style.top = top + 'px';
+
+    // Copy button
+    toolbar.querySelector('#selCopyBtn').addEventListener('click', function () {
+      const state = bookReaderState;
+      const bk = state && state.bookData;
+      const pg = state && state.currentPage;
+      const chapter = bk && bk.pages && bk.pages[pg - 1] ? bk.pages[pg - 1].chapter : '';
+      const bookTitle = bk ? bk.title : '';
+      const citation = `\u201C${selectedText}\u201D (${bookTitle}${chapter ? ', ' + chapter : ''}, Page ${pg})`;
+      navigator.clipboard.writeText(citation).then(function () {
+        showToast('📋 Copied as text evidence!');
+      }).catch(function () {
+        showToast('Copy failed. Please use Ctrl+C.', 'error');
+      });
+      sel.removeAllRanges();
+      hideSelectionToolbar();
+    });
+
+    // Highlight button — show color dots
+    const colorsDiv = toolbar.querySelector('#selColors');
+    toolbar.querySelector('#selHighlightBtn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      colorsDiv.style.display = colorsDiv.style.display === 'none' ? 'flex' : 'none';
+    });
+
+    toolbar.querySelectorAll('.st-sel-color-dot').forEach(function (dot) {
+      dot.addEventListener('click', function (e) {
+        e.stopPropagation();
+        addHighlight(dot.getAttribute('data-color'));
+      });
+    });
+  }
+
+  // ============================================================================
+  // Feature: Bookmarks
+  // ============================================================================
+
+  function getBookmarkKey(link) {
+    return 'rc_book_bookmarks_' + encodeURIComponent(link || _bookLink);
+  }
+
+  function loadBookmarks(link) {
+    try { return JSON.parse(localStorage.getItem(getBookmarkKey(link)) || '[]'); } catch (e) { return []; }
+  }
+
+  function saveBookmarks(link, data) {
+    localStorage.setItem(getBookmarkKey(link), JSON.stringify(data));
+  }
+
+  function updateBookmarkButton() {
+    const state = bookReaderState;
+    const btn = document.getElementById('bookBookmarkBtn');
+    if (!btn || !state) return;
+    const bms = loadBookmarks(_bookLink);
+    const isBookmarked = bms.some(b => b.page === state.currentPage);
+    btn.title = isBookmarked ? 'Remove bookmark from this page' : 'Bookmark this page';
+    btn.style.opacity = isBookmarked ? '1' : '0.55';
+  }
+
+  function toggleBookmark(bookmarkBtn, bookmarksPanel) {
+    const state = bookReaderState;
+    if (!state || !_bookLink) return;
+    const page = state.currentPage;
+    const bms = loadBookmarks(_bookLink);
+    const existingIdx = bms.findIndex(b => b.page === page);
+
+    if (existingIdx !== -1) {
+      // Already bookmarked — remove it
+      bms.splice(existingIdx, 1);
+      saveBookmarks(_bookLink, bms);
+      updateBookmarkButton();
+      if (bookmarksPanel) renderBookmarksPanel(bookmarksPanel);
+      if (bookmarksPanel) bookmarksPanel.style.display = 'block';
+      showToast('Bookmark removed.');
+    } else {
+      // Not bookmarked — add it (with optional note via a prompt-like inline input)
+      if (bookmarksPanel) {
+        bookmarksPanel.style.display = 'block';
+        renderBookmarksPanel(bookmarksPanel, true /* showAddNote */);
+      }
+    }
+  }
+
+  function renderBookmarksPanel(panel, showAddNote) {
+    const state = bookReaderState;
+    if (!state || !_bookLink) { panel.style.display = 'none'; return; }
+    const page = state.currentPage;
+    const bookData = state.bookData;
+    const chapter = bookData.pages && bookData.pages[page - 1] ? bookData.pages[page - 1].chapter : '';
+    const bms = loadBookmarks(_bookLink);
+
+    let addNoteHtml = '';
+    if (showAddNote) {
+      addNoteHtml = `
+        <div class="st-bm-add">
+          <div class="st-bm-add-label">Page ${page}${chapter ? ' · ' + escapeHtml(chapter) : ''}</div>
+          <input class="st-bm-note-input" id="bmNoteInput" type="text" maxlength="100" placeholder="Optional note..." aria-label="Bookmark note"/>
+          <button class="st-bm-save-btn" id="bmSaveBtn">🔖 Save Bookmark</button>
+        </div>`;
+    }
+
+    const listHtml = bms.length
+      ? bms.map((b, i) => `<div class="st-bm-item" data-page="${b.page}">
+          <div class="st-bm-item-info">
+            <span class="st-bm-page">Page ${b.page}</span>${b.chapter ? ` <span class="st-bm-chapter">${escapeHtml(b.chapter)}</span>` : ''}
+            ${b.note ? `<div class="st-bm-note">${escapeHtml(b.note)}</div>` : ''}
+          </div>
+          <button class="st-bm-remove" data-idx="${i}" aria-label="Remove bookmark">✕</button>
+        </div>`).join('')
+      : '<div class="st-bm-empty">No bookmarks yet.</div>';
+
+    panel.innerHTML = `
+      <div class="st-bm-panel-header">Bookmarks</div>
+      ${addNoteHtml}
+      <div class="st-bm-list">${listHtml}</div>
+    `;
+
+    // Save bookmark
+    const saveBtn = panel.querySelector('#bmSaveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        const note = (panel.querySelector('#bmNoteInput') || {}).value || '';
+        bms.push({ page, chapter, note: note.slice(0, 100), timestamp: Date.now() });
+        saveBookmarks(_bookLink, bms);
+        updateBookmarkButton();
+        renderBookmarksPanel(panel, false);
+        showToast('🔖 Bookmark saved!');
+      });
+    }
+
+    // Navigate to bookmark
+    panel.querySelectorAll('.st-bm-item').forEach(function (item) {
+      item.addEventListener('click', function (e) {
+        if (e.target.classList.contains('st-bm-remove')) return;
+        const pg = parseInt(item.getAttribute('data-page'), 10);
+        if (pg >= 1) {
+          stopBookTts();
+          state.currentPage = pg;
+          renderBookPage();
+          panel.style.display = 'none';
+        }
+      });
+    });
+
+    // Remove bookmark
+    panel.querySelectorAll('.st-bm-remove').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        bms.splice(idx, 1);
+        saveBookmarks(_bookLink, bms);
+        updateBookmarkButton();
+        renderBookmarksPanel(panel, false);
+      });
     });
   }
 
