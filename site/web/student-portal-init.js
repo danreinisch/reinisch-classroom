@@ -3732,13 +3732,11 @@
   const DEFAULT_TTS_RATE = 0.92;
   let bookReaderState = null;
   let bookPanelEscapeHandler = null;
-  let bookTtsUtterance = null;
+  let bookTtsAudio = null;       // current Audio element for OpenAI TTS playback
+  let bookTtsAudioUrl = null;    // object URL to revoke when done
   let bookTtsActive = false;
   let bookTtsPaused = false;
   let bookTtsTimeout = null;
-  let _ttsStarting = false;
-  let _cachedTtsVoice = null;
-  let _cachedTtsVoiceName = null;
   // New feature state
   const _wordDefCache = new Map(); // session-level dictionary API cache
   let _bookLink = '';              // current book link (used for localStorage keys)
@@ -3746,48 +3744,6 @@
   let _knownBookResources = [];    // populated by loadStudentResources; each: { link, title, chapters, totalPages }
   let _bookSelectionChangeHandler = null; // stored so it can be removed on close
   const _bookChunkCache = new Map(); // chunkId -> chunkData (pages array)
-
-  // Re-cache on voiceschanged (voices may not be available at load time)
-  if (window.speechSynthesis) {
-    window.speechSynthesis.addEventListener('voiceschanged', function () {
-      _cachedTtsVoice = null;
-      _cachedTtsVoiceName = null;
-    });
-  }
-
-  function pickBestVoice(preferredName) {
-    if (!window.speechSynthesis) return null;
-    const voices = window.speechSynthesis.getVoices();
-    const english = voices.filter(function (v) { return v.lang && v.lang.startsWith('en'); });
-    if (!english.length) return null;
-
-    // Honor explicit user preference
-    if (preferredName) {
-      const match = english.find(function (v) { return v.name === preferredName; });
-      if (match) return match;
-    }
-
-    // Return cached voice if preference hasn't changed
-    const cacheKey = preferredName || '';
-    if (_cachedTtsVoice && _cachedTtsVoiceName === cacheKey) return _cachedTtsVoice;
-
-    const priorities = [
-      function (v) { return /Google (US|UK) English/i.test(v.name); },
-      function (v) { return /Natural/i.test(v.name); },
-      function (v) { return /Samantha.*Enhanced|Alex.*Enhanced|Daniel.*Enhanced/i.test(v.name); },
-      function (v) { return /enhanced|premium/i.test(v.name); },
-      function (v) { return /Microsoft.*(Online|Neural)/i.test(v.name); }
-    ];
-    let best = null;
-    for (const pred of priorities) {
-      best = english.find(pred) || null;
-      if (best) break;
-    }
-    if (!best) best = english[0] || null;
-    _cachedTtsVoice = best;
-    _cachedTtsVoiceName = cacheKey;
-    return best;
-  }
 
   // ============================================================================
   // Book Deep-link Helpers
@@ -4084,7 +4040,7 @@
           <div class="st-book-tts-settings" id="bookTtsSettings" style="display:none;">
             <div class="st-book-tts-settings-row">
               <label class="st-book-tts-settings-label">Speed</label>
-              <input type="range" id="bookTtsRate" class="st-book-tts-slider" min="0.5" max="1.5" step="0.05" value="${DEFAULT_TTS_RATE}"/>
+              <input type="range" id="bookTtsRate" class="st-book-tts-slider" min="0.25" max="4.0" step="0.05" value="${DEFAULT_TTS_RATE}"/>
               <span id="bookTtsRateVal">${DEFAULT_TTS_RATE}×</span>
             </div>
             <div class="st-book-tts-settings-row">
@@ -4432,22 +4388,26 @@
       localStorage.setItem('rc_book_tts_rate', v);
     };
 
-    // Populate voice list
-    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-    const english = voices.filter(function (v) { return v.lang && v.lang.startsWith('en'); });
-    const savedVoice = localStorage.getItem('rc_book_tts_voice') || '';
-    voiceSelect.innerHTML = '<option value="">Auto (best available)</option>';
-    for (const v of english) {
+    // Populate OpenAI voice list
+    const openAiVoices = [
+      { value: 'nova',    label: 'Nova (warm, natural female)' },
+      { value: 'alloy',   label: 'Alloy (neutral, balanced)' },
+      { value: 'echo',    label: 'Echo (male, warm)' },
+      { value: 'fable',   label: 'Fable (British, expressive)' },
+      { value: 'onyx',    label: 'Onyx (deep male)' },
+      { value: 'shimmer', label: 'Shimmer (bright female)' },
+    ];
+    const savedVoice = localStorage.getItem('rc_book_tts_voice') || 'nova';
+    voiceSelect.innerHTML = '';
+    for (const v of openAiVoices) {
       const opt = document.createElement('option');
-      opt.value = v.name;
-      opt.textContent = v.name + ' (' + v.lang + ')';
-      if (v.name === savedVoice) opt.selected = true;
+      opt.value = v.value;
+      opt.textContent = v.label;
+      if (v.value === savedVoice) opt.selected = true;
       voiceSelect.appendChild(opt);
     }
     voiceSelect.onchange = function () {
       localStorage.setItem('rc_book_tts_voice', voiceSelect.value);
-      _cachedTtsVoice = null; // reset cache so next read uses the new preference
-      _cachedTtsVoiceName = null;
     };
   }
 
@@ -4460,37 +4420,31 @@
   }
 
   function startBookTts() {
-    if (!window.speechSynthesis) {
-      showToast('Text-to-speech is not supported in this browser.', 'error');
-      return;
-    }
-    // Prevent re-entrant calls (e.g., double-click, event bubbling)
-    if (_ttsStarting) return;
-    _ttsStarting = true;
     const state = bookReaderState;
-    if (!state) { _ttsStarting = false; return; }
+    if (!state) return;
 
     const content = document.getElementById('bookContent');
-    if (!content) { _ttsStarting = false; return; }
+    if (!content) return;
 
     const allWordSpans = Array.from(content.querySelectorAll('.st-book-word'));
     if (!allWordSpans.length) {
       // Page content not yet rendered (chunk still loading) — inform the user
       showToast('⏳ Page is still loading. Please try again in a moment.');
-      _ttsStarting = false;
       return;
     }
 
-    // Cancel any stale speech in the queue, then un-stick Chrome's speech engine.
-    // Chrome has a well-known bug where cancel() leaves the engine in an internal
-    // "paused" state that silently drops subsequent speak() calls. Calling resume()
-    // immediately after cancel() resets this stuck state.
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
+    // Stop any currently playing audio and clear state
+    if (bookTtsAudio) {
+      bookTtsAudio.pause();
+      bookTtsAudio = null;
+    }
+    if (bookTtsAudioUrl) {
+      URL.revokeObjectURL(bookTtsAudioUrl);
+      bookTtsAudioUrl = null;
+    }
     if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
     bookTtsActive = false;
     bookTtsPaused = false;
-    bookTtsUtterance = null;
     document.querySelectorAll('.st-book-word.tts-active, .st-book-word.tts-read').forEach(function (el) {
       el.classList.remove('tts-active');
       el.classList.remove('tts-read');
@@ -4507,26 +4461,10 @@
       paraData.push({ text, wordOffset: globalOffset, spanCount: spans.length });
       globalOffset += spans.length;
     }
-    if (!paraData.length) { _ttsStarting = false; return; }
+    if (!paraData.length) return;
 
     const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || String(DEFAULT_TTS_RATE));
-    const savedVoiceName = localStorage.getItem('rc_book_tts_voice') || null;
-    let voice = null;
-
-    // Only use a specific voice if the user explicitly selected one in settings.
-    // Auto-selecting "premium" voices causes silent failures on some Chrome versions
-    // where the voice is listed in getVoices() but its audio backend is broken.
-    if (savedVoiceName) {
-      voice = pickBestVoice(savedVoiceName);
-      // If the user's saved voice isn't available yet, try triggering async load
-      if (!voice) {
-        window.speechSynthesis.getVoices(); // trigger async population
-        voice = pickBestVoice(savedVoiceName);
-      }
-    }
-
-    // If no user preference (or saved voice not found), voice remains null and
-    // the browser will use its own default — which is almost always the working one.
+    const savedVoiceName = localStorage.getItem('rc_book_tts_voice') || 'nova';
 
     bookTtsActive = true;
     bookTtsPaused = false;
@@ -4545,7 +4483,6 @@
           lastHighlightedSpan.classList.remove('tts-active');
           lastHighlightedSpan.classList.add('tts-read');
         }
-        bookTtsUtterance = null;
         // Auto-advance only when page finished naturally (not manually stopped)
         const pageFinished = bookTtsActive && idx >= paraData.length;
         if (pageFinished && state && state.currentPage < state.bookData.totalPages) {
@@ -4578,150 +4515,142 @@
       }
 
       const { text, wordOffset, spanCount } = paraData[idx];
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = rate;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      if (voice) utterance.voice = voice;
-      bookTtsUtterance = utterance;
 
-      let _started = false;
-      let _watchdog;
+      // Show loading indicator on first paragraph only
+      if (idx === 0) showToast('🔊 Loading audio...');
 
-      utterance.onstart = function () {
-        _started = true;
-        clearTimeout(_watchdog);
-        console.log(LOG_PREFIX, 'TTS utterance started for paragraph', idx);
-      };
+      fetch('/.netlify/functions/student-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, voice: savedVoiceName, speed: rate }),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (!bookTtsActive) return; // user stopped while we were loading
 
-      utterance.onboundary = function (e) {
-        if (e.name !== 'word') return;
-        if (lastHighlightedSpan) {
-          lastHighlightedSpan.classList.remove('tts-active');
-          lastHighlightedSpan.classList.add('tts-read');
-        }
-        // Map charIndex within this paragraph's text to the correct global word span
-        let charCount = 0;
-        for (let i = 0; i < spanCount; i++) {
-          const span = allWordSpans[wordOffset + i];
-          if (!span) break;
-          const wLen = span.textContent.length;
-          if (charCount + wLen >= e.charIndex) {
-            span.classList.add('tts-active');
-            lastHighlightedSpan = span;
-            span.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-            break;
+          if (!data.ok || !data.audio) {
+            console.warn(LOG_PREFIX, 'TTS API error for paragraph', idx, data.error);
+            showToast('⚠️ Audio unavailable. Please try again.', 'error');
+            bookTtsActive = false;
+            bookTtsPaused = false;
+            if (ttsBtn) ttsBtn.classList.remove('tts-active');
+            if (ttsControls) ttsControls.style.display = 'none';
+            return;
           }
-          charCount += wLen + 1; // +1 for space separator
-        }
-      };
 
-      utterance.onend = function () {
-        clearTimeout(_watchdog);
-        clearInterval(keepAlive);
-        if (!bookTtsActive) return;
-        // 300ms natural pause between paragraphs
-        bookTtsTimeout = setTimeout(function () {
-          speakPara(idx + 1);
-        }, 300);
-      };
+          // Decode base64 audio and create playable object URL
+          const binaryStr = atob(data.audio);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'audio/mpeg' });
 
-      utterance.onerror = function (e) {
-        clearTimeout(_watchdog);
-        clearInterval(keepAlive);
-        if (e.error === 'interrupted' || e.error === 'canceled') return;
-        console.warn(LOG_PREFIX, 'TTS error:', e.error);
-        if (bookTtsActive) speakPara(idx + 1);
-      };
+          // Clean up previous URL
+          if (bookTtsAudioUrl) URL.revokeObjectURL(bookTtsAudioUrl);
+          bookTtsAudioUrl = URL.createObjectURL(blob);
 
-      console.log(LOG_PREFIX, 'TTS speakPara(' + idx + '): speaking=' + window.speechSynthesis.speaking + ', paused=' + window.speechSynthesis.paused + ', pending=' + window.speechSynthesis.pending + ', text=' + text.substring(0, 60) + '...');
-      window.speechSynthesis.speak(utterance);
+          const audio = new Audio(bookTtsAudioUrl);
+          bookTtsAudio = audio;
 
-      // Chrome keep-alive: Chrome silently pauses speech after ~15 seconds.
-      // Periodically calling resume() prevents this silent pause.
-      var keepAlive = setInterval(function () {
-        if (!bookTtsActive || !window.speechSynthesis.speaking) {
-          clearInterval(keepAlive);
-          return;
-        }
-        window.speechSynthesis.resume();
-      }, 5000);
+          // Word highlighting via timeupdate
+          audio.ontimeupdate = function () {
+            if (!audio.duration) return;
+            const wordDuration = audio.duration / spanCount;
+            const currentWordIdx = Math.min(
+              Math.floor(audio.currentTime / wordDuration),
+              spanCount - 1
+            );
+            const span = allWordSpans[wordOffset + currentWordIdx];
+            if (span && span !== lastHighlightedSpan) {
+              if (lastHighlightedSpan) {
+                lastHighlightedSpan.classList.remove('tts-active');
+                lastHighlightedSpan.classList.add('tts-read');
+              }
+              span.classList.add('tts-active');
+              lastHighlightedSpan = span;
+              span.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+          };
 
-      console.log(LOG_PREFIX, 'TTS speak() called. speaking=' + window.speechSynthesis.speaking + ', paused=' + window.speechSynthesis.paused + ', pending=' + window.speechSynthesis.pending);
-
-      // Watchdog: if utterance doesn't start within 2 seconds, the voice may be
-      // broken. Cancel and retry with browser default voice (voice=null).
-      _watchdog = setTimeout(function () {
-        if (!_started && bookTtsActive) {
-          console.warn(LOG_PREFIX, 'TTS watchdog: utterance did not start after 2s, retrying with default voice');
-          clearInterval(keepAlive);
-          window.speechSynthesis.cancel();
-          setTimeout(function () {
+          audio.onended = function () {
             if (!bookTtsActive) return;
-            const retryUtterance = new SpeechSynthesisUtterance(text);
-            retryUtterance.rate = rate;
-            retryUtterance.pitch = 1.0;
-            retryUtterance.volume = 1.0;
-            // Don't set voice — use browser default
-            bookTtsUtterance = retryUtterance;
-            retryUtterance.onstart = function () {
-              console.log(LOG_PREFIX, 'TTS retry utterance started for paragraph', idx);
-            };
-            retryUtterance.onboundary = utterance.onboundary;
-            retryUtterance.onend = utterance.onend;
-            retryUtterance.onerror = function (e) {
-              if (e.error === 'interrupted' || e.error === 'canceled') return;
-              console.warn(LOG_PREFIX, 'TTS retry error:', e.error);
-              if (bookTtsActive) speakPara(idx + 1);
-            };
-            window.speechSynthesis.speak(retryUtterance);
-          }, 150);
-        }
-      }, 2000);
+            // 300ms natural pause between paragraphs
+            bookTtsTimeout = setTimeout(function () {
+              speakPara(idx + 1);
+            }, 300);
+          };
 
-      // Immediately highlight first word as a visual cue that TTS started
-      var firstSpan = allWordSpans[wordOffset];
-      if (firstSpan) {
-        if (lastHighlightedSpan) {
-          lastHighlightedSpan.classList.remove('tts-active');
-          lastHighlightedSpan.classList.add('tts-read');
-        }
-        firstSpan.classList.add('tts-active');
-        lastHighlightedSpan = firstSpan;
-        firstSpan.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-      }
+          audio.onerror = function () {
+            if (!bookTtsActive) return;
+            console.warn(LOG_PREFIX, 'Audio playback error for paragraph', idx);
+            // Try next paragraph on error
+            bookTtsTimeout = setTimeout(function () {
+              speakPara(idx + 1);
+            }, 300);
+          };
+
+          // Highlight first word immediately as a visual cue
+          var firstSpan = allWordSpans[wordOffset];
+          if (firstSpan) {
+            if (lastHighlightedSpan) {
+              lastHighlightedSpan.classList.remove('tts-active');
+              lastHighlightedSpan.classList.add('tts-read');
+            }
+            firstSpan.classList.add('tts-active');
+            lastHighlightedSpan = firstSpan;
+            firstSpan.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
+
+          audio.play().catch(function (err) {
+            console.warn(LOG_PREFIX, 'Audio play() failed:', err);
+            showToast('⚠️ Audio unavailable. Please try again.', 'error');
+            bookTtsActive = false;
+            bookTtsPaused = false;
+            if (ttsBtn) ttsBtn.classList.remove('tts-active');
+            if (ttsControls) ttsControls.style.display = 'none';
+          });
+        })
+        .catch(function (err) {
+          if (!bookTtsActive) return;
+          console.warn(LOG_PREFIX, 'TTS fetch failed:', err);
+          showToast('⚠️ Could not load audio. Check your connection.', 'error');
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+        });
     }
 
-    // Defer first speak() to a new execution frame so Chrome's speech queue
-    // has time to process the cancel() we called at the top of startBookTts().
-    setTimeout(function () {
-      _ttsStarting = false;
-      if (!bookTtsActive) return; // user may have stopped during the delay
-      speakPara(0);
-    }, 100);
+    speakPara(0);
   }
 
   function pauseResumeBookTts() {
-    if (!window.speechSynthesis) return;
     const pauseBtn = document.getElementById('bookTtsPause');
     if (bookTtsPaused) {
-      window.speechSynthesis.resume();
+      if (bookTtsAudio) bookTtsAudio.play().catch(function () {});
       bookTtsPaused = false;
       if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
     } else {
-      window.speechSynthesis.pause();
+      if (bookTtsAudio) bookTtsAudio.pause();
       bookTtsPaused = true;
       if (pauseBtn) pauseBtn.textContent = '▶ Resume';
     }
   }
 
   function stopBookTts() {
-    _ttsStarting = false;
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (bookTtsAudio) {
+      bookTtsAudio.pause();
+      bookTtsAudio.ontimeupdate = null;
+      bookTtsAudio.onended = null;
+      bookTtsAudio.onerror = null;
+      bookTtsAudio = null;
+    }
+    if (bookTtsAudioUrl) {
+      URL.revokeObjectURL(bookTtsAudioUrl);
+      bookTtsAudioUrl = null;
+    }
     if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
     bookTtsActive = false;
     bookTtsPaused = false;
-    bookTtsUtterance = null;
 
     const ttsBtn = document.getElementById('bookTtsBtn');
     const ttsControls = document.getElementById('bookTtsControls');
@@ -4865,7 +4794,6 @@
         if (!window.speechSynthesis) return;
         const utt = new SpeechSynthesisUtterance(cleanWord);
         utt.rate = 0.75;
-        utt.voice = pickBestVoice(localStorage.getItem('rc_book_tts_voice'));
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utt);
       });
