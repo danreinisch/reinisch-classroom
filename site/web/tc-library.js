@@ -659,6 +659,15 @@
     }
   }
 
+  // ── Draft ID Helper ───────────────────────────────────────────────────────────
+
+  /** Generate a unique draft ID using crypto.randomUUID() with a fallback. */
+  function genDraftId() {
+    return (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+  }
+
   // ── Recall Library ────────────────────────────────────────────────────────────
 
   async function loadRecallLibrary() {
@@ -874,9 +883,7 @@
       );
       if (!confirmed) return;
 
-      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-        ? crypto.randomUUID()
-        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 5);
+      const newId = genDraftId();
 
       const newDraft = {
         id: newId,
@@ -1595,9 +1602,7 @@
     dupBtn.appendChild(document.createTextNode('Duplicate'));
     dupBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-        ? crypto.randomUUID()
-        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+      const newId = genDraftId();
       const newDraft = {
         id: newId,
         title: (assignment.title || 'Untitled') + ' (Copy)',
@@ -2181,9 +2186,7 @@
       );
       if (!confirmed) return;
 
-      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-        ? crypto.randomUUID()
-        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 5);
+      const newId = genDraftId();
 
       const newDraft = {
         id: newId,
@@ -2727,9 +2730,7 @@
     stageBtn.appendChild(createIcon('clipboardPlus', 14));
     stageBtn.appendChild(document.createTextNode('Stage'));
     stageBtn.addEventListener('click', () => {
-      const newId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-        ? crypto.randomUUID()
-        : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+      const newId = genDraftId();
       const newDraft = {
         id: newId,
         title: presTitle,
