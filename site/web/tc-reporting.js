@@ -1302,6 +1302,212 @@ ${narrative}`;
   }
 
   /**
+   * Handle AI trend analysis for the Class Performance tab (Tab 3).
+   * Collects goal data across filtered students and POSTs to teacher-ai-analyze-trends.
+   * Must be declared at IIFE root — never inside try/catch or if blocks.
+   */
+  async function handleAnalyzeTrends(isRegenerate) {
+    const statusEl = $("tab3AiTrendsStatus");
+    const resultEl = $("tab3AiTrendsResult");
+    const textareaEl = $("tab3AiTrendsText");
+    const btnGen = $("tab3BtnAnalyzeTrends");
+    const btnRegen = $("tab3BtnReanalyzeTrends");
+
+    if (!statusEl || !resultEl || !textareaEl) return;
+
+    // Show loading state
+    statusEl.style.display = '';
+    statusEl.textContent = isRegenerate ? '🔄 Re-analyzing trends…' : '✨ Analyzing trends…';
+    resultEl.style.display = 'none';
+    if (btnGen) btnGen.disabled = true;
+    if (btnRegen) btnRegen.disabled = true;
+
+    // Build filtered student list from current tab3 state
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter((e) => e.class_name === tab3State.classFilter);
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+
+    const currentQuarter = getCurrentQuarter();
+    const quarterRange = getQuarterDateRange(currentQuarter);
+
+    // Aggregate goals across all filtered students
+    const classGoals = [];
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code && isGoalActive(g));
+      studentGoals.forEach((goal) => {
+        const gp = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        classGoals.push({
+          code: goal.code || '',
+          area: goal.goal_area || '',
+          description: goal.desc || '',
+          baseline: String(goal.baseline || ''),
+          target: String(goal.mastery || goal.target || ''),
+          currentValue: gp.average != null ? String(gp.average.toFixed(1)) : 'No data',
+          trend: '—',
+          dataCount: gp.count || 0,
+        });
+      });
+    });
+
+    // Build data points payload from progressData for those goals
+    const goalCodes = new Set(classGoals.map((g) => g.code));
+    const dataPointsPayload = progressData
+      .filter((p) => goalCodes.has(p.goal_code))
+      .slice(0, 200)
+      .map((p) => ({
+        goalCode: p.goal_code,
+        date: p.recorded_at ? p.recorded_at.slice(0, 10) : '',
+        value: p.value != null ? String(p.value) : '',
+      }));
+
+    const classLabel = tab3State.classFilter === "All Classes" ? "All Classes" : tab3State.classFilter;
+    const classCode = "class:" + classLabel.replace(/\s+/g, '-');
+    const startStr = quarterRange.start instanceof Date ? quarterRange.start.toISOString().slice(0, 10) : String(quarterRange.start || '');
+    const endStr = quarterRange.end instanceof Date ? quarterRange.end.toISOString().slice(0, 10) : String(quarterRange.end || '');
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-analyze-trends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCode: classCode,
+          studentName: "Class: " + classLabel,
+          goals: classGoals.slice(0, 50),
+          dateRange: { start: startStr, end: endStr },
+          dataPoints: dataPointsPayload,
+        }),
+        credentials: 'same-origin',
+      });
+
+      const data = await res.json().catch(() => ({ ok: false, error: 'Invalid response' }));
+
+      if (!data.ok) {
+        statusEl.textContent = '❌ Error: ' + (data.error || 'Analysis failed');
+        if (btnGen) btnGen.disabled = false;
+        if (btnRegen) btnRegen.disabled = false;
+        return;
+      }
+
+      statusEl.style.display = 'none';
+      textareaEl.value = data.analysis || '';
+      resultEl.style.display = '';
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    } catch (err) {
+      console.error('[tc-reporting] handleAnalyzeTrends failed:', err);
+      statusEl.textContent = '❌ Network error: ' + err.message;
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    }
+  }
+
+  /**
+   * Handle AI compliance notes drafting for the Compliance tab (Tab 4).
+   * Collects compliance data from current tab4 state and POSTs to teacher-ai-compliance-notes.
+   * Must be declared at IIFE root — never inside try/catch or if blocks.
+   */
+  async function handleDraftComplianceNotes(isRegenerate) {
+    const statusEl = $("tab4AiNotesStatus");
+    const resultEl = $("tab4AiNotesResult");
+    const textareaEl = $("tab4AiNotesText");
+    const btnGen = $("tab4BtnDraftNotes");
+    const btnRegen = $("tab4BtnRedraftNotes");
+
+    if (!statusEl || !resultEl || !textareaEl) return;
+
+    // Show loading state
+    statusEl.style.display = '';
+    statusEl.textContent = isRegenerate ? '🔄 Re-drafting compliance notes…' : '✨ Drafting compliance notes…';
+    resultEl.style.display = 'none';
+    if (btnGen) btnGen.disabled = true;
+    if (btnRegen) btnRegen.disabled = true;
+
+    // Build filtered student list from current tab4 state
+    const quarterRange = getDateRangeForPeriod(tab4State.quarter);
+    const quarterLabel = getPeriodLabel(tab4State.quarter);
+
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter((e) => e.class_name === tab4State.classFilter);
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+
+    // Aggregate goals and compliance metrics
+    const allGoalsList = [];
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code && isGoalActive(g));
+      studentGoals.forEach((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        allGoalsList.push({
+          code: goal.code || '',
+          area: goal.goal_area || '',
+          description: goal.desc || '',
+          baseline: String(goal.baseline || ''),
+          target: String(goal.mastery || goal.target || ''),
+          currentValue: goalData.average != null ? String(goalData.average.toFixed(1)) : 'No data',
+          trend: '—',
+          dataCount: goalData.count || 0,
+        });
+      });
+    });
+
+    const totalGoals = allGoalsList.length;
+    const totalDataPoints = allGoalsList.reduce((sum, g) => sum + g.dataCount, 0);
+    const goalsWithNoData = allGoalsList.filter((g) => g.dataCount === 0).length;
+    const goalsWithAdequateData = allGoalsList.filter((g) => g.dataCount >= 3).length;
+
+    const complianceData = {
+      totalAssignments: totalGoals * 3,
+      completedAssignments: totalDataPoints,
+      dataCollectionFrequency: '3+ data points per goal per quarter',
+      missedDataPoints: goalsWithNoData,
+      accommodationsProvided: 'Per IEP specifications',
+    };
+
+    const classLabel = tab4State.classFilter === "All Classes" ? "All Classes" : tab4State.classFilter;
+    const classCode = "class:" + classLabel.replace(/\s+/g, '-');
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-compliance-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCode: classCode,
+          studentName: "Class: " + classLabel,
+          goals: allGoalsList.slice(0, 50),
+          complianceData: complianceData,
+          quarterLabel: quarterLabel,
+        }),
+        credentials: 'same-origin',
+      });
+
+      const data = await res.json().catch(() => ({ ok: false, error: 'Invalid response' }));
+
+      if (!data.ok) {
+        statusEl.textContent = '❌ Error: ' + (data.error || 'Generation failed');
+        if (btnGen) btnGen.disabled = false;
+        if (btnRegen) btnRegen.disabled = false;
+        return;
+      }
+
+      statusEl.style.display = 'none';
+      textareaEl.value = data.notes || '';
+      resultEl.style.display = '';
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    } catch (err) {
+      console.error('[tc-reporting] handleDraftComplianceNotes failed:', err);
+      statusEl.textContent = '❌ Network error: ' + err.message;
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    }
+  }
+
+  /**
    * TAB 1: IEP Quarterly Progress Report
    */
   function renderTab1() {
@@ -2705,6 +2911,24 @@ ${narrative}`;
       html += renderQuarterComparison(filteredStudents);
     }
 
+    // AI Trends section
+    html += `
+      <div style="margin-top:20px;padding:16px;border:2px solid #c4b5fd;border-radius:8px;background:#faf5ff;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <strong style="color:#6d28d9;">✨ AI Trend Analysis</strong>
+          <button class="tc-btn" id="tab3BtnAnalyzeTrends" type="button">✨ Analyze Trends</button>
+        </div>
+        <span id="tab3AiTrendsStatus" style="display:none;margin-top:8px;display:none;color:#555;font-style:italic;"></span>
+        <div id="tab3AiTrendsResult" style="display:none;margin-top:12px;">
+          <textarea id="tab3AiTrendsText" rows="10" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.6;border:1px solid #c4b5fd;border-radius:4px;padding:8px;background:#fff;resize:vertical;"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button class="tc-btn tc-btn-small" id="tab3BtnCopyTrends" type="button">📋 Copy</button>
+            <button class="tc-btn tc-btn-small" id="tab3BtnReanalyzeTrends" type="button">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
+    `;
+
     // Export actions
     html += `
       <div class="rp-export-actions">
@@ -2749,6 +2973,32 @@ ${narrative}`;
     const btnPrint = $("btnPrintClass");
     if (btnPrint) {
       btnPrint.addEventListener("click", () => window.print());
+    }
+
+    const btnAnalyzeTrends = $("tab3BtnAnalyzeTrends");
+    if (btnAnalyzeTrends) {
+      btnAnalyzeTrends.addEventListener("click", () => handleAnalyzeTrends(false));
+    }
+
+    const btnReanalyzeTrends = $("tab3BtnReanalyzeTrends");
+    if (btnReanalyzeTrends) {
+      btnReanalyzeTrends.addEventListener("click", () => handleAnalyzeTrends(true));
+    }
+
+    const btnCopyTrends = $("tab3BtnCopyTrends");
+    if (btnCopyTrends) {
+      btnCopyTrends.addEventListener("click", () => {
+        const textarea = $("tab3AiTrendsText");
+        const text = textarea ? textarea.value : '';
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btnCopyTrends.textContent;
+          btnCopyTrends.textContent = '\u2713 Copied!';
+          setTimeout(() => { btnCopyTrends.textContent = original; }, 2000);
+        }).catch((err) => {
+          console.error('[tc-reporting] Failed to copy trend analysis:', err);
+        });
+      });
     }
     } catch (err) {
       renderTabErrorCard(container, renderTab3, err);
@@ -3252,6 +3502,24 @@ ${narrative}`;
     // Grade completion gaps
     html += renderGradeCompletionGaps(filteredStudents);
 
+    // AI Compliance Notes section
+    html += `
+      <div style="margin-top:20px;padding:16px;border:2px solid #c4b5fd;border-radius:8px;background:#faf5ff;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <strong style="color:#6d28d9;">✨ AI Compliance Notes</strong>
+          <button class="tc-btn" id="tab4BtnDraftNotes" type="button">✨ Draft Compliance Notes</button>
+        </div>
+        <span id="tab4AiNotesStatus" style="display:none;margin-top:8px;display:none;color:#555;font-style:italic;"></span>
+        <div id="tab4AiNotesResult" style="display:none;margin-top:12px;">
+          <textarea id="tab4AiNotesText" rows="12" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.6;border:1px solid #c4b5fd;border-radius:4px;padding:8px;background:#fff;resize:vertical;"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button class="tc-btn tc-btn-small" id="tab4BtnCopyNotes" type="button">📋 Copy</button>
+            <button class="tc-btn tc-btn-small" id="tab4BtnRedraftNotes" type="button">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
+    `;
+
     // Export actions
     html += `
       <div class="rp-export-actions">
@@ -3286,6 +3554,32 @@ ${narrative}`;
     const btnPrint = $("btnPrintCompliance");
     if (btnPrint) {
       btnPrint.addEventListener("click", () => window.print());
+    }
+
+    const btnDraftNotes = $("tab4BtnDraftNotes");
+    if (btnDraftNotes) {
+      btnDraftNotes.addEventListener("click", () => handleDraftComplianceNotes(false));
+    }
+
+    const btnRedraftNotes = $("tab4BtnRedraftNotes");
+    if (btnRedraftNotes) {
+      btnRedraftNotes.addEventListener("click", () => handleDraftComplianceNotes(true));
+    }
+
+    const btnCopyNotes = $("tab4BtnCopyNotes");
+    if (btnCopyNotes) {
+      btnCopyNotes.addEventListener("click", () => {
+        const textarea = $("tab4AiNotesText");
+        const text = textarea ? textarea.value : '';
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btnCopyNotes.textContent;
+          btnCopyNotes.textContent = '\u2713 Copied!';
+          setTimeout(() => { btnCopyNotes.textContent = original; }, 2000);
+        }).catch((err) => {
+          console.error('[tc-reporting] Failed to copy compliance notes:', err);
+        });
+      });
     }
     } catch (err) {
       renderTabErrorCard(container, renderTab4, err);
