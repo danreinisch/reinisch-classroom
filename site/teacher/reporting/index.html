@@ -1470,6 +1470,17 @@
 
                 <div class="rp-filters">
                   <div class="rp-filter-group">
+                    <label for="batchTemplateSelect">Template</label>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                      <select id="batchTemplateSelect" class="rp-select" style="min-width:160px;">
+                        <option value="">— No saved templates —</option>
+                      </select>
+                      <button id="batchSaveTemplateBtn" class="tc-btn" type="button" title="Save current settings as a template" style="padding:6px 12px;font-size:13px;">💾 Save</button>
+                      <button id="batchDeleteTemplateBtn" class="tc-btn" type="button" title="Delete selected template" style="padding:6px 12px;font-size:13px;">🗑️ Delete</button>
+                    </div>
+                  </div>
+
+                  <div class="rp-filter-group">
                     <label for="batchQuarterSelect">Quarter</label>
                     <select id="batchQuarterSelect" class="rp-select">
                       <option value="Q1">Q1 (Aug 16-Oct 17)</option>
