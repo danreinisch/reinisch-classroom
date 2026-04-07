@@ -1936,6 +1936,7 @@
 
             const maxPoints = item.points || 5;
             const itemLabel = item.item_ref || item.ref || '';
+            const questionText = item.meta?.question || '';
             const goalCodes = item.goal_codes || [];
             let goalDescriptions = [];
             if (goalCodes.length > 0) {
@@ -1963,6 +1964,7 @@
                   rubric_tiers: generateRubricTiers(maxPoints),
                   max_points: maxPoints,
                   item_label: itemLabel,
+                  question_text: questionText,
                   goal_codes: goalCodes,
                   goal_descriptions: goalDescriptions,
                 }),
@@ -2250,6 +2252,7 @@
     const item = items.find(it => String(it.id) === String(itemId));
     const maxPoints = (item && item.points) || 5;
     const itemLabel = item ? (item.item_ref || item.ref || '') : '';
+    const questionText = (item && item.meta?.question) || '';
     const goalCodes = (item && item.goal_codes) || [];
     let goalDescriptions = [];
 
@@ -2291,6 +2294,7 @@
           rubric_tiers: rubricTiers,
           max_points: maxPoints,
           item_label: itemLabel,
+          question_text: questionText,
           goal_codes: goalCodes,
           goal_descriptions: goalDescriptions
         })

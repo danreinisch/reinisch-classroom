@@ -1,7 +1,7 @@
 // AI-assisted grading suggestion endpoint
 // POST /.netlify/functions/teacher-ai-suggest
 // Auth: Requires teacher session cookie
-// Body: { student_response, rubric_tiers, max_points, item_label, goal_codes, goal_descriptions }
+// Body: { student_response, rubric_tiers, max_points, item_label, question_text?, goal_codes, goal_descriptions }
 // Returns: { ok: true, suggested_score, suggested_note, rationale }
 
 console.log('[teacher-ai-suggest] Module loaded successfully');
@@ -20,7 +20,7 @@ const { SESSION_SECRET } = process.env;
 /**
  * Build the system prompt for the OpenAI grading assistant.
  */
-function buildPrompt({ student_response, rubric_tiers, max_points, item_label, goal_codes, goal_descriptions }) {
+function buildPrompt({ student_response, rubric_tiers, max_points, item_label, question_text, goal_codes, goal_descriptions }) {
   const rubricLines = rubric_tiers
     .map((t) => `  ${t.points} — ${t.label}: ${t.desc}`)
     .join('\n');
@@ -42,7 +42,13 @@ function buildPrompt({ student_response, rubric_tiers, max_points, item_label, g
   }
 
   if (item_label) {
-    prompt += `\nQuestion: ${item_label}\n`;
+    if (question_text) {
+      prompt += `\nQuestion (${item_label}): ${question_text}\n`;
+    } else {
+      prompt += `\nQuestion: ${item_label}\n`;
+    }
+  } else if (question_text) {
+    prompt += `\nQuestion: ${question_text}\n`;
   }
 
   prompt += `\nStudent Response:\n"${student_response}"\n`;
@@ -96,7 +102,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { student_response, rubric_tiers, max_points, item_label, goal_codes, goal_descriptions } = parseResult.data;
+  const { student_response, rubric_tiers, max_points, item_label, question_text, goal_codes, goal_descriptions } = parseResult.data;
 
   // Validate required fields
   if (!student_response || typeof student_response !== 'string' || student_response.trim() === '') {
@@ -115,7 +121,7 @@ exports.handler = async (event) => {
   }
 
   // Build the prompt
-  const systemPrompt = buildPrompt({ student_response, rubric_tiers, max_points, item_label, goal_codes, goal_descriptions });
+  const systemPrompt = buildPrompt({ student_response, rubric_tiers, max_points, item_label, question_text, goal_codes, goal_descriptions });
 
   console.log(`[teacher-ai-suggest] [${requestId}] Calling OpenAI API`);
 
@@ -158,7 +164,12 @@ exports.handler = async (event) => {
       return jsonResponse(event, 502, { ok: false, error: 'AI suggestion failed — please score manually' }, {}, requestId);
     }
 
-    openAiResult = JSON.parse(content);
+    try {
+      openAiResult = JSON.parse(content);
+    } catch (parseErr) {
+      console.error(`[teacher-ai-suggest] [${requestId}] OpenAI returned invalid JSON (first 100 chars): ${String(content).slice(0, 100)}`);
+      return jsonResponse(event, 502, { ok: false, error: 'AI returned an invalid response — please try again or score manually' }, {}, requestId);
+    }
   } catch (err) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
