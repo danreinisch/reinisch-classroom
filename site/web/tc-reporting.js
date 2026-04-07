@@ -1195,6 +1195,113 @@ ${narrative}`;
   }
 
   /**
+   * Handle AI executive summary generation for a student's evidence report.
+   * Called from Tab 6 when the "✨ Generate Executive Summary" button is clicked.
+   * Must be declared at IIFE root — never inside try/catch or if blocks.
+   */
+  async function handleGenerateExecutiveSummary(student, quarterRange, audience, isRegenerate) {
+    const statusEl = $("tab6AiSummaryStatus");
+    const resultEl = $("tab6AiSummaryResult");
+    const textareaEl = $("tab6AiSummaryText");
+    const btnGen = $("tab6BtnGenerateSummary");
+    const btnRegen = $("tab6BtnRegenerateSummary");
+
+    if (!statusEl || !resultEl || !textareaEl) return;
+
+    // Show loading state
+    statusEl.style.display = '';
+    statusEl.textContent = isRegenerate ? '🔄 Regenerating summary…' : '✨ Generating summary…';
+    resultEl.style.display = 'none';
+    if (btnGen) btnGen.disabled = true;
+    if (btnRegen) btnRegen.disabled = true;
+
+    // Build goals payload from current data
+    const activeGoals = goalsData.filter(
+      (g) => g.student_code === student.code && isGoalActive(g)
+    );
+    const goalsPayload = activeGoals.map((goal) => {
+      const gp = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+      const currentDisplay = goal.measurement_type === 'Observation'
+        ? (gp.count > 0 ? 'Data collected' : 'No data')
+        : (gp.average != null ? String(gp.average.toFixed(1)) : 'No data');
+      return {
+        code: goal.code || '',
+        area: goal.goal_area || goal.area || '',
+        description: goal.desc || '',
+        currentValue: currentDisplay,
+        trend: '—',
+        dataCount: gp.count || 0,
+      };
+    });
+
+    // Build assignment summary from cached data
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === student.code || inst.student_id === student.code
+    );
+    const rangedInstances = studentInstances.filter((inst) => {
+      const d = new Date(inst.assigned_at || inst.created_at || '');
+      return isNaN(d.getTime()) || (d >= startDate && d <= endDate);
+    });
+    const total = rangedInstances.length;
+    let completed = 0;
+    let scoreSum = 0;
+    let scoreCount = 0;
+    rangedInstances.forEach((inst) => {
+      const sub = submissionsData.find((s) => s.instance_id === inst.id);
+      if (sub) {
+        completed++;
+        const score = sub.score_total != null ? parseFloat(sub.score_total)
+          : sub.score != null ? parseFloat(sub.score) : null;
+        if (score != null && !isNaN(score)) {
+          scoreSum += score;
+          scoreCount++;
+        }
+      }
+    });
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) + '%' : '0%';
+    const averageScore = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : null;
+    const assignmentSummary = { total, completed, completionRate, averageScore };
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-report-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCode: student.code,
+          studentName: student.name || student.code,
+          goals: goalsPayload,
+          quarterLabel: getTab6PeriodLabel(),
+          assignmentSummary: assignmentSummary,
+          audience: audience,
+        }),
+        credentials: 'same-origin',
+      });
+
+      const data = await res.json().catch(() => ({ ok: false, error: 'Invalid response' }));
+
+      if (!data.ok) {
+        statusEl.textContent = '❌ Error: ' + (data.error || 'Generation failed');
+        if (btnGen) btnGen.disabled = false;
+        if (btnRegen) btnRegen.disabled = false;
+        return;
+      }
+
+      statusEl.style.display = 'none';
+      textareaEl.value = data.summary || '';
+      resultEl.style.display = '';
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    } catch (err) {
+      console.error('[tc-reporting] handleGenerateExecutiveSummary failed:', err);
+      statusEl.textContent = '❌ Network error: ' + err.message;
+      if (btnGen) btnGen.disabled = false;
+      if (btnRegen) btnRegen.disabled = false;
+    }
+  }
+
+  /**
    * TAB 1: IEP Quarterly Progress Report
    */
   function renderTab1() {
@@ -4727,7 +4834,24 @@ ${narrative}`;
       return separator + sectionHtml;
     });
 
+    // Show AI summary button only when there is exactly one student
+    const aiSummaryBarHtml = targetStudents.length === 1 ? `
+      <div id="tab6AiSummaryBar" style="margin-bottom:12px;">
+        <button class="tc-btn" id="tab6BtnGenerateSummary" type="button">✨ Generate Executive Summary</button>
+        <span id="tab6AiSummaryStatus" style="display:none;margin-left:12px;color:#555;font-style:italic;"></span>
+        <div id="tab6AiSummaryResult" style="display:none;margin-top:12px;padding:16px;border:2px solid #93c5fd;border-radius:8px;background:#eff6ff;">
+          <div style="font-weight:700;margin-bottom:8px;color:#1d4ed8;">📋 Executive Summary</div>
+          <textarea id="tab6AiSummaryText" rows="8" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.6;border:1px solid #bfdbfe;border-radius:4px;padding:8px;background:#fff;resize:vertical;"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button class="tc-btn tc-btn-small" id="tab6BtnCopySummary" type="button">📋 Copy</button>
+            <button class="tc-btn tc-btn-small" id="tab6BtnRegenerateSummary" type="button">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
+    ` : '';
+
     output.innerHTML = `
+      ${aiSummaryBarHtml}
       ${sections.join('')}
       <div class="rp-ev-export-bar">
         <button class="tc-btn" id="tab6PrintBtn" type="button">🖨️ Print / PDF</button>
@@ -4736,6 +4860,42 @@ ${narrative}`;
         <button class="tc-btn" id="tab6CopyEmailBtn" type="button">📋 Copy as Email Body</button>
       </div>
     `;
+
+    // Wire AI summary buttons (single-student mode only)
+    if (targetStudents.length === 1) {
+      const singleStudent = targetStudents[0];
+      const audience = tab6State.audienceMode || 'parent';
+
+      const btnGenSummary = $("tab6BtnGenerateSummary");
+      if (btnGenSummary) {
+        btnGenSummary.addEventListener('click', () => {
+          handleGenerateExecutiveSummary(singleStudent, quarterRange, audience, false);
+        });
+      }
+
+      const btnRegenSummary = $("tab6BtnRegenerateSummary");
+      if (btnRegenSummary) {
+        btnRegenSummary.addEventListener('click', () => {
+          handleGenerateExecutiveSummary(singleStudent, quarterRange, audience, true);
+        });
+      }
+
+      const btnCopySummary = $("tab6BtnCopySummary");
+      if (btnCopySummary) {
+        btnCopySummary.addEventListener('click', () => {
+          const textarea = $("tab6AiSummaryText");
+          const text = textarea ? textarea.value : '';
+          if (!text) return;
+          navigator.clipboard.writeText(text).then(() => {
+            const original = btnCopySummary.textContent;
+            btnCopySummary.textContent = '\u2713 Copied!';
+            setTimeout(() => { btnCopySummary.textContent = original; }, 2000);
+          }).catch((err) => {
+            console.error('[tc-reporting] Failed to copy executive summary:', err);
+          });
+        });
+      }
+    }
 
     // Wire export buttons
     const printBtn = $("tab6PrintBtn");

@@ -287,7 +287,7 @@ test('generateEvidenceReport calls exportEvidenceZip for ZIP mode', () => {
 
 test('generateEvidenceReport calls generateEvidencePrintWindow for print mode', () => {
   const fnIdx = rpSrc.indexOf('async function generateEvidenceReport(');
-  const fnSection = rpSrc.slice(fnIdx, fnIdx + 4500);
+  const fnSection = rpSrc.slice(fnIdx, fnIdx + 7000);
   assert.ok(fnSection.includes('generateEvidencePrintWindow('), 'generateEvidenceReport should call generateEvidencePrintWindow');
 });
 
