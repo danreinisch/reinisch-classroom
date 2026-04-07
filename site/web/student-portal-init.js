@@ -1873,6 +1873,11 @@
 
       const retryLockedBadge = isLocked ? `<div class="st-retry-correct-badge">✓ Correct</div>` : '';
 
+      // Per-item earned score (shown in graded mode for constructed-response items)
+      const earnedPointsHtml = (isGraded && subAnswer && subAnswer.earned_points != null)
+        ? `<div class="st-item-score">🎯 Score: ${escapeHtml(String(subAnswer.earned_points))}/${escapeHtml(String(q.points || 5))} pts</div>`
+        : '';
+
       // Per-item teacher note (shown in graded mode when teacher has provided feedback)
       const teacherNoteHtml = (isGraded && subAnswer && subAnswer.teacher_note)
         ? `<div class="st-teacher-note">📝 <strong>Teacher note:</strong> ${escapeHtml(subAnswer.teacher_note)}</div>`
@@ -1896,6 +1901,7 @@
             <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud" aria-label="Read question ${q.number} aloud">🔊</button>
           </div>
           ${answerInputHtml}
+          ${earnedPointsHtml}
           ${teacherNoteHtml}
           ${hintHtml}
         </div>
@@ -5933,6 +5939,15 @@
     const scoreEl = document.createElement('div');
     scoreEl.className = `st-grade-score ${scoreClass}`;
     scoreEl.textContent = score !== null ? `${score}%` : '—';
+
+    if (score !== null) {
+      const letterGrade = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : 'F';
+      const letterEl = document.createElement('span');
+      letterEl.className = `st-letter-grade st-letter-grade-${letterGrade.toLowerCase()}`;
+      letterEl.textContent = letterGrade;
+      scoreEl.appendChild(letterEl);
+    }
+
     actions.appendChild(scoreEl);
     
     if (submission.instance_id) {
