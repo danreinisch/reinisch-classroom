@@ -4462,7 +4462,23 @@
 
     const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || String(DEFAULT_TTS_RATE));
     const savedVoiceName = localStorage.getItem('rc_book_tts_voice') || null;
-    const voice = pickBestVoice(savedVoiceName);
+    let voice = pickBestVoice(savedVoiceName);
+
+    // If voices haven't loaded yet, retry after forcing a getVoices() call
+    if (!voice) {
+      window.speechSynthesis.getVoices(); // trigger async population
+      voice = pickBestVoice(savedVoiceName);
+    }
+
+    // If voices still not available, defer start until voiceschanged fires
+    if (!voice && window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', function onVoicesReady() {
+        startBookTts();
+      }, { once: true });
+      return;
+    }
+    // voice may still be null here — that's OK, we just won't set utterance.voice
+    // and the browser will use its default voice
 
     bookTtsActive = true;
     bookTtsPaused = false;

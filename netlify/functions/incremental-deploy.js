@@ -1134,6 +1134,9 @@ function generateBookPagesJson(title, rawText) {
       continue;
     }
 
+    // Skip piracy/watermark lines
+    if (/^oceanofpdf/i.test(trimmed)) continue;
+
     // Regular paragraph — split into words
     const words = trimmed.split(/\s+/).filter(Boolean);
     if (!words.length) continue;
@@ -1318,46 +1321,51 @@ function parsePandocJsonToBookPages(title, jsonString) {
     switch (block.t) {
       case 'Header': {
         const level = block.c[0];
-        if (level !== 1) {
-          // Level-2+ headers: render as sub-headings within the current chapter
-          if (!foundFirstHeader || skipSection) break;
-          const subInlines = block.c[2] || [];
-          const subWords = [];
-          flattenInlines(subInlines, subWords);
-          const subText = subWords.join(' ').trim();
-          if (!subText) break;
-          currentParagraphs.push(['## ' + subText]);
-          currentWordCount += subWords.filter(Boolean).length;
-          break;
-        }
-        const inlines = block.c[2] || [];
-        const words = [];
-        flattenInlines(inlines, words);
-        const headerText = words.join(' ').trim();
-        // Entering a new level-1 header ends any prior skipSection / glossary mode
-        skipSection = false;
-        inGlossary = false;
-        pendingGlossaryTerm = null;
-        // If ToC header, skip its content until next level-1 header
-        if (/^(table of contents|contents)$/i.test(headerText)) {
-          skipSection = true;
-          foundFirstHeader = true;
-          break;
-        }
-        // If Glossary header, switch to glossary-collection mode
-        if (/^glossary$/i.test(headerText)) {
+        const hInlines = block.c[2] || [];
+        const hWords = [];
+        flattenInlines(hInlines, hWords);
+        const headerText = hWords.join(' ').trim();
+        if (!headerText) break;
+
+        // Determine whether this header acts as a chapter marker:
+        // - level 1: always a chapter marker
+        // - level 2: always a chapter marker (many EPUBs use h2 for chapter titles)
+        // - level 3: only if it matches the CHAPTER_RE pattern
+        // - level 4+: rendered as sub-headings
+        const isChapterMarker = level <= 2 || (level === 3 && CHAPTER_RE.test(headerText));
+
+        if (isChapterMarker) {
+          // Entering a new chapter header ends any prior skipSection / glossary mode
+          skipSection = false;
+          inGlossary = false;
+          pendingGlossaryTerm = null;
+          // If ToC header, skip its content until next chapter header
+          if (/^(table of contents|contents)$/i.test(headerText)) {
+            skipSection = true;
+            foundFirstHeader = true;
+            break;
+          }
+          // If Glossary header, switch to glossary-collection mode
+          if (/^glossary$/i.test(headerText)) {
+            flushPage();
+            foundFirstHeader = true;
+            inGlossary = true;
+            break;
+          }
+          // Real chapter
           flushPage();
           foundFirstHeader = true;
-          inGlossary = true;
+          currentChapter = headerText;
+          chapters.push({ label: headerText, startPage: pages.length + 1 });
+          currentParagraphs.push([headerText]);
+          currentWordCount += hWords.filter(Boolean).length;
           break;
         }
-        // Real chapter
-        flushPage();
-        foundFirstHeader = true;
-        currentChapter = headerText;
-        chapters.push({ label: headerText, startPage: pages.length + 1 });
-        currentParagraphs.push([headerText]);
-        currentWordCount += words.filter(Boolean).length;
+
+        // Sub-heading (level 3 not matching CHAPTER_RE, or level 4+)
+        if (!foundFirstHeader || skipSection) break;
+        currentParagraphs.push(['## ' + headerText]);
+        currentWordCount += hWords.filter(Boolean).length;
         break;
       }
       case 'Para':
@@ -1367,6 +1375,8 @@ function parsePandocJsonToBookPages(title, jsonString) {
         flattenInlines(block.c || [], words);
         const filtered = words.filter(Boolean);
         if (!filtered.length) break;
+        // Skip piracy/watermark paragraphs
+        if (/^oceanofpdf/i.test(filtered.join(' '))) break;
         // In glossary mode, parse entries
         if (inGlossary) {
           const rawText = filtered.join(' ');
