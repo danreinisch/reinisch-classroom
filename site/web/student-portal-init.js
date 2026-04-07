@@ -5614,6 +5614,10 @@
       // Filter to only graded submissions
       const graded = submissions.filter(sub => sub.score_total !== null && sub.score_total !== undefined);
       
+      // Update dashboard streak badge and performance trend chart
+      renderDashboardStreakBadge(graded);
+      renderDashboardTrendChart(graded);
+      
       // Calculate average
       let avgGrade = '—';
       if (graded.length > 0) {
@@ -5966,6 +5970,163 @@
       }
     }
     return { streak, threshold };
+  }
+
+  /**
+   * Check whether a submission has a valid (non-null, parseable) submitted_at date.
+   * @param {{ submitted_at: string|null }} s
+   * @returns {boolean}
+   */
+  function hasValidSubmittedAt(s) {
+    return Boolean(s.submitted_at) && !isNaN(new Date(s.submitted_at).getTime());
+  }
+
+  /**
+   * Build a performance trend SVG line chart for the student's recent graded submissions.
+   * Plots score_total (%) over time using submitted_at as the x-axis.
+   * Shows up to 15 most recent graded submissions, with a 70% passing reference line.
+   * Follows the same PAD/toX/toY/chartW/chartH pattern as buildProgressSVG.
+   * @param {Array} graded - Graded submissions (score_total != null, submitted_at set)
+   * @returns {string} HTML string containing SVG chart and legend, or empty message string
+   */
+  function buildScoreTrendSVG(graded) {
+    const PASSING_THRESHOLD = 70;
+    const MAX_POINTS = 15;
+
+    const sorted = [...graded]
+      .filter(hasValidSubmittedAt)
+      .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at))
+      .slice(-MAX_POINTS);
+
+    if (sorted.length < 2) {
+      return `<div class="st-goal-chart-empty" role="status">Not enough graded assignments yet — keep going!</div>`;
+    }
+
+    const W = 340, H = 120;
+    const PAD = { top: 14, right: 16, bottom: 28, left: 38 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
+
+    const minV = 0;
+    const maxV = 100;
+    const rangeV = maxV - minV;
+
+    const dates = sorted.map(s => new Date(s.submitted_at).getTime());
+    const minD = Math.min(...dates);
+    const maxD = Math.max(...dates);
+    const rangeD = maxD - minD || 1;
+
+    const toX = d => PAD.left + ((new Date(d).getTime() - minD) / rangeD) * chartW;
+    const toY = v => PAD.top + chartH - ((v - minV) / rangeV) * chartH;
+
+    const points = sorted.map(s => ({ x: toX(s.submitted_at), y: toY(s.score_total), s }));
+    const polyline = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+    // X-axis date labels
+    const firstLabel = formatDate(sorted[0].submitted_at);
+    const lastLabel = formatDate(sorted[sorted.length - 1].submitted_at);
+
+    // 70% passing reference line
+    const refY = toY(PASSING_THRESHOLD).toFixed(1);
+    const refLine = `<line class="st-perf-chart-reference" x1="${PAD.left}" y1="${refY}" x2="${W - PAD.right}" y2="${refY}" />`;
+    const refLabel = `<text class="st-perf-chart-reference-label" aria-hidden="true" x="${W - PAD.right + 2}" y="${refY}" dy="4" font-size="9">${PASSING_THRESHOLD}%</text>`;
+
+    // Data dots with tooltips
+    const dots = points.map(p => {
+      const scoreText = Math.round(p.s.score_total) + '%';
+      const dateDisplay = formatDate(p.s.submitted_at);
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}</title></circle>`;
+    }).join('');
+
+    // Latest value label
+    const latestPt = points[points.length - 1];
+    const latestScore = Math.round(latestPt.s.score_total) + '%';
+    const latestLabelX = Math.min(latestPt.x + 6, W - PAD.right - 4);
+
+    return `
+      <div class="st-goal-chart-container">
+        <svg class="st-perf-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Performance trend chart showing your last ${sorted.length} graded assignments">
+          <rect width="${W}" height="${H}" fill="none"/>
+          <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + chartH}" />
+          <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top + chartH}" x2="${W - PAD.right}" y2="${PAD.top + chartH}" />
+          ${refLine}
+          ${refLabel}
+          <polyline class="st-chart-line" points="${polyline}" />
+          ${dots}
+          <text class="st-chart-latest-label" aria-hidden="true" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestScore)}</text>
+          <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="start">${escapeHtml(firstLabel)}</text>
+          <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
+          <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${(PAD.top + chartH).toFixed(1)}" font-size="9" text-anchor="end" dy="4">0%</text>
+          <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${PAD.top}" font-size="9" text-anchor="end" dy="4">100%</text>
+        </svg>
+      </div>
+      <div class="st-perf-chart-legend">
+        <span class="st-perf-chart-legend-item">
+          <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--accent,#60a5fa)" stroke-width="2"/></svg>
+          Score over time
+        </span>
+        <span class="st-perf-chart-legend-item">
+          <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="rgba(251,146,60,0.7)" stroke-width="1.5" stroke-dasharray="4 3"/></svg>
+          Passing (${PASSING_THRESHOLD}%)
+        </span>
+      </div>`;
+  }
+
+  /**
+   * Render the streak badge on the dashboard (#dashStreakBanner).
+   * Shows a motivational fire badge when streak ≥ 1, or an encouraging message when 0.
+   * Uses calculateGradeStreak() (threshold 70%) for grade-based streaks.
+   * @param {Array} graded - Graded submissions (score_total != null)
+   */
+  function renderDashboardStreakBadge(graded) {
+    const container = document.getElementById('dashStreakBanner');
+    if (!container) return;
+
+    const { streak, threshold } = calculateGradeStreak(graded, 70);
+
+    if (streak === 0) {
+      container.innerHTML = `
+        <div class="st-streak-banner st-streak-zero">
+          <div class="st-streak-banner-fire" aria-hidden="true">💪</div>
+          <div class="st-streak-banner-text">
+            <div class="st-streak-banner-title">Keep going!</div>
+            <div class="st-streak-banner-sub">Your next great streak starts now — score ${threshold}% or above to build momentum.</div>
+          </div>
+        </div>`;
+    } else {
+      const assignmentWord = streak === 1 ? 'assignment' : 'assignments';
+      container.innerHTML = `
+        <div class="st-streak-banner">
+          <div class="st-streak-banner-fire" aria-hidden="true">🔥</div>
+          <div class="st-streak-banner-text">
+            <div class="st-streak-banner-title">${streak} ${assignmentWord} in a row above ${threshold}%!</div>
+            <div class="st-streak-banner-sub">You're on a roll — keep it up!</div>
+          </div>
+        </div>`;
+    }
+  }
+
+  /**
+   * Render the performance trend chart on the dashboard (#dashPerfChart).
+   * Shows a line chart of score_total over time for recent graded submissions.
+   * Hides the chart section when there is insufficient data.
+   * @param {Array} graded - Graded submissions (score_total != null)
+   */
+  function renderDashboardTrendChart(graded) {
+    const container = document.getElementById('dashPerfChart');
+    const section = document.getElementById('dashPerfChartSection');
+    if (!container || !section) return;
+
+    const chartHtml = buildScoreTrendSVG(graded);
+    // Show the section only when there are at least 2 submissions with valid dates.
+    // Uses the same hasValidSubmittedAt guard as buildScoreTrendSVG.
+    const hasChart = graded.filter(hasValidSubmittedAt).length >= 2;
+    if (hasChart) {
+      section.style.display = '';
+    } else {
+      section.style.display = 'none';
+    }
+    container.innerHTML = chartHtml;
   }
 
   /**
