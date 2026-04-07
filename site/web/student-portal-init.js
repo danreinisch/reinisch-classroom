@@ -4461,11 +4461,12 @@
       return;
     }
 
-    // Cancel any stale speech in the queue, then clean up state.
-    // We'll defer the actual speak() call via setTimeout to give Chrome
-    // time to process the cancellation (cancel + speak in the same frame
-    // causes Chrome to silently drop the utterance).
+    // Cancel any stale speech in the queue, then un-stick Chrome's speech engine.
+    // Chrome has a well-known bug where cancel() leaves the engine in an internal
+    // "paused" state that silently drops subsequent speak() calls. Calling resume()
+    // immediately after cancel() resets this stuck state.
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
     if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
     bookTtsActive = false;
     bookTtsPaused = false;
@@ -4583,6 +4584,7 @@
       };
 
       utterance.onend = function () {
+        clearInterval(keepAlive);
         if (!bookTtsActive) return;
         // 300ms natural pause between paragraphs
         bookTtsTimeout = setTimeout(function () {
@@ -4591,12 +4593,26 @@
       };
 
       utterance.onerror = function (e) {
+        clearInterval(keepAlive);
         if (e.error === 'interrupted' || e.error === 'canceled') return;
         console.warn(LOG_PREFIX, 'TTS error:', e.error);
         if (bookTtsActive) speakPara(idx + 1);
       };
 
+      console.log(LOG_PREFIX, 'TTS speakPara(' + idx + '): speaking=' + window.speechSynthesis.speaking + ', paused=' + window.speechSynthesis.paused + ', pending=' + window.speechSynthesis.pending + ', text=' + text.substring(0, 60) + '...');
       window.speechSynthesis.speak(utterance);
+
+      // Chrome keep-alive: Chrome silently pauses speech after ~15 seconds.
+      // Periodically calling resume() prevents this silent pause.
+      var keepAlive = setInterval(function () {
+        if (!bookTtsActive || !window.speechSynthesis.speaking) {
+          clearInterval(keepAlive);
+          return;
+        }
+        window.speechSynthesis.resume();
+      }, 5000);
+
+      console.log(LOG_PREFIX, 'TTS speak() called. speaking=' + window.speechSynthesis.speaking + ', paused=' + window.speechSynthesis.paused + ', pending=' + window.speechSynthesis.pending);
 
       // Immediately highlight first word as a visual cue that TTS started
       var firstSpan = allWordSpans[wordOffset];
@@ -4616,7 +4632,7 @@
     setTimeout(function () {
       if (!bookTtsActive) return; // user may have stopped during the delay
       speakPara(0);
-    }, 50);
+    }, 100);
   }
 
   function pauseResumeBookTts() {
