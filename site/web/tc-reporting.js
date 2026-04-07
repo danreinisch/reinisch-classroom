@@ -3811,8 +3811,9 @@ ${narrative}`;
           <div class="rp-ev-ctrl-label">Data Source</div>
           <div class="rp-ev-mode-group" id="tab6DataSourceGroup">${dataSourceBtns}</div>
         </div>
-        <div style="display:flex;align-items:flex-end;grid-column:span 1;">
-          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="width:100%;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
+        <div style="display:flex;align-items:flex-end;gap:8px;grid-column:span 1;">
+          <button class="tc-btn" id="tab6PreviewBtn" type="button" style="flex:0 0 auto;justify-content:center;padding:10px 16px;">👁️ Preview</button>
+          <button class="tc-btn" id="tab6GenerateBtn" type="button" style="flex:1;justify-content:center;padding:10px 20px;font-weight:700;">Generate Report</button>
         </div>
       </div>
       <div id="tab6ReportOutput"></div>
@@ -3902,6 +3903,14 @@ ${narrative}`;
         renderTab6();
       });
     });
+
+    // Wire up preview button
+    const previewBtn = $("tab6PreviewBtn");
+    if (previewBtn) {
+      previewBtn.addEventListener('click', () => {
+        generateTab6Preview();
+      });
+    }
 
     // Wire up generate button
     const generateBtn = $("tab6GenerateBtn");
@@ -4374,6 +4383,121 @@ ${narrative}`;
     lines.push('');
 
     return lines.join('\n');
+  }
+
+  /**
+   * Render a lightweight preview summary card for the current Tab 6 selection.
+   * Shows student(s), date range, assignment/goal counts, audience, and format
+   * without generating the full evidence HTML.
+   */
+  function generateTab6Preview() {
+    var output = $("tab6ReportOutput");
+    if (!output) return;
+
+    var quarterRange = getTab6DateRange();
+
+    // Resolve target students
+    var targetStudents = [];
+    if (tab6State.selectionMode === 'single') {
+      if (!tab6State.studentCode) {
+        output.innerHTML = '<div class="rp-empty">No student selected. Please choose a student before previewing.</div>';
+        return;
+      }
+      var singleStudent = studentsData.find(function(s) { return s.code === tab6State.studentCode; });
+      if (!singleStudent) {
+        output.innerHTML = '<div class="rp-empty">Selected student not found.</div>';
+        return;
+      }
+      targetStudents = [singleStudent];
+    } else if (tab6State.selectionMode === 'multi') {
+      targetStudents = studentsData.filter(function(s) {
+        return tab6State.selectedStudents.includes(s.code) && s.active !== false;
+      });
+      if (targetStudents.length === 0) {
+        output.innerHTML = '<div class="rp-empty">No students selected. Please select at least one student before previewing.</div>';
+        return;
+      }
+    } else {
+      targetStudents = studentsData.filter(function(s) { return s.active !== false; });
+      if (targetStudents.length === 0) {
+        output.innerHTML = '<div class="rp-empty">No active students found.</div>';
+        return;
+      }
+    }
+
+    // Format date range nicely
+    var startDate = new Date(quarterRange.start);
+    var endDate = new Date(quarterRange.end);
+    var fmtOpts = { month: 'short', day: 'numeric', year: 'numeric' };
+    var startLabel = isNaN(startDate.getTime()) ? quarterRange.start
+      : startDate.toLocaleDateString('en-US', fmtOpts);
+    var endLabel = isNaN(endDate.getTime()) ? quarterRange.end
+      : endDate.toLocaleDateString('en-US', fmtOpts);
+    var dateRangeLabel = startLabel + ' \u2014 ' + endLabel;
+
+    // Count assignments in range across all target students
+    var totalAssignments = 0;
+    targetStudents.forEach(function(student) {
+      var studentInstances = instancesData.filter(function(inst) {
+        return inst.student_code === student.code || inst.student_id === student.code;
+      });
+      studentInstances.forEach(function(inst) {
+        var d = new Date(inst.assigned_at || inst.created_at || '');
+        if (isNaN(d.getTime()) || (d >= startDate && d <= endDate)) {
+          totalAssignments++;
+        }
+      });
+    });
+
+    // Count IEP goals across all target students
+    var totalGoals = 0;
+    targetStudents.forEach(function(student) {
+      totalGoals += goalsData.filter(function(g) {
+        return g.student_code === student.code && isGoalActive(g);
+      }).length;
+    });
+
+    // Audience and format labels
+    var audienceLabel = tab6State.audienceMode === 'parent' ? 'Parent'
+      : tab6State.audienceMode === 'admin' ? 'Admin'
+      : 'IEP Progress';
+    var formatLabel = tab6State.outputFormat === 'zip' ? '📦 ZIP Download' : '🖨️ Print / PDF';
+
+    // Student name list (up to 5 shown, then "+ N more")
+    var studentNames = targetStudents.map(function(s) {
+      return escapeHtml(s.name || s.code) + ' (' + escapeHtml(s.code) + ')';
+    });
+    var studentListHtml;
+    if (studentNames.length <= 5) {
+      studentListHtml = studentNames.join(', ');
+    } else {
+      studentListHtml = studentNames.slice(0, 5).join(', ') + ', +' + (studentNames.length - 5) + ' more';
+    }
+
+    output.innerHTML = '<div class="tc-card" style="padding:20px;">'
+      + '<div style="font-size:1.1em;font-weight:700;margin-bottom:16px;">👁️ Preview — Student Evidence Report</div>'
+      + '<div class="rp-kpis" style="margin-bottom:16px;">'
+      + '<div class="rp-kpi-card"><div class="rp-kpi-label">Students</div><div class="rp-kpi-value">' + escapeHtml(String(targetStudents.length)) + '</div></div>'
+      + '<div class="rp-kpi-card"><div class="rp-kpi-label">Date Range</div><div class="rp-kpi-value" style="font-size:.85em;">' + escapeHtml(dateRangeLabel) + '</div></div>'
+      + '<div class="rp-kpi-card"><div class="rp-kpi-label">Assignments</div><div class="rp-kpi-value">' + escapeHtml(String(totalAssignments)) + '</div></div>'
+      + '<div class="rp-kpi-card"><div class="rp-kpi-label">IEP Goals</div><div class="rp-kpi-value">' + escapeHtml(String(totalGoals)) + '</div></div>'
+      + '<div class="rp-kpi-card"><div class="rp-kpi-label">Audience</div><div class="rp-kpi-value">' + escapeHtml(audienceLabel) + '</div></div>'
+      + '<div class="rp-kpi-card"><div class="rp-kpi-label">Format</div><div class="rp-kpi-value" style="font-size:.85em;">' + escapeHtml(formatLabel) + '</div></div>'
+      + '</div>'
+      + '<div style="margin-bottom:12px;font-size:.9em;color:rgba(255,255,255,.7);">'
+      + '<strong>Student(s):</strong> ' + studentListHtml
+      + '</div>'
+      + '<button class="tc-btn" id="tab6PreviewGenerateBtn" type="button" style="font-weight:700;padding:10px 24px;">✅ Looks good — Generate Full Report</button>'
+      + '</div>';
+
+    var previewGenBtn = $("tab6PreviewGenerateBtn");
+    if (previewGenBtn) {
+      previewGenBtn.addEventListener('click', function() {
+        generateEvidenceReport().catch(function(err) {
+          console.error('[tc-reporting] Error generating evidence report:', err);
+        });
+      });
+    }
   }
 
   /**
