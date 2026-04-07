@@ -3161,10 +3161,136 @@ ${narrative}`;
   }
 
   /**
+   * Load saved report templates from localStorage
+   * @returns {Array<Object>}
+   */
+  function loadReportTemplates() {
+    try {
+      const raw = localStorage.getItem('rc_report_templates');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.warn('[tc-reporting] Error loading report templates:', err.message);
+      return [];
+    }
+  }
+
+  /**
+   * Save a named report template to localStorage (max 20)
+   * @param {string} name
+   * @param {Object} config
+   * @returns {boolean} success
+   */
+  function saveReportTemplate(name, config) {
+    const templates = loadReportTemplates();
+    const existingIdx = templates.findIndex((t) => t.name === name);
+    if (existingIdx !== -1) {
+      templates[existingIdx] = Object.assign({ name }, config);
+    } else {
+      if (templates.length >= 20) {
+        return false;
+      }
+      templates.push(Object.assign({ name }, config));
+    }
+    try {
+      localStorage.setItem('rc_report_templates', JSON.stringify(templates));
+      return true;
+    } catch (err) {
+      if (err.name === 'QuotaExceededError' || err.code === 22) {
+        console.warn('[tc-reporting] localStorage quota exceeded — template not saved');
+      } else {
+        console.warn('[tc-reporting] Error saving report template:', err.message);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Delete a named report template from localStorage
+   * @param {string} name
+   */
+  function deleteReportTemplate(name) {
+    const templates = loadReportTemplates().filter((t) => t.name !== name);
+    try {
+      localStorage.setItem('rc_report_templates', JSON.stringify(templates));
+    } catch (err) {
+      if (err.name === 'QuotaExceededError' || err.code === 22) {
+        console.warn('[tc-reporting] localStorage quota exceeded');
+      } else {
+        console.warn('[tc-reporting] Error deleting report template:', err.message);
+      }
+    }
+  }
+
+  /**
    * TAB 5: Batch Reports - Generate Quarterly Progress Reports for All Students
    */
   function renderTab5() {
     try {
+    // Render template controls
+    const templateArea = $("tab5TemplateArea");
+    if (templateArea) {
+      const templates = loadReportTemplates().filter((t) => t.tab === 'tab5');
+      const templateOptions = templates
+        .map((t) => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+        .join('');
+      templateArea.innerHTML = `
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
+          <select id="tab5TemplateSelect" class="rp-select" style="min-width:160px;" aria-label="Load saved template">
+            <option value="">-- Load Template --</option>
+            ${templateOptions}
+          </select>
+          <button class="tc-btn" id="tab5LoadTemplateBtn" type="button">Load</button>
+          <button class="tc-btn" id="tab5DeleteTemplateBtn" type="button">Delete</button>
+          <span style="margin:0 4px;opacity:0.4;">|</span>
+          <input type="text" id="tab5TemplateNameInput" class="rp-select" placeholder="Template name..." style="min-width:140px;" aria-label="New template name">
+          <button class="tc-btn" id="tab5SaveTemplateBtn" type="button">💾 Save</button>
+        </div>
+      `;
+
+      const saveBtn = $("tab5SaveTemplateBtn");
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+          const nameInput = $("tab5TemplateNameInput");
+          const tplName = nameInput ? nameInput.value.trim() : '';
+          if (!tplName) return;
+          const saved = saveReportTemplate(tplName, { tab: 'tab5', quarter: tab5State.quarter });
+          if (saved) {
+            if (nameInput) nameInput.value = '';
+            renderTab5();
+          } else {
+            console.warn('[tc-reporting] Could not save template (max 20 reached or storage error)');
+          }
+        });
+      }
+
+      const loadBtn = $("tab5LoadTemplateBtn");
+      if (loadBtn) {
+        loadBtn.addEventListener('click', () => {
+          const sel = $("tab5TemplateSelect");
+          const tplName = sel ? sel.value : '';
+          if (!tplName) return;
+          const tpl = loadReportTemplates().find((t) => t.name === tplName);
+          if (tpl && tpl.quarter) {
+            tab5State.quarter = tpl.quarter;
+            const quarterSelect = $("batchQuarterSelect");
+            if (quarterSelect) quarterSelect.value = tab5State.quarter;
+          }
+        });
+      }
+
+      const deleteBtn = $("tab5DeleteTemplateBtn");
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+          const sel = $("tab5TemplateSelect");
+          const tplName = sel ? sel.value : '';
+          if (!tplName) return;
+          deleteReportTemplate(tplName);
+          renderTab5();
+        });
+      }
+    }
+
     // Set quarter selector to current quarter
     const quarterSelect = $("batchQuarterSelect");
     if (quarterSelect && !quarterSelect.value) {
@@ -3623,8 +3749,28 @@ ${narrative}`;
       ${tab6State.dataSource === 'auto' ? `<span style="font-size:12px;color:rgba(255,255,255,.5);margin-left:6px;">Auto: ${escapeHtml(currentSourceLabel)}</span>` : ''}
     `;
 
+    // Build template selector options for Tab 6
+    const tab6Templates = loadReportTemplates().filter((t) => t.tab === 'tab6');
+    const tab6TemplateOptions = tab6Templates
+      .map((t) => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+      .join('');
+
     container.innerHTML = `
       <div class="rp-ev-controls">
+        <div class="rp-filter-group" style="grid-column:span 2;">
+          <div class="rp-ev-ctrl-label">Templates</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="tab6TemplateSelect" class="rp-select" style="min-width:160px;" aria-label="Load saved template">
+              <option value="">-- Load Template --</option>
+              ${tab6TemplateOptions}
+            </select>
+            <button class="tc-btn" id="tab6LoadTemplateBtn" type="button">Load</button>
+            <button class="tc-btn" id="tab6DeleteTemplateBtn" type="button">Delete</button>
+            <span style="margin:0 4px;opacity:0.4;">|</span>
+            <input type="text" id="tab6TemplateNameInput" class="rp-select" placeholder="Template name..." style="min-width:140px;" aria-label="New template name">
+            <button class="tc-btn" id="tab6SaveTemplateBtn" type="button">💾 Save</button>
+          </div>
+        </div>
         <div class="rp-filter-group">
           <div class="rp-ev-ctrl-label">Selection Mode</div>
           <div class="rp-ev-mode-group" id="tab6ModeGroup">${modeBtns}</div>
@@ -3749,6 +3895,67 @@ ${narrative}`;
         generateEvidenceReport().catch((err) => {
           console.error('[tc-reporting] Error generating evidence report:', err);
         });
+      });
+    }
+
+    // Wire up template controls
+    const tab6SaveBtn = $("tab6SaveTemplateBtn");
+    if (tab6SaveBtn) {
+      tab6SaveBtn.addEventListener('click', () => {
+        const nameInput = $("tab6TemplateNameInput");
+        const tplName = nameInput ? nameInput.value.trim() : '';
+        if (!tplName) return;
+        const saved = saveReportTemplate(tplName, {
+          tab: 'tab6',
+          selectionMode: tab6State.selectionMode,
+          studentCode: tab6State.studentCode,
+          selectedStudents: tab6State.selectedStudents.slice(),
+          audienceMode: tab6State.audienceMode,
+          dateRange: tab6State.dateRange,
+          customStart: tab6State.customStart,
+          customEnd: tab6State.customEnd,
+          outputFormat: tab6State.outputFormat,
+          dataSource: tab6State.dataSource,
+        });
+        if (saved) {
+          if (nameInput) nameInput.value = '';
+          renderTab6();
+        } else {
+          console.warn('[tc-reporting] Could not save template (max 20 reached or storage error)');
+        }
+      });
+    }
+
+    const tab6LoadBtn = $("tab6LoadTemplateBtn");
+    if (tab6LoadBtn) {
+      tab6LoadBtn.addEventListener('click', () => {
+        const sel = $("tab6TemplateSelect");
+        const tplName = sel ? sel.value : '';
+        if (!tplName) return;
+        const tpl = loadReportTemplates().find((t) => t.name === tplName);
+        if (tpl) {
+          if (tpl.selectionMode) tab6State.selectionMode = tpl.selectionMode;
+          if (tpl.studentCode !== undefined) tab6State.studentCode = tpl.studentCode;
+          if (Array.isArray(tpl.selectedStudents)) tab6State.selectedStudents = tpl.selectedStudents.slice();
+          if (tpl.audienceMode) tab6State.audienceMode = tpl.audienceMode;
+          if (tpl.dateRange) tab6State.dateRange = tpl.dateRange;
+          tab6State.customStart = tpl.customStart || null;
+          tab6State.customEnd = tpl.customEnd || null;
+          if (tpl.outputFormat) tab6State.outputFormat = tpl.outputFormat;
+          if (tpl.dataSource) tab6State.dataSource = tpl.dataSource;
+          renderTab6();
+        }
+      });
+    }
+
+    const tab6DeleteBtn = $("tab6DeleteTemplateBtn");
+    if (tab6DeleteBtn) {
+      tab6DeleteBtn.addEventListener('click', () => {
+        const sel = $("tab6TemplateSelect");
+        const tplName = sel ? sel.value : '';
+        if (!tplName) return;
+        deleteReportTemplate(tplName);
+        renderTab6();
       });
     }
     } catch (err) {
