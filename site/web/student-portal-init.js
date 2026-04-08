@@ -5128,8 +5128,8 @@
 
     // Line spacing (1.4–2.4); only applied when a value has been explicitly stored
     const rawLineSpacing = localStorage.getItem('rc_book_helper_line_spacing');
-    content.querySelectorAll('p').forEach(function (p) {
-      p.style.lineHeight = rawLineSpacing !== null ? String(parseFloat(rawLineSpacing)) : '';
+    content.querySelectorAll('p, h3').forEach(function (el) {
+      el.style.lineHeight = rawLineSpacing !== null ? parseFloat(rawLineSpacing) : '';
     });
 
     // OpenDyslexic font toggle
