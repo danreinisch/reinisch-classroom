@@ -725,6 +725,7 @@
     const markBtn = $('rvBtnMarkAllReviewed');
     const autoGradeBtn = $('rvBtnAutoGrade');
     const finalizeReviewedBtn = $('rvBtnFinalizeAllReviewed');
+    const revertReviewedBtn = $('rvBtnRevertAllReviewed');
     if (!barEl || !finalizeBtn || !markBtn) return;
 
     const queue = buildReviewQueue();
@@ -795,6 +796,15 @@
       finalizeReviewedBtn.disabled = reviewedCount === 0;
       finalizeReviewedBtn.setAttribute('aria-label', `Finalize all reviewed submissions (${reviewedCount})`);
       finalizeReviewedBtn.style.display = reviewedCount > 0 ? '' : 'none';
+    }
+
+    // Revert All Reviewed button — visible only when there are reviewed submissions
+    if (revertReviewedBtn) {
+      revertReviewedBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.59"></path></svg>';
+      revertReviewedBtn.append(` ↩ Revert All Reviewed (${reviewedCount})`);
+      revertReviewedBtn.disabled = reviewedCount === 0;
+      revertReviewedBtn.setAttribute('aria-label', `Revert all reviewed submissions back to Needs Review (${reviewedCount})`);
+      revertReviewedBtn.style.display = reviewedCount > 0 ? '' : 'none';
     }
   }
 
@@ -1480,6 +1490,13 @@
       });
     }
 
+    const revertAllReviewedBtn = $('rvBtnRevertAllReviewed');
+    if (revertAllReviewedBtn) {
+      revertAllReviewedBtn.addEventListener('click', async () => {
+        await handleRevertAllReviewed();
+      });
+    }
+
     // Queue container - event delegation
     const queueContainer = $('rvQueue');
     if (queueContainer) {
@@ -1870,6 +1887,47 @@
     await render();
   }
 
+  // Handle "Revert All Reviewed" batch action — sends all reviewed submissions back to Needs Review
+  async function handleRevertAllReviewed() {
+    if (finalizingInProgress) return;
+    const reviewed = submissionsData.filter(s => s.review_status === 'reviewed');
+    if (reviewed.length === 0) return;
+
+    if (!await rcConfirm('Revert All Reviewed', `Revert ${reviewed.length} reviewed submission${reviewed.length !== 1 ? 's' : ''} back to Needs Review? This will undo AI-suggested grades and allow re-grading.`, 'Revert')) return;
+
+    let reverted = 0;
+    finalizingInProgress = true;
+    try {
+      for (const submission of reviewed) {
+        try {
+          const revertRes = await fetch('/.netlify/functions/teacher-review-save', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'reopen',
+              submissionId: submission.id,
+              instanceId: submission.instance_id,
+            }),
+          });
+          if (!revertRes.ok) {
+            const revertErr = await revertRes.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(revertErr.error || `Failed to revert submission: ${revertRes.status}`);
+          }
+          submission.review_status = 'pending';
+          reverted++;
+        } catch (err) {
+          console.error('[tc-review] Revert all reviewed error:', submission.id, err);
+        }
+      }
+    } finally {
+      finalizingInProgress = false;
+    }
+
+    showToast(`Reverted ${reverted} submission${reverted !== 1 ? 's' : ''} to Needs Review`, '#f59e0b', '#0b1220');
+    await render();
+  }
+
   // Handle "Auto-Grade All" batch action — AI-suggests scores and feedback for all unreviewed submissions
   async function handleAutoGradeAll() {
     if (finalizingInProgress) return;
@@ -2001,6 +2059,7 @@
                       earnedPoints: suggestData.suggested_score,
                       teacherNote: suggestData.suggested_note || '',
                       rationale: suggestData.rationale || '',
+                      aiSuggestedScore: suggestData.suggested_score,
                     }),
                   });
                   if (!saveScoreRes.ok) {
@@ -2319,6 +2378,7 @@
       // Populate fields
       if (suggested_score != null) {
         scoreInput.value = suggested_score;
+        scoreInput.dataset.aiSuggestedScore = suggested_score;
         scoreInput.classList.add('rv-ai-suggested');
         setTimeout(() => scoreInput.classList.remove('rv-ai-suggested'), 2000);
       }
@@ -2373,6 +2433,9 @@
     const earnedPoints = parseFloat(scoreInput.value) || 0;
     const teacherNote = noteInput ? noteInput.value.trim() : '';
     const aiRationale = scoreInput.dataset.aiRationale || '';
+    const aiSuggestedScore = scoreInput.dataset.aiSuggestedScore != null && scoreInput.dataset.aiSuggestedScore !== ''
+      ? parseFloat(scoreInput.dataset.aiSuggestedScore)
+      : null;
 
     // Bug A fix: synthetic item IDs (e.g. "synthetic_WP_4") cannot be stored as bigint.
     // Backfill the assignment first, then resolve to the real DB item ID.
@@ -2446,6 +2509,7 @@
         earnedPoints,
         teacherNote,
         rationale: aiRationale,
+        aiSuggestedScore,
       });
       
       // Clear cache to force reload
