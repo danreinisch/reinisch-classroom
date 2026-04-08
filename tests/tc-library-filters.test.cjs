@@ -216,7 +216,8 @@ function makeFilterContext(storage) {
       dateTo: '',
       viewMode: 'tree',
       sortColumn: 'date',
-      sortDirection: 'desc'
+      sortDirection: 'desc',
+      selectedTags: []
     },
     reserve: {
       presentationsExpanded: false,
@@ -250,7 +251,8 @@ function makeFilterContext(storage) {
           dateTo: filters.finalized.dateTo,
           viewMode: filters.finalized.viewMode,
           sortColumn: filters.finalized.sortColumn,
-          sortDirection: filters.finalized.sortDirection
+          sortDirection: filters.finalized.sortDirection,
+          selectedTags: filters.finalized.selectedTags
         },
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
@@ -296,6 +298,9 @@ function makeFilterContext(storage) {
         if (typeof data.finalized.viewMode === 'string') filters.finalized.viewMode = data.finalized.viewMode;
         if (typeof data.finalized.sortColumn === 'string') filters.finalized.sortColumn = data.finalized.sortColumn;
         if (typeof data.finalized.sortDirection === 'string') filters.finalized.sortDirection = data.finalized.sortDirection;
+        if (Array.isArray(data.finalized.selectedTags)) {
+          filters.finalized.selectedTags = data.finalized.selectedTags.filter(t => typeof t === 'string');
+        }
       }
       if (data.reserve && typeof data.reserve === 'object') {
         if (typeof data.reserve.presentationsExpanded === 'boolean') filters.reserve.presentationsExpanded = data.reserve.presentationsExpanded;
@@ -512,6 +517,89 @@ test('finalized: defaults are preserved when finalized block is absent', () => {
   assert.strictEqual(ctx.filters.finalized.sortDirection, 'desc');
   assert.strictEqual(ctx.filters.finalized.dateFrom, '');
   assert.strictEqual(ctx.filters.finalized.dateTo, '');
+});
+
+// ── finalized.viewMode byUnit round-trip ──────────────────────────────────────
+console.log('\n--- finalized.viewMode byUnit round-trips ---');
+
+test('finalized: save viewMode byUnit → load → viewMode restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.viewMode = 'byUnit';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.viewMode, 'byUnit');
+});
+
+test('finalized: viewMode tree still round-trips after selectedTags added', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.viewMode = 'tree';
+  ctx.filters.finalized.selectedTags = ['quiz'];
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.viewMode, 'tree');
+});
+
+test('finalized: viewMode table still round-trips after selectedTags added', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.viewMode = 'table';
+  ctx.filters.finalized.selectedTags = ['vocabulary'];
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.finalized.viewMode, 'table');
+});
+
+// ── finalized.selectedTags round-trips ────────────────────────────────────────
+console.log('\n--- finalized.selectedTags round-trips ---');
+
+test('finalized: default selectedTags is empty array', () => {
+  const ctx = makeFilterContext(makeMockStorage());
+  assert.deepStrictEqual(ctx.filters.finalized.selectedTags, []);
+});
+
+test('finalized: save selectedTags → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.finalized.selectedTags = ['quiz', 'vocabulary'];
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.deepStrictEqual(ctx2.filters.finalized.selectedTags, ['quiz', 'vocabulary']);
+});
+
+test('finalized: selectedTags as string → not applied, keeps default []', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    finalized: { selectedTags: 'quiz' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.finalized.selectedTags, []);
+});
+
+test('finalized: selectedTags with non-string items → non-strings are filtered out', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    finalized: { selectedTags: ['quiz', 0, true, 'review'] }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.finalized.selectedTags, ['quiz', 'review']);
+});
+
+test('finalized: selectedTags defaults to [] when absent from stored data', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    finalized: { viewMode: 'tree' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.finalized.selectedTags, []);
 });
 
 
