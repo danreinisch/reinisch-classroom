@@ -1780,8 +1780,9 @@
       isRegressing = true;
       isBelowBaseline = true;
     } else if (last3.length >= 2) {
-      // newest-first array: declining means each older value (higher index) > the newer one
-      // e.g. [50, 55, 60] (newest=50, oldest=60) — each older value is greater = declining performance
+      // In a newest-first array, declining performance means each older entry (higher index)
+      // has a greater value than the newer entry before it.
+      // e.g. [50, 55, 60] = newest 50, oldest 60 → performance was higher before = declining
       const allDecline = last3.every((v, i) => i === 0 || v > last3[i - 1]);
       if (allDecline) isRegressing = true;
     }
@@ -3855,7 +3856,7 @@
     } else if (alertStatus.isStalled) {
       alertStripHtml = `
         <div class="st-goal-alert-strip st-goal-alert-strip--stalled">
-          ⏸️ Progress stalled — last ${alertStatus.last3.length} point${alertStatus.last3.length === 1 ? '' : 's'} within ${ALERT_STALLED_BAND}% range
+          ⏸️ Progress stalled — last ${alertStatus.last3.length} point${alertStatus.last3.length === 1 ? '' : 's'} within a ${ALERT_STALLED_BAND}-point range
         </div>`;
     }
 
