@@ -3751,6 +3751,36 @@
     } catch (e) { /* ignore */ }
   }
 
+  /**
+   * Speaks a word aloud using the browser's built-in SpeechSynthesis API.
+   * Uses a slightly slower rate for struggling readers.
+   */
+  function speakWord(word) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(word);
+    utter.rate = 0.85;
+    utter.pitch = 1;
+    window.speechSynthesis.speak(utter);
+  }
+
+  /**
+   * Tracks a heard word in localStorage for the Words Mastered feature (PR 6).
+   * Caps the list at 500 words to avoid localStorage bloat.
+   */
+  function trackHeardWord(word) {
+    try {
+      const key = 'rc_book_helper_heard_words';
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const lower = word.toLowerCase().replace(/[^a-z'-]/g, '');
+      if (lower && !existing.includes(lower)) {
+        existing.push(lower);
+        if (existing.length > 500) existing.shift();
+        localStorage.setItem(key, JSON.stringify(existing));
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   const DEFAULT_TTS_RATE = 0.92;
   let bookReaderState = null;
   let bookPanelEscapeHandler = null;
@@ -4103,7 +4133,10 @@
     // Double-click word lookup
     const bookContent = panel.querySelector('#bookContent');
     if (bookContent) {
+      let _tapToHearTimeout = null;
+
       bookContent.addEventListener('dblclick', function (e) {
+        clearTimeout(_tapToHearTimeout); // cancel any pending tap-to-hear
         const wordEl = e.target.closest('.st-book-word');
         if (!wordEl) return;
         e.preventDefault();
@@ -4112,6 +4145,23 @@
         const cleanWord = rawWord.replace(/[^a-zA-Z'-]/g, '').toLowerCase();
         if (!cleanWord) return;
         showWordPopup(cleanWord, rawWord, e.clientX, e.clientY, wordEl);
+      });
+
+      // Single-click tap-to-hear (only when tap_to_hear helper is enabled)
+      bookContent.addEventListener('click', function (e) {
+        if (!getBookHelper('tap_to_hear')) return;
+        const wordEl = e.target.closest('.st-book-word');
+        if (!wordEl) return;
+        clearTimeout(_tapToHearTimeout);
+        _tapToHearTimeout = setTimeout(function () {
+          const rawWord = wordEl.textContent || '';
+          const cleanWord = rawWord.replace(/[^a-zA-Z'-]/g, '').toLowerCase();
+          if (!cleanWord) return;
+          speakWord(rawWord.trim());
+          trackHeardWord(cleanWord);
+          wordEl.classList.add('st-book-word-heard');
+          setTimeout(function () { wordEl.classList.remove('st-book-word-heard'); }, 600);
+        }, 250);
       });
 
       // Text selection toolbar
@@ -5000,8 +5050,10 @@
         if (!window.speechSynthesis) return;
         const utt = new SpeechSynthesisUtterance(cleanWord);
         utt.rate = 0.75;
+        utt.onend = function () { readItBtn.textContent = '🔊 Read it'; };
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utt);
+        readItBtn.textContent = '🔊 Playing...';
       });
     }
 
