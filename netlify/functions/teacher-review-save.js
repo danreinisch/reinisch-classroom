@@ -37,7 +37,7 @@ async function supaFetch(path, init = {}) {
 // Action: save_score
 // Upsert a submission_answer row with earned_points / teacher_note
 async function handleSaveScore(body, requestId) {
-  const { submissionId, itemId, earnedPoints, teacherNote, rationale } = body;
+  const { submissionId, itemId, earnedPoints, teacherNote, rationale, aiSuggestedScore } = body;
 
   if (!submissionId || typeof submissionId !== 'string') {
     return { statusCode: 400, error: 'submissionId is required' };
@@ -67,6 +67,7 @@ async function handleSaveScore(body, requestId) {
     // PATCH existing row — try with teacher_note first, fall back if column missing
     let payload = { earned_points: earnedPoints, teacher_note: teacherNote || '', scored_at };
     if (rationale) payload.rationale = rationale;
+    if (aiSuggestedScore != null) payload.ai_suggested_score = aiSuggestedScore;
     result = await supaFetch(
       `/rest/v1/submission_answers?submission_id=eq.${encodeURIComponent(submissionId)}&assignment_item_id=eq.${encodeURIComponent(itemId)}`,
       { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) }
@@ -74,7 +75,7 @@ async function handleSaveScore(body, requestId) {
     // Fallback: retry without teacher_note if column not found (PGRST204 or message mentions it)
     if (!result.ok) {
       const errMsg = typeof result.data === 'object' ? (result.data?.message || result.data?.code || '') : String(result.data || '');
-      if (result.data?.code === 'PGRST204' || errMsg.includes('teacher_note') || errMsg.includes('rationale')) {
+      if (result.data?.code === 'PGRST204' || errMsg.includes('teacher_note') || errMsg.includes('rationale') || errMsg.includes('ai_suggested_score')) {
         console.warn(`[teacher-review-save] [${requestId}] teacher_note column missing, retrying without it`);
         payload = { earned_points: earnedPoints, scored_at };
         result = await supaFetch(
@@ -87,13 +88,14 @@ async function handleSaveScore(body, requestId) {
     // POST new row — try with teacher_note first, fall back if column missing
     let payload = { submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, teacher_note: teacherNote || '', scored_at };
     if (rationale) payload.rationale = rationale;
+    if (aiSuggestedScore != null) payload.ai_suggested_score = aiSuggestedScore;
     result = await supaFetch(
       `/rest/v1/submission_answers`,
       { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) }
     );
     if (!result.ok) {
       const errMsg = typeof result.data === 'object' ? (result.data?.message || result.data?.code || '') : String(result.data || '');
-      if (result.data?.code === 'PGRST204' || errMsg.includes('teacher_note') || errMsg.includes('rationale')) {
+      if (result.data?.code === 'PGRST204' || errMsg.includes('teacher_note') || errMsg.includes('rationale') || errMsg.includes('ai_suggested_score')) {
         console.warn(`[teacher-review-save] [${requestId}] teacher_note column missing, retrying without it`);
         payload = { submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, scored_at };
         result = await supaFetch(

@@ -730,6 +730,18 @@
       color: #bbf7d0;
     }
 
+    /* Revert All Reviewed button — amber/warning tint to signal destructive batch action */
+    .rv-btn-revert-reviewed {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
+    }
+    .rv-btn-revert-reviewed:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.5);
+      color: #fde68a;
+    }
+
     /* Progress indicator for Auto-Grade batch operation */
     .rv-autograde-progress {
       position: fixed;
@@ -1002,6 +1014,10 @@
           <button class="rv-btn rv-btn-batch rv-btn-finalize-reviewed" id="rvBtnFinalizeAllReviewed" disabled style="display:none;" aria-label="Finalize all reviewed submissions">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
             ✅ Finalize All Reviewed (0)
+          </button>
+          <button class="rv-btn rv-btn-batch rv-btn-revert-reviewed" id="rvBtnRevertAllReviewed" disabled style="display:none;" aria-label="Revert all reviewed submissions back to Needs Review">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.59"></path></svg>
+            ↩ Revert All Reviewed (0)
           </button>
         </div>
 

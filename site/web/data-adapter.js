@@ -2360,17 +2360,18 @@ const remote = {
 
   /**
    * Update or create a submission answer with teacher scoring
-   * @param {Object} params - { submissionId, itemId, earnedPoints, teacherNote, rationale? }
+   * @param {Object} params - { submissionId, itemId, earnedPoints, teacherNote, rationale?, aiSuggestedScore? }
    * @returns {Object} Updated submission answer
    */
-  async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote, rationale }) {
+  async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote, rationale, aiSuggestedScore }) {
     const response = await fetch('/.netlify/functions/teacher-review-save', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'save_score',
-        submissionId, itemId, earnedPoints, teacherNote, rationale
+        submissionId, itemId, earnedPoints, teacherNote, rationale,
+        aiSuggestedScore: aiSuggestedScore != null ? aiSuggestedScore : null,
       })
     });
     if (!response.ok) {
