@@ -62,7 +62,7 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
 .q-input-single:disabled{opacity:.6}
 .tts-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:4px;margin-left:8px;opacity:.5;transition:opacity .2s,transform .1s;vertical-align:middle;display:inline-block;flex-shrink:0}
 .tts-btn:hover{opacity:1;transform:scale(1.1)}
-.tts-btn:active{transform:scale(.95)}
+.tts-btn:active{transform:scale(.95)}.tts-btn:focus-visible{outline:2px solid #14b8a6;border-radius:4px;opacity:1}.btn:focus-visible{outline:2px solid #14b8a6;outline-offset:2px}
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;z-index:100}
 .score-display{font-size:.85rem;color:#8b949e}
 .score-display span{color:#14b8a6;font-weight:700}
@@ -190,19 +190,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D1Q1','A')">
         <span>A. Bowl of Cereal</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Bowl of Cereal')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Bowl of Cereal')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q1','B')">
         <span>B. PB&amp;J Sandwich</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('PB and J Sandwich')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('PB and J Sandwich')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q1','C')">
         <span>C. Fruit Salad</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Fruit Salad')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Fruit Salad')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q1','D')">
         <span>D. Toast</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Toast')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Toast')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -215,19 +215,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D1Q2','A')">
         <span>A. 3</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('3')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('3')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q2','B')">
         <span>B. 4</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('4')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('4')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q2','C')">
         <span>C. 5</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('5')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('5')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q2','D')">
         <span>D. 6</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('6')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('6')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -240,19 +240,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D1Q3','A')">
         <span>A. Get a bowl from the cabinet</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Get a bowl from the cabinet')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Get a bowl from the cabinet')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q3','B')">
         <span>B. Eat with a spoon</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Eat with a spoon')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Eat with a spoon')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q3','C')">
         <span>C. Pour milk over the cereal</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Pour milk over the cereal')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Pour milk over the cereal')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q3','D')">
         <span>D. Slice the banana</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Slice the banana')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Slice the banana')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -265,19 +265,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D1Q4','A')">
         <span>A. 1 serving</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('1 serving')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('1 serving')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q4','B')">
         <span>B. 2 servings</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('2 servings')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('2 servings')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q4','C')">
         <span>C. 3 servings</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('3 servings')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('3 servings')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q4','D')">
         <span>D. 4 servings</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('4 servings')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('4 servings')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -290,19 +290,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D1Q5','A')">
         <span>A. Title</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Title')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Title')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q5','B')">
         <span>B. Serving Size</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Serving Size')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Serving Size')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q5','C')">
         <span>C. Ingredients</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Ingredients')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Ingredients')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q5','D')">
         <span>D. Steps</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Steps')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Steps')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -315,19 +315,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D1Q6','A')">
         <span>A. Bread</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Bread')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Bread')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q6','B')">
         <span>B. Peanut butter</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Peanut butter')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Peanut butter')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q6','C')">
         <span>C. Honey</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Honey')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Honey')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D1Q6','D')">
         <span>D. Jelly</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Jelly')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Jelly')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -383,19 +383,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D2Q1','A')">
         <span>A. Someone is eating soup</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone is eating soup')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Someone is eating soup')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q1','B')">
         <span>B. A person is making scrambled eggs</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('A person is making scrambled eggs')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('A person is making scrambled eggs')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q1','C')">
         <span>C. A person is pouring cereal</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('A person is pouring cereal')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('A person is pouring cereal')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q1','D')">
         <span>D. Someone is washing dishes</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone is washing dishes')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Someone is washing dishes')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -408,19 +408,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D2Q2','A')">
         <span>A. Making a sandwich</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Making a sandwich')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Making a sandwich')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q2','B')">
         <span>B. Drinking milk</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Drinking milk')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Drinking milk')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q2','C')">
         <span>C. Pouring milk over cereal</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Pouring milk over cereal')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Pouring milk over cereal')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q2','D')">
         <span>D. Cleaning a bowl</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Cleaning a bowl')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Cleaning a bowl')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -433,19 +433,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D2Q3','A')">
         <span>A. A student is throwing away a box</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is throwing away a box')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('A student is throwing away a box')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q3','B')">
         <span>B. A student is opening a juice box and adding a straw</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is opening a juice box and adding a straw')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('A student is opening a juice box and adding a straw')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q3','C')">
         <span>C. A student is making coffee</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is making coffee')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('A student is making coffee')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D2Q3','D')">
         <span>D. A student is refilling a water bottle</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is refilling a water bottle')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('A student is refilling a water bottle')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -531,19 +531,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D3Q1','A')">
         <span>A. The stove was turned off</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('The stove was turned off')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('The stove was turned off')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q1','B')">
         <span>B. The water was left on too long with the heat too high</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('The water was left on too long with the heat too high')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('The water was left on too long with the heat too high')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q1','C')">
         <span>C. Someone added too much ice</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone added too much ice')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Someone added too much ice')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q1','D')">
         <span>D. The lid fell off</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('The lid fell off')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('The lid fell off')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -556,19 +556,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D3Q2','A')">
         <span>A. Their hands are cold</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Their hands are cold')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Their hands are cold')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q2','B')">
         <span>B. They are playing a game</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('They are playing a game')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('They are playing a game')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q2','C')">
         <span>C. To protect their hands from the hot oven</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('To protect their hands from the hot oven')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('To protect their hands from the hot oven')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q2','D')">
         <span>D. The mitts look cool</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('The mitts look cool')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('The mitts look cool')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -581,19 +581,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D3Q3','A')">
         <span>A. Someone put it in the freezer</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone put it in the freezer')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Someone put it in the freezer')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q3','B')">
         <span>B. It was left out at room temperature</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('It was left out at room temperature')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('It was left out at room temperature')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q3','C')">
         <span>C. Cold air is blowing on it</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Cold air is blowing on it')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Cold air is blowing on it')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D3Q3','D')">
         <span>D. Someone added salt to it</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone added salt to it')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Someone added salt to it')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -673,19 +673,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D4Q1','A')">
         <span>A. Take the toast out</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Take the toast out')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Take the toast out')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q1','B')">
         <span>B. Spread butter</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Spread butter')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Spread butter')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q1','C')">
         <span>C. Put a slice of bread in the toaster</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put a slice of bread in the toaster')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Put a slice of bread in the toaster')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q1','D')">
         <span>D. Push down the lever</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Push down the lever')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Push down the lever')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -698,19 +698,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D4Q2','A')">
         <span>A. Spread butter</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Spread butter')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Spread butter')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q2','B')">
         <span>B. Wait for the toast to pop up</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Wait for the toast to pop up')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Wait for the toast to pop up')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q2','C')">
         <span>C. Put bread in the toaster</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put bread in the toaster')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Put bread in the toaster')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q2','D')">
         <span>D. Put it on a plate</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put it on a plate')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Put it on a plate')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -723,19 +723,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D4Q3','A')">
         <span>A. Take the toast out</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Take the toast out')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Take the toast out')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q3','B')">
         <span>B. Push the lever</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Push the lever')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Push the lever')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q3','C')">
         <span>C. Put bread in the toaster</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put bread in the toaster')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Put bread in the toaster')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q3','D')">
         <span>D. Spread butter on the toast</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Spread butter on the toast')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Spread butter on the toast')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -748,19 +748,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height
     <div class="options-group">
       <button class="opt-btn" onclick="selectOpt(this,'D4Q4','A')">
         <span>A. It makes cooking faster</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('It makes cooking faster')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('It makes cooking faster')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q4','B')">
         <span>B. So the food turns out right and is safe to eat</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('So the food turns out right and is safe to eat')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('So the food turns out right and is safe to eat')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q4','C')">
         <span>C. To use more ingredients</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('To use more ingredients')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('To use more ingredients')">&#128266;</span>
       </button>
       <button class="opt-btn" onclick="selectOpt(this,'D4Q4','D')">
         <span>D. Because the recipe says so</span>
-        <button class="tts-btn" onclick="event.stopPropagation();speakText('Because the recipe says so')">&#128266;</button>
+        <span role="button" tabindex="0" class="tts-btn" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();" onclick="event.stopPropagation();speakText('Because the recipe says so')">&#128266;</span>
       </button>
     </div>
     <div class="q-feedback"></div>
@@ -959,7 +959,8 @@ function confirmSubmit() {
   status.style.opacity = '1';
 }
 
-setInterval(autosave, 60000);
+var AUTOSAVE_INTERVAL_MS = 60000;
+setInterval(autosave, AUTOSAVE_INTERVAL_MS);
 </script>
 </body>
 </html>
