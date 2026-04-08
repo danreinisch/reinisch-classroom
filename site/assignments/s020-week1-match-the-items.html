@@ -551,28 +551,12 @@ function switchDay(dayId, tabEl) {
 
 // ===== CATEGORY BUTTONS (Days 1-2) =====
 document.querySelectorAll('.category-group').forEach(function(group) {
-  var correctAnswer = group.dataset.correct;
-  var card = group.closest('.q-card');
-  var fb = card.querySelector('.q-feedback');
   group.querySelectorAll('.cat-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      if (card.classList.contains('correct')) return;
       group.querySelectorAll('.cat-btn').forEach(function(b) {
-        b.classList.remove('selected', 'is-correct', 'is-incorrect', 'reveal-answer');
+        b.classList.remove('selected');
       });
       btn.classList.add('selected');
-      var isCorrect = btn.textContent.trim() === correctAnswer;
-      btn.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
-      card.classList.remove('correct', 'incorrect');
-      card.classList.add(isCorrect ? 'correct' : 'incorrect');
-      fb.textContent = isCorrect
-        ? '✓ Correct! It belongs in the ' + correctAnswer + '.'
-        : '✗ Not quite — it belongs in the ' + correctAnswer + '.';
-      if (!isCorrect) {
-        group.querySelectorAll('.cat-btn').forEach(function(b) {
-          if (b.textContent.trim() === correctAnswer) { b.classList.add('reveal-answer'); }
-        });
-      }
       updateAnsweredCount();
     });
   });
@@ -731,28 +715,17 @@ function setupTouchDrag(shelfEl, onDropCallback) {
       if (DAY3_ITEMS[i].id === itemId) { item = DAY3_ITEMS[i]; break; }
     }
     if (!item) return;
-    if (item.correct) {
-      var chip = makeChip(item, (function(id) {
-        return function() {
-          var sc = shelfEl.querySelector('[data-item-id="' + id + '"]');
-          if (sc) { sc.style.display = ''; }
-          feedbackEl.textContent = '';
-          updateScore();
-        };
-      }(itemId)));
-      var shelfCard = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
-      if (shelfCard) { shelfCard.style.display = 'none'; }
-      dropZoneEl.appendChild(chip);
-      feedbackEl.textContent = '';
-      updateScore();
-    } else {
-      feedbackEl.textContent = '✗ ' + item.label + " doesn't belong in the supply bag!";
-      var sc = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
-      if (sc) {
-        sc.classList.add('wrong-bounce');
-        setTimeout(function() { sc.classList.remove('wrong-bounce'); }, 600);
-      }
-    }
+    var chip = makeChip(item, (function(id) {
+      return function() {
+        var sc = shelfEl.querySelector('[data-item-id="' + id + '"]');
+        if (sc) { sc.style.display = ''; }
+        updateScore();
+      };
+    }(itemId)));
+    var shelfCard = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
+    if (shelfCard) { shelfCard.style.display = 'none'; }
+    dropZoneEl.appendChild(chip);
+    updateScore();
   }
   dropZoneEl.addEventListener('dragover', function(e) {
     e.preventDefault();
@@ -796,29 +769,18 @@ function setupTouchDrag(shelfEl, onDropCallback) {
       if (DAY4_ITEMS[i].id === itemId) { item = DAY4_ITEMS[i]; break; }
     }
     if (!item) return;
-    if (item.zone === zoneName) {
-      var chipsEl = document.getElementById('chips-' + zoneName);
-      var chip = makeChip(item, (function(id) {
-        return function() {
-          var sc = shelfEl.querySelector('[data-item-id="' + id + '"]');
-          if (sc) { sc.style.display = ''; }
-          feedbackEl.textContent = '';
-          updateScore();
-        };
-      }(itemId)));
-      var shelfCard = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
-      if (shelfCard) { shelfCard.style.display = 'none'; }
-      chipsEl.appendChild(chip);
-      feedbackEl.textContent = '';
-      updateScore();
-    } else {
-      feedbackEl.textContent = '✗ ' + item.label + " doesn't belong in the " + zoneName + '!';
-      var sc = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
-      if (sc) {
-        sc.classList.add('wrong-bounce');
-        setTimeout(function() { sc.classList.remove('wrong-bounce'); }, 600);
-      }
-    }
+    var chipsEl = document.getElementById('chips-' + zoneName);
+    var chip = makeChip(item, (function(id) {
+      return function() {
+        var sc = shelfEl.querySelector('[data-item-id="' + id + '"]');
+        if (sc) { sc.style.display = ''; }
+        updateScore();
+      };
+    }(itemId)));
+    var shelfCard = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
+    if (shelfCard) { shelfCard.style.display = 'none'; }
+    chipsEl.appendChild(chip);
+    updateScore();
   }
   document.querySelectorAll('#zones-grid-d4 .zone-card').forEach(function(zoneEl) {
     zoneEl.addEventListener('dragover', function(e) {
