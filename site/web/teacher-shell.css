@@ -95,21 +95,6 @@
 }
 .tc-icon{width:28px;display:inline-flex;justify-content:center;flex-shrink:0}
 
-/* Section divider before utility/data pages */
-.tc-nav a[data-href="/teacher/data/"]{
-  margin-top:8px;
-  position:relative;
-}
-.tc-nav a[data-href="/teacher/data/"]::before{
-  content:'';
-  position:absolute;
-  top:-7px;
-  left:6px;
-  right:6px;
-  height:1px;
-  background:rgba(255,255,255,.10);
-  pointer-events:none;
-}
 
 .tc-main{
   flex:1;
@@ -141,8 +126,6 @@ html.tc-collapsed .tc-sidebar{width:var(--tc-rail-w)}
 html.tc-collapsed .tc-label{display:none}
 html.tc-collapsed .tc-nav a{justify-content:center;border-left-color:transparent}
 html.tc-collapsed .tc-nav a:hover{transform:none}
-html.tc-collapsed .tc-nav a[data-href="/teacher/data/"]{margin-top:8px}
-html.tc-collapsed .tc-nav a[data-href="/teacher/data/"]::before{display:none}
 
 
 /* SAFETY: hide stray file inputs */
