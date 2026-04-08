@@ -3729,6 +3729,28 @@
   // ============================================================================
   // Book Reader Panel
   // ============================================================================
+
+  /**
+   * Returns the stored boolean for a Reading Helper feature toggle.
+   * Keys are stored as 'rc_book_helper_<key>' in localStorage.
+   */
+  function getBookHelper(key) {
+    try {
+      return localStorage.getItem('rc_book_helper_' + key) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Saves a Reading Helper feature toggle state to localStorage.
+   */
+  function setBookHelper(key, value) {
+    try {
+      localStorage.setItem('rc_book_helper_' + key, value ? 'true' : 'false');
+    } catch (e) { /* ignore */ }
+  }
+
   const DEFAULT_TTS_RATE = 0.92;
   let bookReaderState = null;
   let bookPanelEscapeHandler = null;
@@ -4034,6 +4056,10 @@
           <div class="st-book-bookmarks-panel" id="bookBookmarksPanel" style="display:none;"></div>
         </div>
         ${hasGlossary ? `<button class="st-book-nav-btn" id="bookGlossaryBtn" title="Glossary" style="padding:8px 10px;">📚 Glossary</button>` : ''}
+        <div style="position:relative;">
+          <button class="st-book-nav-btn" id="bookReadingHelperBtn" title="Reading Helper settings" style="padding:8px 10px;">🛟 Reading Helper</button>
+          <div class="st-reading-helper-panel" id="bookReadingHelperPanel" style="display:none;"></div>
+        </div>
         <div class="st-book-tts-wrapper" style="position:relative;display:flex;align-items:center;gap:6px;">
           <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
           <button class="st-book-nav-btn st-book-tts-settings-btn" id="bookTtsSettingsBtn" title="TTS settings" style="padding:8px 10px;">⚙️</button>
@@ -4177,6 +4203,26 @@
       document.addEventListener('click', function hideTtsSettings(e) {
         if (!settingsPopover.contains(e.target) && e.target !== settingsBtn) {
           settingsPopover.style.display = 'none';
+        }
+      });
+    }
+
+    // Reading Helper panel
+    const readingHelperBtn = panel.querySelector('#bookReadingHelperBtn');
+    const readingHelperPanel = panel.querySelector('#bookReadingHelperPanel');
+    if (readingHelperBtn && readingHelperPanel) {
+      readingHelperBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = readingHelperPanel.style.display !== 'none';
+        if (isOpen) {
+          hideReadingHelperPanel(readingHelperPanel);
+        } else {
+          showReadingHelperPanel(readingHelperPanel);
+        }
+      });
+      document.addEventListener('click', function hideHelperOnOutsideClick(e) {
+        if (!readingHelperPanel.contains(e.target) && e.target !== readingHelperBtn) {
+          hideReadingHelperPanel(readingHelperPanel);
         }
       });
     }
@@ -4369,6 +4415,72 @@
     stopBookTts();
     state.currentPage = newPage;
     renderBookPage();
+  }
+
+  // Reading Helper panel feature definitions
+  const BOOK_HELPER_FEATURES = [
+    { key: 'tap_to_hear',      label: 'Tap-to-Hear Words',     desc: 'Tap any word to hear it read aloud' },
+    { key: 'sentence_mode',    label: 'Sentence Mode',          desc: 'Read one sentence at a time' },
+    { key: 'vocab_preview',    label: 'Vocabulary Preview',     desc: 'Show key words before each chapter' },
+    { key: 'comprehension',    label: 'Comprehension Check',    desc: 'Quick questions at chapter ends' },
+    { key: 'word_tracker',     label: 'Word Tracker',           desc: 'Track words I\'ve looked up' },
+    { key: 'reading_timer',    label: 'Reading Timer',          desc: 'Show how long I\'ve been reading' },
+    { key: 'replay',           label: 'Replay Button',          desc: 'Add a replay button to Read Aloud' }
+  ];
+
+  /**
+   * Renders and shows the Reading Helper settings panel.
+   */
+  function showReadingHelperPanel(container) {
+    const rows = BOOK_HELPER_FEATURES.map(function (f) {
+      const checked = getBookHelper(f.key);
+      return `<div class="st-rh-row">
+        <div class="st-rh-row-text">
+          <span class="st-rh-row-label">${escapeHtml(f.label)}</span>
+          <span class="st-rh-row-desc">${escapeHtml(f.desc)}</span>
+        </div>
+        <label class="st-rh-toggle" title="${escapeHtml(f.label)}">
+          <input type="checkbox" class="st-rh-toggle-input" data-helper-key="${escapeHtml(f.key)}"${checked ? ' checked' : ''}>
+          <span class="st-rh-toggle-slider"></span>
+        </label>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="st-rh-header">
+        <span class="st-rh-title">📖 Reading Helper</span>
+        <button class="st-rh-close" id="readingHelperCloseBtn" title="Close" aria-label="Close Reading Helper">✕</button>
+      </div>
+      <div class="st-rh-body">
+        ${rows}
+        <!-- Display Settings coming soon -->
+      </div>
+    `;
+
+    container.style.display = 'block';
+
+    // Wire toggle changes
+    container.querySelectorAll('.st-rh-toggle-input').forEach(function (input) {
+      input.addEventListener('change', function () {
+        setBookHelper(input.getAttribute('data-helper-key'), input.checked);
+      });
+    });
+
+    // Close button
+    const closeBtn = container.querySelector('#readingHelperCloseBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        hideReadingHelperPanel(container);
+      });
+    }
+  }
+
+  /**
+   * Hides the Reading Helper settings panel.
+   */
+  function hideReadingHelperPanel(container) {
+    if (container) container.style.display = 'none';
   }
 
   function populateTtsSettingsPopover(container) {
