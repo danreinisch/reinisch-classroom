@@ -4430,7 +4430,7 @@
     { key: 'sentence_mode',    label: 'Sentence Mode',          desc: 'Read one sentence at a time' },
     { key: 'vocab_preview',    label: 'Vocabulary Preview',     desc: 'Show key words before each chapter' },
     { key: 'comprehension',    label: 'Comprehension Check',    desc: 'Quick questions at chapter ends' },
-    { key: 'word_tracker',     label: 'Word Tracker',           desc: 'Track words I\'ve looked up' },
+    { key: 'word_tracker',     label: 'Word Tracker',           desc: 'Track words I\u2019ve looked up' },
     { key: 'reading_timer',    label: 'Reading Timer',          desc: 'Show how long I\'ve been reading' },
     { key: 'replay',           label: 'Replay Button',          desc: 'Add a replay button to Read Aloud' }
   ];
