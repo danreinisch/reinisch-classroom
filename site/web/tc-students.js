@@ -9237,6 +9237,17 @@
   let quickEntryOpen = false;
 
   /**
+   * Close the Quick Entry panel without toggling (used after a successful save).
+   */
+  function closeQuickEntryPanel() {
+    const panel = document.getElementById('stQuickEntryPanel');
+    const btn   = document.getElementById('stQuickEntry');
+    quickEntryOpen = false;
+    if (panel) panel.classList.remove('open');
+    if (btn)   btn.classList.remove('active');
+  }
+
+  /**
    * Toggle the Quick Entry panel open/closed.
    * Builds the panel DOM on first open.
    */
@@ -9516,6 +9527,17 @@
       tdLast.appendChild(lastSpan);
       tr.appendChild(tdLast);
 
+      // Checkbox (created first so it can be referenced in the valueInput event listener)
+      const tdCheck = document.createElement('td');
+      const cbInput = document.createElement('input');
+      cbInput.type = 'checkbox';
+      cbInput.className = 'st-qe-check';
+      cbInput.setAttribute('aria-label', `Include ${goal.code}`);
+      cbInput.dataset.goalCode    = goal.code;
+      cbInput.dataset.studentCode = goal.student_code;
+      cbInput.addEventListener('change', () => updateQuickEntryCount());
+      tdCheck.appendChild(cbInput);
+
       // Value input
       const tdValue = document.createElement('td');
       const valueInput = document.createElement('input');
@@ -9555,17 +9577,6 @@
 
       tdValue.appendChild(valueInput);
       tr.appendChild(tdValue);
-
-      // Checkbox
-      const tdCheck = document.createElement('td');
-      const cbInput = document.createElement('input');
-      cbInput.type = 'checkbox';
-      cbInput.className = 'st-qe-check';
-      cbInput.setAttribute('aria-label', `Include ${goal.code}`);
-      cbInput.dataset.goalCode    = goal.code;
-      cbInput.dataset.studentCode = goal.student_code;
-      cbInput.addEventListener('change', () => updateQuickEntryCount());
-      tdCheck.appendChild(cbInput);
       tr.appendChild(tdCheck);
 
       tbody.appendChild(tr);
@@ -9708,9 +9719,7 @@
     updateQuickEntryCount();
 
     if (closeAfter && failed === 0) {
-      // Close the panel
-      quickEntryOpen = true; // toggleQuickEntryPanel will flip it to false
-      toggleQuickEntryPanel();
+      closeQuickEntryPanel();
     } else {
       // Re-enable save buttons
       if (saveBtn)      saveBtn.disabled      = false;
