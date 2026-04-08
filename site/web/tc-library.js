@@ -266,7 +266,12 @@
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
           presentationsSearch: filters.reserve.presentationsSearch,
-          viewMode: filters.reserve.viewMode
+          viewMode: filters.reserve.viewMode,
+          selectedTags: filters.reserve.selectedTags
+        },
+        active: {
+          viewMode: filters.active.viewMode,
+          selectedTags: filters.active.selectedTags
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -346,6 +351,18 @@
         if (typeof data.reserve.viewMode === 'string') {
           filters.reserve.viewMode = data.reserve.viewMode;
         }
+        if (Array.isArray(data.reserve.selectedTags)) {
+          filters.reserve.selectedTags = data.reserve.selectedTags.filter(t => typeof t === 'string');
+        }
+      }
+
+      if (data.active && typeof data.active === 'object') {
+        if (typeof data.active.viewMode === 'string') {
+          filters.active.viewMode = data.active.viewMode;
+        }
+        if (Array.isArray(data.active.selectedTags)) {
+          filters.active.selectedTags = data.active.selectedTags.filter(t => typeof t === 'string');
+        }
       }
 
       if (Array.isArray(data.collapsedLanes)) {
@@ -413,7 +430,12 @@
     reserve: {
       presentationsExpanded: false,
       presentationsSearch: "",
-      viewMode: "flat"
+      viewMode: "flat",
+      selectedTags: []
+    },
+    active: {
+      viewMode: "flat",
+      selectedTags: []
     }
   };
 
@@ -2194,6 +2216,19 @@
       card.appendChild(seriesEl);
     }
 
+    const cardTags = Array.isArray(assignment.tags) ? assignment.tags.filter(Boolean) : [];
+    if (cardTags.length > 0) {
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;';
+      cardTags.forEach(tag => {
+        const tagPill = document.createElement('span');
+        tagPill.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.50); padding:2px 8px; border-radius:10px; font-size:11px;';
+        tagPill.textContent = tag;
+        tagRow.appendChild(tagPill);
+      });
+      card.appendChild(tagRow);
+    }
+
     const dueDates = instances.map(i => i.due_at).filter(Boolean);
     const nearestDue = dueDates.length > 0
       ? new Date(Math.min(...dueDates.map(d => new Date(d).getTime())))
@@ -3796,7 +3831,15 @@
       container.innerHTML = '';
 
       const filtered = filterAssignments();
-      const reserveList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      let reserveList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+
+      // Apply tag filter
+      if (filters.reserve.selectedTags.length > 0) {
+        reserveList = reserveList.filter(a => {
+          const aTags = Array.isArray(a.tags) ? a.tags : [];
+          return filters.reserve.selectedTags.some(t => aTags.includes(t));
+        });
+      }
 
       // Filter bar
       const filterBar = document.createElement('div');
@@ -3907,6 +3950,44 @@
       viewToggleWrap.appendChild(byUnitViewBtn);
       viewToggleRow.appendChild(viewToggleWrap);
       container.appendChild(viewToggleRow);
+
+      // Tag filter chips (scan pre-tag-filtered list for all available tags)
+      const allReserveForTags = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      const reserveTagSet = new Set();
+      allReserveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) reserveTagSet.add(t); }); });
+      if (reserveTagSet.size > 0) {
+        const tagFilterRow = document.createElement('div');
+        tagFilterRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;';
+        const allTagsBtn = document.createElement('button');
+        allTagsBtn.className = 'tc-btn' + (filters.reserve.selectedTags.length === 0 ? ' active' : '');
+        allTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+        allTagsBtn.textContent = 'All Tags';
+        allTagsBtn.addEventListener('click', () => {
+          filters.reserve.selectedTags = [];
+          saveFilters();
+          renderReserveTab();
+        });
+        tagFilterRow.appendChild(allTagsBtn);
+        [...reserveTagSet].sort().forEach(tag => {
+          const tagBtn = document.createElement('button');
+          const isActive = filters.reserve.selectedTags.includes(tag);
+          tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
+          tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+          tagBtn.textContent = tag;
+          tagBtn.addEventListener('click', () => {
+            const idx = filters.reserve.selectedTags.indexOf(tag);
+            if (idx === -1) {
+              filters.reserve.selectedTags = [...filters.reserve.selectedTags, tag];
+            } else {
+              filters.reserve.selectedTags = filters.reserve.selectedTags.filter(t => t !== tag);
+            }
+            saveFilters();
+            renderReserveTab();
+          });
+          tagFilterRow.appendChild(tagBtn);
+        });
+        container.appendChild(tagFilterRow);
+      }
 
       // Count label
       const countEl = document.createElement('div');
@@ -4191,6 +4272,253 @@
     document.addEventListener('keydown', onMissingWorkKeyDown);
   }
 
+  /**
+   * Renders active assignments grouped by Section → Unit, matching the pattern
+   * of renderReserveByUnit(). Uses renderActiveCard() for each card.
+   * @param {Array} assignments - Pre-filtered sorted active assignments.
+   * @returns {HTMLElement}
+   */
+  function renderActiveByUnit(assignments) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-bottom:24px;';
+
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:32px 24px; text-align:center; color:rgba(255,255,255,.50);';
+      empty.textContent = 'No active assignments';
+      wrapper.appendChild(empty);
+      return wrapper;
+    }
+
+    // Group assignments: section → unit → assignments[]
+    const sectionGroups = new Map();
+    const uncategorized = [];
+
+    assignments.forEach(a => {
+      const uid = a.unit_id;
+      if (!uid) { uncategorized.push(a); return; }
+      const info = getUnitInfo(uid);
+      if (!info) { uncategorized.push(a); return; }
+      const { sectionName, sectionId, unitName } = info;
+      if (!sectionGroups.has(sectionId)) {
+        sectionGroups.set(sectionId, { sectionName, units: new Map() });
+      }
+      const sg = sectionGroups.get(sectionId);
+      if (!sg.units.has(uid)) sg.units.set(uid, { unitName, items: [] });
+      sg.units.get(uid).items.push(a);
+    });
+
+    // Build ordered section list from lessonsData
+    const orderedSectionIds = [];
+    if (lessonsData && Array.isArray(lessonsData.sections)) {
+      lessonsData.sections.forEach(sec => {
+        const sid = sec.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+        if (sectionGroups.has(sid)) orderedSectionIds.push(sid);
+      });
+    }
+    sectionGroups.forEach((_, sid) => {
+      if (!orderedSectionIds.includes(sid)) orderedSectionIds.push(sid);
+    });
+
+    const renderActiveSectionAccordion = (sectionId, sectionData) => {
+      const secExpanded = isHierarchyExpanded('active-section-' + sectionId, true);
+      const secWrapper = document.createElement('div');
+      secWrapper.style.cssText = 'margin-bottom:16px;';
+
+      const secHeader = document.createElement('div');
+      secHeader.style.cssText = [
+        'display:flex; align-items:center; gap:10px;',
+        'padding:12px 16px;',
+        'background:rgba(255,255,255,.06);',
+        'border:1px solid rgba(255,255,255,.12);',
+        'border-radius:' + (secExpanded ? '10px 10px 0 0' : '10px') + ';',
+        'cursor:pointer; user-select:none;'
+      ].join('');
+      secHeader.setAttribute('aria-expanded', String(secExpanded));
+
+      const secToggleIcon = document.createElement('span');
+      secToggleIcon.style.cssText = 'font-size:13px; transition:transform .2s ease; display:inline-block; transform:rotate(' + (secExpanded ? '0deg' : '-90deg') + ');';
+      secToggleIcon.textContent = '\u25be';
+
+      const secTitle = document.createElement('span');
+      secTitle.style.cssText = 'font-size:15px; font-weight:700; letter-spacing:.03em;';
+      secTitle.textContent = sectionData.sectionName;
+
+      const totalCount = [...sectionData.units.values()].reduce((n, u) => n + u.items.length, 0);
+      const secBadge = document.createElement('span');
+      secBadge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 9px; font-size:12px;';
+      secBadge.textContent = totalCount + ' active';
+
+      secHeader.appendChild(secToggleIcon);
+      secHeader.appendChild(createIcon('folder', 14));
+      secHeader.appendChild(secTitle);
+      secHeader.appendChild(secBadge);
+
+      const secContent = document.createElement('div');
+      secContent.style.cssText = [
+        'display:' + (secExpanded ? 'block' : 'none') + ';',
+        'border:1px solid rgba(255,255,255,.12); border-top:none;',
+        'border-radius:0 0 10px 10px; padding:12px;',
+        'background:rgba(255,255,255,.02);'
+      ].join('');
+
+      if (secExpanded) {
+        const orderedUnitIds = [];
+        if (lessonsData && Array.isArray(lessonsData.sections)) {
+          lessonsData.sections.forEach(sec => {
+            const sid = sec.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+            if (sid === sectionId) {
+              (sec.units || []).forEach(u => {
+                if (sectionData.units.has(u.id)) orderedUnitIds.push(u.id);
+              });
+            }
+          });
+        }
+        sectionData.units.forEach((_, uid) => {
+          if (!orderedUnitIds.includes(uid)) orderedUnitIds.push(uid);
+        });
+
+        orderedUnitIds.forEach(uid => {
+          const unitData = sectionData.units.get(uid);
+          const unitExpanded = isHierarchyExpanded('active-unit-' + uid, true);
+
+          const unitWrapper = document.createElement('div');
+          unitWrapper.style.cssText = 'margin-bottom:10px;';
+
+          const unitHeader = document.createElement('div');
+          unitHeader.style.cssText = [
+            'display:flex; align-items:center; gap:8px; padding:8px 12px;',
+            'background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);',
+            'border-radius:' + (unitExpanded ? '8px 8px 0 0' : '8px') + ';',
+            'cursor:pointer; user-select:none;'
+          ].join('');
+          unitHeader.setAttribute('aria-expanded', String(unitExpanded));
+
+          const unitToggle = document.createElement('span');
+          unitToggle.style.cssText = 'font-size:12px; transition:transform .2s; display:inline-block; transform:rotate(' + (unitExpanded ? '0deg' : '-90deg') + ');';
+          unitToggle.textContent = '\u25be';
+
+          const unitTitle = document.createElement('span');
+          unitTitle.style.cssText = 'font-size:14px; font-weight:600;';
+          unitTitle.textContent = unitData.unitName;
+
+          const unitBadge = document.createElement('span');
+          unitBadge.style.cssText = 'background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.22); border-radius:10px; padding:1px 8px; font-size:12px; color:#34d399;';
+          unitBadge.textContent = unitData.items.length + ' active';
+
+          unitHeader.appendChild(unitToggle);
+          unitHeader.appendChild(createIcon('refreshCw', 13));
+          unitHeader.appendChild(unitTitle);
+          unitHeader.appendChild(unitBadge);
+
+          const unitContent = document.createElement('div');
+          unitContent.style.cssText = [
+            'display:' + (unitExpanded ? 'block' : 'none') + ';',
+            'border:1px solid rgba(255,255,255,.08); border-top:none;',
+            'border-radius:0 0 8px 8px; padding:10px;',
+            'background:rgba(0,0,0,.1);'
+          ].join('');
+
+          if (unitExpanded) {
+            const unitGrid = document.createElement('div');
+            unitGrid.className = 'tc-lib-grid';
+            unitGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
+            unitData.items.forEach(a => unitGrid.appendChild(renderActiveCard(a)));
+            unitContent.appendChild(unitGrid);
+          }
+
+          unitHeader.addEventListener('click', () => {
+            hierarchyExpandState.set('active-unit-' + uid, !unitExpanded);
+            saveFilters();
+            renderActiveTab();
+          });
+
+          unitWrapper.appendChild(unitHeader);
+          unitWrapper.appendChild(unitContent);
+          secContent.appendChild(unitWrapper);
+        });
+      }
+
+      secHeader.addEventListener('click', () => {
+        hierarchyExpandState.set('active-section-' + sectionId, !secExpanded);
+        saveFilters();
+        renderActiveTab();
+      });
+
+      secWrapper.appendChild(secHeader);
+      secWrapper.appendChild(secContent);
+      return secWrapper;
+    };
+
+    orderedSectionIds.forEach(sid => {
+      wrapper.appendChild(renderActiveSectionAccordion(sid, sectionGroups.get(sid)));
+    });
+
+    // Uncategorized section
+    const uncatExpanded = isHierarchyExpanded('active-section-uncategorized', true);
+    const uncatWrapper = document.createElement('div');
+    uncatWrapper.style.cssText = 'margin-bottom:16px;';
+
+    const uncatHeader = document.createElement('div');
+    uncatHeader.style.cssText = [
+      'display:flex; align-items:center; gap:10px; padding:12px 16px;',
+      'background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);',
+      'border-radius:' + (uncatExpanded ? '10px 10px 0 0' : '10px') + ';',
+      'cursor:pointer; user-select:none;'
+    ].join('');
+    uncatHeader.setAttribute('aria-expanded', String(uncatExpanded));
+
+    const uncatToggle = document.createElement('span');
+    uncatToggle.style.cssText = 'font-size:13px; transition:transform .2s; display:inline-block; transform:rotate(' + (uncatExpanded ? '0deg' : '-90deg') + ');';
+    uncatToggle.textContent = '\u25be';
+
+    const uncatTitle = document.createElement('span');
+    uncatTitle.style.cssText = 'font-size:15px; font-weight:700; letter-spacing:.03em; color:rgba(255,255,255,.65);';
+    uncatTitle.textContent = 'UNCATEGORIZED';
+
+    const uncatBadge = document.createElement('span');
+    uncatBadge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 9px; font-size:12px;';
+    uncatBadge.textContent = uncategorized.length + ' active';
+
+    uncatHeader.appendChild(uncatToggle);
+    uncatHeader.appendChild(createIcon('refreshCw', 14));
+    uncatHeader.appendChild(uncatTitle);
+    uncatHeader.appendChild(uncatBadge);
+
+    const uncatContent = document.createElement('div');
+    uncatContent.style.cssText = [
+      'display:' + (uncatExpanded ? 'block' : 'none') + ';',
+      'border:1px solid rgba(255,255,255,.12); border-top:none;',
+      'border-radius:0 0 10px 10px; padding:12px;',
+      'background:rgba(255,255,255,.02);'
+    ].join('');
+
+    if (uncatExpanded && uncategorized.length > 0) {
+      const uncatGrid = document.createElement('div');
+      uncatGrid.className = 'tc-lib-grid';
+      uncatGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
+      uncategorized.forEach(a => uncatGrid.appendChild(renderActiveCard(a)));
+      uncatContent.appendChild(uncatGrid);
+    } else if (uncatExpanded) {
+      const none = document.createElement('div');
+      none.style.cssText = 'padding:16px; text-align:center; color:rgba(255,255,255,.40); font-size:13px;';
+      none.textContent = 'All active assignments are cataloged.';
+      uncatContent.appendChild(none);
+    }
+
+    uncatHeader.addEventListener('click', () => {
+      hierarchyExpandState.set('active-section-uncategorized', !uncatExpanded);
+      saveFilters();
+      renderActiveTab();
+    });
+
+    uncatWrapper.appendChild(uncatHeader);
+    uncatWrapper.appendChild(uncatContent);
+    wrapper.appendChild(uncatWrapper);
+
+    return wrapper;
+  }
+
   function renderActiveTab() {
     const container = $('activeTab');
     if (!container) return;
@@ -4198,7 +4526,15 @@
       container.innerHTML = '';
 
       const filtered = filterAssignments();
-      const activeList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+      let activeList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+
+      // Apply tag filter
+      if (filters.active.selectedTags.length > 0) {
+        activeList = activeList.filter(a => {
+          const aTags = Array.isArray(a.tags) ? a.tags : [];
+          return filters.active.selectedTags.some(t => aTags.includes(t));
+        });
+      }
 
       // Filter bar (class + search)
       const filterBar = document.createElement('div');
@@ -4241,6 +4577,85 @@
       filterBar.appendChild(missingWorkBtn);
 
       container.appendChild(filterBar);
+
+      // View toggle row
+      const activeViewToggleRow = document.createElement('div');
+      activeViewToggleRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
+      const activeViewToggleWrap = document.createElement('div');
+      activeViewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
+
+      const activeFlatViewBtn = document.createElement('button');
+      activeFlatViewBtn.className = 'tc-btn';
+      activeFlatViewBtn.setAttribute('aria-pressed', filters.active.viewMode === 'flat' ? 'true' : 'false');
+      activeFlatViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.active.viewMode === 'flat' ? 'background:rgba(96,165,250,.18);' : '');
+      activeFlatViewBtn.appendChild(createIcon('clipboard', 14));
+      activeFlatViewBtn.appendChild(document.createTextNode(' Flat List'));
+      activeFlatViewBtn.addEventListener('click', () => {
+        if (filters.active.viewMode !== 'flat') {
+          filters.active.viewMode = 'flat';
+          saveFilters();
+          renderActiveTab();
+        }
+      });
+
+      const activeByUnitViewBtn = document.createElement('button');
+      activeByUnitViewBtn.className = 'tc-btn';
+      activeByUnitViewBtn.setAttribute('aria-pressed', filters.active.viewMode === 'byUnit' ? 'true' : 'false');
+      activeByUnitViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.active.viewMode === 'byUnit' ? 'background:rgba(96,165,250,.18);' : '');
+      activeByUnitViewBtn.appendChild(createIcon('folderOpen', 14));
+      activeByUnitViewBtn.appendChild(document.createTextNode(' By Unit'));
+      activeByUnitViewBtn.addEventListener('click', () => {
+        if (filters.active.viewMode !== 'byUnit') {
+          filters.active.viewMode = 'byUnit';
+          saveFilters();
+          renderActiveTab();
+        }
+      });
+
+      activeViewToggleWrap.appendChild(activeFlatViewBtn);
+      activeViewToggleWrap.appendChild(activeByUnitViewBtn);
+      activeViewToggleRow.appendChild(activeViewToggleWrap);
+      container.appendChild(activeViewToggleRow);
+
+      // Tag filter chips (scan pre-tag-filtered list for all available tags)
+      const allActiveForTags = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+      const activeTagSet = new Set();
+      allActiveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) activeTagSet.add(t); }); });
+      if (activeTagSet.size > 0) {
+        const activeTagFilterRow = document.createElement('div');
+        activeTagFilterRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;';
+        const allActiveTagsBtn = document.createElement('button');
+        allActiveTagsBtn.className = 'tc-btn' + (filters.active.selectedTags.length === 0 ? ' active' : '');
+        allActiveTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+        allActiveTagsBtn.textContent = 'All Tags';
+        allActiveTagsBtn.addEventListener('click', () => {
+          filters.active.selectedTags = [];
+          saveFilters();
+          renderActiveTab();
+        });
+        activeTagFilterRow.appendChild(allActiveTagsBtn);
+        [...activeTagSet].sort().forEach(tag => {
+          const tagBtn = document.createElement('button');
+          const isActive = filters.active.selectedTags.includes(tag);
+          tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
+          tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+          tagBtn.textContent = tag;
+          tagBtn.addEventListener('click', () => {
+            const idx = filters.active.selectedTags.indexOf(tag);
+            if (idx === -1) {
+              filters.active.selectedTags = [...filters.active.selectedTags, tag];
+            } else {
+              filters.active.selectedTags = filters.active.selectedTags.filter(t => t !== tag);
+            }
+            saveFilters();
+            renderActiveTab();
+          });
+          activeTagFilterRow.appendChild(tagBtn);
+        });
+        container.appendChild(activeTagFilterRow);
+      }
 
       // Count / status row
       const countEl = document.createElement('div');
@@ -4372,112 +4787,117 @@
       container.appendChild(activeBulkRow);
       refreshActiveBulkControls();
 
-      // ── Week grouping ────────────────────────────────────────────────────────
-      const currentWeekLabel = getWeekLabel(new Date());
+      // ── Content: By Unit or Flat (week grouping) ──────────────────────────────
+      if (filters.active.viewMode === 'byUnit') {
+        container.appendChild(renderActiveByUnit(activeList));
+      } else {
+        // ── Week grouping ────────────────────────────────────────────────────────
+        const currentWeekLabel = getWeekLabel(new Date());
 
-      // Group assignments by week of their earliest instance assigned_at (or assignment created_at)
-      const weekMap = new Map(); // weekLabel → { assignments: [], mondayMs: number }
-      activeList.forEach(a => {
-        // Determine reference date: earliest instance assigned_at (or created_at), fallback to assignment created_at
-        const instDates = instancesData
-          .filter(i => i.assignment_id === a.id)
-          .map(i => i.assigned_at || i.created_at)
-          .filter(Boolean)
-          .map(d => new Date(d).getTime())
-          .filter(t => !isNaN(t));
-        const refDate = instDates.length > 0
-          ? new Date(Math.min(...instDates))
-          : (a.created_at ? new Date(a.created_at) : new Date());
-        const weekLabel = getWeekLabel(refDate);
+        // Group assignments by week of their earliest instance assigned_at (or assignment created_at)
+        const weekMap = new Map(); // weekLabel → { assignments: [], mondayMs: number }
+        activeList.forEach(a => {
+          // Determine reference date: earliest instance assigned_at (or created_at), fallback to assignment created_at
+          const instDates = instancesData
+            .filter(i => i.assignment_id === a.id)
+            .map(i => i.assigned_at || i.created_at)
+            .filter(Boolean)
+            .map(d => new Date(d).getTime())
+            .filter(t => !isNaN(t));
+          const refDate = instDates.length > 0
+            ? new Date(Math.min(...instDates))
+            : (a.created_at ? new Date(a.created_at) : new Date());
+          const weekLabel = getWeekLabel(refDate);
 
-        if (!weekMap.has(weekLabel)) {
-          // Compute Monday timestamp for sorting
-          const d = new Date(refDate);
-          const dow = d.getDay();
-          const offset = dow === 0 ? -6 : 1 - dow;
-          const monday = new Date(d);
-          monday.setDate(d.getDate() + offset);
-          monday.setHours(0, 0, 0, 0);
-          weekMap.set(weekLabel, { assignments: [], mondayMs: monday.getTime() });
-        }
-        weekMap.get(weekLabel).assignments.push(a);
-      });
+          if (!weekMap.has(weekLabel)) {
+            // Compute Monday timestamp for sorting
+            const d = new Date(refDate);
+            const dow = d.getDay();
+            const offset = dow === 0 ? -6 : 1 - dow;
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + offset);
+            monday.setHours(0, 0, 0, 0);
+            weekMap.set(weekLabel, { assignments: [], mondayMs: monday.getTime() });
+          }
+          weekMap.get(weekLabel).assignments.push(a);
+        });
 
-      // Sort weeks newest-first
-      const sortedWeeks = [...weekMap.entries()].sort((a, b) => b[1].mondayMs - a[1].mondayMs);
-      const weeksContainer = document.createElement('div');
-      weeksContainer.style.cssText = 'display:flex; flex-direction:column; gap:8px;';
+        // Sort weeks newest-first
+        const sortedWeeks = [...weekMap.entries()].sort((a, b) => b[1].mondayMs - a[1].mondayMs);
+        const weeksContainer = document.createElement('div');
+        weeksContainer.style.cssText = 'display:flex; flex-direction:column; gap:8px;';
 
-      sortedWeeks.forEach(([weekLabel, { assignments: weekAssignments }]) => {
-        const isCurrentWeek = weekLabel === currentWeekLabel;
-        const weekId = 'active-week-' + weekLabel.replace(/[^a-zA-Z0-9]/g, '_');
-        const weekExpanded = isHierarchyExpanded(weekId, isCurrentWeek);
+        sortedWeeks.forEach(([weekLabel, { assignments: weekAssignments }]) => {
+          const isCurrentWeek = weekLabel === currentWeekLabel;
+          const weekId = 'active-week-' + weekLabel.replace(/[^a-zA-Z0-9]/g, '_');
+          const weekExpanded = isHierarchyExpanded(weekId, isCurrentWeek);
 
-        const weekWrapper = document.createElement('div');
-        weekWrapper.style.cssText = 'margin-bottom:2px;';
+          const weekWrapper = document.createElement('div');
+          weekWrapper.style.cssText = 'margin-bottom:2px;';
 
-        const weekHeader = document.createElement('div');
-        weekHeader.className = 'tc-hier-node';
-        weekHeader.dataset.hierNode = weekId;
-        weekHeader.style.cssText = [
-          'display:flex; align-items:center; gap:8px;',
-          'padding:8px 14px;',
-          'background:rgba(255,255,255,.03);',
-          'border:1px solid rgba(255,255,255,.07);',
-          'border-radius:7px; cursor:pointer; user-select:none;',
-          'margin-bottom:' + (weekExpanded ? '6px' : '0') + ';'
-        ].join('');
+          const weekHeader = document.createElement('div');
+          weekHeader.className = 'tc-hier-node';
+          weekHeader.dataset.hierNode = weekId;
+          weekHeader.style.cssText = [
+            'display:flex; align-items:center; gap:8px;',
+            'padding:8px 14px;',
+            'background:rgba(255,255,255,.03);',
+            'border:1px solid rgba(255,255,255,.07);',
+            'border-radius:7px; cursor:pointer; user-select:none;',
+            'margin-bottom:' + (weekExpanded ? '6px' : '0') + ';'
+          ].join('');
 
-        const weekToggle = document.createElement('span');
-        weekToggle.style.cssText = 'font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(' + (weekExpanded ? '0deg' : '-90deg') + ');';
-        weekToggle.textContent = '\u25be';
+          const weekToggle = document.createElement('span');
+          weekToggle.style.cssText = 'font-size:11px; transition:transform .2s; display:inline-block; transform:rotate(' + (weekExpanded ? '0deg' : '-90deg') + ');';
+          weekToggle.textContent = '\u25be';
 
-        const weekIconWrap = document.createElement('span');
-        weekIconWrap.style.cssText = 'display:inline-flex; align-items:center; color:rgba(96,165,250,.70);';
-        weekIconWrap.appendChild(createIcon(weekExpanded ? 'folderOpen' : 'folder', 14));
+          const weekIconWrap = document.createElement('span');
+          weekIconWrap.style.cssText = 'display:inline-flex; align-items:center; color:rgba(96,165,250,.70);';
+          weekIconWrap.appendChild(createIcon(weekExpanded ? 'folderOpen' : 'folder', 14));
 
-        const weekTitle = document.createElement('span');
-        weekTitle.style.cssText = 'font-size:14px; font-weight:600; flex:1;';
-        weekTitle.textContent = weekLabel;
+          const weekTitle = document.createElement('span');
+          weekTitle.style.cssText = 'font-size:14px; font-weight:600; flex:1;';
+          weekTitle.textContent = weekLabel;
 
-        if (isCurrentWeek) {
-          const currentPill = document.createElement('span');
-          currentPill.style.cssText = 'background:rgba(52,211,153,.15); color:#34d399; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;';
-          currentPill.textContent = 'Current Week';
-          weekHeader.appendChild(weekToggle);
-          weekHeader.appendChild(weekIconWrap);
-          weekHeader.appendChild(weekTitle);
-          weekHeader.appendChild(currentPill);
-        } else {
-          weekHeader.appendChild(weekToggle);
-          weekHeader.appendChild(weekIconWrap);
-          weekHeader.appendChild(weekTitle);
-        }
+          if (isCurrentWeek) {
+            const currentPill = document.createElement('span');
+            currentPill.style.cssText = 'background:rgba(52,211,153,.15); color:#34d399; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;';
+            currentPill.textContent = 'Current Week';
+            weekHeader.appendChild(weekToggle);
+            weekHeader.appendChild(weekIconWrap);
+            weekHeader.appendChild(weekTitle);
+            weekHeader.appendChild(currentPill);
+          } else {
+            weekHeader.appendChild(weekToggle);
+            weekHeader.appendChild(weekIconWrap);
+            weekHeader.appendChild(weekTitle);
+          }
 
-        const weekBadge = document.createElement('span');
-        weekBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-left:4px;';
-        weekBadge.textContent = String(weekAssignments.length);
-        weekHeader.appendChild(weekBadge);
+          const weekBadge = document.createElement('span');
+          weekBadge.style.cssText = 'font-size:12px; color:rgba(255,255,255,.40); margin-left:4px;';
+          weekBadge.textContent = String(weekAssignments.length);
+          weekHeader.appendChild(weekBadge);
 
-        weekHeader.addEventListener('click', () => toggleHierarchy(weekId));
+          weekHeader.addEventListener('click', () => toggleHierarchy(weekId));
 
-        const weekContent = document.createElement('div');
-        weekContent.style.cssText = 'display:' + (weekExpanded ? 'block' : 'none') + ';';
+          const weekContent = document.createElement('div');
+          weekContent.style.cssText = 'display:' + (weekExpanded ? 'block' : 'none') + ';';
 
-        if (weekExpanded) {
-          const grid = document.createElement('div');
-          grid.className = 'tc-lib-grid';
-          grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
-          weekAssignments.forEach(a => grid.appendChild(renderActiveCard(a)));
-          weekContent.appendChild(grid);
-        }
+          if (weekExpanded) {
+            const grid = document.createElement('div');
+            grid.className = 'tc-lib-grid';
+            grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:16px;';
+            weekAssignments.forEach(a => grid.appendChild(renderActiveCard(a)));
+            weekContent.appendChild(grid);
+          }
 
-        weekWrapper.appendChild(weekHeader);
-        weekWrapper.appendChild(weekContent);
-        weeksContainer.appendChild(weekWrapper);
-      });
+          weekWrapper.appendChild(weekHeader);
+          weekWrapper.appendChild(weekContent);
+          weeksContainer.appendChild(weekWrapper);
+        });
 
-      container.appendChild(weeksContainer);
+        container.appendChild(weeksContainer);
+      }
 
       updateActiveClassFilter();
     } catch (err) {
@@ -4575,6 +4995,19 @@
       classEl.appendChild(classIcon);
       classEl.appendChild(createClassBadgeSpan(className));
       card.appendChild(classEl);
+    }
+
+    const activeCardTags = Array.isArray(assignment.tags) ? assignment.tags.filter(Boolean) : [];
+    if (activeCardTags.length > 0) {
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;';
+      activeCardTags.forEach(tag => {
+        const tagPill = document.createElement('span');
+        tagPill.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.50); padding:2px 8px; border-radius:10px; font-size:11px;';
+        tagPill.textContent = tag;
+        tagRow.appendChild(tagPill);
+      });
+      card.appendChild(tagRow);
     }
 
     if (nearestDue) {

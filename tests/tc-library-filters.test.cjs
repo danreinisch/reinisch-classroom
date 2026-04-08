@@ -221,7 +221,12 @@ function makeFilterContext(storage) {
     reserve: {
       presentationsExpanded: false,
       presentationsSearch: '',
-      viewMode: 'flat'
+      viewMode: 'flat',
+      selectedTags: []
+    },
+    active: {
+      viewMode: 'flat',
+      selectedTags: []
     }
   };
   const collapsedLanes = new Set(['analytics']);
@@ -250,7 +255,12 @@ function makeFilterContext(storage) {
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
           presentationsSearch: filters.reserve.presentationsSearch,
-          viewMode: filters.reserve.viewMode
+          viewMode: filters.reserve.viewMode,
+          selectedTags: filters.reserve.selectedTags
+        },
+        active: {
+          viewMode: filters.active.viewMode,
+          selectedTags: filters.active.selectedTags
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -291,6 +301,15 @@ function makeFilterContext(storage) {
         if (typeof data.reserve.presentationsExpanded === 'boolean') filters.reserve.presentationsExpanded = data.reserve.presentationsExpanded;
         if (typeof data.reserve.presentationsSearch === 'string') filters.reserve.presentationsSearch = data.reserve.presentationsSearch;
         if (typeof data.reserve.viewMode === 'string') filters.reserve.viewMode = data.reserve.viewMode;
+        if (Array.isArray(data.reserve.selectedTags)) {
+          filters.reserve.selectedTags = data.reserve.selectedTags.filter(t => typeof t === 'string');
+        }
+      }
+      if (data.active && typeof data.active === 'object') {
+        if (typeof data.active.viewMode === 'string') filters.active.viewMode = data.active.viewMode;
+        if (Array.isArray(data.active.selectedTags)) {
+          filters.active.selectedTags = data.active.selectedTags.filter(t => typeof t === 'string');
+        }
       }
       if (Array.isArray(data.collapsedLanes)) {
         collapsedLanes.clear();
@@ -883,6 +902,224 @@ test('reserve: viewMode as number → not applied, keeps default flat', () => {
   const ctx = makeFilterContext(storage);
   ctx.loadFilters();
   assert.strictEqual(ctx.filters.reserve.viewMode, 'flat');
+});
+
+// ── reserve.selectedTags round-trips ──────────────────────────────────────────
+console.log('\n--- reserve.selectedTags round-trips ---');
+
+test('reserve: default selectedTags is empty array', () => {
+  const ctx = makeFilterContext(makeMockStorage());
+  assert.deepStrictEqual(ctx.filters.reserve.selectedTags, []);
+});
+
+test('reserve: save selectedTags → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.reserve.selectedTags = ['quiz', 'vocabulary'];
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.deepStrictEqual(ctx2.filters.reserve.selectedTags, ['quiz', 'vocabulary']);
+});
+
+test('reserve: selectedTags as string → not applied, keeps default []', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { selectedTags: 'quiz' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.reserve.selectedTags, []);
+});
+
+test('reserve: selectedTags with non-string items → non-strings are filtered out', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { selectedTags: ['quiz', 42, null, 'vocabulary'] }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.reserve.selectedTags, ['quiz', 'vocabulary']);
+});
+
+test('reserve: selectedTags defaults to [] when absent from stored data', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { viewMode: 'flat' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.reserve.selectedTags, []);
+});
+
+// ── active.viewMode round-trips ───────────────────────────────────────────────
+console.log('\n--- active.viewMode round-trips ---');
+
+test('active: default viewMode is flat', () => {
+  const ctx = makeFilterContext(makeMockStorage());
+  assert.strictEqual(ctx.filters.active.viewMode, 'flat');
+});
+
+test('active: save viewMode byUnit → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.active.viewMode = 'byUnit';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.active.viewMode, 'byUnit');
+});
+
+test('active: save viewMode flat → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.active.viewMode = 'flat';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.active.viewMode, 'flat');
+});
+
+test('active: viewMode defaults to flat when active block absent', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { viewMode: 'flat' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.active.viewMode, 'flat');
+});
+
+test('active: viewMode as number → not applied, keeps default flat', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    active: { viewMode: 99 }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.active.viewMode, 'flat');
+});
+
+// ── active.selectedTags round-trips ───────────────────────────────────────────
+console.log('\n--- active.selectedTags round-trips ---');
+
+test('active: default selectedTags is empty array', () => {
+  const ctx = makeFilterContext(makeMockStorage());
+  assert.deepStrictEqual(ctx.filters.active.selectedTags, []);
+});
+
+test('active: save selectedTags → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.active.selectedTags = ['homework', 'review'];
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.deepStrictEqual(ctx2.filters.active.selectedTags, ['homework', 'review']);
+});
+
+test('active: selectedTags as string → not applied, keeps default []', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    active: { selectedTags: 'homework' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.active.selectedTags, []);
+});
+
+test('active: selectedTags with non-string items → non-strings are filtered out', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    active: { selectedTags: ['homework', 0, true, 'review'] }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.active.selectedTags, ['homework', 'review']);
+});
+
+test('active: selectedTags defaults to [] when absent from stored data', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    active: { viewMode: 'flat' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.deepStrictEqual(ctx.filters.active.selectedTags, []);
+});
+
+// ── tag filtering logic ───────────────────────────────────────────────────────
+console.log('\n--- tag filtering logic ---');
+
+function applyTagFilter(list, selectedTags) {
+  if (selectedTags.length === 0) return list;
+  return list.filter(a => {
+    const aTags = Array.isArray(a.tags) ? a.tags : [];
+    return selectedTags.some(t => aTags.includes(t));
+  });
+}
+
+test('tag filter: empty selectedTags returns all assignments', () => {
+  const list = [
+    { id: 1, tags: ['quiz'] },
+    { id: 2, tags: ['vocabulary'] },
+    { id: 3, tags: [] }
+  ];
+  assert.strictEqual(applyTagFilter(list, []).length, 3);
+});
+
+test('tag filter: single tag filters correctly', () => {
+  const list = [
+    { id: 1, tags: ['quiz', 'vocabulary'] },
+    { id: 2, tags: ['homework'] },
+    { id: 3, tags: ['quiz'] },
+    { id: 4, tags: [] }
+  ];
+  const result = applyTagFilter(list, ['quiz']);
+  assert.strictEqual(result.length, 2);
+  assert.ok(result.every(a => a.tags.includes('quiz')));
+});
+
+test('tag filter: multiple tags returns assignments matching ANY tag', () => {
+  const list = [
+    { id: 1, tags: ['quiz'] },
+    { id: 2, tags: ['vocabulary'] },
+    { id: 3, tags: ['homework'] },
+    { id: 4, tags: [] }
+  ];
+  const result = applyTagFilter(list, ['quiz', 'vocabulary']);
+  assert.strictEqual(result.length, 2);
+  assert.ok(result.find(a => a.id === 1));
+  assert.ok(result.find(a => a.id === 2));
+});
+
+test('tag filter: assignment with null tags is not matched', () => {
+  const list = [
+    { id: 1, tags: null },
+    { id: 2, tags: ['quiz'] }
+  ];
+  const result = applyTagFilter(list, ['quiz']);
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].id, 2);
+});
+
+test('tag filter: assignment with undefined tags is not matched', () => {
+  const list = [
+    { id: 1 },
+    { id: 2, tags: ['quiz'] }
+  ];
+  const result = applyTagFilter(list, ['quiz']);
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].id, 2);
+});
+
+test('tag filter: no assignments match → returns empty array', () => {
+  const list = [
+    { id: 1, tags: ['quiz'] },
+    { id: 2, tags: ['vocabulary'] }
+  ];
+  const result = applyTagFilter(list, ['homework']);
+  assert.strictEqual(result.length, 0);
 });
 
 // ── injectStyles() ────────────────────────────────────────────────────────────
