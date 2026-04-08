@@ -4882,6 +4882,11 @@
       addStudentBtn.addEventListener('click', showAddStudentWizard);
     }
 
+    const quickEntryBtn = document.getElementById('stQuickEntry');
+    if (quickEntryBtn) {
+      quickEntryBtn.addEventListener('click', toggleQuickEntryPanel);
+    }
+
     const importCsvBtn = document.getElementById('stImportCSV');
     if (importCsvBtn) {
       importCsvBtn.addEventListener('click', showSpedTrackImportModal);
@@ -9224,6 +9229,493 @@
     }
     // Use capture so it fires before the button's own click re-toggles
     setTimeout(() => document.addEventListener('click', onOutsideClick, true), 0);
+  }
+
+  // ── Quick Entry Panel ────────────────────────────────────────────────────
+
+  /** Track whether the quick entry panel is open */
+  let quickEntryOpen = false;
+
+  /**
+   * Toggle the Quick Entry panel open/closed.
+   * Builds the panel DOM on first open.
+   */
+  function toggleQuickEntryPanel() {
+    const panel = document.getElementById('stQuickEntryPanel');
+    const btn   = document.getElementById('stQuickEntry');
+    if (!panel || !btn) return;
+
+    quickEntryOpen = !quickEntryOpen;
+    panel.classList.toggle('open', quickEntryOpen);
+    btn.classList.toggle('active', quickEntryOpen);
+
+    if (quickEntryOpen) {
+      buildQuickEntryPanel(panel);
+    }
+  }
+
+  /**
+   * Build (or rebuild) the contents of the Quick Entry panel.
+   * Uses only DOM API — no innerHTML with dynamic/user data.
+   */
+  function buildQuickEntryPanel(panel) {
+    // Clear existing content
+    while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+    // ── Header ────────────────────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.className = 'st-qe-header';
+
+    const title = document.createElement('span');
+    title.className = 'st-qe-title';
+    title.textContent = '⚡ Quick Entry';
+    header.appendChild(title);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'st-btn st-btn-small';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '✕ Close';
+    closeBtn.addEventListener('click', () => toggleQuickEntryPanel());
+    header.appendChild(closeBtn);
+
+    panel.appendChild(header);
+
+    // ── Controls row (Date + Scope) ────────────────────────────────────────
+    const controls = document.createElement('div');
+    controls.className = 'st-qe-controls';
+
+    // Date label + input
+    const dateLabel = document.createElement('label');
+    dateLabel.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;';
+    dateLabel.textContent = 'Date:';
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.id = 'stQeDateInput';
+    dateInput.value = todayISO();
+    dateInput.className = 'st-btn'; // reuse base button styling for input
+    dateInput.style.cssText = 'padding:4px 8px;font-size:13px;width:150px;';
+    dateLabel.appendChild(dateInput);
+    controls.appendChild(dateLabel);
+
+    // Scope label + select
+    const scopeLabel = document.createElement('label');
+    scopeLabel.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:13px;';
+    scopeLabel.textContent = 'Scope:';
+    const scopeSelect = document.createElement('select');
+    scopeSelect.id = 'stQeScopeSelect';
+    scopeSelect.className = 'st-btn';
+    scopeSelect.style.cssText = 'padding:4px 8px;font-size:13px;';
+    [
+      { value: 'stale',          label: 'All stale goals (🟠🔴)' },
+      { value: 'needs-data',     label: 'All goals needing data (🟡🟠🔴)' },
+      { value: 'no-data',        label: 'Goals with no data yet (⚪)' },
+      { value: 'all-active',     label: 'All active goals' },
+      { value: 'current-student', label: 'Current student only' },
+    ].forEach(({ value, label }) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      scopeSelect.appendChild(opt);
+    });
+    scopeSelect.value = 'stale';
+    scopeSelect.addEventListener('change', () => populateQuickEntryTable(panel));
+    scopeLabel.appendChild(scopeSelect);
+    controls.appendChild(scopeLabel);
+
+    panel.appendChild(controls);
+
+    // ── Table wrapper ──────────────────────────────────────────────────────
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'st-qe-table-wrap';
+    tableWrap.id = 'stQeTableWrap';
+    panel.appendChild(tableWrap);
+
+    // ── Footer ─────────────────────────────────────────────────────────────
+    const footer = document.createElement('div');
+    footer.className = 'st-qe-footer';
+
+    const countEl = document.createElement('span');
+    countEl.className = 'st-qe-count';
+    countEl.id = 'stQeCount';
+    countEl.textContent = '0 of 0 goals filled';
+    footer.appendChild(countEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'st-qe-actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'stQeSaveBtn';
+    saveBtn.className = 'st-btn st-btn-small';
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Save 0 Entries';
+    saveBtn.addEventListener('click', () => saveQuickEntries(false));
+    actions.appendChild(saveBtn);
+
+    const saveCloseBtn = document.createElement('button');
+    saveCloseBtn.id = 'stQeSaveCloseBtn';
+    saveCloseBtn.className = 'st-btn st-btn-small st-btn-primary';
+    saveCloseBtn.type = 'button';
+    saveCloseBtn.textContent = 'Save & Close';
+    saveCloseBtn.addEventListener('click', () => saveQuickEntries(true));
+    actions.appendChild(saveCloseBtn);
+
+    footer.appendChild(actions);
+    panel.appendChild(footer);
+
+    // Fill the table immediately
+    populateQuickEntryTable(panel);
+  }
+
+  /**
+   * Determine which goals to show based on the scope selector value.
+   * Returns an array of { student, goal, daysSince, tier } objects.
+   */
+  function getQuickEntryRows() {
+    const scopeEl = document.getElementById('stQeScopeSelect');
+    const scope = scopeEl ? scopeEl.value : 'stale';
+
+    const today = new Date();
+
+    // Build a flat list of { student, goal, daysSince, tier } for every active goal
+    // in students visible under the current class filter.
+    const rows = [];
+    const visibleStudentCodes = new Set(filteredStudents.map(s => s.code));
+
+    const activeGoals = allGoals.filter(g =>
+      g.status === 'active' &&
+      visibleStudentCodes.has(g.student_code)
+    );
+
+    for (const goal of activeGoals) {
+      const lastDate = getLastProgressDate(goal.student_code, goal.code);
+      let daysSince = null;
+      if (lastDate) {
+        const diff = today - new Date(lastDate);
+        daysSince = Math.floor(diff / MS_PER_DAY);
+      }
+      const stalenessObj = getGoalStaleness(daysSince);
+
+      rows.push({ goal, daysSince, tier: stalenessObj.tier, stalenessObj });
+    }
+
+    // Filter by scope
+    let filtered;
+    switch (scope) {
+      case 'stale':
+        filtered = rows.filter(r => r.tier === 'stale' || r.tier === 'critical');
+        break;
+      case 'needs-data':
+        filtered = rows.filter(r => r.tier === 'aging' || r.tier === 'stale' || r.tier === 'critical');
+        break;
+      case 'no-data':
+        filtered = rows.filter(r => r.tier === 'none');
+        break;
+      case 'all-active':
+        filtered = rows;
+        break;
+      case 'current-student': {
+        // Show goals for whichever students are currently expanded (or the first one)
+        const expanded = [...expandedStudents];
+        if (expanded.length > 0) {
+          const expSet = new Set(expanded);
+          filtered = rows.filter(r => expSet.has(r.goal.student_code));
+        } else {
+          filtered = rows;
+        }
+        break;
+      }
+      default:
+        filtered = rows;
+    }
+
+    // Sort: by staleness tier (worst first), then by student code, then goal code
+    filtered.sort((a, b) => {
+      const tierDiff = a.stalenessObj.sortOrder - b.stalenessObj.sortOrder;
+      if (tierDiff !== 0) return tierDiff;
+      const sc = (a.goal.student_code || '').localeCompare(b.goal.student_code || '');
+      if (sc !== 0) return sc;
+      return (a.goal.code || '').localeCompare(b.goal.code || '');
+    });
+
+    return filtered;
+  }
+
+  /**
+   * Populate (or repopulate) the quick-entry table inside the panel.
+   */
+  function populateQuickEntryTable(panel) {
+    const wrap = panel
+      ? panel.querySelector('#stQeTableWrap')
+      : document.getElementById('stQeTableWrap');
+    if (!wrap) return;
+
+    // Clear existing table
+    while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+
+    const rows = getQuickEntryRows();
+
+    if (rows.length === 0) {
+      const empty = document.createElement('p');
+      empty.style.cssText = 'font-size:13px;opacity:0.6;padding:12px 0;';
+      empty.textContent = 'No goals match the selected scope.';
+      wrap.appendChild(empty);
+      updateQuickEntryCount();
+      return;
+    }
+
+    // Build table
+    const table = document.createElement('table');
+    table.className = 'st-qe-table';
+    table.setAttribute('role', 'grid');
+
+    // Header
+    const thead = document.createElement('thead');
+    const hRow = document.createElement('tr');
+    ['Student', 'Goal Code', 'Goal Area', 'Last Data', 'Value', '✓'].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      th.setAttribute('scope', 'col');
+      hRow.appendChild(th);
+    });
+    thead.appendChild(hRow);
+    table.appendChild(thead);
+
+    // Body
+    const tbody = document.createElement('tbody');
+    rows.forEach((rowData, idx) => {
+      const { goal, daysSince, stalenessObj } = rowData;
+      const student = allStudents.find(s => s.code === goal.student_code);
+      const studentName = student ? (student.name || student.code) : goal.student_code;
+
+      const tr = document.createElement('tr');
+      tr.dataset.goalCode    = goal.code;
+      tr.dataset.studentCode = goal.student_code;
+      tr.dataset.rowIdx      = String(idx);
+
+      // Student name
+      const tdStudent = document.createElement('td');
+      tdStudent.textContent = studentName;
+      tr.appendChild(tdStudent);
+
+      // Goal code
+      const tdCode = document.createElement('td');
+      tdCode.style.fontFamily = 'monospace';
+      tdCode.textContent = goal.code;
+      tr.appendChild(tdCode);
+
+      // Goal area
+      const tdArea = document.createElement('td');
+      tdArea.textContent = goal.goal_area || '—';
+      tr.appendChild(tdArea);
+
+      // Last data (staleness)
+      const tdLast = document.createElement('td');
+      const lastSpan = document.createElement('span');
+      lastSpan.className = stalenessObj.cssClass || '';
+      lastSpan.textContent = `${stalenessObj.icon} ${formatRelativeTime(daysSince)}`;
+      tdLast.appendChild(lastSpan);
+      tr.appendChild(tdLast);
+
+      // Value input
+      const tdValue = document.createElement('td');
+      const valueInput = document.createElement('input');
+      valueInput.type = 'number';
+      valueInput.className = 'st-qe-value-input';
+      valueInput.placeholder = '—';
+      valueInput.setAttribute('aria-label', `Value for ${goal.code}`);
+      valueInput.dataset.goalCode    = goal.code;
+      valueInput.dataset.studentCode = goal.student_code;
+      valueInput.dataset.rowIdx      = String(idx);
+
+      // Auto-check checkbox when value is typed; update count
+      valueInput.addEventListener('input', () => {
+        const hasValue = valueInput.value.trim() !== '';
+        cbInput.checked = hasValue;
+        updateQuickEntryCount();
+      });
+
+      // Auto-select all text on focus
+      valueInput.addEventListener('focus', () => valueInput.select());
+
+      // Keyboard navigation: Enter → next row; Arrow Up/Down ± value
+      valueInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          focusNextQeInput(idx);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const delta = e.ctrlKey ? 10 : e.shiftKey ? 5 : 1;
+          const current = parseFloat(valueInput.value) || 0;
+          valueInput.value = String(
+            Math.round((current + (e.key === 'ArrowUp' ? delta : -delta)) * 10) / 10
+          );
+          valueInput.dispatchEvent(new Event('input'));
+        }
+      });
+
+      tdValue.appendChild(valueInput);
+      tr.appendChild(tdValue);
+
+      // Checkbox
+      const tdCheck = document.createElement('td');
+      const cbInput = document.createElement('input');
+      cbInput.type = 'checkbox';
+      cbInput.className = 'st-qe-check';
+      cbInput.setAttribute('aria-label', `Include ${goal.code}`);
+      cbInput.dataset.goalCode    = goal.code;
+      cbInput.dataset.studentCode = goal.student_code;
+      cbInput.addEventListener('change', () => updateQuickEntryCount());
+      tdCheck.appendChild(cbInput);
+      tr.appendChild(tdCheck);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+
+    updateQuickEntryCount();
+
+    // Focus the first value input
+    const firstInput = wrap.querySelector('.st-qe-value-input');
+    if (firstInput) setTimeout(() => firstInput.focus(), 50);
+  }
+
+  /**
+   * Move keyboard focus to the value input in the next table row.
+   */
+  function focusNextQeInput(currentIdx) {
+    const wrap = document.getElementById('stQeTableWrap');
+    if (!wrap) return;
+    const inputs = [...wrap.querySelectorAll('.st-qe-value-input')];
+    const next = inputs.find(i => parseInt(i.dataset.rowIdx, 10) > currentIdx);
+    if (next) next.focus();
+  }
+
+  /**
+   * Update the "N of M goals filled" counter and the Save button label.
+   */
+  function updateQuickEntryCount() {
+    const wrap    = document.getElementById('stQeTableWrap');
+    const countEl = document.getElementById('stQeCount');
+    const saveBtn = document.getElementById('stQeSaveBtn');
+    if (!wrap) return;
+
+    const allRows   = wrap.querySelectorAll('tr[data-goal-code]');
+    const checked   = wrap.querySelectorAll('.st-qe-check:checked');
+    const total     = allRows.length;
+    const filled    = checked.length;
+
+    if (countEl) countEl.textContent = `${filled} of ${total} goals filled`;
+    if (saveBtn) {
+      saveBtn.textContent = `Save ${filled} Entr${filled === 1 ? 'y' : 'ies'}`;
+      saveBtn.disabled    = filled === 0;
+    }
+    const saveCloseBtn = document.getElementById('stQeSaveCloseBtn');
+    if (saveCloseBtn) saveCloseBtn.disabled = filled === 0;
+  }
+
+  /**
+   * Save all checked quick-entry rows via db.upsertGoalProgress().
+   * Shows a progress indicator, then a success toast.
+   * @param {boolean} closeAfter  If true, close the panel after saving.
+   */
+  async function saveQuickEntries(closeAfter) {
+    const wrap      = document.getElementById('stQeTableWrap');
+    const dateInput = document.getElementById('stQeDateInput');
+    const countEl   = document.getElementById('stQeCount');
+    const saveBtn   = document.getElementById('stQeSaveBtn');
+    const saveCloseBtn = document.getElementById('stQeSaveCloseBtn');
+    if (!wrap || !dateInput) return;
+
+    const date = dateInput.value;
+    if (!date) {
+      showToast('Please select a date before saving.');
+      return;
+    }
+
+    // Collect checked rows with a value
+    const toSave = [];
+    const rows = wrap.querySelectorAll('tr[data-goal-code]');
+    rows.forEach(tr => {
+      const cb = tr.querySelector('.st-qe-check');
+      const vi = tr.querySelector('.st-qe-value-input');
+      if (cb && cb.checked && vi && vi.value.trim() !== '') {
+        const numVal = parseFloat(vi.value);
+        if (!isNaN(numVal)) {
+          toSave.push({
+            goal_code:    tr.dataset.goalCode,
+            student_code: tr.dataset.studentCode,
+            value:        numVal,
+            tr,
+            vi,
+            cb,
+          });
+        }
+      }
+    });
+
+    if (toSave.length === 0) {
+      showToast('No filled entries to save.');
+      return;
+    }
+
+    // Disable buttons during save
+    if (saveBtn)      { saveBtn.disabled = true; }
+    if (saveCloseBtn) { saveCloseBtn.disabled = true; }
+
+    let saved = 0;
+    let failed = 0;
+
+    for (const entry of toSave) {
+      if (countEl) {
+        countEl.textContent = `Saving ${saved + 1} of ${toSave.length}…`;
+      }
+      try {
+        await db.upsertGoalProgress({
+          goal_code:    entry.goal_code,
+          student_code: entry.student_code,
+          date,
+          value:        entry.value,
+          source:       'manual',
+        });
+        // Mark row as saved
+        entry.tr.classList.add('st-qe-saved');
+        entry.vi.classList.add('saved');
+        entry.vi.disabled = true;
+        entry.cb.checked  = false;
+        entry.cb.disabled = true;
+        saved++;
+      } catch (err) {
+        console.error('[tc-students] Quick entry save failed:', err, entry);
+        failed++;
+      }
+    }
+
+    // Reload in-memory progress data and re-render
+    await reloadProgressEntries();
+    filterStudents();
+    renderStudentList();
+    renderStudentKpiSummary();
+    renderCollectNudge();
+
+    // Show result toast
+    if (failed === 0) {
+      showToast(`✅ ${saved} entr${saved === 1 ? 'y' : 'ies'} saved`);
+    } else {
+      showToast(`⚠️ ${saved} saved, ${failed} failed — check console`);
+    }
+
+    updateQuickEntryCount();
+
+    if (closeAfter && failed === 0) {
+      // Close the panel
+      quickEntryOpen = true; // toggleQuickEntryPanel will flip it to false
+      toggleQuickEntryPanel();
+    } else {
+      // Re-enable save buttons
+      if (saveBtn)      saveBtn.disabled      = false;
+      if (saveCloseBtn) saveCloseBtn.disabled = false;
+    }
   }
 
   // Initialize

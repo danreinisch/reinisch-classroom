@@ -228,6 +228,126 @@
         color: rgba(255, 255, 255, 0.25);
       }
 
+      /* Quick Entry panel */
+      .st-quick-entry-panel {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 20px 0;
+        display: none;
+      }
+      .st-quick-entry-panel.open {
+        display: block;
+        animation: stSlideDown 0.2s ease-out;
+      }
+      @keyframes stSlideDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .st-qe-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .st-qe-title {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .st-qe-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .st-qe-table-wrap {
+        max-height: 360px;
+        overflow-y: auto;
+      }
+      .st-qe-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .st-qe-table th {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.6;
+        position: sticky;
+        top: 0;
+        background: rgba(20, 20, 30, 0.95);
+      }
+      .st-qe-table td {
+        padding: 4px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .st-qe-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .st-qe-table tr.st-qe-saved {
+        opacity: 0.45;
+      }
+      .st-qe-value-input {
+        width: 70px;
+        padding: 4px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        font-size: 13px;
+        text-align: center;
+      }
+      .st-qe-value-input:focus {
+        border-color: rgba(59, 130, 246, 0.5);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+      }
+      .st-qe-value-input.saved {
+        border-color: rgba(34, 197, 94, 0.4);
+        background: rgba(34, 197, 94, 0.08);
+      }
+      .st-qe-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .st-qe-count {
+        font-size: 13px;
+        opacity: 0.7;
+      }
+      .st-qe-actions {
+        display: flex;
+        gap: 8px;
+      }
+      /* Quick Entry toolbar button */
+      .st-btn-quick-entry {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.25);
+        color: rgba(59, 130, 246, 0.9);
+      }
+      .st-btn-quick-entry:hover {
+        background: rgba(59, 130, 246, 0.18);
+      }
+      .st-btn-quick-entry.active {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.4);
+        font-weight: 600;
+      }
+      @media (max-width: 768px) {
+        .st-qe-controls { flex-direction: column; align-items: stretch; }
+        .st-qe-table { font-size: 12px; }
+        .st-qe-value-input { width: 55px; }
+      }
+
       /* "Collect Now" floating nudge button */
       .st-collect-nudge {
         position: fixed;
@@ -1957,7 +2077,13 @@
             <button id="stExportBtn" class="st-btn st-btn-small">📤 Export</button>
             <button id="stImportCSV" class="st-btn st-btn-small">📥 Import</button>
             <button id="stMasterSpreadsheet" class="st-btn st-btn-small">📊 Master Spreadsheet</button>
+            <button id="stQuickEntry" class="st-btn st-btn-small st-btn-quick-entry" type="button">⚡ Quick Entry</button>
             <button id="stAddStudent" class="st-btn st-btn-primary">+ Add Student</button>
+          </div>
+
+          <!-- Quick Entry Panel (toggled by ⚡ Quick Entry button) -->
+          <div id="stQuickEntryPanel" class="st-quick-entry-panel" aria-label="Quick entry panel" role="region">
+            <!-- Populated by JS -->
           </div>
 
           <!-- Quarter Filter Row -->
