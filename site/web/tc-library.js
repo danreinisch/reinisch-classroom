@@ -434,6 +434,19 @@
       ].join('\n');
       document.head.appendChild(style);
     }
+    // Inject responsive charts row style once
+    if (!document.getElementById('tc-lib-charts-responsive-style')) {
+      const style = document.createElement('style');
+      style.id = 'tc-lib-charts-responsive-style';
+      style.textContent = [
+        '@media (max-width: 768px) {',
+        '  .tc-lib-charts-row {',
+        '    grid-template-columns: 1fr !important;',
+        '  }',
+        '}'
+      ].join('\n');
+      document.head.appendChild(style);
+    }
     loadFilters();
     renderTabBar();
     renderTabContent();
@@ -4581,6 +4594,32 @@
       const currentList   = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
       const finalizedList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'finalized'));
       container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
+
+      // Pre-compute weekly data once for both charts
+      const weekMap = new Map(); // weekLabel → { count, scores, date }
+      finalizedList.forEach(a => {
+        const date = getFinalizationDate(a, instancesData, submissionsData);
+        const label = getWeekLabel(date);
+        if (!weekMap.has(label)) weekMap.set(label, { count: 0, scores: [], date });
+        const entry = weekMap.get(label);
+        entry.count++;
+        const stats = getAssignmentStats(a, instancesData, submissionsData);
+        if (stats.avgScore != null) entry.scores.push(stats.avgScore);
+      });
+      const weekEntries = [...weekMap.entries()]
+        .sort((a, b) => a[1].date - b[1].date)
+        .slice(-12);
+
+      // Charts row (2-column on desktop, 1-column on mobile)
+      const chartsRow = document.createElement('div');
+      chartsRow.className = 'tc-lib-charts-row';
+      chartsRow.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;';
+      chartsRow.appendChild(renderFinalizedPerWeekChart(weekEntries));
+      chartsRow.appendChild(renderAvgScoreTrendChart(weekEntries));
+      container.appendChild(chartsRow);
+
+      // Per-Class Breakdown (collapsible)
+      container.appendChild(renderPerClassBreakdown());
     } catch (err) {
       console.error('[tc-library] Error rendering Overview tab:', err);
       container.innerHTML = '';
@@ -4598,6 +4637,402 @@
       errCard.appendChild(retryBtn);
       container.appendChild(errCard);
     }
+  }
+
+  // ── Overview Charts & Per-Class Breakdown ────────────────────────────────────
+
+  /** Abbreviate "Week of Apr 7 – 11" → "Apr 7" for axis labels. */
+  function abbrevWeekLabel(label) {
+    const m = label.match(/^Week of (\w+ \d+)/);
+    return m ? m[1] : label;
+  }
+
+  /**
+   * Renders a vertical SVG bar chart showing finalized assignments per week.
+   * @param {Array<[string, {count:number, scores:number[], date:Date}]>} weekEntries
+   */
+  function renderFinalizedPerWeekChart(weekEntries) {
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding:16px;';
+
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:12px; display:flex; align-items:center; gap:6px;';
+    titleEl.appendChild(createIcon('barChart', 13));
+    titleEl.appendChild(document.createTextNode(' Assignments Finalized Per Week'));
+    card.appendChild(titleEl);
+
+    if (weekEntries.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px; padding:20px 0; text-align:center;';
+      empty.textContent = 'No finalized assignments to chart.';
+      card.appendChild(empty);
+      return card;
+    }
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 460, H = 220;
+    const ML = 36, MR = 10, MT = 16, MB = 48;
+    const chartW = W - ML - MR;
+    const chartH = H - MT - MB;
+
+    const maxCount = Math.max(1, ...weekEntries.map(([, d]) => d.count));
+    const n = weekEntries.length;
+    const gap = 3;
+    const barW = Math.max(6, (chartW - (n - 1) * gap) / n);
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + String(W) + ' ' + String(H));
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Finalized assignments per week bar chart');
+
+    // Y-axis gridlines and tick labels
+    const ySteps = Math.min(maxCount, 5);
+    for (let i = 0; i <= ySteps; i++) {
+      const yVal = Math.round(maxCount * i / ySteps);
+      const yPos = MT + chartH - (yVal / maxCount) * chartH;
+
+      const gridLine = document.createElementNS(NS, 'line');
+      gridLine.setAttribute('x1', String(ML));
+      gridLine.setAttribute('y1', String(yPos));
+      gridLine.setAttribute('x2', String(ML + chartW));
+      gridLine.setAttribute('y2', String(yPos));
+      gridLine.setAttribute('stroke', 'rgba(255,255,255,.08)');
+      gridLine.setAttribute('stroke-width', '1');
+      svg.appendChild(gridLine);
+
+      const yLabel = document.createElementNS(NS, 'text');
+      yLabel.setAttribute('x', String(ML - 5));
+      yLabel.setAttribute('y', String(yPos + 4));
+      yLabel.setAttribute('text-anchor', 'end');
+      yLabel.setAttribute('font-size', '10');
+      yLabel.setAttribute('fill', 'rgba(255,255,255,.45)');
+      yLabel.textContent = String(yVal);
+      svg.appendChild(yLabel);
+    }
+
+    // X-axis baseline
+    const xAxis = document.createElementNS(NS, 'line');
+    xAxis.setAttribute('x1', String(ML));
+    xAxis.setAttribute('y1', String(MT + chartH));
+    xAxis.setAttribute('x2', String(ML + chartW));
+    xAxis.setAttribute('y2', String(MT + chartH));
+    xAxis.setAttribute('stroke', 'rgba(255,255,255,.20)');
+    xAxis.setAttribute('stroke-width', '1');
+    svg.appendChild(xAxis);
+
+    // Bars and labels
+    weekEntries.forEach(([label, data], i) => {
+      const barH = data.count > 0 ? (data.count / maxCount) * chartH : 0;
+      const x = ML + i * (barW + gap);
+      const y = MT + chartH - barH;
+
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('x', String(x));
+      rect.setAttribute('y', String(y));
+      rect.setAttribute('width', String(barW));
+      rect.setAttribute('height', String(Math.max(0, barH)));
+      rect.setAttribute('fill', '#60a5fa');
+      rect.setAttribute('rx', '2');
+
+      const barTitle = document.createElementNS(NS, 'title');
+      barTitle.textContent = abbrevWeekLabel(label) + ': ' + String(data.count);
+      rect.appendChild(barTitle);
+      svg.appendChild(rect);
+
+      // Count label above bar
+      if (data.count > 0) {
+        const countText = document.createElementNS(NS, 'text');
+        countText.setAttribute('x', String(x + barW / 2));
+        countText.setAttribute('y', String(y - 3));
+        countText.setAttribute('text-anchor', 'middle');
+        countText.setAttribute('font-size', '9');
+        countText.setAttribute('fill', 'white');
+        countText.textContent = String(data.count);
+        svg.appendChild(countText);
+      }
+
+      // X-axis label
+      const xLabel = document.createElementNS(NS, 'text');
+      xLabel.setAttribute('x', String(x + barW / 2));
+      xLabel.setAttribute('y', String(MT + chartH + 13));
+      xLabel.setAttribute('text-anchor', 'middle');
+      xLabel.setAttribute('font-size', '9');
+      xLabel.setAttribute('fill', 'rgba(255,255,255,.45)');
+      xLabel.textContent = abbrevWeekLabel(label);
+      svg.appendChild(xLabel);
+    });
+
+    card.appendChild(svg);
+    return card;
+  }
+
+  /**
+   * Renders a pure SVG line chart of weekly average scores.
+   * @param {Array<[string, {count:number, scores:number[], date:Date}]>} weekEntries
+   */
+  function renderAvgScoreTrendChart(weekEntries) {
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding:16px;';
+
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.45); margin-bottom:12px; display:flex; align-items:center; gap:6px;';
+    titleEl.appendChild(createIcon('arrowRight', 13));
+    titleEl.appendChild(document.createTextNode(' Average Score Trend'));
+    card.appendChild(titleEl);
+
+    const scoredEntries = weekEntries
+      .filter(([, weekData]) => weekData.scores.length > 0)
+      .map(([label, weekData]) => {
+        const avg = Math.round(weekData.scores.reduce((a, b) => a + b, 0) / weekData.scores.length);
+        return [label, avg];
+      });
+
+    if (scoredEntries.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:rgba(255,255,255,.40); font-size:13px; padding:20px 0; text-align:center;';
+      empty.textContent = 'No score data available.';
+      card.appendChild(empty);
+      return card;
+    }
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 460, H = 220;
+    const ML = 36, MR = 10, MT = 16, MB = 48;
+    const chartW = W - ML - MR;
+    const chartH = H - MT - MB;
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + String(W) + ' ' + String(H));
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Average score trend line chart');
+
+    // Y-axis gridlines (0–100 in 20% increments)
+    for (let v = 0; v <= 100; v += 20) {
+      const yPos = MT + chartH - (v / 100) * chartH;
+
+      const gridLine = document.createElementNS(NS, 'line');
+      gridLine.setAttribute('x1', String(ML));
+      gridLine.setAttribute('y1', String(yPos));
+      gridLine.setAttribute('x2', String(ML + chartW));
+      gridLine.setAttribute('y2', String(yPos));
+      gridLine.setAttribute('stroke', 'rgba(255,255,255,.08)');
+      gridLine.setAttribute('stroke-width', '1');
+      svg.appendChild(gridLine);
+
+      const yLabel = document.createElementNS(NS, 'text');
+      yLabel.setAttribute('x', String(ML - 5));
+      yLabel.setAttribute('y', String(yPos + 4));
+      yLabel.setAttribute('text-anchor', 'end');
+      yLabel.setAttribute('font-size', '10');
+      yLabel.setAttribute('fill', 'rgba(255,255,255,.45)');
+      yLabel.textContent = String(v) + '%';
+      svg.appendChild(yLabel);
+    }
+
+    // X-axis baseline
+    const xAxis = document.createElementNS(NS, 'line');
+    xAxis.setAttribute('x1', String(ML));
+    xAxis.setAttribute('y1', String(MT + chartH));
+    xAxis.setAttribute('x2', String(ML + chartW));
+    xAxis.setAttribute('y2', String(MT + chartH));
+    xAxis.setAttribute('stroke', 'rgba(255,255,255,.20)');
+    xAxis.setAttribute('stroke-width', '1');
+    svg.appendChild(xAxis);
+
+    // 80% proficiency reference line (dashed, gray)
+    const refY = MT + chartH - 0.8 * chartH;
+    const refLine = document.createElementNS(NS, 'line');
+    refLine.setAttribute('x1', String(ML));
+    refLine.setAttribute('y1', String(refY));
+    refLine.setAttribute('x2', String(ML + chartW));
+    refLine.setAttribute('y2', String(refY));
+    refLine.setAttribute('stroke', 'rgba(255,255,255,.25)');
+    refLine.setAttribute('stroke-width', '1');
+    refLine.setAttribute('stroke-dasharray', '4 3');
+    svg.appendChild(refLine);
+
+    const refLabel = document.createElementNS(NS, 'text');
+    refLabel.setAttribute('x', String(ML + chartW + 3));
+    refLabel.setAttribute('y', String(refY + 4));
+    refLabel.setAttribute('font-size', '9');
+    refLabel.setAttribute('fill', 'rgba(255,255,255,.30)');
+    refLabel.textContent = '80%';
+    svg.appendChild(refLabel);
+
+    // Compute x positions
+    const n = scoredEntries.length;
+    const xPos = (i) => n === 1
+      ? ML + chartW / 2
+      : ML + i * (chartW / (n - 1));
+    const yPos = (avg) => MT + chartH - (avg / 100) * chartH;
+
+    // Polyline (line chart)
+    const pointsStr = scoredEntries.map(([, avg], i) =>
+      String(xPos(i)) + ',' + String(yPos(avg))
+    ).join(' ');
+    const polyline = document.createElementNS(NS, 'polyline');
+    polyline.setAttribute('points', pointsStr);
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', '#4ade80');
+    polyline.setAttribute('stroke-width', '2');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(polyline);
+
+    // Dots and X-axis labels
+    scoredEntries.forEach(([label, avg], i) => {
+      const cx = xPos(i);
+      const cy = yPos(avg);
+
+      const circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', String(cx));
+      circle.setAttribute('cy', String(cy));
+      circle.setAttribute('r', '4');
+      circle.setAttribute('fill', '#4ade80');
+
+      const dotTitle = document.createElementNS(NS, 'title');
+      dotTitle.textContent = abbrevWeekLabel(label) + ': ' + String(avg) + '%';
+      circle.appendChild(dotTitle);
+      svg.appendChild(circle);
+
+      // X-axis label
+      const xLabel = document.createElementNS(NS, 'text');
+      xLabel.setAttribute('x', String(cx));
+      xLabel.setAttribute('y', String(MT + chartH + 13));
+      xLabel.setAttribute('text-anchor', 'middle');
+      xLabel.setAttribute('font-size', '9');
+      xLabel.setAttribute('fill', 'rgba(255,255,255,.45)');
+      xLabel.textContent = abbrevWeekLabel(label);
+      svg.appendChild(xLabel);
+    });
+
+    card.appendChild(svg);
+    return card;
+  }
+
+  /**
+   * Renders a collapsible per-class KPI breakdown section.
+   */
+  function renderPerClassBreakdown() {
+    const laneId = 'perClassBreakdown';
+    const expanded = isLaneExpanded(laneId);
+
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom:16px;';
+
+    // Collapsible header
+    const header = document.createElement('div');
+    header.style.cssText = [
+      'display:flex; align-items:center; gap:10px; padding:10px 16px;',
+      'background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);',
+      'border-radius:' + (expanded ? '10px 10px 0 0' : '10px') + '; cursor:pointer; user-select:none;',
+      'transition:background .15s ease;'
+    ].join('');
+    header.setAttribute('aria-expanded', String(expanded));
+
+    const toggleIcon = document.createElement('span');
+    toggleIcon.style.cssText = 'font-size:13px; display:inline-block; transform:rotate(' + (expanded ? '0deg' : '-90deg') + '); transition:transform .2s;';
+    toggleIcon.textContent = '\u25be';
+    header.appendChild(toggleIcon);
+
+    const titleEl = document.createElement('span');
+    titleEl.style.cssText = 'display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:600;';
+    titleEl.appendChild(createIcon('users'));
+    titleEl.appendChild(document.createTextNode(' Per-Class Breakdown'));
+    header.appendChild(titleEl);
+
+    header.addEventListener('click', () => toggleLane(laneId));
+    section.appendChild(header);
+
+    if (!expanded) return section;
+
+    // Content card
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'padding:16px; border-top:none; border-radius:0 0 10px 10px;';
+
+    // Pre-compute per-class metrics from all assignments (not filtered)
+    const classDataMap = new Map();
+    CANON_CLASSES.forEach(cls => {
+      classDataMap.set(cls, { upcoming: 0, current: 0, finalized: 0, scores: [] });
+    });
+    assignmentsData.forEach(a => {
+      const cls = inferClassName(a);
+      if (!cls || !classDataMap.has(cls)) return;
+      const lane = computeLane(a, instancesData);
+      const classMetrics = classDataMap.get(cls);
+      if (lane === 'upcoming') {
+        classMetrics.upcoming++;
+      } else if (lane === 'current') {
+        classMetrics.current++;
+      } else if (lane === 'finalized') {
+        classMetrics.finalized++;
+        const stats = getAssignmentStats(a, instancesData, submissionsData);
+        if (stats.avgScore != null) classMetrics.scores.push(stats.avgScore);
+      }
+    });
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;';
+
+    CANON_CLASSES.forEach(cls => {
+      const classMetrics = classDataMap.get(cls);
+      const total = classMetrics.upcoming + classMetrics.current + classMetrics.finalized;
+      const avgScore = classMetrics.scores.length > 0
+        ? Math.round(classMetrics.scores.reduce((a, b) => a + b, 0) / classMetrics.scores.length)
+        : null;
+      const enrolledCount = classEnrollmentsData.filter(
+        e => e.class_name === cls && e.active !== false
+      ).length;
+
+      const classCard = document.createElement('div');
+      classCard.className = 'tc-card';
+      classCard.style.cssText = 'padding:14px;' + (total === 0 ? ' opacity:.45;' : '');
+
+      // Class name header
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:13px; font-weight:700; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+      nameEl.textContent = cls;
+      nameEl.title = cls;
+      classCard.appendChild(nameEl);
+
+      // Student count
+      const studEl = document.createElement('div');
+      studEl.style.cssText = 'font-size:11px; color:rgba(255,255,255,.50); margin-bottom:10px; display:flex; align-items:center; gap:4px;';
+      studEl.appendChild(createIcon('users', 11));
+      studEl.appendChild(document.createTextNode(' ' + String(enrolledCount) + ' student' + (enrolledCount !== 1 ? 's' : '')));
+      classCard.appendChild(studEl);
+
+      // KPI pills row
+      const pillRow = document.createElement('div');
+      pillRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:5px;';
+
+      const makePill = (labelText, valueText, color) => {
+        const pill = document.createElement('span');
+        pill.style.cssText = 'display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:10px; font-size:11px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:' + (color || 'rgba(255,255,255,.80)') + ';';
+        pill.textContent = labelText + ': ' + valueText;
+        return pill;
+      };
+
+      pillRow.appendChild(makePill('R', String(classMetrics.upcoming), 'rgba(255,255,255,.70)'));
+      pillRow.appendChild(makePill('A', String(classMetrics.current), '#60a5fa'));
+      pillRow.appendChild(makePill('F', String(classMetrics.finalized), '#4ade80'));
+      if (avgScore != null) {
+        pillRow.appendChild(makePill('Avg', String(avgScore) + '%', scoreColor(avgScore)));
+      } else {
+        pillRow.appendChild(makePill('Avg', '\u2014', 'rgba(255,255,255,.35)'));
+      }
+
+      classCard.appendChild(pillRow);
+      grid.appendChild(classCard);
+    });
+
+    card.appendChild(grid);
+    section.appendChild(card);
+    return section;
   }
 
   function getSyncStatusBadge() {
