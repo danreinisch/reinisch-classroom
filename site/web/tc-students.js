@@ -99,6 +99,11 @@
   // UI indicator for missing dates
   const MISSING_DATE_WARNING = ' <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
+  // Milliseconds per calendar day — used for staleness calculations
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  // Sort sentinel used when a student has never had data collected (sort last by data_age)
+  const NULL_DATA_AGE_SORT_VALUE = 99999;
+
   // Inline SVG status icons for table cells and status badges
   const SVG_STATUS_OK   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
   const SVG_STATUS_WARN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
@@ -1665,7 +1670,7 @@
   function getGoalStalenessInfo(studentCode, goalCode) {
     const lastDate = getLastProgressDate(studentCode, goalCode);
     if (!lastDate) return getGoalStaleness(null);
-    const daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
+    const daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / MS_PER_DAY);
     return getGoalStaleness(daysSince);
   }
 
@@ -1691,7 +1696,7 @@
     for (const g of goals) {
       const lastDate = getLastProgressDate(studentCode, g.code);
       if (lastDate) {
-        const days = Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
+        const days = Math.floor((Date.now() - new Date(lastDate).getTime()) / MS_PER_DAY);
         if (minDays === null || days < minDays) minDays = days;
       }
     }
@@ -1978,7 +1983,7 @@
 
       // Health dot — worst staleness tier across all active goals
       const healthInfo = getStudentStalenessInfo(student.code);
-      const healthDot = `<span class="st-health-dot" title="${escapeHtml(healthInfo.label)}">${healthInfo.icon}</span>`;
+      const healthDot = `<span class="st-health-dot" title="${escapeHtml(healthInfo.label)}">${escapeHtml(healthInfo.icon)}</span>`;
 
       // Data column — relative time of most-recent progress entry + staleness color
       const daysSince = getStudentDaysSinceLastData(student.code);
@@ -1986,7 +1991,7 @@
       const dataLabel = formatRelativeTime(daysSince);
 
       let rows = `
-        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? 99999 : daysSince}">
+        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
             <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>${healthDot}
           </td>
