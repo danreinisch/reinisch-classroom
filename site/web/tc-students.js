@@ -8091,25 +8091,35 @@
   function parseSpedTrackCsv(text) {
     const lines = text.trim().split(/\r?\n/);
     if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+    const headers = spedtrackSplitCsvLine(lines[0]).map(h => h.toLowerCase());
     const rows = [];
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
-      // Simple CSV split (handles quoted fields with commas)
-      const vals = [];
-      let inQuote = false;
-      let cell = '';
-      for (const ch of lines[i]) {
-        if (ch === '"') { inQuote = !inQuote; }
-        else if (ch === ',' && !inQuote) { vals.push(cell.trim()); cell = ''; }
-        else { cell += ch; }
-      }
-      vals.push(cell.trim());
+      const vals = spedtrackSplitCsvLine(lines[i]);
       const row = {};
       headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
       rows.push(row);
     }
     return rows;
+  }
+
+  /** Split one CSV line respecting double-quoted fields (RFC 4180). */
+  function spedtrackSplitCsvLine(line) {
+    const fields = [];
+    let inQuote = false;
+    let cell = '';
+    for (const ch of line) {
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === ',' && !inQuote) { fields.push(cell.trim()); cell = ''; }
+      else { cell += ch; }
+    }
+    fields.push(cell.trim());
+    return fields;
+  }
+
+  /** Quote a single value for CSV output (RFC 4180). */
+  function spedtrackCsvQuote(v) {
+    return '"' + String(v).replace(/"/g, '""') + '"';
   }
 
   /**
@@ -8400,7 +8410,7 @@
 
     const thead = document.createElement('thead');
     const headerTr = document.createElement('tr');
-    ['Status', 'Student', 'Goal', 'Date', 'Value', 'Notes'].forEach(col => {
+    ['Status', 'Student', 'Goal', 'Date', 'Percent', 'Notes'].forEach(col => {
       const th = document.createElement('th');
       th.textContent = col;
       headerTr.appendChild(th);
@@ -8565,7 +8575,7 @@
       ]);
     }
 
-    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const csv = rows.map(r => r.map(spedtrackCsvQuote).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
