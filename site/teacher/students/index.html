@@ -946,6 +946,50 @@
         opacity: 0.7;
       }
 
+      /* Pin Students */
+      .st-pin-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        line-height: 1;
+        padding: 1px 3px;
+        margin-left: 4px;
+        border-radius: 4px;
+        opacity: 0.25;
+        vertical-align: middle;
+        transition: opacity 0.15s, background 0.15s;
+      }
+      .st-pin-btn:hover {
+        opacity: 0.7;
+        background: rgba(168, 85, 247, 0.12);
+      }
+      .st-pin-btn.active {
+        opacity: 1;
+      }
+      tr:hover .st-pin-btn:not(.active) {
+        opacity: 0.5;
+      }
+      .st-table tbody tr.st-row-pinned {
+        border-left: 3px solid rgba(168, 85, 247, 0.7);
+        background: rgba(168, 85, 247, 0.06);
+      }
+      .st-table tbody tr.st-row-pinned:hover {
+        background: rgba(168, 85, 247, 0.1);
+      }
+      .st-table tbody tr.st-pinned-divider {
+        pointer-events: none;
+      }
+      .st-table tbody tr.st-pinned-divider td {
+        padding: 0;
+        height: 2px;
+        background: linear-gradient(to right, rgba(168, 85, 247, 0.5), rgba(168, 85, 247, 0.05));
+        border: none;
+      }
+
       /* Light theme variants */
       @media (prefers-color-scheme: light) {
         .st-btn-focus {
@@ -959,6 +1003,16 @@
         .st-btn-focus.active {
           background: rgba(168, 85, 247, 0.15);
           border-color: rgba(168, 85, 247, 0.45);
+        }
+        .st-table tbody tr.st-row-pinned {
+          border-left-color: rgba(126, 34, 206, 0.6);
+          background: rgba(168, 85, 247, 0.05);
+        }
+        .st-table tbody tr.st-row-pinned:hover {
+          background: rgba(168, 85, 247, 0.09);
+        }
+        .st-table tbody tr.st-pinned-divider td {
+          background: linear-gradient(to right, rgba(126, 34, 206, 0.4), rgba(126, 34, 206, 0.04));
         }
       }
 
@@ -1037,6 +1091,16 @@
       }
       [data-theme="light"] .st-btn-shortcuts:hover {
         background: rgba(99, 102, 241, 0.12);
+      }
+      [data-theme="light"] .st-table tbody tr.st-row-pinned {
+        border-left-color: rgba(126, 34, 206, 0.6);
+        background: rgba(168, 85, 247, 0.05);
+      }
+      [data-theme="light"] .st-table tbody tr.st-row-pinned:hover {
+        background: rgba(168, 85, 247, 0.09);
+      }
+      [data-theme="light"] .st-table tbody tr.st-pinned-divider td {
+        background: linear-gradient(to right, rgba(126, 34, 206, 0.4), rgba(126, 34, 206, 0.04));
       }
 
       /* Modal */
