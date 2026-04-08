@@ -698,7 +698,7 @@
         if (Array.isArray(lessonsData.sections)) {
           lessonsData.sections.forEach(section => {
             const sectionName = section.name || '';
-            const sectionId = (sectionName).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const sectionId = sectionName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
             if (Array.isArray(section.units)) {
               section.units.forEach(unit => {
                 if (unit.id) {
@@ -6554,6 +6554,10 @@
           });
         }
 
+        function normalizeTag(raw) {
+          return raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        }
+
         async function saveTags() {
           try {
             await db.updateAssignment(assignment.id, { tags: currentTags });
@@ -6578,7 +6582,7 @@
         tagInput.addEventListener('keydown', async (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            const newTag = tagInput.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            const newTag = normalizeTag(tagInput.value);
             if (newTag && !currentTags.includes(newTag)) {
               currentTags = [...currentTags, newTag];
               renderTagPills();
