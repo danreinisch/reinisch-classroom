@@ -813,9 +813,10 @@
     for (const p of allProgressEntries) {
       const goal = goalMap.get(`${p.student_code}_${p.goal_code}`);
       const issueKey = `${p.student_code}_${p.goal_code}_${p.date}`;
-      const pValue = parseFloat(p.value ?? p.percent ?? 0);
+      const rawValue = p.value ?? p.percent;
+      const pValue = rawValue != null ? parseFloat(rawValue) : null;
 
-      if (goal) {
+      if (goal && pValue != null && !isNaN(pValue)) {
         const masteryThreshold = parseGoalValue(goal.mastery || goal.target);
         if (masteryThreshold != null && pValue > masteryThreshold) {
           const key = `exceeds_mastery_${issueKey}`;
@@ -932,7 +933,7 @@
     }
 
     if (!accordion) return;
-    accordion.innerHTML = '';
+    accordion.replaceChildren();
 
     issues.forEach(issue => {
       const student = allStudents.find(s => s.code === issue.student_code);
@@ -1093,7 +1094,7 @@
 
     const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
     const currentQ = getCurrentQuarter();
-    container.innerHTML = '';
+    container.replaceChildren();
 
     quarters.forEach(q => {
       const btn = document.createElement('button');
@@ -1199,7 +1200,7 @@
       iterDate.setDate(iterDate.getDate() - 1);
     }
 
-    container.innerHTML = '';
+    container.replaceChildren();
     container.style.display = 'block';
 
     const wrapper = document.createElement('div');
