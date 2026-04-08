@@ -154,6 +154,10 @@
     copy: [
       { tag: 'rect', x: '9', y: '9', width: '13', height: '13', rx: '2', ry: '2' },
       { tag: 'path', d: 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1' }
+    ],
+    send: [
+      { tag: 'line', x1: '22', y1: '2', x2: '11', y2: '13' },
+      { tag: 'polygon', points: '22 2 15 22 11 13 2 9 22 2' }
     ]
   };
 
@@ -668,6 +672,334 @@
       : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
   }
 
+  // ── Re-Issue Helpers ──────────────────────────────────────────────────────────
+
+  /**
+   * Returns the number of active students enrolled in the given class.
+   * Uses `classEnrollmentsData` loaded at init time.
+   * @param {string} className
+   * @returns {number}
+   */
+  function getClassStudentCount(className) {
+    return classEnrollmentsData.filter(
+      e => e.class_name === className && e.active !== false
+    ).length;
+  }
+
+  /**
+   * Opens the Re-Issue class-picker modal.
+   * The teacher can pick a target class and issue directly via the
+   * `teacher-issue-draft` Netlify function, or fall back to saving a draft
+   * in localStorage and redirecting to the Work tab.
+   *
+   * @param {object} assignment  – normalised assignment-like object with at minimum:
+   *   { id, title, type, series, meta, assignment_id }
+   * @param {'finalized'|'recallLibrary'} [tabContext]  – which tab to re-render on success
+   */
+  function showReIssueModal(assignment, tabContext) {
+    const triggerEl = document.activeElement;
+
+    // ── Overlay ────────────────────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'reissueModalTitle');
+    overlay.style.cssText = [
+      'position:fixed; top:0; left:0; right:0; bottom:0;',
+      'background:rgba(0,0,0,.82); backdrop-filter:blur(4px);',
+      'display:flex; align-items:center; justify-content:center;',
+      'z-index:10010; padding:24px;'
+    ].join('');
+
+    // ── Card ───────────────────────────────────────────────────────────────────
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width:560px; width:100%; max-height:90vh; overflow-y:auto; padding:28px;';
+
+    // ── Header ─────────────────────────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:12px;';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    titleWrap.appendChild(createIcon('refreshCw', 20));
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'reissueModalTitle';
+    titleEl.style.cssText = 'margin:0; font-size:20px; font-weight:700;';
+    titleEl.textContent = 'Re-Issue Assignment';
+    titleWrap.appendChild(titleEl);
+    header.appendChild(titleWrap);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tc-btn';
+    closeBtn.style.cssText = 'padding:6px 12px; flex-shrink:0;';
+    closeBtn.setAttribute('aria-label', 'Close dialog');
+    closeBtn.appendChild(createIcon('x', 14));
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    // ── Assignment title display ───────────────────────────────────────────────
+    const assignmentLabel = document.createElement('div');
+    assignmentLabel.style.cssText = [
+      'background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);',
+      'border-radius:8px; padding:10px 14px; margin-bottom:20px; font-size:14px;',
+      'color:rgba(255,255,255,.80);'
+    ].join('');
+    const assignmentLabelSpan = document.createElement('span');
+    assignmentLabelSpan.style.cssText = 'color:rgba(255,255,255,.45); font-size:12px; display:block; margin-bottom:2px;';
+    assignmentLabelSpan.textContent = 'Re-issuing:';
+    assignmentLabel.appendChild(assignmentLabelSpan);
+    const assignmentTitleSpan = document.createElement('span');
+    assignmentTitleSpan.style.cssText = 'font-weight:600; color:#fff;';
+    assignmentTitleSpan.textContent = assignment.title || '(Untitled)';
+    assignmentLabel.appendChild(assignmentTitleSpan);
+    card.appendChild(assignmentLabel);
+
+    // ── Class picker section heading ───────────────────────────────────────────
+    const pickHeading = document.createElement('div');
+    pickHeading.style.cssText = 'font-size:13px; font-weight:600; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.06em; margin-bottom:12px;';
+    pickHeading.textContent = 'Select a class';
+    card.appendChild(pickHeading);
+
+    // ── Determine original class ───────────────────────────────────────────────
+    const originalClass = inferClassName(assignment) || assignment.series || null;
+
+    // ── Enrollment count note ──────────────────────────────────────────────────
+    const noEnrollData = classEnrollmentsData.length === 0;
+    if (noEnrollData) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:12px; color:rgba(255,200,80,.75); margin-bottom:10px;';
+      note.textContent = 'Enrollment data unavailable — student counts not shown.';
+      card.appendChild(note);
+    }
+
+    // ── Class picker grid ──────────────────────────────────────────────────────
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; margin-bottom:24px;';
+
+    let selectedClassName = null;
+
+    const classBtns = CANON_CLASSES.map(cls => {
+      const btn = document.createElement('button');
+      btn.style.cssText = [
+        'display:flex; flex-direction:column; align-items:flex-start; gap:4px;',
+        'background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.12);',
+        'border-radius:10px; padding:12px 14px; cursor:pointer; text-align:left;',
+        'transition:border-color .15s, background .15s; color:#fff; font-family:inherit;'
+      ].join('');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.style.cssText = 'font-size:14px; font-weight:600;';
+      nameSpan.textContent = cls;
+      btn.appendChild(nameSpan);
+
+      if (!noEnrollData) {
+        const count = getClassStudentCount(cls);
+        const countSpan = document.createElement('span');
+        countSpan.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45);';
+        countSpan.textContent = count === 1 ? '1 student' : count + ' students';
+        btn.appendChild(countSpan);
+      }
+
+      if (originalClass && cls === originalClass) {
+        const badge = document.createElement('span');
+        badge.style.cssText = [
+          'font-size:10px; color:#60a5fa;',
+          'background:rgba(96,165,250,.12); border:1px solid rgba(96,165,250,.25);',
+          'border-radius:6px; padding:1px 6px; margin-top:2px;'
+        ].join('');
+        badge.textContent = 'original';
+        btn.appendChild(badge);
+      }
+
+      btn.addEventListener('click', () => {
+        selectedClassName = cls;
+        classBtns.forEach(b => {
+          b.style.borderColor = 'rgba(255,255,255,.12)';
+          b.style.background = 'rgba(255,255,255,.05)';
+          b.style.boxShadow = '';
+        });
+        btn.style.borderColor = '#3b82f6';
+        btn.style.background = 'rgba(59,130,246,.12)';
+        btn.style.boxShadow = '0 0 0 3px rgba(59,130,246,.20)';
+        issueBtn.disabled = false;
+        issueBtn.style.opacity = '1';
+        errorDiv.style.display = 'none';
+      });
+
+      grid.appendChild(btn);
+      return btn;
+    });
+
+    card.appendChild(grid);
+
+    // ── Action row ─────────────────────────────────────────────────────────────
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
+
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'tc-btn';
+    issueBtn.style.cssText = 'font-weight:600; font-size:15px; padding:12px 20px; background:#3b82f6; border-color:#3b82f6; color:#fff; opacity:.45;';
+    issueBtn.disabled = true;
+    issueBtn.appendChild(createIcon('send', 16));
+    issueBtn.appendChild(document.createTextNode(' Issue to Class'));
+    actionRow.appendChild(issueBtn);
+
+    // Error message div (hidden by default)
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'display:none; color:#f87171; font-size:13px; padding:8px 12px; background:rgba(248,113,113,.10); border:1px solid rgba(248,113,113,.25); border-radius:8px;';
+    actionRow.appendChild(errorDiv);
+
+    const draftBtn = document.createElement('button');
+    draftBtn.className = 'tc-btn';
+    draftBtn.style.cssText = 'font-size:13px; color:rgba(255,255,255,.55); border-color:rgba(255,255,255,.12); padding:8px 14px;';
+    draftBtn.appendChild(createIcon('arrowRight', 13));
+    draftBtn.appendChild(document.createTextNode(' Save as Draft Instead'));
+    actionRow.appendChild(draftBtn);
+
+    card.appendChild(actionRow);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // ── Focus management ───────────────────────────────────────────────────────
+    function closeModal() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKeyDown);
+      if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
+    }
+
+    closeBtn.focus();
+
+    // ── Issue to Class handler ─────────────────────────────────────────────────
+    issueBtn.addEventListener('click', async () => {
+      if (!selectedClassName) return;
+      issueBtn.disabled = true;
+      issueBtn.style.opacity = '.6';
+      // Update button text to show spinner
+      while (issueBtn.firstChild) issueBtn.removeChild(issueBtn.firstChild);
+      issueBtn.appendChild(createIcon('refreshCw', 16));
+      issueBtn.appendChild(document.createTextNode(' Issuing\u2026'));
+      errorDiv.style.display = 'none';
+
+      const draft = {
+        id: genDraftId(),
+        title: assignment.title || '(Untitled)',
+        className: selectedClassName,
+        batchId: null,
+        assignment: {
+          kind: assignment.type || 'file',
+          text: assignment.meta?.page || '',
+        },
+        mapping: assignment.meta?.mapping || null,
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+        reissuedFrom: assignment.id || assignment.assignment_id,
+      };
+
+      let result;
+      try {
+        const response = await fetch('/.netlify/functions/teacher-issue-draft', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ draft }),
+        });
+
+        result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const status = response.status;
+          let msg = result.error || result.message || 'Issue failed';
+          if (status === 401) msg = 'Session expired — please reload the page and try again.';
+          else if (status === 400) msg = 'Validation error: ' + msg;
+          throw new Error(msg);
+        }
+
+        if (!result.ok) {
+          throw new Error(result.error || result.message || 'Issue failed');
+        }
+      } catch (err) {
+        console.error('[tc-library] Re-issue failed:', err);
+        errorDiv.textContent = err.message || 'An unexpected error occurred.';
+        errorDiv.style.display = 'block';
+        // Re-enable button
+        while (issueBtn.firstChild) issueBtn.removeChild(issueBtn.firstChild);
+        issueBtn.appendChild(createIcon('send', 16));
+        issueBtn.appendChild(document.createTextNode(' Issue to Class'));
+        issueBtn.disabled = false;
+        issueBtn.style.opacity = '1';
+        return;
+      }
+
+      // Success
+      const issued = result.issued_count ?? result.created_instances ?? 0;
+      showToast('Issued to ' + issued + ' student' + (issued !== 1 ? 's' : '') + ' in ' + selectedClassName, '#22c55e', '#fff');
+      closeModal();
+      if (tabContext === 'recallLibrary') {
+        renderRecallLibraryTab();
+      } else {
+        renderFinalizedTab();
+      }
+    });
+
+    // ── Save as Draft fallback ─────────────────────────────────────────────────
+    draftBtn.addEventListener('click', () => {
+      const newDraft = {
+        id: genDraftId(),
+        title: assignment.title || '(Untitled)',
+        className: assignment.series || '',
+        batchId: null,
+        assignment: {
+          kind: assignment.type || 'file',
+          text: assignment.meta?.page || '',
+        },
+        mapping: assignment.meta?.mapping || null,
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+        reissuedFrom: assignment.id || assignment.assignment_id,
+      };
+      try {
+        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
+        drafts.unshift(newDraft);
+        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
+      } catch (err) {
+        console.error('[tc-library] Failed to save re-issue draft:', err);
+        showToast('Could not save draft \u2014 storage may be full.', '#ef4444', '#fff');
+        return;
+      }
+      closeModal();
+      showToast('Draft saved \u2014 redirecting to Work tab\u2026');
+      window.location.href = '/teacher/work/';
+    });
+
+    // ── Dismiss handlers ───────────────────────────────────────────────────────
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      } else if (e.key === 'Tab') {
+        const focusable = card.querySelectorAll('button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+  }
+
   // ── Recall Library ────────────────────────────────────────────────────────────
 
   async function loadRecallLibrary() {
@@ -875,45 +1207,15 @@
     reIssueBtn.style.cssText = 'font-size:12px; padding:5px 12px;';
     reIssueBtn.appendChild(createIcon('refreshCw', 14));
     reIssueBtn.appendChild(document.createTextNode(' Re-Issue'));
-    reIssueBtn.addEventListener('click', async () => {
-      const confirmed = await rcConfirm(
-        'Re-Issue Assignment',
-        `This will create a new draft from "${entry.title || '(Untitled)'}" in your Work tab, ready to be edited and issued to a class.\n\nContinue?`,
-        'Create Draft'
-      );
-      if (!confirmed) return;
-
-      const newId = genDraftId();
-
-      const newDraft = {
-        id: newId,
-        title: entry.title || '(Untitled)',
-        className: entry.series || '',
-        batchId: null,
-        assignment: {
-          kind: entry.type || 'file',
-          text: entry.meta?.page || '',
-        },
-        mapping: entry.meta?.mapping || null,
-        createdAt: new Date().toISOString(),
-        submittedAt: null,
-        issuedAt: null,
-        assignmentId: null,
-        reissuedFrom: entry.assignment_id,
-      };
-
-      try {
-        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
-        drafts.unshift(newDraft);
-        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
-      } catch (err) {
-        console.error('[tc-library] Failed to save re-issue draft:', err);
-        showToast('Could not save draft — storage may be full.', '#ef4444', '#fff');
-        return;
-      }
-
-      showToast('Draft created from recalled assignment — redirecting to Work tab…');
-      window.location.href = '/teacher/work/';
+    reIssueBtn.addEventListener('click', () => {
+      showReIssueModal({
+        id: entry.assignment_id,
+        title: entry.title,
+        type: entry.type,
+        series: entry.series,
+        meta: entry.meta,
+        assignment_id: entry.assignment_id,
+      }, 'recallLibrary');
     });
     btnRow.appendChild(reIssueBtn);
     card.appendChild(btnRow);
@@ -2177,46 +2479,9 @@
     reIssueBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0;';
     reIssueBtn.appendChild(createIcon('refreshCw', 12));
     reIssueBtn.appendChild(document.createTextNode(' Re-Issue'));
-    reIssueBtn.addEventListener('click', async (e) => {
+    reIssueBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const confirmed = await rcConfirm(
-        'Re-Issue Assignment',
-        'This will create a new draft from "' + (assignment.title || '(Untitled)') + '" in your Work tab, ready to be edited and issued to a class.\n\nContinue?',
-        'Create Draft'
-      );
-      if (!confirmed) return;
-
-      const newId = genDraftId();
-
-      const newDraft = {
-        id: newId,
-        title: assignment.title || '(Untitled)',
-        className: assignment.series || '',
-        batchId: null,
-        assignment: {
-          kind: assignment.type || 'file',
-          text: assignment.meta?.page || '',
-        },
-        mapping: assignment.meta?.mapping || null,
-        createdAt: new Date().toISOString(),
-        submittedAt: null,
-        issuedAt: null,
-        assignmentId: null,
-        reissuedFrom: assignment.id,
-      };
-
-      try {
-        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
-        drafts.unshift(newDraft);
-        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
-      } catch (err) {
-        console.error('[tc-library] Failed to save re-issue draft:', err);
-        showToast('Could not save draft — storage may be full.', '#ef4444', '#fff');
-        return;
-      }
-
-      showToast('Draft created from finalized assignment — redirecting to Work tab…');
-      window.location.href = '/teacher/work/';
+      showReIssueModal(assignment, 'finalized');
     });
     btnGroup.appendChild(reIssueBtn);
 
