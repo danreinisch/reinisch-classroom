@@ -51,6 +51,17 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
       const area = sanitizeForPrompt(g.area, 100);
       const trend = sanitizeForPrompt(g.trend, 10);
       prompt += `- Code: ${code}, Area: ${area}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%\n`;
+
+      // Include per-question weaknesses (< 60% accuracy) when available
+      if (Array.isArray(g.question_weaknesses) && g.question_weaknesses.length > 0) {
+        prompt += `  Specific skill struggles for ${code}:\n`;
+        for (const q of g.question_weaknesses) {
+          const qText = sanitizeForPrompt(q.text, 100);
+          const qAcc = sanitizeNumber(q.accuracy);
+          const qAttempts = sanitizeNumber(q.attempts);
+          prompt += `    * "${qText}" — ${qAcc}% accuracy over ${qAttempts} attempt${q.attempts === 1 ? '' : 's'}\n`;
+        }
+      }
     }
     prompt += `\n`;
   }
@@ -106,8 +117,8 @@ exports.handler = async (event) => {
     return jsonResponse(event, 503, { ok: false, error: 'AI skills summary not configured' }, {}, requestId);
   }
 
-  // Validate body size (20KB max — skills payloads can be larger than grading)
-  const bodySizeCheck = validateBodySize(event.body, 20);
+  // Validate body size (30KB max — skills payloads can include per-question weakness data)
+  const bodySizeCheck = validateBodySize(event.body, 30);
   if (!bodySizeCheck.valid) {
     console.log(`[teacher-ai-skills-summary] [${requestId}] Body too large: ${bodySizeCheck.error}`);
     return jsonResponse(event, 400, { ok: false, error: 'Request body too large' }, {}, requestId);
