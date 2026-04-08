@@ -3809,6 +3809,8 @@
   let _bookSelectionChangeHandler = null; // stored so it can be removed on close
   let _bookReadingHelperOutsideClickHandler = null; // stored so it can be removed on close
   const _bookChunkCache = new Map(); // chunkId -> chunkData (pages array)
+  const _vocabPreviewedChapters = new Set(); // chapter startPages previewed this session
+  const _vocabImageCache = new Map();        // lowercase term -> base64 image data URL
 
   // ============================================================================
   // Book Deep-link Helpers
@@ -4065,6 +4067,7 @@
     }
 
     bookReaderState = null;
+    _vocabPreviewedChapters.clear();
   }
 
   function renderBookPanel(panel, bookData, title) {
@@ -4478,6 +4481,14 @@
     if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
       fetchBookChunk(nextChunk.id);
     }
+
+    // Vocabulary Preview: show card before first page of each new chapter
+    if (getBookHelper('vocab_preview') && _bookGlossaryMap && bookData.chapters && bookData.chapters.length > 0) {
+      const chapterAtPage = bookData.chapters.find(function (ch) { return ch.startPage === currentPage; });
+      if (chapterAtPage && !_vocabPreviewedChapters.has(currentPage)) {
+        showVocabPreviewCard(chapterAtPage);
+      }
+    }
   }
 
   function navigateBookPage(delta) {
@@ -4488,6 +4499,204 @@
     stopBookTts();
     state.currentPage = newPage;
     renderBookPage();
+  }
+
+  /**
+   * Selects up to 5 glossary terms that appear in the given chapter's page range,
+   * prioritizing longer/less-common words. Returns between 0 and 5 terms.
+   * @param {object} bookData
+   * @param {object} chapter - { title, startPage }
+   * @param {Map} glossaryMap - Map<normalized_term, definition>
+   * @returns {Array<{term:string, definition:string}>}
+   */
+  function selectVocabTermsForChapter(bookData, chapter, glossaryMap) {
+    if (!glossaryMap || !glossaryMap.size) return [];
+
+    // Determine page range for this chapter
+    const chapters = bookData.chapters || [];
+    const chIdx = chapters.indexOf(chapter);
+    const startPage = chapter.startPage;
+    const endPage = (chIdx >= 0 && chIdx + 1 < chapters.length)
+      ? chapters[chIdx + 1].startPage - 1
+      : bookData.totalPages;
+
+    // Count occurrences of each glossary term across the chapter's pages
+    const termCounts = new Map(); // term -> occurrence count
+    for (let pg = startPage; pg <= endPage; pg++) {
+      const pageObj = bookData.pages[pg - 1];
+      if (!pageObj) continue;
+      for (const para of (pageObj.paragraphs || [])) {
+        for (const word of para) {
+          const normalized = word.toLowerCase().replace(/[^a-z'-]/g, '');
+          if (glossaryMap.has(normalized)) {
+            termCounts.set(normalized, (termCounts.get(normalized) || 0) + 1);
+          }
+        }
+      }
+    }
+
+    if (!termCounts.size) return [];
+
+    // Sort: prefer longer terms (rarer/more interesting vocab), then by frequency (less common = lower count)
+    const sorted = Array.from(termCounts.entries()).sort(function (a, b) {
+      // Primary: longer term first
+      if (b[0].length !== a[0].length) return b[0].length - a[0].length;
+      // Secondary: less frequent first (harder words)
+      return a[1] - b[1];
+    });
+
+    // Pick up to 5, retrieving full term and definition from the original glossary
+    const result = [];
+    for (const [normalizedTerm] of sorted) {
+      if (result.length >= 5) break;
+      const definition = glossaryMap.get(normalizedTerm);
+      // Find the canonical (original casing) term from the glossary
+      const canonicalTerm = (function () {
+        for (const entry of (bookData.glossary || [])) {
+          if (entry.term && entry.term.toLowerCase() === normalizedTerm) return entry.term;
+        }
+        return normalizedTerm;
+      }());
+      result.push({ term: canonicalTerm, definition: definition || '' });
+    }
+    return result;
+  }
+
+  /**
+   * Fetches an AI-generated illustration for a vocabulary term.
+   * Results are cached in _vocabImageCache to avoid redundant API calls.
+   * @param {string} term
+   * @param {string} definition
+   * @returns {Promise<string|null>} base64 data URL or null on failure
+   */
+  async function fetchVocabImage(term, definition) {
+    const cacheKey = term.toLowerCase();
+    if (_vocabImageCache.has(cacheKey)) return _vocabImageCache.get(cacheKey);
+
+    try {
+      const res = await fetch('/.netlify/functions/student-vocab-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term, definition }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.ok || !data.image) return null;
+      const dataUrl = 'data:image/png;base64,' + data.image;
+      _vocabImageCache.set(cacheKey, dataUrl);
+      return dataUrl;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Shows the Vocabulary Preview card as an overlay inside the book panel,
+   * before the student starts reading a new chapter.
+   * @param {object} chapter - { title, startPage }
+   * @returns {Promise<void>} resolves when the student dismisses the card
+   */
+  function showVocabPreviewCard(chapter) {
+    return new Promise(function (resolve) {
+      const { bookData } = bookReaderState;
+      const terms = selectVocabTermsForChapter(bookData, chapter, _bookGlossaryMap);
+
+      // If there are no matching glossary terms, skip the preview entirely
+      if (!terms.length) {
+        _vocabPreviewedChapters.add(chapter.startPage);
+        resolve();
+        return;
+      }
+
+      const chapterTitle = escapeHtml(chapter.title || ('Chapter ' + chapter.startPage));
+
+      // Build term cards HTML (images start as loading placeholders)
+      const termCardsHtml = terms.map(function (t, i) {
+        return `<div class="st-vp-term-card">
+          <div class="st-vp-term-img-wrap" id="vpImg${i}">
+            <div class="st-vp-term-img-placeholder"></div>
+          </div>
+          <div class="st-vp-term-body">
+            <div class="st-vp-term-word">${escapeHtml(t.term)}</div>
+            <div class="st-vp-term-def">${escapeHtml(t.definition)}</div>
+            <button class="st-vp-hear-btn" data-vp-term="${escapeHtml(t.term)}" title="Hear it">🔊 Hear it</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Find the book panel to anchor the overlay inside it
+      const bookPanel = document.getElementById('bookPanel');
+      if (!bookPanel) {
+        _vocabPreviewedChapters.add(chapter.startPage);
+        resolve();
+        return;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'st-vp-overlay';
+      overlay.id = 'vocabPreviewOverlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-labelledby', 'vpCardTitle');
+      overlay.innerHTML = `
+        <div class="st-vp-card">
+          <div class="st-vp-header">
+            <span class="st-vp-title" id="vpCardTitle">📚 Words to Know — ${chapterTitle}</span>
+          </div>
+          <div class="st-vp-terms">${termCardsHtml}</div>
+          <div class="st-vp-footer">
+            <button class="st-vp-start-btn" id="vpStartBtn">Start Reading →</button>
+          </div>
+        </div>
+      `;
+
+      bookPanel.appendChild(overlay);
+
+      // Wire "Hear it" buttons
+      overlay.addEventListener('click', function (e) {
+        const hearBtn = e.target.closest('.st-vp-hear-btn');
+        if (hearBtn) {
+          const word = hearBtn.getAttribute('data-vp-term');
+          if (word) speakWord(word);
+        }
+      });
+
+      // Wire "Start Reading" button
+      const startBtn = overlay.querySelector('#vpStartBtn');
+      if (startBtn) {
+        startBtn.addEventListener('click', function () {
+          _vocabPreviewedChapters.add(chapter.startPage);
+          overlay.classList.add('st-vp-overlay-out');
+          setTimeout(function () {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            resolve();
+          }, 250);
+        });
+        // Focus the start button for keyboard users
+        setTimeout(function () { startBtn.focus(); }, 50);
+      }
+
+      // Load images asynchronously for each term
+      terms.forEach(function (t, i) {
+        fetchVocabImage(t.term, t.definition).then(function (dataUrl) {
+          const wrap = document.getElementById('vpImg' + i);
+          if (!wrap) return;
+          // Validate that the dataUrl is a safe base64 PNG data URL before injecting into DOM
+          if (dataUrl && /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(dataUrl)) {
+            const img = document.createElement('img');
+            img.className = 'st-vp-term-img';
+            img.src = dataUrl;
+            img.alt = t.term + ' illustration';
+            img.loading = 'lazy';
+            wrap.innerHTML = '';
+            wrap.appendChild(img);
+          } else {
+            // Hide the image area on failure or unexpected format
+            wrap.style.display = 'none';
+          }
+        });
+      });
+    });
   }
 
   // Reading Helper panel feature definitions
