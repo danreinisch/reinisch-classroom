@@ -12,6 +12,7 @@
   const { getSchedule } = await import('/web/class-schedule.js');
   const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
   const { getGoalStaleness, getStudentHealthDot, formatRelativeTime } = await import('/web/staleness-utils.js');
+  const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -2628,6 +2629,56 @@
     }));
   }
 
+  /**
+   * Asynchronously fetch per-question aggregation data for each goal and inject
+   * "⚠ Skill Gaps" badges into the placeholder spans rendered in renderGoalCard.
+   * Called lazily after the Goals tab renders — non-blocking.
+   */
+  async function injectSkillGapBadges(container, studentCode, studentGoals) {
+    const placeholders = container.querySelectorAll('.st-skill-gap-badge-placeholder[data-goal-code]');
+    if (!placeholders.length) return;
+
+    let submissionsData = [];
+    let assignmentsData = [];
+    let mappingsData = [];
+    try {
+      [submissionsData, assignmentsData, mappingsData] = await Promise.all([
+        db.listSubmissions ? db.listSubmissions({ studentCode }) : Promise.resolve([]),
+        db.listAssignments ? db.listAssignments() : Promise.resolve([]),
+        db.listAssignmentGoalMappings ? db.listAssignmentGoalMappings({ studentCode }) : Promise.resolve([]),
+      ]);
+    } catch (_e) {
+      return; // Silently skip — badges are optional
+    }
+
+    for (const placeholder of placeholders) {
+      const goalCode = placeholder.dataset.goalCode;
+      if (!goalCode) continue;
+
+      const questions = getPerQuestionAggregation(goalCode, studentCode, mappingsData, submissionsData, assignmentsData);
+      const weakQuestions = questions.filter(q => q.accuracy !== null && q.accuracy < 50);
+      if (weakQuestions.length === 0) continue;
+
+      // Build tooltip listing weak question texts
+      const tooltipLines = weakQuestions
+        .slice(0, 5) // cap at 5 items in tooltip
+        .map(q => {
+          const shortText = q.text.length > 50 ? q.text.slice(0, 50) + '…' : q.text;
+          return `${shortText} (${q.accuracy}%)`;
+        })
+        .join('\n');
+      const moreCount = weakQuestions.length > 5 ? `\n+${weakQuestions.length - 5} more` : '';
+
+      const badge = document.createElement('span');
+      badge.className = 'st-skill-gap-badge';
+      badge.style.cssText = 'display:inline-flex;align-items:center;gap:3px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:4px;cursor:default;vertical-align:middle;';
+      badge.title = `⚠ Skill Gaps — questions below 50%:\n${tooltipLines}${moreCount}`;
+      badge.textContent = `⚠ ${weakQuestions.length} Skill Gap${weakQuestions.length === 1 ? '' : 's'}`;
+
+      placeholder.appendChild(badge);
+    }
+  }
+
   async function renderExpandedDetail(studentCode) {
     const container = document.getElementById(`stExpandedDetail-${studentCode}`);
     if (!container) return;
@@ -2745,6 +2796,7 @@
     // After the goals tab is rendered, batch-fetch data points to show accurate counts
     if (selectedDetailTab === 'goals') {
       batchUpdateGoalDataCounts(contentDiv, studentGoals).catch(() => {});
+      injectSkillGapBadges(contentDiv, studentCode, studentGoals).catch(() => {});
     }
 
     // Wire up the AI Commentary button for the skills tab
@@ -2843,6 +2895,100 @@
     if (score >= 80) return 'dt-score-green';
     if (score >= 60) return 'dt-score-amber';
     return 'dt-score-red';
+  }
+
+  /**
+   * Aggregate per-question accuracy for a goal across all submissions for a student.
+   * @param {string} goalCode
+   * @param {string} studentCode
+   * @param {Array} mappingsData - assignment_goal_mappings records
+   * @param {Array} submissionsData - submission records (with answers, student_code, assignment_id)
+   * @param {Array} assignmentsData - assignment records (with id, meta)
+   * @returns {Array} Per-question stats sorted by accuracy ascending (weakest first):
+   *   [{ itemRef, text, attempts, correct, accuracy, trend }]
+   */
+  function getPerQuestionAggregation(goalCode, studentCode, mappingsData, submissionsData, assignmentsData) {
+    // Find assignment IDs mapped to this goal for this student
+    const mappedIds = (mappingsData || [])
+      .filter(m => m.goal_code === goalCode && m.student_code === studentCode)
+      .map(m => m.assignment_id);
+
+    if (mappedIds.length === 0) return [];
+
+    // Find submissions for these assignments by this student, sorted chronologically
+    const relSubs = (submissionsData || [])
+      .filter(sub => sub.student_code === studentCode && mappedIds.includes(sub.assignment_id))
+      .slice()
+      .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+
+    if (relSubs.length === 0) return [];
+
+    // Per-question accumulator: key = item_ref
+    const questionStats = new Map();
+
+    for (const sub of relSubs) {
+      const assignment = (assignmentsData || []).find(a => a.id === sub.assignment_id);
+      if (!assignment) continue;
+
+      const items = buildItemsFromMeta(sub.assignment_id, assignment.meta || null)
+        .filter(item => Array.isArray(item.goal_codes) && item.goal_codes.includes(goalCode));
+
+      const rawAnswers = (sub.answers && typeof sub.answers === 'object' && !Array.isArray(sub.answers))
+        ? sub.answers : {};
+
+      for (const item of items) {
+        const key = item.item_ref;
+        if (!questionStats.has(key)) {
+          questionStats.set(key, {
+            text: (item.meta && item.meta.text) ? item.meta.text : String(item.item_ref),
+            attempts: 0,
+            correct: 0,
+            history: [],
+          });
+        }
+        const stat = questionStats.get(key);
+
+        const studentAns = rawAnswers[item.item_ref] !== undefined ? rawAnswers[item.item_ref] : null;
+        const correctAns = item.meta ? item.meta.correct : undefined;
+
+        let isCorrect = null;
+        if (studentAns !== null && studentAns !== undefined && correctAns !== undefined && correctAns !== null) {
+          isCorrect = String(studentAns).toLowerCase().trim() === String(correctAns).toLowerCase().trim();
+        }
+
+        if (isCorrect !== null) {
+          stat.attempts++;
+          if (isCorrect) stat.correct++;
+          stat.history.push(isCorrect ? 1 : 0);
+        }
+      }
+    }
+
+    // Build result array with computed stats
+    const results = [];
+    for (const [itemRef, stat] of questionStats) {
+      const accuracy = stat.attempts > 0 ? Math.round((stat.correct / stat.attempts) * 100) : null;
+
+      // Compute trend from last 3 history entries
+      let trend = 'stable';
+      if (stat.history.length >= 3) {
+        const recent = stat.history.slice(-3);
+        const first = recent[0];
+        const last = recent[recent.length - 1];
+        if (last > first) trend = 'improving';
+        else if (last < first) trend = 'declining';
+      }
+
+      results.push({ itemRef, text: stat.text, attempts: stat.attempts, correct: stat.correct, accuracy, trend });
+    }
+
+    // Sort by accuracy ascending (weakest first), null accuracy sorted last
+    return results.sort((a, b) => {
+      if (a.accuracy === null && b.accuracy === null) return 0;
+      if (a.accuracy === null) return 1;
+      if (b.accuracy === null) return -1;
+      return a.accuracy - b.accuracy;
+    });
   }
 
   /**
@@ -3207,6 +3353,84 @@
   }
 
   /**
+   * Build the "📊 Question Breakdown" collapsible DOM element for the Work Samples modal.
+   * Uses per-question aggregation data. All user strings set via textContent.
+   */
+  function buildQuestionBreakdownEl(goalCode, studentCode, mappingsData, submissionsData, assignmentsData) {
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-top:20px;';
+
+    const questions = getPerQuestionAggregation(goalCode, studentCode, mappingsData, submissionsData, assignmentsData);
+
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.style.cssText = 'cursor:pointer;font-weight:600;font-size:15px;user-select:none;padding:6px 0;';
+    summary.textContent = '📊 Question Breakdown';
+    details.appendChild(summary);
+
+    if (questions.length === 0) {
+      const msg = document.createElement('p');
+      msg.style.cssText = 'font-size:13px;opacity:0.6;margin-top:8px;font-style:italic;';
+      msg.textContent = 'No question-level data available for this goal.';
+      details.appendChild(msg);
+    } else {
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;';
+
+      // Header row
+      const thead = document.createElement('thead');
+      const hrow = document.createElement('tr');
+      for (const label of ['Question', 'Attempts', 'Correct', 'Accuracy', 'Trend']) {
+        const th = document.createElement('th');
+        th.style.cssText = 'text-align:left;padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);opacity:0.7;font-weight:600;';
+        th.textContent = label;
+        hrow.appendChild(th);
+      }
+      thead.appendChild(hrow);
+      table.appendChild(thead);
+
+      // Body rows
+      const tbody = document.createElement('tbody');
+      for (const q of questions) {
+        const tr = document.createElement('tr');
+
+        // Accuracy color: red < 50%, amber 50–74%, green ≥ 75%
+        let accColor = '#9ca3af';
+        if (q.accuracy !== null) {
+          if (q.accuracy < 50) accColor = '#ef4444';
+          else if (q.accuracy < 75) accColor = '#f59e0b';
+          else accColor = '#22c55e';
+        }
+
+        const trendIcon = q.trend === 'improving' ? '↑' : q.trend === 'declining' ? '↓' : '→';
+        const trendColor = q.trend === 'improving' ? '#22c55e' : q.trend === 'declining' ? '#ef4444' : '#9ca3af';
+
+        const cells = [
+          { text: q.text, style: 'padding:5px 8px;border-bottom:1px solid rgba(0,0,0,0.06);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' },
+          { text: String(q.attempts), style: 'padding:5px 8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:center;' },
+          { text: String(q.correct), style: 'padding:5px 8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:center;' },
+          { text: q.accuracy !== null ? q.accuracy + '%' : '—', style: `padding:5px 8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:center;font-weight:600;color:${accColor};` },
+          { text: trendIcon, style: `padding:5px 8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:center;font-weight:700;color:${trendColor};` },
+        ];
+
+        for (const cell of cells) {
+          const td = document.createElement('td');
+          td.style.cssText = cell.style;
+          td.textContent = cell.text;
+          tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      details.appendChild(table);
+    }
+
+    section.appendChild(details);
+    return section;
+  }
+
+  /**
    * Open the Work Samples modal for a goal on the Progress tab.
    * Modal body is built entirely using DOM API — no innerHTML with user data.
    */
@@ -3308,6 +3532,10 @@
         body.appendChild(item);
       });
     }
+
+    // ── Question Breakdown section ──────────────────────────────────────────
+    const breakdownSection = buildQuestionBreakdownEl(goalCode, studentCode, mappingsData, submissionsData, assignmentsData);
+    body.appendChild(breakdownSection);
 
     // Create and show modal
     const modal = createModal('Work Samples', '');
@@ -4265,6 +4493,7 @@
             <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
             <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
             ${obsBadgeHtml}
+            <span class="st-skill-gap-badge-placeholder" data-goal-code="${escapeHtml(goal.code)}" data-student-code="${escapeHtml(goal.student_code)}"></span>
           </div>
           <span class="st-goal-quarter-status">${statusEmoji} <span id="${headerCountId}" data-expected="${dataStatus.expected}" style="color:${getCountColor(quarterProgress.length, dataStatus.expected)}">${quarterProgress.length}/${dataStatus.expected}</span></span>
           <span class="st-goal-chevron">▶</span>
@@ -7910,6 +8139,29 @@
    */
   async function requestSkillsNarratives(student, iepCards, deseCards) {
     try {
+      // Build per-question weakness data for IEP goals (questions < 60% accuracy)
+      let iepQuestionWeaknesses = {};
+      try {
+        const [subsData, assnData, mappData] = await Promise.all([
+          db.listSubmissions ? db.listSubmissions({ studentCode: student.code }) : Promise.resolve([]),
+          db.listAssignments ? db.listAssignments() : Promise.resolve([]),
+          db.listAssignmentGoalMappings ? db.listAssignmentGoalMappings({ studentCode: student.code }) : Promise.resolve([]),
+        ]);
+        for (const card of iepCards) {
+          const qs = getPerQuestionAggregation(card.code, student.code, mappData, subsData, assnData);
+          const weak = qs.filter(q => q.accuracy !== null && q.accuracy < 60);
+          if (weak.length > 0) {
+            iepQuestionWeaknesses[card.code] = weak.map(q => ({
+              text: q.text.slice(0, 120),
+              accuracy: q.accuracy,
+              attempts: q.attempts,
+            }));
+          }
+        }
+      } catch (_e) {
+        // per-question data is optional — continue without it
+      }
+
       const iepPayload = iepCards.map(c => ({
         code: c.code,
         area: c.area,
@@ -7919,6 +8171,7 @@
         data_points: c.dataPoints,
         target: c.target,
         baseline: c.baseline,
+        question_weaknesses: iepQuestionWeaknesses[c.code] || [],
       }));
 
       const desePayload = deseCards.map(c => ({
