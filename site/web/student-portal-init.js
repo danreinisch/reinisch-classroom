@@ -3786,7 +3786,7 @@
    * Handles common abbreviations to avoid false splits.
    */
   function splitIntoSentences(text) {
-    var abbrevs = /(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|approx|dept|govt|inc|corp)\./gi;
+    var abbrevs = /(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|approx|dept|govt|inc|corp)\./g;
     var temp = text.replace(abbrevs, function (m) { return m.replace('.', '\u3008DOT\u3009'); });
     var parts = temp.split(/(?<=[.!?])\s+/);
     return parts.map(function (s) { return s.replace(/\u3008DOT\u3009/g, '.').trim(); }).filter(function (s) { return s.length > 0; });
