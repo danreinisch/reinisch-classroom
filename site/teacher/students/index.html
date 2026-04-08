@@ -922,6 +922,46 @@
         font-weight: 600;
       }
 
+      /* Focus Mode button */
+      .st-btn-focus {
+        background: rgba(168, 85, 247, 0.08);
+        border-color: rgba(168, 85, 247, 0.2);
+        color: rgba(168, 85, 247, 0.9);
+      }
+      .st-btn-focus:hover {
+        background: rgba(168, 85, 247, 0.15);
+      }
+      .st-btn-focus.active {
+        background: rgba(168, 85, 247, 0.2);
+        border-color: rgba(168, 85, 247, 0.4);
+        font-weight: 600;
+      }
+
+      /* Focus Mode table dimming */
+      .st-focus-active tr[data-code]:not(.st-needs-attention) {
+        opacity: 0.3;
+        transition: opacity 0.15s;
+      }
+      .st-focus-active tr[data-code]:not(.st-needs-attention):hover {
+        opacity: 0.7;
+      }
+
+      /* Light theme variants */
+      @media (prefers-color-scheme: light) {
+        .st-btn-focus {
+          background: rgba(168, 85, 247, 0.06);
+          border-color: rgba(168, 85, 247, 0.25);
+          color: rgb(126, 34, 206);
+        }
+        .st-btn-focus:hover {
+          background: rgba(168, 85, 247, 0.12);
+        }
+        .st-btn-focus.active {
+          background: rgba(168, 85, 247, 0.15);
+          border-color: rgba(168, 85, 247, 0.45);
+        }
+      }
+
       /* Modal */
       .st-modal-backdrop {
         display: none;
@@ -2202,6 +2242,7 @@
               <input type="checkbox" id="stShowArchived" /> Show Archived
             </label>
             <button id="stFilterAttention" class="st-btn st-btn-small st-btn-attention" type="button">⚠️ Needs Attention</button>
+            <button id="stFocusToggle" class="st-btn st-btn-small st-btn-focus" type="button">🎯 Focus</button>
             <button id="stExpandAllBtn" class="st-btn st-btn-small">▼ Collapse All</button>
             <button id="stExpandStudentsBtn" class="st-btn st-btn-small">▶ Expand Students</button>
             <button id="stExpandAllFullBtn" class="st-btn st-btn-small">▶▶ Expand All</button>
@@ -2300,7 +2341,7 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260331"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260408b"></script>
+    <script type="module" src="/web/tc-students.js?v=20260408c"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
   </body>
