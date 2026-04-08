@@ -2418,10 +2418,10 @@
     const tbody = document.getElementById('stStudentTableBody');
     if (!tbody) return;
 
-    // Determine where the pinned-students section ends so we can insert a divider
+    // Determine where the pinned-students section ends so we can insert a divider.
+    // findIndex returns -1 when no non-pinned students exist (all pinned) → no divider.
     const firstNonPinnedIdx = filteredStudents.findIndex(s => !pinnedStudents.has(s.code));
-    const hasPinnedStudents = firstNonPinnedIdx > 0;
-    const showDivider = hasPinnedStudents && firstNonPinnedIdx < filteredStudents.length;
+    const showDivider = firstNonPinnedIdx > 0 && firstNonPinnedIdx < filteredStudents.length;
 
     const htmlParts = [];
 
@@ -2475,7 +2475,7 @@
 
       // Pin button — shown in collapsed (non-expanded) rows
       const pinBtn = !isExpanded
-        ? `<button class="st-pin-btn${isPinned ? ' active' : ''}" data-code="${escapeHtml(student.code)}" title="${isPinned ? 'Unpin student' : 'Pin student to top'}" aria-pressed="${isPinned ? 'true' : 'false'}">📌</button>`
+        ? `<button class="st-pin-btn${isPinned ? ' active' : ''}" data-code="${escapeHtml(student.code)}" title="${isPinned ? 'Unpin student' : 'Pin student to top'}" aria-label="${isPinned ? 'Unpin ' + escapeHtml(student.code) : 'Pin ' + escapeHtml(student.code) + ' to top'}" aria-pressed="${isPinned ? 'true' : 'false'}">📌</button>`
         : '';
 
       let rows = `
@@ -2511,7 +2511,7 @@
 
       // Insert divider after the last pinned row
       if (showDivider && idx === firstNonPinnedIdx - 1) {
-        htmlParts.push(`<tr class="st-pinned-divider" role="separator"><td colspan="7"></td></tr>`);
+        htmlParts.push(`<tr class="st-pinned-divider" role="separator" aria-label="End of pinned students"><td colspan="7"></td></tr>`);
       }
     });
 
