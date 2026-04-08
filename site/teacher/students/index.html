@@ -962,6 +962,83 @@
         }
       }
 
+      /* Keyboard Shortcuts panel */
+      .st-shortcuts-panel {
+        display: none;
+        position: fixed;
+        bottom: 60px;
+        right: 20px;
+        background: rgba(15, 23, 42, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        padding: 14px 18px;
+        z-index: 1100;
+        min-width: 260px;
+        backdrop-filter: blur(8px);
+      }
+      .st-shortcuts-panel.st-shortcuts-visible {
+        display: block;
+      }
+      .st-shortcuts-title {
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        opacity: 0.9;
+      }
+      .st-shortcut-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        padding: 4px 0;
+        opacity: 0.85;
+      }
+      .st-shortcut-key {
+        display: inline-block;
+        font-family: monospace;
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 4px;
+        padding: 1px 7px;
+        min-width: 36px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .st-btn-shortcuts {
+        background: rgba(99, 102, 241, 0.08);
+        border-color: rgba(99, 102, 241, 0.2);
+        color: rgba(165, 180, 252, 0.9);
+      }
+      .st-btn-shortcuts:hover {
+        background: rgba(99, 102, 241, 0.15);
+      }
+      .st-btn-shortcuts.active {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.4);
+        font-weight: 600;
+      }
+      /* Light theme variants */
+      [data-theme="light"] .st-shortcuts-panel {
+        background: rgba(255, 255, 255, 0.96);
+        border-color: rgba(0, 0, 0, 0.12);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        color: #1e293b;
+      }
+      [data-theme="light"] .st-shortcut-key {
+        background: rgba(0, 0, 0, 0.06);
+        border-color: rgba(0, 0, 0, 0.18);
+      }
+      [data-theme="light"] .st-btn-shortcuts {
+        background: rgba(99, 102, 241, 0.06);
+        border-color: rgba(99, 102, 241, 0.25);
+        color: rgb(79, 70, 229);
+      }
+      [data-theme="light"] .st-btn-shortcuts:hover {
+        background: rgba(99, 102, 241, 0.12);
+      }
+
       /* Modal */
       .st-modal-backdrop {
         display: none;
@@ -2243,6 +2320,7 @@
             </label>
             <button id="stFilterAttention" class="st-btn st-btn-small st-btn-attention" type="button">⚠️ Needs Attention</button>
             <button id="stFocusToggle" class="st-btn st-btn-small st-btn-focus" type="button">🎯 Focus</button>
+            <button id="stShortcutsBtn" class="st-btn st-btn-small st-btn-shortcuts" type="button" title="Keyboard shortcuts (?)">⌨️</button>
             <button id="stExpandAllBtn" class="st-btn st-btn-small">▼ Collapse All</button>
             <button id="stExpandStudentsBtn" class="st-btn st-btn-small">▶ Expand Students</button>
             <button id="stExpandAllFullBtn" class="st-btn st-btn-small">▶▶ Expand All</button>

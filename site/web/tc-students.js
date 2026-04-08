@@ -1911,6 +1911,52 @@
     if (btn) btn.classList.toggle('active', focusModeActive);
   }
 
+  // ── Keyboard Shortcuts Help ──────────────────────────────────────────────
+
+  /**
+   * Toggle the keyboard shortcuts help popover (#stShortcutsHelp).
+   * Creates the panel on first call; subsequent calls show/hide it.
+   */
+  function toggleShortcutsHelp() {
+    let panel = document.getElementById('stShortcutsHelp');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'stShortcutsHelp';
+      panel.className = 'st-shortcuts-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-label', 'Keyboard shortcuts');
+      const shortcuts = [
+        { key: 'F',   desc: 'Toggle focus mode' },
+        { key: 'S',   desc: 'Focus search input' },
+        { key: '/',   desc: 'Focus search input' },
+        { key: 'Esc', desc: 'Close panel / blur search' },
+        { key: '?',   desc: 'Show/hide this help' },
+      ];
+      const rows = shortcuts.map(s =>
+        `<div class="st-shortcut-row">` +
+          `<kbd class="st-shortcut-key">${escapeHtml(s.key)}</kbd>` +
+          `<span>${escapeHtml(s.desc)}</span>` +
+        `</div>`
+      ).join('');
+      panel.innerHTML =
+        `<div class="st-shortcuts-title">⌨️ Keyboard Shortcuts</div>` +
+        rows;
+      document.body.appendChild(panel);
+
+      // Close when clicking outside the panel
+      document.addEventListener('click', (e) => {
+        if (
+          panel.classList.contains('st-shortcuts-visible') &&
+          !panel.contains(e.target) &&
+          e.target.id !== 'stShortcutsBtn'
+        ) {
+          panel.classList.remove('st-shortcuts-visible');
+        }
+      }, true);
+    }
+    panel.classList.toggle('st-shortcuts-visible');
+  }
+
   // ── Goals Hover Tooltip ──────────────────────────────────────────────────
 
   /** Maximum number of goals shown in the hover tooltip. */
@@ -4567,12 +4613,52 @@
       focusToggleBtn.addEventListener('click', () => toggleFocusMode());
     }
 
-    // F key shortcut to toggle Focus Mode (when not typing in an input/textarea)
+    // Shortcuts help button
+    const shortcutsBtn = document.getElementById('stShortcutsBtn');
+    if (shortcutsBtn) {
+      shortcutsBtn.addEventListener('click', () => toggleShortcutsHelp());
+    }
+
+    // Global keyboard shortcuts
     document.addEventListener('keydown', e => {
+      const tag = e.target.tagName;
+      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+        e.target.isContentEditable;
+
+      // Escape always works regardless of focus
+      if (e.key === 'Escape') {
+        const openModal = document.querySelector('.st-modal-backdrop.active');
+        if (openModal) {
+          openModal.remove();
+          return;
+        }
+        const helpPanel = document.getElementById('stShortcutsHelp');
+        if (helpPanel && helpPanel.classList.contains('st-shortcuts-visible')) {
+          helpPanel.classList.remove('st-shortcuts-visible');
+          return;
+        }
+        const searchEl = document.getElementById('stSearchInput');
+        if (searchEl && document.activeElement === searchEl) {
+          searchEl.blur();
+          return;
+        }
+        if (focusModeActive) {
+          toggleFocusMode();
+        }
+        return;
+      }
+
+      // Remaining shortcuts are ignored when typing in inputs
+      if (isEditable) return;
+
       if (e.key === 'f' || e.key === 'F') {
-        const tag = document.activeElement && document.activeElement.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         toggleFocusMode();
+      } else if (e.key === 's' || e.key === 'S' || e.key === '/') {
+        const searchEl = document.getElementById('stSearchInput');
+        if (searchEl) { e.preventDefault(); searchEl.focus(); searchEl.select(); }
+      } else if (e.key === '?') {
+        e.preventDefault();
+        toggleShortcutsHelp();
       }
     });
 
