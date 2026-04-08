@@ -1893,7 +1893,7 @@
     const reviewed = submissionsData.filter(s => s.review_status === 'reviewed');
     if (reviewed.length === 0) return;
 
-    if (!await rcConfirm('Revert All Reviewed', `Revert ${reviewed.length} reviewed submission${reviewed.length !== 1 ? 's' : ''} back to Needs Review? This will undo AI-suggested grades and allow re-grading.`, 'Revert')) return;
+    if (!await rcConfirm('Revert All Reviewed', `Revert ${reviewed.length} reviewed submission${reviewed.length !== 1 ? 's' : ''} back to Needs Review? Scores will be preserved but submissions will be reopened for re-grading.`, 'Revert')) return;
 
     let reverted = 0;
     finalizingInProgress = true;
@@ -2433,8 +2433,8 @@
     const earnedPoints = parseFloat(scoreInput.value) || 0;
     const teacherNote = noteInput ? noteInput.value.trim() : '';
     const aiRationale = scoreInput.dataset.aiRationale || '';
-    const aiSuggestedScore = scoreInput.dataset.aiSuggestedScore != null && scoreInput.dataset.aiSuggestedScore !== ''
-      ? parseFloat(scoreInput.dataset.aiSuggestedScore)
+    const aiSuggestedScore = ('aiSuggestedScore' in scoreInput.dataset) && scoreInput.dataset.aiSuggestedScore !== ''
+      ? (parseFloat(scoreInput.dataset.aiSuggestedScore) || null)
       : null;
 
     // Bug A fix: synthetic item IDs (e.g. "synthetic_WP_4") cannot be stored as bigint.
