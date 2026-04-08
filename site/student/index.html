@@ -4465,6 +4465,257 @@
         outline-offset: 2px;
         box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
       }
+
+      /* ============================================================
+         Vocabulary Preview Card (.st-vp-*)
+         ============================================================ */
+      .st-vp-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        padding: 16px;
+        animation: stVpFadeIn 0.22s ease both;
+      }
+
+      @keyframes stVpFadeIn {
+        from { opacity: 0; transform: scale(0.97); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+
+      .st-vp-overlay.st-vp-overlay-out {
+        animation: stVpFadeOut 0.22s ease both;
+      }
+
+      @keyframes stVpFadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to   { opacity: 0; transform: scale(0.97); }
+      }
+
+      .st-vp-card {
+        background: rgba(15, 23, 42, 0.97);
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        max-width: 540px;
+        width: 100%;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .st-vp-header {
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+        flex-shrink: 0;
+      }
+
+      .st-vp-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #e2e8f0;
+        letter-spacing: 0.02em;
+      }
+
+      .st-vp-terms {
+        overflow-y: auto;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+      }
+
+      .st-vp-term-card {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+
+      .st-vp-term-img-wrap {
+        flex-shrink: 0;
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .st-vp-term-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+        display: block;
+      }
+
+      .st-vp-term-img-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          120deg,
+          rgba(255, 255, 255, 0.04) 25%,
+          rgba(255, 255, 255, 0.09) 50%,
+          rgba(255, 255, 255, 0.04) 75%
+        );
+        background-size: 200% 100%;
+        animation: stVpShimmer 1.4s infinite;
+        border-radius: 8px;
+      }
+
+      @keyframes stVpShimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      .st-vp-term-body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .st-vp-term-word {
+        font-size: 14px;
+        font-weight: 700;
+        color: #67e8f9;
+        letter-spacing: 0.01em;
+      }
+
+      .st-vp-term-def {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.72);
+        line-height: 1.5;
+      }
+
+      .st-vp-hear-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+        padding: 4px 10px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+        align-self: flex-start;
+      }
+
+      .st-vp-hear-btn:hover {
+        background: rgba(255, 255, 255, 0.13);
+        border-color: rgba(255, 255, 255, 0.25);
+        color: #e2e8f0;
+      }
+
+      .st-vp-footer {
+        padding: 12px 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.10);
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .st-vp-start-btn {
+        padding: 9px 20px;
+        background: rgba(99, 102, 241, 0.85);
+        border: 1px solid rgba(99, 102, 241, 0.6);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+
+      .st-vp-start-btn:hover {
+        background: rgba(99, 102, 241, 1);
+      }
+
+      .st-vp-start-btn:focus-visible {
+        outline: 2px solid #818cf8;
+        outline-offset: 2px;
+      }
+
+      /* Light theme overrides for vocabulary preview */
+      [data-theme="light"] .st-vp-card {
+        background: rgba(248, 250, 252, 0.98);
+        border-color: rgba(0, 0, 0, 0.12);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+
+      [data-theme="light"] .st-vp-header {
+        border-bottom-color: rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme="light"] .st-vp-title {
+        color: #1e293b;
+      }
+
+      [data-theme="light"] .st-vp-term-card {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme="light"] .st-vp-term-img-wrap {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      [data-theme="light"] .st-vp-term-img-placeholder {
+        background: linear-gradient(
+          120deg,
+          rgba(0, 0, 0, 0.04) 25%,
+          rgba(0, 0, 0, 0.09) 50%,
+          rgba(0, 0, 0, 0.04) 75%
+        );
+        background-size: 200% 100%;
+      }
+
+      [data-theme="light"] .st-vp-term-word {
+        color: #0e7490;
+      }
+
+      [data-theme="light"] .st-vp-term-def {
+        color: rgba(0, 0, 0, 0.65);
+      }
+
+      [data-theme="light"] .st-vp-hear-btn {
+        background: rgba(0, 0, 0, 0.05);
+        border-color: rgba(0, 0, 0, 0.14);
+        color: rgba(0, 0, 0, 0.6);
+      }
+
+      [data-theme="light"] .st-vp-hear-btn:hover {
+        background: rgba(0, 0, 0, 0.09);
+        color: #1e293b;
+      }
+
+      [data-theme="light"] .st-vp-footer {
+        border-top-color: rgba(0, 0, 0, 0.08);
+      }
+
+      /* Responsive: on small screens, hide image to save space */
+      @media (max-width: 420px) {
+        .st-vp-term-img-wrap {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
