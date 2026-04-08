@@ -4125,6 +4125,8 @@
     hideSelectionToolbar();
     _lastSpokenText = '';
     _lastSpokenType = 'paragraph';
+    _lastSpokenWordOffset = 0;
+    _lastSpokenSpanCount = 0;
     if (bookPanelEscapeHandler) {
       document.removeEventListener('keydown', bookPanelEscapeHandler);
       bookPanelEscapeHandler = null;
