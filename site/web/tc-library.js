@@ -4784,9 +4784,9 @@
     card.appendChild(titleEl);
 
     const scoredEntries = weekEntries
-      .filter(([, d]) => d.scores.length > 0)
-      .map(([label, d]) => {
-        const avg = Math.round(d.scores.reduce((a, b) => a + b, 0) / d.scores.length);
+      .filter(([, weekData]) => weekData.scores.length > 0)
+      .map(([label, weekData]) => {
+        const avg = Math.round(weekData.scores.reduce((a, b) => a + b, 0) / weekData.scores.length);
         return [label, avg];
       });
 
@@ -4963,15 +4963,15 @@
       const cls = inferClassName(a);
       if (!cls || !classDataMap.has(cls)) return;
       const lane = computeLane(a, instancesData);
-      const d = classDataMap.get(cls);
+      const classMetrics = classDataMap.get(cls);
       if (lane === 'upcoming') {
-        d.upcoming++;
+        classMetrics.upcoming++;
       } else if (lane === 'current') {
-        d.current++;
+        classMetrics.current++;
       } else if (lane === 'finalized') {
-        d.finalized++;
+        classMetrics.finalized++;
         const stats = getAssignmentStats(a, instancesData, submissionsData);
-        if (stats.avgScore != null) d.scores.push(stats.avgScore);
+        if (stats.avgScore != null) classMetrics.scores.push(stats.avgScore);
       }
     });
 
@@ -4979,10 +4979,10 @@
     grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;';
 
     CANON_CLASSES.forEach(cls => {
-      const d = classDataMap.get(cls);
-      const total = d.upcoming + d.current + d.finalized;
-      const avgScore = d.scores.length > 0
-        ? Math.round(d.scores.reduce((a, b) => a + b, 0) / d.scores.length)
+      const classMetrics = classDataMap.get(cls);
+      const total = classMetrics.upcoming + classMetrics.current + classMetrics.finalized;
+      const avgScore = classMetrics.scores.length > 0
+        ? Math.round(classMetrics.scores.reduce((a, b) => a + b, 0) / classMetrics.scores.length)
         : null;
       const enrolledCount = classEnrollmentsData.filter(
         e => e.class_name === cls && e.active !== false
@@ -5003,7 +5003,7 @@
       const studEl = document.createElement('div');
       studEl.style.cssText = 'font-size:11px; color:rgba(255,255,255,.50); margin-bottom:10px; display:flex; align-items:center; gap:4px;';
       studEl.appendChild(createIcon('users', 11));
-      studEl.appendChild(document.createTextNode('\u00a0' + String(enrolledCount) + ' student' + (enrolledCount !== 1 ? 's' : '')));
+      studEl.appendChild(document.createTextNode(' ' + String(enrolledCount) + ' student' + (enrolledCount !== 1 ? 's' : '')));
       classCard.appendChild(studEl);
 
       // KPI pills row
@@ -5017,9 +5017,9 @@
         return pill;
       };
 
-      pillRow.appendChild(makePill('R', String(d.upcoming), 'rgba(255,255,255,.70)'));
-      pillRow.appendChild(makePill('A', String(d.current), '#60a5fa'));
-      pillRow.appendChild(makePill('F', String(d.finalized), '#4ade80'));
+      pillRow.appendChild(makePill('R', String(classMetrics.upcoming), 'rgba(255,255,255,.70)'));
+      pillRow.appendChild(makePill('A', String(classMetrics.current), '#60a5fa'));
+      pillRow.appendChild(makePill('F', String(classMetrics.finalized), '#4ade80'));
       if (avgScore != null) {
         pillRow.appendChild(makePill('Avg', String(avgScore) + '%', scoreColor(avgScore)));
       } else {
