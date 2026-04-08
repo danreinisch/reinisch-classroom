@@ -154,6 +154,39 @@
     return div.innerHTML;
   }
 
+  // ── Mastery Nudge Snooze Helpers ─────────────────────────────────────────
+  const MASTERY_DISMISS_PREFIX = 'rc_mastery_dismiss_';
+  const MASTERY_DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  /** Returns true if the mastery nudge for this goal+student has been snoozed and the snooze hasn't expired. */
+  function isMasteryDismissed(goalCode, studentCode) {
+    const key = MASTERY_DISMISS_PREFIX + goalCode + '_' + studentCode;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return false;
+      const ts = parseInt(raw, 10);
+      return !isNaN(ts) && Date.now() - ts < MASTERY_DISMISS_TTL_MS;
+    } catch { return false; }
+  }
+
+  /** Stores a dismissal timestamp so the nudge is hidden for 7 days. */
+  function dismissMasteryNudge(goalCode, studentCode) {
+    const key = MASTERY_DISMISS_PREFIX + goalCode + '_' + studentCode;
+    try { localStorage.setItem(key, String(Date.now())); } catch { /* ignore */ }
+  }
+
+  /**
+   * Increments the version suffix of a goal code.
+   * e.g. "S001.11.1" → "S001.11.1v2", "S001.11.1v2" → "S001.11.1v3"
+   */
+  function incrementGoalCode(code) {
+    const match = (code || '').match(/^(.+?)v(\d+)$/);
+    if (match) {
+      return match[1] + 'v' + (parseInt(match[2], 10) + 1);
+    }
+    return (code || '') + 'v2';
+  }
+
   function formatDate(dateStr) {
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
@@ -4161,22 +4194,37 @@
 
     // Build mastery banner HTML (shown below header, above body)
     let masteryBannerHtml = '';
-    if (alertStatus.isMastered) {
+    if (alertStatus.isMastered && !isMasteryDismissed(goal.code, goal.student_code)) {
       const avgDisplay = escapeHtml(formatProgressValue(alertStatus.avgValue, goal.measurement_type));
       const masteryDisplay = escapeHtml(String(goal.mastery || goal.target || ''));
       const consec = alertStatus.consecutiveAboveMastery;
+      const currentDisplay = escapeHtml(formatProgressValue(alertStatus.currentNum, goal.measurement_type));
       masteryBannerHtml = `
-        <div class="st-goal-mastery-banner st-goal-mastery-banner--mastered">
-          <span>🎉 Goal appears mastered — avg ${avgDisplay} vs ${masteryDisplay} target (${consec} consecutive point${consec === 1 ? '' : 's'} above mastery)</span>
-          <button type="button" class="st-btn st-btn-small st-skill-callout-btn"
-            data-action="archive-goal"
-            data-student-code="${escapeHtml(goal.student_code)}"
-            data-goal-code="${escapeHtml(goal.code)}">📋 Archive Goal</button>
-          <button type="button" class="st-btn st-btn-small st-skill-callout-btn"
-            data-action="suggest-goal"
-            data-student-code="${escapeHtml(goal.student_code)}"
-            data-goal-area="${escapeHtml(goal.goal_area || '')}"
-            data-baseline="${escapeHtml(String(Math.round(alertStatus.avgValue ?? 0)))}">💡 Suggest Replacement</button>
+        <div class="st-goal-mastery-banner st-goal-mastery-banner--mastered st-mastery-nudge-card">
+          <div class="st-mastery-nudge-header">
+            <span class="st-mastery-nudge-title">🎉 Mastery Reached</span>
+            <button type="button" class="st-mastery-nudge-dismiss st-skill-callout-btn"
+              data-action="dismiss-mastery"
+              data-goal-code="${escapeHtml(goal.code)}"
+              data-student-code="${escapeHtml(goal.student_code)}"
+              title="Remind me in 7 days">×</button>
+          </div>
+          <div class="st-mastery-nudge-details">
+            <span><strong>Goal:</strong> ${escapeHtml(goal.code)}</span>
+            <span><strong>Target:</strong> ${masteryDisplay}</span>
+            <span><strong>Current:</strong> ${currentDisplay}</span>
+            <span style="opacity:0.75;">(avg ${avgDisplay} · ${consec} consecutive point${consec === 1 ? '' : 's'} above mastery)</span>
+          </div>
+          <div class="st-mastery-nudge-actions">
+            <button type="button" class="st-btn st-btn-small st-skill-callout-btn"
+              data-action="archive-goal"
+              data-student-code="${escapeHtml(goal.student_code)}"
+              data-goal-code="${escapeHtml(goal.code)}">📋 Archive Goal</button>
+            <button type="button" class="st-btn st-btn-small st-skill-callout-btn"
+              data-action="replace-goal-version"
+              data-goal-id="${escapeHtml(goal.id)}"
+              data-avg-value="${escapeHtml(String(Math.round(alertStatus.avgValue ?? 0)))}">🔄 Replace with Next Version</button>
+          </div>
         </div>`;
     } else if (alertStatus.isApproachingMastery) {
       const avgDisplay = escapeHtml(formatProgressValue(alertStatus.avgValue, goal.measurement_type));
@@ -4923,6 +4971,23 @@
             } else {
               console.warn('[tc-students] Archive callout: goal not found for code', goalCode);
               await rcAlert('Goal Not Found', 'This goal could not be located. It may have already been archived.');
+            }
+          } else if (action === 'replace-goal-version') {
+            const goalId = skillCalloutBtn.dataset.goalId;
+            const goal = allGoals.find(g => g.id === goalId);
+            if (goal) {
+              const avgValue = parseFloat(skillCalloutBtn.dataset.avgValue) || null;
+              showReplaceGoalVersionModal(goal, avgValue);
+            } else {
+              await rcAlert('Goal Not Found', 'This goal could not be located. It may have already been archived.');
+            }
+          } else if (action === 'dismiss-mastery') {
+            const goalCode = skillCalloutBtn.dataset.goalCode;
+            const studentCode = skillCalloutBtn.dataset.studentCode;
+            dismissMasteryNudge(goalCode, studentCode);
+            // Re-render the expanded detail to hide the banner
+            if (studentCode && expandedStudents.has(studentCode)) {
+              await renderExpandedDetail(studentCode);
             }
           } else if (action === 'create-iep-goal') {
             const studentCode = skillCalloutBtn.dataset.studentCode;
@@ -5930,6 +5995,151 @@
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
       await rcAlert('Error', 'Failed to add goal');
+    }
+  }
+
+  /**
+   * Opens the "Replace with Next Version" modal pre-populated from the current goal.
+   * On submit: archives the old goal and creates the new versioned goal.
+   *
+   * @param {Object} oldGoal - The goal object to be replaced
+   * @param {number|null} avgValue - The student's current rolling average (used as new baseline)
+   */
+  function showReplaceGoalVersionModal(oldGoal, avgValue) {
+    const newCode = incrementGoalCode(oldGoal.code || '');
+    const newBaseline = avgValue != null ? String(Math.round(avgValue)) : (oldGoal.mastery || oldGoal.target || '');
+
+    const modal = createModal('🔄 Replace with Next Version', `
+      <form id="replace-goal-form">
+        <p style="font-size:13px;opacity:0.75;margin-bottom:16px;">
+          This will archive <strong>${escapeHtml(oldGoal.code || '')}</strong> and create a new version below.
+          The new baseline is pre-filled with the mastered value.
+        </p>
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Area:</label>
+          <select name="goal_area" class="st-form-select" required>
+            <option value="">Select...</option>
+            ${GOAL_AREAS.map(area => `<option value="${escapeHtml(area)}">${escapeHtml(area)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">New Goal Code:</label>
+          <input type="text" name="goal_code" class="st-form-input" required>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Description (editable):</label>
+          <textarea name="goal_text" class="st-form-textarea" rows="4" required></textarea>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Measurement Type:</label>
+          <select name="measurement_type" class="st-form-select" required>
+            <option value="">Select...</option>
+            <option value="Accuracy">Accuracy</option>
+            <option value="Frequency">Frequency</option>
+            <option value="Duration">Duration</option>
+            <option value="Rate">Rate</option>
+            <option value="Observation">Observation</option>
+          </select>
+        </div>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">New Baseline:</label>
+            <input type="text" name="baseline" class="st-form-input" required>
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">New Mastery/Target:</label>
+            <input type="text" name="mastery" class="st-form-input" placeholder="Set new target">
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">Target:</label>
+            <input type="text" name="target" class="st-form-input" required>
+          </div>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Case Manager:</label>
+          <input type="text" name="case_manager" class="st-form-input" required>
+        </div>
+        <div class="st-modal-footer">
+          <button type="button" class="st-btn st-btn-secondary" id="cancel-replace-goal">Cancel</button>
+          <button type="submit" class="st-btn st-btn-primary">Create New Version</button>
+        </div>
+      </form>
+    `);
+
+    document.body.appendChild(modal);
+
+    // Pre-populate fields via DOM API (safe, no innerHTML with user data)
+    const form = modal.querySelector('#replace-goal-form');
+    form.querySelector('[name="goal_code"]').value = newCode;
+    form.querySelector('[name="goal_text"]').value = oldGoal.desc || oldGoal.goal_text || '';
+    form.querySelector('[name="baseline"]').value = newBaseline;
+    form.querySelector('[name="target"]').value = '';
+    form.querySelector('[name="case_manager"]').value = oldGoal.case_manager || '';
+
+    const areaSelect = form.querySelector('[name="goal_area"]');
+    if (oldGoal.goal_area) areaSelect.value = oldGoal.goal_area;
+
+    const mtSelect = form.querySelector('[name="measurement_type"]');
+    if (oldGoal.measurement_type) mtSelect.value = oldGoal.measurement_type;
+
+    modal.querySelector('#cancel-replace-goal').addEventListener('click', () => modal.remove());
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      await handleReplaceGoalVersion(form, oldGoal);
+      modal.remove();
+    });
+  }
+
+  /**
+   * Handles the "Replace with Next Version" form submission.
+   * Archives the old goal and creates the new versioned goal.
+   *
+   * @param {HTMLFormElement} form
+   * @param {Object} oldGoal - The goal being replaced
+   */
+  async function handleReplaceGoalVersion(form, oldGoal) {
+    const formData = new FormData(form);
+    const newGoal = {
+      student_code: oldGoal.student_code,
+      goal_area: formData.get('goal_area'),
+      code: formData.get('goal_code'),
+      goal_text: formData.get('goal_text'),
+      measurement_type: formData.get('measurement_type'),
+      baseline: formData.get('baseline'),
+      mastery: formData.get('mastery') || null,
+      target: formData.get('target'),
+      case_manager: formData.get('case_manager'),
+      data_collector: oldGoal.data_collector || 'Dan Reinisch',
+      data_collector_email: oldGoal.data_collector_email || null,
+      class_context: oldGoal.class_context || null,
+      status: 'active',
+      version: (oldGoal.version || 1) + 1,
+      addressed_in_class: oldGoal.addressed_in_class !== false,
+      individual_delivery: !!oldGoal.individual_delivery,
+    };
+
+    try {
+      // Archive the old goal
+      await db.upsertGoal({ id: oldGoal.id, status: 'archived' });
+      console.log('[tc-students] Archived old goal for replacement:', oldGoal.id);
+
+      // Create the new versioned goal
+      await db.upsertGoal(newGoal);
+      console.log('[tc-students] Created replacement goal:', newGoal.code);
+
+      // Clear any mastery dismissal for the old code so new goal starts fresh
+      try {
+        localStorage.removeItem(MASTERY_DISMISS_PREFIX + oldGoal.code + '_' + oldGoal.student_code);
+      } catch { /* ignore */ }
+
+      await loadData();
+      if (oldGoal.student_code && expandedStudents.has(oldGoal.student_code)) {
+        await renderExpandedDetail(oldGoal.student_code);
+      }
+    } catch (error) {
+      console.error('[tc-students] Error replacing goal version:', error);
+      await rcAlert('Error', 'Failed to replace goal version: ' + (error.message || error));
     }
   }
 
