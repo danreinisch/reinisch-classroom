@@ -615,8 +615,6 @@ test('updateAssignment replaces tags (does not merge)', () => {
   const arr = [{ id: 'A1', title: 'Quiz', unit_id: null, tags: ['quiz', 'old-tag'] }];
   const result = updateAssignmentLocal(arr, 'A1', { tags: ['review'] });
   assert.deepStrictEqual(result.tags, ['review'], 'tags should be fully replaced, not merged');
-  assert.strictEqual(result.tags.includes('old-tag'), false, 'old tag should be removed');
-  assert.strictEqual(result.tags.includes('quiz'), false, 'previous tags should be gone');
 });
 
 test('updateAssignment can clear tags to empty array', () => {

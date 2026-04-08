@@ -3769,7 +3769,7 @@
       uncatGrid.className = 'tc-lib-grid';
       uncategorized.forEach(a => uncatGrid.appendChild(renderUpcomingCard(a)));
       uncatContent.appendChild(uncatGrid);
-    } else if (uncatExpanded && uncategorized.length === 0) {
+    } else if (uncatExpanded) {
       const none = document.createElement('div');
       none.style.cssText = 'padding:16px; text-align:center; color:rgba(255,255,255,.40); font-size:13px;';
       none.textContent = 'All assignments are cataloged.';
@@ -6615,7 +6615,7 @@
 
       const renderTagPills = () => {
         tagPillsWrap.innerHTML = '';
-        currentTags.forEach((tag, i) => {
+        currentTags.forEach(tag => {
           const pill = document.createElement('span');
           pill.style.cssText = 'display:inline-flex; align-items:center; gap:4px; background:rgba(96,165,250,.20); border:1px solid rgba(96,165,250,.35); border-radius:12px; padding:2px 8px 2px 10px; font-size:12px; color:#93c5fd;';
           pill.appendChild(document.createTextNode(tag));
@@ -6624,7 +6624,8 @@
           removeBtn.textContent = '\u00d7';
           removeBtn.setAttribute('aria-label', 'Remove tag ' + tag);
           removeBtn.addEventListener('click', async () => {
-            currentTags.splice(i, 1);
+            const idx = currentTags.indexOf(tag);
+            if (idx !== -1) currentTags.splice(idx, 1);
             renderTagPills();
             await saveTags([...currentTags]);
           });
