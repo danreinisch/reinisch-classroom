@@ -834,6 +834,14 @@
   let progressTabQuarterMap = new Map(); // Map<studentCode, quarterKey> - Per-student quarter selection on Progress tab
   let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
 
+  // ── Per-question skill gap thresholds ─────────────────────────────────────
+  /** Badge shows on goal card when any question accuracy is below this threshold */
+  const SKILL_GAP_BADGE_THRESHOLD = 50;
+  /** Questions below this threshold are included in the AI prompt as weaknesses */
+  const AI_WEAKNESS_THRESHOLD = 60;
+  /** Max question text length sent to AI (must match sanitizeForPrompt limit in teacher-ai-skills-summary.js) */
+  const AI_QUESTION_TEXT_MAX_LEN = 100;
+
   // ── Cross-student summary / data quality ─────────────────────────────────
   const ST_DISMISSED_VALIDATIONS_KEY = 'rc_dismissed_validations';
 
@@ -2656,7 +2664,7 @@
       if (!goalCode) continue;
 
       const questions = getPerQuestionAggregation(goalCode, studentCode, mappingsData, submissionsData, assignmentsData);
-      const weakQuestions = questions.filter(q => q.accuracy !== null && q.accuracy < 50);
+      const weakQuestions = questions.filter(q => q.accuracy !== null && q.accuracy < SKILL_GAP_BADGE_THRESHOLD);
       if (weakQuestions.length === 0) continue;
 
       // Build tooltip listing weak question texts
@@ -8149,10 +8157,10 @@
         ]);
         for (const card of iepCards) {
           const qs = getPerQuestionAggregation(card.code, student.code, mappData, subsData, assnData);
-          const weak = qs.filter(q => q.accuracy !== null && q.accuracy < 60);
+          const weak = qs.filter(q => q.accuracy !== null && q.accuracy < AI_WEAKNESS_THRESHOLD);
           if (weak.length > 0) {
             iepQuestionWeaknesses[card.code] = weak.map(q => ({
-              text: q.text.slice(0, 120),
+              text: q.text.slice(0, AI_QUESTION_TEXT_MAX_LEN),
               accuracy: q.accuracy,
               attempts: q.attempts,
             }));
