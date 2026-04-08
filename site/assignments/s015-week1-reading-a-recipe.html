@@ -48,9 +48,9 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .opt-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
 .opt-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
 .opt-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
-.scene-card{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
-.scene-emoji{font-size:2.2rem;line-height:1;}
-.scene-text{font-size:0.95rem;color:#c9d1d9;line-height:1.5;}
+.scene-card{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.scene-card svg{display:block;width:100%;}
+.scene-text{display:block;font-size:0.95rem;color:#c9d1d9;line-height:1.5;padding:12px 16px;}
 .q-input{font-family:'JetBrains Mono',monospace;font-size:0.95rem;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:8px 14px;color:#e6edf3;width:100%;outline:none;transition:border-color 0.2s;resize:vertical;min-height:60px;}
 .q-input:focus{border-color:#14b8a6;}
 .scrambled-steps{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:14px 18px;margin-bottom:16px;}
@@ -224,7 +224,50 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   <div class="part-label">&#128064; What&#8217;s Happening?</div>
 
   <div class="scene-card">
-    <span class="scene-emoji">&#129473;&#8205;&#127859;</span>
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A person is spreading peanut butter on bread" aria-describedby="svg1-title">
+      <title id="svg1-title">A person is spreading peanut butter on bread</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- peanut butter jar (left) -->
+      <rect x="60" y="155" width="70" height="80" rx="6" fill="#6b3a1f" stroke="#2d3748" stroke-width="2"/>
+      <rect x="55" y="148" width="80" height="18" rx="4" fill="#4a2810" stroke="#2d3748" stroke-width="2"/>
+      <rect x="68" y="163" width="54" height="52" rx="3" fill="#c8a060"/>
+      <line x1="72" y1="175" x2="116" y2="175" stroke="#8b5520" stroke-width="2"/>
+      <line x1="72" y1="184" x2="116" y2="184" stroke="#8b5520" stroke-width="2"/>
+      <line x1="72" y1="193" x2="116" y2="193" stroke="#8b5520" stroke-width="2"/>
+      <!-- bread slice -->
+      <rect x="195" y="140" width="210" height="88" rx="12" fill="#c07828" stroke="#2d3748" stroke-width="2.5"/>
+      <rect x="208" y="152" width="184" height="64" rx="8" fill="#f5d878"/>
+      <!-- peanut butter smear -->
+      <ellipse cx="290" cy="175" rx="70" ry="14" fill="#8b5520" opacity="0.85"/>
+      <ellipse cx="260" cy="183" rx="40" ry="10" fill="#8b5520" opacity="0.7"/>
+      <ellipse cx="320" cy="181" rx="35" ry="9" fill="#8b5520" opacity="0.7"/>
+      <!-- knife (rotated -12 deg around center 390,165) -->
+      <g transform="rotate(-12, 390, 165)">
+        <!-- blade -->
+        <rect x="345" y="158" width="100" height="14" rx="3" fill="#c8d8e0" stroke="#2d3748" stroke-width="1.5"/>
+        <!-- handle -->
+        <rect x="440" y="154" width="42" height="22" rx="5" fill="#6b3a1f" stroke="#2d3748" stroke-width="1.5"/>
+        <!-- rivets -->
+        <circle cx="450" cy="165" r="3" fill="#4a2810"/>
+        <circle cx="464" cy="165" r="3" fill="#4a2810"/>
+        <circle cx="478" cy="165" r="3" fill="#4a2810"/>
+      </g>
+      <!-- hand holding knife -->
+      <g transform="rotate(-12, 390, 165)">
+        <!-- palm -->
+        <ellipse cx="470" cy="148" rx="22" ry="14" fill="#fac8a0" stroke="#2d3748" stroke-width="1.5"/>
+        <!-- fingers -->
+        <rect x="452" y="132" width="10" height="20" rx="5" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="464" y="128" width="10" height="22" rx="5" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="476" y="130" width="10" height="20" rx="5" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="488" y="133" width="9" height="18" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+      </g>
+    </svg>
     <span class="scene-text">A person is spreading peanut butter on bread.</span>
   </div>
 
@@ -248,7 +291,48 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   </div>
 
   <div class="scene-card">
-    <span class="scene-emoji">&#129379;</span>
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A bowl is filled with fruit and honey on top" aria-describedby="svg2-title">
+      <title id="svg2-title">A bowl is filled with fruit and honey on top</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- bowl body -->
+      <path d="M 152 210 Q 152 272 300 272 Q 448 272 448 210" fill="#f8f0e8" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- bowl interior fill -->
+      <path d="M 160 210 Q 160 262 300 262 Q 440 262 440 210" fill="#fff8f0"/>
+      <!-- rim ellipse -->
+      <ellipse cx="300" cy="210" rx="148" ry="25" fill="#f8f0e8" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- strawberry (left in bowl) -->
+      <ellipse cx="225" cy="205" rx="28" ry="22" fill="#e53e3e" stroke="#2d3748" stroke-width="1.5"/>
+      <path d="M 210 190 Q 218 178 225 184 Q 232 178 240 190" fill="#22c55e" stroke="#2d3748" stroke-width="1.5"/>
+      <circle cx="218" cy="200" r="2.5" fill="#fff0f0"/>
+      <circle cx="230" cy="207" r="2.5" fill="#fff0f0"/>
+      <circle cx="222" cy="213" r="2" fill="#fff0f0"/>
+      <circle cx="234" cy="198" r="2" fill="#fff0f0"/>
+      <!-- orange wedge (center) -->
+      <path d="M 300 205 L 272 230 A 36 36 0 0 0 328 230 Z" fill="#f97316" stroke="#2d3748" stroke-width="1.5"/>
+      <line x1="300" y1="205" x2="272" y2="230" stroke="#fde68a" stroke-width="1"/>
+      <line x1="300" y1="205" x2="300" y2="234" stroke="#fde68a" stroke-width="1"/>
+      <line x1="300" y1="205" x2="328" y2="230" stroke="#fde68a" stroke-width="1"/>
+      <!-- kiwi (right in bowl) -->
+      <ellipse cx="375" cy="205" rx="26" ry="22" fill="#4a7c3f" stroke="#2d3748" stroke-width="1.5"/>
+      <ellipse cx="375" cy="205" rx="20" ry="17" fill="#86c15e"/>
+      <!-- kiwi seeds arranged in circle -->
+      <ellipse cx="375" cy="190" rx="3.5" ry="2" fill="#2d3748"/>
+      <ellipse cx="386" cy="194" rx="3.5" ry="2" transform="rotate(45,386,194)" fill="#2d3748"/>
+      <ellipse cx="390" cy="205" rx="3.5" ry="2" transform="rotate(90,390,205)" fill="#2d3748"/>
+      <ellipse cx="386" cy="216" rx="3.5" ry="2" transform="rotate(135,386,216)" fill="#2d3748"/>
+      <ellipse cx="375" cy="220" rx="3.5" ry="2" fill="#2d3748"/>
+      <ellipse cx="364" cy="216" rx="3.5" ry="2" transform="rotate(135,364,216)" fill="#2d3748"/>
+      <ellipse cx="360" cy="205" rx="3.5" ry="2" transform="rotate(90,360,205)" fill="#2d3748"/>
+      <ellipse cx="364" cy="194" rx="3.5" ry="2" transform="rotate(45,364,194)" fill="#2d3748"/>
+      <circle cx="375" cy="205" r="4" fill="white"/>
+      <!-- honey drizzle -->
+      <path d="M 240 188 Q 260 178 280 188 Q 300 198 320 185 Q 340 172 360 182 Q 380 192 395 180" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+    </svg>
     <span class="scene-text">A bowl is filled with fruit and honey on top.</span>
   </div>
 
@@ -272,7 +356,50 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   </div>
 
   <div class="scene-card">
-    <span class="scene-emoji">&#129403;</span>
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="Someone pouring milk into a bowl of cereal" aria-describedby="svg3-title">
+      <title id="svg3-title">Someone pouring milk into a bowl of cereal</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- bowl body (center-left) -->
+      <path d="M 112 210 Q 112 265 245 265 Q 378 265 378 210" fill="#f8f0e8" stroke="#2d3748" stroke-width="2.5"/>
+      <path d="M 120 210 Q 120 256 245 256 Q 370 256 370 210" fill="#fff8f0"/>
+      <!-- bowl rim -->
+      <ellipse cx="245" cy="210" rx="133" ry="22" fill="#f8f0e8" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- cereal pieces inside bowl -->
+      <ellipse cx="185" cy="220" rx="14" ry="8" fill="#f97316" stroke="#2d3748" stroke-width="1"/>
+      <ellipse cx="215" cy="228" rx="14" ry="8" fill="#a855f7" stroke="#2d3748" stroke-width="1"/>
+      <ellipse cx="245" cy="232" rx="14" ry="8" fill="#3b82f6" stroke="#2d3748" stroke-width="1"/>
+      <ellipse cx="275" cy="228" rx="14" ry="8" fill="#22c55e" stroke="#2d3748" stroke-width="1"/>
+      <ellipse cx="305" cy="220" rx="14" ry="8" fill="#ef4444" stroke="#2d3748" stroke-width="1"/>
+      <ellipse cx="200" cy="238" rx="12" ry="7" fill="#eab308" stroke="#2d3748" stroke-width="1"/>
+      <ellipse cx="265" cy="240" rx="12" ry="7" fill="#ec4899" stroke="#2d3748" stroke-width="1"/>
+      <!-- milk carton (tilted -25 deg, right side) -->
+      <g transform="rotate(-25, 490, 140)">
+        <!-- carton body -->
+        <rect x="455" y="100" width="70" height="90" rx="4" fill="white" stroke="#2d3748" stroke-width="2"/>
+        <!-- carton blue stripe/label -->
+        <rect x="455" y="130" width="70" height="35" fill="#93c5fd" stroke="none"/>
+        <!-- carton top triangle -->
+        <polygon points="455,100 525,100 490,72" fill="white" stroke="#2d3748" stroke-width="2"/>
+        <!-- spout tip -->
+        <polygon points="475,72 505,72 490,60" fill="#e2e8f0" stroke="#2d3748" stroke-width="1.5"/>
+      </g>
+      <!-- hand holding carton -->
+      <g transform="rotate(-25, 490, 140)">
+        <ellipse cx="490" cy="195" rx="22" ry="12" fill="#fac8a0" stroke="#2d3748" stroke-width="1.5"/>
+        <rect x="470" y="202" width="9" height="16" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="481" y="204" width="9" height="18" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="492" y="204" width="9" height="18" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="503" y="202" width="9" height="16" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+      </g>
+      <!-- milk stream -->
+      <path d="M 442 105 Q 420 145 380 175 Q 355 190 320 205" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+      <path d="M 442 105 Q 420 145 380 175 Q 355 190 320 205" fill="none" stroke="#dbeafe" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+    </svg>
     <span class="scene-text">Someone is pouring milk into a bowl of cereal.</span>
   </div>
 
@@ -303,7 +430,40 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   <div class="part-label">&#129300; Why Is That Happening?</div>
 
   <div class="scene-card">
-    <span class="scene-emoji">&#127838;</span>
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="The bread is toasted and golden brown" aria-describedby="svg4-title">
+      <title id="svg4-title">The bread is toasted and golden brown</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- toaster body -->
+      <rect x="195" y="168" width="210" height="70" rx="10" fill="#4a5568" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- toaster base strip -->
+      <rect x="195" y="222" width="210" height="16" rx="6" fill="#374151" stroke="#2d3748" stroke-width="2"/>
+      <!-- toast slot left -->
+      <rect x="228" y="162" width="38" height="12" rx="4" fill="#2d3748"/>
+      <!-- toast slot right -->
+      <rect x="334" y="162" width="38" height="12" rx="4" fill="#2d3748"/>
+      <!-- toast left (popping up) -->
+      <rect x="222" y="108" width="50" height="68" rx="8" fill="#b45309" stroke="#2d3748" stroke-width="2"/>
+      <rect x="228" y="114" width="38" height="56" rx="5" fill="#d97706"/>
+      <!-- toast right (popping up) -->
+      <rect x="328" y="108" width="50" height="68" rx="8" fill="#b45309" stroke="#2d3748" stroke-width="2"/>
+      <rect x="334" y="114" width="38" height="56" rx="5" fill="#d97706"/>
+      <!-- steam lines above left toast -->
+      <path d="M 238 98 Q 234 88 238 78 Q 242 68 238 58" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 250 95 Q 246 85 250 75 Q 254 65 250 55" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 262 98 Q 258 88 262 78 Q 266 68 262 58" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <!-- steam lines above right toast -->
+      <path d="M 344 98 Q 340 88 344 78 Q 348 68 344 58" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 356 95 Q 352 85 356 75 Q 360 65 356 55" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 368 98 Q 364 88 368 78 Q 372 68 368 58" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <!-- toaster lever -->
+      <rect x="388" y="185" width="12" height="40" rx="4" fill="#6b7280" stroke="#2d3748" stroke-width="1.5"/>
+      <circle cx="394" cy="185" r="7" fill="#9ca3af" stroke="#2d3748" stroke-width="1.5"/>
+    </svg>
     <span class="scene-text">The bread is toasted and golden brown.</span>
   </div>
 
@@ -327,7 +487,40 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   </div>
 
   <div class="scene-card">
-    <span class="scene-emoji">&#129398;</span>
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A very cold glass of milk with ice cubes and condensation" aria-describedby="svg5-title">
+      <title id="svg5-title">A very cold glass of milk with ice cubes and condensation</title>
+      <!-- cool light background -->
+      <rect width="600" height="300" fill="#e8f4fd"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- glass body (trapezoid wider at top) -->
+      <path d="M 242 105 L 358 105 L 340 228 L 260 228 Z" fill="#f0f8ff" stroke="#94a3b8" stroke-width="2.5"/>
+      <!-- milk fill inside glass -->
+      <path d="M 246 118 L 354 118 L 338 224 L 262 224 Z" fill="#f5f5ff"/>
+      <!-- frost rim at top of glass -->
+      <rect x="242" y="105" width="116" height="14" rx="4" fill="#bfdbfe" opacity="0.7"/>
+      <!-- ice cube 1 -->
+      <rect x="268" y="145" width="44" height="38" rx="6" fill="#bfdbfe" stroke="#93c5fd" stroke-width="1.5"/>
+      <line x1="272" y1="149" x2="308" y2="149" stroke="white" stroke-width="2" opacity="0.7"/>
+      <line x1="272" y1="149" x2="272" y2="179" stroke="white" stroke-width="2" opacity="0.7"/>
+      <!-- ice cube 2 -->
+      <rect x="304" y="158" width="36" height="32" rx="5" fill="#bfdbfe" stroke="#93c5fd" stroke-width="1.5"/>
+      <line x1="308" y1="162" x2="336" y2="162" stroke="white" stroke-width="2" opacity="0.7"/>
+      <!-- condensation drops on outside -->
+      <circle cx="238" cy="140" r="4" fill="#bfdbfe" opacity="0.8"/>
+      <circle cx="362" cy="155" r="3" fill="#bfdbfe" opacity="0.8"/>
+      <circle cx="234" cy="168" r="3.5" fill="#bfdbfe" opacity="0.7"/>
+      <circle cx="365" cy="180" r="4" fill="#bfdbfe" opacity="0.7"/>
+      <circle cx="240" cy="195" r="3" fill="#bfdbfe" opacity="0.6"/>
+      <circle cx="358" cy="135" r="2.5" fill="#bfdbfe" opacity="0.8"/>
+      <circle cx="236" cy="212" r="2.5" fill="#bfdbfe" opacity="0.6"/>
+      <!-- glass rim highlight -->
+      <ellipse cx="300" cy="105" rx="58" ry="8" fill="none" stroke="#94a3b8" stroke-width="2"/>
+      <!-- glass base -->
+      <ellipse cx="300" cy="228" rx="40" ry="6" fill="none" stroke="#94a3b8" stroke-width="2"/>
+    </svg>
     <span class="scene-text">The milk is very cold.</span>
   </div>
 
@@ -351,7 +544,57 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   </div>
 
   <div class="scene-card">
-    <span class="scene-emoji">&#127827;</span>
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="Strawberries cut in half on a wooden cutting board" aria-describedby="svg6-title">
+      <title id="svg6-title">Strawberries cut in half on a wooden cutting board</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- cutting board outer -->
+      <rect x="120" y="140" width="360" height="100" rx="10" fill="#c8a46e" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- cutting board inner -->
+      <rect x="132" y="150" width="336" height="80" rx="6" fill="#deb887"/>
+      <!-- wood grain lines -->
+      <line x1="132" y1="165" x2="468" y2="165" stroke="#b8943c" stroke-width="1"/>
+      <line x1="132" y1="178" x2="468" y2="178" stroke="#b8943c" stroke-width="1"/>
+      <line x1="132" y1="191" x2="468" y2="191" stroke="#b8943c" stroke-width="1"/>
+      <line x1="132" y1="204" x2="468" y2="204" stroke="#b8943c" stroke-width="1"/>
+      <line x1="132" y1="217" x2="468" y2="217" stroke="#b8943c" stroke-width="1"/>
+      <!-- strawberry half 1 (left) - D-shape cut side facing right -->
+      <path d="M 195 165 A 32 35 0 0 1 195 225 Z" fill="#fce4ec"/>
+      <path d="M 195 165 A 32 35 0 0 0 195 225" fill="#e53e3e" stroke="#2d3748" stroke-width="1.5"/>
+      <line x1="195" y1="165" x2="195" y2="225" stroke="#2d3748" stroke-width="1.5"/>
+      <!-- seeds on flesh -->
+      <ellipse cx="188" cy="180" rx="2" ry="1.5" fill="#c53030"/>
+      <ellipse cx="186" cy="195" rx="2" ry="1.5" fill="#c53030"/>
+      <ellipse cx="188" cy="210" rx="2" ry="1.5" fill="#c53030"/>
+      <!-- green cap -->
+      <path d="M 182 162 Q 192 148 195 162 Q 198 148 206 155 Q 198 165 195 165 Q 192 165 182 162 Z" fill="#22c55e" stroke="#2d3748" stroke-width="1.2"/>
+      <!-- strawberry half 2 (center) -->
+      <path d="M 300 162 A 32 36 0 0 1 300 226 Z" fill="#fce4ec"/>
+      <path d="M 300 162 A 32 36 0 0 0 300 226" fill="#e53e3e" stroke="#2d3748" stroke-width="1.5"/>
+      <line x1="300" y1="162" x2="300" y2="226" stroke="#2d3748" stroke-width="1.5"/>
+      <ellipse cx="293" cy="177" rx="2" ry="1.5" fill="#c53030"/>
+      <ellipse cx="291" cy="193" rx="2" ry="1.5" fill="#c53030"/>
+      <ellipse cx="293" cy="209" rx="2" ry="1.5" fill="#c53030"/>
+      <path d="M 287 159 Q 297 145 300 159 Q 303 145 311 152 Q 303 162 300 162 Q 297 162 287 159 Z" fill="#22c55e" stroke="#2d3748" stroke-width="1.2"/>
+      <!-- strawberry half 3 (right) -->
+      <path d="M 405 164 A 30 34 0 0 1 405 224 Z" fill="#fce4ec"/>
+      <path d="M 405 164 A 30 34 0 0 0 405 224" fill="#e53e3e" stroke="#2d3748" stroke-width="1.5"/>
+      <line x1="405" y1="164" x2="405" y2="224" stroke="#2d3748" stroke-width="1.5"/>
+      <ellipse cx="398" cy="178" rx="2" ry="1.5" fill="#c53030"/>
+      <ellipse cx="396" cy="193" rx="2" ry="1.5" fill="#c53030"/>
+      <ellipse cx="398" cy="208" rx="2" ry="1.5" fill="#c53030"/>
+      <path d="M 392 161 Q 402 147 405 161 Q 408 147 416 154 Q 408 164 405 164 Q 402 164 392 161 Z" fill="#22c55e" stroke="#2d3748" stroke-width="1.2"/>
+      <!-- knife lying flat on board -->
+      <rect x="145" y="148" width="110" height="12" rx="3" fill="#c8d8e0" stroke="#2d3748" stroke-width="1.5"/>
+      <rect x="252" y="145" width="40" height="18" rx="4" fill="#6b3a1f" stroke="#2d3748" stroke-width="1.5"/>
+      <circle cx="260" cy="154" r="2.5" fill="#4a2810"/>
+      <circle cx="272" cy="154" r="2.5" fill="#4a2810"/>
+      <circle cx="284" cy="154" r="2.5" fill="#4a2810"/>
+    </svg>
     <span class="scene-text">The strawberries are cut in half.</span>
   </div>
 
