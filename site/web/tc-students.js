@@ -790,6 +790,7 @@
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
+  let needsAttentionFilter = false; // When true, show only students with regressing/stalled goals or stale data
   let expandedGoalCards = new Set(); // Track which goal cards are expanded (not collapsed)
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
@@ -1703,8 +1704,130 @@
     return minDays;
   }
 
+  // ── Alert Detection Constants ─────────────────────────────────────────────
+  const ALERT_TREND_WINDOW = 30; // analyse data from last 30 days
+  const ALERT_STALLED_BAND = 5;  // last 3+ points within ≤5% range = stalled
+
   /**
-   * Render a compact quarterly-averages row for a goal card.
+   * Compute mastery and regression/stalled alert status for a single goal.
+   * Only applies to non-Observation numeric goals.
+   *
+   * @param {Object} goal - Goal object with code, student_code, measurement_type, baseline, mastery, target
+   * @returns {{
+   *   isMastered: boolean,
+   *   isApproachingMastery: boolean,
+   *   isRegressing: boolean,
+   *   isStalled: boolean,
+   *   avgValue: number|null,
+   *   masteryNum: number|null,
+   *   baselineNum: number|null,
+   *   currentNum: number|null,
+   *   last3: number[],
+   *   consecutiveAboveMastery: number
+   * }}
+   */
+  function computeGoalAlertStatus(goal) {
+    const noop = { isMastered: false, isApproachingMastery: false, isRegressing: false, isStalled: false,
+      avgValue: null, masteryNum: null, baselineNum: null, currentNum: null, last3: [], consecutiveAboveMastery: 0 };
+
+    if (goal.measurement_type === 'Observation') return noop;
+
+    const masteryNum = parseGoalValue(goal.mastery) ?? parseGoalValue(goal.target);
+    const baselineNum = parseGoalValue(goal.baseline);
+    if (masteryNum == null || baselineNum == null) return noop;
+
+    const trendCutoff = new Date();
+    trendCutoff.setDate(trendCutoff.getDate() - ALERT_TREND_WINDOW);
+    const trendCutoffStr = trendCutoff.toISOString().slice(0, 10);
+
+    const allEntries = getProgressForGoal(goal.student_code, goal.code);
+    const recentEntries = allEntries
+      .filter(p => p.date && p.date >= trendCutoffStr)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    const values = recentEntries
+      .map(p => (p.value != null ? parseFloat(p.value) : null))
+      .filter(v => v != null && !isNaN(v));
+
+    if (values.length === 0) return { ...noop, masteryNum, baselineNum };
+
+    const currentNum = values[0];
+    const avgValue = values.reduce((s, v) => s + v, 0) / values.length;
+
+    // Mastery detection: count consecutive recent points at or above mastery
+    let consecutiveAboveMastery = 0;
+    if (masteryNum > baselineNum) {
+      for (const v of values) {
+        if (v >= masteryNum) consecutiveAboveMastery++;
+        else break;
+      }
+    }
+    const isMastered = consecutiveAboveMastery >= 3 && avgValue >= masteryNum;
+
+    // Approaching mastery: avg within 10% of mastery-baseline range (but not yet mastered)
+    const range = masteryNum - baselineNum;
+    const nearThreshold = masteryNum - Math.abs(range) * 0.1;
+    const isApproachingMastery = !isMastered && masteryNum > baselineNum
+      && avgValue >= nearThreshold && avgValue < masteryNum;
+
+    // Regression / stalled detection
+    const last3 = values.slice(0, 3);
+    let isRegressing = false;
+    let isStalled = false;
+
+    if (currentNum < baselineNum) {
+      isRegressing = true;
+    } else if (last3.length >= 2) {
+      // newest-first array: declining means each older value (higher index) > the newer one
+      const allDecline = last3.every((v, i) => i === 0 || v > last3[i - 1]);
+      if (allDecline) isRegressing = true;
+    }
+
+    if (!isRegressing) {
+      if (last3.length >= 3) {
+        const rangeSpan = Math.max(...last3) - Math.min(...last3);
+        if (rangeSpan <= ALERT_STALLED_BAND) isStalled = true;
+      } else if (currentNum <= baselineNum + ALERT_STALLED_BAND) {
+        isStalled = true;
+      }
+    }
+
+    return { isMastered, isApproachingMastery, isRegressing, isStalled,
+      avgValue, masteryNum, baselineNum, currentNum, last3, consecutiveAboveMastery };
+  }
+
+  /**
+   * Compute alert badge counts for a student's active goals.
+   * @param {string} studentCode
+   * @returns {{ regressingCount: number, masteredCount: number, stalledCount: number }}
+   */
+  function getStudentAlertCounts(studentCode) {
+    const goals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    let regressingCount = 0;
+    let masteredCount = 0;
+    let stalledCount = 0;
+    for (const goal of goals) {
+      const s = computeGoalAlertStatus(goal);
+      if (s.isMastered) masteredCount++;
+      if (s.isRegressing) regressingCount++;
+      else if (s.isStalled) stalledCount++;
+    }
+    return { regressingCount, masteredCount, stalledCount };
+  }
+
+  /**
+   * Returns true if a student has any regressing/stalled goals or stale/critical data.
+   * Used for the "Needs Attention" filter.
+   * @param {string} studentCode
+   */
+  function studentNeedsAttention(studentCode) {
+    const { regressingCount, stalledCount } = getStudentAlertCounts(studentCode);
+    if (regressingCount > 0 || stalledCount > 0) return true;
+    const health = getStudentStalenessInfo(studentCode);
+    return health.tier === 'stale' || health.tier === 'critical';
+  }
+
+  /**
    * Shows Q1–Q4 avg (collected/expected) for the current school year.
    */
   function renderQuarterlyAverages(studentCode, goalCode, goalId) {
@@ -1919,6 +2042,11 @@
       });
     }
 
+    // Needs Attention filter: students with regressing/stalled goals or stale/critical data
+    if (needsAttentionFilter) {
+      filtered = filtered.filter(s => studentNeedsAttention(s.code));
+    }
+
     // Sort the filtered students
     if (sortBy === 'code') {
       filtered.sort((a, b) => a.code.localeCompare(b.code));
@@ -1990,6 +2118,20 @@
       const dataInfo = getGoalStaleness(daysSince);
       const dataLabel = formatRelativeTime(daysSince);
 
+      // Alert badge counts for this student
+      const alertCounts = getStudentAlertCounts(student.code);
+      const alertBadgesHtml = [
+        alertCounts.regressingCount > 0
+          ? `<span class="st-alert-badge st-alert-badge--regressing" title="Regressing goals">⚠️ ${alertCounts.regressingCount} regressing</span>`
+          : '',
+        alertCounts.masteredCount > 0
+          ? `<span class="st-alert-badge st-alert-badge--mastered" title="Mastered goals">🎉 ${alertCounts.masteredCount} mastered</span>`
+          : '',
+        alertCounts.stalledCount > 0
+          ? `<span class="st-alert-badge st-alert-badge--stalled" title="Stalled goals">⏸️ ${alertCounts.stalledCount} stalled</span>`
+          : '',
+      ].join('');
+
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
@@ -1998,7 +2140,7 @@
           <td class="st-code-cell">${escapeHtml(student.code)}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
           <td class="st-goals-cell">
-            <span class="st-goals-badge">${studentGoals.length}</span>
+            <span class="st-goals-badge">${studentGoals.length}</span>${alertBadgesHtml}
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
@@ -3663,6 +3805,54 @@
 
     const obsCardStyle = isObs ? ' style="border-left: 3px solid var(--rc-accent, #6366f1);"' : '';
 
+    // Compute mastery / regression / stalled alert status for this goal
+    const alertStatus = computeGoalAlertStatus(goal);
+
+    // Build mastery banner HTML (shown below header, above body)
+    let masteryBannerHtml = '';
+    if (alertStatus.isMastered) {
+      const avgDisplay = escapeHtml(formatProgressValue(alertStatus.avgValue, goal.measurement_type));
+      const masteryDisplay = escapeHtml(String(goal.mastery || goal.target || ''));
+      const consec = alertStatus.consecutiveAboveMastery;
+      masteryBannerHtml = `
+        <div class="st-goal-mastery-banner st-goal-mastery-banner--mastered">
+          <span>🎉 Goal appears mastered — avg ${avgDisplay} vs ${masteryDisplay} target (${consec} consecutive point${consec === 1 ? '' : 's'} above mastery)</span>
+          <button type="button" class="st-btn st-btn-small st-skill-callout-btn"
+            data-action="archive-goal"
+            data-student-code="${escapeHtml(goal.student_code)}"
+            data-goal-code="${escapeHtml(goal.code)}">📋 Archive Goal</button>
+          <button type="button" class="st-btn st-btn-small st-skill-callout-btn"
+            data-action="suggest-goal"
+            data-student-code="${escapeHtml(goal.student_code)}"
+            data-goal-area="${escapeHtml(goal.goal_area || '')}"
+            data-baseline="${escapeHtml(String(Math.round(alertStatus.avgValue ?? 0)))}">💡 Suggest Replacement</button>
+        </div>`;
+    } else if (alertStatus.isApproachingMastery) {
+      const avgDisplay = escapeHtml(formatProgressValue(alertStatus.avgValue, goal.measurement_type));
+      const masteryDisplay = escapeHtml(String(goal.mastery || goal.target || ''));
+      masteryBannerHtml = `
+        <div class="st-goal-mastery-banner st-goal-mastery-banner--approaching">
+          <span>⭐ Approaching Mastery — avg ${avgDisplay} vs ${masteryDisplay} target</span>
+        </div>`;
+    }
+
+    // Build regression / stalled alert strip HTML
+    let alertStripHtml = '';
+    if (alertStatus.isRegressing) {
+      const currentDisplay = escapeHtml(formatProgressValue(alertStatus.currentNum, goal.measurement_type));
+      const baselineDisplay = escapeHtml(String(goal.baseline || ''));
+      const consecutiveDeclines = alertStatus.last3.length;
+      alertStripHtml = `
+        <div class="st-goal-alert-strip st-goal-alert-strip--regressing">
+          ⚠️ Regression detected — current ${currentDisplay} is below baseline ${baselineDisplay}${consecutiveDeclines >= 2 ? ` (${consecutiveDeclines} consecutive declines)` : ''}
+        </div>`;
+    } else if (alertStatus.isStalled) {
+      alertStripHtml = `
+        <div class="st-goal-alert-strip st-goal-alert-strip--stalled">
+          ⏸️ Progress stalled — last ${alertStatus.last3.length} point${alertStatus.last3.length === 1 ? '' : 's'} within ${ALERT_STALLED_BAND}% range
+        </div>`;
+    }
+
     return `
       <div class="st-goal-card ${collapsedClass}"${obsCardStyle} data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
@@ -3677,6 +3867,7 @@
           <span class="st-goal-chevron">▶</span>
         </div>
         ${renderQuarterlyAverages(goal.student_code, goal.code, goal.id)}
+        ${masteryBannerHtml}${alertStripHtml}
         <div class="st-goal-body">
           ${descHtml}
           <div class="st-goal-metrics">
@@ -4099,6 +4290,18 @@
     if (showArchivedCheckbox) {
       showArchivedCheckbox.addEventListener('change', (e) => {
         showArchived = e.target.checked;
+        filterStudents();
+        renderStudentList();
+        renderStudentKpiSummary();
+      });
+    }
+
+    // Needs Attention filter button
+    const attentionFilterBtn = document.getElementById('stFilterAttention');
+    if (attentionFilterBtn) {
+      attentionFilterBtn.addEventListener('click', () => {
+        needsAttentionFilter = !needsAttentionFilter;
+        attentionFilterBtn.classList.toggle('active', needsAttentionFilter);
         filterStudents();
         renderStudentList();
         renderStudentKpiSummary();

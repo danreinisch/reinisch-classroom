@@ -590,6 +590,87 @@
         background: rgba(239, 68, 68, 0.18);
       }
 
+      /* Mastery banner on goal cards */
+      .st-goal-mastery-banner {
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin: 8px 0;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .st-goal-mastery-banner--mastered {
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: rgba(34, 197, 94, 1);
+      }
+      .st-goal-mastery-banner--approaching {
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.25);
+        color: rgba(234, 179, 8, 1);
+      }
+
+      /* Regression/stalled alert strip */
+      .st-goal-alert-strip {
+        padding: 6px 12px;
+        border-radius: 6px;
+        margin: 6px 0;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .st-goal-alert-strip--regressing {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: rgba(239, 68, 68, 0.9);
+      }
+      .st-goal-alert-strip--stalled {
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.25);
+        color: rgba(234, 179, 8, 0.9);
+      }
+
+      /* Alert badges in collapsed student rows */
+      .st-alert-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 4px;
+      }
+      .st-alert-badge--regressing {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: rgba(239, 68, 68, 1);
+      }
+      .st-alert-badge--mastered {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: rgba(34, 197, 94, 1);
+      }
+      .st-alert-badge--stalled {
+        background: rgba(234, 179, 8, 0.15);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        color: rgba(234, 179, 8, 1);
+      }
+
+      /* Needs Attention filter button */
+      .st-btn-attention {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: rgba(239, 68, 68, 0.2);
+        color: rgba(239, 68, 68, 0.9);
+      }
+      .st-btn-attention:hover {
+        background: rgba(239, 68, 68, 0.15);
+      }
+      .st-btn-attention.active {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.4);
+        font-weight: 600;
+      }
+
       /* Modal */
       .st-modal-backdrop {
         display: none;
@@ -1869,6 +1950,7 @@
             <label class="st-toggle-label">
               <input type="checkbox" id="stShowArchived" /> Show Archived
             </label>
+            <button id="stFilterAttention" class="st-btn st-btn-small st-btn-attention" type="button">⚠️ Needs Attention</button>
             <button id="stExpandAllBtn" class="st-btn st-btn-small">▼ Collapse All</button>
             <button id="stExpandStudentsBtn" class="st-btn st-btn-small">▶ Expand Students</button>
             <button id="stExpandAllFullBtn" class="st-btn st-btn-small">▶▶ Expand All</button>
