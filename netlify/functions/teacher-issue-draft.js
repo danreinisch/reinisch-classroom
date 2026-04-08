@@ -906,16 +906,27 @@ exports.handler = async (event) => {
     let parsedMeta = null;
     if (draft.assignment && draft.assignment.kind === "file" && draft.assignment.text) {
       console.log(`[teacher-issue-draft] [${requestId}] Parsing assignment content`);
-      parsedMeta = parseTxtToMeta(
-        draft.assignment.text,
-        resolvedClassName,
-        draft.assignment.name || 'assignment.txt'
-      );
-      
-      if (parsedMeta) {
-        console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
+      const fileName = draft.assignment.name || 'assignment.txt';
+      const isHtmlFile = /\.html?$/i.test(fileName);
+
+      if (isHtmlFile) {
+        // For HTML files, store the raw HTML so the student portal can render it
+        // in a sandboxed iframe via srcdoc.  Structured text parsing is skipped
+        // because DOMParser is not available server-side.
+        parsedMeta = { html_src: draft.assignment.text };
+        console.log(`[teacher-issue-draft] [${requestId}] HTML file detected — storing html_src in meta (${draft.assignment.text.length} chars)`);
       } else {
-        console.log(`[teacher-issue-draft] [${requestId}] No structured content found in assignment file`);
+        parsedMeta = parseTxtToMeta(
+          draft.assignment.text,
+          resolvedClassName,
+          fileName
+        );
+
+        if (parsedMeta) {
+          console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
+        } else {
+          console.log(`[teacher-issue-draft] [${requestId}] No structured content found in assignment file`);
+        }
       }
     }
 
@@ -1000,7 +1011,10 @@ exports.handler = async (event) => {
       // Update existing assignment with new meta if we have parsed meta
       // Always update to ensure assignment content is current
       if (parsedMeta) {
-        console.log(`[teacher-issue-draft] [${requestId}] Updating duplicate assignment meta with ${parsedMeta.days.length} day(s)`);
+        const metaSummary = parsedMeta.html_src
+          ? `html_src (${parsedMeta.html_src.length} chars)`
+          : `${parsedMeta.days ? parsedMeta.days.length : 0} day(s)`;
+        console.log(`[teacher-issue-draft] [${requestId}] Updating duplicate assignment meta with ${metaSummary}`);
         
         const updateUrl = `${SUPABASE_URL}/rest/v1/assignments?id=eq.${assignmentId}`;
         const updateResponse = await fetch(updateUrl, {
