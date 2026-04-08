@@ -1583,8 +1583,11 @@
     
     // Build the panel UI
     if (assignment.page) {
-      // HTML page assignment - render in iframe
+      // URL-based HTML assignment - render in iframe via src
       renderHtmlAssignmentPanel(panel, instance);
+    } else if (meta.html_src) {
+      // File-uploaded HTML assignment - render inline via srcdoc
+      renderHtmlSrcdocPanel(panel, instance);
     } else if (!meta.days || meta.days.length === 0) {
       // No structured content - show fallback
       renderNoContentPanel(panel, instance);
@@ -1700,7 +1703,58 @@
       console.warn(LOG_PREFIX, 'Could not load html-assignment-bridge:', err);
     });
   }
-  function renderStructuredAssignment(panel, instance) {
+
+  /**
+   * Render a file-uploaded HTML assignment inside a sandboxed iframe using srcdoc.
+   * The full HTML source is stored in assignment.meta.html_src.
+   */
+  function renderHtmlSrcdocPanel(panel, instance) {
+    const assignment = instance.assignment || {};
+    const meta = assignment.meta || {};
+    const title = escapeHtml(assignment.title || 'Assignment');
+    const htmlSrc = meta.html_src || '';
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    iframe.style.cssText = 'width: 100%; flex: 1; border: none; min-height: 0;';
+    iframe.title = assignment.title || 'Assignment';
+    iframe.srcdoc = htmlSrc;
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'st-panel-back-btn';
+    backBtn.id = 'panelBackBtn';
+    backBtn.textContent = '← Back to Dashboard';
+
+    const header = document.createElement('div');
+    header.className = 'st-panel-header';
+    const headerTitle = document.createElement('h2');
+    headerTitle.textContent = assignment.title || 'Assignment';
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'st-panel-close-btn';
+    closeBtn.id = 'panelCloseBtn';
+    closeBtn.textContent = '✕';
+    header.appendChild(headerTitle);
+    header.appendChild(closeBtn);
+
+    panel.appendChild(backBtn);
+    panel.appendChild(header);
+    panel.appendChild(iframe);
+
+    panel.style.cssText = 'display: flex; flex-direction: column; width: 95vw; max-width: 1200px; height: 92vh; max-height: 92vh;';
+
+    backBtn.addEventListener('click', closeAssignmentViewer);
+    closeBtn.addEventListener('click', closeAssignmentViewer);
+
+    // Initialise the postMessage bridge so the iframe can submit answers
+    const studentCode = sessionStorage.getItem('rc_user_code');
+    import('/web/html-assignment-bridge.js').then(({ initHtmlAssignmentBridge }) => {
+      htmlBridgeCleanup = initHtmlAssignmentBridge(instance.id, studentCode);
+    }).catch(err => {
+      console.warn(LOG_PREFIX, 'Could not load html-assignment-bridge:', err);
+    });
+  }
+
+
     const assignment = instance.assignment || {};
     const meta = assignment.meta || {};
     const title = escapeHtml(assignment.title || 'Assignment');
@@ -7438,6 +7492,12 @@
   function renderDashboardStreakBadge(graded) {
     const container = document.getElementById('dashStreakBanner');
     if (!container) return;
+
+    // Don't show any streak message for students who have never submitted anything.
+    if (!graded || graded.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
 
     const { streak, threshold } = calculateGradeStreak(graded, 70);
 
