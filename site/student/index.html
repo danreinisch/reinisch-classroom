@@ -1932,6 +1932,133 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
       }
 
+      /* Section header inside the reading helper panel */
+      .st-rh-section-header {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
+        padding: 10px 14px 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        margin-top: 4px;
+      }
+
+      /* Slider rows inside the reading helper panel */
+      .st-rh-slider-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .st-rh-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 90px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.2);
+        outline: none;
+        cursor: pointer;
+      }
+
+      .st-rh-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      }
+
+      .st-rh-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      }
+
+      .st-rh-slider-val {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+        min-width: 32px;
+        text-align: right;
+      }
+
+      /* Light theme overrides for new reading helper elements */
+      [data-theme="light"] .st-rh-section-header {
+        color: rgba(0, 0, 0, 0.4);
+        border-top-color: rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme="light"] .st-rh-slider-row {
+        border-bottom-color: rgba(0, 0, 0, 0.06);
+      }
+
+      [data-theme="light"] .st-rh-slider {
+        background: rgba(0, 0, 0, 0.15);
+      }
+
+      [data-theme="light"] .st-rh-slider-val {
+        color: rgba(0, 0, 0, 0.5);
+      }
+
+      /* OpenDyslexic font (loaded from CDN via @font-face) */
+      @font-face {
+        font-family: 'OpenDyslexic';
+        src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@2.0.0/woff2/OpenDyslexic-Regular.woff2') format('woff2');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Display Accessibility: OpenDyslexic font */
+      .st-book-content.dyslexic-font,
+      .st-book-content.dyslexic-font p,
+      .st-book-content.dyslexic-font h3,
+      .st-book-content.dyslexic-font .st-book-word {
+        font-family: 'OpenDyslexic', sans-serif !important;
+      }
+
+      /* Display Accessibility: High Contrast */
+      .st-book-content.high-contrast {
+        background: #000 !important;
+      }
+
+      .st-book-content.high-contrast p,
+      .st-book-content.high-contrast .st-book-word {
+        color: #fff !important;
+      }
+
+      .st-book-content.high-contrast h3,
+      .st-book-content.high-contrast .st-book-subheading {
+        color: #ffff00 !important;
+        border-bottom-color: rgba(255, 255, 0, 0.3) !important;
+      }
+
+      [data-theme="light"] .st-book-content.high-contrast {
+        background: #000 !important;
+      }
+
+      [data-theme="light"] .st-book-content.high-contrast p,
+      [data-theme="light"] .st-book-content.high-contrast .st-book-word {
+        color: #fff !important;
+      }
+
+      [data-theme="light"] .st-book-content.high-contrast h3,
+      [data-theme="light"] .st-book-content.high-contrast .st-book-subheading {
+        color: #ffff00 !important;
+        border-bottom-color: rgba(255, 255, 0, 0.3) !important;
+      }
+
       /* Light theme overrides for book reader */
       [data-theme="light"] .st-book-panel {
         background: var(--surface);

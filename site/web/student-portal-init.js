@@ -4521,6 +4521,7 @@
     // Apply glossary term underlines and persistent highlights
     applyGlossaryTerms(content);
     applyPageHighlights(content, currentPage);
+    applyDisplayAccessibility();
     updateBookmarkButton();
 
     // Prefetch next chunk in background while reading current chunk
@@ -5005,6 +5006,31 @@
   }
 
   /**
+   * Applies display accessibility settings (line spacing, dyslexic font,
+   * letter spacing, high contrast) from localStorage to #bookContent.
+   */
+  function applyDisplayAccessibility() {
+    var content = document.getElementById('bookContent');
+    if (!content) return;
+
+    // Line spacing (default 1.7, range 1.4–2.4)
+    var lineSpacing = parseFloat(localStorage.getItem('rc_book_helper_line_spacing')) || 1.7;
+    content.style.lineHeight = lineSpacing;
+
+    // OpenDyslexic font toggle
+    var dyslexic = getBookHelper('dyslexic_font');
+    content.classList.toggle('dyslexic-font', dyslexic);
+
+    // Letter spacing (default 0, range 0–0.15em)
+    var letterSpacing = parseFloat(localStorage.getItem('rc_book_helper_letter_spacing')) || 0;
+    content.style.letterSpacing = letterSpacing > 0 ? letterSpacing + 'em' : '';
+
+    // High contrast toggle
+    var highContrast = getBookHelper('high_contrast');
+    content.classList.toggle('high-contrast', highContrast);
+  }
+
+  /**
    * Renders and shows the Reading Helper settings panel.
    */
   function showReadingHelperPanel(container) {
@@ -5022,6 +5048,58 @@
       </div>`;
     }).join('');
 
+    // Display Accessibility section
+    var lineSpacingVal = parseFloat(localStorage.getItem('rc_book_helper_line_spacing')) || 1.7;
+    var letterSpacingVal = parseFloat(localStorage.getItem('rc_book_helper_letter_spacing')) || 0;
+    var dyslexicChecked = getBookHelper('dyslexic_font');
+    var highContrastChecked = getBookHelper('high_contrast');
+
+    var displayAccessibilityRows = `
+      <div class="st-rh-section-header">🎨 Display Accessibility</div>
+      <div class="st-rh-slider-row">
+        <div class="st-rh-row-text">
+          <span class="st-rh-row-label">Line Spacing</span>
+          <span class="st-rh-row-desc">Space between lines of text</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <input type="range" class="st-rh-slider" data-helper-key="line_spacing"
+            min="1.4" max="2.4" step="0.1" value="${lineSpacingVal}">
+          <span class="st-rh-slider-val">${lineSpacingVal.toFixed(1)}</span>
+        </div>
+      </div>
+      <div class="st-rh-row">
+        <div class="st-rh-row-text">
+          <span class="st-rh-row-label">OpenDyslexic Font</span>
+          <span class="st-rh-row-desc">Easier-to-read font for dyslexia</span>
+        </div>
+        <label class="st-rh-toggle" title="OpenDyslexic Font">
+          <input type="checkbox" class="st-rh-toggle-input" data-helper-key="dyslexic_font"${dyslexicChecked ? ' checked' : ''}>
+          <span class="st-rh-toggle-slider"></span>
+        </label>
+      </div>
+      <div class="st-rh-slider-row">
+        <div class="st-rh-row-text">
+          <span class="st-rh-row-label">Letter Spacing</span>
+          <span class="st-rh-row-desc">Extra space between letters</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <input type="range" class="st-rh-slider" data-helper-key="letter_spacing"
+            min="0" max="0.15" step="0.01" value="${letterSpacingVal}">
+          <span class="st-rh-slider-val">${letterSpacingVal.toFixed(2)}em</span>
+        </div>
+      </div>
+      <div class="st-rh-row">
+        <div class="st-rh-row-text">
+          <span class="st-rh-row-label">High Contrast</span>
+          <span class="st-rh-row-desc">Black background, white text</span>
+        </div>
+        <label class="st-rh-toggle" title="High Contrast">
+          <input type="checkbox" class="st-rh-toggle-input" data-helper-key="high_contrast"${highContrastChecked ? ' checked' : ''}>
+          <span class="st-rh-toggle-slider"></span>
+        </label>
+      </div>
+    `;
+
     container.innerHTML = `
       <div class="st-rh-header">
         <span class="st-rh-title">📖 Reading Helper</span>
@@ -5029,7 +5107,7 @@
       </div>
       <div class="st-rh-body">
         ${rows}
-        <!-- Display Settings coming soon -->
+        ${displayAccessibilityRows}
       </div>
     `;
 
@@ -5040,7 +5118,26 @@
       const input = e.target.closest('.st-rh-toggle-input');
       if (input) {
         setBookHelper(input.getAttribute('data-helper-key'), input.checked);
+        applyDisplayAccessibility();
       }
+    };
+
+    // Wire slider input events via event delegation
+    container.oninput = function (e) {
+      const slider = e.target.closest('.st-rh-slider');
+      if (!slider) return;
+      var key = slider.getAttribute('data-helper-key');
+      var val = slider.value;
+      try {
+        localStorage.setItem('rc_book_helper_' + key, val);
+      } catch (_e) { /* ignore */ }
+      var valDisplay = slider.parentElement.querySelector('.st-rh-slider-val');
+      if (valDisplay) {
+        valDisplay.textContent = key === 'line_spacing'
+          ? parseFloat(val).toFixed(1)
+          : parseFloat(val).toFixed(2) + 'em';
+      }
+      applyDisplayAccessibility();
     };
 
     // Close button
