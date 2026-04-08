@@ -791,6 +791,7 @@
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
   let needsAttentionFilter = false; // When true, show only students with regressing/stalled goals or stale data
+  let focusModeActive = false; // When true, dim non-attention rows to 30% opacity
   let expandedGoalCards = new Set(); // Track which goal cards are expanded (not collapsed)
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
@@ -1898,6 +1899,18 @@
     return health.tier === 'stale' || health.tier === 'critical';
   }
 
+  /**
+   * Toggle Focus Mode: dims non-attention rows to 30% opacity so needs-attention
+   * students stand out clearly.
+   */
+  function toggleFocusMode() {
+    focusModeActive = !focusModeActive;
+    const table = document.querySelector('.st-table');
+    if (table) table.classList.toggle('st-focus-active', focusModeActive);
+    const btn = document.getElementById('stFocusToggle');
+    if (btn) btn.classList.toggle('active', focusModeActive);
+  }
+
   // ── Goals Hover Tooltip ──────────────────────────────────────────────────
 
   /** Maximum number of goals shown in the hover tooltip. */
@@ -2365,8 +2378,12 @@
       const sparklineSvg = renderMiniSparkline(sparklineValues);
       const sparklineHtml = sparklineSvg ? `<span class="st-mini-sparkline">${sparklineSvg}</span>` : '';
 
+      // Focus mode: mark rows that need attention so non-attention rows can be dimmed
+      const needsAttention = alertCounts.regressingCount > 0 || alertCounts.stalledCount > 0 ||
+        healthInfo.tier === 'critical' || healthInfo.tier === 'stale' || healthInfo.tier === 'none';
+
       let rows = `
-        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
+        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''} ${needsAttention ? 'st-needs-attention' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
             <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>${healthDot}
           </td>
@@ -4543,6 +4560,21 @@
         renderStudentKpiSummary();
       });
     }
+
+    // Focus Mode button
+    const focusToggleBtn = document.getElementById('stFocusToggle');
+    if (focusToggleBtn) {
+      focusToggleBtn.addEventListener('click', () => toggleFocusMode());
+    }
+
+    // F key shortcut to toggle Focus Mode (when not typing in an input/textarea)
+    document.addEventListener('keydown', e => {
+      if (e.key === 'f' || e.key === 'F') {
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        toggleFocusMode();
+      }
+    });
 
     // Export button — show dropdown with format options
     const exportBtn = document.getElementById('stExportBtn');
