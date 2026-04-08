@@ -250,9 +250,7 @@
           typeFilter: filters.assignments.typeFilter,
           sortBy: filters.assignments.sortBy
         },
-        lessons: {
-          searchQuery: filters.lessons.searchQuery
-        },
+        lessons: {searchQuery: filters.lessons.searchQuery},
         finalized: {
           classFilter: filters.finalized.classFilter,
           studentFilter: filters.finalized.studentFilter,
@@ -261,7 +259,8 @@
           dateTo: filters.finalized.dateTo,
           viewMode: filters.finalized.viewMode,
           sortColumn: filters.finalized.sortColumn,
-          sortDirection: filters.finalized.sortDirection
+          sortDirection: filters.finalized.sortDirection,
+          selectedTags: filters.finalized.selectedTags
         },
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
@@ -269,10 +268,7 @@
           viewMode: filters.reserve.viewMode,
           selectedTags: filters.reserve.selectedTags
         },
-        active: {
-          viewMode: filters.active.viewMode,
-          selectedTags: filters.active.selectedTags
-        },
+        active: {viewMode: filters.active.viewMode, selectedTags: filters.active.selectedTags},
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
       };
@@ -339,6 +335,7 @@
         if (typeof data.finalized.sortDirection === 'string') {
           filters.finalized.sortDirection = data.finalized.sortDirection;
         }
+        if (Array.isArray(data.finalized.selectedTags)) filters.finalized.selectedTags = data.finalized.selectedTags.filter(t => typeof t === 'string');
       }
 
       if (data.reserve && typeof data.reserve === 'object') {
@@ -425,7 +422,8 @@
       dateTo: "",
       viewMode: "tree",
       sortColumn: "date",
-      sortDirection: "desc"
+      sortDirection: "desc",
+      selectedTags: []
     },
     reserve: {
       presentationsExpanded: false,
@@ -2795,6 +2793,13 @@
     if (finalizedClassName) {
       titleSection.appendChild(createClassBadgeSpan(finalizedClassName));
     }
+    const finEntryTags = Array.isArray(assignment.tags) ? assignment.tags.filter(Boolean) : [];
+    finEntryTags.forEach(tag => {
+      const tagPill = document.createElement('span');
+      tagPill.style.cssText = 'background:rgba(255,255,255,.08); color:rgba(255,255,255,.50); padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;';
+      tagPill.textContent = tag;
+      titleSection.appendChild(tagPill);
+    });
     row.appendChild(titleSection);
 
     const btnGroup = document.createElement('div');
@@ -5160,6 +5165,23 @@
 
       viewToggleWrap.appendChild(treeViewBtn);
       viewToggleWrap.appendChild(tableViewBtn);
+
+      const byUnitViewBtn = document.createElement('button');
+      byUnitViewBtn.className = 'tc-btn';
+      byUnitViewBtn.setAttribute('aria-pressed', filters.finalized.viewMode === 'byUnit' ? 'true' : 'false');
+      byUnitViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.finalized.viewMode === 'byUnit' ? 'background:rgba(96,165,250,.18);' : '');
+      byUnitViewBtn.appendChild(createIcon('folderOpen', 14));
+      byUnitViewBtn.appendChild(document.createTextNode(' By Unit'));
+      byUnitViewBtn.addEventListener('click', () => {
+        if (filters.finalized.viewMode !== 'byUnit') {
+          filters.finalized.viewMode = 'byUnit';
+          saveFilters();
+          renderFinalizedTab();
+        }
+      });
+      viewToggleWrap.appendChild(byUnitViewBtn);
+
       toolbarRow.appendChild(viewToggleWrap);
 
       const toolbarSpacer = document.createElement('div');
@@ -5339,6 +5361,52 @@
         }
       }
 
+      // Tag filter chips (scan pre-tag-filtered list for available tags)
+      const allFinalizedForTags = finalizedList.slice();
+      const finalizedTagSet = new Set();
+      allFinalizedForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) finalizedTagSet.add(t); }); });
+      if (finalizedTagSet.size > 0) {
+        const finTagFilterRow = document.createElement('div');
+        finTagFilterRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;';
+        const allFinTagsBtn = document.createElement('button');
+        allFinTagsBtn.className = 'tc-btn' + (filters.finalized.selectedTags.length === 0 ? ' active' : '');
+        allFinTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+        allFinTagsBtn.textContent = 'All Tags';
+        allFinTagsBtn.addEventListener('click', () => {
+          filters.finalized.selectedTags = [];
+          saveFilters();
+          renderFinalizedTab();
+        });
+        finTagFilterRow.appendChild(allFinTagsBtn);
+        [...finalizedTagSet].sort().forEach(tag => {
+          const tagBtn = document.createElement('button');
+          const isActive = filters.finalized.selectedTags.includes(tag);
+          tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
+          tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+          tagBtn.textContent = tag;
+          tagBtn.addEventListener('click', () => {
+            const idx = filters.finalized.selectedTags.indexOf(tag);
+            if (idx === -1) {
+              filters.finalized.selectedTags = [...filters.finalized.selectedTags, tag];
+            } else {
+              filters.finalized.selectedTags = filters.finalized.selectedTags.filter(t => t !== tag);
+            }
+            saveFilters();
+            renderFinalizedTab();
+          });
+          finTagFilterRow.appendChild(tagBtn);
+        });
+        container.appendChild(finTagFilterRow);
+      }
+
+      // Apply tag filter
+      if (filters.finalized.selectedTags.length > 0) {
+        finalizedList = finalizedList.filter(a => {
+          const aTags = Array.isArray(a.tags) ? a.tags : [];
+          return filters.finalized.selectedTags.some(t => aTags.includes(t));
+        });
+      }
+
       // Count label
       const countEl = document.createElement('div');
       countEl.setAttribute('aria-live', 'polite');
@@ -5372,6 +5440,8 @@
         tableWrap.style.cssText = 'padding:0; overflow-x:auto;';
         tableWrap.appendChild(renderFinalizedTable(finalizedList));
         container.appendChild(tableWrap);
+      } else if (filters.finalized.viewMode === 'byUnit') {
+        container.appendChild(renderFinalizedByUnit(finalizedList));
       } else {
         container.appendChild(
           renderLaneSection('finalized', 'checkCircle', 'Finalized', finalizedList.length, (div) => {
@@ -5595,6 +5665,245 @@
     });
     table.appendChild(tbody);
     return table;
+  }
+
+
+  // ── Finalized By Unit View ────────────────────────────────────────────────────
+
+  function renderFinalizedByUnit(assignments) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-bottom:24px;';
+
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:32px 24px; text-align:center; color:rgba(255,255,255,.50);';
+      empty.textContent = 'No finalized assignments';
+      wrapper.appendChild(empty);
+      return wrapper;
+    }
+
+    // Group assignments: section → unit → assignments[]
+    const sectionGroups = new Map();
+    const uncategorized = [];
+
+    assignments.forEach(a => {
+      const uid = a.unit_id;
+      if (!uid) { uncategorized.push(a); return; }
+      const info = getUnitInfo(uid);
+      if (!info) { uncategorized.push(a); return; }
+      const { sectionName, sectionId, unitName } = info;
+      if (!sectionGroups.has(sectionId)) {
+        sectionGroups.set(sectionId, { sectionName, units: new Map() });
+      }
+      const sg = sectionGroups.get(sectionId);
+      if (!sg.units.has(uid)) sg.units.set(uid, { unitName, items: [] });
+      sg.units.get(uid).items.push(a);
+    });
+
+    // Build ordered section list from lessonsData
+    const orderedSectionIds = [];
+    if (lessonsData && Array.isArray(lessonsData.sections)) {
+      lessonsData.sections.forEach(sec => {
+        const sid = sec.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+        if (sectionGroups.has(sid)) orderedSectionIds.push(sid);
+      });
+    }
+    sectionGroups.forEach((_, sid) => {
+      if (!orderedSectionIds.includes(sid)) orderedSectionIds.push(sid);
+    });
+
+    const renderFinSectionAccordion = (sectionId, sectionData) => {
+      const secExpanded = isHierarchyExpanded('fin-section-' + sectionId, true);
+      const secWrapper = document.createElement('div');
+      secWrapper.style.cssText = 'margin-bottom:16px;';
+
+      const secHeader = document.createElement('div');
+      secHeader.style.cssText = [
+        'display:flex; align-items:center; gap:10px;',
+        'padding:12px 16px;',
+        'background:rgba(255,255,255,.06);',
+        'border:1px solid rgba(255,255,255,.12);',
+        'border-radius:' + (secExpanded ? '10px 10px 0 0' : '10px') + ';',
+        'cursor:pointer; user-select:none;'
+      ].join('');
+      secHeader.setAttribute('aria-expanded', String(secExpanded));
+
+      const secToggleIcon = document.createElement('span');
+      secToggleIcon.style.cssText = 'font-size:13px; transition:transform .2s ease; display:inline-block; transform:rotate(' + (secExpanded ? '0deg' : '-90deg') + ');';
+      secToggleIcon.textContent = '\u25be';
+
+      const secTitle = document.createElement('span');
+      secTitle.style.cssText = 'font-size:15px; font-weight:700; letter-spacing:.03em;';
+      secTitle.textContent = sectionData.sectionName;
+
+      const totalCount = [...sectionData.units.values()].reduce((n, u) => n + u.items.length, 0);
+      const secBadge = document.createElement('span');
+      secBadge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 9px; font-size:12px;';
+      secBadge.textContent = totalCount + ' finalized';
+
+      secHeader.appendChild(secToggleIcon);
+      secHeader.appendChild(createIcon('folder', 14));
+      secHeader.appendChild(secTitle);
+      secHeader.appendChild(secBadge);
+
+      const secContent = document.createElement('div');
+      secContent.style.cssText = [
+        'display:' + (secExpanded ? 'block' : 'none') + ';',
+        'border:1px solid rgba(255,255,255,.12); border-top:none;',
+        'border-radius:0 0 10px 10px; padding:12px;',
+        'background:rgba(255,255,255,.02);'
+      ].join('');
+
+      if (secExpanded) {
+        const orderedUnitIds = [];
+        if (lessonsData && Array.isArray(lessonsData.sections)) {
+          lessonsData.sections.forEach(sec => {
+            const sid = sec.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+            if (sid === sectionId) {
+              (sec.units || []).forEach(u => {
+                if (sectionData.units.has(u.id)) orderedUnitIds.push(u.id);
+              });
+            }
+          });
+        }
+        sectionData.units.forEach((_, uid) => {
+          if (!orderedUnitIds.includes(uid)) orderedUnitIds.push(uid);
+        });
+
+        orderedUnitIds.forEach(uid => {
+          const unitData = sectionData.units.get(uid);
+          const unitExpanded = isHierarchyExpanded('fin-unit-' + uid, true);
+
+          const unitWrapper = document.createElement('div');
+          unitWrapper.style.cssText = 'margin-bottom:10px;';
+
+          const unitHeader = document.createElement('div');
+          unitHeader.style.cssText = [
+            'display:flex; align-items:center; gap:8px; padding:8px 12px;',
+            'background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);',
+            'border-radius:' + (unitExpanded ? '8px 8px 0 0' : '8px') + ';',
+            'cursor:pointer; user-select:none;'
+          ].join('');
+          unitHeader.setAttribute('aria-expanded', String(unitExpanded));
+
+          const unitToggle = document.createElement('span');
+          unitToggle.style.cssText = 'font-size:12px; transition:transform .2s; display:inline-block; transform:rotate(' + (unitExpanded ? '0deg' : '-90deg') + ');';
+          unitToggle.textContent = '\u25be';
+
+          const unitTitle = document.createElement('span');
+          unitTitle.style.cssText = 'font-size:14px; font-weight:600;';
+          unitTitle.textContent = unitData.unitName;
+
+          // Compute unit stats (count + avg score)
+          const unitScores = unitData.items.map(a => getAssignmentStats(a, instancesData, submissionsData).avgScore).filter(s => s != null);
+          const unitAvg = unitScores.length > 0 ? Math.round(unitScores.reduce((s, v) => s + v, 0) / unitScores.length) : null;
+          const unitBadge = document.createElement('span');
+          unitBadge.style.cssText = 'background:rgba(96,165,250,.15); border:1px solid rgba(96,165,250,.25); border-radius:10px; padding:1px 8px; font-size:12px; color:#93c5fd;';
+          unitBadge.textContent = unitData.items.length + ' finalized' + (unitAvg != null ? ' \u2022 avg ' + unitAvg + '%' : '');
+
+          unitHeader.appendChild(unitToggle);
+          unitHeader.appendChild(createIcon('checkCircle', 13));
+          unitHeader.appendChild(unitTitle);
+          unitHeader.appendChild(unitBadge);
+
+          const unitContent = document.createElement('div');
+          unitContent.style.cssText = [
+            'display:' + (unitExpanded ? 'block' : 'none') + ';',
+            'border:1px solid rgba(255,255,255,.08); border-top:none;',
+            'border-radius:0 0 8px 8px; padding:10px;',
+            'background:rgba(0,0,0,.1);'
+          ].join('');
+
+          if (unitExpanded) {
+            unitData.items.forEach(a => unitContent.appendChild(renderFinalizedEntry(a)));
+          }
+
+          unitHeader.addEventListener('click', () => {
+            hierarchyExpandState.set('fin-unit-' + uid, !unitExpanded);
+            saveFilters();
+            renderFinalizedTab();
+          });
+
+          unitWrapper.appendChild(unitHeader);
+          unitWrapper.appendChild(unitContent);
+          secContent.appendChild(unitWrapper);
+        });
+      }
+
+      secHeader.addEventListener('click', () => {
+        hierarchyExpandState.set('fin-section-' + sectionId, !secExpanded);
+        saveFilters();
+        renderFinalizedTab();
+      });
+
+      secWrapper.appendChild(secHeader);
+      secWrapper.appendChild(secContent);
+      return secWrapper;
+    };
+
+    orderedSectionIds.forEach(sid => {
+      wrapper.appendChild(renderFinSectionAccordion(sid, sectionGroups.get(sid)));
+    });
+
+    // Uncategorized section
+    const uncatExpanded = isHierarchyExpanded('fin-section-uncategorized', true);
+    const uncatWrapper = document.createElement('div');
+    uncatWrapper.style.cssText = 'margin-bottom:16px;';
+
+    const uncatHeader = document.createElement('div');
+    uncatHeader.style.cssText = [
+      'display:flex; align-items:center; gap:10px; padding:12px 16px;',
+      'background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);',
+      'border-radius:' + (uncatExpanded ? '10px 10px 0 0' : '10px') + ';',
+      'cursor:pointer; user-select:none;'
+    ].join('');
+    uncatHeader.setAttribute('aria-expanded', String(uncatExpanded));
+
+    const uncatToggle = document.createElement('span');
+    uncatToggle.style.cssText = 'font-size:13px; transition:transform .2s; display:inline-block; transform:rotate(' + (uncatExpanded ? '0deg' : '-90deg') + ');';
+    uncatToggle.textContent = '\u25be';
+
+    const uncatTitle = document.createElement('span');
+    uncatTitle.style.cssText = 'font-size:15px; font-weight:700; letter-spacing:.03em; color:rgba(255,255,255,.65);';
+    uncatTitle.textContent = 'UNCATEGORIZED';
+
+    const uncatBadge = document.createElement('span');
+    uncatBadge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 9px; font-size:12px;';
+    uncatBadge.textContent = uncategorized.length + ' finalized';
+
+    uncatHeader.appendChild(uncatToggle);
+    uncatHeader.appendChild(createIcon('checkCircle', 14));
+    uncatHeader.appendChild(uncatTitle);
+    uncatHeader.appendChild(uncatBadge);
+
+    const uncatContent = document.createElement('div');
+    uncatContent.style.cssText = [
+      'display:' + (uncatExpanded ? 'block' : 'none') + ';',
+      'border:1px solid rgba(255,255,255,.12); border-top:none;',
+      'border-radius:0 0 10px 10px; padding:12px;',
+      'background:rgba(255,255,255,.02);'
+    ].join('');
+
+    if (uncatExpanded && uncategorized.length > 0) {
+      uncategorized.forEach(a => uncatContent.appendChild(renderFinalizedEntry(a)));
+    } else if (uncatExpanded) {
+      const none = document.createElement('div');
+      none.style.cssText = 'padding:16px; text-align:center; color:rgba(255,255,255,.40); font-size:13px;';
+      none.textContent = 'All finalized assignments are cataloged.';
+      uncatContent.appendChild(none);
+    }
+
+    uncatHeader.addEventListener('click', () => {
+      hierarchyExpandState.set('fin-section-uncategorized', !uncatExpanded);
+      saveFilters();
+      renderFinalizedTab();
+    });
+
+    uncatWrapper.appendChild(uncatHeader);
+    uncatWrapper.appendChild(uncatContent);
+    wrapper.appendChild(uncatWrapper);
+
+    return wrapper;
   }
 
   // ── Student Detail Modal ──────────────────────────────────────────────────────
