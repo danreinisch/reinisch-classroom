@@ -2033,7 +2033,7 @@
     const goalCode        = cell.dataset.goal;
     const safeStudentCode = cell.dataset.student;
     const goal            = allGoals.find(g => g.code === goalCode && g.student_code === safeStudentCode);
-    const isCountType     = goal && (goal.measurement_type === 'Frequency' || goal.measurement_type === 'prompt_count');
+    const isCountType     = goal && (goal.measurement_type === 'Frequency' || goal.observation_config?.category === 'prompt_count');
 
     const input = document.createElement('input');
     input.type = 'number'; input.min = '0'; input.step = isCountType ? '1' : '0.1';
@@ -2159,7 +2159,7 @@
       const valueInput = form.querySelector('.dt-value-input');
       const notesInput = form.querySelector('.dt-notes-input');
       const goalObj    = allGoals.find(g => g.code === goalCode && g.student_code === studentC);
-      const isCountType = goalObj && (goalObj.measurement_type === 'Frequency' || goalObj.measurement_type === 'prompt_count');
+      const isCountType = goalObj && (goalObj.measurement_type === 'Frequency' || goalObj.observation_config?.category === 'prompt_count');
 
       const hideForm = () => { form.style.display = 'none'; if (valueInput) valueInput.value = ''; };
 
