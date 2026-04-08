@@ -2011,6 +2011,64 @@
         color: rgba(0, 0, 0, 0.5);
       }
 
+      /* ============================================================
+         Reading Time Tracker
+         ============================================================ */
+      .st-reading-timer-pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.7);
+        white-space: nowrap;
+        user-select: none;
+      }
+
+      .st-reading-stats {
+        padding: 8px 14px 12px;
+      }
+
+      .st-reading-bar-chart {
+        display: flex;
+        height: 60px;
+        gap: 4px;
+        align-items: flex-end;
+      }
+
+      .st-reading-bar {
+        flex: 1;
+        min-height: 2px;
+        border-radius: 3px 3px 0 0;
+        background: #3b82f6;
+        transition: height 0.3s;
+      }
+
+      .st-reading-bar-label {
+        font-size: 9px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.4);
+        margin-top: 2px;
+      }
+
+      .st-reading-streak {
+        color: #f59e0b;
+        font-weight: 700;
+        font-size: 12px;
+      }
+
+      [data-theme="light"] .st-reading-timer-pill {
+        background: rgba(0, 0, 0, 0.08);
+        color: rgba(0, 0, 0, 0.6);
+      }
+
+      [data-theme="light"] .st-reading-bar-label {
+        color: rgba(0, 0, 0, 0.4);
+      }
+
+      [data-theme="light"] .st-reading-streak {
+        color: #d97706;
+      }
+
       /* OpenDyslexic font (loaded from CDN via @font-face) */
       @font-face {
         font-family: 'OpenDyslexic';
