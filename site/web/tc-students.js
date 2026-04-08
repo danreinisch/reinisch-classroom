@@ -1611,7 +1611,7 @@
     const lastX = padding + (values.length - 1) * stepX;
     const bottomY = height - padding;
     const polygonPoints = points + `${lastX},${bottomY} ${firstX},${bottomY}`;
-    const safeId = `sparkGradient-st-${goal.code.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    const safeId = `sparkGradient-st-${studentCode.replace(/[^a-zA-Z0-9-_]/g, '_')}-${goal.code.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
 
     return `
       <div class="dt-sparkline">
@@ -1909,7 +1909,7 @@
           <label style="font-size:13px;opacity:0.9;">Date:</label>
           <input type="date" class="dt-date-input" value="${formatProgressDate()}" />
           <label style="font-size:13px;opacity:0.9;">Value:</label>
-          <input type="number" class="dt-value-input" min="0" max="100" step="1" placeholder="0–100" />
+          <input type="number" class="dt-value-input" min="0" step="1" placeholder="Value" />
           <label style="font-size:13px;opacity:0.9;">Notes:</label>
           <input type="text" class="dt-notes-input" placeholder="Optional" />
           <button class="dt-btn primary st-progress-save-btn">Save</button>
@@ -2003,7 +2003,6 @@
 
     // Build basic info and data-points section (re-use existing entries in current quarter)
     const quarter   = selectedProgressQuarterMap.get(studentCode) || getCurrentQuarter();
-    const entries   = getGoalProgressEntriesForTab(goalCode, studentCode, quarter);
     const dataTable = renderProgressDataPointsTable(goal, studentCode, quarter);
 
     modalBody.innerHTML = `
@@ -2028,17 +2027,19 @@
   function startProgressCellEdit(cell, studentCode) {
     if (document.querySelector('#st-progress-tab-' + studentCode + ' .dt-data-value.editing')) return;
 
-    const currentValue = parseFloat(cell.dataset.value);
-    const entryId      = cell.dataset.entryId;
-    const goalCode     = cell.dataset.goal;
+    const currentValue    = parseFloat(cell.dataset.value);
+    const originalDisplay = cell.textContent.trim(); // store text only — avoids innerHTML round-trip (XSS)
+    const entryId         = cell.dataset.entryId;
+    const goalCode        = cell.dataset.goal;
     const safeStudentCode = cell.dataset.student;
+    const goal            = allGoals.find(g => g.code === goalCode && g.student_code === safeStudentCode);
+    const isCountType     = goal && (goal.measurement_type === 'Frequency' || goal.measurement_type === 'prompt_count');
 
     const input = document.createElement('input');
-    input.type = 'number'; input.min = '0'; input.max = '100'; input.step = '1';
+    input.type = 'number'; input.min = '0'; input.step = isCountType ? '1' : '0.1';
+    if (!isCountType) input.max = '100';
     input.value = isNaN(currentValue) ? '' : currentValue;
-    cell.dataset.originalValue = currentValue;
-    const originalContent = cell.innerHTML;
-    cell.innerHTML = '';
+    cell.textContent = '';
     cell.appendChild(input);
     cell.classList.add('editing');
     input.focus();
@@ -2046,13 +2047,13 @@
 
     const cancel = () => {
       cell.classList.remove('editing');
-      cell.innerHTML = originalContent;
+      cell.textContent = originalDisplay; // textContent is safe — no HTML re-parsing
     };
 
     const save = async () => {
       const newValue = parseFloat(input.value);
-      if (isNaN(newValue) || newValue < 0 || newValue > 100) {
-        await rcAlert('Validation', 'Please enter a valid number between 0 and 100');
+      if (isNaN(newValue) || newValue < 0 || (!isCountType && newValue > 100)) {
+        await rcAlert('Validation', isCountType ? 'Please enter a valid non-negative number' : 'Please enter a valid number between 0 and 100');
         input.focus();
         return;
       }
@@ -2085,8 +2086,8 @@
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter')   { e.preventDefault(); save(); }
       else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
-      else if (e.key === 'ArrowUp')   { e.preventDefault(); input.value = Math.min(100, parseFloat(input.value || 0) + (e.shiftKey ? 5 : 1)); }
-      else if (e.key === 'ArrowDown') { e.preventDefault(); input.value = Math.max(0,   parseFloat(input.value || 0) - (e.shiftKey ? 5 : 1)); }
+      else if (e.key === 'ArrowUp')   { e.preventDefault(); input.value = parseFloat(input.value || 0) + (e.shiftKey ? 5 : 1); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); input.value = Math.max(0, parseFloat(input.value || 0) - (e.shiftKey ? 5 : 1)); }
     });
   }
 
@@ -2157,6 +2158,8 @@
       const dateInput  = form.querySelector('.dt-date-input');
       const valueInput = form.querySelector('.dt-value-input');
       const notesInput = form.querySelector('.dt-notes-input');
+      const goalObj    = allGoals.find(g => g.code === goalCode && g.student_code === studentC);
+      const isCountType = goalObj && (goalObj.measurement_type === 'Frequency' || goalObj.measurement_type === 'prompt_count');
 
       const hideForm = () => { form.style.display = 'none'; if (valueInput) valueInput.value = ''; };
 
@@ -2168,8 +2171,8 @@
           const notes = notesInput ? notesInput.value : '';
           if (!date) { await rcAlert('Validation', 'Please enter a date'); return; }
           const numValue = parseFloat(value);
-          if (isNaN(numValue) || numValue < 0 || numValue > 100) {
-            await rcAlert('Validation', 'Please enter a valid number between 0 and 100');
+          if (isNaN(numValue) || numValue < 0 || (!isCountType && numValue > 100)) {
+            await rcAlert('Validation', isCountType ? 'Please enter a valid non-negative number' : 'Please enter a valid number between 0 and 100');
             return;
           }
           try {
