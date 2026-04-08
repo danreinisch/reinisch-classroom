@@ -366,7 +366,7 @@ test('saveFilters catches generic errors without crashing', () => {
 test('source catch block distinguishes QuotaExceededError', () => {
   const saveIdx = src.indexOf('function saveFilters(');
   assert.ok(saveIdx !== -1, 'saveFilters not found in source');
-  const saveSection = src.slice(saveIdx, saveIdx + 1200);
+  const saveSection = src.slice(saveIdx, saveIdx + 1500);
   assert.ok(
     saveSection.includes('QuotaExceededError'),
     'saveFilters should handle QuotaExceededError specifically'

@@ -158,6 +158,10 @@ const ICON_PATHS = {
     { tag: 'polyline', points: '14 2 14 8 20 8' },
     { tag: 'line', x1: '16', y1: '13', x2: '8', y2: '13' },
     { tag: 'line', x1: '14', y1: '17', x2: '8', y2: '17' }
+  ],
+  copy: [
+    { tag: 'rect', x: '9', y: '9', width: '13', height: '13', rx: '2', ry: '2' },
+    { tag: 'path', d: 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1' }
   ]
 };
 
@@ -213,6 +217,10 @@ function makeFilterContext(storage) {
       viewMode: 'tree',
       sortColumn: 'date',
       sortDirection: 'desc'
+    },
+    reserve: {
+      presentationsExpanded: false,
+      presentationsSearch: ''
     }
   };
   const collapsedLanes = new Set(['analytics']);
@@ -237,6 +245,10 @@ function makeFilterContext(storage) {
           viewMode: filters.finalized.viewMode,
           sortColumn: filters.finalized.sortColumn,
           sortDirection: filters.finalized.sortDirection
+        },
+        reserve: {
+          presentationsExpanded: filters.reserve.presentationsExpanded,
+          presentationsSearch: filters.reserve.presentationsSearch
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -272,6 +284,10 @@ function makeFilterContext(storage) {
         if (typeof data.finalized.viewMode === 'string') filters.finalized.viewMode = data.finalized.viewMode;
         if (typeof data.finalized.sortColumn === 'string') filters.finalized.sortColumn = data.finalized.sortColumn;
         if (typeof data.finalized.sortDirection === 'string') filters.finalized.sortDirection = data.finalized.sortDirection;
+      }
+      if (data.reserve && typeof data.reserve === 'object') {
+        if (typeof data.reserve.presentationsExpanded === 'boolean') filters.reserve.presentationsExpanded = data.reserve.presentationsExpanded;
+        if (typeof data.reserve.presentationsSearch === 'string') filters.reserve.presentationsSearch = data.reserve.presentationsSearch;
       }
       if (Array.isArray(data.collapsedLanes)) {
         collapsedLanes.clear();
@@ -754,11 +770,68 @@ test('icons referenced in codebase exist in ICON_PATHS', () => {
     'checkCircle', 'inbox', 'upload', 'download', 'search',
     'filter', 'chevronDown', 'chevronRight', 'folder', 'folderOpen',
     'barChart', 'arrowRight', 'x',
-    'table', 'printer', 'fileCsv'
+    'table', 'printer', 'fileCsv',
+    'copy'
   ];
   requiredIcons.forEach(name => {
     assert.ok(Object.prototype.hasOwnProperty.call(ICON_PATHS, name), `"${name}" missing from ICON_PATHS`);
   });
+});
+
+// ── Reserve filter round-trips ────────────────────────────────────────────────
+console.log('\n--- Reserve filter round-trips ---');
+
+test('reserve: save presentationsExpanded true → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.reserve.presentationsExpanded = true;
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.reserve.presentationsExpanded, true);
+});
+
+test('reserve: save presentationsSearch → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.reserve.presentationsSearch = 'poetry';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.reserve.presentationsSearch, 'poetry');
+});
+
+test('reserve: defaults are preserved when reserve block is absent', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    assignments: { classFilter: 'All Classes', searchQuery: '', typeFilter: 'All', sortBy: 'newest' },
+    collapsedLanes: [],
+    hierarchyExpandState: []
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.reserve.presentationsExpanded, false);
+  assert.strictEqual(ctx.filters.reserve.presentationsSearch, '');
+});
+
+test('reserve: presentationsExpanded as string → not applied, keeps default false', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { presentationsExpanded: 'yes', presentationsSearch: '' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.reserve.presentationsExpanded, false);
+});
+
+test('reserve: presentationsSearch as number → not applied, keeps default empty', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { presentationsExpanded: false, presentationsSearch: 42 }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.reserve.presentationsSearch, '');
 });
 
 // ── injectStyles() ────────────────────────────────────────────────────────────
