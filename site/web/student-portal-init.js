@@ -3863,6 +3863,10 @@
   let bookTtsPaused = false;
   let bookTtsTimeout = null;
   let bookTtsNextSentenceCallback = null; // set when waiting between sentences in sentence mode
+  let _lastSpokenText = '';              // text of the last spoken paragraph or sentence
+  let _lastSpokenType = 'paragraph';     // 'paragraph' or 'sentence'
+  let _lastSpokenWordOffset = 0;         // word span offset for the last spoken chunk
+  let _lastSpokenSpanCount = 0;          // word span count for the last spoken chunk
   // New feature state
   const _wordDefCache = new Map(); // session-level dictionary API cache
   let _bookLink = '';              // current book link (used for localStorage keys)
@@ -4091,6 +4095,10 @@
       if (e.key === 'Escape' && !document.querySelector('.rc-modal-backdrop')) closeBookReader();
       if (e.key === 'ArrowRight') navigateBookPage(1);
       if (e.key === 'ArrowLeft') navigateBookPage(-1);
+      if ((e.key === 'r' || e.key === 'R') && getBookHelper('replay') && _lastSpokenText) {
+        var tag = document.activeElement && document.activeElement.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') replayLastSpoken();
+      }
     };
     document.addEventListener('keydown', bookPanelEscapeHandler);
 
@@ -4115,7 +4123,10 @@
     stopReadingTimer();
     closeWordPopup();
     hideSelectionToolbar();
-
+    _lastSpokenText = '';
+    _lastSpokenType = 'paragraph';
+    _lastSpokenWordOffset = 0;
+    _lastSpokenSpanCount = 0;
     if (bookPanelEscapeHandler) {
       document.removeEventListener('keydown', bookPanelEscapeHandler);
       bookPanelEscapeHandler = null;
@@ -4197,6 +4208,7 @@
           <div class="st-reading-helper-panel" id="bookReadingHelperPanel" style="display:none;"></div>
         </div>
         <div class="st-book-tts-wrapper" style="position:relative;display:flex;align-items:center;gap:6px;">
+          ${getBookHelper('replay') ? `<button class="st-book-nav-btn st-book-tts-replay-btn" id="bookTtsReplayBtn" aria-label="Replay last spoken text" title="Replay last spoken text (R)" disabled>⏪ Replay</button>` : ''}
           <button class="st-book-nav-btn" id="bookTtsBtn">🔊 Read Aloud</button>
           <button class="st-book-nav-btn st-book-tts-settings-btn" id="bookTtsSettingsBtn" title="TTS settings" style="padding:8px 10px;">⚙️</button>
           <div class="st-book-tts-settings" id="bookTtsSettings" style="display:none;">
@@ -4234,7 +4246,11 @@
     });
     panel.querySelector('#bookTtsStop').addEventListener('click', stopBookTts);
 
-    // Double-click word lookup
+    if (getBookHelper('replay')) {
+      const replayBtnEl = panel.querySelector('#bookTtsReplayBtn');
+      if (replayBtnEl) replayBtnEl.addEventListener('click', replayLastSpoken);
+    }
+
     const bookContent = panel.querySelector('#bookContent');
     if (bookContent) {
       let _tapToHearTimeout = null;
@@ -5542,6 +5558,13 @@
       var sentWordOffset = sentenceSpanRanges[sentIdx].offset;
       var sentSpanCount = sentenceSpanRanges[sentIdx].count;
 
+      // Track last spoken chunk for replay
+      _lastSpokenText = sentText;
+      _lastSpokenType = 'sentence';
+      _lastSpokenWordOffset = sentWordOffset;
+      _lastSpokenSpanCount = sentSpanCount;
+      updateReplayBtn();
+
       // Highlight current sentence spans
       document.querySelectorAll('.st-book-sentence-active').forEach(function (el) {
         el.classList.remove('st-book-sentence-active');
@@ -5803,6 +5826,13 @@
         }
       }
 
+      // Track last spoken chunk for replay
+      _lastSpokenText = text;
+      _lastSpokenType = 'paragraph';
+      _lastSpokenWordOffset = wordOffset;
+      _lastSpokenSpanCount = spanCount;
+      updateReplayBtn();
+
       fetch('/.netlify/functions/student-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5975,6 +6005,141 @@
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('stop', null);
     }
+  }
+
+  function updateReplayBtn() {
+    var btn = document.getElementById('bookTtsReplayBtn');
+    if (btn) btn.disabled = !_lastSpokenText;
+  }
+
+  function replayLastSpoken() {
+    if (!_lastSpokenText) return;
+
+    // Stop any current playback
+    stopBookTts();
+
+    const content = document.getElementById('bookContent');
+    if (!content) return;
+    const allWordSpans = Array.from(content.querySelectorAll('.st-book-word'));
+
+    const rate = parseFloat(localStorage.getItem('rc_book_tts_rate') || String(DEFAULT_TTS_RATE));
+    const OPENAI_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+    const rawVoice = localStorage.getItem('rc_book_tts_voice') || 'nova';
+    const savedVoiceName = OPENAI_VOICES.includes(rawVoice) ? rawVoice : 'nova';
+
+    const replayBtn = document.getElementById('bookTtsReplayBtn');
+    if (replayBtn) {
+      replayBtn.classList.add('replaying');
+      setTimeout(function () { replayBtn.classList.remove('replaying'); }, 1300);
+    }
+
+    const ttsBtn = document.getElementById('bookTtsBtn');
+    const ttsControls = document.getElementById('bookTtsControls');
+    bookTtsActive = true;
+    bookTtsPaused = false;
+    if (ttsBtn) ttsBtn.classList.add('tts-active');
+    if (ttsControls) ttsControls.style.display = 'flex';
+
+    const replayText = _lastSpokenText;
+    const wordOffset = _lastSpokenWordOffset;
+    const spanCount = _lastSpokenSpanCount;
+    let lastHighlightedSpan = null;
+
+    fetch('/.netlify/functions/student-tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: replayText, voice: savedVoiceName, speed: rate }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!bookTtsActive) return;
+
+        if (!data.ok || !data.audio) {
+          console.warn(LOG_PREFIX, 'Replay TTS API error', data.error);
+          showToast('⚠️ Could not replay audio. Try again.', 'error');
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+          return;
+        }
+
+        const binaryStr = atob(data.audio);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'audio/mpeg' });
+
+        if (bookTtsAudioUrl) URL.revokeObjectURL(bookTtsAudioUrl);
+        bookTtsAudioUrl = URL.createObjectURL(blob);
+
+        const audio = new Audio(bookTtsAudioUrl);
+        bookTtsAudio = audio;
+
+        audio.ontimeupdate = function () {
+          if (!audio.duration || !spanCount) return;
+          const wordDuration = audio.duration / spanCount;
+          const currentWordIdx = Math.min(Math.floor(audio.currentTime / wordDuration), spanCount - 1);
+          const span = allWordSpans[wordOffset + currentWordIdx];
+          if (span && span !== lastHighlightedSpan) {
+            if (lastHighlightedSpan) {
+              lastHighlightedSpan.classList.remove('tts-active');
+              lastHighlightedSpan.classList.add('tts-read');
+            }
+            span.classList.add('tts-active');
+            lastHighlightedSpan = span;
+            span.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
+        };
+
+        audio.onended = function () {
+          if (lastHighlightedSpan) {
+            lastHighlightedSpan.classList.remove('tts-active');
+            lastHighlightedSpan.classList.add('tts-read');
+          }
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+          document.querySelectorAll('.st-book-word.tts-active, .st-book-word.tts-read').forEach(function (el) {
+            el.classList.remove('tts-active');
+            el.classList.remove('tts-read');
+          });
+        };
+
+        audio.onerror = function () {
+          if (!bookTtsActive) return;
+          console.warn(LOG_PREFIX, 'Replay audio playback error');
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+        };
+
+        var firstSpan = allWordSpans[wordOffset];
+        if (firstSpan) {
+          firstSpan.classList.add('tts-active');
+          lastHighlightedSpan = firstSpan;
+          firstSpan.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+
+        audio.play().catch(function (err) {
+          console.warn(LOG_PREFIX, 'Replay audio play() failed:', err);
+          showToast('⚠️ Audio unavailable. Please try again.', 'error');
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+        });
+      })
+      .catch(function (err) {
+        if (!bookTtsActive) return;
+        console.warn(LOG_PREFIX, 'Replay TTS fetch failed:', err);
+        showToast('⚠️ Could not load audio. Check your connection.', 'error');
+        bookTtsActive = false;
+        bookTtsPaused = false;
+        if (ttsBtn) ttsBtn.classList.remove('tts-active');
+        if (ttsControls) ttsControls.style.display = 'none';
+      });
   }
 
   // ============================================================================
