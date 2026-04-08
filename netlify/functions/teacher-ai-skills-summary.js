@@ -2,7 +2,7 @@
 // POST /.netlify/functions/teacher-ai-skills-summary
 // Auth: Requires teacher session cookie
 // Body: { student_code, iep_goals, dese_standards }
-// Returns: { ok: true, skills: [{ code, summary, tier }] }
+// Returns: { ok: true, skills: [{ code, summary, tier, source }] }
 
 console.log('[teacher-ai-skills-summary] Module loaded successfully');
 
@@ -68,8 +68,9 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
   prompt += `  "code": the goal or DESE code exactly as provided\n`;
   prompt += `  "summary": a 2-3 sentence narrative about performance in this skill area\n`;
   prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
+  prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
   prompt += `Include every IEP goal and every DESE standard provided. Do not add or remove entries.\n`;
-  prompt += `Example: { "skills": [{ "code": "S023.10.1", "summary": "...", "tier": "on-track" }] }`;
+  prompt += `Example: { "skills": [{ "code": "S023.10.1", "summary": "...", "tier": "on-track", "source": "iep" }] }`;
 
   return prompt;
 }
@@ -155,7 +156,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         temperature: 0.3,
-        max_tokens: 1500,
+        max_tokens: 2000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
@@ -206,6 +207,7 @@ exports.handler = async (event) => {
       code: s.code.trim(),
       summary: typeof s.summary === 'string' ? s.summary.trim() : '',
       tier: VALID_TIERS.has(s.tier) ? s.tier : 'needs-support',
+      source: s.source === 'dese' ? 'dese' : 'iep',
     }));
 
   console.log(`[teacher-ai-skills-summary] [${requestId}] Summary ready: ${sanitizedSkills.length} skills for ${student_code}`);
