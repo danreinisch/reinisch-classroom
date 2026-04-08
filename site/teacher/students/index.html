@@ -194,9 +194,74 @@
       .st-date-ok {
         color: rgba(34, 197, 94, 1);
       }
+      .st-date-stale {
+        color: rgba(249, 115, 22, 1);
+        font-weight: 600;
+      }
       .st-date-none {
         color: rgba(148, 163, 184, 1);
         opacity: 0.6;
+      }
+
+      /* Health dot in collapsed table row */
+      .st-health-dot {
+        font-size: 14px;
+        line-height: 1;
+        display: inline-block;
+        cursor: default;
+      }
+
+      /* Staleness summary strip inside the KPI summary body */
+      .st-staleness-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        padding: 6px 0 2px;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .st-staleness-strip-item {
+        white-space: nowrap;
+      }
+      .st-staleness-sep {
+        color: rgba(255, 255, 255, 0.25);
+      }
+
+      /* "Collect Now" floating nudge button */
+      .st-collect-nudge {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 900;
+        background: rgba(239, 68, 68, 0.92);
+        color: #fff;
+        border: none;
+        border-radius: 24px;
+        padding: 12px 22px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        transition: background 0.2s, transform 0.1s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .st-collect-nudge:hover {
+        background: rgba(220, 38, 38, 1);
+        transform: translateY(-1px);
+      }
+      .st-collect-nudge:active {
+        transform: translateY(0);
+      }
+      @media (max-width: 768px) {
+        .st-collect-nudge {
+          bottom: 16px;
+          right: 16px;
+          font-size: 13px;
+          padding: 10px 16px;
+        }
       }
 
       /* Expanded Row Detail */
@@ -1714,6 +1779,8 @@
               <option value="code">Sort: Code (A-Z)</option>
               <option value="goals">Sort: Goal Count</option>
               <option value="iep_due">Sort: IEP Due Date</option>
+              <option value="health">Sort: Health (Worst First)</option>
+              <option value="data_age">Sort: Data Age (Oldest First)</option>
             </select>
             <label class="st-toggle-label">
               <input type="checkbox" id="stShowArchived" /> Show Archived
@@ -1787,13 +1854,13 @@
             <table class="st-table">
               <thead>
                 <tr>
-                  <th></th>
+                  <th class="sortable" data-sort="health" title="Student data-health (worst goal staleness)">●</th>
                   <th class="sortable" data-sort="code">Code</th>
                   <th>Classes</th>
                   <th class="sortable" data-sort="goals">Goals</th>
                   <th class="sortable" data-sort="iep_due">IEP Due</th>
                   <th class="sortable" data-sort="eval_due">Eval Due</th>
-                  <th>Data</th>
+                  <th class="sortable" data-sort="data_age">Data</th>
                 </tr>
               </thead>
               <tbody id="stStudentTableBody">
@@ -1809,6 +1876,7 @@
     <script src="/web/supabase-config.js?v=20260331"></script>
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260331"></script>
+    <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
     <script type="module" src="/web/tc-students.js?v=20260408a"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
