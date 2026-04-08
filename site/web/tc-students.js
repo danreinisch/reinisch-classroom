@@ -802,6 +802,15 @@
   // ── Cross-student summary / data quality ─────────────────────────────────
   const ST_DISMISSED_VALIDATIONS_KEY = 'rc_dismissed_validations';
 
+  // ── Pinned Students ───────────────────────────────────────────────────────
+  const ST_PINNED_STUDENTS_KEY = 'rc_pinned_students_v1';
+  const pinnedStudents = new Set(
+    JSON.parse(localStorage.getItem(ST_PINNED_STUDENTS_KEY) || '[]')
+  );
+
+  /** Track the last student row the pointer hovered over (for 'P' shortcut). */
+  let _lastHoveredCode = null;
+
   /**
    * Validate all loaded progress entries and return an array of issue objects.
    * Uses the same dismissed-validation key as tc-data.js so dismissals persist
@@ -1927,6 +1936,7 @@
       panel.setAttribute('aria-label', 'Keyboard shortcuts');
       const shortcuts = [
         { key: 'F',   desc: 'Toggle focus mode' },
+        { key: 'P',   desc: 'Pin/unpin hovered student' },
         { key: 'S',   desc: 'Focus search input' },
         { key: '/',   desc: 'Focus search input' },
         { key: 'Esc', desc: 'Close panel / blur search' },
@@ -2373,7 +2383,34 @@
       });
     }
 
+    // Pinned students always float to the top, preserving the chosen sort within each group
+    filtered.sort((a, b) => {
+      const aPinned = pinnedStudents.has(a.code) ? 0 : 1;
+      const bPinned = pinnedStudents.has(b.code) ? 0 : 1;
+      return aPinned - bPinned;
+    });
+
     filteredStudents = filtered;
+  }
+
+  /** Returns true if the student is currently pinned. */
+  function isStudentPinned(code) {
+    return pinnedStudents.has(code);
+  }
+
+  /**
+   * Toggle pin state for a student, persist to localStorage, and re-render.
+   * @param {string} code
+   */
+  function togglePinStudent(code) {
+    if (pinnedStudents.has(code)) {
+      pinnedStudents.delete(code);
+    } else {
+      pinnedStudents.add(code);
+    }
+    localStorage.setItem(ST_PINNED_STUDENTS_KEY, JSON.stringify([...pinnedStudents]));
+    filterStudents();
+    renderStudentList();
   }
 
   // Render functions
@@ -2381,12 +2418,20 @@
     const tbody = document.getElementById('stStudentTableBody');
     if (!tbody) return;
 
-    const html = filteredStudents.map(student => {
+    // Determine where the pinned-students section ends so we can insert a divider.
+    // findIndex returns -1 when no non-pinned students exist (all pinned) → no divider.
+    const firstNonPinnedIdx = filteredStudents.findIndex(s => !pinnedStudents.has(s.code));
+    const showDivider = firstNonPinnedIdx > 0 && firstNonPinnedIdx < filteredStudents.length;
+
+    const htmlParts = [];
+
+    filteredStudents.forEach((student, idx) => {
       const enrollments = allEnrollments.filter(e => e.student_code === student.code);
       const studentGoals = allGoals.filter(g => g.student_code === student.code);
       const classes = enrollments.map(e => abbreviateClass(e.class_name)).join(', ');
       const isExpanded = expandedStudents.has(student.code);
       const isArchived = student.status === 'archived' || student.active === false;
+      const isPinned = pinnedStudents.has(student.code);
       
       const iepDue = student.iep_due ? formatDate(student.iep_due) : 'N/A';
       const iepUrgency = getDateUrgency(student.iep_due);
@@ -2428,12 +2473,17 @@
       const needsAttention = alertCounts.regressingCount > 0 || alertCounts.stalledCount > 0 ||
         healthInfo.tier === 'critical' || healthInfo.tier === 'stale' || healthInfo.tier === 'none';
 
+      // Pin button — shown in collapsed (non-expanded) rows
+      const pinBtn = !isExpanded
+        ? `<button class="st-pin-btn${isPinned ? ' active' : ''}" data-code="${escapeHtml(student.code)}" title="${isPinned ? 'Unpin student' : 'Pin student to top'}" aria-label="${isPinned ? 'Unpin ' + escapeHtml(student.code) : 'Pin ' + escapeHtml(student.code) + ' to top'}" aria-pressed="${isPinned ? 'true' : 'false'}">📌</button>`
+        : '';
+
       let rows = `
-        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''} ${needsAttention ? 'st-needs-attention' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
+        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''} ${needsAttention ? 'st-needs-attention' : ''} ${isPinned ? 'st-row-pinned' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
             <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>${healthDot}
           </td>
-          <td class="st-code-cell">${escapeHtml(student.code)}</td>
+          <td class="st-code-cell">${escapeHtml(student.code)}${pinBtn}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
           <td class="st-goals-cell">
             <span class="st-goals-tooltip-wrapper" data-student="${escapeHtml(student.code)}"><span class="st-goals-badge">${studentGoals.length}</span>${sparklineHtml}</span>${alertBadgesHtml}
@@ -2457,10 +2507,15 @@
         `;
       }
 
-      return rows;
-    }).join('');
+      htmlParts.push(rows);
 
-    tbody.innerHTML = html;
+      // Insert divider after the last pinned row
+      if (showDivider && idx === firstNonPinnedIdx - 1) {
+        htmlParts.push(`<tr class="st-pinned-divider" role="separator" aria-label="End of pinned students"><td colspan="7"></td></tr>`);
+      }
+    });
+
+    tbody.innerHTML = htmlParts.join('');
 
     // Render detail content for all expanded students
     // Use Promise.allSettled to handle async rendering safely
@@ -4656,6 +4711,8 @@
       } else if (e.key === 's' || e.key === 'S' || e.key === '/') {
         const searchEl = document.getElementById('stSearchInput');
         if (searchEl) { e.preventDefault(); searchEl.focus(); searchEl.select(); }
+      } else if (e.key === 'p' || e.key === 'P') {
+        if (_lastHoveredCode) togglePinStudent(_lastHoveredCode);
       } else if (e.key === '?') {
         e.preventDefault();
         toggleShortcutsHelp();
@@ -5118,6 +5175,15 @@
           }
           return;
         }
+
+        // PRIORITY 3b: Pin button
+        const pinBtn = e.target.closest('.st-pin-btn');
+        if (pinBtn) {
+          const code = pinBtn.dataset.code;
+          if (code) togglePinStudent(code);
+          e.stopPropagation();
+          return;
+        }
         
         // PRIORITY 4: Handle row click for expand/collapse (lowest priority - catch-all)
         const row = e.target.closest('tr:not(.st-expanded-row)');
@@ -5175,6 +5241,15 @@
 
       // Goals hover tooltip (event delegation, 200 ms delay)
       setupGoalsTooltipHandlers(tableBody);
+
+      // Track last hovered student row for the 'P' keyboard shortcut
+      tableBody.addEventListener('mouseover', (e) => {
+        const row = e.target.closest('tr[data-code]');
+        if (row) _lastHoveredCode = row.dataset.code;
+      });
+      tableBody.addEventListener('mouseleave', () => {
+        _lastHoveredCode = null;
+      });
     }
 
     // Hide goals tooltip on scroll so it doesn't float at a stale position
