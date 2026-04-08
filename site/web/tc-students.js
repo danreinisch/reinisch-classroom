@@ -1801,6 +1801,73 @@
   }
 
   /**
+   * Render a mini 60×20 SVG sparkline from an array of numeric values.
+   * Returns an inline SVG string, or empty string if fewer than 2 data points.
+   * Line colour: green (#22c55e) if last value ≥ second-to-last (up/flat), red (#ef4444) if down.
+   * @param {number[]} values - Chronological array of averaged progress values (oldest → newest).
+   * @returns {string} SVG markup or ''
+   */
+  function renderMiniSparkline(values) {
+    if (!values || values.length < 2) return '';
+
+    const W = 60, H = 20, PAD = 2;
+    const last = values[values.length - 1];
+    const prev = values[values.length - 2];
+    const color = last >= prev ? '#22c55e' : '#ef4444';
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    const points = values.map((v, i) => {
+      const x = PAD + (i / (values.length - 1)) * (W - PAD * 2);
+      const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+
+  /**
+   * Aggregate progress values for a student across all active, non-prompt_count goals.
+   * Groups entries by date, averages all goals' values per date, then returns the last
+   * up to 8 chronological values (oldest → newest).
+   * @param {string} studentCode
+   * @returns {number[]}
+   */
+  function getStudentSparklineValues(studentCode) {
+    const goals = allGoals.filter(g =>
+      g.student_code === studentCode &&
+      g.status !== 'archived' &&
+      !(g.measurement_type === 'Observation' && g.observation_config?.category === 'prompt_count')
+    );
+    if (goals.length === 0) return [];
+
+    // Collect all progress entries for these goals
+    const byDate = new Map();
+    for (const goal of goals) {
+      const entries = getProgressForGoal(studentCode, goal.code);
+      for (const entry of entries) {
+        if (!entry.date) continue;
+        const v = entry.value != null ? parseFloat(entry.value) : null;
+        if (v == null || isNaN(v)) continue;
+        if (!byDate.has(entry.date)) byDate.set(entry.date, []);
+        byDate.get(entry.date).push(v);
+      }
+    }
+
+    if (byDate.size === 0) return [];
+
+    // Sort dates oldest → newest, compute average per date, take last 5–8
+    const sorted = Array.from(byDate.keys()).sort();
+    const slice = sorted.slice(-8);
+    return slice.map(date => {
+      const vals = byDate.get(date);
+      return vals.reduce((s, v) => s + v, 0) / vals.length;
+    });
+  }
+
+  /**
    * Compute alert badge counts for a student's active goals.
    * @param {string} studentCode
    * @returns {{ regressingCount: number, masteredCount: number, stalledCount: number }}
@@ -2136,6 +2203,11 @@
           : '',
       ].join('');
 
+      // Mini sparkline — only shown in collapsed row
+      const sparklineValues = getStudentSparklineValues(student.code);
+      const sparklineSvg = renderMiniSparkline(sparklineValues);
+      const sparklineHtml = sparklineSvg ? `<span class="st-mini-sparkline">${sparklineSvg}</span>` : '';
+
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
@@ -2144,7 +2216,7 @@
           <td class="st-code-cell">${escapeHtml(student.code)}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
           <td class="st-goals-cell">
-            <span class="st-goals-badge">${studentGoals.length}</span>${alertBadgesHtml}
+            <span class="st-goals-badge">${studentGoals.length}</span>${sparklineHtml}${alertBadgesHtml}
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
