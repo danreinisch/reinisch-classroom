@@ -416,6 +416,9 @@
   // Bulk selection state for the Upcoming lane
   let selectedUpcoming = new Set();
 
+  // Bulk selection state for the Active tab
+  let selectedActive = new Set();
+
   // ── Initialization ────────────────────────────────────────────────────────────
 
   async function init() {
@@ -1641,6 +1644,41 @@
     if (bulkArchiveBtn) bulkArchiveBtn.style.display = count > 0 ? '' : 'none';
   }
 
+  /**
+   * Updates the Active tab Select All checkbox and shows/hides bulk-action buttons
+   * without triggering a full re-render.
+   */
+  function refreshActiveBulkControls() {
+    const selectAllCb = document.getElementById('activeSelectAll');
+    if (!selectAllCb) return;
+
+    const allCardIds = Array.from(
+      document.querySelectorAll('#activeTab .assignment-card')
+    ).map(c => c.dataset.id).filter(Boolean);
+
+    const count = selectedActive.size;
+    const allSelected = allCardIds.length > 0 && allCardIds.every(id => selectedActive.has(id));
+    const someSelected = allCardIds.some(id => selectedActive.has(id));
+    selectAllCb.checked = allSelected;
+    selectAllCb.indeterminate = someSelected && !allSelected;
+
+    const countLabel = document.getElementById('activeSelectionCount');
+    if (countLabel) {
+      countLabel.textContent = count > 0 ? count + ' selected' : '';
+      countLabel.style.display = count > 0 ? '' : 'none';
+    }
+    const finalizeBtn = document.getElementById('activeBulkFinalizeBtn');
+    if (finalizeBtn) finalizeBtn.style.display = count > 0 ? '' : 'none';
+    const reIssueBtn = document.getElementById('activeBulkReIssueBtn');
+    if (reIssueBtn) reIssueBtn.style.display = count > 0 ? '' : 'none';
+  }
+
+  /** Clears the active selection and re-renders the Active tab. */
+  function refreshActiveTab() {
+    selectedActive.clear();
+    renderActiveTab();
+  }
+
   function renderUpcomingLane(assignments) {
     if (assignments.length === 0) {
       const empty = document.createElement('div');
@@ -2499,6 +2537,22 @@
       showReIssueModal(assignment, 'finalized');
     });
     btnGroup.appendChild(reIssueBtn);
+
+    const gbFinalizedBtn = document.createElement('button');
+    gbFinalizedBtn.className = 'tc-btn';
+    gbFinalizedBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0; color:rgba(255,255,255,.45); border-color:rgba(255,255,255,.10);';
+    gbFinalizedBtn.setAttribute('title', 'View in Gradebook');
+    gbFinalizedBtn.setAttribute('aria-label', 'View in Gradebook');
+    gbFinalizedBtn.appendChild(createIcon('barChart', 12));
+    gbFinalizedBtn.appendChild(document.createTextNode(' Gradebook'));
+    gbFinalizedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const gbUrl = finalizedClassName
+        ? '/teacher/gradebook/?class=' + encodeURIComponent(finalizedClassName)
+        : '/teacher/gradebook/';
+      window.location.href = gbUrl;
+    });
+    btnGroup.appendChild(gbFinalizedBtn);
 
     row.appendChild(btnGroup);
 
@@ -3619,6 +3673,105 @@
         return;
       }
 
+      // ── Bulk controls row ─────────────────────────────────────────────────────
+      const activeBulkRow = document.createElement('div');
+      activeBulkRow.id = 'activeBulkControls';
+      activeBulkRow.style.cssText = [
+        'display:flex; align-items:center; gap:10px; flex-wrap:wrap;',
+        'padding:8px 4px 12px 4px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:12px;'
+      ].join('');
+
+      const activeSelectAllLabel = document.createElement('label');
+      activeSelectAllLabel.style.cssText = 'display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:rgba(255,255,255,.70); user-select:none;';
+      const activeSelectAllCb = document.createElement('input');
+      activeSelectAllCb.type = 'checkbox';
+      activeSelectAllCb.id = 'activeSelectAll';
+      activeSelectAllCb.style.cssText = 'cursor:pointer; width:15px; height:15px; accent-color:#60a5fa;';
+      activeSelectAllCb.addEventListener('change', () => {
+        if (activeSelectAllCb.checked) {
+          activeList.forEach(a => selectedActive.add(a.id));
+        } else {
+          activeList.forEach(a => selectedActive.delete(a.id));
+        }
+        document.querySelectorAll('#activeTab .assignment-card').forEach(c => {
+          const isSelected = selectedActive.has(c.dataset.id);
+          c.style.outline = isSelected ? '2px solid #60a5fa' : '';
+          c.style.boxShadow = isSelected ? '0 0 0 2px rgba(96,165,250,.25)' : '';
+          const cb = c.querySelector('.active-select-cb');
+          if (cb) cb.checked = isSelected;
+        });
+        refreshActiveBulkControls();
+      });
+      activeSelectAllLabel.appendChild(activeSelectAllCb);
+      activeSelectAllLabel.appendChild(document.createTextNode('Select All'));
+      activeBulkRow.appendChild(activeSelectAllLabel);
+
+      const activeCountLabel = document.createElement('span');
+      activeCountLabel.id = 'activeSelectionCount';
+      activeCountLabel.style.cssText = 'font-size:13px; font-weight:600; color:#60a5fa; display:none;';
+      activeBulkRow.appendChild(activeCountLabel);
+
+      const activeFinalizeBtn = document.createElement('button');
+      activeFinalizeBtn.id = 'activeBulkFinalizeBtn';
+      activeFinalizeBtn.className = 'tc-btn';
+      activeFinalizeBtn.style.cssText = 'display:none; font-size:12px; padding:5px 12px;';
+      activeFinalizeBtn.setAttribute('title', 'Finalize selected assignments');
+      activeFinalizeBtn.setAttribute('aria-label', 'Finalize selected assignments');
+      activeFinalizeBtn.appendChild(createIcon('checkCircle', 14));
+      activeFinalizeBtn.appendChild(document.createTextNode(' Finalize Selected'));
+      activeFinalizeBtn.addEventListener('click', async () => {
+        const ids = [...selectedActive];
+        const n = ids.length;
+        if (n === 0) return;
+        const confirmed = await rcConfirm(
+          'Batch Finalize',
+          'Finalize ' + n + ' selected assignment' + (n !== 1 ? 's' : '') + '?\n\nThey will move to the Finalized tab.',
+          'Finalize'
+        );
+        if (!confirmed) return;
+        try {
+          const now = new Date().toISOString();
+          await Promise.all(ids.map(id => db.updateAssignment(id, { active: false, finalized_at: now })));
+          ids.forEach(id => {
+            const idx = assignmentsData.findIndex(a => a.id === id);
+            if (idx !== -1) {
+              assignmentsData[idx].active = false;
+              assignmentsData[idx].finalized_at = now;
+            }
+          });
+          refreshActiveTab();
+          showToast(n + ' assignment' + (n !== 1 ? 's' : '') + ' finalized');
+        } catch (err) {
+          console.error('[tc-library] Batch finalize failed:', err);
+          showToast('Failed to finalize assignments', '#ef4444', '#fff');
+        }
+      });
+      activeBulkRow.appendChild(activeFinalizeBtn);
+
+      const activeBulkReIssueBtn = document.createElement('button');
+      activeBulkReIssueBtn.id = 'activeBulkReIssueBtn';
+      activeBulkReIssueBtn.className = 'tc-btn';
+      activeBulkReIssueBtn.style.cssText = 'display:none; font-size:12px; padding:5px 12px;';
+      activeBulkReIssueBtn.setAttribute('title', 'Re-issue selected assignments');
+      activeBulkReIssueBtn.setAttribute('aria-label', 'Re-issue selected assignments');
+      activeBulkReIssueBtn.appendChild(createIcon('refreshCw', 14));
+      activeBulkReIssueBtn.appendChild(document.createTextNode(' Re-Issue Selected'));
+      activeBulkReIssueBtn.addEventListener('click', () => {
+        const ids = [...selectedActive];
+        const n = ids.length;
+        if (n === 0) return;
+        if (n === 1) {
+          const assignment = assignmentsData.find(a => a.id === ids[0]);
+          if (assignment) showReIssueModal(assignment, 'active');
+        } else {
+          showToast('Select one assignment at a time for re-issue');
+        }
+      });
+      activeBulkRow.appendChild(activeBulkReIssueBtn);
+
+      container.appendChild(activeBulkRow);
+      refreshActiveBulkControls();
+
       // ── Week grouping ────────────────────────────────────────────────────────
       const currentWeekLabel = getWeekLabel(new Date());
 
@@ -3769,7 +3922,37 @@
     const card = document.createElement('div');
     card.className = 'tc-card assignment-card';
     card.dataset.id = assignment.id || '';
-    card.style.cssText = 'padding:20px; cursor:pointer;';
+    const isActiveSelected = assignment.id != null && selectedActive.has(assignment.id);
+    card.style.cssText = [
+      'padding:20px; cursor:pointer;',
+      isActiveSelected ? 'outline:2px solid #60a5fa; box-shadow:0 0 0 2px rgba(96,165,250,.25);' : ''
+    ].join('');
+
+    // ── Individual selection checkbox ────────────────────────────────────────
+    const cbWrap = document.createElement('div');
+    cbWrap.style.cssText = 'display:flex; justify-content:flex-end; margin-bottom:6px;';
+    const selectCb = document.createElement('input');
+    selectCb.type = 'checkbox';
+    selectCb.className = 'active-select-cb';
+    selectCb.checked = isActiveSelected;
+    selectCb.disabled = assignment.id == null;
+    selectCb.setAttribute('aria-label', 'Select ' + (assignment.title || 'Untitled'));
+    selectCb.style.cssText = 'cursor:pointer; width:15px; height:15px; accent-color:#60a5fa;';
+    selectCb.addEventListener('change', () => {
+      if (assignment.id == null) return;
+      if (selectCb.checked) {
+        selectedActive.add(assignment.id);
+        card.style.outline = '2px solid #60a5fa';
+        card.style.boxShadow = '0 0 0 2px rgba(96,165,250,.25)';
+      } else {
+        selectedActive.delete(assignment.id);
+        card.style.outline = '';
+        card.style.boxShadow = '';
+      }
+      refreshActiveBulkControls();
+    });
+    cbWrap.appendChild(selectCb);
+    card.appendChild(cbWrap);
 
     // Header
     const headerRow = document.createElement('div');
@@ -3872,6 +4055,24 @@
     btnRow.appendChild(viewBtn);
     btnRow.appendChild(issueBtn);
     card.appendChild(btnRow);
+
+    // Gradebook cross-link
+    const gbLink = document.createElement('button');
+    gbLink.className = 'tc-btn';
+    gbLink.style.cssText = 'margin-top:6px; font-size:11px; padding:4px 8px; color:rgba(255,255,255,.45); border-color:rgba(255,255,255,.10); width:100%; justify-content:center;';
+    gbLink.setAttribute('title', 'View in Gradebook');
+    gbLink.setAttribute('aria-label', 'View in Gradebook');
+    gbLink.appendChild(createIcon('barChart', 12));
+    gbLink.appendChild(document.createTextNode(' Gradebook'));
+    gbLink.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const gbUrl = className
+        ? '/teacher/gradebook/?class=' + encodeURIComponent(className)
+        : '/teacher/gradebook/';
+      window.location.href = gbUrl;
+    });
+    card.appendChild(gbLink);
+
     return card;
   }
 
