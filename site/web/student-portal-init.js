@@ -3811,6 +3811,7 @@
   const _bookChunkCache = new Map(); // chunkId -> chunkData (pages array)
   const _vocabPreviewedChapters = new Set(); // chapter startPages previewed this session
   const _vocabImageCache = new Map();        // lowercase term -> base64 image data URL
+  const _comprehensionCheckedChapters = new Set(); // chapter startPages checked this session
 
   // ============================================================================
   // Book Deep-link Helpers
@@ -4068,6 +4069,7 @@
 
     bookReaderState = null;
     _vocabPreviewedChapters.clear();
+    _comprehensionCheckedChapters.clear();
   }
 
   function renderBookPanel(panel, bookData, title) {
@@ -4494,9 +4496,39 @@
   function navigateBookPage(delta) {
     const state = bookReaderState;
     if (!state) return;
-    const newPage = state.currentPage + delta;
+    const prevPage = state.currentPage;
+    const newPage = prevPage + delta;
     if (newPage < 1 || newPage > state.bookData.totalPages) return;
     stopBookTts();
+
+    // Comprehension check: when moving forward into a new chapter, check the chapter just completed
+    if (delta > 0 && getBookHelper('comprehension')) {
+      const bookData = state.bookData;
+      const chapters = (bookData.chapters && bookData.chapters.length > 0) ? bookData.chapters : null;
+      if (chapters) {
+        // Check if the new page starts a chapter
+        const newChapter = chapters.find(function (ch) { return ch.startPage === newPage; });
+        if (newChapter) {
+          // Find the chapter that was just completed (contains prevPage)
+          let prevChapter = null;
+          for (let ci = chapters.length - 1; ci >= 0; ci--) {
+            if (chapters[ci].startPage <= prevPage) {
+              prevChapter = chapters[ci];
+              break;
+            }
+          }
+          if (prevChapter && !_comprehensionCheckedChapters.has(prevChapter.startPage)) {
+            // Show comprehension check, then navigate after
+            state.currentPage = newPage;
+            showComprehensionCheck(prevChapter, bookData).then(function () {
+              renderBookPage();
+            });
+            return;
+          }
+        }
+      }
+    }
+
     state.currentPage = newPage;
     renderBookPage();
   }
@@ -4709,6 +4741,223 @@
     { key: 'reading_timer',    label: 'Reading Timer',          desc: 'Show how long I\'ve been reading' },
     { key: 'replay',           label: 'Replay Button',          desc: 'Add a replay button to Read Aloud' }
   ];
+
+  /**
+   * Extracts the full text of a chapter by joining all paragraph words from the
+   * chapter's page range. Returns an empty string if pages aren't loaded yet.
+   * @param {object} bookData
+   * @param {object} chapter - { title, startPage }
+   * @param {Array}  chapters - full chapters array from bookData
+   * @returns {string}
+   */
+  function getChapterText(bookData, chapter, chapters) {
+    if (!bookData || !chapter || !Array.isArray(bookData.pages)) return '';
+    const startPage = chapter.startPage;
+
+    // Determine the end page (last page of this chapter)
+    let endPage = bookData.totalPages;
+    if (chapters && chapters.length > 0) {
+      for (let i = 0; i < chapters.length; i++) {
+        if (chapters[i].startPage === startPage && i + 1 < chapters.length) {
+          endPage = chapters[i + 1].startPage - 1;
+          break;
+        }
+      }
+    }
+
+    const parts = [];
+    for (let p = startPage; p <= endPage; p++) {
+      const page = bookData.pages[p - 1];
+      if (!page || !Array.isArray(page.paragraphs)) continue;
+      for (const para of page.paragraphs) {
+        if (!para) continue;
+        const words = Array.isArray(para) ? para : (para.words || []);
+        if (words.length > 0) parts.push(words.join(' '));
+      }
+    }
+    return parts.join(' ');
+  }
+
+  /**
+   * Shows the comprehension check overlay after a chapter ends.
+   * Calls the student-comprehension-check Netlify function to get questions,
+   * displays them as an interactive overlay, and resolves when the student
+   * finishes (or on error, to never block the student).
+   * @param {object} chapter  - { title, startPage }
+   * @param {object} bookData
+   * @returns {Promise<void>}
+   */
+  function showComprehensionCheck(chapter, bookData) {
+    return new Promise(function (resolve) {
+      // Mark this chapter as checked immediately so re-triggers are prevented
+      _comprehensionCheckedChapters.add(chapter.startPage);
+
+      const bookPanel = document.getElementById('bookPanel');
+      if (!bookPanel) {
+        resolve();
+        return;
+      }
+
+      const chapterTitle = chapter.title || ('Chapter ' + chapter.startPage);
+      const safeChapterTitle = escapeHtml(chapterTitle);
+      const chapters = bookData.chapters || [];
+      const chapterText = getChapterText(bookData, chapter, chapters);
+
+      // If we can't extract text (e.g., chunked pages not loaded), skip gracefully
+      if (!chapterText.trim()) {
+        resolve();
+        return;
+      }
+
+      // --- Build loading overlay ---
+      const overlay = document.createElement('div');
+      overlay.className = 'st-cc-backdrop';
+      overlay.id = 'comprehensionCheckOverlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-labelledby', 'ccCardTitle');
+      overlay.innerHTML = `
+        <div class="st-cc-card">
+          <div class="st-cc-header" id="ccCardTitle">🧠 Chapter Check — ${safeChapterTitle}</div>
+          <div class="st-cc-loading">
+            <div class="st-cc-spinner"></div>
+            <span>Preparing comprehension check…</span>
+          </div>
+        </div>
+      `;
+      bookPanel.appendChild(overlay);
+
+      // Fetch comprehension questions from the Netlify function
+      const bookTitle = (bookData.title && typeof bookData.title === 'string') ? bookData.title : '';
+
+      fetch('/.netlify/functions/student-comprehension-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chapterTitle: chapterTitle,
+          chapterText: chapterText,
+          bookTitle: bookTitle,
+        }),
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data.ok || !Array.isArray(data.questions) || data.questions.length === 0) {
+            throw new Error('Invalid response from server');
+          }
+          renderComprehensionQuestions(overlay, data.questions, safeChapterTitle, resolve);
+        })
+        .catch(function () {
+          showToast('Could not load questions — continuing to next chapter', 'error');
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          resolve();
+        });
+    });
+  }
+
+  /**
+   * Renders the comprehension questions inside an existing overlay element.
+   * @param {HTMLElement} overlay
+   * @param {Array} questions
+   * @param {string} safeChapterTitle - already HTML-escaped chapter title
+   * @param {Function} resolve - Promise resolve callback
+   */
+  function renderComprehensionQuestions(overlay, questions, safeChapterTitle, resolve) {
+    let answeredCount = 0;
+
+    const questionsHtml = questions.map(function (q, qi) {
+      const choicesHtml = q.choices.map(function (choice, ci) {
+        return `<button class="st-cc-choice" data-qi="${qi}" data-ci="${ci}">${escapeHtml(choice)}</button>`;
+      }).join('');
+      return `
+        <div class="st-cc-question-block" id="ccQ${qi}">
+          <div class="st-cc-question">${escapeHtml(q.question)}</div>
+          <div class="st-cc-choices">${choicesHtml}</div>
+          <div class="st-cc-feedback" id="ccFeedback${qi}" style="display:none;">
+            <div class="st-cc-result" id="ccResult${qi}"></div>
+            <div class="st-cc-explanation" id="ccExplan${qi}"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    overlay.innerHTML = `
+      <div class="st-cc-card">
+        <div class="st-cc-header" id="ccCardTitle">🧠 Chapter Check — ${safeChapterTitle}</div>
+        <div class="st-cc-body">
+          ${questionsHtml}
+        </div>
+        <div class="st-cc-footer" id="ccFooter" style="display:none;">
+          <button class="st-cc-continue-btn" id="ccContinueBtn">Continue Reading →</button>
+        </div>
+      </div>
+    `;
+
+    // Wire choice buttons
+    overlay.addEventListener('click', function (e) {
+      const btn = e.target.closest('.st-cc-choice');
+      if (!btn || btn.classList.contains('disabled')) return;
+
+      const qi = parseInt(btn.getAttribute('data-qi'), 10);
+      const ci = parseInt(btn.getAttribute('data-ci'), 10);
+      const q = questions[qi];
+      if (!q) return;
+
+      // Disable all choices for this question
+      const block = document.getElementById('ccQ' + qi);
+      if (!block) return;
+      block.querySelectorAll('.st-cc-choice').forEach(function (b) {
+        b.classList.add('disabled');
+        b.setAttribute('disabled', 'disabled');
+      });
+
+      // Highlight correct / incorrect
+      const correctBtn = block.querySelector('[data-ci="' + q.correctIndex + '"]');
+      if (ci === q.correctIndex) {
+        btn.classList.add('correct');
+      } else {
+        btn.classList.add('incorrect');
+        if (correctBtn) correctBtn.classList.add('correct');
+      }
+
+      // Show feedback
+      const feedbackEl = document.getElementById('ccFeedback' + qi);
+      const resultEl = document.getElementById('ccResult' + qi);
+      const explanEl = document.getElementById('ccExplan' + qi);
+      if (feedbackEl) feedbackEl.style.display = '';
+      if (resultEl) resultEl.textContent = ci === q.correctIndex ? '✅ Correct!' : '❌ Not quite';
+      if (resultEl) resultEl.className = 'st-cc-result ' + (ci === q.correctIndex ? 'correct' : 'incorrect');
+      if (explanEl) explanEl.textContent = q.explanation;
+
+      answeredCount++;
+      if (answeredCount >= questions.length) {
+        const footer = document.getElementById('ccFooter');
+        if (footer) footer.style.display = '';
+        const continueBtn = document.getElementById('ccContinueBtn');
+        if (continueBtn) {
+          setTimeout(function () { continueBtn.focus(); }, 50);
+        }
+      }
+    });
+
+    // Wire "Continue Reading" button
+    overlay.addEventListener('click', function (e) {
+      const btn = e.target.closest('#ccContinueBtn');
+      if (!btn) return;
+      overlay.classList.add('st-cc-backdrop-out');
+      setTimeout(function () {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        resolve();
+      }, 220);
+    });
+
+    // Focus first choice for keyboard users
+    setTimeout(function () {
+      const firstChoice = overlay.querySelector('.st-cc-choice');
+      if (firstChoice) firstChoice.focus();
+    }, 50);
+  }
 
   /**
    * Renders and shows the Reading Helper settings panel.
@@ -5043,17 +5292,41 @@
             if (ttsBtn) ttsBtn.classList.remove('tts-active');
             if (ttsControls) ttsControls.style.display = 'none';
 
-            // 60-second auto-stop timeout
-            let chapterPromptTimeout = setTimeout(function () {
-              stopBookTts();
-            }, 60000);
+            // Find the current chapter object (the chapter that just ended)
+            let currentChapter = null;
+            if (chapters) {
+              for (let ci = chapters.length - 1; ci >= 0; ci--) {
+                if (chapters[ci].startPage <= state.currentPage) {
+                  currentChapter = chapters[ci];
+                  break;
+                }
+              }
+            }
 
-            rcConfirm(
-              '📖 Chapter Complete!',
-              'Continue to: ' + nextChapterLabel + '?',
-              'Continue Reading'
-            ).then(function (confirmed) {
-              clearTimeout(chapterPromptTimeout);
+            // Comprehension check: show before chapter-complete dialog if enabled
+            const comprCheckPromise = (
+              getBookHelper('comprehension') &&
+              currentChapter &&
+              !_comprehensionCheckedChapters.has(currentChapter.startPage)
+            )
+              ? showComprehensionCheck(currentChapter, state.bookData)
+              : Promise.resolve();
+
+            // 60-second auto-stop timeout (starts after any comprehension check)
+            let chapterPromptTimeout = null;
+
+            comprCheckPromise.then(function () {
+              chapterPromptTimeout = setTimeout(function () {
+                stopBookTts();
+              }, 60000);
+
+              return rcConfirm(
+                '📖 Chapter Complete!',
+                'Continue to: ' + nextChapterLabel + '?',
+                'Continue Reading'
+              );
+            }).then(function (confirmed) {
+              if (chapterPromptTimeout) clearTimeout(chapterPromptTimeout);
               if (confirmed) {
                 state.currentPage = nextPage;
                 const nextChunk = findChunkForPage(state.bookData, state.currentPage);
