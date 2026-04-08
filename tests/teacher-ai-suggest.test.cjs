@@ -383,4 +383,100 @@ test('returns specific error when OpenAI returns valid HTTP 200 but invalid JSON
 
 // ── Run ───────────────────────────────────────────────────────────────────────
 
+// ── scrubPii unit tests ───────────────────────────────────────────────────────
+
+const { scrubPii } = require('../netlify/functions/teacher-ai-suggest');
+
+test('scrubPii: redacts email addresses', () => {
+  const result = scrubPii('Contact me at student@school.edu for help.');
+  assert.ok(!result.includes('student@school.edu'), 'email should be removed');
+  assert.ok(result.includes('[EMAIL]'), 'should contain [EMAIL] token');
+});
+
+test('scrubPii: redacts phone numbers in dashes format', () => {
+  const result = scrubPii('Call me at 555-867-5309 anytime.');
+  assert.ok(!result.includes('555-867-5309'), 'phone should be removed');
+  assert.ok(result.includes('[PHONE]'), 'should contain [PHONE] token');
+});
+
+test('scrubPii: redacts phone numbers in (xxx) xxx-xxxx format', () => {
+  const result = scrubPii('My number is (555) 867-5309.');
+  assert.ok(!result.includes('867-5309'), 'phone should be removed');
+  assert.ok(result.includes('[PHONE]'), 'should contain [PHONE] token');
+});
+
+test('scrubPii: redacts phone numbers in dot-separated format', () => {
+  const result = scrubPii('Reach me at 555.867.5309.');
+  assert.ok(!result.includes('555.867.5309'), 'phone should be removed');
+  assert.ok(result.includes('[PHONE]'), 'should contain [PHONE] token');
+});
+
+test('scrubPii: redacts phone numbers in space-separated format', () => {
+  const result = scrubPii('Number: 555 867 5309');
+  assert.ok(!result.includes('555 867 5309'), 'phone should be removed');
+  assert.ok(result.includes('[PHONE]'), 'should contain [PHONE] token');
+});
+
+test('scrubPii: redacts SSN-like patterns', () => {
+  const result = scrubPii('My SSN is 123-45-6789.');
+  assert.ok(!result.includes('123-45-6789'), 'SSN should be removed');
+  assert.ok(result.includes('[REDACTED]'), 'should contain [REDACTED] token');
+});
+
+test('scrubPii: redacts street addresses', () => {
+  const result = scrubPii('I live at 123 Main Street in Springfield.');
+  assert.ok(!result.includes('123 Main Street'), 'address should be removed');
+  assert.ok(result.includes('[ADDRESS]'), 'should contain [ADDRESS] token');
+});
+
+test('scrubPii: redacts street addresses with Avenue', () => {
+  const result = scrubPii('My address is 456 Oak Avenue.');
+  assert.ok(!result.includes('456 Oak Avenue'), 'address should be removed');
+  assert.ok(result.includes('[ADDRESS]'), 'should contain [ADDRESS] token');
+});
+
+test('scrubPii: does not modify normal academic text', () => {
+  const text = 'The slope of a line is rise over run. In algebra, we use y = mx + b.';
+  const result = scrubPii(text);
+  assert.strictEqual(result, text, 'academic text should not be modified');
+});
+
+test('scrubPii: redacts multiple PII instances in one string', () => {
+  const text = 'Email me at john@example.com or call 555-123-4567. I live at 789 Elm Drive.';
+  const result = scrubPii(text);
+  assert.ok(!result.includes('john@example.com'), 'email should be removed');
+  assert.ok(!result.includes('555-123-4567'), 'phone should be removed');
+  assert.ok(!result.includes('789 Elm Drive'), 'address should be removed');
+  assert.ok(result.includes('[EMAIL]'), 'should have [EMAIL]');
+  assert.ok(result.includes('[PHONE]'), 'should have [PHONE]');
+  assert.ok(result.includes('[ADDRESS]'), 'should have [ADDRESS]');
+});
+
+test('scrubPii: scrubbed response is used in OpenAI prompt', async () => {
+  let capturedBody = null;
+  global.fetch = async (_url, opts) => {
+    capturedBody = JSON.parse(opts.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ suggested_score: 3, suggested_note: 'OK', rationale: 'Fine.' }) } }],
+      }),
+    };
+  };
+
+  const bodyWithPii = {
+    ...validBody,
+    student_response: 'The slope is 2. Email me at stu@school.edu if confused.',
+  };
+
+  const res = await handler(authedEvent(bodyWithPii));
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(capturedBody, 'fetch should have been called');
+  assert.ok(Array.isArray(capturedBody.messages) && capturedBody.messages.length > 0, 'messages array should not be empty');
+  const systemContent = capturedBody.messages[0].content;
+  assert.ok(!systemContent.includes('stu@school.edu'), 'PII email should not appear in prompt');
+  assert.ok(systemContent.includes('[EMAIL]'), 'redaction token should appear in prompt');
+});
+
 runAll();

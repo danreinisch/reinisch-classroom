@@ -2909,6 +2909,9 @@ ${narrative}`;
     // Assignment performance table
     html += renderAssignmentPerformanceTable(tab3State.classFilter, tab3State.typeFilter);
 
+    // Item difficulty analytics
+    html += renderItemAnalysis(tab3State.classFilter);
+
     // Student performance table
     html += renderStudentPerformanceTable(filteredStudents, quarterRange);
 
@@ -3122,6 +3125,173 @@ ${narrative}`;
         </table>
       </div>
     `;
+  }
+
+  /**
+   * Render item difficulty analytics for a given class filter.
+   * Aggregates submission answer data to show per-question difficulty rates,
+   * most common wrong answers (MCQ/boolean), and type labels (constructed).
+   */
+  function renderItemAnalysis(classFilter) {
+    // Filter assignments by class
+    let relevantAssignments = assignmentsData;
+    if (classFilter !== 'All Classes') {
+      relevantAssignments = assignmentsData.filter((a) => a.class_id === classFilter);
+    }
+
+    // Only include assignments that have item metadata and at least one submission
+    const analysisData = [];
+
+    for (const assignment of relevantAssignments) {
+      const items = buildItemsFromMeta(assignment.id, assignment.meta);
+      if (!items || items.length === 0) continue;
+
+      // Gather all submissions for this assignment
+      const instances = instancesData.filter((inst) => inst.assignment_id === assignment.id);
+      const submissions = instances
+        .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+        .filter((s) => s && s.answers && typeof s.answers === 'object');
+
+      if (submissions.length === 0) continue;
+
+      const assignmentTitle = assignment.title || `Assignment ${assignment.id}`;
+      const itemStats = [];
+
+      for (const item of items) {
+        const ref = item.item_ref || item.ref;
+        if (!ref) continue;
+
+        const answerType = item.answer_type || 'constructed';
+        const correctAns = item.meta?.correct ?? item.correct;
+        const qNum = item.meta?.question_number || ref;
+        const label = `Q${qNum}`;
+
+        if (answerType === 'constructed') {
+          itemStats.push({ label, type: 'Written', difficulty: null, wrongAnswer: null });
+          continue;
+        }
+
+        // MCQ / boolean — compute difficulty rate and most common wrong answer
+        let correctCount = 0;
+        let totalResponses = 0;
+        const wrongAnswerCounts = {};
+
+        for (const sub of submissions) {
+          const studentAns = sub.answers[ref];
+          if (studentAns === undefined || studentAns === null || studentAns === '') continue;
+          totalResponses++;
+          const normalizedStudent = String(studentAns).trim().toLowerCase();
+          const normalizedCorrect = correctAns !== undefined && correctAns !== null
+            ? String(correctAns).trim().toLowerCase()
+            : null;
+          if (normalizedCorrect !== null && normalizedStudent === normalizedCorrect) {
+            correctCount++;
+          } else {
+            const wrong = String(studentAns).trim();
+            wrongAnswerCounts[wrong] = (wrongAnswerCounts[wrong] || 0) + 1;
+          }
+        }
+
+        const difficultyPct = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : null;
+
+        // Find most common wrong answer
+        let mostCommonWrong = null;
+        let mostCommonWrongCount = 0;
+        for (const [ans, cnt] of Object.entries(wrongAnswerCounts)) {
+          if (cnt > mostCommonWrongCount) {
+            mostCommonWrong = ans;
+            mostCommonWrongCount = cnt;
+          }
+        }
+
+        itemStats.push({
+          label,
+          type: answerType === 'boolean' ? 'Boolean' : 'MCQ',
+          difficulty: difficultyPct,
+          totalResponses,
+          wrongAnswer: mostCommonWrong,
+          wrongAnswerPct: totalResponses > 0 ? Math.round((mostCommonWrongCount / totalResponses) * 100) : 0,
+        });
+      }
+
+      if (itemStats.length > 0) {
+        analysisData.push({ assignmentTitle, itemStats });
+      }
+    }
+
+    if (analysisData.length === 0) {
+      return '<h3 class="rp-section-heading">📊 Item Analysis</h3><div class="rp-empty">No item-level data available. Item analysis requires graded assignments with answer metadata.</div>';
+    }
+
+    let html = '<h3 class="rp-section-heading">📊 Item Analysis</h3>';
+
+    const displayData = analysisData.slice(0, 10);
+    if (analysisData.length > 10) {
+      html += `<div style="margin-bottom:12px;font-size:12px;opacity:0.65;">Showing 10 of ${analysisData.length} assignments. Use the class or type filter above to narrow the view.</div>`;
+    }
+
+    for (const { assignmentTitle, itemStats } of displayData) {
+      const rows = itemStats.map((stat) => {
+        let difficultyCell;
+        if (stat.type === 'Written') {
+          difficultyCell = '<span class="rp-difficulty-badge rp-difficulty-written">Written</span>';
+        } else if (stat.difficulty === null) {
+          difficultyCell = '<span style="opacity:0.5">—</span>';
+        } else {
+          let badgeClass;
+          let emoji;
+          if (stat.difficulty >= 80) {
+            badgeClass = 'rp-difficulty-easy';
+            emoji = '✅';
+          } else if (stat.difficulty >= 50) {
+            badgeClass = 'rp-difficulty-moderate';
+            emoji = '🟡';
+          } else {
+            badgeClass = 'rp-difficulty-hard';
+            emoji = '🔴';
+          }
+          difficultyCell = `<span class="rp-difficulty-badge ${badgeClass}">${stat.difficulty}% ${emoji}</span>`;
+        }
+
+        let wrongCell;
+        if (stat.wrongAnswer && stat.wrongAnswerPct > 0) {
+          wrongCell = `${escapeHtml(stat.wrongAnswer)} <span style="opacity:0.6;font-size:11px;">(${stat.wrongAnswerPct}%)</span>`;
+        } else {
+          wrongCell = '<span style="opacity:0.5">—</span>';
+        }
+
+        return `
+          <tr>
+            <td>${escapeHtml(stat.label)}</td>
+            <td>${escapeHtml(stat.type)}</td>
+            <td>${difficultyCell}</td>
+            <td>${stat.type === 'Written' ? '<span style="opacity:0.5">—</span>' : wrongCell}</td>
+          </tr>
+        `;
+      }).join('');
+
+      html += `
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;font-weight:600;opacity:0.75;margin-bottom:8px;padding-left:2px;">${escapeHtml(assignmentTitle)}</div>
+          <div class="rp-table-container">
+            <table class="rp-table">
+              <caption>Item Analysis — ${escapeHtml(assignmentTitle)}</caption>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Type</th>
+                  <th>Difficulty</th>
+                  <th>Most Common Wrong Answer</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    return html;
   }
 
   /**
