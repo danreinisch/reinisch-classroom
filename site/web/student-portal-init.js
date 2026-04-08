@@ -4503,7 +4503,7 @@
 
   /**
    * Selects up to 5 glossary terms that appear in the given chapter's page range,
-   * prioritizing longer/less-common words.
+   * prioritizing longer/less-common words. Returns between 0 and 5 terms.
    * @param {object} bookData
    * @param {object} chapter - { title, startPage }
    * @param {Map} glossaryMap - Map<normalized_term, definition>
@@ -4681,10 +4681,17 @@
         fetchVocabImage(t.term, t.definition).then(function (dataUrl) {
           const wrap = document.getElementById('vpImg' + i);
           if (!wrap) return;
-          if (dataUrl) {
-            wrap.innerHTML = `<img class="st-vp-term-img" src="${dataUrl}" alt="${escapeHtml(t.term)} illustration" loading="lazy">`;
+          // Validate that the dataUrl is a safe base64 PNG data URL before injecting into DOM
+          if (dataUrl && /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(dataUrl)) {
+            const img = document.createElement('img');
+            img.className = 'st-vp-term-img';
+            img.src = dataUrl;
+            img.alt = t.term + ' illustration';
+            img.loading = 'lazy';
+            wrap.innerHTML = '';
+            wrap.appendChild(img);
           } else {
-            // Hide the image area on failure
+            // Hide the image area on failure or unexpected format
             wrap.style.display = 'none';
           }
         });

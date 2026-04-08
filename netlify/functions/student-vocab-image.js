@@ -73,8 +73,16 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: `definition must be ${MAX_DEFINITION_LENGTH} characters or fewer` }, {}, requestId);
   }
 
-  const cleanTerm = term.trim();
-  const promptDefinitionPart = resolvedDefinition ? `: ${resolvedDefinition}` : '';
+  // Strip control characters to prevent prompt injection attempts
+  const cleanTerm = term.trim().replace(/[\x00-\x1f\x7f]/g, '');
+  const cleanDefinition = resolvedDefinition.replace(/[\x00-\x1f\x7f]/g, '');
+
+  if (!cleanTerm) {
+    console.log(`[student-vocab-image] [${requestId}] Term empty after sanitization`);
+    return jsonResponse(event, 400, { ok: false, error: 'term must contain valid characters' }, {}, requestId);
+  }
+
+  const promptDefinitionPart = cleanDefinition ? `: ${cleanDefinition}` : '';
   const prompt = `A clear, realistic, photographic-style illustration of ${cleanTerm}${promptDefinitionPart}. The image should accurately depict the real-world thing this word describes. Educational illustration style, clean white background, no text or labels in the image.`;
 
   console.log(`[student-vocab-image] [${requestId}] Calling OpenAI DALL-E API - term: "${cleanTerm}"`);
