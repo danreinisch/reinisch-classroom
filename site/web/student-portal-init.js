@@ -5211,7 +5211,7 @@
 
   function flushReadingTime() {
     var key = _readingTimerDateKey();
-    var cap = 86400;
+    var cap = 86400; // max seconds in a day — prevents runaway values
     try {
       var stored = parseInt(localStorage.getItem(key) || '0', 10) || 0;
       var total = Math.min(stored + (_readingTimerSeconds - _readingTimerLastFlush), cap);
@@ -5336,7 +5336,7 @@
 
     var barsHtml = days.map(function (day) {
       var pct = maxSecs > 0 ? Math.round((day.secs / maxSecs) * 100) : 0;
-      if (pct < 2 && day.secs > 0) pct = 2;
+      if (pct < 2 && day.secs > 0) pct = 2; // ensure minimum visible height for days with activity
       return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;">' +
         '<div class="st-reading-bar" style="height:' + pct + '%;"></div>' +
         '<div class="st-reading-bar-label">' + day.label + '</div>' +
