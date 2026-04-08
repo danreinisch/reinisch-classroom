@@ -33,7 +33,8 @@
     ['oldest', 'Oldest First'],
     ['titleAZ', 'Title A\u2013Z'],
     ['titleZA', 'Title Z\u2013A'],
-    ['avgScore', 'Avg Score']
+    ['avgScore', 'Avg Score'],
+    ['custom', 'Custom Order']
   ];
 
   // ── SVG Icon System ───────────────────────────────────────────────────────────
@@ -204,6 +205,8 @@
       .tc-card.interactive:hover { border-color:rgba(255,255,255,.18); transform:translateY(-1px); }
       @keyframes rc-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
       .tc-lib-shimmer { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 75%); background-size: 200% 100%; animation: rc-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+      .assignment-card.dragging { opacity: 0.4; }
+      .assignment-card.drag-over { border-top: 3px solid #60a5fa; }
     `;
     document.head.appendChild(style);
   }
@@ -495,11 +498,25 @@
     tabsContainer.appendChild(makeTabBtn('finalized', 'checkCircle', 'Finalized',     false));
     tabsContainer.appendChild(makeTabBtn('overview',  'barChart',    'Overview',      false));
     tabsContainer.appendChild(makeTabBtn('lessons',   'bookOpen',    'Lessons',       false));
-    tabsContainer.appendChild(makeTabBtn('recallLibrary', 'inbox',   'Recall Library', false));
+    const recallTabBtn = makeTabBtn('recallLibrary', 'inbox',   'Recall Library', false);
+    const recallBadge = document.createElement('span');
+    recallBadge.id = 'recallLibraryBadge';
+    recallBadge.style.cssText = 'background:#6366f1; color:white; border-radius:9999px; font-size:10px; font-weight:700; padding:1px 6px; min-width:18px; text-align:center; line-height:1.6; display:none;';
+    recallTabBtn.appendChild(recallBadge);
+    tabsContainer.appendChild(recallTabBtn);
 
     const spacer = document.createElement('div');
     spacer.style.cssText = 'flex:1;';
     tabsContainer.appendChild(spacer);
+
+    const shortcutsHintBtn = document.createElement('button');
+    shortcutsHintBtn.id = 'keyboardShortcutsBtn';
+    shortcutsHintBtn.className = 'tc-btn';
+    shortcutsHintBtn.setAttribute('aria-label', 'Keyboard shortcuts');
+    shortcutsHintBtn.title = 'Keyboard shortcuts';
+    shortcutsHintBtn.style.cssText = 'margin-right:8px; width:32px; height:32px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;';
+    shortcutsHintBtn.textContent = '?';
+    tabsContainer.appendChild(shortcutsHintBtn);
 
     const uploadBtn = document.createElement('button');
     uploadBtn.id = 'uploadPaperBtn';
@@ -1041,6 +1058,7 @@
       _recallLibraryEntries = [];
     } finally {
       _recallLibraryLoading = false;
+      updateRecallBadge();
     }
   }
 
@@ -1219,7 +1237,7 @@
 
     // Re-Issue button
     const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'margin-top:4px;';
+    btnRow.style.cssText = 'margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;';
     const reIssueBtn = document.createElement('button');
     reIssueBtn.className = 'tc-btn';
     reIssueBtn.style.cssText = 'font-size:12px; padding:5px 12px;';
@@ -1236,6 +1254,37 @@
       }, 'recallLibrary');
     });
     btnRow.appendChild(reIssueBtn);
+
+    const addToReserveBtn = document.createElement('button');
+    addToReserveBtn.className = 'tc-btn';
+    addToReserveBtn.style.cssText = 'font-size:12px; padding:5px 12px;';
+    addToReserveBtn.appendChild(createIcon('clipboard', 14));
+    addToReserveBtn.appendChild(document.createTextNode(' Add to Reserve'));
+    addToReserveBtn.addEventListener('click', () => {
+      const newDraft = {
+        id: genDraftId(),
+        title: entry.title || '(Untitled)',
+        className: entry.series || '',
+        batchId: null,
+        assignment: { kind: entry.type || 'file', text: entry.meta && entry.meta.page ? entry.meta.page : '' },
+        mapping: (entry.meta && entry.meta.mapping) ? entry.meta.mapping : null,
+        createdAt: new Date().toISOString(),
+        submittedAt: null,
+        issuedAt: null,
+        assignmentId: null,
+        reissuedFrom: entry.assignment_id,
+      };
+      try {
+        const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
+        drafts.unshift(newDraft);
+        localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
+        showToast('Added to Reserve \u2014 switch to Reserve tab to view.');
+      } catch (err) {
+        console.error('[tc-library] Failed to add to reserve:', err);
+        showToast('Could not add to Reserve \u2014 storage may be full.', '#ef4444', '#fff');
+      }
+    });
+    btnRow.appendChild(addToReserveBtn);
     card.appendChild(btnRow);
 
     return card;
@@ -1523,6 +1572,20 @@
         const scoreB = statsB.avgScore != null ? statsB.avgScore : -1;
         return scoreB - scoreA;
       });
+    } else if (sortBy === 'custom') {
+      // Apply saved custom order from localStorage; items not in order array go to end
+      let order = [];
+      try {
+        order = JSON.parse(localStorage.getItem('rc_tc_library_reserve_order_v1') || '[]');
+      } catch (_) { /* ignore */ }
+      if (order.length > 0) {
+        const orderMap = new Map(order.map((id, i) => [id, i]));
+        sorted.sort((a, b) => {
+          const ia = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+          const ib = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+          return ia - ib;
+        });
+      }
     } else {
       // default: newest — items without dates sort to the end
       sorted.sort((a, b) => {
@@ -1692,6 +1755,9 @@
       const subtitle = document.createElement('div');
       subtitle.style.cssText = 'font-size:13px; color:rgba(255,255,255,.50); margin-bottom:16px;';
       subtitle.textContent = 'Create one in Work \u2192 or upload a paper assignment';
+      const tipEl = document.createElement('div');
+      tipEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.35); margin-bottom:16px;';
+      tipEl.textContent = 'Tip: Press ? to see keyboard shortcuts';
       const btnRow = document.createElement('div');
       btnRow.style.cssText = 'display:flex; gap:8px; justify-content:center; flex-wrap:wrap;';
       const uploadBtn = document.createElement('button');
@@ -1709,6 +1775,7 @@
       empty.appendChild(iconWrap);
       empty.appendChild(title);
       empty.appendChild(subtitle);
+      empty.appendChild(tipEl);
       empty.appendChild(btnRow);
       return empty;
     }
@@ -1828,6 +1895,62 @@
     container.appendChild(controlsRow);
 
     assignments.forEach(a => grid.appendChild(renderUpcomingCard(a)));
+
+    // ── Drag-and-drop reorder handlers ────────────────────────────────────
+    let _dragSrcId = null;
+
+    grid.addEventListener('dragstart', (e) => {
+      const card = e.target.closest('.assignment-card');
+      if (!card || !card.dataset.id) return;
+      _dragSrcId = card.dataset.id;
+      e.dataTransfer.setData('text/plain', _dragSrcId);
+      e.dataTransfer.effectAllowed = 'move';
+      requestAnimationFrame(() => card.classList.add('dragging'));
+    });
+
+    grid.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const card = e.target.closest('.assignment-card');
+      grid.querySelectorAll('.assignment-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      if (card && card.dataset.id && card.dataset.id !== _dragSrcId) {
+        card.classList.add('drag-over');
+      }
+    });
+
+    grid.addEventListener('dragleave', (e) => {
+      const card = e.target.closest('.assignment-card');
+      if (card) card.classList.remove('drag-over');
+    });
+
+    grid.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const targetCard = e.target.closest('.assignment-card');
+      grid.querySelectorAll('.assignment-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      if (!targetCard || !_dragSrcId || targetCard.dataset.id === _dragSrcId) return;
+      const targetId = targetCard.dataset.id;
+      const srcIdx = assignmentsData.findIndex(a => a.id === _dragSrcId);
+      const tgtIdx = assignmentsData.findIndex(a => a.id === targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return;
+      const [moved] = assignmentsData.splice(srcIdx, 1);
+      assignmentsData.splice(tgtIdx, 0, moved);
+      // Persist custom order
+      try {
+        const order = assignmentsData.map(a => a.id);
+        localStorage.setItem('rc_tc_library_reserve_order_v1', JSON.stringify(order));
+      } catch (_) { /* storage full */ }
+      filters.assignments.sortBy = 'custom';
+      saveFilters();
+      renderReserveTab();
+    });
+
+    grid.addEventListener('dragend', (e) => {
+      const card = e.target.closest('.assignment-card');
+      if (card) card.classList.remove('dragging');
+      grid.querySelectorAll('.assignment-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      _dragSrcId = null;
+    });
+
     container.appendChild(grid);
 
     // Sync initial toolbar state (e.g. after filter re-render with persisted selections)
@@ -1843,6 +1966,8 @@
     const card = document.createElement('div');
     card.className = 'tc-card assignment-card';
     card.dataset.id = assignment.id || '';
+    card.setAttribute('draggable', 'true');
+    card.setAttribute('aria-label', 'Drag to reorder: ' + (assignment.title || 'Untitled'));
     const isSelected = assignment.id != null && selectedUpcoming.has(assignment.id);
     card.style.cssText = [
       'padding:20px; cursor:pointer;',
@@ -2106,6 +2231,18 @@
     }
     const missingStudents = computeMissingWork();
     const count = missingStudents.length;
+    if (count === 0) {
+      badge.style.display = 'none';
+    } else {
+      badge.textContent = String(count);
+      badge.style.display = 'inline';
+    }
+  }
+
+  function updateRecallBadge() {
+    const badge = document.getElementById('recallLibraryBadge');
+    if (!badge) return;
+    const count = Array.isArray(_recallLibraryEntries) ? _recallLibraryEntries.length : 0;
     if (count === 0) {
       badge.style.display = 'none';
     } else {
@@ -3668,6 +3805,12 @@
           : 'No active assignments. Issue an assignment from the Reserve tab.';
         empty.appendChild(iconWrap);
         empty.appendChild(msg);
+        if (!filters.assignments.classFilter || filters.assignments.classFilter === 'All Classes') {
+          const activeTipEl = document.createElement('div');
+          activeTipEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.35); margin-top:10px;';
+          activeTipEl.textContent = 'Tip: Launch assignments from the Reserve tab or press 1 to switch.';
+          empty.appendChild(activeTipEl);
+        }
         container.appendChild(empty);
         updateActiveClassFilter();
         return;
@@ -5211,20 +5354,40 @@
       const pillRow = document.createElement('div');
       pillRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:5px;';
 
-      const makePill = (labelText, valueText, color) => {
+      const makeClickablePill = (labelText, valueText, color, tabName) => {
+        const pill = document.createElement('button');
+        pill.style.cssText = 'display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:10px; font-size:11px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:' + (color || 'rgba(255,255,255,.80)') + '; cursor:pointer;';
+        pill.textContent = labelText + ': ' + valueText;
+        if (tabName) {
+          pill.title = 'View ' + cls + ' in ' + tabName + ' tab';
+          pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (tabName === 'finalized') {
+              filters.finalized.classFilter = cls;
+            } else {
+              filters.assignments.classFilter = cls;
+            }
+            saveFilters();
+            switchTab(tabName);
+          });
+        }
+        return pill;
+      };
+
+      const makeStaticPill = (labelText, valueText, color) => {
         const pill = document.createElement('span');
         pill.style.cssText = 'display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:10px; font-size:11px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:' + (color || 'rgba(255,255,255,.80)') + ';';
         pill.textContent = labelText + ': ' + valueText;
         return pill;
       };
 
-      pillRow.appendChild(makePill('R', String(classMetrics.upcoming), 'rgba(255,255,255,.70)'));
-      pillRow.appendChild(makePill('A', String(classMetrics.current), '#60a5fa'));
-      pillRow.appendChild(makePill('F', String(classMetrics.finalized), '#4ade80'));
+      pillRow.appendChild(makeClickablePill('R', String(classMetrics.upcoming), 'rgba(255,255,255,.70)', 'reserve'));
+      pillRow.appendChild(makeClickablePill('A', String(classMetrics.current), '#60a5fa', 'active'));
+      pillRow.appendChild(makeClickablePill('F', String(classMetrics.finalized), '#4ade80', 'finalized'));
       if (avgScore != null) {
-        pillRow.appendChild(makePill('Avg', String(avgScore) + '%', scoreColor(avgScore)));
+        pillRow.appendChild(makeStaticPill('Avg', String(avgScore) + '%', scoreColor(avgScore)));
       } else {
-        pillRow.appendChild(makePill('Avg', '\u2014', 'rgba(255,255,255,.35)'));
+        pillRow.appendChild(makeStaticPill('Avg', '\u2014', 'rgba(255,255,255,.35)'));
       }
 
       classCard.appendChild(pillRow);
@@ -5609,6 +5772,172 @@
     // Evidence Report button
     const evidenceBtn = $('evidenceReportBtn');
     if (evidenceBtn) evidenceBtn.addEventListener('click', openEvidenceReportModal);
+
+    // Keyboard shortcuts hint button
+    const shortcutsBtn = $('keyboardShortcutsBtn');
+    if (shortcutsBtn) shortcutsBtn.addEventListener('click', () => showKeyboardShortcutsModal());
+
+    // Global keyboard shortcuts
+    const TAB_KEY_MAP = { '1': 'reserve', '2': 'active', '3': 'finalized', '4': 'overview', '5': 'lessons', '6': 'recallLibrary' };
+    document.addEventListener('keydown', (e) => {
+      // Skip if a modifier key is held
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : '';
+      const isEditable = tag === 'input' || tag === 'textarea' || tag === 'select' ||
+        (document.activeElement && document.activeElement.getAttribute('contenteditable') != null &&
+          document.activeElement.getAttribute('contenteditable') !== 'false');
+
+      if (e.key === 'Escape') {
+        // Clear and blur search inputs when focused
+        if (isEditable) {
+          const active = document.activeElement;
+          if (active && (active.id === 'assignmentSearch' || active.id === 'lessonSearch' || active.closest('#recallLibraryTab'))) {
+            active.value = '';
+            active.dispatchEvent(new Event('input', { bubbles: true }));
+            active.blur();
+            e.preventDefault();
+          }
+        }
+        return;
+      }
+
+      // All remaining shortcuts require no input to be focused
+      if (isEditable) return;
+
+      if (TAB_KEY_MAP[e.key]) {
+        e.preventDefault();
+        switchTab(TAB_KEY_MAP[e.key]);
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        // Find the visible search input on the current tab
+        const searchIds = ['assignmentSearch', 'lessonSearch'];
+        let focusTarget = null;
+        for (const id of searchIds) {
+          const el = document.getElementById(id);
+          if (el && el.offsetParent !== null) { focusTarget = el; break; }
+        }
+        if (!focusTarget) {
+          const recallTab = $('recallLibraryTab');
+          if (recallTab && recallTab.style.display !== 'none') {
+            focusTarget = recallTab.querySelector('input[type="text"], input[type="search"]');
+          }
+        }
+        if (focusTarget) focusTarget.focus();
+        return;
+      }
+
+      if (e.key === '?') {
+        e.preventDefault();
+        showKeyboardShortcutsModal();
+      }
+    });
+  }
+
+  // ── Keyboard Shortcuts Modal ─────────────────────────────────────────────────
+
+  function showKeyboardShortcutsModal() {
+    if (document.getElementById('keyboardShortcutsOverlay')) return;
+    const triggerEl = document.activeElement;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'keyboardShortcutsOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'kbShortcutsTitle');
+    overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.80); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:10001; padding:24px;';
+
+    function closeModal() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKbKeyDown);
+      if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
+    }
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width:480px; width:100%; padding:28px; display:flex; flex-direction:column; gap:16px;';
+
+    const headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'kbShortcutsTitle';
+    titleEl.style.cssText = 'margin:0; font-size:18px;';
+    titleEl.textContent = 'Keyboard Shortcuts';
+    headerRow.appendChild(titleEl);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'closeKbShortcutsBtn';
+    closeBtn.className = 'tc-btn';
+    closeBtn.style.cssText = 'padding:6px; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center;';
+    closeBtn.setAttribute('aria-label', 'Close keyboard shortcuts');
+    closeBtn.appendChild(createIcon('x', 16));
+    closeBtn.addEventListener('click', closeModal);
+    headerRow.appendChild(closeBtn);
+    card.appendChild(headerRow);
+
+    const shortcutsList = [
+      ['1', 'Switch to Reserve tab'],
+      ['2', 'Switch to Active tab'],
+      ['3', 'Switch to Finalized tab'],
+      ['4', 'Switch to Overview tab'],
+      ['5', 'Switch to Lessons tab'],
+      ['6', 'Switch to Recall Library tab'],
+      ['/', 'Focus search on current tab'],
+      ['Escape', 'Clear search and blur'],
+      ['?', 'Show this help modal'],
+    ];
+
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%; border-collapse:collapse; font-size:14px;';
+    shortcutsList.forEach(([key, desc]) => {
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:1px solid rgba(255,255,255,.07);';
+      const tdKey = document.createElement('td');
+      tdKey.style.cssText = 'padding:8px 12px 8px 0; width:90px; font-family:monospace;';
+      const kbd = document.createElement('kbd');
+      kbd.style.cssText = 'display:inline-block; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.20); border-radius:5px; padding:2px 8px; font-size:13px; font-family:monospace; white-space:nowrap;';
+      kbd.textContent = key;
+      tdKey.appendChild(kbd);
+      const tdDesc = document.createElement('td');
+      tdDesc.style.cssText = 'padding:8px 0; color:rgba(255,255,255,.80);';
+      tdDesc.textContent = desc;
+      tr.appendChild(tdKey);
+      tr.appendChild(tdDesc);
+      table.appendChild(tr);
+    });
+    card.appendChild(table);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    closeBtn.focus();
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+    function onKbKeyDown(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = Array.from(card.querySelectorAll('button:not([disabled]):not([hidden]), input:not([hidden]), [tabindex]:not([tabindex="-1"])'))
+          .filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', onKbKeyDown);
   }
 
   // ── Assignment Detail Modal ───────────────────────────────────────────────────
