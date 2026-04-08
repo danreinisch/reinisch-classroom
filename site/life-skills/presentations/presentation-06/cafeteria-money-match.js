@@ -245,7 +245,7 @@
       u.rate = 0.95;
       u.pitch = 1.03;
       window.speechSynthesis.speak(u);
-    } catch {}
+    } catch { /* ignored */ }
   }
 
   function centsToSpeech(cents){
@@ -273,7 +273,7 @@
       o.start(now);
       o.stop(now + 0.14);
       setTimeout(() => ctx.close(), 250);
-    } catch {}
+    } catch { /* ignored */ }
   }
 
   function setSound(on){
