@@ -1902,6 +1902,10 @@
 
   /** Maximum number of goals shown in the hover tooltip. */
   const MAX_TOOLTIP_GOALS = 8;
+  /** Minimum % change to show an up/down trend arrow (vs flat →). */
+  const TOOLTIP_TREND_THRESHOLD = 2;
+  /** Minimum px margin between the tooltip and the viewport edges. */
+  const TOOLTIP_VIEWPORT_MARGIN = 8;
 
   /**
    * Build the inner HTML for the goals hover tooltip for a student.
@@ -1926,9 +1930,9 @@
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
       const latestEntry = entries.length > 0 ? entries[entries.length - 1] : null;
-      const latestRaw = latestEntry != null ? latestEntry.value : null;
-      const valDisplay = latestRaw != null
-        ? `${parseFloat(latestRaw).toFixed(0)}%`
+      const latestRaw = latestEntry != null ? parseFloat(latestEntry.value) : null;
+      const valDisplay = latestRaw != null && !isNaN(latestRaw)
+        ? `${latestRaw.toFixed(0)}%`
         : '—';
 
       // Staleness icon via getGoalStalenessInfo
@@ -1942,8 +1946,8 @@
         const oldVal = parseFloat(recent[0].value);
         const newVal = parseFloat(recent[recent.length - 1].value);
         if (!isNaN(oldVal) && !isNaN(newVal)) {
-          if (newVal > oldVal + 2)      { trendSymbol = '↗'; trendClass = 'st-tooltip-goal-trend--up'; }
-          else if (newVal < oldVal - 2) { trendSymbol = '↘'; trendClass = 'st-tooltip-goal-trend--down'; }
+          if (newVal > oldVal + TOOLTIP_TREND_THRESHOLD)      { trendSymbol = '↗'; trendClass = 'st-tooltip-goal-trend--up'; }
+          else if (newVal < oldVal - TOOLTIP_TREND_THRESHOLD) { trendSymbol = '↘'; trendClass = 'st-tooltip-goal-trend--down'; }
         }
       }
 
@@ -1956,7 +1960,7 @@
       return `<div class="st-tooltip-goal">` +
         `<span class="st-tooltip-goal-code">${escapeHtml(goal.code)}</span>` +
         `<span class="st-tooltip-goal-area">${escapeHtml(goal.goal_area || 'General')}</span>` +
-        `<span class="st-tooltip-goal-value">${escapeHtml(stalenessInfo.icon)} ${escapeHtml(valDisplay)}</span>` +
+        `<span class="st-tooltip-goal-value">${stalenessInfo.icon} ${escapeHtml(valDisplay)}</span>` +
         `<span class="st-tooltip-goal-trend ${trendClass}">${trendSymbol}</span>` +
         `<span class="st-tooltip-goal-range">${escapeHtml(baseline)}→${escapeHtml(mastery)}</span>` +
         `</div>`;
@@ -2008,11 +2012,11 @@
 
     // Center tooltip above the wrapper, then clamp to viewport
     const idealLeft = wRect.left + wRect.width / 2 - tRect.width / 2;
-    const clampedLeft = Math.max(8, Math.min(idealLeft, window.innerWidth - tRect.width - 8));
+    const clampedLeft = Math.max(TOOLTIP_VIEWPORT_MARGIN, Math.min(idealLeft, window.innerWidth - tRect.width - TOOLTIP_VIEWPORT_MARGIN));
     const top = wRect.top - tRect.height - 10;
 
     tooltip.style.left = `${clampedLeft}px`;
-    tooltip.style.top = `${Math.max(8, top)}px`;
+    tooltip.style.top = `${Math.max(TOOLTIP_VIEWPORT_MARGIN, top)}px`;
 
     // Align caret with the center of the wrapper element
     const caretX = wRect.left + wRect.width / 2 - clampedLeft;
