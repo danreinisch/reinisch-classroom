@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading a Recipe &#8211; Week 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
+.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
+.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
+.header p{font-size:0.95rem;color:#8b949e;}
+.day-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;background:#0d1117;border-bottom:1px solid #21262d;}
+.day-tab{flex-shrink:0;padding:8px 20px;border:2px solid #30363d;border-radius:10px;background:#161b22;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.day-tab:hover{border-color:#14b8a6;color:#14b8a6;}
+.day-tab.active{border-color:#14b8a6;background:rgba(20,184,166,0.12);color:#14b8a6;}
+.day-panel{display:none;padding:20px 24px 80px;}
+.day-panel.active{display:block;}
+.tts-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:0 4px;opacity:0.7;transition:opacity 0.2s;vertical-align:middle;}
+.tts-btn:hover{opacity:1;}
+.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:20px 0 10px;}
+.recipe-intro{font-size:0.9rem;color:#8b949e;margin-bottom:14px;line-height:1.5;}
+.recipes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px;}
+.recipe-card{background:#161b22;border:2px solid #30363d;border-left:4px solid #14b8a6;border-radius:14px;padding:16px 18px;}
+.recipe-title{font-size:1.05rem;font-weight:800;color:#14b8a6;margin-bottom:2px;}
+.recipe-servings{font-size:0.75rem;color:#8b949e;margin-bottom:10px;font-family:'JetBrains Mono',monospace;}
+.recipe-section-heading{font-size:0.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-top:10px;margin-bottom:5px;}
+.recipe-list{list-style:none;padding:0;}
+.recipe-list li{font-size:0.88rem;color:#c9d1d9;padding:3px 0;border-bottom:1px solid #21262d;line-height:1.4;}
+.recipe-list li:last-child{border-bottom:none;}
+.recipe-list.steps{counter-reset:step-counter;}
+.recipe-list.steps li{counter-increment:step-counter;padding-left:22px;position:relative;}
+.recipe-list.steps li::before{content:counter(step-counter)".";position:absolute;left:0;color:#5eead4;font-weight:700;font-size:0.8rem;}
+.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
+.q-card.correct{border-color:#22c55e;}
+.q-card.incorrect{border-color:#ef4444;}
+.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
+.q-prompt{font-size:1rem;font-weight:400;color:#e6edf3;line-height:1.5;margin-bottom:12px;}
+.q-feedback{font-size:0.8rem;margin-top:8px;min-height:18px;}
+.q-card.correct .q-feedback{color:#22c55e;}
+.q-card.incorrect .q-feedback{color:#ef4444;}
+.options-group{display:flex;flex-direction:column;gap:8px;}
+.opt-row{display:flex;align-items:center;gap:6px;}
+.opt-btn{flex:1;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.95rem;padding:10px 14px;text-align:left;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;}
+.opt-btn:hover{border-color:#14b8a6;color:#e6edf3;}
+.opt-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
+.opt-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
+.opt-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
+.opt-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
+.scene-card{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.scene-card svg{display:block;width:100%;}
+.scene-text{display:block;font-size:0.95rem;color:#c9d1d9;line-height:1.5;padding:12px 16px;}
+.q-input{font-family:'JetBrains Mono',monospace;font-size:0.95rem;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:8px 14px;color:#e6edf3;width:100%;outline:none;transition:border-color 0.2s;resize:vertical;min-height:60px;}
+.q-input:focus{border-color:#14b8a6;}
+.scrambled-steps{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:14px 18px;margin-bottom:16px;}
+.scrambled-steps p{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
+.scrambled-step{font-size:0.92rem;color:#c9d1d9;padding:6px 0;border-bottom:1px solid #21262d;line-height:1.4;}
+.scrambled-step:last-child{border-bottom:none;}
+.scrambled-step strong{color:#5eead4;font-family:'JetBrains Mono',monospace;font-size:0.82rem;}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
+.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
+.score-display span{color:#14b8a6;font-weight:700;}
+.save-status{font-size:0.8rem;opacity:0;transition:opacity 0.3s;color:#22c55e;min-width:100px;}
+.btn-row{display:flex;gap:10px;}
+.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-save{background:#30363d;color:#e6edf3;}
+.btn-save:hover{background:#484f58;}
+.btn-submit{background:#14b8a6;color:#0d1117;}
+.btn-submit:hover{background:#0d9488;}
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
+.confirm-overlay.show{display:flex;}
+.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
+.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
+.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Reading a Recipe &#8211; Week 2 <button class="tts-btn" type="button" onclick="speakText('Reading a Recipe, Week 2')" aria-label="Read aloud">&#128266;</button></h1>
+  <p>Read each recipe carefully, then answer the questions below.</p>
+</div>
+
+<div class="day-tabs" role="tablist">
+  <button class="day-tab active" type="button" role="tab" aria-selected="true" data-day="1">Day 1 &#8212; Recipe Parts</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="2">Day 2 &#8212; What&#8217;s Happening?</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="3">Day 3 &#8212; Why Is That Happening?</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="4">Day 4 &#8212; Follow the Recipe</button>
+</div>
+
+<!-- DAY 1 -->
+<div class="day-panel active" id="day-panel-1" data-goal="S015.11.1-1;S015.11.4-1">
+
+  <div class="part-label">&#128214; Reference Recipes</div>
+  <p class="recipe-intro">Look at these three recipes to answer the questions. You can scroll back up to check them any time!</p>
+
+  <div class="recipes-grid">
+
+    <div class="recipe-card">
+      <div class="recipe-title">Recipe 1: Scrambled Eggs <button class="tts-btn" type="button" onclick="speakText('Recipe 1: Scrambled Eggs')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="recipe-servings">Makes: 1 serving</div>
+      <div class="recipe-section-heading">Ingredients</div>
+      <ul class="recipe-list">
+        <li>2 eggs</li>
+        <li>1 tablespoon butter</li>
+        <li>Salt and pepper to taste</li>
+      </ul>
+      <div class="recipe-section-heading">Steps</div>
+      <ol class="recipe-list steps">
+        <li>Crack the eggs into a bowl.</li>
+        <li>Whisk the eggs until mixed.</li>
+        <li>Melt butter in a pan over low heat.</li>
+        <li>Pour the egg mixture into the pan.</li>
+        <li>Stir gently until eggs are cooked through.</li>
+        <li>Season with salt and pepper.</li>
+      </ol>
+    </div>
+
+    <div class="recipe-card">
+      <div class="recipe-title">Recipe 2: Banana Smoothie <button class="tts-btn" type="button" onclick="speakText('Recipe 2: Banana Smoothie')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="recipe-servings">Makes: 1 serving</div>
+      <div class="recipe-section-heading">Ingredients</div>
+      <ul class="recipe-list">
+        <li>1 banana</li>
+        <li>&#189; cup milk</li>
+        <li>&#189; cup yogurt</li>
+        <li>1 tablespoon honey</li>
+      </ul>
+      <div class="recipe-section-heading">Steps</div>
+      <ol class="recipe-list steps">
+        <li>Peel and slice the banana.</li>
+        <li>Put all ingredients into the blender.</li>
+        <li>Blend for 30 seconds until smooth.</li>
+        <li>Pour into a glass and enjoy!</li>
+      </ol>
+    </div>
+
+    <div class="recipe-card">
+      <div class="recipe-title">Recipe 3: Grilled Cheese Sandwich <button class="tts-btn" type="button" onclick="speakText('Recipe 3: Grilled Cheese Sandwich')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="recipe-servings">Makes: 1 sandwich</div>
+      <div class="recipe-section-heading">Ingredients</div>
+      <ul class="recipe-list">
+        <li>2 slices bread</li>
+        <li>2 slices cheese</li>
+        <li>1 tablespoon butter</li>
+      </ul>
+      <div class="recipe-section-heading">Steps</div>
+      <ol class="recipe-list steps">
+        <li>Spread butter on one side of each bread slice.</li>
+        <li>Place cheese between the bread slices.</li>
+        <li>Heat a pan on medium heat.</li>
+        <li>Cook sandwich 3 minutes per side until golden brown.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <div class="part-label">&#10067; Questions</div>
+
+  <div class="q-card" data-qref="D1Q1" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What is the title of Recipe 1?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the title of Recipe 1? <button class="tts-btn" type="button" onclick="speakText('What is the title of Recipe 1?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Banana Smoothie</button><button class="tts-btn" type="button" onclick="speakText('Banana Smoothie')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Grilled Cheese Sandwich</button><button class="tts-btn" type="button" onclick="speakText('Grilled Cheese Sandwich')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Scrambled Eggs</button><button class="tts-btn" type="button" onclick="speakText('Scrambled Eggs')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Fruit Salad</button><button class="tts-btn" type="button" onclick="speakText('Fruit Salad')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q2" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Which section lists eggs, butter, salt and pepper?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Which section lists &#8220;eggs, butter, salt and pepper&#8221;? <button class="tts-btn" type="button" onclick="speakText('Which section lists eggs, butter, salt and pepper?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Steps</button><button class="tts-btn" type="button" onclick="speakText('Steps')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Title</button><button class="tts-btn" type="button" onclick="speakText('Title')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Serving Size</button><button class="tts-btn" type="button" onclick="speakText('Serving Size')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>d) Ingredients</button><button class="tts-btn" type="button" onclick="speakText('Ingredients')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q3" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is Step 1 of Recipe 3, Grilled Cheese Sandwich?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is Step 1 of Recipe 3 (Grilled Cheese Sandwich)? <button class="tts-btn" type="button" onclick="speakText('What is Step 1 of Recipe 3, Grilled Cheese Sandwich?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Cook sandwich 3 minutes per side</button><button class="tts-btn" type="button" onclick="speakText('Cook sandwich 3 minutes per side')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Heat a pan on medium heat</button><button class="tts-btn" type="button" onclick="speakText('Heat a pan on medium heat')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Spread butter on one side of each bread slice</button><button class="tts-btn" type="button" onclick="speakText('Spread butter on one side of each bread slice')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Place cheese between the bread slices</button><button class="tts-btn" type="button" onclick="speakText('Place cheese between the bread slices')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q4" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. How many servings does Recipe 2, Banana Smoothie, make?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">How many servings does Recipe 2 (Banana Smoothie) make? <button class="tts-btn" type="button" onclick="speakText('How many servings does Recipe 2, Banana Smoothie, make?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) 2 servings</button><button class="tts-btn" type="button" onclick="speakText('2 servings')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) 3 servings</button><button class="tts-btn" type="button" onclick="speakText('3 servings')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) 1 serving</button><button class="tts-btn" type="button" onclick="speakText('1 serving')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) 4 servings</button><button class="tts-btn" type="button" onclick="speakText('4 servings')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D1Q5" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. Which part of a recipe tells you what to do step by step?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Which part of a recipe tells you WHAT TO DO step by step? <button class="tts-btn" type="button" onclick="speakText('Which part of a recipe tells you what to do step by step?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Title</button><button class="tts-btn" type="button" onclick="speakText('Title')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Ingredients</button><button class="tts-btn" type="button" onclick="speakText('Ingredients')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Serving Size</button><button class="tts-btn" type="button" onclick="speakText('Serving Size')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>d) Steps</button><button class="tts-btn" type="button" onclick="speakText('Steps')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+</div>
+
+<!-- DAY 2 -->
+<div class="day-panel" id="day-panel-2" data-goal="S015.11.1-2;S015.11.2-1">
+
+  <div class="part-label">&#128064; What&#8217;s Happening?</div>
+
+  <!-- Scene 1: Cracking an egg into a bowl -->
+  <div class="scene-card">
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="Someone cracking an egg into a bowl" aria-describedby="svg1-title">
+      <title id="svg1-title">Someone cracking an egg into a bowl</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- bowl outer shape -->
+      <path d="M 182 208 Q 182 268 300 268 Q 418 268 418 208" fill="#f8f0e8" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- bowl inner fill -->
+      <path d="M 190 208 Q 190 258 300 258 Q 410 258 410 208" fill="#fff8f0"/>
+      <!-- bowl rim ellipse -->
+      <ellipse cx="300" cy="208" rx="118" ry="20" fill="#f8f0e8" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- egg white dripping (left stream) -->
+      <path d="M 284 146 Q 276 168 274 188 Q 272 204 283 208" fill="none" stroke="#f8f8f0" stroke-width="11" stroke-linecap="round" opacity="0.88"/>
+      <!-- egg white dripping (right stream) -->
+      <path d="M 318 146 Q 326 170 327 190 Q 328 205 317 208" fill="none" stroke="#f8f8f0" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+      <!-- egg yolk falling -->
+      <ellipse cx="300" cy="170" rx="20" ry="18" fill="#fce96a" stroke="#e6b800" stroke-width="2"/>
+      <!-- yolk highlight -->
+      <ellipse cx="294" cy="164" rx="7" ry="5" fill="#fef08a" opacity="0.7"/>
+      <!-- left egg shell half (tilted outward) -->
+      <g transform="rotate(-18, 232, 126)">
+        <!-- shell exterior (white dome) -->
+        <path d="M 196 126 A 36 28 0 0 0 268 126 Z" fill="white" stroke="#d0c8b0" stroke-width="2"/>
+        <!-- shell interior (cream) -->
+        <path d="M 202 126 A 30 22 0 0 0 262 126 Z" fill="#fffaf0"/>
+        <!-- shell rim ellipse -->
+        <ellipse cx="232" cy="126" rx="36" ry="7" fill="#f5f0e0" stroke="#d0c8b0" stroke-width="1.5"/>
+      </g>
+      <!-- left hand holding left shell -->
+      <g transform="rotate(-18, 232, 126)">
+        <ellipse cx="232" cy="104" rx="22" ry="13" fill="#fac8a0" stroke="#2d3748" stroke-width="1.5"/>
+        <rect x="214" y="87" width="9" height="20" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="225" y="83" width="9" height="23" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="236" y="84" width="9" height="22" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="247" y="87" width="8" height="18" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+      </g>
+      <!-- right egg shell half (tilted outward) -->
+      <g transform="rotate(18, 368, 126)">
+        <path d="M 332 126 A 36 28 0 0 0 404 126 Z" fill="white" stroke="#d0c8b0" stroke-width="2"/>
+        <path d="M 338 126 A 30 22 0 0 0 398 126 Z" fill="#fffaf0"/>
+        <ellipse cx="368" cy="126" rx="36" ry="7" fill="#f5f0e0" stroke="#d0c8b0" stroke-width="1.5"/>
+      </g>
+      <!-- right hand holding right shell -->
+      <g transform="rotate(18, 368, 126)">
+        <ellipse cx="368" cy="104" rx="22" ry="13" fill="#fac8a0" stroke="#2d3748" stroke-width="1.5"/>
+        <rect x="350" y="87" width="9" height="20" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="361" y="83" width="9" height="23" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="372" y="84" width="9" height="22" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+        <rect x="383" y="87" width="8" height="18" rx="4" fill="#fac8a0" stroke="#2d3748" stroke-width="1.2"/>
+      </g>
+    </svg>
+    <span class="scene-text">Someone is cracking an egg into a bowl.</span>
+  </div>
+
+  <div class="q-card" data-qref="D2Q1" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What is the person doing?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the person doing? <button class="tts-btn" type="button" onclick="speakText('What is the person doing?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Pouring milk</button><button class="tts-btn" type="button" onclick="speakText('Pouring milk')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) Cracking an egg</button><button class="tts-btn" type="button" onclick="speakText('Cracking an egg')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Washing fruit</button><button class="tts-btn" type="button" onclick="speakText('Washing fruit')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Stirring soup</button><button class="tts-btn" type="button" onclick="speakText('Stirring soup')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q2" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Write a sentence about what you see.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write a sentence about what you see. <button class="tts-btn" type="button" onclick="speakText('Write a sentence about what you see.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D2Q2"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Scene 2: Blender making banana smoothie -->
+  <div class="scene-card">
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A blender on the counter with banana and milk inside" aria-describedby="svg2-title">
+      <title id="svg2-title">A blender on the counter with banana and milk inside</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- blender base (motor unit) -->
+      <rect x="238" y="190" width="124" height="38" rx="8" fill="#4a5568" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- base dividing line -->
+      <rect x="238" y="210" width="124" height="4" fill="#374151"/>
+      <!-- buttons on base -->
+      <circle cx="263" cy="200" r="8" fill="#22c55e" stroke="#2d3748" stroke-width="1.5"/>
+      <circle cx="289" cy="200" r="8" fill="#ef4444" stroke="#2d3748" stroke-width="1.5"/>
+      <circle cx="315" cy="200" r="8" fill="#eab308" stroke="#2d3748" stroke-width="1.5"/>
+      <circle cx="341" cy="200" r="8" fill="#e2e8f0" stroke="#2d3748" stroke-width="1.5"/>
+      <!-- base feet -->
+      <rect x="242" y="226" width="28" height="5" rx="2" fill="#374151"/>
+      <rect x="330" y="226" width="28" height="5" rx="2" fill="#374151"/>
+      <!-- blender jar outer (trapezoid: wider at top, narrower at bottom) -->
+      <path d="M 252 190 L 268 78 L 332 78 L 348 190 Z" fill="#e2e8f0" stroke="#2d3748" stroke-width="2" opacity="0.65"/>
+      <!-- smoothie fill inside jar -->
+      <path d="M 255 190 L 270 84 L 330 84 L 345 190 Z" fill="#fbbf24" opacity="0.88"/>
+      <!-- banana slice 1 (floating in smoothie) -->
+      <ellipse cx="298" cy="128" rx="21" ry="11" fill="#fce96a" stroke="#b45309" stroke-width="1.5"/>
+      <ellipse cx="298" cy="128" rx="13" ry="6" fill="#fbbf24"/>
+      <!-- banana slice 2 -->
+      <ellipse cx="318" cy="158" rx="18" ry="10" fill="#fce96a" stroke="#b45309" stroke-width="1.5"/>
+      <ellipse cx="318" cy="158" rx="11" ry="5" fill="#fbbf24"/>
+      <!-- banana slice 3 -->
+      <ellipse cx="279" cy="163" rx="16" ry="9" fill="#fce96a" stroke="#b45309" stroke-width="1.5" opacity="0.85"/>
+      <ellipse cx="279" cy="163" rx="10" ry="5" fill="#fbbf24" opacity="0.85"/>
+      <!-- blending motion lines -->
+      <line x1="288" y1="105" x2="312" y2="105" stroke="white" stroke-width="1.5" opacity="0.5"/>
+      <line x1="285" y1="117" x2="315" y2="117" stroke="white" stroke-width="1.5" opacity="0.5"/>
+      <line x1="283" y1="130" x2="317" y2="130" stroke="white" stroke-width="1.5" opacity="0.5"/>
+      <!-- jar lid -->
+      <rect x="266" y="66" width="68" height="14" rx="5" fill="#718096" stroke="#2d3748" stroke-width="2"/>
+      <!-- lid handle knob -->
+      <rect x="285" y="53" width="30" height="15" rx="4" fill="#718096" stroke="#2d3748" stroke-width="1.5"/>
+      <rect x="293" y="44" width="14" height="12" rx="3" fill="#9ca3af" stroke="#2d3748" stroke-width="1.5"/>
+    </svg>
+    <span class="scene-text">Someone is making a banana smoothie in a blender.</span>
+  </div>
+
+  <div class="q-card" data-qref="D2Q3" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is being made?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is being made? <button class="tts-btn" type="button" onclick="speakText('What is being made?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) A cup of juice</button><button class="tts-btn" type="button" onclick="speakText('A cup of juice')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Scrambled eggs</button><button class="tts-btn" type="button" onclick="speakText('Scrambled eggs')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) A banana smoothie</button><button class="tts-btn" type="button" onclick="speakText('A banana smoothie')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) A bowl of cereal</button><button class="tts-btn" type="button" onclick="speakText('A bowl of cereal')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q4" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. Write a sentence describing this picture.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write a sentence describing this picture. <button class="tts-btn" type="button" onclick="speakText('Write a sentence describing this picture.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D2Q4"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Scene 3: Grilled cheese sandwich cooking in a pan -->
+  <div class="scene-card">
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A grilled cheese sandwich cooking in a pan on the stove" aria-describedby="svg3-title">
+      <title id="svg3-title">A grilled cheese sandwich cooking in a pan on the stove</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- stove burner ring (front edge visible) -->
+      <ellipse cx="275" cy="225" rx="105" ry="10" fill="#4a5568" opacity="0.45"/>
+      <!-- pan body (side view) -->
+      <rect x="144" y="162" width="268" height="62" rx="3" fill="#4a5568" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- pan rim top edge -->
+      <rect x="140" y="157" width="276" height="9" rx="4" fill="#374151" stroke="#2d3748" stroke-width="2"/>
+      <!-- pan interior -->
+      <rect x="148" y="168" width="260" height="56" fill="#374151"/>
+      <!-- sandwich: bottom bread slice (golden) -->
+      <rect x="172" y="193" width="212" height="28" rx="5" fill="#c07828" stroke="#2d3748" stroke-width="2"/>
+      <rect x="179" y="197" width="198" height="19" rx="3" fill="#d4882a"/>
+      <!-- melted cheese layer (yellow, slightly wider) -->
+      <rect x="168" y="183" width="220" height="13" rx="4" fill="#f59e0b" stroke="#2d3748" stroke-width="1.5"/>
+      <!-- cheese oozing left side -->
+      <path d="M 168 183 Q 158 189 160 196 Q 162 200 172 199" fill="#f59e0b"/>
+      <!-- cheese oozing right side -->
+      <path d="M 388 183 Q 398 189 396 196 Q 394 200 384 199" fill="#f59e0b"/>
+      <!-- sandwich: top bread slice (grilled golden-brown) -->
+      <rect x="173" y="161" width="210" height="26" rx="5" fill="#c07828" stroke="#2d3748" stroke-width="2"/>
+      <rect x="180" y="165" width="196" height="18" rx="3" fill="#d4882a"/>
+      <!-- grill marks (darker lines across top bread) -->
+      <line x1="210" y1="163" x2="210" y2="185" stroke="#8b4513" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+      <line x1="245" y1="162" x2="245" y2="186" stroke="#8b4513" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+      <line x1="280" y1="162" x2="280" y2="186" stroke="#8b4513" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+      <line x1="315" y1="162" x2="315" y2="186" stroke="#8b4513" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+      <line x1="350" y1="163" x2="350" y2="185" stroke="#8b4513" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+      <!-- steam lines rising above pan -->
+      <path d="M 212 150 Q 208 138 212 126 Q 216 114 212 102" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 242 147 Q 238 135 242 123 Q 246 111 242 99" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 274 144 Q 270 132 274 120 Q 278 108 274 96" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 306 147 Q 302 135 306 123 Q 310 111 306 99" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 336 150 Q 332 138 336 126 Q 340 114 336 102" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <!-- pan handle extending right -->
+      <rect x="406" y="181" width="110" height="16" rx="8" fill="#4a5568" stroke="#2d3748" stroke-width="2"/>
+      <circle cx="514" cy="189" r="8" fill="#6b7280" stroke="#2d3748" stroke-width="1.5"/>
+    </svg>
+    <span class="scene-text">A grilled cheese sandwich is cooking in a pan.</span>
+  </div>
+
+  <div class="q-card" data-qref="D2Q5" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. What is cooking in the pan?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is cooking in the pan? <button class="tts-btn" type="button" onclick="speakText('What is cooking in the pan?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Scrambled eggs</button><button class="tts-btn" type="button" onclick="speakText('Scrambled eggs')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Pancakes</button><button class="tts-btn" type="button" onclick="speakText('Pancakes')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) A grilled cheese sandwich</button><button class="tts-btn" type="button" onclick="speakText('A grilled cheese sandwich')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Soup</button><button class="tts-btn" type="button" onclick="speakText('Soup')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q6" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6. Write a sentence about this scene.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write a sentence about this scene. <button class="tts-btn" type="button" onclick="speakText('Write a sentence about this scene.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D2Q6"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+</div>
+
+<!-- DAY 3 -->
+<div class="day-panel" id="day-panel-3" data-goal="S015.11.1-3;S015.11.2-2">
+
+  <div class="part-label">&#129300; Why Is That Happening?</div>
+
+  <!-- Scene 4: Fluffy cooked scrambled eggs in a pan -->
+  <div class="scene-card">
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="Fluffy cooked scrambled eggs in a frying pan" aria-describedby="svg4-title">
+      <title id="svg4-title">Fluffy cooked scrambled eggs in a frying pan</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- stove burner ring -->
+      <ellipse cx="272" cy="225" rx="108" ry="10" fill="#4a5568" opacity="0.4"/>
+      <!-- pan body (side view) -->
+      <rect x="140" y="165" width="268" height="59" rx="3" fill="#4a5568" stroke="#2d3748" stroke-width="2.5"/>
+      <!-- pan rim top edge -->
+      <rect x="136" y="160" width="276" height="9" rx="4" fill="#374151" stroke="#2d3748" stroke-width="2"/>
+      <!-- pan interior -->
+      <rect x="144" y="170" width="260" height="54" fill="#374151"/>
+      <!-- fluffy scrambled eggs (overlapping ellipses, bright yellow) -->
+      <ellipse cx="215" cy="194" rx="48" ry="20" fill="#fce96a" stroke="#e6b800" stroke-width="1.5"/>
+      <ellipse cx="258" cy="188" rx="46" ry="22" fill="#fce96a" stroke="#e6b800" stroke-width="1.5"/>
+      <ellipse cx="302" cy="191" rx="48" ry="21" fill="#fce96a" stroke="#e6b800" stroke-width="1.5"/>
+      <ellipse cx="346" cy="195" rx="44" ry="19" fill="#fce96a" stroke="#e6b800" stroke-width="1.5"/>
+      <!-- top fluffy layer (lighter yellow) -->
+      <ellipse cx="238" cy="178" rx="40" ry="18" fill="#fef08a" stroke="#e6b800" stroke-width="1"/>
+      <ellipse cx="285" cy="175" rx="38" ry="17" fill="#fef08a" stroke="#e6b800" stroke-width="1"/>
+      <ellipse cx="328" cy="179" rx="36" ry="16" fill="#fef08a" stroke="#e6b800" stroke-width="1"/>
+      <!-- small pepper flecks -->
+      <circle cx="250" cy="182" r="2.5" fill="#2d3748" opacity="0.6"/>
+      <circle cx="272" cy="178" r="2" fill="#2d3748" opacity="0.6"/>
+      <circle cx="305" cy="181" r="2.5" fill="#2d3748" opacity="0.6"/>
+      <circle cx="320" cy="177" r="2" fill="#2d3748" opacity="0.6"/>
+      <!-- steam lines rising from eggs -->
+      <path d="M 210 158 Q 206 146 210 134 Q 214 122 210 110" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 240 154 Q 236 142 240 130 Q 244 118 240 106" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 272 150 Q 268 138 272 126 Q 276 114 272 102" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 305 153 Q 301 141 305 129 Q 309 117 305 105" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <path d="M 335 156 Q 331 144 335 132 Q 339 120 335 108" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <!-- pan handle -->
+      <rect x="402" y="182" width="112" height="16" rx="8" fill="#4a5568" stroke="#2d3748" stroke-width="2"/>
+      <circle cx="512" cy="190" r="8" fill="#6b7280" stroke="#2d3748" stroke-width="1.5"/>
+    </svg>
+    <span class="scene-text">The eggs look fluffy and cooked.</span>
+  </div>
+
+  <div class="q-card" data-qref="D3Q1" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. Why do the eggs look cooked and fluffy?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Why do the eggs look cooked and fluffy? <button class="tts-btn" type="button" onclick="speakText('Why do the eggs look cooked and fluffy?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) They were put in the freezer</button><button class="tts-btn" type="button" onclick="speakText('They were put in the freezer')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) They were microwaved</button><button class="tts-btn" type="button" onclick="speakText('They were microwaved')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) They were cooked on the stove</button><button class="tts-btn" type="button" onclick="speakText('They were cooked on the stove')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) They were left in the sun</button><button class="tts-btn" type="button" onclick="speakText('They were left in the sun')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q2" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Write 1 to 3 sentences about why this happened.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write 1&#8211;3 sentences about why this happened. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences about why this happened.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D3Q2"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Scene 5: Tall glass of smooth yellow banana smoothie -->
+  <div class="scene-card">
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A tall glass of smooth yellow banana smoothie" aria-describedby="svg5-title">
+      <title id="svg5-title">A tall glass of smooth yellow banana smoothie</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- tall glass outer (trapezoid wider at top) -->
+      <path d="M 248 80 L 352 80 L 334 228 L 266 228 Z" fill="#e8f4f8" stroke="#94a3b8" stroke-width="2.5" opacity="0.7"/>
+      <!-- smoothie fill (uniform yellow, all one color) -->
+      <path d="M 252 84 L 348 84 L 330 224 L 270 224 Z" fill="#fbbf24" opacity="0.92"/>
+      <!-- glass rim (top) -->
+      <rect x="247" y="76" width="106" height="8" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+      <!-- glass base ellipse -->
+      <ellipse cx="300" cy="228" rx="34" ry="5" fill="none" stroke="#94a3b8" stroke-width="2"/>
+      <!-- straw (pink striped) -->
+      <rect x="294" y="38" width="10" height="188" rx="4" fill="#f472b6"/>
+      <rect x="294" y="38" width="10" height="14" rx="3" fill="white" opacity="0.5"/>
+      <rect x="294" y="64" width="10" height="14" rx="3" fill="white" opacity="0.5"/>
+      <rect x="294" y="90" width="10" height="14" rx="3" fill="white" opacity="0.5"/>
+      <rect x="294" y="116" width="10" height="14" rx="3" fill="white" opacity="0.5"/>
+      <rect x="294" y="142" width="10" height="14" rx="3" fill="white" opacity="0.5"/>
+      <!-- banana slice decorating the rim (perched on top right edge) -->
+      <g transform="rotate(-15, 345, 78)">
+        <ellipse cx="345" cy="78" rx="22" ry="12" fill="#fce96a" stroke="#b45309" stroke-width="1.5"/>
+        <ellipse cx="345" cy="78" rx="14" ry="7" fill="#fbbf24"/>
+        <!-- center dot of banana slice -->
+        <circle cx="345" cy="78" r="3" fill="#e6a800" opacity="0.7"/>
+        <!-- notch cut for rim placement -->
+        <path d="M 345 66 L 345 78" stroke="#b45309" stroke-width="1.5"/>
+      </g>
+      <!-- glass highlight (left edge) -->
+      <path d="M 257 96 L 262 210" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+      <path d="M 263 86 L 268 204" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+    </svg>
+    <span class="scene-text">The smoothie is smooth and all one color.</span>
+  </div>
+
+  <div class="q-card" data-qref="D3Q3" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. Why is the smoothie smooth and all one color?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Why is the smoothie smooth and all one color? <button class="tts-btn" type="button" onclick="speakText('Why is the smoothie smooth and all one color?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) It was poured slowly</button><button class="tts-btn" type="button" onclick="speakText('It was poured slowly')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) It was stirred with a spoon</button><button class="tts-btn" type="button" onclick="speakText('It was stirred with a spoon')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) It was kept in the refrigerator</button><button class="tts-btn" type="button" onclick="speakText('It was kept in the refrigerator')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>d) It was blended in the blender</button><button class="tts-btn" type="button" onclick="speakText('It was blended in the blender')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q4" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. Write 1 to 3 sentences explaining why.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write 1&#8211;3 sentences explaining why. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences explaining why.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D3Q4"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Scene 6: Grilled cheese sandwich on a plate with melted cheese -->
+  <div class="scene-card">
+    <svg viewBox="0 0 600 300" width="100%" role="img" aria-label="A grilled cheese sandwich on a plate with melted cheese oozing out" aria-describedby="svg6-title">
+      <title id="svg6-title">A grilled cheese sandwich on a plate with melted cheese oozing out</title>
+      <!-- background -->
+      <rect width="600" height="300" fill="#fef3e2"/>
+      <!-- counter edge -->
+      <rect x="0" y="224" width="600" height="4" fill="#b8943c"/>
+      <!-- counter surface -->
+      <rect x="0" y="228" width="600" height="72" fill="#deb887"/>
+      <!-- plate (white oval) -->
+      <ellipse cx="300" cy="212" rx="178" ry="42" fill="white" stroke="#d0d0d0" stroke-width="2.5"/>
+      <!-- plate inner ring -->
+      <ellipse cx="300" cy="212" rx="162" ry="34" fill="#f8f8f8" stroke="#e0e0e0" stroke-width="1"/>
+      <!-- sandwich bottom bread slice -->
+      <rect x="178" y="192" width="244" height="30" rx="8" fill="#c07828" stroke="#2d3748" stroke-width="2"/>
+      <rect x="185" y="196" width="230" height="22" rx="5" fill="#d4882a"/>
+      <!-- melted cheese oozing from all sides -->
+      <rect x="174" y="181" width="252" height="14" rx="5" fill="#f59e0b"/>
+      <!-- cheese dripping left -->
+      <path d="M 174 181 Q 162 188 164 196 Q 166 201 178 199" fill="#f59e0b"/>
+      <!-- cheese dripping right -->
+      <path d="M 426 181 Q 438 188 436 196 Q 434 201 422 199" fill="#f59e0b"/>
+      <!-- cheese drips falling below sandwich -->
+      <path d="M 218 222 Q 215 232 218 238" stroke="#f59e0b" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M 382 222 Q 385 232 382 238" stroke="#f59e0b" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <!-- top bread slice (golden-brown grilled) -->
+      <rect x="180" y="160" width="240" height="26" rx="8" fill="#c07828" stroke="#2d3748" stroke-width="2"/>
+      <rect x="187" y="164" width="226" height="18" rx="5" fill="#d4882a"/>
+      <!-- grill marks on top bread -->
+      <line x1="215" y1="162" x2="215" y2="184" stroke="#7a3a0e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+      <line x1="250" y1="161" x2="250" y2="185" stroke="#7a3a0e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+      <line x1="285" y1="161" x2="285" y2="185" stroke="#7a3a0e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+      <line x1="320" y1="161" x2="320" y2="185" stroke="#7a3a0e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+      <line x1="355" y1="162" x2="355" y2="184" stroke="#7a3a0e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+      <line x1="388" y1="162" x2="388" y2="184" stroke="#7a3a0e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+      <!-- bread crumbs on plate -->
+      <circle cx="165" cy="218" r="3" fill="#d4882a"/>
+      <circle cx="156" cy="212" r="2" fill="#c07828"/>
+      <circle cx="436" cy="215" r="3" fill="#d4882a"/>
+      <circle cx="444" cy="221" r="2" fill="#c07828"/>
+      <circle cx="175" cy="228" r="2" fill="#d4882a"/>
+      <circle cx="428" cy="226" r="2" fill="#d4882a"/>
+    </svg>
+    <span class="scene-text">The cheese is melted inside the sandwich.</span>
+  </div>
+
+  <div class="q-card" data-qref="D3Q5" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. Why is the cheese melted?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Why is the cheese melted? <button class="tts-btn" type="button" onclick="speakText('Why is the cheese melted?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) It was left out all day</button><button class="tts-btn" type="button" onclick="speakText('It was left out all day')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) It was put in the freezer</button><button class="tts-btn" type="button" onclick="speakText('It was put in the freezer')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) It was cooked in a hot pan</button><button class="tts-btn" type="button" onclick="speakText('It was cooked in a hot pan')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Someone added water to it</button><button class="tts-btn" type="button" onclick="speakText('Someone added water to it')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D3Q6" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6. Write 1 to 3 sentences about this.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write 1&#8211;3 sentences about this. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences about this.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D3Q6"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+</div>
+
+<!-- DAY 4 -->
+<div class="day-panel" id="day-panel-4" data-goal="S015.11.4-2;S015.11.1-1">
+
+  <div class="part-label">&#128203; Scrambled Eggs Steps &#8212; Out of Order</div>
+
+  <div class="scrambled-steps">
+    <p>Scrambled Steps &#8212; Read carefully!</p>
+    <div class="scrambled-step"><strong>Step A:</strong> Stir gently until eggs are cooked through.</div>
+    <div class="scrambled-step"><strong>Step B:</strong> Crack the eggs into a bowl.</div>
+    <div class="scrambled-step"><strong>Step C:</strong> Season with salt and pepper.</div>
+    <div class="scrambled-step"><strong>Step D:</strong> Melt butter in a pan over low heat.</div>
+    <div class="scrambled-step"><strong>Step E:</strong> Whisk the eggs until mixed.</div>
+    <div class="scrambled-step"><strong>Step F:</strong> Pour the egg mixture into the pan.</div>
+  </div>
+
+  <div class="part-label">&#10067; Questions</div>
+
+  <div class="q-card" data-qref="D4Q1" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What should you do FIRST when making Scrambled Eggs?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What should you do FIRST when making Scrambled Eggs? <button class="tts-btn" type="button" onclick="speakText('What should you do FIRST when making Scrambled Eggs?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Stir gently until eggs are cooked</button><button class="tts-btn" type="button" onclick="speakText('Stir gently until eggs are cooked')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) Crack the eggs into a bowl</button><button class="tts-btn" type="button" onclick="speakText('Crack the eggs into a bowl')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Melt butter in the pan</button><button class="tts-btn" type="button" onclick="speakText('Melt butter in the pan')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Pour egg mixture into the pan</button><button class="tts-btn" type="button" onclick="speakText('Pour egg mixture into the pan')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q2" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. What comes AFTER whisking the eggs?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What comes AFTER whisking the eggs? <button class="tts-btn" type="button" onclick="speakText('What comes AFTER whisking the eggs?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Crack the eggs into the bowl</button><button class="tts-btn" type="button" onclick="speakText('Crack the eggs into the bowl')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Season with salt and pepper</button><button class="tts-btn" type="button" onclick="speakText('Season with salt and pepper')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Melt butter in a pan</button><button class="tts-btn" type="button" onclick="speakText('Melt butter in a pan')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Stir gently</button><button class="tts-btn" type="button" onclick="speakText('Stir gently')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q3" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is the LAST step?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the LAST step? <button class="tts-btn" type="button" onclick="speakText('What is the LAST step?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="options-group">
+      <div class="opt-row"><button class="opt-btn" type="button">a) Pour egg mixture into the pan</button><button class="tts-btn" type="button" onclick="speakText('Pour egg mixture into the pan')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Whisk the eggs</button><button class="tts-btn" type="button" onclick="speakText('Whisk the eggs')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Season with salt and pepper</button><button class="tts-btn" type="button" onclick="speakText('Season with salt and pepper')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Stir gently</button><button class="tts-btn" type="button" onclick="speakText('Stir gently')" aria-label="Read aloud">&#128266;</button></div>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q4" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. In your own words, describe how to make a Banana Smoothie.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">In your own words, describe how to make a Banana Smoothie. <button class="tts-btn" type="button" onclick="speakText('In your own words, describe how to make a Banana Smoothie.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="4" placeholder="Write your answer here&#8230;" data-qref="D4Q4"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D4Q5" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. What ingredients do you need to make Scrambled Eggs? List at least 2.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What ingredients do you need to make Scrambled Eggs? List at least 2. <button class="tts-btn" type="button" onclick="speakText('What ingredients do you need to make Scrambled Eggs? List at least 2.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="4" placeholder="Write your answer here&#8230;" data-qref="D4Q5"></textarea>
+    <div class="q-feedback"></div>
+  </div>
+
+</div>
+
+<!-- Bottom Bar -->
+<div class="bottom-bar">
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">22</span></div>
+  <div id="save-status" class="save-status"></div>
+  <div class="btn-row">
+    <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
+    <button class="btn btn-submit" type="button" onclick="submitAll()">Submit Assignment</button>
+  </div>
+</div>
+
+<!-- Confirm Overlay -->
+<div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+  <div class="confirm-box">
+    <p id="confirm-msg">Are you sure you want to submit? You cannot change your answers after submitting.</p>
+    <div class="confirm-btn-row">
+      <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
+      <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
+  window.speakText = speakText;
+
+  /* Day Tabs */
+  var tabs = document.querySelectorAll('.day-tab');
+  var panels = document.querySelectorAll('.day-panel');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var day = tab.getAttribute('data-day');
+      tabs.forEach(function (t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      panels.forEach(function (p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      var panel = document.getElementById('day-panel-' + day);
+      if (panel) panel.classList.add('active');
+    });
+  });
+
+  /* MCQ Click Handling */
+  document.querySelectorAll('.options-group').forEach(function (group) {
+    group.addEventListener('click', function (e) {
+      if (e.target.closest('.tts-btn')) return;
+      var btn = e.target.closest('.opt-btn');
+      if (!btn) return;
+      var card = btn.closest('.q-card');
+      if (!card) return;
+      if (card.classList.contains('correct') || card.classList.contains('incorrect')) return;
+
+      var allOpts = group.querySelectorAll('.opt-btn');
+      allOpts.forEach(function (o) { o.classList.remove('selected', 'is-correct', 'is-incorrect'); });
+
+      btn.classList.add('selected');
+      var isCorrect = btn.hasAttribute('data-correct');
+
+      if (isCorrect) {
+        btn.classList.add('is-correct');
+        card.classList.add('correct');
+      } else {
+        btn.classList.add('is-incorrect');
+        card.classList.add('incorrect');
+        allOpts.forEach(function (o) {
+          if (o.hasAttribute('data-correct')) o.classList.add('reveal-answer');
+        });
+      }
+
+      var fb = card.querySelector('.q-feedback');
+      if (fb) {
+        fb.textContent = isCorrect ? '\u2713 Correct!' : '\u2717 Not quite \u2014 the correct answer is highlighted.';
+      }
+      updateAnsweredCount();
+    });
+  });
+
+  /* Textarea tracking */
+  document.querySelectorAll('.q-input').forEach(function (ta) {
+    ta.addEventListener('input', function () { updateAnsweredCount(); });
+  });
+
+  function updateAnsweredCount() {
+    var answered = 0;
+    document.querySelectorAll('.q-card[data-answer-type="multiple-choice"]').forEach(function (card) {
+      if (card.classList.contains('correct') || card.classList.contains('incorrect')) answered++;
+    });
+    document.querySelectorAll('.q-input').forEach(function (ta) {
+      if (ta.value.trim().length > 0) answered++;
+    });
+    var el = document.getElementById('answeredCount');
+    if (el) el.textContent = String(answered);
+  }
+
+  function getAnswers() {
+    var answers = {};
+    document.querySelectorAll('.q-card[data-answer-type="multiple-choice"]').forEach(function (card) {
+      var qref = card.getAttribute('data-qref');
+      var selected = card.querySelector('.opt-btn.selected');
+      answers[qref] = selected ? selected.textContent.trim() : '';
+    });
+    document.querySelectorAll('.q-input').forEach(function (ta) {
+      var qref = ta.getAttribute('data-qref');
+      if (qref) answers[qref] = ta.value.trim();
+    });
+    return answers;
+  }
+
+  var statusTimer = null;
+  function showStatus(msg, color) {
+    var el = document.getElementById('save-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || '#22c55e';
+    el.style.opacity = '1';
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () { el.style.opacity = '0'; }, 2500);
+  }
+
+  function autosave() {
+    window.parent.postMessage({ type: 'rc-assignment-autosave', answers: getAnswers() }, '*');
+    showStatus('Progress saved!', '#22c55e');
+  }
+  window.autosave = autosave;
+
+  function submitAll() {
+    document.getElementById('confirm-overlay').classList.add('show');
+  }
+  window.submitAll = submitAll;
+
+  function cancelSubmit() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+  }
+  window.cancelSubmit = cancelSubmit;
+
+  function confirmSubmit() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+    window.parent.postMessage({ type: 'rc-assignment-submit', answers: getAnswers() }, '*');
+  }
+  window.confirmSubmit = confirmSubmit;
+
+  updateAnsweredCount();
+}());
+</script>
+</body>
+</html>
