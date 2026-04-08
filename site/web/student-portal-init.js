@@ -4274,7 +4274,11 @@
       _bookMyWordsOutsideClickHandler = function (e) {
         const mwPanel = document.getElementById('bookMyWordsPanel');
         if (mwPanel && !mwPanel.contains(e.target) && e.target !== myWordsBtn && !myWordsBtn.contains(e.target)) {
-          mwPanel.remove();
+          if (typeof mwPanel._closeMyWordsPanel === 'function') {
+            mwPanel._closeMyWordsPanel();
+          } else {
+            mwPanel.remove();
+          }
         }
       };
       document.addEventListener('click', _bookMyWordsOutsideClickHandler);
@@ -5872,9 +5876,16 @@
   // ============================================================================
 
   function showMyWordsPanel() {
-    // Toggle: if already open, close it
+    // Toggle: if already open, close it (use stored closePanel if available)
     const existing = document.getElementById('bookMyWordsPanel');
-    if (existing) { existing.remove(); return; }
+    if (existing) {
+      if (typeof existing._closeMyWordsPanel === 'function') {
+        existing._closeMyWordsPanel();
+      } else {
+        existing.remove();
+      }
+      return;
+    }
 
     const bookPanel = document.getElementById('bookPanel');
     if (!bookPanel) return;
@@ -5961,8 +5972,8 @@
         return `<div class="st-mw-entry" data-mw-word="${escapeHtml(word)}">
           <div class="st-mw-entry-main">
             <span class="st-mw-word">${escapeHtml(word)}</span>
-            <button class="st-mw-hear-btn" data-mw-hear="${escapeHtml(word)}" title="Hear word">🔊</button>
-            <button class="st-mw-remove-btn" data-mw-remove="${escapeHtml(word)}" title="Remove from My Words">❌</button>
+            <button class="st-mw-hear-btn" data-mw-hear="${escapeHtml(word)}" title="Hear word" aria-label="Hear pronunciation of ${escapeHtml(word)}">🔊</button>
+            <button class="st-mw-remove-btn" data-mw-remove="${escapeHtml(word)}" title="Remove from My Words" aria-label="Remove ${escapeHtml(word)} from My Words">❌</button>
           </div>
           ${defHtml}
         </div>`;
@@ -5976,10 +5987,24 @@
       renderWordList(e.target.value);
     });
 
-    // Close button
-    panel.querySelector('#myWordsClose').addEventListener('click', function () {
+    // Close on Escape - store reference for explicit cleanup
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        closePanel();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+
+    function closePanel() {
+      document.removeEventListener('keydown', onKeyDown);
       panel.remove();
-    });
+    }
+
+    // Expose closePanel so external removal (e.g. outside-click) can clean up too
+    panel._closeMyWordsPanel = closePanel;
+
+    // Close button
+    panel.querySelector('#myWordsClose').addEventListener('click', closePanel);
 
     // Event delegation for hear/remove buttons
     panel.querySelector('#myWordsList').addEventListener('click', function (e) {
@@ -6012,16 +6037,6 @@
         renderWordList('');
       }
     });
-
-    // Close on Escape
-    function onKeyDown(e) {
-      if (e.key === 'Escape') {
-        panel.remove();
-        document.removeEventListener('keydown', onKeyDown);
-      }
-    }
-    document.addEventListener('keydown', onKeyDown);
-    panel.addEventListener('remove', function () { document.removeEventListener('keydown', onKeyDown); });
   }
 
   // ============================================================================
