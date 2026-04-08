@@ -1091,6 +1091,7 @@
 
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
+    searchInput.id = 'recallLibrarySearch';
     searchInput.placeholder = 'Search by title…';
     searchInput.value = _recallSearchQuery;
     searchInput.style.cssText = 'background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:#fff; font-size:13px; padding:7px 12px; outline:none; flex:1; min-width:180px; max-width:300px;';
@@ -1266,8 +1267,8 @@
         title: entry.title || '(Untitled)',
         className: entry.series || '',
         batchId: null,
-        assignment: { kind: entry.type || 'file', text: entry.meta && entry.meta.page ? entry.meta.page : '' },
-        mapping: (entry.meta && entry.meta.mapping) ? entry.meta.mapping : null,
+        assignment: { kind: entry.type || 'file', text: entry.meta?.page || '' },
+        mapping: entry.meta?.mapping || null,
         createdAt: new Date().toISOString(),
         submittedAt: null,
         issuedAt: null,
@@ -5789,10 +5790,10 @@
           document.activeElement.getAttribute('contenteditable') !== 'false');
 
       if (e.key === 'Escape') {
-        // Clear and blur search inputs when focused
+        // Clear and blur known search inputs when focused
         if (isEditable) {
           const active = document.activeElement;
-          if (active && (active.id === 'assignmentSearch' || active.id === 'lessonSearch' || active.closest('#recallLibraryTab'))) {
+          if (active && (active.id === 'assignmentSearch' || active.id === 'lessonSearch' || active.id === 'recallLibrarySearch')) {
             active.value = '';
             active.dispatchEvent(new Event('input', { bubbles: true }));
             active.blur();
@@ -5814,17 +5815,11 @@
       if (e.key === '/') {
         e.preventDefault();
         // Find the visible search input on the current tab
-        const searchIds = ['assignmentSearch', 'lessonSearch'];
+        const searchIds = ['assignmentSearch', 'lessonSearch', 'recallLibrarySearch'];
         let focusTarget = null;
         for (const id of searchIds) {
           const el = document.getElementById(id);
           if (el && el.offsetParent !== null) { focusTarget = el; break; }
-        }
-        if (!focusTarget) {
-          const recallTab = $('recallLibraryTab');
-          if (recallTab && recallTab.style.display !== 'none') {
-            focusTarget = recallTab.querySelector('input[type="text"], input[type="search"]');
-          }
         }
         if (focusTarget) focusTarget.focus();
         return;
