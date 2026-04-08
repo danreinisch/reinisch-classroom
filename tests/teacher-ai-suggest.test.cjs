@@ -319,6 +319,68 @@ test('suggested_note defaults to empty string when AI omits it', async () => {
   assert.strictEqual(body.suggested_note, '');
 });
 
+test('includes question_text in prompt when provided', async () => {
+  let capturedBody = null;
+  global.fetch = async (_url, opts) => {
+    capturedBody = JSON.parse(opts.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ suggested_score: 4, suggested_note: 'Good.', rationale: 'Correct.' }) } }],
+      }),
+    };
+  };
+
+  const bodyWithQuestion = {
+    ...validBody,
+    question_text: 'What is the slope of a line and how do you calculate it?',
+  };
+
+  const res = await handler(authedEvent(bodyWithQuestion));
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(capturedBody, 'fetch should have been called');
+  const systemContent = capturedBody.messages[0].content;
+  assert.ok(systemContent.includes('What is the slope of a line'), 'prompt should include question_text');
+  assert.ok(systemContent.includes('Question 3: Explain slope'), 'prompt should include item_label');
+  assert.ok(systemContent.includes('(Question 3: Explain slope):'), 'prompt should use combined format');
+});
+
+test('question_text is optional — prompt still works without it', async () => {
+  let capturedBody = null;
+  global.fetch = async (_url, opts) => {
+    capturedBody = JSON.parse(opts.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ suggested_score: 3, suggested_note: 'OK.', rationale: 'Partial.' }) } }],
+      }),
+    };
+  };
+
+  const res = await handler(authedEvent(validBody)); // no question_text
+  assert.strictEqual(res.statusCode, 200);
+  const systemContent = capturedBody.messages[0].content;
+  assert.ok(systemContent.includes('Question: Question 3: Explain slope'), 'prompt should fall back to label-only format');
+});
+
+test('returns specific error when OpenAI returns valid HTTP 200 but invalid JSON content', async () => {
+  global.fetch = async (_url, _opts) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      choices: [{ message: { content: 'This is not valid JSON at all!' } }],
+    }),
+  });
+
+  const res = await handler(authedEvent(validBody));
+  assert.strictEqual(res.statusCode, 502);
+  const body = JSON.parse(res.body);
+  assert.strictEqual(body.ok, false);
+  assert.ok(body.error.includes('invalid response'), `expected "invalid response" in error, got: "${body.error}"`);
+});
+
 // ── Run ───────────────────────────────────────────────────────────────────────
 
 runAll();

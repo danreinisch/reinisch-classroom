@@ -171,7 +171,12 @@ exports.handler = async (event) => {
       return jsonResponse(event, 502, { ok: false, error: 'AI feedback generation failed — please write feedback manually' }, {}, requestId);
     }
 
-    openAiResult = JSON.parse(content);
+    try {
+      openAiResult = JSON.parse(content);
+    } catch (parseErr) {
+      console.error(`[teacher-ai-suggest-feedback] [${requestId}] OpenAI returned invalid JSON (first 100 chars): ${String(content).slice(0, 100)}`);
+      return jsonResponse(event, 502, { ok: false, error: 'AI returned an invalid response — please try again or write feedback manually' }, {}, requestId);
+    }
   } catch (err) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
