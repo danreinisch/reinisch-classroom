@@ -4290,6 +4290,34 @@
           e.stopPropagation();
           return;
         }
+
+        // Skills Summary callout buttons
+        const skillCalloutBtn = e.target.closest('.st-skill-callout-btn');
+        if (skillCalloutBtn) {
+          const action = skillCalloutBtn.dataset.action;
+          if (action === 'suggest-goal') {
+            const studentCode = skillCalloutBtn.dataset.studentCode;
+            const goalArea = skillCalloutBtn.dataset.goalArea;
+            const baseline = skillCalloutBtn.dataset.baseline;
+            showAddGoalModal(studentCode, { prefillArea: goalArea, prefillBaseline: baseline });
+          } else if (action === 'archive-goal') {
+            const studentCode = skillCalloutBtn.dataset.studentCode;
+            const goalCode = skillCalloutBtn.dataset.goalCode;
+            const goal = allGoals.find(g => g.code === goalCode && g.student_code === studentCode);
+            if (goal) {
+              await handleArchiveGoal(goal.id);
+            } else {
+              console.warn('[tc-students] Archive callout: goal not found for code', goalCode);
+              await rcAlert('Goal Not Found', 'This goal could not be located. It may have already been archived.');
+            }
+          } else if (action === 'create-iep-goal') {
+            const studentCode = skillCalloutBtn.dataset.studentCode;
+            const deseCode = skillCalloutBtn.dataset.deseCode;
+            showAddGoalModal(studentCode, { prefillDesc: `IEP goal for DESE standard: ${deseCode}` });
+          }
+          e.stopPropagation();
+          return;
+        }
         
         // Enter Data button
         const enterDataBtn = e.target.closest('.enter-data-btn');
@@ -5106,7 +5134,7 @@
     }
   }
 
-  function showAddGoalModal(studentCode) {
+  function showAddGoalModal(studentCode, prefill = {}) {
     const student = allStudents.find(s => s.code === studentCode);
     if (!student) return;
 
@@ -5194,6 +5222,20 @@
     `);
 
     document.body.appendChild(modal);
+
+    // Apply prefill values using DOM API (no innerHTML with user data)
+    if (prefill.prefillArea) {
+      const select = modal.querySelector('select[name="goal_area"]');
+      if (select) select.value = prefill.prefillArea;
+    }
+    if (prefill.prefillBaseline !== undefined && prefill.prefillBaseline !== '') {
+      const input = modal.querySelector('input[name="baseline"]');
+      if (input) input.value = prefill.prefillBaseline;
+    }
+    if (prefill.prefillDesc) {
+      const textarea = modal.querySelector('textarea[name="goal_text"]');
+      if (textarea) textarea.value = prefill.prefillDesc;
+    }
 
     // Wire up observation config show/hide
     initObservationFields(modal);
@@ -6738,8 +6780,9 @@
 
   /**
    * Render a single skill card (IEP or DESE).
+   * studentCode is optional; when provided, mastery/DESE-bridge callouts are rendered.
    */
-  function renderSkillCard(card, narrativeHtml) {
+  function renderSkillCard(card, narrativeHtml, studentCode) {
     const score = card.displayScore !== null && card.displayScore !== undefined ? card.displayScore : null;
     const tierInfo = getSkillTier(score);
     const pct = score !== null ? Math.min(100, Math.max(0, score)) : 0;
@@ -6768,6 +6811,35 @@
 
     const scoreDisplay = score !== null ? `${score}%` : '—';
 
+    // Mastery callout for excellent IEP goals
+    let calloutHtml = '';
+    if (studentCode && card.type === 'iep' && tierInfo.tier === 'excellent') {
+      const safeStudentCode = escapeHtml(studentCode);
+      const safeGoalCode = escapeHtml(card.code);
+      const safeArea = escapeHtml(card.area);
+      const safeBaseline = escapeHtml(score !== null ? String(score) : '');
+      calloutHtml = `
+        <div class="st-skill-callout st-skill-callout--mastery">
+          <span>⭐ This goal appears mastered</span>
+          <button class="st-skill-callout-btn" data-action="suggest-goal"
+            data-student-code="${safeStudentCode}" data-goal-code="${safeGoalCode}"
+            data-goal-area="${safeArea}" data-baseline="${safeBaseline}">💡 Suggest replacement goal</button>
+          <button class="st-skill-callout-btn" data-action="archive-goal"
+            data-student-code="${safeStudentCode}" data-goal-code="${safeGoalCode}">📋 Archive goal</button>
+        </div>
+      `;
+    } else if (studentCode && card.type === 'dese' && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical')) {
+      const safeStudentCode = escapeHtml(studentCode);
+      const safeDeseCode = escapeHtml(card.code);
+      calloutHtml = `
+        <div class="st-skill-callout st-skill-callout--dese-bridge">
+          <span>💡 This DESE standard is below 50% — consider adding an IEP goal for this area</span>
+          <button class="st-skill-callout-btn" data-action="create-iep-goal"
+            data-student-code="${safeStudentCode}" data-dese-code="${safeDeseCode}">+ Create IEP Goal for ${safeDeseCode}</button>
+        </div>
+      `;
+    }
+
     return `
       <div class="st-skill-card st-skill-tier-${tierInfo.tier}" data-skill-code="${escapeHtml(card.code)}" style="border-left-color:${tierInfo.border};background:${tierInfo.bg};">
         <div class="st-skill-card-header">
@@ -6788,6 +6860,7 @@
         </div>
         ${metaHtml}
         <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || SKILL_NARRATIVE_PLACEHOLDER_HTML}</div>
+        ${calloutHtml}
       </div>
     `;
   }
@@ -6894,26 +6967,73 @@
       </button>
     `;
 
+    // Build strengths & weaknesses strip
+    const allCards = [...iepCards, ...deseCards];
+    const strengthCards = allCards.filter(c => {
+      const tier = getSkillTier(c.displayScore).tier;
+      return tier === 'excellent' || tier === 'on-track';
+    });
+    const concernCards = allCards.filter(c => {
+      const tier = getSkillTier(c.displayScore).tier;
+      return tier === 'needs-support' || tier === 'critical';
+    });
+
+    const buildStripItems = (cards) => cards.map(c => {
+      let trendIcon = '';
+      if (c.type === 'iep' && c.trend === 'up') trendIcon = ' ↗';
+      else if (c.type === 'iep' && c.trend === 'down') trendIcon = ' ↘';
+      const scoreStr = c.displayScore !== null ? ` (${c.displayScore}%${trendIcon})` : '';
+      return `<span>${escapeHtml(c.area + scoreStr)}</span>`;
+    }).join('<span style="opacity:0.4;margin:0 2px;">·</span>');
+
+    const strengthsStripHtml = `
+      <div class="st-skill-strengths-strip">
+        <div class="st-skill-strengths-row">
+          <span class="st-skill-strengths-label good">✅ Strengths:</span>
+          ${strengthCards.length > 0
+            ? buildStripItems(strengthCards)
+            : '<span style="opacity:0.5">None identified yet</span>'}
+        </div>
+        <div class="st-skill-strengths-row">
+          <span class="st-skill-strengths-label concern">⚠️ Needs Attention:</span>
+          ${concernCards.length > 0
+            ? buildStripItems(concernCards)
+            : '<span style="opacity:0.5">None identified</span>'}
+        </div>
+      </div>
+    `;
+
     const iepSectionHtml = hasIep ? `
       <div class="st-skill-section">
-        <h3 class="st-skill-section-title">📋 IEP Goals</h3>
-        ${iepCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null)).join('')}
+        <h3 class="st-skill-section-title st-skill-section-toggle">
+          🎯 IEP Goal Skills
+          <span class="st-skill-section-chevron">▼</span>
+        </h3>
+        <div class="st-skill-cards-container">
+          ${iepCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null, student.code)).join('')}
+        </div>
       </div>
     ` : '';
 
     const deseSectionHtml = `
       <div class="st-skill-section">
-        <h3 class="st-skill-section-title">📊 DESE Standards (from Assignments)</h3>
-        ${hasDese
-          ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null)).join('')
-          : '<p class="st-skill-no-data">No assignment-based standards data yet.</p>'
-        }
+        <h3 class="st-skill-section-title st-skill-section-toggle">
+          📚 DESE Standards Performance
+          <span class="st-skill-section-chevron">▼</span>
+        </h3>
+        <div class="st-skill-cards-container">
+          ${hasDese
+            ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null, student.code)).join('')
+            : '<p class="st-skill-no-data">No assignment-based standards data yet.</p>'
+          }
+        </div>
       </div>
     `;
 
     const html = `
       <div class="st-detail-section" id="skills-tab-${escapeHtml(student.code)}">
         ${aiButtonHtml}
+        ${strengthsStripHtml}
         ${iepSectionHtml}
         ${deseSectionHtml}
       </div>
@@ -7077,6 +7197,16 @@
     const btnId = `ai-generate-btn-${student.code}`;
     const btn = document.getElementById(btnId);
     if (!btn || !contentDiv.contains(btn)) return;
+
+    // Wire up collapsible section toggles
+    contentDiv.querySelectorAll('.st-skill-section-toggle').forEach(header => {
+      header.addEventListener('click', () => {
+        const section = header.closest('.st-skill-section');
+        if (section) {
+          section.classList.toggle('collapsed');
+        }
+      });
+    });
 
     btn.addEventListener('click', async () => {
       // Guard against duplicate in-flight requests (e.g. rapid tab switching)
