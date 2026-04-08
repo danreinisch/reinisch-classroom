@@ -2449,7 +2449,7 @@
             cachedAnswer.earned_points = suggested_score;
             cachedAnswer.teacher_note = suggested_note || '';
           } else {
-            cachedAnswers.push({ item_id: itemId, earned_points: suggested_score, teacher_note: suggested_note || '', rationale: rationale || '' });
+            cachedAnswers.push({ item_id: itemId, assignment_item_id: itemId, earned_points: suggested_score, teacher_note: suggested_note || '', rationale: rationale || '' });
           }
 
           // Advance submission status to 'in_progress' if it is still 'pending'
