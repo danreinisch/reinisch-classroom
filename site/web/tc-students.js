@@ -1567,7 +1567,7 @@
   }
 
   /** Helper: today's date as YYYY-MM-DD */
-  function progressTodayISO() {
+  function todayISO() {
     return new Date().toISOString().split('T')[0];
   }
 
@@ -1785,7 +1785,7 @@
     const dateInput = document.createElement('input');
     dateInput.type = 'date';
     dateInput.className = 'dt-date-input';
-    dateInput.value = progressTodayISO();
+    dateInput.value = todayISO();
 
     const valLabel = stEl('label', null, 'Value:');
     valLabel.style.cssText = 'font-size:13px;opacity:0.9;';
@@ -1935,7 +1935,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `progress_${student.code}_${quarter || 'all'}_${progressTodayISO()}.csv`;
+    a.download = `progress_${student.code}_${quarter || 'all'}_${todayISO()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -2133,7 +2133,7 @@
         if (!goalRow) return;
         const form = goalRow.querySelector('.dt-inline-form');
         if (!form) return;
-        form.querySelector('.dt-date-input').value = progressTodayISO();
+        form.querySelector('.dt-date-input').value = todayISO();
         form.querySelector('.dt-value-input').value = '';
         form.style.display = 'flex';
         setTimeout(() => form.querySelector('.dt-value-input').focus(), 100);
@@ -2150,10 +2150,10 @@
       const valueInput = form.querySelector('.dt-value-input');
 
       const doSave = async () => {
-        if (!dateInput.value) { await rcAlert('Validation', 'Please enter a date'); return; }
+        if (!dateInput.value) { await rcAlert('Validation', 'Please select a date for this data point'); return; }
         const numValue = parseFloat(valueInput.value);
         if (isNaN(numValue) || numValue < 0 || numValue > 100) {
-          await rcAlert('Validation', 'Please enter a value between 0 and 100');
+          await rcAlert('Validation', 'Please enter a numeric value between 0 and 100');
           return;
         }
         try {
@@ -2162,7 +2162,7 @@
           selectedDetailTabMap.set(studentCode, 'progress');
           await renderExpandedDetail(studentCode);
         } catch (err) {
-          await rcAlert('Error', 'Error adding data point: ' + err.message);
+          await rcAlert('Error', 'Failed to add data point: ' + err.message);
         }
       };
 
@@ -2211,7 +2211,7 @@
         const doSave = async () => {
           const newValue = parseFloat(input.value);
           if (isNaN(newValue) || newValue < 0 || newValue > 100) {
-            await rcAlert('Validation', 'Please enter a value between 0 and 100');
+            await rcAlert('Validation', 'Please enter a numeric value between 0 and 100');
             input.focus();
             return;
           }
@@ -2227,7 +2227,7 @@
             selectedDetailTabMap.set(studentCode, 'progress');
             await renderExpandedDetail(studentCode);
           } catch (err) {
-            await rcAlert('Error', 'Error updating data point: ' + err.message);
+            await rcAlert('Error', 'Failed to update data point: ' + err.message);
             cell.classList.remove('saving', 'editing');
             cell.textContent = originalContent;
             input.disabled = false;
