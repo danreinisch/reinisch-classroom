@@ -1705,7 +1705,7 @@
   }
 
   // ── Alert Detection Constants ─────────────────────────────────────────────
-  const ALERT_TREND_WINDOW = 30; // analyse data from last 30 days
+  const ALERT_TREND_WINDOW = 30; // analyze data from last 30 days
   const ALERT_STALLED_BAND = 5;  // last 3+ points within ≤5% range = stalled
 
   /**
@@ -1727,7 +1727,7 @@
    * }}
    */
   function computeGoalAlertStatus(goal) {
-    const noop = { isMastered: false, isApproachingMastery: false, isRegressing: false, isStalled: false,
+    const noop = { isMastered: false, isApproachingMastery: false, isRegressing: false, isBelowBaseline: false, isStalled: false,
       avgValue: null, masteryNum: null, baselineNum: null, currentNum: null, last3: [], consecutiveAboveMastery: 0 };
 
     if (goal.measurement_type === 'Observation') return noop;
@@ -1749,7 +1749,7 @@
       .map(p => (p.value != null ? parseFloat(p.value) : null))
       .filter(v => v != null && !isNaN(v));
 
-    if (values.length === 0) return { ...noop, masteryNum, baselineNum };
+    if (values.length === 0) return { ...noop, masteryNum, baselineNum, isBelowBaseline: false };
 
     const currentNum = values[0];
     const avgValue = values.reduce((s, v) => s + v, 0) / values.length;
@@ -1773,12 +1773,15 @@
     // Regression / stalled detection
     const last3 = values.slice(0, 3);
     let isRegressing = false;
+    let isBelowBaseline = false;
     let isStalled = false;
 
     if (currentNum < baselineNum) {
       isRegressing = true;
+      isBelowBaseline = true;
     } else if (last3.length >= 2) {
       // newest-first array: declining means each older value (higher index) > the newer one
+      // e.g. [50, 55, 60] (newest=50, oldest=60) — each older value is greater = declining performance
       const allDecline = last3.every((v, i) => i === 0 || v > last3[i - 1]);
       if (allDecline) isRegressing = true;
     }
@@ -1792,7 +1795,7 @@
       }
     }
 
-    return { isMastered, isApproachingMastery, isRegressing, isStalled,
+    return { isMastered, isApproachingMastery, isRegressing, isBelowBaseline, isStalled,
       avgValue, masteryNum, baselineNum, currentNum, last3, consecutiveAboveMastery };
   }
 
@@ -3841,10 +3844,13 @@
     if (alertStatus.isRegressing) {
       const currentDisplay = escapeHtml(formatProgressValue(alertStatus.currentNum, goal.measurement_type));
       const baselineDisplay = escapeHtml(String(goal.baseline || ''));
-      const consecutiveDeclines = alertStatus.last3.length;
+      const recentPointCount = alertStatus.last3.length;
+      const reason = alertStatus.isBelowBaseline
+        ? `current ${currentDisplay} is below baseline ${baselineDisplay}`
+        : `${recentPointCount} consecutive point${recentPointCount === 1 ? '' : 's'} show decline`;
       alertStripHtml = `
         <div class="st-goal-alert-strip st-goal-alert-strip--regressing">
-          ⚠️ Regression detected — current ${currentDisplay} is below baseline ${baselineDisplay}${consecutiveDeclines >= 2 ? ` (${consecutiveDeclines} consecutive declines)` : ''}
+          ⚠️ Regression detected — ${reason}
         </div>`;
     } else if (alertStatus.isStalled) {
       alertStripHtml = `
