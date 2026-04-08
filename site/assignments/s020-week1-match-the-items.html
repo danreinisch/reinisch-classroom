@@ -1,77 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Match the Items – Week 1</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
-.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
-.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
-.header p{font-size:0.95rem;color:#8b949e;}
-.main-content{padding:20px 24px 80px;}
-.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:0 0 16px;}
-/* Q-card */
-.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
-.q-card.correct{border-color:#22c55e;}
-.q-card.incorrect{border-color:#ef4444;}
-.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
-.q-prompt{font-size:0.95rem;font-weight:400;color:#8b949e;line-height:1.5;margin-bottom:14px;}
-.q-feedback{font-size:0.8rem;margin-top:10px;min-height:18px;}
-.q-card.correct .q-feedback{color:#22c55e;}
-.q-card.incorrect .q-feedback{color:#ef4444;}
-/* Item display */
-.item-display{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;}
-.item-emoji{font-size:3rem;line-height:1;}
-.item-label{font-size:1.1rem;font-weight:700;color:#e6edf3;}
-/* Category buttons */
-.category-group{display:flex;gap:10px;flex-wrap:wrap;}
-.cat-btn{flex:1 1 calc(33% - 8px);min-width:90px;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:10px 8px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;}
-.cat-btn:hover{border-color:#14b8a6;color:#e6edf3;}
-.cat-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
-.cat-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
-.cat-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
-.cat-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
-/* Bottom bar */
-.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
-.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
-.score-display span{color:#14b8a6;font-weight:700;}
-.save-status{font-size:0.8rem;opacity:0;transition:opacity 0.3s;color:#22c55e;min-width:100px;}
-.btn-row{display:flex;gap:10px;}
-.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
-.btn-save{background:#30363d;color:#e6edf3;}
-.btn-save:hover{background:#484f58;}
-.btn-submit{background:#14b8a6;color:#0d1117;}
-.btn-submit:hover{background:#0d9488;}
-/* Custom confirm dialog */
-.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
-.confirm-overlay.show{display:flex;}
-.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
-.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
-.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Match the Items &#8211; Week 1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
+    .page-header{background:#161b22;border-bottom:1px solid #30363d;padding:16px 24px;}
+    .page-title{font-size:1.2rem;font-weight:700;color:#e6edf3;}
+    .page-sub{font-size:0.85rem;color:#8b949e;margin-top:2px;}
+    .day-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;background:#0d1117;border-bottom:1px solid #21262d;}
+    .day-tab{flex-shrink:0;padding:8px 20px;border:2px solid #30363d;border-radius:10px;background:#161b22;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+    .day-tab:hover{border-color:#14b8a6;color:#14b8a6;}
+    .day-tab.active{border-color:#14b8a6;background:rgba(20,184,166,0.12);color:#14b8a6;}
+    .day-panel{display:none;padding:20px 24px 80px;}
+    .day-panel.active{display:block;}
+    .day-heading{font-size:1.1rem;font-weight:700;color:#e6edf3;margin-bottom:4px;}
+    .day-sub{font-size:0.85rem;color:#8b949e;margin-bottom:18px;}
+    .part-label{font-size:0.8rem;font-weight:700;letter-spacing:0.5px;color:#5eead4;text-transform:uppercase;margin-bottom:8px;margin-top:16px;}
+    .tts-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:0 4px;opacity:0.7;transition:opacity 0.2s;vertical-align:middle;}
+    .tts-btn:hover{opacity:1;}
+    .q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
+    .q-card.correct{border-color:#22c55e;}
+    .q-card.incorrect{border-color:#ef4444;}
+    .q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
+    .q-prompt{font-size:0.95rem;color:#8b949e;line-height:1.5;margin-bottom:14px;}
+    .q-feedback{font-size:0.8rem;margin-top:10px;min-height:18px;}
+    .q-card.correct .q-feedback{color:#22c55e;}
+    .q-card.incorrect .q-feedback{color:#ef4444;}
+    .item-display{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;}
+    .item-emoji{font-size:3rem;line-height:1;}
+    .item-label{font-size:1.1rem;font-weight:700;color:#e6edf3;}
+    .category-group{display:flex;gap:10px;flex-wrap:wrap;}
+    .cat-btn{flex:1 1 calc(33% - 8px);min-width:90px;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:10px 8px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;}
+    .cat-btn:hover{border-color:#14b8a6;color:#e6edf3;}
+    .cat-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
+    .cat-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
+    .cat-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
+    .cat-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
+    .shelf-zone{display:flex;flex-wrap:wrap;gap:12px;padding:16px;background:#161b22;border:2px solid #30363d;border-radius:14px;min-height:80px;margin-bottom:16px;}
+    .drag-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 10px;background:#0d1117;border:2px solid #30363d;border-radius:12px;cursor:grab;transition:border-color 0.2s,opacity 0.2s;min-width:80px;text-align:center;}
+    .drag-item:hover{border-color:#14b8a6;}
+    .drag-item.dragging{opacity:0.4;}
+    .drag-item.wrong-bounce{border-color:#ef4444;animation:wrongBounce 0.5s ease;}
+    .drag-emoji{font-size:2rem;line-height:1;}
+    .drag-label{font-size:0.8rem;color:#c9d1d9;line-height:1.3;}
+    @keyframes wrongBounce{0%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}100%{transform:translateX(0);}}
+    .drop-zone{min-height:100px;border:2px dashed #30363d;border-radius:14px;padding:14px;background:#0d1117;transition:border-color 0.2s,background 0.2s;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;align-content:flex-start;}
+    .drop-zone.drag-over{border-color:#14b8a6;background:rgba(20,184,166,0.05);}
+    .drop-zone-label{font-size:0.85rem;font-weight:700;color:#5eead4;margin-bottom:8px;width:100%;}
+    .drop-zone-placeholder{color:#484f58;font-size:0.9rem;font-style:italic;width:100%;text-align:center;padding:20px 0;}
+    .bag-chip{display:inline-flex;align-items:center;gap:6px;background:#161b22;border:2px solid #22c55e;border-radius:20px;padding:5px 10px;font-size:0.85rem;color:#22c55e;}
+    .chip-remove{background:none;border:none;color:#8b949e;cursor:pointer;font-size:1rem;padding:0 0 0 4px;line-height:1;}
+    .chip-remove:hover{color:#ef4444;}
+    .drag-feedback{font-size:0.85rem;margin-top:8px;min-height:18px;color:#ef4444;}
+    .drag-score{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;margin-top:6px;}
+    .zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px;}
+    .zone-card{border:2px dashed #30363d;border-radius:14px;padding:14px;background:#0d1117;min-height:120px;transition:border-color 0.2s,background 0.2s;}
+    .zone-card.drag-over{border-color:#14b8a6;background:rgba(20,184,166,0.05);}
+    .zone-card .drop-zone-label{font-size:0.9rem;font-weight:700;color:#5eead4;margin-bottom:8px;display:block;}
+    .zone-chips{display:flex;flex-wrap:wrap;gap:6px;}
+    .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:1px solid #30363d;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:100;flex-wrap:wrap;}
+    .score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;flex:1;}
+    .save-status{font-size:0.8rem;color:#14b8a6;min-width:120px;}
+    .btn-row{display:flex;gap:8px;}
+    .btn{padding:8px 18px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
+    .btn-save{background:#161b22;border-color:#30363d;color:#8b949e;}
+    .btn-save:hover{border-color:#14b8a6;color:#14b8a6;}
+    .btn-submit{background:#14b8a6;border-color:#14b8a6;color:#0d1117;}
+    .btn-submit:hover{background:#0d9488;border-color:#0d9488;}
+    .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(13,17,23,0.85);z-index:200;align-items:center;justify-content:center;}
+    .confirm-overlay.show{display:flex;}
+    .confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;}
+    .confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.5;margin-bottom:20px;}
+    .confirm-btn-row{display:flex;gap:10px;justify-content:flex-end;}
+    .touch-clone{position:fixed;pointer-events:none;z-index:9999;opacity:0.75;transform:scale(1.05);}
+  </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Match the Items – Week 1</h1>
-  <p>Where does each item belong? Click the correct room for each one.</p>
+<div class="page-header">
+  <div class="page-title">Match the Items &#8211; Week 1 <button class="tts-btn" type="button" onclick="speakText('Match the Items, Week 1')" aria-label="Read aloud">&#128266;</button></div>
+  <div class="page-sub">S020 &middot; Skills: S020.12.1, S020.12.2, S020.12.4</div>
 </div>
 
-<div class="main-content">
+<div class="day-tabs" role="tablist">
+  <button class="day-tab active" type="button" role="tab" aria-selected="true" onclick="switchDay('day1',this)">Day 1</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" onclick="switchDay('day2',this)">Day 2</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" onclick="switchDay('day3',this)">Day 3</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" onclick="switchDay('day4',this)">Day 4</button>
+</div>
 
-  <div class="part-label">Sort each item into the correct room</div>
+<!-- DAY 1 -->
+<div class="day-panel active" id="day1" role="tabpanel">
+  <div class="day-heading">Day 1 &#8211; Sort Items by Room <button class="tts-btn" type="button" onclick="speakText('Day 1. Sort Items by Room')" aria-label="Read aloud">&#128266;</button></div>
+  <div class="day-sub">Click the room where each item belongs.</div>
 
-  <!-- Q1 -->
-  <div class="q-card" data-qref="W1Q1" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q1">
-    <div class="q-num">Question 1</div>
+  <div class="q-card" data-qref="D1Q1" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🍳</span>
-      <span class="item-label">Frying Pan</span>
+      <span class="item-emoji">&#129363;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Frying Pan</span>
+        <button class="tts-btn" type="button" onclick="speakText('Frying Pan')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Frying Pan belong in?</div>
+    <div class="q-prompt">Where does a Frying Pan belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Frying Pan belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Kitchen">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -80,14 +118,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q2 -->
-  <div class="q-card" data-qref="W1Q2" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q2">
-    <div class="q-num">Question 2</div>
+  <div class="q-card" data-qref="D1Q2" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🧴</span>
-      <span class="item-label">Shampoo Bottle</span>
+      <span class="item-emoji">&#129396;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Shampoo</span>
+        <button class="tts-btn" type="button" onclick="speakText('Shampoo')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Shampoo Bottle belong in?</div>
+    <div class="q-prompt">Where does a Shampoo belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Shampoo belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Bathroom">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -96,14 +136,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q3 -->
-  <div class="q-card" data-qref="W1Q3" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q3">
-    <div class="q-num">Question 3</div>
+  <div class="q-card" data-qref="D1Q3" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🛏️</span>
-      <span class="item-label">Pillow</span>
+      <span class="item-emoji">&#128716;&#65039;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Pillow</span>
+        <button class="tts-btn" type="button" onclick="speakText('Pillow')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Pillow belong in?</div>
+    <div class="q-prompt">Where does a Pillow belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Pillow belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Bedroom">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -112,14 +154,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q4 -->
-  <div class="q-card" data-qref="W1Q4" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q4">
-    <div class="q-num">Question 4</div>
+  <div class="q-card" data-qref="D1Q4" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🍽️</span>
-      <span class="item-label">Dinner Plate</span>
+      <span class="item-emoji">&#127869;&#65039;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Dinner Plate</span>
+        <button class="tts-btn" type="button" onclick="speakText('Dinner Plate')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Dinner Plate belong in?</div>
+    <div class="q-prompt">Where does a Dinner Plate belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Dinner Plate belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Kitchen">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -128,14 +172,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q5 -->
-  <div class="q-card" data-qref="W1Q5" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q5">
-    <div class="q-num">Question 5</div>
+  <div class="q-card" data-qref="D1Q5" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🪥</span>
-      <span class="item-label">Toothbrush</span>
+      <span class="item-emoji">&#129397;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Toothbrush</span>
+        <button class="tts-btn" type="button" onclick="speakText('Toothbrush')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Toothbrush belong in?</div>
+    <div class="q-prompt">Where does a Toothbrush belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Toothbrush belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Bathroom">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -144,14 +190,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q6 -->
-  <div class="q-card" data-qref="W1Q6" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q6">
-    <div class="q-num">Question 6</div>
+  <div class="q-card" data-qref="D1Q6" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🧸</span>
-      <span class="item-label">Stuffed Animal</span>
+      <span class="item-emoji">&#129528;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Stuffed Animal</span>
+        <button class="tts-btn" type="button" onclick="speakText('Stuffed Animal')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Stuffed Animal belong in?</div>
+    <div class="q-prompt">Where does a Stuffed Animal belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Stuffed Animal belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Bedroom">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -160,14 +208,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q7 -->
-  <div class="q-card" data-qref="W1Q7" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q7">
-    <div class="q-num">Question 7</div>
+  <div class="q-card" data-qref="D1Q7" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 7 <button class="tts-btn" type="button" onclick="speakText('Question 7')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🥄</span>
-      <span class="item-label">Wooden Spoon</span>
+      <span class="item-emoji">&#129348;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Wooden Spoon</span>
+        <button class="tts-btn" type="button" onclick="speakText('Wooden Spoon')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Wooden Spoon belong in?</div>
+    <div class="q-prompt">Where does a Wooden Spoon belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Wooden Spoon belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Kitchen">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -176,14 +226,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q8 -->
-  <div class="q-card" data-qref="W1Q8" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q8">
-    <div class="q-num">Question 8</div>
+  <div class="q-card" data-qref="D1Q8" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 8 <button class="tts-btn" type="button" onclick="speakText('Question 8')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🧼</span>
-      <span class="item-label">Bar of Soap</span>
+      <span class="item-emoji">&#129532;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Bar of Soap</span>
+        <button class="tts-btn" type="button" onclick="speakText('Bar of Soap')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Bar of Soap belong in?</div>
+    <div class="q-prompt">Where does a Bar of Soap belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Bar of Soap belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Bathroom">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -192,14 +244,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q9 -->
-  <div class="q-card" data-qref="W1Q9" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q9">
-    <div class="q-num">Question 9</div>
+  <div class="q-card" data-qref="D1Q9" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 9 <button class="tts-btn" type="button" onclick="speakText('Question 9')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">📚</span>
-      <span class="item-label">Book</span>
+      <span class="item-emoji">&#128218;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Book</span>
+        <button class="tts-btn" type="button" onclick="speakText('Book')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Book belong in?</div>
+    <div class="q-prompt">Where does a Book belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Book belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Bedroom">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -208,14 +262,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Q10 -->
-  <div class="q-card" data-qref="W1Q10" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice" id="qW1Q10">
-    <div class="q-num">Question 10</div>
+  <div class="q-card" data-qref="D1Q10" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 10 <button class="tts-btn" type="button" onclick="speakText('Question 10')" aria-label="Read aloud">&#128266;</button></div>
     <div class="item-display">
-      <span class="item-emoji">🥣</span>
-      <span class="item-label">Mixing Bowl</span>
+      <span class="item-emoji">&#129379;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Mixing Bowl</span>
+        <button class="tts-btn" type="button" onclick="speakText('Mixing Bowl')" aria-label="Read aloud">&#128266;</button>
+      </div>
     </div>
-    <div class="q-prompt">Which room does a Mixing Bowl belong in?</div>
+    <div class="q-prompt">Where does a Mixing Bowl belong? <button class="tts-btn" type="button" onclick="speakText('Where does a Mixing Bowl belong?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="category-group" data-correct="Kitchen">
       <button class="cat-btn" type="button">Kitchen</button>
       <button class="cat-btn" type="button">Bathroom</button>
@@ -223,12 +279,236 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     </div>
     <div class="q-feedback"></div>
   </div>
+</div>
 
-</div><!-- /main-content -->
+<!-- DAY 2 -->
+<div class="day-panel" id="day2" role="tabpanel">
+  <div class="day-heading">Day 2 &#8211; Sort by Category <button class="tts-btn" type="button" onclick="speakText('Day 2. Sort by Category')" aria-label="Read aloud">&#128266;</button></div>
+  <div class="day-sub">Click the category where each item belongs.</div>
 
-<!-- ══════════ BOTTOM BAR ══════════ -->
+  <div class="q-card" data-qref="D2Q1" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#129529;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Broom</span>
+        <button class="tts-btn" type="button" onclick="speakText('Broom')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Broom belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Broom belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Cleaning Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q2" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#127822;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Apple</span>
+        <button class="tts-btn" type="button" onclick="speakText('Apple')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Apple belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Apple belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Food Items">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q3" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#9999;&#65039;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Pencil</span>
+        <button class="tts-btn" type="button" onclick="speakText('Pencil')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Pencil belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Pencil belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="School Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q4" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#129533;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Sponge</span>
+        <button class="tts-btn" type="button" onclick="speakText('Sponge')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Sponge belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Sponge belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Cleaning Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q5" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#129371;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Milk Carton</span>
+        <button class="tts-btn" type="button" onclick="speakText('Milk Carton')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Milk Carton belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Milk Carton belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Food Items">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q6" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#128207;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Ruler</span>
+        <button class="tts-btn" type="button" onclick="speakText('Ruler')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Ruler belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Ruler belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="School Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q7" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 7 <button class="tts-btn" type="button" onclick="speakText('Question 7')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#129507;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Mop Bucket</span>
+        <button class="tts-btn" type="button" onclick="speakText('Mop Bucket')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Mop Bucket belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Mop Bucket belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Cleaning Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q8" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 8 <button class="tts-btn" type="button" onclick="speakText('Question 8')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#127838;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Bread Loaf</span>
+        <button class="tts-btn" type="button" onclick="speakText('Bread Loaf')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Bread Loaf belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Bread Loaf belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Food Items">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q9" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 9 <button class="tts-btn" type="button" onclick="speakText('Question 9')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#128211;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Notebook</span>
+        <button class="tts-btn" type="button" onclick="speakText('Notebook')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Notebook belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Notebook belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="School Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="D2Q10" data-goal="S020.12.1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 10 <button class="tts-btn" type="button" onclick="speakText('Question 10')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="item-display">
+      <span class="item-emoji">&#129527;</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="item-label">Dish Soap</span>
+        <button class="tts-btn" type="button" onclick="speakText('Dish Soap')" aria-label="Read aloud">&#128266;</button>
+      </div>
+    </div>
+    <div class="q-prompt">What category does Dish Soap belong to? <button class="tts-btn" type="button" onclick="speakText('What category does Dish Soap belong to?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="category-group" data-correct="Cleaning Supplies">
+      <button class="cat-btn" type="button">Cleaning Supplies</button>
+      <button class="cat-btn" type="button">Food Items</button>
+      <button class="cat-btn" type="button">School Supplies</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day-panel" id="day3" role="tabpanel">
+  <div class="day-heading">Day 3 &#8211; Pack a Supply Bag <button class="tts-btn" type="button" onclick="speakText('Day 3. Pack a Supply Bag')" aria-label="Read aloud">&#128266;</button></div>
+  <div class="day-sub">Drag the 5 school supply items into the bag. Leave out the things that don&#39;t belong!</div>
+  <div class="part-label">&#128230; Shelf &#8212; Drag items to the bag below</div>
+  <div class="shelf-zone" id="shelf-zone-d3"></div>
+  <div class="part-label">&#127872; Supply Bag &#8212; Drop items here</div>
+  <div class="drop-zone" id="drop-zone-d3">
+    <div class="drop-zone-placeholder" id="d3-placeholder">Drop items here</div>
+  </div>
+  <div class="drag-feedback" id="d3-feedback"></div>
+  <div class="drag-score" id="d3-score">Items packed: 0 / 5</div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day-panel" id="day4" role="tabpanel">
+  <div class="day-heading">Day 4 &#8211; Gather &amp; Organize Supplies <button class="tts-btn" type="button" onclick="speakText('Day 4. Gather and Organize Supplies')" aria-label="Read aloud">&#128266;</button></div>
+  <div class="day-sub">Drag each item to the room where it belongs.</div>
+  <div class="part-label">&#127968; Items &#8212; Drag to the correct room</div>
+  <div class="shelf-zone" id="shelf-zone-d4"></div>
+  <div class="part-label">&#128682; Rooms &#8212; Drop items here</div>
+  <div class="zones-grid" id="zones-grid-d4">
+    <div class="zone-card" id="zone-Kitchen" data-zone="Kitchen">
+      <span class="drop-zone-label">&#129363; Kitchen</span>
+      <div class="zone-chips" id="chips-Kitchen"></div>
+    </div>
+    <div class="zone-card" id="zone-Bathroom" data-zone="Bathroom">
+      <span class="drop-zone-label">&#128705; Bathroom</span>
+      <div class="zone-chips" id="chips-Bathroom"></div>
+    </div>
+    <div class="zone-card" id="zone-Bedroom" data-zone="Bedroom">
+      <span class="drop-zone-label">&#128716;&#65039; Bedroom</span>
+      <div class="zone-chips" id="chips-Bedroom"></div>
+    </div>
+  </div>
+  <div class="drag-feedback" id="d4-feedback"></div>
+  <div class="drag-score" id="d4-score">Items placed: 0 / 12</div>
+</div>
+
+<!-- BOTTOM BAR -->
 <div class="bottom-bar">
-  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">10</span></div>
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">37</span></div>
   <div id="save-status" class="save-status"></div>
   <div class="btn-row">
     <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
@@ -236,10 +516,10 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   </div>
 </div>
 
-<!-- ══════════ CUSTOM CONFIRM DIALOG ══════════ -->
+<!-- CONFIRM OVERLAY -->
 <div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
   <div class="confirm-box">
-    <p id="confirm-msg">Are you sure you want to submit your assignment? You cannot change your answers after submitting.</p>
+    <p id="confirm-msg">Are you sure you want to submit? You cannot change your answers after submitting.</p>
     <div class="confirm-btn-row">
       <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
       <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
@@ -248,116 +528,378 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 </div>
 
 <script>
-(function () {
-  'use strict';
+// ===== TTS =====
+function speakText(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9; utterance.pitch = 1.0; utterance.volume = 1.0;
+  window.speechSynthesis.speak(utterance);
+}
 
-  var TOTAL = 10;
-  document.getElementById('totalCount').textContent = String(TOTAL);
+// ===== DAY TABS =====
+function switchDay(dayId, tabEl) {
+  document.querySelectorAll('.day-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.day-tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  document.getElementById(dayId).classList.add('active');
+  tabEl.classList.add('active');
+  tabEl.setAttribute('aria-selected', 'true');
+}
 
-  /* ── Category-button click handling ── */
-  document.querySelectorAll('.category-group').forEach(function (group) {
-    group.addEventListener('click', function (e) {
-      var btn = e.target.closest('.cat-btn');
-      if (!btn) return;
-      var card = btn.closest('.q-card');
-      var correctAnswer = group.dataset.correct;
-
-      /* Clear previous selection styling */
-      group.querySelectorAll('.cat-btn').forEach(function (b) {
+// ===== CATEGORY BUTTONS (Days 1-2) =====
+document.querySelectorAll('.category-group').forEach(function(group) {
+  var correctAnswer = group.dataset.correct;
+  var card = group.closest('.q-card');
+  var fb = card.querySelector('.q-feedback');
+  group.querySelectorAll('.cat-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (card.classList.contains('correct')) return;
+      group.querySelectorAll('.cat-btn').forEach(function(b) {
         b.classList.remove('selected', 'is-correct', 'is-incorrect', 'reveal-answer');
       });
-
-      /* Apply selection */
       btn.classList.add('selected');
       var isCorrect = btn.textContent.trim() === correctAnswer;
       btn.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
-
-      /* Update card border */
-      card.classList.toggle('correct', isCorrect);
-      card.classList.toggle('incorrect', !isCorrect);
-
-      /* Feedback text */
-      var fb = card.querySelector('.q-feedback');
-      if (fb) {
-        fb.textContent = isCorrect
-          ? '✓ Correct! It belongs in the ' + correctAnswer + '.'
-          : '✗ Not quite — it belongs in the ' + correctAnswer + '.';
-      }
-
-      /* Reveal correct answer if wrong */
+      card.classList.remove('correct', 'incorrect');
+      card.classList.add(isCorrect ? 'correct' : 'incorrect');
+      fb.textContent = isCorrect
+        ? '✓ Correct! It belongs in the ' + correctAnswer + '.'
+        : '✗ Not quite — it belongs in the ' + correctAnswer + '.';
       if (!isCorrect) {
-        group.querySelectorAll('.cat-btn').forEach(function (b) {
-          if (b.textContent.trim() === correctAnswer) {
-            b.classList.add('reveal-answer');
-          }
+        group.querySelectorAll('.cat-btn').forEach(function(b) {
+          if (b.textContent.trim() === correctAnswer) { b.classList.add('reveal-answer'); }
         });
       }
-
-      updateCount();
+      updateAnsweredCount();
     });
   });
+});
 
-  /* ── Answer collection ── */
-  function getAnswers() {
-    var answers = {};
-    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
-      var qref = card.dataset.qref;
-      var sel = card.querySelector('.cat-btn.selected');
-      if (sel) answers[qref] = sel.textContent.trim();
-    });
-    return answers;
+// ===== DATA =====
+var DAY3_ITEMS = [
+  { id: 'D3I1', emoji: '📓', label: 'Notebook',       correct: true  },
+  { id: 'D3I2', emoji: '✏️',  label: 'Pencil',         correct: true  },
+  { id: 'D3I3', emoji: '📏', label: 'Ruler',           correct: true  },
+  { id: 'D3I4', emoji: '✂️',  label: 'Scissors',       correct: true  },
+  { id: 'D3I5', emoji: '🖊️', label: 'Pen',      correct: true  },
+  { id: 'D3I6', emoji: '🍎', label: 'Apple',           correct: false },
+  { id: 'D3I7', emoji: '🧸', label: 'Stuffed Animal',  correct: false },
+  { id: 'D3I8', emoji: '🪴', label: 'Plant',           correct: false }
+];
+
+var DAY4_ITEMS = [
+  { id: 'D4I1',  emoji: '🍳', label: 'Frying Pan',     zone: 'Kitchen'  },
+  { id: 'D4I2',  emoji: '🧴', label: 'Shampoo',        zone: 'Bathroom' },
+  { id: 'D4I3',  emoji: '🛏️', label: 'Pillow',  zone: 'Bedroom'  },
+  { id: 'D4I4',  emoji: '🥣', label: 'Mixing Bowl',    zone: 'Kitchen'  },
+  { id: 'D4I5',  emoji: '🧼', label: 'Bar of Soap',    zone: 'Bathroom' },
+  { id: 'D4I6',  emoji: '🧸', label: 'Stuffed Animal', zone: 'Bedroom'  },
+  { id: 'D4I7',  emoji: '🍽️', label: 'Dinner Plate', zone: 'Kitchen' },
+  { id: 'D4I8',  emoji: '🪥', label: 'Toothbrush',     zone: 'Bathroom' },
+  { id: 'D4I9',  emoji: '📚', label: 'Book',           zone: 'Bedroom'  },
+  { id: 'D4I10', emoji: '🥄', label: 'Wooden Spoon',   zone: 'Kitchen'  },
+  { id: 'D4I11', emoji: '🧻', label: 'Toilet Paper',   zone: 'Bathroom' },
+  { id: 'D4I12', emoji: '🛋️', label: 'Blanket', zone: 'Bedroom'  }
+];
+
+// ===== CHIP FACTORY =====
+function makeChip(item, onRemove) {
+  var chip = document.createElement('div');
+  chip.className = 'bag-chip';
+  chip.dataset.itemId = item.id;
+  var emojiEl = document.createElement('span');
+  emojiEl.textContent = item.emoji;
+  emojiEl.setAttribute('aria-hidden', 'true');
+  var labelEl = document.createElement('span');
+  labelEl.textContent = item.label;
+  var removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'chip-remove';
+  removeBtn.textContent = '×';
+  removeBtn.setAttribute('aria-label', 'Remove ' + item.label);
+  removeBtn.addEventListener('click', function() {
+    chip.remove();
+    if (typeof onRemove === 'function') { onRemove(); }
+  });
+  chip.appendChild(emojiEl);
+  chip.appendChild(document.createTextNode(' '));
+  chip.appendChild(labelEl);
+  chip.appendChild(removeBtn);
+  return chip;
+}
+
+// ===== DRAG ITEM FACTORY =====
+function makeDragItem(item) {
+  var card = document.createElement('div');
+  card.className = 'drag-item';
+  card.draggable = true;
+  card.dataset.itemId = item.id;
+  var emojiEl = document.createElement('span');
+  emojiEl.className = 'drag-emoji';
+  emojiEl.textContent = item.emoji;
+  emojiEl.setAttribute('aria-hidden', 'true');
+  var labelEl = document.createElement('span');
+  labelEl.className = 'drag-label';
+  labelEl.textContent = item.label;
+  var ttsBtn = document.createElement('button');
+  ttsBtn.className = 'tts-btn';
+  ttsBtn.type = 'button';
+  ttsBtn.setAttribute('aria-label', 'Read aloud');
+  ttsBtn.textContent = '🔊';
+  (function(lbl) {
+    ttsBtn.addEventListener('click', function(e) { e.stopPropagation(); speakText(lbl); });
+  }(item.label));
+  card.appendChild(emojiEl);
+  card.appendChild(labelEl);
+  card.appendChild(ttsBtn);
+  card.addEventListener('dragstart', function(e) {
+    e.dataTransfer.setData('text/plain', item.id);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragend', function() { card.classList.remove('dragging'); });
+  return card;
+}
+
+// ===== TOUCH DRAG =====
+function setupTouchDrag(shelfEl, onDropCallback) {
+  var touchClone = null;
+  var activeDragId = null;
+  var offsetX = 0;
+  var offsetY = 0;
+  shelfEl.addEventListener('touchstart', function(e) {
+    var target = e.target.closest('.drag-item');
+    if (!target) return;
+    e.preventDefault();
+    activeDragId = target.dataset.itemId;
+    var touch = e.touches[0];
+    var rect = target.getBoundingClientRect();
+    offsetX = touch.clientX - rect.left;
+    offsetY = touch.clientY - rect.top;
+    touchClone = target.cloneNode(true);
+    touchClone.className = 'drag-item touch-clone';
+    touchClone.style.width = rect.width + 'px';
+    touchClone.style.left = (touch.clientX - offsetX) + 'px';
+    touchClone.style.top = (touch.clientY - offsetY) + 'px';
+    document.body.appendChild(touchClone);
+    target.classList.add('dragging');
+  }, { passive: false });
+  document.addEventListener('touchmove', function(e) {
+    if (!touchClone || !activeDragId) return;
+    e.preventDefault();
+    var touch = e.touches[0];
+    touchClone.style.left = (touch.clientX - offsetX) + 'px';
+    touchClone.style.top = (touch.clientY - offsetY) + 'px';
+  }, { passive: false });
+  document.addEventListener('touchend', function(e) {
+    if (!touchClone || !activeDragId) return;
+    var touch = e.changedTouches[0];
+    var x = touch.clientX;
+    var y = touch.clientY;
+    touchClone.remove();
+    touchClone = null;
+    var shelfCard = shelfEl.querySelector('[data-item-id="' + activeDragId + '"]');
+    if (shelfCard) { shelfCard.classList.remove('dragging'); }
+    var dropId = activeDragId;
+    activeDragId = null;
+    onDropCallback(dropId, x, y);
+  });
+}
+
+// ===== DAY 3 SETUP =====
+(function() {
+  var shelfEl = document.getElementById('shelf-zone-d3');
+  var dropZoneEl = document.getElementById('drop-zone-d3');
+  var feedbackEl = document.getElementById('d3-feedback');
+  var scoreEl = document.getElementById('d3-score');
+  var placeholderEl = document.getElementById('d3-placeholder');
+  var TOTAL_CORRECT = 5;
+  DAY3_ITEMS.forEach(function(item) { shelfEl.appendChild(makeDragItem(item)); });
+  function updateScore() {
+    var count = dropZoneEl.querySelectorAll('.bag-chip').length;
+    scoreEl.textContent = 'Items packed: ' + count + ' / ' + TOTAL_CORRECT;
+    placeholderEl.style.display = count > 0 ? 'none' : '';
+    updateAnsweredCount();
   }
-
-  /* ── Answered count ── */
-  function updateCount() {
-    var filled = 0;
-    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
-      if (card.querySelector('.cat-btn.selected')) filled++;
-    });
-    var el = document.getElementById('answeredCount');
-    if (el) el.textContent = String(filled);
+  function handleDrop(itemId) {
+    if (dropZoneEl.querySelector('[data-item-id="' + itemId + '"]')) return;
+    var item = null;
+    for (var i = 0; i < DAY3_ITEMS.length; i++) {
+      if (DAY3_ITEMS[i].id === itemId) { item = DAY3_ITEMS[i]; break; }
+    }
+    if (!item) return;
+    if (item.correct) {
+      var chip = makeChip(item, (function(id) {
+        return function() {
+          var sc = shelfEl.querySelector('[data-item-id="' + id + '"]');
+          if (sc) { sc.style.display = ''; }
+          feedbackEl.textContent = '';
+          updateScore();
+        };
+      }(itemId)));
+      var shelfCard = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
+      if (shelfCard) { shelfCard.style.display = 'none'; }
+      dropZoneEl.appendChild(chip);
+      feedbackEl.textContent = '';
+      updateScore();
+    } else {
+      feedbackEl.textContent = '✗ ' + item.label + " doesn't belong in the supply bag!";
+      var sc = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
+      if (sc) {
+        sc.classList.add('wrong-bounce');
+        setTimeout(function() { sc.classList.remove('wrong-bounce'); }, 600);
+      }
+    }
   }
-
-  /* ── Status toast ── */
-  function showStatus(msg, color) {
-    var el = document.getElementById('save-status');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = color || '#22c55e';
-    el.style.opacity = '1';
-    clearTimeout(el._t);
-    el._t = setTimeout(function () { el.style.opacity = '0'; }, 2500);
-  }
-
-  /* ── Save / Submit ── */
-  function autosave() {
-    var answers = getAnswers();
-    window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
-    showStatus('Progress saved!', '#22c55e');
-  }
-
-  function submitAll() {
-    document.getElementById('confirm-overlay').classList.add('show');
-  }
-
-  function cancelSubmit() {
-    document.getElementById('confirm-overlay').classList.remove('show');
-  }
-
-  function confirmSubmit() {
-    document.getElementById('confirm-overlay').classList.remove('show');
-    var answers = getAnswers();
-    window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
-  }
-
-  /* Expose for inline onclick */
-  window.autosave = autosave;
-  window.submitAll = submitAll;
-  window.cancelSubmit = cancelSubmit;
-  window.confirmSubmit = confirmSubmit;
-
-  updateCount();
+  dropZoneEl.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    dropZoneEl.classList.add('drag-over');
+  });
+  dropZoneEl.addEventListener('dragleave', function(e) {
+    if (!dropZoneEl.contains(e.relatedTarget)) { dropZoneEl.classList.remove('drag-over'); }
+  });
+  dropZoneEl.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZoneEl.classList.remove('drag-over');
+    handleDrop(e.dataTransfer.getData('text/plain'));
+  });
+  setupTouchDrag(shelfEl, function(itemId, x, y) {
+    var el = document.elementFromPoint(x, y);
+    while (el && el !== document.body) {
+      if (el === dropZoneEl) { handleDrop(itemId); return; }
+      el = el.parentElement;
+    }
+  });
 }());
+
+// ===== DAY 4 SETUP =====
+(function() {
+  var shelfEl = document.getElementById('shelf-zone-d4');
+  var feedbackEl = document.getElementById('d4-feedback');
+  var scoreEl = document.getElementById('d4-score');
+  var TOTAL_ITEMS = DAY4_ITEMS.length;
+  DAY4_ITEMS.forEach(function(item) { shelfEl.appendChild(makeDragItem(item)); });
+  function updateScore() {
+    var count = document.querySelectorAll('#zones-grid-d4 .bag-chip').length;
+    scoreEl.textContent = 'Items placed: ' + count + ' / ' + TOTAL_ITEMS;
+    updateAnsweredCount();
+  }
+  function handleDrop(itemId, zoneEl) {
+    if (document.querySelector('#zones-grid-d4 [data-item-id="' + itemId + '"]')) return;
+    var zoneName = zoneEl.dataset.zone;
+    var item = null;
+    for (var i = 0; i < DAY4_ITEMS.length; i++) {
+      if (DAY4_ITEMS[i].id === itemId) { item = DAY4_ITEMS[i]; break; }
+    }
+    if (!item) return;
+    if (item.zone === zoneName) {
+      var chipsEl = document.getElementById('chips-' + zoneName);
+      var chip = makeChip(item, (function(id) {
+        return function() {
+          var sc = shelfEl.querySelector('[data-item-id="' + id + '"]');
+          if (sc) { sc.style.display = ''; }
+          feedbackEl.textContent = '';
+          updateScore();
+        };
+      }(itemId)));
+      var shelfCard = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
+      if (shelfCard) { shelfCard.style.display = 'none'; }
+      chipsEl.appendChild(chip);
+      feedbackEl.textContent = '';
+      updateScore();
+    } else {
+      feedbackEl.textContent = '✗ ' + item.label + " doesn't belong in the " + zoneName + '!';
+      var sc = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
+      if (sc) {
+        sc.classList.add('wrong-bounce');
+        setTimeout(function() { sc.classList.remove('wrong-bounce'); }, 600);
+      }
+    }
+  }
+  document.querySelectorAll('#zones-grid-d4 .zone-card').forEach(function(zoneEl) {
+    zoneEl.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zoneEl.classList.add('drag-over');
+    });
+    zoneEl.addEventListener('dragleave', function(e) {
+      if (!zoneEl.contains(e.relatedTarget)) { zoneEl.classList.remove('drag-over'); }
+    });
+    zoneEl.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zoneEl.classList.remove('drag-over');
+      handleDrop(e.dataTransfer.getData('text/plain'), zoneEl);
+    });
+  });
+  setupTouchDrag(shelfEl, function(itemId, x, y) {
+    var el = document.elementFromPoint(x, y);
+    while (el && el !== document.body) {
+      if (el.classList && el.classList.contains('zone-card') && el.dataset.zone) {
+        handleDrop(itemId, el); return;
+      }
+      el = el.parentElement;
+    }
+  });
+}());
+
+// ===== ANSWERS =====
+function getAnswers() {
+  var answers = { days12: {}, D3: [], D4: { Kitchen: [], Bathroom: [], Bedroom: [] } };
+  document.querySelectorAll('.q-card[data-qref]').forEach(function(card) {
+    var sel = card.querySelector('.cat-btn.selected');
+    answers.days12[card.dataset.qref] = sel ? sel.textContent.trim() : null;
+  });
+  document.querySelectorAll('#drop-zone-d3 .bag-chip').forEach(function(chip) {
+    answers.D3.push(chip.dataset.itemId);
+  });
+  ['Kitchen', 'Bathroom', 'Bedroom'].forEach(function(zone) {
+    document.querySelectorAll('#chips-' + zone + ' .bag-chip').forEach(function(chip) {
+      answers.D4[zone].push(chip.dataset.itemId);
+    });
+  });
+  return answers;
+}
+
+// ===== ANSWERED COUNT =====
+function updateAnsweredCount() {
+  var count = 0;
+  // Days 1–2: count selected category-button questions
+  document.querySelectorAll('.q-card[data-qref]').forEach(function(card) {
+    if (card.querySelector('.cat-btn.selected')) { count++; }
+  });
+  // Day 3: count items packed into the bag
+  count += document.querySelectorAll('#drop-zone-d3 .bag-chip').length;
+  // Day 4: count items placed into room zones
+  count += document.querySelectorAll('.zone-chips .bag-chip').length;
+  document.getElementById('answeredCount').textContent = count;
+}
+
+// ===== SAVE / SUBMIT =====
+function showStatus(msg) {
+  var el = document.getElementById('save-status');
+  el.textContent = msg;
+  setTimeout(function() { el.textContent = ''; }, 3000);
+}
+function autosave() {
+  window.parent.postMessage({ type: 'rc-assignment-autosave', answers: getAnswers() }, '*');
+  showStatus('Progress saved!');
+}
+function submitAll() {
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function cancelSubmit() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+}
+function confirmSubmit() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+  window.parent.postMessage({ type: 'rc-assignment-submit', answers: getAnswers() }, '*');
+}
+
+updateAnsweredCount();
 </script>
 </body>
 </html>
