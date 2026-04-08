@@ -8,7 +8,7 @@
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
-  const { parseGoalValue } = await import('/web/goal-utils.js');
+  const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
 
@@ -788,6 +788,7 @@
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
+  let progressTabQuarterMap = new Map(); // Map<studentCode, quarterKey> - Per-student quarter selection on Progress tab
   let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
 
 
@@ -1382,8 +1383,11 @@
     
     // Render header with tabs
     let tabContent = '';
+    let tabContentEl = null; // For tabs that return DOM elements instead of HTML strings
     if (selectedDetailTab === 'goals') {
       tabContent = await renderStudentGoalsTab(student, studentGoals);
+    } else if (selectedDetailTab === 'progress') {
+      tabContentEl = await renderStudentProgressTab(student, studentGoals);
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
     } else if (selectedDetailTab === 'skills') {
@@ -1449,6 +1453,7 @@
     tabsDiv.className = 'st-tabs';
     tabsDiv.innerHTML = `
       <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
+      <button class="st-tab ${selectedDetailTab === 'progress' ? 'active' : ''}" data-tab="progress">Progress</button>
       <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
       <button class="st-tab ${selectedDetailTab === 'skills' ? 'active' : ''}" data-tab="skills">Skills Summary</button>
       <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
@@ -1458,7 +1463,12 @@
     // Tab content — output of trusted render functions that already use escapeHtml()
     const contentDiv = document.createElement('div');
     contentDiv.className = 'st-tab-content';
-    contentDiv.innerHTML = tabContent;
+    if (tabContentEl) {
+      // Progress tab returns a DOM element (built with DOM API to satisfy CodeQL requirements)
+      contentDiv.appendChild(tabContentEl);
+    } else {
+      contentDiv.innerHTML = tabContent;
+    }
     container.appendChild(contentDiv);
 
     // Wire up observation config show/hide for any inline edit forms rendered
@@ -1476,6 +1486,7 @@
       initSkillsTabButton(contentDiv, student);
     }
   }
+
 
   async function renderStudentGoalsTab(student, studentGoals) {
     // Check for active tokens
@@ -1537,6 +1548,706 @@
       </div>
     `;
   }
+
+  // ============================================================================
+  // PROGRESS TAB — per-student IEP goal data history, stats, sparklines,
+  //                inline editing, add data point, export CSV, samples modal.
+  //
+  // Security: All user-controlled data (goal codes, descriptions, student names,
+  //           values, dates, sources) is set via textContent / setAttribute.
+  //           SVG sparklines use only computed numeric coordinates — safe as innerHTML.
+  // ============================================================================
+
+  /** DOM helper: create an element with optional class names and text content */
+  function stEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text != null) el.textContent = text;
+    return el;
+  }
+
+  /** Helper: today's date as YYYY-MM-DD */
+  function todayISO() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  /** Helper: score color CSS class (mirrors tc-data.js scoreColorClass) */
+  function progressScoreColorClass(score) {
+    if (score == null || isNaN(score)) return '';
+    if (score >= 80) return 'dt-score-green';
+    if (score >= 60) return 'dt-score-amber';
+    return 'dt-score-red';
+  }
+
+  /**
+   * Get progress entries for a goal in a specific quarter (or all if quarter is falsy).
+   * Reads from allProgressEntries (the module-level array loaded in loadData).
+   */
+  function getProgressEntriesForTab(studentCode, goalCode, quarter) {
+    const all = getProgressForGoal(studentCode, goalCode)
+      .slice()
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (!quarter) return all;
+    const range = getQuarterDateRange(quarter);
+    if (!range) return all;
+    return all.filter(p => {
+      const d = new Date(p.date);
+      return d >= range.start && d <= range.end;
+    });
+  }
+
+  /** Calculate rolling average from an array of progress entries */
+  function calcProgressAvg(entries) {
+    const nums = entries.filter(e => e.value != null).map(e => parseFloat(e.value));
+    if (nums.length === 0) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+
+  /**
+   * Build sparkline SVG for the Progress tab.
+   * Uses pure numeric coordinates — safe to assign as innerHTML.
+   * @param {Array} entries - Sorted progress entries with .value
+   * @param {number} idx    - Numeric index for unique gradient ID (not user data)
+   * @returns {HTMLElement|null}
+   */
+  function buildProgressSparklineEl(entries, idx) {
+    const numericEntries = entries.filter(e => e.value != null && !isNaN(parseFloat(e.value)));
+    if (numericEntries.length < 2) return null;
+
+    const width = 200, height = 40, padding = 4;
+    const values = numericEntries.map(e => parseFloat(e.value));
+    const maxV = Math.max(...values, 100);
+    const minV = Math.min(...values, 0);
+    const range = maxV - minV || 1;
+    const stepX = (width - 2 * padding) / (values.length - 1);
+
+    let points = '';
+    let circles = '';
+    values.forEach((val, i) => {
+      const x = padding + i * stepX;
+      const y = height - padding - ((val - minV) / range) * (height - 2 * padding);
+      points += `${x.toFixed(2)},${y.toFixed(2)} `;
+      circles += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2" fill="rgba(34,197,94,0.9)"/>`;
+    });
+
+    const firstX = padding;
+    const lastX = padding + (values.length - 1) * stepX;
+    const bottomY = height - padding;
+    const polyPts = points.trim() + ` ${lastX.toFixed(2)},${bottomY} ${firstX},${bottomY}`;
+    // Gradient ID uses only a numeric index — not user-controlled
+    const gId = `stPrgSpkGrad${idx}`;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'dt-sparkline';
+    // SVG content uses only numeric computed values — no user data interpolated
+    wrapper.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="${gId}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:rgba(34,197,94,0.2);stop-opacity:1"/><stop offset="100%" style="stop-color:rgba(34,197,94,0.02);stop-opacity:1"/></linearGradient></defs><polygon points="${polyPts}" fill="url(#${gId})"/><polyline points="${points.trim()}" fill="none" stroke="rgba(34,197,94,0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${circles}</svg>`;
+    return wrapper;
+  }
+
+  /**
+   * Build the stats row for a goal on the Progress tab.
+   * All user-controlled values set via textContent — never interpolated into HTML.
+   */
+  function buildProgressStatsEl(goal, entries) {
+    const avg = calcProgressAvg(entries);
+    const baseline = goal.baseline != null ? String(goal.baseline) : 'N/A';
+    const mastery = goal.mastery != null ? String(goal.mastery) : (goal.target != null ? String(goal.target) : 'N/A');
+    const target = goal.target != null ? String(goal.target) : 'N/A';
+    const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
+    const baselineNum = parseGoalValue(goal.baseline) ?? 0;
+    const delta = current != null ? current - baselineNum : null;
+
+    let trend = '→';
+    if (entries.length >= 2) {
+      const half = Math.floor(entries.length / 2);
+      const firstHalf = entries.slice(0, half);
+      const secondHalf = entries.slice(half);
+      const fAvg = firstHalf.reduce((s, e) => s + parseFloat(e.value || 0), 0) / firstHalf.length;
+      const sAvg = secondHalf.reduce((s, e) => s + parseFloat(e.value || 0), 0) / secondHalf.length;
+      if (sAvg > fAvg + 5) trend = '↗';
+      else if (sAvg < fAvg - 5) trend = '↘';
+    }
+
+    const statsDiv = stEl('div', 'dt-stats');
+
+    const makeStatSpan = (label, value, colorClass) => {
+      const span = document.createElement('span');
+      const labelText = document.createTextNode(label + ': ');
+      const strong = document.createElement('strong');
+      if (colorClass) strong.className = colorClass;
+      strong.textContent = value;
+      span.appendChild(labelText);
+      span.appendChild(strong);
+      return span;
+    };
+
+    if (goal.measurement_type === 'Observation') {
+      // Simplified observation stats
+      const currentDisplay = entries.length > 0 ? formatObservationValue(entries[entries.length - 1], goal) : 'N/A';
+      const avgDisplay = avg != null ? `${avg.toFixed(0)}%` : 'N/A';
+      const avgClass = progressScoreColorClass(avg);
+      statsDiv.appendChild(makeStatSpan('Baseline', baseline, ''));
+      statsDiv.appendChild(makeStatSpan('Mastery', mastery, ''));
+      statsDiv.appendChild(makeStatSpan('Target', target, ''));
+      statsDiv.appendChild(makeStatSpan('Current', currentDisplay, ''));
+      statsDiv.appendChild(makeStatSpan('Avg', avgDisplay, avgClass));
+      statsDiv.appendChild(makeStatSpan('Trend', trend, ''));
+    } else {
+      const avgClass = progressScoreColorClass(avg);
+      const currentClass = progressScoreColorClass(current);
+      const currentDisplay = current != null ? formatGoalValue(current, goal.measurement_type, goal) : 'N/A';
+      const avgDisplay = avg != null ? formatGoalValue(avg, goal.measurement_type, goal) : 'N/A';
+      const deltaDisplay = delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(1) : 'N/A';
+      statsDiv.appendChild(makeStatSpan('Baseline', baseline, ''));
+      statsDiv.appendChild(makeStatSpan('Mastery', mastery, ''));
+      statsDiv.appendChild(makeStatSpan('Target', target, ''));
+      statsDiv.appendChild(makeStatSpan('Current', currentDisplay, currentClass));
+      statsDiv.appendChild(makeStatSpan('Rolling Avg', avgDisplay, avgClass));
+      statsDiv.appendChild(makeStatSpan('Delta', deltaDisplay, ''));
+      statsDiv.appendChild(makeStatSpan('Trend', trend, ''));
+    }
+
+    return statsDiv;
+  }
+
+  /**
+   * Build the data-points table for a goal on the Progress tab.
+   * All user-controlled cell content set via textContent.
+   * @returns {HTMLElement}
+   */
+  function buildProgressDataTableEl(goal, entries, studentCode) {
+    if (entries.length === 0) {
+      const empty = stEl('div', null, goal.measurement_type === 'Observation'
+        ? 'No observation data recorded yet.'
+        : 'No data points recorded for this quarter.');
+      empty.style.cssText = 'padding:10px;font-size:13px;color:#6b7280;';
+      return empty;
+    }
+
+    const isObs = goal.measurement_type === 'Observation';
+    const grid = stEl('div', 'dt-data-grid');
+    const table = stEl('table', 'dt-data-table');
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['Date', 'Value', 'Source'].forEach(h => {
+      const th = stEl('th', null, h);
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    entries.forEach(entry => {
+      const tr = document.createElement('tr');
+
+      // Date cell
+      const tdDate = stEl('td', null, new Date(entry.date + 'T00:00:00').toLocaleDateString());
+      tr.appendChild(tdDate);
+
+      // Value cell (editable for non-observation goals)
+      const scoreClass = isObs ? '' : progressScoreColorClass(parseFloat(entry.value));
+      const displayValue = isObs
+        ? formatObservationValue(entry, goal)
+        : formatGoalValue(parseFloat(entry.value), goal.measurement_type, goal);
+      const tdVal = stEl('td', `dt-data-value${isObs ? '' : ` ${scoreClass} editable`}`);
+      tdVal.textContent = displayValue;
+      if (!isObs) {
+        tdVal.dataset.entryId = entry.id;
+        tdVal.dataset.goal = goal.code;
+        tdVal.dataset.student = studentCode;
+        tdVal.dataset.value = entry.value;
+      }
+      tr.appendChild(tdVal);
+
+      // Source cell
+      const tdSrc = stEl('td', null, entry.source || 'manual');
+      tr.appendChild(tdSrc);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    grid.appendChild(table);
+    return grid;
+  }
+
+  /**
+   * Build the inline "Add Data Point" form element for the Progress tab.
+   * Returns a hidden form div; caller makes it visible and wires event handlers.
+   */
+  function buildProgressInlineFormEl(goal, studentCode) {
+    const form = stEl('div', 'dt-inline-form');
+    form.style.display = 'none';
+    form.dataset.goal = goal.code;
+    form.dataset.student = studentCode;
+
+    const dateLabel = stEl('label', null, 'Date:');
+    dateLabel.style.cssText = 'font-size:13px;opacity:0.9;';
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'dt-date-input';
+    dateInput.value = todayISO();
+
+    const valLabel = stEl('label', null, 'Value:');
+    valLabel.style.cssText = 'font-size:13px;opacity:0.9;';
+    const valInput = document.createElement('input');
+    valInput.type = 'number';
+    valInput.className = 'dt-value-input';
+    valInput.min = '0';
+    valInput.max = '100';
+    valInput.step = '1';
+    valInput.placeholder = '0–100';
+
+    const saveBtn = stEl('button', 'dt-btn primary dt-save-btn', 'Save');
+    const cancelBtn = stEl('button', 'dt-btn dt-cancel-btn', 'Cancel');
+
+    form.appendChild(dateLabel);
+    form.appendChild(dateInput);
+    form.appendChild(valLabel);
+    form.appendChild(valInput);
+    form.appendChild(saveBtn);
+    form.appendChild(cancelBtn);
+    return form;
+  }
+
+  /**
+   * Build a complete goal row element for the Progress tab.
+   * ALL user-controlled data goes through textContent/setAttribute — no innerHTML with user data.
+   * @param {Object} goal
+   * @param {Array}  entries   Filtered progress entries for this goal/quarter
+   * @param {string} studentCode
+   * @param {number} idx       Numeric index for sparkline gradient IDs
+   * @returns {HTMLElement}
+   */
+  function buildProgressGoalRowEl(goal, entries, studentCode, idx) {
+    const row = stEl('div', 'dt-goal-row');
+    row.dataset.goal = goal.code;
+    row.dataset.student = studentCode;
+
+    // Header: goal code — description | Samples button
+    const header = stEl('div', 'dt-goal-header');
+
+    const titleDiv = document.createElement('div');
+    const codeStrong = stEl('strong');
+    codeStrong.textContent = goal.code;
+    titleDiv.appendChild(codeStrong);
+    titleDiv.appendChild(document.createTextNode(' — '));
+    titleDiv.appendChild(document.createTextNode(goal.desc || 'No description'));
+    header.appendChild(titleDiv);
+
+    const samplesBtn = stEl('button', 'dt-btn');
+    samplesBtn.textContent = '📎 Samples';
+    samplesBtn.dataset.action = 'open-samples';
+    samplesBtn.dataset.goal = goal.code;
+    samplesBtn.dataset.student = studentCode;
+    header.appendChild(samplesBtn);
+
+    row.appendChild(header);
+
+    // Meta badges: area, measurement type
+    const meta = stEl('div', 'dt-goal-meta');
+
+    const areaSpan = document.createElement('span');
+    areaSpan.appendChild(document.createTextNode('Area: '));
+    const areaStrong = stEl('strong');
+    areaStrong.textContent = goal.goal_area || 'Uncategorized';
+    areaSpan.appendChild(areaStrong);
+    meta.appendChild(areaSpan);
+
+    if (goal.measurement_type === 'Observation' && goal.observation_config?.category) {
+      const catLabels = {
+        session_outcome: 'Session Outcome',
+        tally: 'Tally',
+        prompt_count: 'Prompt Count',
+        behavior_checklist: 'Behavior Checklist',
+      };
+      const badge = stEl('span', 'dt-badge dt-badge-obs');
+      badge.textContent = catLabels[goal.observation_config.category] || 'Observation';
+      meta.appendChild(badge);
+    } else if (goal.measurement_type) {
+      const typeBadge = stEl('span', 'dt-badge');
+      typeBadge.textContent = goal.measurement_type;
+      meta.appendChild(typeBadge);
+    }
+
+    row.appendChild(meta);
+
+    // Stats row
+    row.appendChild(buildProgressStatsEl(goal, entries));
+
+    // Sparkline (numeric SVG — safe)
+    if (goal.measurement_type !== 'Observation') {
+      const sparkEl = buildProgressSparklineEl(entries, idx);
+      if (sparkEl) row.appendChild(sparkEl);
+    }
+
+    // Data table
+    row.appendChild(buildProgressDataTableEl(goal, entries, studentCode));
+
+    // Add Data Point button
+    const addBtn = stEl('button', 'dt-btn primary');
+    addBtn.textContent = '+ Add Data Point';
+    addBtn.dataset.action = 'show-add-form';
+    addBtn.dataset.goal = goal.code;
+    addBtn.dataset.student = studentCode;
+    row.appendChild(addBtn);
+
+    // Inline add form
+    const form = buildProgressInlineFormEl(goal, studentCode);
+    row.appendChild(form);
+
+    return row;
+  }
+
+  /**
+   * Reload progress entries from the DB without reloading everything else.
+   * Used after adding/editing data points on the Progress tab.
+   */
+  async function reloadProgressEntries() {
+    try {
+      allProgressEntries = await loadProgressEntries(allGoals, allStudents);
+      buildProgressLookupMap();
+    } catch (err) {
+      console.warn('[tc-students] reloadProgressEntries failed:', err);
+    }
+  }
+
+  /**
+   * Export a single student's progress data as CSV.
+   * Builds the CSV from allProgressEntries filtered to this student's goals.
+   */
+  function exportStudentProgressCsv(student, studentGoals, quarter) {
+    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Baseline', 'Mastery', 'Target', 'Date', 'Value', 'Source', 'Quarter']];
+    studentGoals.forEach(goal => {
+      const entries = getProgressEntriesForTab(student.code, goal.code, quarter);
+      const baseline = goal.baseline != null ? String(goal.baseline) : '';
+      const mastery = goal.mastery != null ? String(goal.mastery) : (goal.target != null ? String(goal.target) : '');
+      const target = goal.target != null ? String(goal.target) : '';
+      if (entries.length === 0) {
+        rows.push([student.name || student.code, student.code, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, '', '', '', quarter || 'All']);
+      } else {
+        entries.forEach(entry => {
+          rows.push([student.name || student.code, student.code, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, entry.date, entry.value != null ? String(entry.value) : '', entry.source || 'manual', quarter || 'All']);
+        });
+      }
+    });
+    const csvContent = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `progress_${student.code}_${quarter || 'all'}_${todayISO()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Open the Work Samples modal for a goal on the Progress tab.
+   * Modal body is built entirely using DOM API — no innerHTML with user data.
+   */
+  async function openProgressSamplesModal(goalCode, studentCode) {
+    const goal = allGoals.find(g => g.code === goalCode && g.student_code === studentCode);
+    const student = allStudents.find(s => s.code === studentCode);
+    if (!goal || !student) {
+      await rcAlert('Error', 'Goal or student not found');
+      return;
+    }
+
+    // Fetch submissions and assignments for work samples
+    let submissionsData = [];
+    let assignmentsData = [];
+    let mappingsData = [];
+    try {
+      [submissionsData, assignmentsData, mappingsData] = await Promise.all([
+        db.listSubmissions ? db.listSubmissions({ studentCode }) : Promise.resolve([]),
+        db.listAssignments ? db.listAssignments() : Promise.resolve([]),
+        db.listAssignmentGoalMappings ? db.listAssignmentGoalMappings({ studentCode }) : Promise.resolve([]),
+      ]);
+    } catch (_e) {
+      // Work samples are optional; silently continue with empty arrays
+    }
+
+    const mappedIds = (mappingsData || [])
+      .filter(m => m.goal_code === goalCode && m.student_code === studentCode)
+      .map(m => m.assignment_id);
+    const relevantSubs = (submissionsData || []).filter(sub =>
+      sub.student_code === studentCode && mappedIds.includes(sub.assignment_id)
+    );
+
+    // Build modal using DOM API — all user strings go through textContent
+    const body = document.createElement('div');
+
+    const titleEl = stEl('h3');
+    titleEl.style.marginTop = '0';
+    // Goal code and desc via textContent
+    titleEl.textContent = goal.code + ' — ' + (goal.desc || '');
+    body.appendChild(titleEl);
+
+    const mkPara = (label, value) => {
+      const p = document.createElement('p');
+      const strong = stEl('strong', null, label + ': ');
+      p.appendChild(strong);
+      p.appendChild(document.createTextNode(value));
+      return p;
+    };
+
+    body.appendChild(mkPara('Student', (student.name || student.code) + ' (' + student.code + ')'));
+    body.appendChild(mkPara('Goal Area', goal.goal_area || 'Uncategorized'));
+    body.appendChild(mkPara('Baseline', goal.baseline != null ? String(goal.baseline) : 'N/A'));
+    body.appendChild(mkPara('Target', goal.target != null ? String(goal.target) : 'N/A'));
+
+    // Work samples section header
+    const samplesH4 = stEl('h4', null, 'Work Samples');
+    samplesH4.style.marginTop = '20px';
+    body.appendChild(samplesH4);
+
+    if (relevantSubs.length === 0) {
+      const noSamples = stEl('div', 'dt-sample-item');
+      noSamples.appendChild(stEl('p', null, 'No work samples found for this goal'));
+      const hint = stEl('p');
+      hint.style.cssText = 'font-size:13px;opacity:0.7;';
+      hint.textContent = 'Work samples appear here when assignments are mapped to this IEP goal and the student submits them.';
+      noSamples.appendChild(hint);
+      body.appendChild(noSamples);
+    } else {
+      relevantSubs.forEach(sub => {
+        const assignment = (assignmentsData || []).find(a => a.id === sub.assignment_id);
+        const item = stEl('div', 'dt-sample-item');
+
+        const topRow = document.createElement('div');
+        topRow.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:8px;';
+        const titleStrong = stEl('strong');
+        titleStrong.textContent = assignment ? (assignment.title || 'Untitled') : `Assignment ${sub.assignment_id}`;
+        const dateSpan = document.createElement('span');
+        dateSpan.style.opacity = '0.8';
+        dateSpan.textContent = sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'N/A';
+        topRow.appendChild(titleStrong);
+        topRow.appendChild(dateSpan);
+        item.appendChild(topRow);
+
+        const scoreDiv = document.createElement('div');
+        scoreDiv.style.cssText = 'font-size:13px;opacity:0.85;margin-bottom:4px;';
+        const scoreLabel = stEl('strong', null, 'Score: ');
+        const scoreText = document.createTextNode(sub.score_total != null ? sub.score_total + '%' : 'Not graded');
+        scoreDiv.appendChild(scoreLabel);
+        scoreDiv.appendChild(scoreText);
+        item.appendChild(scoreDiv);
+
+        const idDiv = document.createElement('div');
+        idDiv.style.cssText = 'font-size:13px;opacity:0.7;';
+        const idEm = document.createElement('em');
+        idEm.textContent = 'Submission ID: ' + (sub.submission_id || sub.id || '');
+        idDiv.appendChild(idEm);
+        item.appendChild(idDiv);
+
+        body.appendChild(item);
+      });
+    }
+
+    // Create and show modal
+    const modal = createModal('Work Samples', '');
+    // Replace the empty modal body content with our DOM-built content
+    const modalBodyEl = modal.querySelector('.st-modal-body');
+    if (modalBodyEl) {
+      modalBodyEl.innerHTML = '';
+      modalBodyEl.appendChild(body);
+    }
+    document.body.appendChild(modal);
+  }
+
+  /**
+   * Render the Progress tab for a student.
+   * Returns a DOM element — NOT an HTML string — so no innerHTML with user data occurs.
+   */
+  async function renderStudentProgressTab(student, studentGoals) {
+    const activeGoals = studentGoals.filter(g => g.status !== 'archived');
+    const quarter = progressTabQuarterMap.get(student.code) || getCurrentQuarter();
+
+    const wrapper = document.createElement('div');
+    wrapper.dataset.progressStudent = student.code;
+
+    // ── Actions row ─────────────────────────────────────────────────────────
+    const actionsBar = stEl('div', 'dt-progress-actions');
+
+    const exportBtn = stEl('button', 'dt-btn');
+    exportBtn.textContent = '⬇ Export CSV';
+    exportBtn.addEventListener('click', () => {
+      exportStudentProgressCsv(student, activeGoals, quarter);
+    });
+    actionsBar.appendChild(exportBtn);
+
+    const bulkBtn = stEl('button', 'dt-btn');
+    bulkBtn.textContent = '+ Bulk Add Progress';
+    bulkBtn.addEventListener('click', async () => {
+      await rcAlert('Coming Soon', 'Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple goals at once.');
+    });
+    actionsBar.appendChild(bulkBtn);
+
+    wrapper.appendChild(actionsBar);
+
+    // ── Quarter picker ───────────────────────────────────────────────────────
+    const qBar = stEl('div', 'dt-quarter-bar');
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
+      const btn = stEl('button', `dt-q-btn${q === quarter ? ' active' : ''}`);
+      btn.textContent = q;
+      btn.addEventListener('click', async () => {
+        progressTabQuarterMap.set(student.code, q);
+        // Re-render only the progress tab content
+        selectedDetailTabMap.set(student.code, 'progress');
+        await renderExpandedDetail(student.code);
+      });
+      qBar.appendChild(btn);
+    });
+    wrapper.appendChild(qBar);
+
+    // ── Goal rows ────────────────────────────────────────────────────────────
+    if (activeGoals.length === 0) {
+      const empty = stEl('div', null, 'No active IEP goals found for this student.');
+      empty.style.cssText = 'padding:20px;opacity:0.7;';
+      wrapper.appendChild(empty);
+      return wrapper;
+    }
+
+    activeGoals.forEach((goal, idx) => {
+      const entries = getProgressEntriesForTab(student.code, goal.code, quarter);
+      const rowEl = buildProgressGoalRowEl(goal, entries, student.code, idx);
+      wrapper.appendChild(rowEl);
+    });
+
+    // ── Wire event handlers ──────────────────────────────────────────────────
+
+    // Samples buttons
+    wrapper.querySelectorAll('[data-action="open-samples"]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openProgressSamplesModal(btn.dataset.goal, btn.dataset.student);
+      });
+    });
+
+    // "Add Data Point" buttons — show inline form
+    wrapper.querySelectorAll('[data-action="show-add-form"]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const goalCode = btn.dataset.goal;
+        const studentCode = btn.dataset.student;
+        const goalRow = wrapper.querySelector(`.dt-goal-row[data-goal="${CSS.escape(goalCode)}"][data-student="${CSS.escape(studentCode)}"]`);
+        if (!goalRow) return;
+        const form = goalRow.querySelector('.dt-inline-form');
+        if (!form) return;
+        form.querySelector('.dt-date-input').value = todayISO();
+        form.querySelector('.dt-value-input').value = '';
+        form.style.display = 'flex';
+        setTimeout(() => form.querySelector('.dt-value-input').focus(), 100);
+      });
+    });
+
+    // Inline form save / cancel
+    wrapper.querySelectorAll('.dt-inline-form').forEach(form => {
+      const goalCode = form.dataset.goal;
+      const studentCode = form.dataset.student;
+      const saveBtn = form.querySelector('.dt-save-btn');
+      const cancelBtn = form.querySelector('.dt-cancel-btn');
+      const dateInput = form.querySelector('.dt-date-input');
+      const valueInput = form.querySelector('.dt-value-input');
+
+      const doSave = async () => {
+        if (!dateInput.value) { await rcAlert('Validation', 'Please select a date for this data point'); return; }
+        const numValue = parseFloat(valueInput.value);
+        if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+          await rcAlert('Validation', 'Please enter a numeric value between 0 and 100');
+          return;
+        }
+        try {
+          await db.upsertGoalProgress({ goal_code: goalCode, student_code: studentCode, date: dateInput.value, value: numValue, source: 'manual' });
+          await reloadProgressEntries();
+          selectedDetailTabMap.set(studentCode, 'progress');
+          await renderExpandedDetail(studentCode);
+        } catch (err) {
+          await rcAlert('Error', 'Failed to add data point: ' + err.message);
+        }
+      };
+
+      saveBtn.addEventListener('click', e => { e.stopPropagation(); doSave(); });
+      cancelBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        form.style.display = 'none';
+        if (valueInput) valueInput.value = '';
+      });
+      valueInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+        else if (e.key === 'Escape') { e.preventDefault(); form.style.display = 'none'; }
+      });
+    });
+
+    // Inline cell editing (non-observation goals only)
+    wrapper.querySelectorAll('.dt-data-value.editable').forEach(cell => {
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
+        if (document.querySelector('.dt-data-value.editing')) return;
+
+        const currentValue = parseFloat(cell.dataset.value);
+        const entryId = cell.dataset.entryId;
+        const goalCode = cell.dataset.goal;
+        const studentCode = cell.dataset.student;
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.max = '100';
+        input.step = '1';
+        input.value = isNaN(currentValue) ? '' : currentValue;
+
+        const originalContent = cell.textContent;
+        cell.textContent = '';
+        cell.appendChild(input);
+        cell.classList.add('editing');
+        input.focus();
+        input.select();
+
+        const doCancel = () => {
+          cell.classList.remove('editing');
+          cell.textContent = originalContent;
+        };
+
+        const doSave = async () => {
+          const newValue = parseFloat(input.value);
+          if (isNaN(newValue) || newValue < 0 || newValue > 100) {
+            await rcAlert('Validation', 'Please enter a numeric value between 0 and 100');
+            input.focus();
+            return;
+          }
+          if (newValue === currentValue) { doCancel(); return; }
+
+          cell.classList.add('saving');
+          input.disabled = true;
+          try {
+            const entry = allProgressEntries.find(p => p.id === entryId);
+            if (!entry) throw new Error('Entry not found');
+            await db.upsertGoalProgress({ goal_code: goalCode, student_code: studentCode, date: entry.date, value: newValue, source: entry.source || 'manual' });
+            await reloadProgressEntries();
+            selectedDetailTabMap.set(studentCode, 'progress');
+            await renderExpandedDetail(studentCode);
+          } catch (err) {
+            await rcAlert('Error', 'Failed to update data point: ' + err.message);
+            cell.classList.remove('saving', 'editing');
+            cell.textContent = originalContent;
+            input.disabled = false;
+          }
+        };
+
+        input.addEventListener('blur', doSave);
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+          else if (e.key === 'Escape') { e.preventDefault(); doCancel(); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); input.value = Math.min(100, parseFloat(input.value || 0) + (e.shiftKey ? 5 : 1)); }
+          else if (e.key === 'ArrowDown') { e.preventDefault(); input.value = Math.max(0, parseFloat(input.value || 0) - (e.shiftKey ? 5 : 1)); }
+        });
+      });
+    });
+
+    return wrapper;
+  }
+
+  // ── END PROGRESS TAB ──────────────────────────────────────────────────────
 
   function renderClassFilterOptions() {
     const selectEl = document.getElementById('stClassFilter');
@@ -2506,72 +3217,17 @@
           return;
         }
 
-        // Progress detail toggle
+        // Progress detail toggle — now switches to Progress tab
         const progressToggleBtn = e.target.closest('.tc-progress-toggle-btn');
         if (progressToggleBtn) {
-          const targetId = progressToggleBtn.dataset.progressId;
-          const panel = document.getElementById(targetId);
-          if (panel) {
-            // Use aria-expanded as source of truth for consistent toggle state
-            const wasExpanded = progressToggleBtn.getAttribute('aria-expanded') === 'true';
-            const nowExpanded = !wasExpanded;
-            panel.hidden = !nowExpanded;
-            panel.setAttribute('aria-hidden', String(!nowExpanded));
-            progressToggleBtn.setAttribute('aria-expanded', String(nowExpanded));
-            // Update button label with SVG icon — use innerHTML since we need SVG markup
-            progressToggleBtn.innerHTML = nowExpanded
-              ? `${SVG_HIDE_DATA}Hide Data`
-              : `${SVG_VIEW_DATA}View Data`;
-
-            // Lazily inject the dot-grid chart when panel is first expanded
-            if (nowExpanded && !panel.dataset.dpLoaded) {
-              const goalId = progressToggleBtn.dataset.goalId;
-              const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
-              if (!goal) {
-                console.warn('[tc-students] dot-grid: goal not found in allGoals for id:', goalId, '— allGoals.length:', allGoals.length);
-              } else {
-                // Prefer goal.student_id (direct FK on the goals row) for reliability;
-                // fall back to looking up by student_code in allStudents.
-                const studentId = goal.student_id || allStudents.find(s => s.code === goal.student_code)?.id;
-                if (!studentId) {
-                  console.warn('[tc-students] dot-grid: could not resolve student_id for goal', goal.id, '(student_code:', goal.student_code, ')');
-                } else {
-                  try {
-                    const dataPoints = await db.listGoalDataPoints({ studentId, goalId: goal.id });
-                    console.log(`[tc-students] dot-grid: loaded ${(dataPoints || []).length} data point(s) for goal ${goal.id}`, { studentId, goalId: goal.id, studentCode: goal.student_code });
-                    const { html: dotHtml, hasData } = buildTcDotGridChart(dataPoints, goal.id);
-                    console.log(`[tc-students] dot-grid: hasData=${hasData}, ${(dataPoints || []).length} point(s), firstElementChild=${panel.firstElementChild?.tagName ?? 'null'}`);
-                    if (hasData) {
-                      const dotWrapper = document.createElement('div');
-                      dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
-                      dotWrapper.innerHTML = dotHtml;
-                      panel.prepend(dotWrapper);
-                    }
-
-                    // Update the status count with per-question data points (where available)
-                    if (dataPoints && dataPoints.length > 0) {
-                      try {
-                        const qRange = getQuarterDateRange(getCurrentQuarter());
-                        const dpThisQ = qRange
-                          ? dataPoints.filter(dp => { const d = new Date(dp.date); return d >= qRange.start && d <= qRange.end; })
-                          : dataPoints;
-                        if (dpThisQ.length > 0) {
-                          const statusEl = document.getElementById(`tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`);
-                          if (statusEl) {
-                            const n = dpThisQ.length;
-                            statusEl.textContent = `${n} data ${n === 1 ? 'point' : 'points'} this quarter`;
-                          }
-                        }
-                      } catch (_qe) { /* leave existing text unchanged */ }
-                    }
-                    // Mark as loaded only on success so a network failure allows retry
-                    panel.dataset.dpLoaded = '1';
-                  } catch (dpErr) {
-                    console.warn('[tc-students] Could not load goal data points:', dpErr);
-                  }
-                }
-              }
-            }
+          const goalId = progressToggleBtn.dataset.goalId;
+          const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
+          const expandedDetail = progressToggleBtn.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '') || goal?.student_code;
+          if (studentCode) {
+            // Switch to the Progress tab for this student
+            selectedDetailTabMap.set(studentCode, 'progress');
+            await renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;

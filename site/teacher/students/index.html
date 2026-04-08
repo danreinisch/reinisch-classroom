@@ -1267,6 +1267,141 @@
         background: rgba(255,255,255,0.08);
         color: rgba(255,255,255,0.55);
       }
+
+      /* ── Progress Tab (dt- classes shared with Data page) ───────────────── */
+      .dt-goal-row {
+        border: 1px solid var(--rc-glass-border);
+        border-radius: var(--rc-radius-sm);
+        padding: 12px;
+        margin-bottom: 12px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .dt-goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .dt-goal-meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 13px;
+        opacity: 0.85;
+        margin-bottom: 10px;
+      }
+      .dt-data-grid {
+        overflow-x: auto;
+        border-radius: var(--rc-radius-sm);
+        border: 1px solid var(--rc-glass-border);
+        margin-bottom: 10px;
+      }
+      .dt-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .dt-data-table th,
+      .dt-data-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--rc-glass-border);
+        border-right: 1px solid rgba(255,255,255,0.04);
+        text-align: center;
+        white-space: nowrap;
+      }
+      .dt-data-table th {
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        opacity: 0.9;
+        background: rgba(0,0,0,0.3);
+      }
+      .dt-data-value { font-variant-numeric: tabular-nums; }
+      .dt-data-value.editable { cursor: pointer; transition: background 0.15s ease; }
+      .dt-data-value.editable:hover { background: var(--rc-glass-hover); }
+      .dt-data-value.editing input {
+        width: 60px; padding: 4px 6px;
+        border: 1px solid rgba(34,197,94,0.5); border-radius: 6px;
+        background: rgba(0,0,0,0.4); color: inherit;
+        font-size: 13px; text-align: center; font-variant-numeric: tabular-nums;
+      }
+      .dt-data-value.saving { opacity: 0.5; pointer-events: none; }
+      .dt-score-green { color: var(--rc-success); }
+      .dt-score-amber { color: var(--rc-warning); }
+      .dt-score-red   { color: var(--rc-danger); }
+      .dt-stats {
+        display: flex; gap: 16px; flex-wrap: wrap;
+        font-size: 13px; opacity: 0.85; margin-bottom: 10px;
+      }
+      .dt-sample-item {
+        border: 1px solid var(--rc-glass-border);
+        border-radius: var(--rc-radius-sm);
+        padding: 12px; margin-bottom: 10px;
+        background: rgba(255,255,255,0.02);
+      }
+      .dt-inline-form {
+        display: flex; gap: 8px; align-items: center;
+        margin-top: 8px; padding: 8px;
+        border: 1px solid var(--rc-glass-border);
+        border-radius: var(--rc-radius-sm);
+        background: rgba(0,0,0,0.2);
+        flex-wrap: wrap;
+      }
+      .dt-inline-form input {
+        padding: 6px 10px;
+        border: 1px solid var(--rc-border-strong);
+        border-radius: var(--rc-radius-sm);
+        background: rgba(0,0,0,0.3); color: inherit;
+        font-size: 13px; outline: none;
+        transition: border-color 0.2s ease;
+      }
+      .dt-inline-form input:focus { border-color: var(--rc-brand); }
+      .dt-inline-form input[type="date"] { min-width: 140px; }
+      .dt-inline-form input[type="number"] { width: 70px; text-align: center; }
+      .dt-sparkline { margin: 8px 0; opacity: 0.9; }
+      .dt-sparkline svg { display: block; }
+      .dt-btn {
+        padding: 8px 14px; border-radius: var(--rc-radius-sm);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(255,255,255,0.06); color: inherit;
+        cursor: pointer; font-size: 13px; font-weight: 500;
+        transition: background 0.2s ease;
+      }
+      .dt-btn:hover { background: var(--rc-glass-hover); }
+      .dt-btn.primary { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); }
+      .dt-btn.primary:hover { background: rgba(34,197,94,0.25); }
+      .dt-badge {
+        display: inline-block; padding: 2px 8px;
+        border-radius: 12px; font-size: 11px; font-weight: 600;
+        background: rgba(255,255,255,0.08);
+      }
+      .dt-badge-obs {
+        background: rgba(99,102,241,0.15);
+        color: #818cf8;
+        border: 1px solid rgba(99,102,241,0.25);
+      }
+      .dt-progress-actions {
+        display: flex; gap: 10px; flex-wrap: wrap;
+        margin-bottom: 16px; align-items: center;
+      }
+      .dt-quarter-bar {
+        display: flex; gap: 6px; flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .dt-q-btn {
+        padding: 4px 12px; border-radius: var(--rc-radius-sm);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(255,255,255,0.04); color: inherit;
+        cursor: pointer; font-size: 12px; font-weight: 500;
+        transition: background 0.15s;
+      }
+      .dt-q-btn.active {
+        background: rgba(34,197,94,0.15);
+        border-color: rgba(34,197,94,0.4);
+        color: var(--rc-brand, #22c55e);
+      }
+      .obs-chart-container { margin: 6px 0; max-width: 100%; }
     </style>
   </head>
   <body>
