@@ -265,7 +265,8 @@
         },
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
-          presentationsSearch: filters.reserve.presentationsSearch
+          presentationsSearch: filters.reserve.presentationsSearch,
+          viewMode: filters.reserve.viewMode
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -342,6 +343,9 @@
         if (typeof data.reserve.presentationsSearch === 'string') {
           filters.reserve.presentationsSearch = data.reserve.presentationsSearch;
         }
+        if (typeof data.reserve.viewMode === 'string') {
+          filters.reserve.viewMode = data.reserve.viewMode;
+        }
       }
 
       if (Array.isArray(data.collapsedLanes)) {
@@ -372,6 +376,8 @@
   let submissionsData = [];
   let classEnrollmentsData = [];
   let lessonsData = null;
+  let unitMap = new Map(); // unit_id → { unitName, sectionName, sectionId }
+  const getUnitInfo = (unitId) => unitMap.get(unitId) || null;
   let syncStatus = "loading";
 
   // Recall Library state
@@ -406,7 +412,8 @@
     },
     reserve: {
       presentationsExpanded: false,
-      presentationsSearch: ""
+      presentationsSearch: "",
+      viewMode: "flat"
     }
   };
 
@@ -693,6 +700,16 @@
     } catch (err) {
       console.error("[tc-library] Error loading lessons:", err);
       lessonsData = null;
+    }
+    // Build unit lookup map: unit_id → { unitName, sectionName, sectionId }
+    unitMap.clear();
+    if (lessonsData && Array.isArray(lessonsData.sections)) {
+      lessonsData.sections.forEach(section => {
+        const sectionId = section.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+        (section.units || []).forEach(unit => {
+          unitMap.set(unit.id, { unitName: unit.name, sectionName: section.name, sectionId });
+        });
+      });
     }
   }
 
@@ -1710,6 +1727,8 @@
     if (bulkDeleteBtn) bulkDeleteBtn.style.display = count > 0 ? '' : 'none';
     const bulkArchiveBtn = document.getElementById('upcomingBulkArchiveBtn');
     if (bulkArchiveBtn) bulkArchiveBtn.style.display = count > 0 ? '' : 'none';
+    const bulkSetUnitBtn = document.getElementById('upcomingBulkSetUnitBtn');
+    if (bulkSetUnitBtn) bulkSetUnitBtn.style.display = count > 0 ? '' : 'none';
   }
 
   /**
@@ -1745,6 +1764,124 @@
   function refreshActiveTab() {
     selectedActive.clear();
     renderActiveTab();
+  }
+
+  /**
+   * Opens a modal that lets the teacher pick a unit and bulk-assign it to the
+   * selected upcoming assignments.
+   * @param {string[]} ids - Assignment IDs to update.
+   */
+  function openBulkSetUnitModal(ids) {
+    const triggerEl = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'bulkSetUnitTitle');
+    overlay.style.cssText = [
+      'position:fixed; top:0; left:0; right:0; bottom:0;',
+      'background:rgba(0,0,0,.80); backdrop-filter:blur(4px);',
+      'display:flex; align-items:center; justify-content:center;',
+      'z-index:10000; padding:24px;'
+    ].join('');
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width:480px; width:100%; padding:28px;';
+
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'bulkSetUnitTitle';
+    titleEl.style.cssText = 'margin:0 0 16px; font-size:20px; display:flex; align-items:center; gap:8px;';
+    const titleIcon = document.createElement('span');
+    titleIcon.appendChild(createIcon('folderOpen', 18));
+    titleEl.appendChild(titleIcon);
+    titleEl.appendChild(document.createTextNode(' Set Unit'));
+    card.appendChild(titleEl);
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'margin:0 0 16px; font-size:13px; color:rgba(255,255,255,.60);';
+    desc.textContent = 'Assign ' + ids.length + ' selected assignment' + (ids.length !== 1 ? 's' : '') + ' to a unit:';
+    card.appendChild(desc);
+
+    const unitSelect = document.createElement('select');
+    unitSelect.style.cssText = 'width:100%; padding:10px 12px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.20); border-radius:8px; color:white; font-size:14px; margin-bottom:20px;';
+
+    const blankOpt = document.createElement('option');
+    blankOpt.value = '';
+    blankOpt.textContent = 'Uncategorized';
+    unitSelect.appendChild(blankOpt);
+
+    if (lessonsData && Array.isArray(lessonsData.sections)) {
+      lessonsData.sections.forEach(section => {
+        const group = document.createElement('optgroup');
+        group.label = section.name;
+        (section.units || []).forEach(unit => {
+          const opt = document.createElement('option');
+          opt.value = unit.id;
+          opt.textContent = unit.name;
+          group.appendChild(opt);
+        });
+        unitSelect.appendChild(group);
+      });
+    }
+    card.appendChild(unitSelect);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex; gap:10px; justify-content:flex-end;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'tc-btn';
+    cancelBtn.style.cssText = 'color:rgba(255,255,255,.60);';
+    cancelBtn.textContent = 'Cancel';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'tc-btn';
+    confirmBtn.style.cssText = 'background:rgba(96,165,250,.25); border-color:rgba(96,165,250,.40);';
+    confirmBtn.appendChild(createIcon('folderOpen', 14));
+    confirmBtn.appendChild(document.createTextNode(' Apply'));
+
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(confirmBtn);
+    card.appendChild(btnRow);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    unitSelect.focus();
+
+    const closeModal = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', onKeyDown);
+      if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+    confirmBtn.addEventListener('click', async () => {
+      const chosenUnitId = unitSelect.value;
+      const unitInfo = getUnitInfo(chosenUnitId);
+      const chosenSectionId = unitInfo ? unitInfo.sectionId : null;
+      const unitLabel = unitInfo ? unitInfo.unitName : 'Uncategorized';
+      closeModal();
+      try {
+        await Promise.all(ids.map(id => db.updateAssignment(id, { unit_id: chosenUnitId || null, section_id: chosenSectionId })));
+        ids.forEach(id => {
+          const idx = assignmentsData.findIndex(a => a.id === id);
+          if (idx !== -1) {
+            assignmentsData[idx].unit_id = chosenUnitId || null;
+            assignmentsData[idx].section_id = chosenSectionId;
+          }
+        });
+        selectedUpcoming.clear();
+        refreshCurrentTab();
+        showToast(ids.length + ' assignment' + (ids.length !== 1 ? 's' : '') + ' cataloged to ' + unitLabel);
+      } catch (err) {
+        console.error('[tc-library] Bulk set unit failed:', err);
+        showToast('Failed to set unit', '#ef4444', '#fff');
+      }
+    });
   }
 
   function renderUpcomingLane(assignments) {
@@ -1896,6 +2033,19 @@
       await executeBulkDeactivate('archived', 'bulk archive');
     });
     controlsRow.appendChild(bulkArchiveBtn);
+
+    const bulkSetUnitBtn = document.createElement('button');
+    bulkSetUnitBtn.id = 'upcomingBulkSetUnitBtn';
+    bulkSetUnitBtn.className = 'tc-btn';
+    bulkSetUnitBtn.style.cssText = 'display:none; font-size:12px; padding:5px 12px;';
+    bulkSetUnitBtn.appendChild(createIcon('folderOpen', 14));
+    bulkSetUnitBtn.appendChild(document.createTextNode(' Set Unit'));
+    bulkSetUnitBtn.addEventListener('click', () => {
+      const ids = [...selectedUpcoming];
+      if (ids.length === 0) return;
+      openBulkSetUnitModal(ids);
+    });
+    controlsRow.appendChild(bulkSetUnitBtn);
 
     container.appendChild(controlsRow);
 
@@ -3382,6 +3532,263 @@
     return wrapper;
   }
 
+  /**
+   * Renders the Reserve tab assignments grouped by Section → Unit accordion.
+   * Assignments without a unit_id are placed in an "UNCATEGORIZED" bucket at
+   * the end. Each section/unit is collapsible via hierarchyExpandState.
+   * @param {Array} assignments - Pre-filtered sorted reserve assignments.
+   * @returns {HTMLElement}
+   */
+  function renderReserveByUnit(assignments) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-bottom:24px;';
+
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:32px 24px; text-align:center; color:rgba(255,255,255,.50);';
+      empty.textContent = 'No reserved assignments';
+      wrapper.appendChild(empty);
+      return wrapper;
+    }
+
+    // Group assignments: section → unit → assignments[]
+    // sectionGroups: Map<sectionId, { sectionName, units: Map<unitId, { unitName, items[] }> }>
+    const sectionGroups = new Map();
+    const uncategorized = [];
+
+    assignments.forEach(a => {
+      const uid = a.unit_id;
+      if (!uid) {
+        uncategorized.push(a);
+        return;
+      }
+      const info = getUnitInfo(uid);
+      if (!info) {
+        uncategorized.push(a);
+        return;
+      }
+      const { sectionName, sectionId, unitName } = info;
+      if (!sectionGroups.has(sectionId)) {
+        sectionGroups.set(sectionId, { sectionName, units: new Map() });
+      }
+      const sg = sectionGroups.get(sectionId);
+      if (!sg.units.has(uid)) {
+        sg.units.set(uid, { unitName, items: [] });
+      }
+      sg.units.get(uid).items.push(a);
+    });
+
+    // Build sections from lessonsData order (so sections appear in defined order)
+    const orderedSectionIds = [];
+    if (lessonsData && Array.isArray(lessonsData.sections)) {
+      lessonsData.sections.forEach(sec => {
+        const sid = sec.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+        if (sectionGroups.has(sid)) orderedSectionIds.push(sid);
+      });
+    }
+    // Add any section IDs not in lessonsData order
+    sectionGroups.forEach((_, sid) => {
+      if (!orderedSectionIds.includes(sid)) orderedSectionIds.push(sid);
+    });
+
+    const renderSectionAccordion = (sectionId, sectionData) => {
+      const secExpanded = isHierarchyExpanded('reserve-section-' + sectionId, true);
+      const secWrapper = document.createElement('div');
+      secWrapper.style.cssText = 'margin-bottom:16px;';
+
+      const secHeader = document.createElement('div');
+      secHeader.style.cssText = [
+        'display:flex; align-items:center; gap:10px;',
+        'padding:12px 16px;',
+        'background:rgba(255,255,255,.06);',
+        'border:1px solid rgba(255,255,255,.12);',
+        'border-radius:' + (secExpanded ? '10px 10px 0 0' : '10px') + ';',
+        'cursor:pointer; user-select:none;'
+      ].join('');
+      secHeader.setAttribute('aria-expanded', String(secExpanded));
+
+      const secToggleIcon = document.createElement('span');
+      secToggleIcon.style.cssText = 'font-size:13px; transition:transform .2s ease; display:inline-block; transform:rotate(' + (secExpanded ? '0deg' : '-90deg') + ');';
+      secToggleIcon.textContent = '\u25be';
+
+      const secTitle = document.createElement('span');
+      secTitle.style.cssText = 'font-size:15px; font-weight:700; letter-spacing:.03em;';
+      secTitle.textContent = sectionData.sectionName;
+
+      const totalCount = [...sectionData.units.values()].reduce((n, u) => n + u.items.length, 0);
+      const secBadge = document.createElement('span');
+      secBadge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 9px; font-size:12px;';
+      secBadge.textContent = totalCount;
+
+      secHeader.appendChild(secToggleIcon);
+      secHeader.appendChild(createIcon('folder', 14));
+      secHeader.appendChild(secTitle);
+      secHeader.appendChild(secBadge);
+
+      const secContent = document.createElement('div');
+      secContent.style.cssText = [
+        'display:' + (secExpanded ? 'block' : 'none') + ';',
+        'border:1px solid rgba(255,255,255,.12); border-top:none;',
+        'border-radius:0 0 10px 10px; padding:12px;',
+        'background:rgba(255,255,255,.02);'
+      ].join('');
+
+      if (secExpanded) {
+        // Build unit order from lessonsData
+        const orderedUnitIds = [];
+        if (lessonsData && Array.isArray(lessonsData.sections)) {
+          lessonsData.sections.forEach(sec => {
+            const sid = sec.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+            if (sid === sectionId) {
+              (sec.units || []).forEach(u => {
+                if (sectionData.units.has(u.id)) orderedUnitIds.push(u.id);
+              });
+            }
+          });
+        }
+        sectionData.units.forEach((_, uid) => {
+          if (!orderedUnitIds.includes(uid)) orderedUnitIds.push(uid);
+        });
+
+        orderedUnitIds.forEach(uid => {
+          const unitData = sectionData.units.get(uid);
+          const unitExpanded = isHierarchyExpanded('reserve-unit-' + uid, true);
+
+          const unitWrapper = document.createElement('div');
+          unitWrapper.style.cssText = 'margin-bottom:10px;';
+
+          const unitHeader = document.createElement('div');
+          unitHeader.style.cssText = [
+            'display:flex; align-items:center; gap:8px; padding:8px 12px;',
+            'background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);',
+            'border-radius:' + (unitExpanded ? '8px 8px 0 0' : '8px') + ';',
+            'cursor:pointer; user-select:none;'
+          ].join('');
+          unitHeader.setAttribute('aria-expanded', String(unitExpanded));
+
+          const unitToggle = document.createElement('span');
+          unitToggle.style.cssText = 'font-size:12px; transition:transform .2s; display:inline-block; transform:rotate(' + (unitExpanded ? '0deg' : '-90deg') + ');';
+          unitToggle.textContent = '\u25be';
+
+          const unitTitle = document.createElement('span');
+          unitTitle.style.cssText = 'font-size:14px; font-weight:600;';
+          unitTitle.textContent = unitData.unitName;
+
+          const unitBadge = document.createElement('span');
+          unitBadge.style.cssText = 'background:rgba(96,165,250,.15); border:1px solid rgba(96,165,250,.25); border-radius:10px; padding:1px 8px; font-size:12px; color:#93c5fd;';
+          unitBadge.textContent = unitData.items.length + ' assignment' + (unitData.items.length !== 1 ? 's' : '');
+
+          unitHeader.appendChild(unitToggle);
+          unitHeader.appendChild(createIcon('clipboard', 13));
+          unitHeader.appendChild(unitTitle);
+          unitHeader.appendChild(unitBadge);
+
+          const unitContent = document.createElement('div');
+          unitContent.style.cssText = [
+            'display:' + (unitExpanded ? 'block' : 'none') + ';',
+            'border:1px solid rgba(255,255,255,.08); border-top:none;',
+            'border-radius:0 0 8px 8px; padding:10px;',
+            'background:rgba(0,0,0,.1);'
+          ].join('');
+
+          if (unitExpanded) {
+            const unitGrid = document.createElement('div');
+            unitGrid.className = 'tc-lib-grid';
+            unitData.items.forEach(a => unitGrid.appendChild(renderUpcomingCard(a)));
+            unitContent.appendChild(unitGrid);
+          }
+
+          unitHeader.addEventListener('click', () => {
+            hierarchyExpandState.set('reserve-unit-' + uid, !unitExpanded);
+            saveFilters();
+            renderReserveTab();
+          });
+
+          unitWrapper.appendChild(unitHeader);
+          unitWrapper.appendChild(unitContent);
+          secContent.appendChild(unitWrapper);
+        });
+      }
+
+      secHeader.addEventListener('click', () => {
+        hierarchyExpandState.set('reserve-section-' + sectionId, !secExpanded);
+        saveFilters();
+        renderReserveTab();
+      });
+
+      secWrapper.appendChild(secHeader);
+      secWrapper.appendChild(secContent);
+      return secWrapper;
+    };
+
+    orderedSectionIds.forEach(sid => {
+      wrapper.appendChild(renderSectionAccordion(sid, sectionGroups.get(sid)));
+    });
+
+    // Uncategorized section
+    const uncatExpanded = isHierarchyExpanded('reserve-section-uncategorized', true);
+    const uncatWrapper = document.createElement('div');
+    uncatWrapper.style.cssText = 'margin-bottom:16px;';
+
+    const uncatHeader = document.createElement('div');
+    uncatHeader.style.cssText = [
+      'display:flex; align-items:center; gap:10px; padding:12px 16px;',
+      'background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);',
+      'border-radius:' + (uncatExpanded ? '10px 10px 0 0' : '10px') + ';',
+      'cursor:pointer; user-select:none;'
+    ].join('');
+    uncatHeader.setAttribute('aria-expanded', String(uncatExpanded));
+
+    const uncatToggle = document.createElement('span');
+    uncatToggle.style.cssText = 'font-size:13px; transition:transform .2s; display:inline-block; transform:rotate(' + (uncatExpanded ? '0deg' : '-90deg') + ');';
+    uncatToggle.textContent = '\u25be';
+
+    const uncatTitle = document.createElement('span');
+    uncatTitle.style.cssText = 'font-size:15px; font-weight:700; letter-spacing:.03em; color:rgba(255,255,255,.65);';
+    uncatTitle.textContent = 'UNCATEGORIZED';
+
+    const uncatBadge = document.createElement('span');
+    uncatBadge.style.cssText = 'background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:2px 9px; font-size:12px;';
+    uncatBadge.textContent = uncategorized.length;
+
+    uncatHeader.appendChild(uncatToggle);
+    uncatHeader.appendChild(createIcon('clipboard', 14));
+    uncatHeader.appendChild(uncatTitle);
+    uncatHeader.appendChild(uncatBadge);
+
+    const uncatContent = document.createElement('div');
+    uncatContent.style.cssText = [
+      'display:' + (uncatExpanded ? 'block' : 'none') + ';',
+      'border:1px solid rgba(255,255,255,.12); border-top:none;',
+      'border-radius:0 0 10px 10px; padding:12px;',
+      'background:rgba(255,255,255,.02);'
+    ].join('');
+
+    if (uncatExpanded && uncategorized.length > 0) {
+      const uncatGrid = document.createElement('div');
+      uncatGrid.className = 'tc-lib-grid';
+      uncategorized.forEach(a => uncatGrid.appendChild(renderUpcomingCard(a)));
+      uncatContent.appendChild(uncatGrid);
+    } else if (uncatExpanded && uncategorized.length === 0) {
+      const none = document.createElement('div');
+      none.style.cssText = 'padding:16px; text-align:center; color:rgba(255,255,255,.40); font-size:13px;';
+      none.textContent = 'All assignments are cataloged.';
+      uncatContent.appendChild(none);
+    }
+
+    uncatHeader.addEventListener('click', () => {
+      hierarchyExpandState.set('reserve-section-uncategorized', !uncatExpanded);
+      saveFilters();
+      renderReserveTab();
+    });
+
+    uncatWrapper.appendChild(uncatHeader);
+    uncatWrapper.appendChild(uncatContent);
+    wrapper.appendChild(uncatWrapper);
+
+    return wrapper;
+  }
+
   function renderReserveTab() {
     const container = $('reserveTab');
     if (!container) return;
@@ -3460,6 +3867,47 @@
       }
       container.appendChild(filterBar);
 
+      // View toggle row
+      const viewToggleRow = document.createElement('div');
+      viewToggleRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
+      const viewToggleWrap = document.createElement('div');
+      viewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
+
+      const flatViewBtn = document.createElement('button');
+      flatViewBtn.className = 'tc-btn';
+      flatViewBtn.setAttribute('aria-pressed', filters.reserve.viewMode === 'flat' ? 'true' : 'false');
+      flatViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.reserve.viewMode === 'flat' ? 'background:rgba(96,165,250,.18);' : '');
+      flatViewBtn.appendChild(createIcon('clipboard', 14));
+      flatViewBtn.appendChild(document.createTextNode(' Flat List'));
+      flatViewBtn.addEventListener('click', () => {
+        if (filters.reserve.viewMode !== 'flat') {
+          filters.reserve.viewMode = 'flat';
+          saveFilters();
+          renderReserveTab();
+        }
+      });
+
+      const byUnitViewBtn = document.createElement('button');
+      byUnitViewBtn.className = 'tc-btn';
+      byUnitViewBtn.setAttribute('aria-pressed', filters.reserve.viewMode === 'byUnit' ? 'true' : 'false');
+      byUnitViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
+        + (filters.reserve.viewMode === 'byUnit' ? 'background:rgba(96,165,250,.18);' : '');
+      byUnitViewBtn.appendChild(createIcon('folderOpen', 14));
+      byUnitViewBtn.appendChild(document.createTextNode(' By Unit'));
+      byUnitViewBtn.addEventListener('click', () => {
+        if (filters.reserve.viewMode !== 'byUnit') {
+          filters.reserve.viewMode = 'byUnit';
+          saveFilters();
+          renderReserveTab();
+        }
+      });
+
+      viewToggleWrap.appendChild(flatViewBtn);
+      viewToggleWrap.appendChild(byUnitViewBtn);
+      viewToggleRow.appendChild(viewToggleWrap);
+      container.appendChild(viewToggleRow);
+
       // Count label
       const countEl = document.createElement('div');
       countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
@@ -3467,11 +3915,15 @@
         `${reserveList.length} assignment${reserveList.length !== 1 ? 's' : ''} in reserve`;
       container.appendChild(countEl);
 
-      container.appendChild(
-        renderLaneSection('upcoming', 'clipboard', 'Reserve', reserveList.length, (div) => {
-          div.appendChild(renderUpcomingLane(reserveList));
-        })
-      );
+      if (filters.reserve.viewMode === 'byUnit') {
+        container.appendChild(renderReserveByUnit(reserveList));
+      } else {
+        container.appendChild(
+          renderLaneSection('upcoming', 'clipboard', 'Reserve', reserveList.length, (div) => {
+            div.appendChild(renderUpcomingLane(reserveList));
+          })
+        );
+      }
 
       // Presentations & Lessons collapsible section
       container.appendChild(renderPresentationsSection());
@@ -6076,6 +6528,158 @@
       }
 
       card.appendChild(grid);
+
+      // ── Catalog Section: Unit Picker + Tags ───────────────────────────────
+      const catalogSection = document.createElement('div');
+      catalogSection.style.cssText = 'border-top:1px solid rgba(255,255,255,.10); margin:16px 0; padding-top:16px;';
+
+      const catalogHeading = document.createElement('div');
+      catalogHeading.style.cssText = 'font-size:14px; font-weight:600; color:rgba(255,255,255,.70); margin-bottom:12px; display:flex; align-items:center; gap:6px;';
+      catalogHeading.appendChild(createIcon('folderOpen', 14));
+      catalogHeading.appendChild(document.createTextNode(' Catalog'));
+      catalogSection.appendChild(catalogHeading);
+
+      // Unit picker
+      const unitRow = document.createElement('div');
+      unitRow.style.cssText = 'margin-bottom:14px;';
+      const unitLbl = document.createElement('div');
+      unitLbl.style.cssText = 'font-size:13px; color:rgba(255,255,255,.55); margin-bottom:6px;';
+      unitLbl.textContent = 'Unit';
+      unitRow.appendChild(unitLbl);
+
+      const unitSelect = document.createElement('select');
+      unitSelect.style.cssText = 'width:100%; padding:8px 10px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.20); border-radius:8px; color:white; font-size:13px;';
+
+      const blankUnitOpt = document.createElement('option');
+      blankUnitOpt.value = '';
+      blankUnitOpt.textContent = 'Uncategorized';
+      unitSelect.appendChild(blankUnitOpt);
+
+      if (lessonsData && Array.isArray(lessonsData.sections)) {
+        lessonsData.sections.forEach(section => {
+          const group = document.createElement('optgroup');
+          group.label = section.name;
+          (section.units || []).forEach(unit => {
+            const opt = document.createElement('option');
+            opt.value = unit.id;
+            opt.textContent = unit.name;
+            group.appendChild(opt);
+          });
+          unitSelect.appendChild(group);
+        });
+      }
+      unitSelect.value = assignment.unit_id || '';
+      unitRow.appendChild(unitSelect);
+      catalogSection.appendChild(unitRow);
+
+      unitSelect.addEventListener('change', async () => {
+        const newUnitId = unitSelect.value || null;
+        const unitInfo = newUnitId ? getUnitInfo(newUnitId) : null;
+        const newSectionId = unitInfo ? unitInfo.sectionId : null;
+        try {
+          await db.updateAssignment(assignment.id, { unit_id: newUnitId, section_id: newSectionId });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) {
+            assignmentsData[idx].unit_id = newUnitId;
+            assignmentsData[idx].section_id = newSectionId;
+          }
+          showToast('Unit updated');
+        } catch (err) {
+          console.error('[tc-library] Failed to update unit:', err);
+          showToast('Failed to update unit', '#ef4444', '#fff');
+        }
+      });
+
+      // Tag input
+      const tagsRow = document.createElement('div');
+      const tagsLbl = document.createElement('div');
+      tagsLbl.style.cssText = 'font-size:13px; color:rgba(255,255,255,.55); margin-bottom:6px;';
+      tagsLbl.textContent = 'Tags';
+      tagsRow.appendChild(tagsLbl);
+
+      const currentTags = Array.isArray(assignment.tags) ? [...assignment.tags] : [];
+
+      const tagPillsWrap = document.createElement('div');
+      tagPillsWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; min-height:28px;';
+
+      const saveTags = async (newTags) => {
+        try {
+          await db.updateAssignment(assignment.id, { tags: newTags });
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          if (idx !== -1) assignmentsData[idx].tags = newTags;
+        } catch (err) {
+          console.error('[tc-library] Failed to update tags:', err);
+          showToast('Failed to update tags', '#ef4444', '#fff');
+        }
+      };
+
+      const renderTagPills = () => {
+        tagPillsWrap.innerHTML = '';
+        currentTags.forEach((tag, i) => {
+          const pill = document.createElement('span');
+          pill.style.cssText = 'display:inline-flex; align-items:center; gap:4px; background:rgba(96,165,250,.20); border:1px solid rgba(96,165,250,.35); border-radius:12px; padding:2px 8px 2px 10px; font-size:12px; color:#93c5fd;';
+          pill.appendChild(document.createTextNode(tag));
+          const removeBtn = document.createElement('button');
+          removeBtn.style.cssText = 'background:none; border:none; color:rgba(147,197,253,.70); cursor:pointer; padding:0; display:inline-flex; align-items:center; font-size:14px; line-height:1;';
+          removeBtn.textContent = '\u00d7';
+          removeBtn.setAttribute('aria-label', 'Remove tag ' + tag);
+          removeBtn.addEventListener('click', async () => {
+            currentTags.splice(i, 1);
+            renderTagPills();
+            await saveTags([...currentTags]);
+          });
+          pill.appendChild(removeBtn);
+          tagPillsWrap.appendChild(pill);
+        });
+      };
+      renderTagPills();
+      tagsRow.appendChild(tagPillsWrap);
+
+      const tagInputRow = document.createElement('div');
+      tagInputRow.style.cssText = 'display:flex; gap:6px; margin-bottom:8px;';
+      const tagInput = document.createElement('input');
+      tagInput.type = 'text';
+      tagInput.placeholder = 'Add tag, press Enter...';
+      tagInput.style.cssText = 'flex:1; padding:6px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.18); border-radius:7px; color:white; font-size:13px;';
+      tagInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const val = tagInput.value.trim().toLowerCase().replace(/\s+/g, '-');
+          if (val && !currentTags.includes(val)) {
+            currentTags.push(val);
+            renderTagPills();
+            await saveTags([...currentTags]);
+          }
+          tagInput.value = '';
+        }
+      });
+      tagInputRow.appendChild(tagInput);
+      tagsRow.appendChild(tagInputRow);
+
+      const suggestedTagsWrap = document.createElement('div');
+      suggestedTagsWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:5px;';
+      const SUGGESTED_TAGS = ['quiz', 'homework', 'assessment', 'vocabulary', 'reading', 'writing', 'review', 'daily-work'];
+      SUGGESTED_TAGS.forEach(tag => {
+        const chip = document.createElement('button');
+        chip.className = 'tc-btn';
+        chip.style.cssText = 'font-size:11px; padding:3px 9px; opacity:' + (currentTags.includes(tag) ? '0.4' : '0.75') + ';';
+        chip.textContent = '+ ' + tag;
+        chip.setAttribute('aria-label', 'Add suggested tag ' + tag);
+        chip.addEventListener('click', async () => {
+          if (!currentTags.includes(tag)) {
+            currentTags.push(tag);
+            renderTagPills();
+            chip.style.opacity = '0.4';
+            await saveTags([...currentTags]);
+          }
+        });
+        suggestedTagsWrap.appendChild(chip);
+      });
+      tagsRow.appendChild(suggestedTagsWrap);
+      catalogSection.appendChild(tagsRow);
+
+      card.appendChild(catalogSection);
+      // ── End Catalog Section ───────────────────────────────────────────────
 
       const actionRow = document.createElement('div');
       actionRow.style.cssText = 'display: flex; gap: 12px;';

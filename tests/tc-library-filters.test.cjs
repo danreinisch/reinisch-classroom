@@ -220,7 +220,8 @@ function makeFilterContext(storage) {
     },
     reserve: {
       presentationsExpanded: false,
-      presentationsSearch: ''
+      presentationsSearch: '',
+      viewMode: 'flat'
     }
   };
   const collapsedLanes = new Set(['analytics']);
@@ -248,7 +249,8 @@ function makeFilterContext(storage) {
         },
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
-          presentationsSearch: filters.reserve.presentationsSearch
+          presentationsSearch: filters.reserve.presentationsSearch,
+          viewMode: filters.reserve.viewMode
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -288,6 +290,7 @@ function makeFilterContext(storage) {
       if (data.reserve && typeof data.reserve === 'object') {
         if (typeof data.reserve.presentationsExpanded === 'boolean') filters.reserve.presentationsExpanded = data.reserve.presentationsExpanded;
         if (typeof data.reserve.presentationsSearch === 'string') filters.reserve.presentationsSearch = data.reserve.presentationsSearch;
+        if (typeof data.reserve.viewMode === 'string') filters.reserve.viewMode = data.reserve.viewMode;
       }
       if (Array.isArray(data.collapsedLanes)) {
         collapsedLanes.clear();
@@ -832,6 +835,54 @@ test('reserve: presentationsSearch as number → not applied, keeps default empt
   const ctx = makeFilterContext(storage);
   ctx.loadFilters();
   assert.strictEqual(ctx.filters.reserve.presentationsSearch, '');
+});
+
+// ── reserve.viewMode round-trips ──────────────────────────────────────────────
+console.log('\n--- reserve.viewMode round-trips ---');
+
+test('reserve: default viewMode is flat', () => {
+  const ctx = makeFilterContext(makeMockStorage());
+  assert.strictEqual(ctx.filters.reserve.viewMode, 'flat');
+});
+
+test('reserve: save viewMode byUnit → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.reserve.viewMode = 'byUnit';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.reserve.viewMode, 'byUnit');
+});
+
+test('reserve: save viewMode flat → load → restored', () => {
+  const storage = makeMockStorage();
+  const ctx = makeFilterContext(storage);
+  ctx.filters.reserve.viewMode = 'flat';
+  ctx.saveFilters();
+  const ctx2 = makeFilterContext(storage);
+  ctx2.loadFilters();
+  assert.strictEqual(ctx2.filters.reserve.viewMode, 'flat');
+});
+
+test('reserve: viewMode defaults to flat when absent from stored data', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { presentationsExpanded: false, presentationsSearch: '' }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.reserve.viewMode, 'flat');
+});
+
+test('reserve: viewMode as number → not applied, keeps default flat', () => {
+  const storage = makeMockStorage();
+  storage.setItem('rc_tc_library_filters_v1', JSON.stringify({
+    reserve: { viewMode: 42 }
+  }));
+  const ctx = makeFilterContext(storage);
+  ctx.loadFilters();
+  assert.strictEqual(ctx.filters.reserve.viewMode, 'flat');
 });
 
 // ── injectStyles() ────────────────────────────────────────────────────────────
