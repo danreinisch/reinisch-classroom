@@ -3821,6 +3821,13 @@
   const _vocabImageCache = new Map();        // lowercase term -> base64 image data URL
   const _comprehensionCheckedChapters = new Set(); // chapter startPages checked this session
 
+  // Reading Time Tracker state
+  let _readingTimerInterval = null;
+  let _readingTimerSeconds = 0;
+  let _readingTimerLastFlush = 0;
+  let _readingTimerVisibilityHandler = null;
+  let _readingTimerPillUpdateInterval = null;
+
   // ============================================================================
   // Book Deep-link Helpers
   // ============================================================================
@@ -4041,10 +4048,16 @@
     if (bookReaderState.resuming) {
       showToast(`📖 Resuming from page ${bookReaderState.currentPage}`);
     }
+
+    // Start reading timer if enabled
+    if (getBookHelper('reading_timer')) {
+      startReadingTimer();
+    }
   }
 
   function closeBookReader() {
     stopBookTts();
+    stopReadingTimer();
     closeWordPopup();
     hideSelectionToolbar();
 
@@ -4123,6 +4136,7 @@
         </div>
         ${hasGlossary ? `<button class="st-book-nav-btn" id="bookGlossaryBtn" title="Glossary" style="padding:8px 10px;">📚 Glossary</button>` : ''}
         ${getBookHelper('word_tracker') ? `<div style="position:relative;"><button class="st-book-nav-btn" id="bookMyWordsBtn" title="My Words" style="padding:8px 10px;">📝 My Words <span class="st-mw-badge" id="myWordsBadge" style="display:none;"></span></button></div>` : ''}
+        ${getBookHelper('reading_timer') ? `<span class="st-reading-timer-pill" id="bookReadingTimerPill">\u23F1 0m</span>` : ''}
         <div style="position:relative;">
           <button class="st-book-nav-btn" id="bookReadingHelperBtn" title="Reading Helper settings" style="padding:8px 10px;">🛟 Reading Helper</button>
           <div class="st-reading-helper-panel" id="bookReadingHelperPanel" style="display:none;"></div>
@@ -5113,6 +5127,14 @@
 
     container.style.display = 'block';
 
+    // Append reading stats section if timer is enabled
+    if (getBookHelper('reading_timer')) {
+      var statsDiv = document.createElement('div');
+      renderReadingStats(statsDiv);
+      var rhBody = container.querySelector('.st-rh-body');
+      if (rhBody) rhBody.appendChild(statsDiv);
+    }
+
     // Wire toggle changes via event delegation (avoids duplicate listeners on re-open)
     container.onchange = function (e) {
       const input = e.target.closest('.st-rh-toggle-input');
@@ -5155,6 +5177,186 @@
    */
   function hideReadingHelperPanel(container) {
     if (container) container.style.display = 'none';
+  }
+
+  // ============================================================================
+  // Reading Time Tracker
+  // ============================================================================
+
+  function _readingTimerDateKey(date) {
+    var d = date || new Date();
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return 'rc_book_helper_reading_time_' + yyyy + '-' + mm + '-' + dd;
+  }
+
+  function getReadingTimeForDate(dateStr) {
+    var val = 0;
+    try {
+      val = parseInt(localStorage.getItem('rc_book_helper_reading_time_' + dateStr) || '0', 10) || 0;
+    } catch (_e) { /* ignore */ }
+    return val;
+  }
+
+  function formatReadingTime(seconds) {
+    var mins = Math.floor(seconds / 60);
+    var hrs = Math.floor(mins / 60);
+    var remMins = mins % 60;
+    if (hrs > 0) {
+      return hrs + ' hr ' + remMins + ' min';
+    }
+    return mins + ' min';
+  }
+
+  function flushReadingTime() {
+    var key = _readingTimerDateKey();
+    var cap = 86400; // max seconds in a day — prevents runaway values
+    try {
+      var stored = parseInt(localStorage.getItem(key) || '0', 10) || 0;
+      var total = Math.min(stored + (_readingTimerSeconds - _readingTimerLastFlush), cap);
+      localStorage.setItem(key, String(total));
+      _readingTimerLastFlush = _readingTimerSeconds;
+    } catch (_e) { /* ignore */ }
+  }
+
+  function _updateReadingTimerPill() {
+    var pill = document.getElementById('bookReadingTimerPill');
+    if (!pill) return;
+    var key = _readingTimerDateKey();
+    var stored = 0;
+    try {
+      stored = parseInt(localStorage.getItem(key) || '0', 10) || 0;
+    } catch (_e) { /* ignore */ }
+    var current = stored + (_readingTimerSeconds - _readingTimerLastFlush);
+    var mins = Math.floor(current / 60);
+    pill.textContent = '\u23F1 ' + mins + 'm';
+  }
+
+  function startReadingTimer() {
+    if (_readingTimerInterval) return;
+    // _readingTimerSeconds tracks seconds accumulated this session (from 0)
+    // _readingTimerLastFlush mirrors it so delta = 0 on flush
+    // flushReadingTime reads today's stored value from localStorage and adds the delta
+    _readingTimerSeconds = 0;
+    _readingTimerLastFlush = 0;
+
+    _readingTimerInterval = setInterval(function () {
+      if (document.visibilityState === 'hidden') return;
+      if (bookTtsPaused) return;
+      _readingTimerSeconds += 1;
+      // Flush every 10 seconds
+      if (_readingTimerSeconds - _readingTimerLastFlush >= 10) {
+        flushReadingTime();
+      }
+    }, 1000);
+
+    // Pill update every 10 seconds
+    _readingTimerPillUpdateInterval = setInterval(_updateReadingTimerPill, 10000);
+
+    // Visibility change: resume pill update when tab becomes visible again
+    _readingTimerVisibilityHandler = function () {
+      if (document.visibilityState === 'visible') {
+        _updateReadingTimerPill();
+      }
+    };
+    document.addEventListener('visibilitychange', _readingTimerVisibilityHandler);
+
+    // Initial pill update
+    _updateReadingTimerPill();
+
+    // Flush on page unload
+    window.addEventListener('beforeunload', flushReadingTime);
+  }
+
+  function stopReadingTimer() {
+    if (_readingTimerInterval) {
+      clearInterval(_readingTimerInterval);
+      _readingTimerInterval = null;
+    }
+    if (_readingTimerPillUpdateInterval) {
+      clearInterval(_readingTimerPillUpdateInterval);
+      _readingTimerPillUpdateInterval = null;
+    }
+    if (_readingTimerVisibilityHandler) {
+      document.removeEventListener('visibilitychange', _readingTimerVisibilityHandler);
+      _readingTimerVisibilityHandler = null;
+    }
+    window.removeEventListener('beforeunload', flushReadingTime);
+    flushReadingTime();
+    _readingTimerSeconds = 0;
+    _readingTimerLastFlush = 0;
+    // Remove pill
+    var pill = document.getElementById('bookReadingTimerPill');
+    if (pill) pill.remove();
+  }
+
+  function renderReadingStats(container) {
+    var today = new Date();
+    var todayKey = _readingTimerDateKey(today);
+    var todayStored = 0;
+    try {
+      todayStored = parseInt(localStorage.getItem(todayKey) || '0', 10) || 0;
+    } catch (_e) { /* ignore */ }
+    var todayTotal = todayStored + (_readingTimerSeconds - _readingTimerLastFlush);
+    var todayDisplay = formatReadingTime(todayTotal);
+
+    // Build last 7 days data
+    var days = [];
+    var weekTotal = 0;
+    var streak = 0;
+    var streakBroken = false;
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      var yyyy = d.getFullYear();
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      var dd = String(d.getDate()).padStart(2, '0');
+      var dateStr = yyyy + '-' + mm + '-' + dd;
+      var secs = i === 0 ? todayTotal : getReadingTimeForDate(dateStr);
+      var dayLabel = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()];
+      days.push({ secs: secs, label: dayLabel });
+      weekTotal += secs;
+    }
+
+    // Streak: count consecutive days backwards from today with > 0
+    for (var j = 6; j >= 0; j--) {
+      if (!streakBroken && days[j].secs > 0) {
+        streak += 1;
+      } else {
+        streakBroken = true;
+      }
+    }
+
+    // Max secs for bar scaling
+    var maxSecs = 0;
+    for (var k = 0; k < days.length; k++) {
+      if (days[k].secs > maxSecs) maxSecs = days[k].secs;
+    }
+
+    var barsHtml = days.map(function (day) {
+      var pct = maxSecs > 0 ? Math.round((day.secs / maxSecs) * 100) : 0;
+      if (pct < 2 && day.secs > 0) pct = 2; // ensure minimum visible height for days with activity
+      return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;">' +
+        '<div class="st-reading-bar" style="height:' + pct + '%;"></div>' +
+        '<div class="st-reading-bar-label">' + day.label + '</div>' +
+        '</div>';
+    }).join('');
+
+    container.innerHTML =
+      '<div class="st-rh-section-header">📊 Reading Stats</div>' +
+      '<div class="st-reading-stats">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<span style="font-size:12px;color:rgba(255,255,255,0.6);">Today</span>' +
+          '<span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);">' + todayDisplay + '</span>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+          '<span style="font-size:12px;color:rgba(255,255,255,0.6);">This week</span>' +
+          '<span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.9);">' + formatReadingTime(weekTotal) + '</span>' +
+        '</div>' +
+        (streak > 0 ? '<div class="st-reading-streak" style="margin-bottom:10px;">🔥 ' + streak + '-day streak</div>' : '') +
+        '<div class="st-reading-bar-chart">' + barsHtml + '</div>' +
+      '</div>';
   }
 
   function populateTtsSettingsPopover(container) {
