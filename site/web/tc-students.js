@@ -8103,15 +8103,28 @@
     return rows;
   }
 
-  /** Split one CSV line respecting double-quoted fields (RFC 4180). */
+  /** Split one CSV line respecting double-quoted fields (RFC 4180).
+   *  Handles embedded quotes encoded as "" (two consecutive quotes). */
   function spedtrackSplitCsvLine(line) {
     const fields = [];
     let inQuote = false;
     let cell = '';
-    for (const ch of line) {
-      if (ch === '"') { inQuote = !inQuote; }
-      else if (ch === ',' && !inQuote) { fields.push(cell.trim()); cell = ''; }
-      else { cell += ch; }
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuote && line[i + 1] === '"') {
+          // Escaped quote inside a quoted field → emit a literal "
+          cell += '"';
+          i++; // skip the second quote
+        } else {
+          inQuote = !inQuote;
+        }
+      } else if (ch === ',' && !inQuote) {
+        fields.push(cell.trim());
+        cell = '';
+      } else {
+        cell += ch;
+      }
     }
     fields.push(cell.trim());
     return fields;
@@ -8142,7 +8155,11 @@
       goalMatch = allGoals.find(g => g.student_code === studentMatch.code && g.code === goal);
     }
 
-    const dateValid    = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const dateFormatOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const dateValid    = dateFormatOk && (() => {
+      const d = new Date(date);
+      return !isNaN(d.getTime()) && d.toISOString().startsWith(date);
+    })();
     const parsedValue  = parseFloat(valStr);
     const valueValid   = !isNaN(parsedValue) && parsedValue >= 0;
 
