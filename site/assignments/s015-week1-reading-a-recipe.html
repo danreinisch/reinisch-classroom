@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reading a Recipe – Week 1</title>
+<title>Reading a Recipe &#8211; Week 1</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -11,19 +11,15 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
 .header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
 .header p{font-size:0.95rem;color:#8b949e;}
-/* Day tabs */
 .day-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;background:#0d1117;border-bottom:1px solid #21262d;}
 .day-tab{flex-shrink:0;padding:8px 20px;border:2px solid #30363d;border-radius:10px;background:#161b22;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
 .day-tab:hover{border-color:#14b8a6;color:#14b8a6;}
 .day-tab.active{border-color:#14b8a6;background:rgba(20,184,166,0.12);color:#14b8a6;}
 .day-panel{display:none;padding:20px 24px 80px;}
 .day-panel.active{display:block;}
-/* TTS */
 .tts-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:0 4px;opacity:0.7;transition:opacity 0.2s;vertical-align:middle;}
 .tts-btn:hover{opacity:1;}
-/* Part label */
 .part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:20px 0 10px;}
-/* Recipe cards */
 .recipe-intro{font-size:0.9rem;color:#8b949e;margin-bottom:14px;line-height:1.5;}
 .recipes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px;}
 .recipe-card{background:#161b22;border:2px solid #30363d;border-left:4px solid #14b8a6;border-radius:14px;padding:16px 18px;}
@@ -36,7 +32,6 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .recipe-list.steps{counter-reset:step-counter;}
 .recipe-list.steps li{counter-increment:step-counter;padding-left:22px;position:relative;}
 .recipe-list.steps li::before{content:counter(step-counter)".";position:absolute;left:0;color:#5eead4;font-weight:700;font-size:0.8rem;}
-/* Q-card */
 .q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
 .q-card.correct{border-color:#22c55e;}
 .q-card.incorrect{border-color:#ef4444;}
@@ -45,28 +40,24 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .q-feedback{font-size:0.8rem;margin-top:8px;min-height:18px;}
 .q-card.correct .q-feedback{color:#22c55e;}
 .q-card.incorrect .q-feedback{color:#ef4444;}
-/* Options */
 .options-group{display:flex;flex-direction:column;gap:8px;}
-.opt-btn{background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.95rem;padding:10px 14px;text-align:left;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;width:100%;}
+.opt-row{display:flex;align-items:center;gap:6px;}
+.opt-btn{flex:1;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.95rem;padding:10px 14px;text-align:left;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;}
 .opt-btn:hover{border-color:#14b8a6;color:#e6edf3;}
 .opt-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
 .opt-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
 .opt-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
 .opt-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
-/* Scene cards */
 .scene-card{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
 .scene-emoji{font-size:2.2rem;line-height:1;}
 .scene-text{font-size:0.95rem;color:#c9d1d9;line-height:1.5;}
-/* Textarea */
 .q-input{font-family:'JetBrains Mono',monospace;font-size:0.95rem;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:8px 14px;color:#e6edf3;width:100%;outline:none;transition:border-color 0.2s;resize:vertical;min-height:60px;}
 .q-input:focus{border-color:#14b8a6;}
-/* Scrambled steps for Day 4 */
 .scrambled-steps{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:14px 18px;margin-bottom:16px;}
 .scrambled-steps p{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
 .scrambled-step{font-size:0.92rem;color:#c9d1d9;padding:6px 0;border-bottom:1px solid #21262d;line-height:1.4;}
 .scrambled-step:last-child{border-bottom:none;}
 .scrambled-step strong{color:#5eead4;font-family:'JetBrains Mono',monospace;font-size:0.82rem;}
-/* Bottom bar */
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
 .score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
 .score-display span{color:#14b8a6;font-weight:700;}
@@ -77,7 +68,6 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .btn-save:hover{background:#484f58;}
 .btn-submit{background:#14b8a6;color:#0d1117;}
 .btn-submit:hover{background:#0d9488;}
-/* Custom confirm dialog */
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
 .confirm-overlay.show{display:flex;}
 .confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
@@ -88,27 +78,25 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 <body>
 
 <div class="header">
-  <h1>Reading a Recipe – Week 1 <button class="tts-btn" type="button" onclick="speakText('Reading a Recipe, Week 1')" aria-label="Read aloud">🔊</button></h1>
+  <h1>Reading a Recipe &#8211; Week 1 <button class="tts-btn" type="button" onclick="speakText('Reading a Recipe, Week 1')" aria-label="Read aloud">&#128266;</button></h1>
   <p>Read each recipe carefully, then answer the questions below.</p>
 </div>
 
-<!-- Day Tabs -->
 <div class="day-tabs" role="tablist">
-  <button class="day-tab active" type="button" role="tab" aria-selected="true" data-day="1">Day 1 — Recipe Parts</button>
-  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="2">Day 2 — What's Happening?</button>
-  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="3">Day 3 — Why Is That Happening?</button>
-  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="4">Day 4 — Follow the Recipe</button>
+  <button class="day-tab active" type="button" role="tab" aria-selected="true" data-day="1">Day 1 &#8212; Recipe Parts</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="2">Day 2 &#8212; What&#8217;s Happening?</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="3">Day 3 &#8212; Why Is That Happening?</button>
+  <button class="day-tab" type="button" role="tab" aria-selected="false" data-day="4">Day 4 &#8212; Follow the Recipe</button>
 </div>
 
-<!-- ═══════════════════════════ DAY 1 ═══════════════════════════ -->
+<!-- DAY 1 -->
 <div class="day-panel active" id="day-panel-1" data-goal="S015.11.1-1;S015.11.4-1">
 
-  <div class="part-label">📖 Reference Recipes</div>
-  <p class="recipe-intro">Look at these three recipes to answer the questions below. You can scroll back up to check them any time!</p>
+  <div class="part-label">&#128214; Reference Recipes</div>
+  <p class="recipe-intro">Look at these three recipes to answer the questions. You can scroll back up to check them any time!</p>
 
   <div class="recipes-grid">
 
-    <!-- Recipe 1 -->
     <div class="recipe-card">
       <div class="recipe-title">Recipe 1: Peanut Butter &amp; Jelly Sandwich</div>
       <div class="recipe-servings">Makes: 1 sandwich</div>
@@ -128,14 +116,13 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       </ol>
     </div>
 
-    <!-- Recipe 2 -->
     <div class="recipe-card">
       <div class="recipe-title">Recipe 2: Bowl of Cereal</div>
       <div class="recipe-servings">Makes: 1 bowl</div>
       <div class="recipe-section-heading">Ingredients</div>
       <ul class="recipe-list">
         <li>1 cup cereal</li>
-        <li>¾ cup milk</li>
+        <li>&#190; cup milk</li>
       </ul>
       <div class="recipe-section-heading">Steps</div>
       <ol class="recipe-list steps">
@@ -145,7 +132,6 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       </ol>
     </div>
 
-    <!-- Recipe 3 -->
     <div class="recipe-card">
       <div class="recipe-title">Recipe 3: Fruit Salad</div>
       <div class="recipe-servings">Makes: 2 servings</div>
@@ -153,7 +139,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       <ul class="recipe-list">
         <li>1 cup strawberries, sliced</li>
         <li>1 banana, sliced</li>
-        <li>½ cup blueberries</li>
+        <li>&#189; cup blueberries</li>
         <li>1 tablespoon honey</li>
       </ul>
       <div class="recipe-section-heading">Steps</div>
@@ -166,260 +152,237 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       </ol>
     </div>
 
-  </div><!-- /recipes-grid -->
+  </div>
 
-  <div class="part-label">❓ Questions</div>
+  <div class="part-label">&#10067; Questions</div>
 
-  <!-- D1 Q1 -->
   <div class="q-card" data-qref="D1Q1" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What is the title of Recipe 1?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What is the title of Recipe 1? <button class="tts-btn" type="button" onclick="speakText('What is the title of Recipe 1?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What is the title of Recipe 1?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the title of Recipe 1? <button class="tts-btn" type="button" onclick="speakText('What is the title of Recipe 1?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Fruit Salad <button class="tts-btn" type="button" onclick="speakText('Fruit Salad')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Bowl of Cereal <button class="tts-btn" type="button" onclick="speakText('Bowl of Cereal')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>c) Peanut Butter &amp; Jelly Sandwich <button class="tts-btn" type="button" onclick="speakText('Peanut Butter and Jelly Sandwich')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Banana Smoothie <button class="tts-btn" type="button" onclick="speakText('Banana Smoothie')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Fruit Salad</button><button class="tts-btn" type="button" onclick="speakText('Fruit Salad')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Bowl of Cereal</button><button class="tts-btn" type="button" onclick="speakText('Bowl of Cereal')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Peanut Butter &amp; Jelly Sandwich</button><button class="tts-btn" type="button" onclick="speakText('Peanut Butter and Jelly Sandwich')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Banana Smoothie</button><button class="tts-btn" type="button" onclick="speakText('Banana Smoothie')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D1 Q2 -->
   <div class="q-card" data-qref="D1Q2" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Which section lists bread, peanut butter, and jelly?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Which section lists "bread, peanut butter, jelly"? <button class="tts-btn" type="button" onclick="speakText('Which section lists bread, peanut butter, jelly?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Which section lists bread, peanut butter, and jelly?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Which section lists &#8220;bread, peanut butter, jelly&#8221;? <button class="tts-btn" type="button" onclick="speakText('Which section lists bread, peanut butter, jelly?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Steps <button class="tts-btn" type="button" onclick="speakText('Steps')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) Ingredients <button class="tts-btn" type="button" onclick="speakText('Ingredients')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) Serving Size <button class="tts-btn" type="button" onclick="speakText('Serving Size')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Title <button class="tts-btn" type="button" onclick="speakText('Title')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Steps</button><button class="tts-btn" type="button" onclick="speakText('Steps')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) Ingredients</button><button class="tts-btn" type="button" onclick="speakText('Ingredients')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Serving Size</button><button class="tts-btn" type="button" onclick="speakText('Serving Size')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Title</button><button class="tts-btn" type="button" onclick="speakText('Title')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D1 Q3 -->
   <div class="q-card" data-qref="D1Q3" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is Step 1 of Recipe 3, Fruit Salad?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What is Step 1 of Recipe 3 (Fruit Salad)? <button class="tts-btn" type="button" onclick="speakText('What is Step 1 of Recipe 3, Fruit Salad?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is Step 1 of Recipe 3, Fruit Salad?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is Step 1 of Recipe 3 (Fruit Salad)? <button class="tts-btn" type="button" onclick="speakText('What is Step 1 of Recipe 3, Fruit Salad?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Drizzle honey on top <button class="tts-btn" type="button" onclick="speakText('Drizzle honey on top')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Combine all fruit in a bowl <button class="tts-btn" type="button" onclick="speakText('Combine all fruit in a bowl')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>c) Wash all the fruit under cold water <button class="tts-btn" type="button" onclick="speakText('Wash all the fruit under cold water')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Slice the strawberries and banana <button class="tts-btn" type="button" onclick="speakText('Slice the strawberries and banana')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Drizzle honey on top</button><button class="tts-btn" type="button" onclick="speakText('Drizzle honey on top')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Combine all fruit in a bowl</button><button class="tts-btn" type="button" onclick="speakText('Combine all fruit in a bowl')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Wash all the fruit under cold water</button><button class="tts-btn" type="button" onclick="speakText('Wash all the fruit under cold water')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Slice the strawberries and banana</button><button class="tts-btn" type="button" onclick="speakText('Slice the strawberries and banana')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D1 Q4 -->
   <div class="q-card" data-qref="D1Q4" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. How many servings does Recipe 3, Fruit Salad, make?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">How many servings does Recipe 3 (Fruit Salad) make? <button class="tts-btn" type="button" onclick="speakText('How many servings does Recipe 3, Fruit Salad, make?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. How many servings does Recipe 3, Fruit Salad, make?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">How many servings does Recipe 3 (Fruit Salad) make? <button class="tts-btn" type="button" onclick="speakText('How many servings does Recipe 3, Fruit Salad, make?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) 1 serving <button class="tts-btn" type="button" onclick="speakText('1 serving')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) 2 servings <button class="tts-btn" type="button" onclick="speakText('2 servings')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) 3 servings <button class="tts-btn" type="button" onclick="speakText('3 servings')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) 4 servings <button class="tts-btn" type="button" onclick="speakText('4 servings')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) 1 serving</button><button class="tts-btn" type="button" onclick="speakText('1 serving')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) 2 servings</button><button class="tts-btn" type="button" onclick="speakText('2 servings')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) 3 servings</button><button class="tts-btn" type="button" onclick="speakText('3 servings')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) 4 servings</button><button class="tts-btn" type="button" onclick="speakText('4 servings')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D1 Q5 -->
   <div class="q-card" data-qref="D1Q5" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. Which part of a recipe tells you how many people it feeds?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Which part of a recipe tells you how many people it feeds? <button class="tts-btn" type="button" onclick="speakText('Which part of a recipe tells you how many people it feeds?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. Which part of a recipe tells you how many people it feeds?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Which part of a recipe tells you how many people it feeds? <button class="tts-btn" type="button" onclick="speakText('Which part of a recipe tells you how many people it feeds?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Title <button class="tts-btn" type="button" onclick="speakText('Title')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Steps <button class="tts-btn" type="button" onclick="speakText('Steps')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) Ingredients <button class="tts-btn" type="button" onclick="speakText('Ingredients')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>d) Serving Size <button class="tts-btn" type="button" onclick="speakText('Serving Size')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Title</button><button class="tts-btn" type="button" onclick="speakText('Title')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Steps</button><button class="tts-btn" type="button" onclick="speakText('Steps')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Ingredients</button><button class="tts-btn" type="button" onclick="speakText('Ingredients')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>d) Serving Size</button><button class="tts-btn" type="button" onclick="speakText('Serving Size')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-</div><!-- /day-panel-1 -->
+</div>
 
-<!-- ═══════════════════════════ DAY 2 ═══════════════════════════ -->
+<!-- DAY 2 -->
 <div class="day-panel" id="day-panel-2" data-goal="S015.11.1-2;S015.11.2-1">
 
-  <div class="part-label">👀 What's Happening?</div>
+  <div class="part-label">&#128064; What&#8217;s Happening?</div>
 
-  <!-- Scene 1 -->
   <div class="scene-card">
-    <span class="scene-emoji">🧑‍🍳</span>
+    <span class="scene-emoji">&#129473;&#8205;&#127859;</span>
     <span class="scene-text">A person is spreading peanut butter on bread.</span>
   </div>
 
-  <!-- D2 Q1 MCQ -->
   <div class="q-card" data-qref="D2Q1" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What is the person doing?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What is the person doing? <button class="tts-btn" type="button" onclick="speakText('What is the person doing?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What is the person doing?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the person doing? <button class="tts-btn" type="button" onclick="speakText('What is the person doing?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Pouring milk <button class="tts-btn" type="button" onclick="speakText('Pouring milk')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) Making a sandwich <button class="tts-btn" type="button" onclick="speakText('Making a sandwich')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) Washing fruit <button class="tts-btn" type="button" onclick="speakText('Washing fruit')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Eating cereal <button class="tts-btn" type="button" onclick="speakText('Eating cereal')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Pouring milk</button><button class="tts-btn" type="button" onclick="speakText('Pouring milk')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) Making a sandwich</button><button class="tts-btn" type="button" onclick="speakText('Making a sandwich')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Washing fruit</button><button class="tts-btn" type="button" onclick="speakText('Washing fruit')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Eating cereal</button><button class="tts-btn" type="button" onclick="speakText('Eating cereal')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D2 Q2 CR -->
   <div class="q-card" data-qref="D2Q2" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Write a sentence about what you see in Scene 1.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Write a sentence about what you see. <button class="tts-btn" type="button" onclick="speakText('Write a sentence about what you see.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="3" placeholder="Write your answer here…" data-qref="D2Q2"></textarea>
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Write a sentence about what you see.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write a sentence about what you see. <button class="tts-btn" type="button" onclick="speakText('Write a sentence about what you see.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D2Q2"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Scene 2 -->
   <div class="scene-card">
-    <span class="scene-emoji">🥣</span>
+    <span class="scene-emoji">&#129379;</span>
     <span class="scene-text">A bowl is filled with fruit and honey on top.</span>
   </div>
 
-  <!-- D2 Q3 MCQ -->
   <div class="q-card" data-qref="D2Q3" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is in the bowl?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What is in the bowl? <button class="tts-btn" type="button" onclick="speakText('What is in the bowl?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is in the bowl?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is in the bowl? <button class="tts-btn" type="button" onclick="speakText('What is in the bowl?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Cereal and milk <button class="tts-btn" type="button" onclick="speakText('Cereal and milk')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) Fruit and honey <button class="tts-btn" type="button" onclick="speakText('Fruit and honey')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) Peanut butter and jelly <button class="tts-btn" type="button" onclick="speakText('Peanut butter and jelly')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Bread and butter <button class="tts-btn" type="button" onclick="speakText('Bread and butter')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Cereal and milk</button><button class="tts-btn" type="button" onclick="speakText('Cereal and milk')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) Fruit and honey</button><button class="tts-btn" type="button" onclick="speakText('Fruit and honey')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Peanut butter and jelly</button><button class="tts-btn" type="button" onclick="speakText('Peanut butter and jelly')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Bread and butter</button><button class="tts-btn" type="button" onclick="speakText('Bread and butter')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D2 Q4 CR -->
   <div class="q-card" data-qref="D2Q4" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. Write a sentence describing this picture.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Write a sentence describing this picture. <button class="tts-btn" type="button" onclick="speakText('Write a sentence describing this picture.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="3" placeholder="Write your answer here…" data-qref="D2Q4"></textarea>
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. Write a sentence describing this picture.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write a sentence describing this picture. <button class="tts-btn" type="button" onclick="speakText('Write a sentence describing this picture.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D2Q4"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Scene 3 -->
   <div class="scene-card">
-    <span class="scene-emoji">🫙</span>
+    <span class="scene-emoji">&#129403;</span>
     <span class="scene-text">Someone is pouring milk into a bowl of cereal.</span>
   </div>
 
-  <!-- D2 Q5 MCQ -->
   <div class="q-card" data-qref="D2Q5" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. What is the person pouring?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What is the person pouring? <button class="tts-btn" type="button" onclick="speakText('What is the person pouring?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. What is the person pouring?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the person pouring? <button class="tts-btn" type="button" onclick="speakText('What is the person pouring?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Honey <button class="tts-btn" type="button" onclick="speakText('Honey')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Juice <button class="tts-btn" type="button" onclick="speakText('Juice')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>c) Milk <button class="tts-btn" type="button" onclick="speakText('Milk')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Water <button class="tts-btn" type="button" onclick="speakText('Water')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Honey</button><button class="tts-btn" type="button" onclick="speakText('Honey')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Juice</button><button class="tts-btn" type="button" onclick="speakText('Juice')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Milk</button><button class="tts-btn" type="button" onclick="speakText('Milk')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Water</button><button class="tts-btn" type="button" onclick="speakText('Water')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D2 Q6 CR -->
   <div class="q-card" data-qref="D2Q6" data-goal="S015.11.1-2;S015.11.2-1" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6. Write a sentence about this scene.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Write a sentence about this scene. <button class="tts-btn" type="button" onclick="speakText('Write a sentence about this scene.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="3" placeholder="Write your answer here…" data-qref="D2Q6"></textarea>
+    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6. Write a sentence about this scene.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write a sentence about this scene. <button class="tts-btn" type="button" onclick="speakText('Write a sentence about this scene.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D2Q6"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-</div><!-- /day-panel-2 -->
+</div>
 
-<!-- ═══════════════════════════ DAY 3 ═══════════════════════════ -->
+<!-- DAY 3 -->
 <div class="day-panel" id="day-panel-3" data-goal="S015.11.1-3;S015.11.2-2">
 
-  <div class="part-label">🤔 Why Is That Happening?</div>
+  <div class="part-label">&#129300; Why Is That Happening?</div>
 
-  <!-- Scene 1 -->
   <div class="scene-card">
-    <span class="scene-emoji">🍞</span>
+    <span class="scene-emoji">&#127838;</span>
     <span class="scene-text">The bread is toasted and golden brown.</span>
   </div>
 
-  <!-- D3 Q1 MCQ -->
   <div class="q-card" data-qref="D3Q1" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. Why is the bread brown?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Why is the bread brown? <button class="tts-btn" type="button" onclick="speakText('Why is the bread brown?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. Why is the bread brown?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Why is the bread brown? <button class="tts-btn" type="button" onclick="speakText('Why is the bread brown?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) It was left in the sun <button class="tts-btn" type="button" onclick="speakText('It was left in the sun')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) It was put in the toaster <button class="tts-btn" type="button" onclick="speakText('It was put in the toaster')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) It got wet <button class="tts-btn" type="button" onclick="speakText('It got wet')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Someone painted it <button class="tts-btn" type="button" onclick="speakText('Someone painted it')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) It was left in the sun</button><button class="tts-btn" type="button" onclick="speakText('It was left in the sun')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) It was put in the toaster</button><button class="tts-btn" type="button" onclick="speakText('It was put in the toaster')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) It got wet</button><button class="tts-btn" type="button" onclick="speakText('It got wet')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Someone painted it</button><button class="tts-btn" type="button" onclick="speakText('Someone painted it')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D3 Q2 CR -->
   <div class="q-card" data-qref="D3Q2" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Write 1 to 3 sentences about why this happened.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Write 1–3 sentences about why this happened. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences about why this happened.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="3" placeholder="Write your answer here…" data-qref="D3Q2"></textarea>
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. Write 1 to 3 sentences about why this happened.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write 1&#8211;3 sentences about why this happened. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences about why this happened.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D3Q2"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Scene 2 -->
   <div class="scene-card">
-    <span class="scene-emoji">🧊</span>
+    <span class="scene-emoji">&#129398;</span>
     <span class="scene-text">The milk is very cold.</span>
   </div>
 
-  <!-- D3 Q3 MCQ -->
   <div class="q-card" data-qref="D3Q3" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. Why is the milk cold?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Why is the milk cold? <button class="tts-btn" type="button" onclick="speakText('Why is the milk cold?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. Why is the milk cold?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Why is the milk cold? <button class="tts-btn" type="button" onclick="speakText('Why is the milk cold?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) It was left outside in the snow <button class="tts-btn" type="button" onclick="speakText('It was left outside in the snow')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Ice cubes were added to it <button class="tts-btn" type="button" onclick="speakText('Ice cubes were added to it')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>c) It was kept in the refrigerator <button class="tts-btn" type="button" onclick="speakText('It was kept in the refrigerator')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Someone blew on it <button class="tts-btn" type="button" onclick="speakText('Someone blew on it')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) It was left outside in the snow</button><button class="tts-btn" type="button" onclick="speakText('It was left outside in the snow')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Ice cubes were added to it</button><button class="tts-btn" type="button" onclick="speakText('Ice cubes were added to it')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) It was kept in the refrigerator</button><button class="tts-btn" type="button" onclick="speakText('It was kept in the refrigerator')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Someone blew on it</button><button class="tts-btn" type="button" onclick="speakText('Someone blew on it')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D3 Q4 CR -->
   <div class="q-card" data-qref="D3Q4" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. Write 1 to 3 sentences explaining why.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Write 1–3 sentences explaining why. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences explaining why.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="3" placeholder="Write your answer here…" data-qref="D3Q4"></textarea>
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. Write 1 to 3 sentences explaining why.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write 1&#8211;3 sentences explaining why. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences explaining why.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D3Q4"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- Scene 3 -->
   <div class="scene-card">
-    <span class="scene-emoji">🍓</span>
+    <span class="scene-emoji">&#127827;</span>
     <span class="scene-text">The strawberries are cut in half.</span>
   </div>
 
-  <!-- D3 Q5 MCQ -->
   <div class="q-card" data-qref="D3Q5" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. Why are the strawberries cut?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Why are the strawberries cut? <button class="tts-btn" type="button" onclick="speakText('Why are the strawberries cut?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. Why are the strawberries cut?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Why are the strawberries cut? <button class="tts-btn" type="button" onclick="speakText('Why are the strawberries cut?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) They were too big to fit in the bowl <button class="tts-btn" type="button" onclick="speakText('They were too big to fit in the bowl')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) To put them in the fruit salad <button class="tts-btn" type="button" onclick="speakText('To put them in the fruit salad')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) They were rotten <button class="tts-btn" type="button" onclick="speakText('They were rotten')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) To make them cook faster <button class="tts-btn" type="button" onclick="speakText('To make them cook faster')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) They were too big to fit in the bowl</button><button class="tts-btn" type="button" onclick="speakText('They were too big to fit in the bowl')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) To put them in the fruit salad</button><button class="tts-btn" type="button" onclick="speakText('To put them in the fruit salad')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) They were rotten</button><button class="tts-btn" type="button" onclick="speakText('They were rotten')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) To make them cook faster</button><button class="tts-btn" type="button" onclick="speakText('To make them cook faster')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D3 Q6 CR -->
   <div class="q-card" data-qref="D3Q6" data-goal="S015.11.1-3;S015.11.2-2" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6. Write 1 to 3 sentences about this.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">Write 1–3 sentences about this. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences about this.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="3" placeholder="Write your answer here…" data-qref="D3Q6"></textarea>
+    <div class="q-num">Question 6 <button class="tts-btn" type="button" onclick="speakText('Question 6. Write 1 to 3 sentences about this.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">Write 1&#8211;3 sentences about this. <button class="tts-btn" type="button" onclick="speakText('Write 1 to 3 sentences about this.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="3" placeholder="Write your answer here&#8230;" data-qref="D3Q6"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-</div><!-- /day-panel-3 -->
+</div>
 
-<!-- ═══════════════════════════ DAY 4 ═══════════════════════════ -->
+<!-- DAY 4 -->
 <div class="day-panel" id="day-panel-4" data-goal="S015.11.4-2;S015.11.1-1">
 
-  <div class="part-label">📋 PB&amp;J Steps — Out of Order</div>
+  <div class="part-label">&#128203; PB&amp;J Steps &#8212; Out of Order</div>
 
   <div class="scrambled-steps">
-    <p>Scrambled Steps — Read carefully!</p>
+    <p>Scrambled Steps &#8212; Read carefully!</p>
     <div class="scrambled-step"><strong>Step A:</strong> Press both slices together.</div>
     <div class="scrambled-step"><strong>Step B:</strong> Spread jelly on the other slice of bread.</div>
     <div class="scrambled-step"><strong>Step C:</strong> Cut in half and enjoy!</div>
@@ -427,64 +390,59 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     <div class="scrambled-step"><strong>Step E:</strong> Spread peanut butter on one slice of bread.</div>
   </div>
 
-  <div class="part-label">❓ Questions</div>
+  <div class="part-label">&#10067; Questions</div>
 
-  <!-- D4 Q1 MCQ -->
   <div class="q-card" data-qref="D4Q1" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What should you do FIRST when making a PB and J?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What should you do FIRST when making a PB&amp;J? <button class="tts-btn" type="button" onclick="speakText('What should you do FIRST when making a PB and J?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 1 <button class="tts-btn" type="button" onclick="speakText('Question 1. What should you do FIRST when making a PB and J?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What should you do FIRST when making a PB&amp;J? <button class="tts-btn" type="button" onclick="speakText('What should you do FIRST when making a PB and J?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Spread peanut butter on one slice <button class="tts-btn" type="button" onclick="speakText('Spread peanut butter on one slice')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>b) Lay two slices of bread flat on a plate <button class="tts-btn" type="button" onclick="speakText('Lay two slices of bread flat on a plate')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) Press both slices together <button class="tts-btn" type="button" onclick="speakText('Press both slices together')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Cut in half and enjoy <button class="tts-btn" type="button" onclick="speakText('Cut in half and enjoy')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Spread peanut butter on one slice</button><button class="tts-btn" type="button" onclick="speakText('Spread peanut butter on one slice')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>b) Lay two slices of bread flat on a plate</button><button class="tts-btn" type="button" onclick="speakText('Lay two slices of bread flat on a plate')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Press both slices together</button><button class="tts-btn" type="button" onclick="speakText('Press both slices together')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Cut in half and enjoy</button><button class="tts-btn" type="button" onclick="speakText('Cut in half and enjoy')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D4 Q2 MCQ -->
   <div class="q-card" data-qref="D4Q2" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. What comes AFTER spreading peanut butter?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What comes AFTER spreading peanut butter? <button class="tts-btn" type="button" onclick="speakText('What comes AFTER spreading peanut butter?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 2 <button class="tts-btn" type="button" onclick="speakText('Question 2. What comes AFTER spreading peanut butter?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What comes AFTER spreading peanut butter? <button class="tts-btn" type="button" onclick="speakText('What comes AFTER spreading peanut butter?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Lay the bread flat <button class="tts-btn" type="button" onclick="speakText('Lay the bread flat')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Cut in half <button class="tts-btn" type="button" onclick="speakText('Cut in half')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>c) Spread jelly on the other slice <button class="tts-btn" type="button" onclick="speakText('Spread jelly on the other slice')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">d) Press both slices together <button class="tts-btn" type="button" onclick="speakText('Press both slices together')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Lay the bread flat</button><button class="tts-btn" type="button" onclick="speakText('Lay the bread flat')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Cut in half</button><button class="tts-btn" type="button" onclick="speakText('Cut in half')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>c) Spread jelly on the other slice</button><button class="tts-btn" type="button" onclick="speakText('Spread jelly on the other slice')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">d) Press both slices together</button><button class="tts-btn" type="button" onclick="speakText('Press both slices together')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D4 Q3 MCQ -->
   <div class="q-card" data-qref="D4Q3" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
-    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is the LAST step?')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What is the LAST step? <button class="tts-btn" type="button" onclick="speakText('What is the LAST step?')" aria-label="Read aloud">🔊</button></div>
+    <div class="q-num">Question 3 <button class="tts-btn" type="button" onclick="speakText('Question 3. What is the LAST step?')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What is the LAST step? <button class="tts-btn" type="button" onclick="speakText('What is the LAST step?')" aria-label="Read aloud">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Spread jelly on the other slice <button class="tts-btn" type="button" onclick="speakText('Spread jelly on the other slice')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">b) Press both slices together <button class="tts-btn" type="button" onclick="speakText('Press both slices together')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button">c) Lay the bread flat on a plate <button class="tts-btn" type="button" onclick="speakText('Lay the bread flat on a plate')" aria-label="Read aloud">🔊</button></button>
-      <button class="opt-btn" type="button" data-correct>d) Cut in half and enjoy! <button class="tts-btn" type="button" onclick="speakText('Cut in half and enjoy!')" aria-label="Read aloud">🔊</button></button>
+      <div class="opt-row"><button class="opt-btn" type="button">a) Spread jelly on the other slice</button><button class="tts-btn" type="button" onclick="speakText('Spread jelly on the other slice')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">b) Press both slices together</button><button class="tts-btn" type="button" onclick="speakText('Press both slices together')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button">c) Lay the bread flat on a plate</button><button class="tts-btn" type="button" onclick="speakText('Lay the bread flat on a plate')" aria-label="Read aloud">&#128266;</button></div>
+      <div class="opt-row"><button class="opt-btn" type="button" data-correct>d) Cut in half and enjoy!</button><button class="tts-btn" type="button" onclick="speakText('Cut in half and enjoy!')" aria-label="Read aloud">&#128266;</button></div>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D4 Q4 CR -->
   <div class="q-card" data-qref="D4Q4" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. In your own words, describe how to make a bowl of cereal.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">In your own words, describe how to make a bowl of cereal. <button class="tts-btn" type="button" onclick="speakText('In your own words, describe how to make a bowl of cereal.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="4" placeholder="Write your answer here…" data-qref="D4Q4"></textarea>
+    <div class="q-num">Question 4 <button class="tts-btn" type="button" onclick="speakText('Question 4. In your own words, describe how to make a bowl of cereal.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">In your own words, describe how to make a bowl of cereal. <button class="tts-btn" type="button" onclick="speakText('In your own words, describe how to make a bowl of cereal.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="4" placeholder="Write your answer here&#8230;" data-qref="D4Q4"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- D4 Q5 CR -->
   <div class="q-card" data-qref="D4Q5" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="constructed-response">
-    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. What ingredients do you need to make a Fruit Salad? List at least 3.')" aria-label="Read aloud">🔊</button></div>
-    <div class="q-prompt">What ingredients do you need to make a Fruit Salad? List at least 3. <button class="tts-btn" type="button" onclick="speakText('What ingredients do you need to make a Fruit Salad? List at least 3.')" aria-label="Read aloud">🔊</button></div>
-    <textarea class="q-input" rows="4" placeholder="Write your answer here…" data-qref="D4Q5"></textarea>
+    <div class="q-num">Question 5 <button class="tts-btn" type="button" onclick="speakText('Question 5. What ingredients do you need to make a Fruit Salad? List at least 3.')" aria-label="Read aloud">&#128266;</button></div>
+    <div class="q-prompt">What ingredients do you need to make a Fruit Salad? List at least 3. <button class="tts-btn" type="button" onclick="speakText('What ingredients do you need to make a Fruit Salad? List at least 3.')" aria-label="Read aloud">&#128266;</button></div>
+    <textarea class="q-input" rows="4" placeholder="Write your answer here&#8230;" data-qref="D4Q5"></textarea>
     <div class="q-feedback"></div>
   </div>
 
-</div><!-- /day-panel-4 -->
+</div>
 
 <!-- Bottom Bar -->
 <div class="bottom-bar">
@@ -511,7 +469,6 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 (function () {
   'use strict';
 
-  /* ── TTS ── */
   function speakText(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -523,10 +480,9 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   }
   window.speakText = speakText;
 
-  /* ── Day Tabs ── */
+  /* Day Tabs */
   var tabs = document.querySelectorAll('.day-tab');
   var panels = document.querySelectorAll('.day-panel');
-
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var day = tab.getAttribute('data-day');
@@ -542,18 +498,14 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     });
   });
 
-  /* ── MCQ Click Handling ── */
+  /* MCQ Click Handling */
   document.querySelectorAll('.options-group').forEach(function (group) {
     group.addEventListener('click', function (e) {
+      if (e.target.classList.contains('tts-btn') || e.target.closest('.tts-btn')) return;
       var btn = e.target.closest('.opt-btn');
       if (!btn) return;
-      /* Ignore clicks on the nested TTS buttons */
-      if (e.target.classList.contains('tts-btn') || e.target.closest('.tts-btn')) return;
-
       var card = btn.closest('.q-card');
       if (!card) return;
-
-      /* Prevent re-answering */
       if (card.classList.contains('correct') || card.classList.contains('incorrect')) return;
 
       var allOpts = group.querySelectorAll('.opt-btn');
@@ -568,40 +520,29 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       } else {
         btn.classList.add('is-incorrect');
         card.classList.add('incorrect');
-        /* Reveal the correct answer */
         allOpts.forEach(function (o) {
-          if (o.hasAttribute('data-correct')) {
-            o.classList.add('reveal-answer');
-          }
+          if (o.hasAttribute('data-correct')) o.classList.add('reveal-answer');
         });
       }
 
       var fb = card.querySelector('.q-feedback');
       if (fb) {
-        fb.textContent = isCorrect ? '✓ Correct!' : '✗ Not quite — the correct answer is highlighted.';
+        fb.textContent = isCorrect ? '\u2713 Correct!' : '\u2717 Not quite \u2014 the correct answer is highlighted.';
       }
-
       updateAnsweredCount();
     });
   });
 
-  /* ── Textarea change tracking ── */
+  /* Textarea tracking */
   document.querySelectorAll('.q-input').forEach(function (ta) {
-    ta.addEventListener('input', function () {
-      updateAnsweredCount();
-    });
+    ta.addEventListener('input', function () { updateAnsweredCount(); });
   });
 
-  /* ── Count answered questions ── */
   function updateAnsweredCount() {
     var answered = 0;
-    /* MCQ: card has correct or incorrect class */
     document.querySelectorAll('.q-card[data-answer-type="multiple-choice"]').forEach(function (card) {
-      if (card.classList.contains('correct') || card.classList.contains('incorrect')) {
-        answered++;
-      }
+      if (card.classList.contains('correct') || card.classList.contains('incorrect')) answered++;
     });
-    /* CR: textarea has non-empty trimmed value */
     document.querySelectorAll('.q-input').forEach(function (ta) {
       if (ta.value.trim().length > 0) answered++;
     });
@@ -609,16 +550,13 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     if (el) el.textContent = String(answered);
   }
 
-  /* ── Collect answers (no innerHTML) ── */
   function getAnswers() {
     var answers = {};
-    /* MCQ */
     document.querySelectorAll('.q-card[data-answer-type="multiple-choice"]').forEach(function (card) {
       var qref = card.getAttribute('data-qref');
       var selected = card.querySelector('.opt-btn.selected');
       answers[qref] = selected ? selected.textContent.trim() : '';
     });
-    /* Constructed response */
     document.querySelectorAll('.q-input').forEach(function (ta) {
       var qref = ta.getAttribute('data-qref');
       if (qref) answers[qref] = ta.value.trim();
@@ -626,7 +564,6 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     return answers;
   }
 
-  /* ── Save status helper ── */
   var statusTimer = null;
   function showStatus(msg, color) {
     var el = document.getElementById('save-status');
@@ -635,19 +572,15 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     el.style.color = color || '#22c55e';
     el.style.opacity = '1';
     if (statusTimer) clearTimeout(statusTimer);
-    statusTimer = setTimeout(function () {
-      el.style.opacity = '0';
-    }, 2500);
+    statusTimer = setTimeout(function () { el.style.opacity = '0'; }, 2500);
   }
 
-  /* ── Autosave ── */
   function autosave() {
     window.parent.postMessage({ type: 'rc-assignment-autosave', answers: getAnswers() }, '*');
     showStatus('Progress saved!', '#22c55e');
   }
   window.autosave = autosave;
 
-  /* ── Submit flow ── */
   function submitAll() {
     document.getElementById('confirm-overlay').classList.add('show');
   }
@@ -664,7 +597,6 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   }
   window.confirmSubmit = confirmSubmit;
 
-  /* ── Initial count ── */
   updateAnsweredCount();
 }());
 </script>
