@@ -3,394 +3,963 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reading a Recipe – Week 1</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<title>Reading a Recipe &#8211; Week 1 | S015</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
-.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
-.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
-.header p{font-size:0.95rem;color:#8b949e;}
-.main-content{padding:20px 24px 80px;}
-.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:20px 0 10px;}
-/* Recipe section */
-.recipe-intro{font-size:0.9rem;color:#8b949e;margin-bottom:14px;line-height:1.5;}
-.recipes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px;}
-.recipe-card{background:#161b22;border:2px solid #30363d;border-left:4px solid #14b8a6;border-radius:14px;padding:16px 18px;}
-.recipe-title{font-size:1.05rem;font-weight:800;color:#14b8a6;margin-bottom:2px;}
-.recipe-servings{font-size:0.75rem;color:#8b949e;margin-bottom:10px;font-family:'JetBrains Mono',monospace;}
-.recipe-section-heading{font-size:0.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-top:10px;margin-bottom:5px;}
-.recipe-list{list-style:none;padding:0;}
-.recipe-list li{font-size:0.88rem;color:#c9d1d9;padding:3px 0;border-bottom:1px solid #21262d;line-height:1.4;}
-.recipe-list li:last-child{border-bottom:none;}
-.recipe-list.steps{counter-reset:step-counter;}
-.recipe-list.steps li{counter-increment:step-counter;padding-left:22px;position:relative;}
-.recipe-list.steps li::before{content:counter(step-counter)".";position:absolute;left:0;color:#5eead4;font-weight:700;font-size:0.8rem;}
-/* Q-card */
-.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
-.q-card.correct{border-color:#22c55e;}
-.q-card.incorrect{border-color:#ef4444;}
-.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
-.q-prompt{font-size:1rem;font-weight:400;color:#e6edf3;line-height:1.5;margin-bottom:12px;}
-.q-feedback{font-size:0.8rem;margin-top:8px;min-height:18px;}
-.q-card.correct .q-feedback{color:#22c55e;}
-.q-card.incorrect .q-feedback{color:#ef4444;}
-/* Multiple choice options */
-.options-group{display:flex;flex-direction:column;gap:8px;}
-.opt-btn{background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.95rem;padding:10px 14px;text-align:left;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;width:100%;}
-.opt-btn:hover{border-color:#14b8a6;color:#e6edf3;}
-.opt-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
-.opt-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
-.opt-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
-.opt-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
-/* Constructed response */
-.q-input-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;}
-.q-input{font-family:'JetBrains Mono',monospace;font-size:1rem;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:8px 14px;color:#e6edf3;width:100%;outline:none;transition:border-color 0.2s;resize:vertical;min-height:44px;}
-.q-input:focus{border-color:#14b8a6;}
-/* Bottom bar */
-.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
-.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
-.score-display span{color:#14b8a6;font-weight:700;}
-.save-status{font-size:0.8rem;opacity:0;transition:opacity 0.3s;color:#22c55e;min-width:100px;}
-.btn-row{display:flex;gap:10px;}
-.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
-.btn-save{background:#30363d;color:#e6edf3;}
-.btn-save:hover{background:#484f58;}
-.btn-submit{background:#14b8a6;color:#0d1117;}
-.btn-submit:hover{background:#0d9488;}
-/* Custom confirm dialog */
-.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
-.confirm-overlay.show{display:flex;}
-.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
-.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
-.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Outfit',sans-serif;min-height:100vh;padding-bottom:100px}
+.header{background:#161b22;border-bottom:2px solid #30363d;padding:24px 20px 18px;text-align:center}
+.header h1{font-size:1.5rem;font-weight:800;color:#14b8a6;margin-bottom:6px}
+.header p{font-size:.9rem;color:#8b949e}
+.day-tabs{display:flex;gap:6px;padding:16px 20px 0;border-bottom:2px solid #30363d;overflow-x:auto}
+.day-tab{background:none;border:2px solid #30363d;border-bottom:none;border-radius:8px 8px 0 0;color:#8b949e;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.9rem;font-weight:600;padding:10px 22px;transition:background .15s,color .15s;white-space:nowrap}
+.day-tab:hover{background:#21262d;color:#c9d1d9}
+.day-tab.active{background:#161b22;border-color:#14b8a6;color:#14b8a6;position:relative;bottom:-2px}
+.day-panel{display:none;padding:20px;max-width:860px;margin:0 auto}
+.day-panel.active{display:block}
+.day-heading{font-size:1.1rem;font-weight:800;color:#e6edf3;margin-bottom:4px}
+.day-subheading{font-size:.82rem;color:#8b949e;margin-bottom:20px}
+.section-label{font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#484f58;margin-bottom:12px;margin-top:24px}
+.recipe-card{background:#161b22;border:2px solid #30363d;border-left:4px solid #14b8a6;border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.recipe-title{font-size:1.1rem;font-weight:800;color:#14b8a6;margin-bottom:4px}
+.recipe-servings{font-size:.78rem;color:#8b949e;margin-bottom:10px;font-family:'JetBrains Mono',monospace}
+.recipe-section-heading{font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-top:10px;margin-bottom:5px}
+.recipe-list{list-style:none;padding:0}
+.recipe-list li{font-size:.88rem;color:#c9d1d9;padding:4px 0;border-bottom:1px solid #21262d;line-height:1.4}
+.recipe-list li:last-child{border-bottom:none}
+.recipe-list.steps{counter-reset:step-counter}
+.recipe-list.steps li{counter-increment:step-counter;padding-left:24px;position:relative}
+.recipe-list.steps li::before{content:counter(step-counter)".";position:absolute;left:0;color:#5eead4;font-weight:700;font-size:.8rem}
+.scene-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:20px;margin-bottom:14px;display:flex;align-items:flex-start;gap:16px}
+.scene-emoji{font-size:3rem;line-height:1;flex-shrink:0}
+.scene-text{font-size:.95rem;color:#c9d1d9;line-height:1.6}
+.scene-label{font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin-bottom:6px}
+.scrambled-card{background:#161b22;border:2px solid #30363d;border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.step-letter{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:#14b8a6;flex-shrink:0}
+.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px;margin-bottom:14px;transition:border-color .2s}
+.q-card.correct{border-color:#22c55e}
+.q-card.incorrect{border-color:#ef4444}
+.q-num{font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px}
+.q-prompt{font-size:.95rem;font-weight:600;color:#e6edf3;margin-bottom:14px;line-height:1.5}
+.options-group{display:flex;flex-direction:column;gap:8px}
+.opt-btn{background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.9rem;padding:10px 14px;text-align:left;transition:background .15s,border-color .15s;display:flex;align-items:center;justify-content:space-between}
+.opt-btn:hover{background:#21262d;border-color:#8b949e}
+.opt-btn.selected{border-color:#14b8a6;background:#0d2d2a;color:#e6edf3}
+.opt-btn.correct{border-color:#22c55e;background:#0d2a1a;color:#86efac}
+.opt-btn.incorrect{border-color:#ef4444;background:#2a0d0d;color:#fca5a5}
+.opt-btn:disabled{cursor:default}
+.q-feedback{font-size:.82rem;font-weight:600;margin-top:10px;min-height:20px}
+.q-feedback.correct-msg{color:#22c55e}
+.q-feedback.incorrect-msg{color:#ef4444}
+.q-input-row{margin-top:4px}
+.q-input{width:100%;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:.9rem;padding:10px 12px;resize:vertical;transition:border-color .15s;line-height:1.5}
+.q-input:focus{outline:none;border-color:#14b8a6}
+.q-input:disabled{opacity:.6}
+.q-input-single{width:100%;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:.9rem;padding:10px 12px;transition:border-color .15s}
+.q-input-single:focus{outline:none;border-color:#14b8a6}
+.q-input-single:disabled{opacity:.6}
+.tts-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:4px;margin-left:8px;opacity:.5;transition:opacity .2s,transform .1s;vertical-align:middle;display:inline-block;flex-shrink:0}
+.tts-btn:hover{opacity:1;transform:scale(1.1)}
+.tts-btn:active{transform:scale(.95)}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;z-index:100}
+.score-display{font-size:.85rem;color:#8b949e}
+.score-display span{color:#14b8a6;font-weight:700}
+.save-status{font-size:.78rem;color:#22c55e;font-family:'JetBrains Mono',monospace;transition:opacity .3s}
+.btn-row{display:flex;gap:8px}
+.btn{border:none;border-radius:8px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:700;padding:8px 16px;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-save{background:#30363d;color:#c9d1d9}
+.btn-save:hover{background:#484f58}
+.btn-submit{background:#14b8a6;color:#0d1117}
+.btn-submit:hover{background:#0d9488}
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(13,17,23,.85);z-index:200;align-items:center;justify-content:center}
+.confirm-overlay.visible{display:flex}
+.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:16px;padding:28px 32px;max-width:360px;width:90%;text-align:center}
+.confirm-box p{font-size:.95rem;color:#c9d1d9;line-height:1.6;margin-bottom:20px}
+.confirm-btn-row{display:flex;gap:10px;justify-content:center}
+.recipes-grid{display:grid;grid-template-columns:1fr;gap:0}
+.scenes-grid{display:grid;grid-template-columns:1fr;gap:0}
+@media(min-width:640px){
+  .recipes-grid{grid-template-columns:repeat(3,1fr);gap:14px}
+  .recipe-card{margin-bottom:0}
+  .scenes-grid{grid-template-columns:repeat(3,1fr);gap:14px}
+  .scene-card{margin-bottom:0}
+}
+.submitted-banner{background:#0d2a1a;border:2px solid #22c55e;border-radius:12px;color:#86efac;font-weight:700;padding:16px;text-align:center;margin-bottom:20px;display:none}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Reading a Recipe – Week 1</h1>
-  <p>Read each recipe carefully, then answer the questions below.</p>
+  <h1>Reading a Recipe &#8211; Week 1</h1>
+  <p>Use the recipe cards to answer the questions each day.</p>
 </div>
 
-<div class="main-content">
+<div class="day-tabs">
+  <button class="day-tab active" onclick="showDay(0)">Day 1</button>
+  <button class="day-tab" onclick="showDay(1)">Day 2</button>
+  <button class="day-tab" onclick="showDay(2)">Day 3</button>
+  <button class="day-tab" onclick="showDay(3)">Day 4</button>
+</div>
 
-  <!-- ══════════ RECIPE REFERENCE CARDS ══════════ -->
-  <div class="part-label">📖 Reference Recipes</div>
-  <p class="recipe-intro">Look at these three recipes to answer the questions. You can scroll back up to check them any time!</p>
+<!-- ============================================================ DAY 1 -->
+<div class="day-panel active" id="panel-0">
+  <div id="submitted-banner-0" class="submitted-banner">&#10003; Assignment submitted! Great work!</div>
 
+  <div class="day-heading">Day 1 &#8211; Recipe Parts Identification
+    <button class="tts-btn" onclick="speakText('Day 1. Recipe Parts Identification')">&#128266;</button>
+  </div>
+  <div class="day-subheading">Read each recipe card, then answer the questions below.</div>
+
+  <div class="section-label">Recipe Cards</div>
   <div class="recipes-grid">
 
-    <!-- Recipe 1 -->
+    <!-- PB&J -->
     <div class="recipe-card">
-      <div class="recipe-title">Recipe 1: Peanut Butter &amp; Jelly Sandwich</div>
-      <div class="recipe-servings">Makes: 1 sandwich</div>
+      <div class="recipe-title">PB&amp;J Sandwich <button class="tts-btn" onclick="speakText('PB and J Sandwich')">&#128266;</button></div>
+      <div class="recipe-servings">Serves: 1 sandwich</div>
       <div class="recipe-section-heading">Ingredients</div>
       <ul class="recipe-list">
-        <li>2 slices of bread</li>
-        <li>2 tablespoons peanut butter</li>
-        <li>1 tablespoon jelly</li>
+        <li>2 slices of bread <button class="tts-btn" onclick="speakText('2 slices of bread')">&#128266;</button></li>
+        <li>2 tablespoons of peanut butter <button class="tts-btn" onclick="speakText('2 tablespoons of peanut butter')">&#128266;</button></li>
+        <li>1 tablespoon of jelly <button class="tts-btn" onclick="speakText('1 tablespoon of jelly')">&#128266;</button></li>
       </ul>
       <div class="recipe-section-heading">Steps</div>
-      <ol class="recipe-list steps">
-        <li>Lay two slices of bread flat on a plate.</li>
-        <li>Spread peanut butter on one slice of bread.</li>
-        <li>Spread jelly on the other slice of bread.</li>
-        <li>Press both slices together.</li>
-        <li>Cut in half and enjoy!</li>
-      </ol>
+      <ul class="recipe-list steps">
+        <li>Lay both slices of bread flat. <button class="tts-btn" onclick="speakText('Lay both slices of bread flat.')">&#128266;</button></li>
+        <li>Spread peanut butter on one slice. <button class="tts-btn" onclick="speakText('Spread peanut butter on one slice.')">&#128266;</button></li>
+        <li>Spread jelly on the other slice. <button class="tts-btn" onclick="speakText('Spread jelly on the other slice.')">&#128266;</button></li>
+        <li>Press the two slices together. <button class="tts-btn" onclick="speakText('Press the two slices together.')">&#128266;</button></li>
+        <li>Cut in half and enjoy! <button class="tts-btn" onclick="speakText('Cut in half and enjoy!')">&#128266;</button></li>
+      </ul>
     </div>
 
-    <!-- Recipe 2 -->
+    <!-- Bowl of Cereal -->
     <div class="recipe-card">
-      <div class="recipe-title">Recipe 2: Bowl of Cereal</div>
-      <div class="recipe-servings">Makes: 1 bowl</div>
+      <div class="recipe-title">Bowl of Cereal <button class="tts-btn" onclick="speakText('Bowl of Cereal')">&#128266;</button></div>
+      <div class="recipe-servings">Serves: 1 bowl</div>
       <div class="recipe-section-heading">Ingredients</div>
       <ul class="recipe-list">
-        <li>1 cup cereal</li>
-        <li>½ cup cold milk</li>
+        <li>1 cup of cereal <button class="tts-btn" onclick="speakText('1 cup of cereal')">&#128266;</button></li>
+        <li>1 cup of milk <button class="tts-btn" onclick="speakText('1 cup of milk')">&#128266;</button></li>
+        <li>Optional: 1 banana <button class="tts-btn" onclick="speakText('Optional: 1 banana')">&#128266;</button></li>
       </ul>
       <div class="recipe-section-heading">Steps</div>
-      <ol class="recipe-list steps">
-        <li>Get a bowl from the cabinet.</li>
-        <li>Pour 1 cup of cereal into the bowl.</li>
-        <li>Pour ½ cup of cold milk over the cereal.</li>
-        <li>Add a spoon and enjoy!</li>
-      </ol>
+      <ul class="recipe-list steps">
+        <li>Get a bowl from the cabinet. <button class="tts-btn" onclick="speakText('Get a bowl from the cabinet.')">&#128266;</button></li>
+        <li>Pour cereal into the bowl. <button class="tts-btn" onclick="speakText('Pour cereal into the bowl.')">&#128266;</button></li>
+        <li>Pour milk over the cereal. <button class="tts-btn" onclick="speakText('Pour milk over the cereal.')">&#128266;</button></li>
+        <li>Optional: slice the banana and add on top. <button class="tts-btn" onclick="speakText('Optional: slice the banana and add on top.')">&#128266;</button></li>
+        <li>Eat with a spoon. <button class="tts-btn" onclick="speakText('Eat with a spoon.')">&#128266;</button></li>
+      </ul>
     </div>
 
-    <!-- Recipe 3 -->
+    <!-- Fruit Salad -->
     <div class="recipe-card">
-      <div class="recipe-title">Recipe 3: Fruit Salad</div>
-      <div class="recipe-servings">Makes: 2 servings</div>
+      <div class="recipe-title">Fruit Salad <button class="tts-btn" onclick="speakText('Fruit Salad')">&#128266;</button></div>
+      <div class="recipe-servings">Serves: 2 servings</div>
       <div class="recipe-section-heading">Ingredients</div>
       <ul class="recipe-list">
-        <li>1 cup strawberries</li>
-        <li>½ cup blueberries</li>
-        <li>½ cup grapes</li>
-        <li>1 teaspoon honey</li>
+        <li>1 apple <button class="tts-btn" onclick="speakText('1 apple')">&#128266;</button></li>
+        <li>1 banana <button class="tts-btn" onclick="speakText('1 banana')">&#128266;</button></li>
+        <li>1 cup of grapes <button class="tts-btn" onclick="speakText('1 cup of grapes')">&#128266;</button></li>
+        <li>1 cup of strawberries <button class="tts-btn" onclick="speakText('1 cup of strawberries')">&#128266;</button></li>
+        <li>1 tablespoon of honey <button class="tts-btn" onclick="speakText('1 tablespoon of honey')">&#128266;</button></li>
       </ul>
       <div class="recipe-section-heading">Steps</div>
-      <ol class="recipe-list steps">
-        <li>Wash all the fruit under cold water.</li>
-        <li>Cut the strawberries in half.</li>
-        <li>Measure ½ cup of blueberries and add to bowl.</li>
-        <li>Measure ½ cup of grapes and add to bowl.</li>
-        <li>Combine all fruit in a large bowl.</li>
-        <li>Drizzle 1 teaspoon of honey on top.</li>
-        <li>Stir gently and serve.</li>
-      </ol>
+      <ul class="recipe-list steps">
+        <li>Wash all the fruit. <button class="tts-btn" onclick="speakText('Wash all the fruit.')">&#128266;</button></li>
+        <li>Cut the apple into small pieces. <button class="tts-btn" onclick="speakText('Cut the apple into small pieces.')">&#128266;</button></li>
+        <li>Slice the banana. <button class="tts-btn" onclick="speakText('Slice the banana.')">&#128266;</button></li>
+        <li>Cut the strawberries in half. <button class="tts-btn" onclick="speakText('Cut the strawberries in half.')">&#128266;</button></li>
+        <li>Mix all fruit in a bowl. <button class="tts-btn" onclick="speakText('Mix all fruit in a bowl.')">&#128266;</button></li>
+        <li>Drizzle honey on top. <button class="tts-btn" onclick="speakText('Drizzle honey on top.')">&#128266;</button></li>
+      </ul>
     </div>
 
   </div><!-- /recipes-grid -->
 
-  <!-- ══════════ PART A: MULTIPLE CHOICE ══════════ -->
-  <div class="part-label">Part A – Multiple Choice</div>
+  <div class="section-label" style="margin-top:28px">Questions</div>
 
-  <div class="q-card" data-qref="W1Q1" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q1">
+  <!-- D1Q1 -->
+  <div class="q-card" data-qref="D1Q1" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
     <div class="q-num">Question 1</div>
-    <div class="q-prompt">What is the title of Recipe 1?</div>
+    <div class="q-prompt">What is the title of Recipe 1? <button class="tts-btn" onclick="speakText('What is the title of Recipe 1?')">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Fruit Salad</button>
-      <button class="opt-btn" type="button">b) Bowl of Cereal</button>
-      <button class="opt-btn" type="button" data-correct>c) Peanut Butter &amp; Jelly Sandwich</button>
-      <button class="opt-btn" type="button">d) Oatmeal</button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q1','A')">
+        <span>A. Bowl of Cereal</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Bowl of Cereal')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q1','B')">
+        <span>B. PB&amp;J Sandwich</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('PB and J Sandwich')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q1','C')">
+        <span>C. Fruit Salad</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Fruit Salad')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q1','D')">
+        <span>D. Toast</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Toast')">&#128266;</button>
+      </button>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q2" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q2">
+  <!-- D1Q2 -->
+  <div class="q-card" data-qref="D1Q2" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
     <div class="q-num">Question 2</div>
-    <div class="q-prompt">How many ingredients does Recipe 2 (Bowl of Cereal) need?</div>
+    <div class="q-prompt">How many ingredients does the Fruit Salad recipe need? <button class="tts-btn" onclick="speakText('How many ingredients does the Fruit Salad recipe need?')">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) 1</button>
-      <button class="opt-btn" type="button" data-correct>b) 2</button>
-      <button class="opt-btn" type="button">c) 3</button>
-      <button class="opt-btn" type="button">d) 4</button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q2','A')">
+        <span>A. 3</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('3')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q2','B')">
+        <span>B. 4</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('4')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q2','C')">
+        <span>C. 5</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('5')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q2','D')">
+        <span>D. 6</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('6')">&#128266;</button>
+      </button>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q3" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q3">
+  <!-- D1Q3 -->
+  <div class="q-card" data-qref="D1Q3" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
     <div class="q-num">Question 3</div>
-    <div class="q-prompt">What is Step 1 of Recipe 3 (Fruit Salad)?</div>
+    <div class="q-prompt">What is Step 3 of the Bowl of Cereal recipe? <button class="tts-btn" onclick="speakText('What is Step 3 of the Bowl of Cereal recipe?')">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Cut the strawberries in half</button>
-      <button class="opt-btn" type="button">b) Drizzle honey on top</button>
-      <button class="opt-btn" type="button" data-correct>c) Wash all the fruit under cold water</button>
-      <button class="opt-btn" type="button">d) Combine all fruit in a large bowl</button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q3','A')">
+        <span>A. Get a bowl from the cabinet</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Get a bowl from the cabinet')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q3','B')">
+        <span>B. Eat with a spoon</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Eat with a spoon')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q3','C')">
+        <span>C. Pour milk over the cereal</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Pour milk over the cereal')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q3','D')">
+        <span>D. Slice the banana</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Slice the banana')">&#128266;</button>
+      </button>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q4" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q4">
+  <!-- D1Q4 -->
+  <div class="q-card" data-qref="D1Q4" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
     <div class="q-num">Question 4</div>
-    <div class="q-prompt">How many servings does Recipe 1 (PB&amp;J) make?</div>
+    <div class="q-prompt">What is the serving size of the Fruit Salad recipe? <button class="tts-btn" onclick="speakText('What is the serving size of the Fruit Salad recipe?')">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button" data-correct>a) 1</button>
-      <button class="opt-btn" type="button">b) 2</button>
-      <button class="opt-btn" type="button">c) 3</button>
-      <button class="opt-btn" type="button">d) 4</button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q4','A')">
+        <span>A. 1 serving</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('1 serving')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q4','B')">
+        <span>B. 2 servings</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('2 servings')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q4','C')">
+        <span>C. 3 servings</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('3 servings')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q4','D')">
+        <span>D. 4 servings</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('4 servings')">&#128266;</button>
+      </button>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q5" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q5">
+  <!-- D1Q5 -->
+  <div class="q-card" data-qref="D1Q5" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
     <div class="q-num">Question 5</div>
-    <div class="q-prompt">What is the last step of Recipe 2 (Bowl of Cereal)?</div>
+    <div class="q-prompt">Which part of a recipe tells you what to do? <button class="tts-btn" onclick="speakText('Which part of a recipe tells you what to do?')">&#128266;</button></div>
     <div class="options-group">
-      <button class="opt-btn" type="button">a) Pour cereal into the bowl</button>
-      <button class="opt-btn" type="button">b) Pour cold milk over the cereal</button>
-      <button class="opt-btn" type="button">c) Get a bowl from the cabinet</button>
-      <button class="opt-btn" type="button" data-correct>d) Add a spoon and enjoy!</button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q5','A')">
+        <span>A. Title</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Title')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q5','B')">
+        <span>B. Serving Size</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Serving Size')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q5','C')">
+        <span>C. Ingredients</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Ingredients')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q5','D')">
+        <span>D. Steps</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Steps')">&#128266;</button>
+      </button>
     </div>
     <div class="q-feedback"></div>
   </div>
 
-  <!-- ══════════ PART B: CONSTRUCTED RESPONSE ══════════ -->
-  <div class="part-label">Part B – Write Your Answer</div>
-
-  <div class="q-card" data-qref="W1Q6" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q6">
+  <!-- D1Q6 -->
+  <div class="q-card" data-qref="D1Q6" data-goal="S015.11.1-1;S015.11.4-1" data-points="1" data-answer-type="multiple-choice">
     <div class="q-num">Question 6</div>
-    <div class="q-prompt">What is the first step to make a PB&amp;J Sandwich? Write the step in your own words.</div>
-    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q6" autocomplete="off" rows="2"></textarea></div>
+    <div class="q-prompt">Which ingredient is NOT in the PB&amp;J Sandwich recipe? <button class="tts-btn" onclick="speakText('Which ingredient is NOT in the PB and J Sandwich recipe?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q6','A')">
+        <span>A. Bread</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Bread')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q6','B')">
+        <span>B. Peanut butter</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Peanut butter')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q6','C')">
+        <span>C. Honey</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Honey')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D1Q6','D')">
+        <span>D. Jelly</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Jelly')">&#128266;</button>
+      </button>
+    </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q7" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q7">
-    <div class="q-num">Question 7</div>
-    <div class="q-prompt">List 2 ingredients you need to make the Fruit Salad.</div>
-    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q7" autocomplete="off" rows="2"></textarea></div>
+</div><!-- /panel-0 -->
+
+
+<!-- ============================================================ DAY 2 -->
+<div class="day-panel" id="panel-1">
+  <div id="submitted-banner-1" class="submitted-banner">&#10003; Assignment submitted! Great work!</div>
+
+  <div class="day-heading">Day 2 &#8211; What&#39;s Happening?
+    <button class="tts-btn" onclick="speakText('Day 2. What is Happening?')">&#128266;</button>
+  </div>
+  <div class="day-subheading">Look at each scene, then answer the questions below.</div>
+
+  <div class="section-label">Scene Cards</div>
+  <div class="scenes-grid">
+
+    <div class="scene-card">
+      <div class="scene-emoji">&#127859;</div>
+      <div>
+        <div class="scene-label">Scene A <button class="tts-btn" onclick="speakText('Scene A')">&#128266;</button></div>
+        <div class="scene-text">A person is cracking an egg into a hot frying pan on the stove. <button class="tts-btn" onclick="speakText('A person is cracking an egg into a hot frying pan on the stove.')">&#128266;</button></div>
+      </div>
+    </div>
+
+    <div class="scene-card">
+      <div class="scene-emoji">&#129379;</div>
+      <div>
+        <div class="scene-label">Scene B <button class="tts-btn" onclick="speakText('Scene B')">&#128266;</button></div>
+        <div class="scene-text">Someone is pouring milk over cereal in a big bowl. <button class="tts-btn" onclick="speakText('Someone is pouring milk over cereal in a big bowl.')">&#128266;</button></div>
+      </div>
+    </div>
+
+    <div class="scene-card">
+      <div class="scene-emoji">&#129475;</div>
+      <div>
+        <div class="scene-label">Scene C <button class="tts-btn" onclick="speakText('Scene C')">&#128266;</button></div>
+        <div class="scene-text">A student is opening a juice box and putting a straw in it. <button class="tts-btn" onclick="speakText('A student is opening a juice box and putting a straw in it.')">&#128266;</button></div>
+      </div>
+    </div>
+
+  </div><!-- /scenes-grid -->
+
+  <div class="section-label" style="margin-top:28px">Questions</div>
+
+  <!-- D2Q1 -->
+  <div class="q-card" data-qref="D2Q1" data-goal="S015.11.1-2" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">What is happening in Scene A? <button class="tts-btn" onclick="speakText('What is happening in Scene A?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q1','A')">
+        <span>A. Someone is eating soup</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone is eating soup')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q1','B')">
+        <span>B. A person is making scrambled eggs</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('A person is making scrambled eggs')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q1','C')">
+        <span>C. A person is pouring cereal</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('A person is pouring cereal')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q1','D')">
+        <span>D. Someone is washing dishes</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone is washing dishes')">&#128266;</button>
+      </button>
+    </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q8" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q8">
-    <div class="q-num">Question 8</div>
-    <div class="q-prompt">How many steps does the Bowl of Cereal recipe have?</div>
-    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q8" autocomplete="off" rows="1"></textarea></div>
+  <!-- D2Q2 -->
+  <div class="q-card" data-qref="D2Q2" data-goal="S015.11.1-2" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">What is the person in Scene B doing? <button class="tts-btn" onclick="speakText('What is the person in Scene B doing?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q2','A')">
+        <span>A. Making a sandwich</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Making a sandwich')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q2','B')">
+        <span>B. Drinking milk</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Drinking milk')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q2','C')">
+        <span>C. Pouring milk over cereal</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Pouring milk over cereal')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q2','D')">
+        <span>D. Cleaning a bowl</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Cleaning a bowl')">&#128266;</button>
+      </button>
+    </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q9" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q9">
-    <div class="q-num">Question 9</div>
-    <div class="q-prompt">In the Fruit Salad recipe, what do you drizzle on top of the fruit?</div>
-    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q9" autocomplete="off" rows="1"></textarea></div>
+  <!-- D2Q3 -->
+  <div class="q-card" data-qref="D2Q3" data-goal="S015.11.1-2" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">What is happening in Scene C? <button class="tts-btn" onclick="speakText('What is happening in Scene C?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q3','A')">
+        <span>A. A student is throwing away a box</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is throwing away a box')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q3','B')">
+        <span>B. A student is opening a juice box and adding a straw</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is opening a juice box and adding a straw')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q3','C')">
+        <span>C. A student is making coffee</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is making coffee')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D2Q3','D')">
+        <span>D. A student is refilling a water bottle</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('A student is refilling a water bottle')">&#128266;</button>
+      </button>
+    </div>
     <div class="q-feedback"></div>
   </div>
 
-  <div class="q-card" data-qref="W1Q10" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q10">
-    <div class="q-num">Question 10</div>
-    <div class="q-prompt">Which recipe in this assignment makes 2 servings?</div>
-    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q10" autocomplete="off" rows="1"></textarea></div>
+  <!-- D2Q4 -->
+  <div class="q-card" data-qref="D2Q4" data-goal="S015.11.2-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Write one sentence describing what you see in Scene A. <button class="tts-btn" onclick="speakText('Write one sentence describing what you see in Scene A.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D2Q4" rows="3" oninput="updateCount()"></textarea>
+    </div>
     <div class="q-feedback"></div>
   </div>
 
-</div><!-- /main-content -->
+  <!-- D2Q5 -->
+  <div class="q-card" data-qref="D2Q5" data-goal="S015.11.2-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Write one sentence describing what you see in Scene B. <button class="tts-btn" onclick="speakText('Write one sentence describing what you see in Scene B.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D2Q5" rows="3" oninput="updateCount()"></textarea>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
 
-<!-- ══════════ BOTTOM BAR ══════════ -->
+  <!-- D2Q6 -->
+  <div class="q-card" data-qref="D2Q6" data-goal="S015.11.2-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Look at Scene C. Write a sentence about what the student is doing. <button class="tts-btn" onclick="speakText('Look at Scene C. Write a sentence about what the student is doing.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D2Q6" rows="3" oninput="updateCount()"></textarea>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+</div><!-- /panel-1 -->
+
+
+<!-- ============================================================ DAY 3 -->
+<div class="day-panel" id="panel-2">
+  <div id="submitted-banner-2" class="submitted-banner">&#10003; Assignment submitted! Great work!</div>
+
+  <div class="day-heading">Day 3 &#8211; Why Is That Happening?
+    <button class="tts-btn" onclick="speakText('Day 3. Why Is That Happening?')">&#128266;</button>
+  </div>
+  <div class="day-subheading">Look at each cause and effect scene, then answer the questions.</div>
+
+  <div class="section-label">Scene Cards</div>
+  <div class="scenes-grid">
+
+    <div class="scene-card">
+      <div class="scene-emoji">&#128293;</div>
+      <div>
+        <div class="scene-label">Scene D <button class="tts-btn" onclick="speakText('Scene D')">&#128266;</button></div>
+        <div class="scene-text">The pot on the stove is boiling over and water is spilling out. <button class="tts-btn" onclick="speakText('The pot on the stove is boiling over and water is spilling out.')">&#128266;</button></div>
+      </div>
+    </div>
+
+    <div class="scene-card">
+      <div class="scene-emoji">&#129316;</div>
+      <div>
+        <div class="scene-label">Scene E <button class="tts-btn" onclick="speakText('Scene E')">&#128266;</button></div>
+        <div class="scene-text">A person is wearing oven mitts while taking a tray out of the oven. <button class="tts-btn" onclick="speakText('A person is wearing oven mitts while taking a tray out of the oven.')">&#128266;</button></div>
+      </div>
+    </div>
+
+    <div class="scene-card">
+      <div class="scene-emoji">&#129482;</div>
+      <div>
+        <div class="scene-label">Scene F <button class="tts-btn" onclick="speakText('Scene F')">&#128266;</button></div>
+        <div class="scene-text">Ice is melting in a cup because it was left on the counter. <button class="tts-btn" onclick="speakText('Ice is melting in a cup because it was left on the counter.')">&#128266;</button></div>
+      </div>
+    </div>
+
+  </div><!-- /scenes-grid -->
+
+  <div class="section-label" style="margin-top:28px">Questions</div>
+
+  <!-- D3Q1 -->
+  <div class="q-card" data-qref="D3Q1" data-goal="S015.11.1-3" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Why is the pot in Scene D boiling over? <button class="tts-btn" onclick="speakText('Why is the pot in Scene D boiling over?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q1','A')">
+        <span>A. The stove was turned off</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('The stove was turned off')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q1','B')">
+        <span>B. The water was left on too long with the heat too high</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('The water was left on too long with the heat too high')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q1','C')">
+        <span>C. Someone added too much ice</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone added too much ice')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q1','D')">
+        <span>D. The lid fell off</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('The lid fell off')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D3Q2 -->
+  <div class="q-card" data-qref="D3Q2" data-goal="S015.11.1-3" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Why is the person in Scene E wearing oven mitts? <button class="tts-btn" onclick="speakText('Why is the person in Scene E wearing oven mitts?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q2','A')">
+        <span>A. Their hands are cold</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Their hands are cold')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q2','B')">
+        <span>B. They are playing a game</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('They are playing a game')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q2','C')">
+        <span>C. To protect their hands from the hot oven</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('To protect their hands from the hot oven')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q2','D')">
+        <span>D. The mitts look cool</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('The mitts look cool')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D3Q3 -->
+  <div class="q-card" data-qref="D3Q3" data-goal="S015.11.1-3" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Why is the ice in Scene F melting? <button class="tts-btn" onclick="speakText('Why is the ice in Scene F melting?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q3','A')">
+        <span>A. Someone put it in the freezer</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone put it in the freezer')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q3','B')">
+        <span>B. It was left out at room temperature</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('It was left out at room temperature')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q3','C')">
+        <span>C. Cold air is blowing on it</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Cold air is blowing on it')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D3Q3','D')">
+        <span>D. Someone added salt to it</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Someone added salt to it')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D3Q4 -->
+  <div class="q-card" data-qref="D3Q4" data-goal="S015.11.2-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Look at Scene D. Write 1&#8211;3 sentences explaining WHY the pot is boiling over and what should be done. <button class="tts-btn" onclick="speakText('Look at Scene D. Write 1 to 3 sentences explaining why the pot is boiling over and what should be done.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D3Q4" rows="4" oninput="updateCount()"></textarea>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D3Q5 -->
+  <div class="q-card" data-qref="D3Q5" data-goal="S015.11.2-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Look at Scene E. Write 1&#8211;3 sentences explaining why it is important to wear oven mitts. <button class="tts-btn" onclick="speakText('Look at Scene E. Write 1 to 3 sentences explaining why it is important to wear oven mitts.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D3Q5" rows="4" oninput="updateCount()"></textarea>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D3Q6 -->
+  <div class="q-card" data-qref="D3Q6" data-goal="S015.11.2-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Look at Scene F. Write 1&#8211;3 sentences explaining why the ice is melting and how to keep it frozen. <button class="tts-btn" onclick="speakText('Look at Scene F. Write 1 to 3 sentences explaining why the ice is melting and how to keep it frozen.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D3Q6" rows="4" oninput="updateCount()"></textarea>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+</div><!-- /panel-2 -->
+
+
+<!-- ============================================================ DAY 4 -->
+<div class="day-panel" id="panel-3">
+  <div id="submitted-banner-3" class="submitted-banner">&#10003; Assignment submitted! Great work!</div>
+
+  <div class="day-heading">Day 4 &#8211; Follow the Recipe
+    <button class="tts-btn" onclick="speakText('Day 4. Follow the Recipe')">&#128266;</button>
+  </div>
+  <div class="day-subheading">The steps below are scrambled. Read them carefully, then answer the questions.</div>
+
+  <div class="section-label">Making Toast with Butter &#8211; Scrambled Steps</div>
+
+  <div class="scrambled-card">
+    <div class="step-letter">A</div>
+    <div class="scene-text">Put the toast on a plate. <button class="tts-btn" onclick="speakText('Step A: Put the toast on a plate.')">&#128266;</button></div>
+  </div>
+  <div class="scrambled-card">
+    <div class="step-letter">B</div>
+    <div class="scene-text">Take the toast out when it pops up. <button class="tts-btn" onclick="speakText('Step B: Take the toast out when it pops up.')">&#128266;</button></div>
+  </div>
+  <div class="scrambled-card">
+    <div class="step-letter">C</div>
+    <div class="scene-text">Put a slice of bread in the toaster. <button class="tts-btn" onclick="speakText('Step C: Put a slice of bread in the toaster.')">&#128266;</button></div>
+  </div>
+  <div class="scrambled-card">
+    <div class="step-letter">D</div>
+    <div class="scene-text">Spread butter on the toast. <button class="tts-btn" onclick="speakText('Step D: Spread butter on the toast.')">&#128266;</button></div>
+  </div>
+  <div class="scrambled-card">
+    <div class="step-letter">E</div>
+    <div class="scene-text">Push down the toaster lever and wait. <button class="tts-btn" onclick="speakText('Step E: Push down the toaster lever and wait.')">&#128266;</button></div>
+  </div>
+
+  <div class="section-label" style="margin-top:28px">Questions</div>
+
+  <!-- D4Q1 -->
+  <div class="q-card" data-qref="D4Q1" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">What is the FIRST step you should do when making toast? <button class="tts-btn" onclick="speakText('What is the FIRST step you should do when making toast?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q1','A')">
+        <span>A. Take the toast out</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Take the toast out')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q1','B')">
+        <span>B. Spread butter</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Spread butter')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q1','C')">
+        <span>C. Put a slice of bread in the toaster</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put a slice of bread in the toaster')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q1','D')">
+        <span>D. Push down the lever</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Push down the lever')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D4Q2 -->
+  <div class="q-card" data-qref="D4Q2" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">What should you do AFTER pushing down the toaster lever? <button class="tts-btn" onclick="speakText('What should you do AFTER pushing down the toaster lever?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q2','A')">
+        <span>A. Spread butter</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Spread butter')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q2','B')">
+        <span>B. Wait for the toast to pop up</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Wait for the toast to pop up')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q2','C')">
+        <span>C. Put bread in the toaster</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put bread in the toaster')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q2','D')">
+        <span>D. Put it on a plate</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put it on a plate')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D4Q3 -->
+  <div class="q-card" data-qref="D4Q3" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">What is the LAST step when making toast? <button class="tts-btn" onclick="speakText('What is the LAST step when making toast?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q3','A')">
+        <span>A. Take the toast out</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Take the toast out')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q3','B')">
+        <span>B. Push the lever</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Push the lever')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q3','C')">
+        <span>C. Put bread in the toaster</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Put bread in the toaster')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q3','D')">
+        <span>D. Spread butter on the toast</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Spread butter on the toast')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D4Q4 -->
+  <div class="q-card" data-qref="D4Q4" data-goal="S015.11.1-1" data-points="1" data-answer-type="multiple-choice">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Why is it important to follow recipe steps in the correct order? <button class="tts-btn" onclick="speakText('Why is it important to follow recipe steps in the correct order?')">&#128266;</button></div>
+    <div class="options-group">
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q4','A')">
+        <span>A. It makes cooking faster</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('It makes cooking faster')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q4','B')">
+        <span>B. So the food turns out right and is safe to eat</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('So the food turns out right and is safe to eat')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q4','C')">
+        <span>C. To use more ingredients</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('To use more ingredients')">&#128266;</button>
+      </button>
+      <button class="opt-btn" onclick="selectOpt(this,'D4Q4','D')">
+        <span>D. Because the recipe says so</span>
+        <button class="tts-btn" onclick="event.stopPropagation();speakText('Because the recipe says so')">&#128266;</button>
+      </button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D4Q5 -->
+  <div class="q-card" data-qref="D4Q5" data-goal="S015.11.4-2;S015.11.1-1" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Put the toast steps in the correct order. Write the letters in order (example: C, E, B, A, D): <button class="tts-btn" onclick="speakText('Put the toast steps in the correct order. Write the letters in order. For example: C, E, B, A, D')">&#128266;</button></div>
+    <div class="q-input-row">
+      <input type="text" class="q-input-single" placeholder="e.g. C, E, B, A, D" name="D4Q5" oninput="updateCount()">
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- D4Q6 -->
+  <div class="q-card" data-qref="D4Q6" data-goal="S015.11.4-2" data-points="1" data-answer-type="constructed-response">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">What would happen if you forgot to push down the toaster lever? Write a sentence. <button class="tts-btn" onclick="speakText('What would happen if you forgot to push down the toaster lever? Write a sentence.')">&#128266;</button></div>
+    <div class="q-input-row">
+      <textarea class="q-input" placeholder="Write your answer here..." name="D4Q6" rows="3" oninput="updateCount()"></textarea>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+</div><!-- /panel-3 -->
+
+
+<!-- Bottom Bar -->
 <div class="bottom-bar">
-  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">10</span></div>
-  <div id="save-status" class="save-status"></div>
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">22</span></div>
+  <div class="save-status" id="saveStatus">Saved &#10003;</div>
   <div class="btn-row">
-    <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
-    <button class="btn btn-submit" type="button" onclick="submitAll()">Submit Assignment</button>
+    <button class="btn btn-save" onclick="autosave()">Save Progress</button>
+    <button class="btn btn-submit" onclick="showConfirm()">Submit Assignment</button>
   </div>
 </div>
 
-<!-- ══════════ CUSTOM CONFIRM DIALOG ══════════ -->
-<div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+<!-- Custom confirm overlay (no window.confirm — iframes block modals) -->
+<div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
-    <p id="confirm-msg">Are you sure you want to submit your assignment? You cannot change your answers after submitting.</p>
+    <p>Are you sure you want to submit?<br>You cannot change your answers after submitting.</p>
     <div class="confirm-btn-row">
-      <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
-      <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
+      <button class="btn btn-save" onclick="hideConfirm()">Cancel</button>
+      <button class="btn btn-submit" onclick="confirmSubmit()">Submit</button>
     </div>
   </div>
 </div>
 
 <script>
-(function () {
-  'use strict';
+var ANSWERS = {
+  D1Q1:'B', D1Q2:'C', D1Q3:'C', D1Q4:'B', D1Q5:'D', D1Q6:'C',
+  D2Q1:'B', D2Q2:'C', D2Q3:'B',
+  D3Q1:'B', D3Q2:'C', D3Q3:'B',
+  D4Q1:'C', D4Q2:'B', D4Q3:'D', D4Q4:'B'
+};
 
-  var TOTAL = 10;
-  document.getElementById('totalCount').textContent = String(TOTAL);
+var selectedAnswers = {};
 
-  /* ── Multiple-choice click handling ── */
-  document.querySelectorAll('.options-group').forEach(function (group) {
-    group.addEventListener('click', function (e) {
-      var btn = e.target.closest('.opt-btn');
-      if (!btn) return;
-      var card = btn.closest('.q-card');
+function speakText(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+  window.speechSynthesis.speak(utterance);
+}
 
-      /* Clear previous selection styling */
-      group.querySelectorAll('.opt-btn').forEach(function (b) {
-        b.classList.remove('selected', 'is-correct', 'is-incorrect', 'reveal-answer');
-      });
+function showDay(index) {
+  document.querySelectorAll('.day-panel').forEach(function(p, i) {
+    p.classList.toggle('active', i === index);
+  });
+  document.querySelectorAll('.day-tab').forEach(function(t, i) {
+    t.classList.toggle('active', i === index);
+  });
+}
 
-      /* Apply selection */
-      btn.classList.add('selected');
-      var isCorrect = btn.hasAttribute('data-correct');
-      btn.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
+function selectOpt(btn, qref, value) {
+  var card = btn.closest('.q-card');
+  if (!card) return;
 
-      /* Update card border */
-      card.classList.toggle('correct', isCorrect);
-      card.classList.toggle('incorrect', !isCorrect);
-
-      /* Feedback text */
-      var fb = card.querySelector('.q-feedback');
-      if (fb) {
-        fb.textContent = isCorrect ? '✓ Correct!' : '✗ Not quite — the correct answer is highlighted below.';
-      }
-
-      /* Reveal correct answer if wrong */
-      if (!isCorrect) {
-        group.querySelectorAll('.opt-btn[data-correct]').forEach(function (b) {
-          b.classList.add('reveal-answer');
-        });
-      }
-
-      updateCount();
-    });
+  card.querySelectorAll('.opt-btn').forEach(function(b) {
+    b.classList.remove('selected', 'correct', 'incorrect');
   });
 
-  /* ── Constructed-response input handling ── */
-  document.addEventListener('input', function (e) {
-    if (e.target && e.target.classList.contains('q-input')) {
-      updateCount();
-    }
-  });
+  btn.classList.add('selected');
+  selectedAnswers[qref] = value;
 
-  /* ── Answer collection ── */
-  function getAnswers() {
-    var answers = {};
-    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
-      var qref = card.dataset.qref;
-      if (card.dataset.answerType === 'multiple-choice') {
-        var sel = card.querySelector('.opt-btn.selected');
-        if (sel) answers[qref] = sel.textContent.trim();
-      } else {
-        var inp = card.querySelector('.q-input');
-        if (inp && inp.value.trim()) answers[qref] = inp.value.trim();
-      }
-    });
-    return answers;
+  var feedback = card.querySelector('.q-feedback');
+  var correct = ANSWERS[qref];
+
+  if (value === correct) {
+    btn.classList.add('correct');
+    card.classList.remove('incorrect');
+    card.classList.add('correct');
+    feedback.textContent = '\u2713 Correct!';
+    feedback.className = 'q-feedback correct-msg';
+  } else {
+    btn.classList.add('incorrect');
+    card.classList.remove('correct');
+    card.classList.add('incorrect');
+    feedback.textContent = '\u2717 Not quite \u2014 try reading the recipe again.';
+    feedback.className = 'q-feedback incorrect-msg';
   }
-
-  /* ── Answered count ── */
-  function updateCount() {
-    var filled = 0;
-    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
-      if (card.dataset.answerType === 'multiple-choice') {
-        if (card.querySelector('.opt-btn.selected')) filled++;
-      } else {
-        var inp = card.querySelector('.q-input');
-        if (inp && inp.value.trim()) filled++;
-      }
-    });
-    var el = document.getElementById('answeredCount');
-    if (el) el.textContent = String(filled);
-  }
-
-  /* ── Status toast ── */
-  function showStatus(msg, color) {
-    var el = document.getElementById('save-status');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = color || '#22c55e';
-    el.style.opacity = '1';
-    clearTimeout(el._t);
-    el._t = setTimeout(function () { el.style.opacity = '0'; }, 2500);
-  }
-
-  /* ── Save / Submit ── */
-  function autosave() {
-    var answers = getAnswers();
-    window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
-    showStatus('Progress saved!', '#22c55e');
-  }
-
-  function submitAll() {
-    document.getElementById('confirm-overlay').classList.add('show');
-  }
-
-  function cancelSubmit() {
-    document.getElementById('confirm-overlay').classList.remove('show');
-  }
-
-  function confirmSubmit() {
-    document.getElementById('confirm-overlay').classList.remove('show');
-    var answers = getAnswers();
-    window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
-  }
-
-  /* Expose for inline onclick */
-  window.autosave = autosave;
-  window.submitAll = submitAll;
-  window.cancelSubmit = cancelSubmit;
-  window.confirmSubmit = confirmSubmit;
 
   updateCount();
-}());
+}
+
+function updateCount() {
+  var count = Object.keys(selectedAnswers).length;
+
+  document.querySelectorAll('textarea.q-input').forEach(function(ta) {
+    if (ta.value.trim().length > 0) count++;
+  });
+  document.querySelectorAll('input.q-input-single').forEach(function(inp) {
+    if (inp.value.trim().length > 0) count++;
+  });
+
+  document.getElementById('answeredCount').textContent = count;
+}
+
+function collectAnswers() {
+  var data = {};
+
+  Object.keys(selectedAnswers).forEach(function(k) {
+    data[k] = selectedAnswers[k];
+  });
+
+  document.querySelectorAll('textarea.q-input').forEach(function(ta) {
+    if (ta.name) data[ta.name] = ta.value;
+  });
+
+  document.querySelectorAll('input.q-input-single').forEach(function(inp) {
+    if (inp.name) data[inp.name] = inp.value;
+  });
+
+  return data;
+}
+
+function autosave() {
+  var answers = collectAnswers();
+  try {
+    window.parent.postMessage({
+      type: 'rc-assignment-autosave',
+      student: 'S015',
+      assignment: 's015-week1-reading-a-recipe',
+      answers: answers
+    }, '*');
+  } catch(e) {}
+
+  var status = document.getElementById('saveStatus');
+  status.textContent = 'Saved \u2713';
+  status.style.opacity = '1';
+  setTimeout(function() { status.style.opacity = '0.6'; }, 2000);
+}
+
+function showConfirm() {
+  document.getElementById('confirmOverlay').classList.add('visible');
+}
+
+function hideConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('visible');
+}
+
+function confirmSubmit() {
+  var answers = collectAnswers();
+  try {
+    window.parent.postMessage({
+      type: 'rc-assignment-submit',
+      student: 'S015',
+      assignment: 's015-week1-reading-a-recipe',
+      answers: answers
+    }, '*');
+  } catch(e) {}
+
+  hideConfirm();
+
+  document.querySelectorAll('.opt-btn').forEach(function(b) {
+    b.disabled = true;
+    b.style.cursor = 'default';
+  });
+  document.querySelectorAll('textarea.q-input, input.q-input-single').forEach(function(el) {
+    el.disabled = true;
+  });
+
+  var submitBtn = document.querySelector('.btn-submit');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.5'; }
+
+  document.querySelectorAll('.submitted-banner').forEach(function(el) {
+    el.style.display = 'block';
+  });
+
+  var status = document.getElementById('saveStatus');
+  status.textContent = 'Submitted \u2713';
+  status.style.opacity = '1';
+}
+
+setInterval(autosave, 60000);
 </script>
 </body>
 </html>
