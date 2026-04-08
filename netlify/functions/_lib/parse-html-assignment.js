@@ -20,39 +20,58 @@
  */
 
 /**
- * Decode the most common HTML character references found in answer text.
- * Only handles named entities and decimal numeric references seen in our HTML.
+ * Decode common HTML character references in a single pass, preventing any
+ * chance of double-unescaping (e.g. &amp;lt; should become &lt;, not <).
  * @param {string} str
  * @returns {string}
  */
 function decodeHtmlEntities(str) {
   if (!str) return str;
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#8211;/g, '\u2013')
-    .replace(/&#8212;/g, '\u2014')
-    .replace(/&#8217;/g, '\u2019')
-    .replace(/&#8216;/g, '\u2018')
-    .replace(/&#160;/g, '\u00a0')
-    .replace(/&#(\d+);/g, function (_, code) {
-      return String.fromCharCode(parseInt(code, 10));
-    });
+  var ENTITIES = {
+    '&amp;':   '&',
+    '&lt;':    '<',
+    '&gt;':    '>',
+    '&quot;':  '"',
+    '&apos;':  "'",
+    '&#8211;': '\u2013',
+    '&#8212;': '\u2014',
+    '&#8217;': '\u2019',
+    '&#8216;': '\u2018',
+    '&#160;':  '\u00a0',
+  };
+  // Single-pass: match named entities and decimal numeric references.
+  return str.replace(/&(?:[a-zA-Z]+|#\d+);/g, function (entity) {
+    if (Object.prototype.hasOwnProperty.call(ENTITIES, entity)) {
+      return ENTITIES[entity];
+    }
+    var numMatch = /^&#(\d+);$/.exec(entity);
+    if (numMatch) {
+      return String.fromCharCode(parseInt(numMatch[1], 10));
+    }
+    return entity;
+  });
+}
+
+/**
+ * Escape special regex metacharacters in a string so it can be safely
+ * embedded inside a RegExp pattern.
+ * @param {string} s
+ * @returns {string}
+ */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
  * Extract the value of a named attribute from an HTML opening tag string.
  * Returns null if the attribute is absent.
  * @param {string} tag  e.g. '<div class="q-card" data-qref="D1Q1" ...>'
- * @param {string} attr attribute name
+ * @param {string} attr attribute name (e.g. 'data-goal')
  * @returns {string|null}
  */
 function extractAttr(tag, attr) {
   // Match: attr="value" or attr='value'
-  var re = new RegExp('\\b' + attr + '=["\']([^"\']*)["\']', 'i');
+  var re = new RegExp('\\b' + escapeRegExp(attr) + '=["\']([^"\']*)["\']', 'i');
   var m = re.exec(tag);
   return m ? m[1] : null;
 }
@@ -176,4 +195,4 @@ function parseHtmlAssignment(htmlText) {
   return { questions: questions };
 }
 
-module.exports = { parseHtmlAssignment, decodeHtmlEntities, extractAttr };
+module.exports = { parseHtmlAssignment, decodeHtmlEntities, extractAttr, escapeRegExp };
