@@ -3765,6 +3765,7 @@
   let _bookGlossaryMap = null;     // Map<normalized_term, definition>
   let _knownBookResources = [];    // populated by loadStudentResources; each: { link, title, chapters, totalPages }
   let _bookSelectionChangeHandler = null; // stored so it can be removed on close
+  let _bookReadingHelperOutsideClickHandler = null; // stored so it can be removed on close
   const _bookChunkCache = new Map(); // chunkId -> chunkData (pages array)
 
   // ============================================================================
@@ -4004,6 +4005,11 @@
       _bookSelectionChangeHandler = null;
     }
 
+    if (_bookReadingHelperOutsideClickHandler) {
+      document.removeEventListener('click', _bookReadingHelperOutsideClickHandler);
+      _bookReadingHelperOutsideClickHandler = null;
+    }
+
     const panel = document.getElementById('bookPanel');
     const backdrop = document.getElementById('bookPanelBackdrop');
 
@@ -4220,11 +4226,12 @@
           showReadingHelperPanel(readingHelperPanel);
         }
       });
-      document.addEventListener('click', function hideHelperOnOutsideClick(e) {
+      _bookReadingHelperOutsideClickHandler = function (e) {
         if (!readingHelperPanel.contains(e.target) && e.target !== readingHelperBtn) {
           hideReadingHelperPanel(readingHelperPanel);
         }
-      });
+      };
+      document.addEventListener('click', _bookReadingHelperOutsideClickHandler);
     }
 
     if (hasSidebar) {
@@ -4459,12 +4466,13 @@
 
     container.style.display = 'block';
 
-    // Wire toggle changes
-    container.querySelectorAll('.st-rh-toggle-input').forEach(function (input) {
-      input.addEventListener('change', function () {
+    // Wire toggle changes via event delegation (avoids duplicate listeners on re-open)
+    container.onchange = function (e) {
+      const input = e.target.closest('.st-rh-toggle-input');
+      if (input) {
         setBookHelper(input.getAttribute('data-helper-key'), input.checked);
-      });
-    });
+      }
+    };
 
     // Close button
     const closeBtn = container.querySelector('#readingHelperCloseBtn');
