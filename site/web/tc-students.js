@@ -4306,6 +4306,9 @@
             const goal = allGoals.find(g => g.code === goalCode && g.student_code === studentCode);
             if (goal) {
               await handleArchiveGoal(goal.id);
+            } else {
+              console.warn('[tc-students] Archive callout: goal not found for code', goalCode);
+              await rcAlert('Goal Not Found', 'This goal could not be located. It may have already been archived.');
             }
           } else if (action === 'create-iep-goal') {
             const studentCode = skillCalloutBtn.dataset.studentCode;
@@ -6976,7 +6979,9 @@
     });
 
     const buildStripItems = (cards) => cards.map(c => {
-      const trendIcon = c.type === 'iep' && c.trend === 'up' ? ' ↗' : c.type === 'iep' && c.trend === 'down' ? ' ↘' : '';
+      let trendIcon = '';
+      if (c.type === 'iep' && c.trend === 'up') trendIcon = ' ↗';
+      else if (c.type === 'iep' && c.trend === 'down') trendIcon = ' ↘';
       const scoreStr = c.displayScore !== null ? ` (${c.displayScore}%${trendIcon})` : '';
       return `<span>${escapeHtml(c.area + scoreStr)}</span>`;
     }).join('<span style="opacity:0.4;margin:0 2px;">·</span>');
