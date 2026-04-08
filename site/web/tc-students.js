@@ -791,6 +791,539 @@
   let progressTabQuarterMap = new Map(); // Map<studentCode, quarterKey> - Per-student quarter selection on Progress tab
   let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
 
+  // ── Cross-student summary / data quality ─────────────────────────────────
+  const ST_DISMISSED_VALIDATIONS_KEY = 'rc_dismissed_validations';
+
+  /**
+   * Validate all loaded progress entries and return an array of issue objects.
+   * Uses the same dismissed-validation key as tc-data.js so dismissals persist
+   * across both pages.
+   */
+  function validateStudentProgress() {
+    const issues = [];
+    const dismissed = new Set(
+      JSON.parse(localStorage.getItem(ST_DISMISSED_VALIDATIONS_KEY) || '[]')
+    );
+
+    const goalMap = new Map();
+    for (const g of allGoals) {
+      goalMap.set(`${g.student_code}_${g.code}`, g);
+    }
+
+    for (const p of allProgressEntries) {
+      const goal = goalMap.get(`${p.student_code}_${p.goal_code}`);
+      const issueKey = `${p.student_code}_${p.goal_code}_${p.date}`;
+      const pValue = parseFloat(p.value ?? p.percent ?? 0);
+
+      if (goal) {
+        const masteryThreshold = parseGoalValue(goal.mastery || goal.target);
+        if (masteryThreshold != null && pValue > masteryThreshold) {
+          const key = `exceeds_mastery_${issueKey}`;
+          if (!dismissed.has(key)) {
+            issues.push({
+              id: key,
+              type: 'exceeds_mastery',
+              severity: 'warning',
+              student_code: p.student_code,
+              goal_code: p.goal_code,
+              message: `Progress (${pValue}) exceeds mastery target (${goal.mastery || goal.target})`,
+              date: p.date
+            });
+          }
+        }
+      }
+
+      if (new Date(p.date) > new Date()) {
+        const key = `future_date_${issueKey}`;
+        if (!dismissed.has(key)) {
+          issues.push({
+            id: key,
+            type: 'future_date',
+            severity: 'error',
+            student_code: p.student_code,
+            goal_code: p.goal_code,
+            message: `Entry dated in the future: ${p.date}`,
+            date: p.date
+          });
+        }
+      }
+    }
+
+    const seen = new Map();
+    for (const p of allProgressEntries) {
+      const pValue = p.value ?? p.percent;
+      const key = `${p.student_code}_${p.goal_code}_${p.date}_${pValue}`;
+      if (seen.has(key)) {
+        const issueKey = `duplicate_${key}`;
+        if (!dismissed.has(issueKey)) {
+          issues.push({
+            id: issueKey,
+            type: 'duplicate',
+            severity: 'warning',
+            student_code: p.student_code,
+            goal_code: p.goal_code,
+            message: 'Duplicate entry detected',
+            date: p.date
+          });
+        }
+      }
+      seen.set(key, true);
+    }
+
+    const goalsWithProgress = new Set(
+      allProgressEntries.map(p => `${p.student_code}_${p.goal_code}`)
+    );
+    for (const g of allGoals) {
+      if (g.status === 'archived') continue;
+      const key = `${g.student_code}_${g.code}`;
+      if (goalsWithProgress.has(key) && g.baseline == null) {
+        const issueKey = `missing_baseline_${key}`;
+        if (!dismissed.has(issueKey)) {
+          issues.push({
+            id: issueKey,
+            type: 'missing_baseline',
+            severity: 'warning',
+            student_code: g.student_code,
+            goal_code: g.code,
+            message: 'Goal has progress data but no baseline set'
+          });
+        }
+      }
+    }
+
+    return issues;
+  }
+
+  /**
+   * Render the data quality banner above the student table.
+   * All dynamic content is set via textContent / setAttribute — never innerHTML
+   * with user-controlled data.
+   */
+  function renderStudentQualityBanner() {
+    const banner = document.getElementById('stQualityBanner');
+    const bannerText = document.getElementById('stQualityBannerText');
+    const accordion = document.getElementById('stValidationAccordion');
+    if (!banner) return;
+
+    const issues = validateStudentProgress();
+
+    if (issues.length === 0) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    banner.style.display = 'block';
+
+    const counts = {};
+    issues.forEach(i => { counts[i.type] = (counts[i.type] || 0) + 1; });
+    const typeLabels = {
+      exceeds_mastery: 'Progress > Mastery',
+      future_date: 'Future Dates',
+      out_of_range: 'Out of Range',
+      duplicate: 'Duplicates',
+      missing_baseline: 'Missing Baseline',
+      stale: 'Stale Goals (60+ days)'
+    };
+    const summaryParts = Object.entries(counts)
+      .map(([type, count]) => `${count} ${typeLabels[type] || type}`);
+    if (bannerText) {
+      bannerText.textContent =
+        `⚠ ${issues.length} data quality issue${issues.length !== 1 ? 's' : ''}: ${summaryParts.join(', ')}`;
+    }
+
+    if (!accordion) return;
+    accordion.innerHTML = '';
+
+    issues.forEach(issue => {
+      const student = allStudents.find(s => s.code === issue.student_code);
+
+      const item = document.createElement('div');
+      item.className = 'st-val-accordion-item';
+
+      const header = document.createElement('div');
+      header.className = 'st-val-accordion-header';
+
+      const title = document.createElement('div');
+      title.className = 'st-val-accordion-title';
+
+      const iconSpan = document.createElement('span');
+      iconSpan.textContent = issue.severity === 'error' ? '🔴' : '⚠️';
+
+      const labelSpan = document.createElement('span');
+      const strong = document.createElement('strong');
+      strong.textContent = student ? (student.name || student.code) : issue.student_code;
+      const goalText = document.createTextNode(` — Goal ${issue.goal_code}`);
+      labelSpan.appendChild(strong);
+      labelSpan.appendChild(goalText);
+
+      title.appendChild(iconSpan);
+      title.appendChild(labelSpan);
+
+      const chevron = document.createElement('span');
+      chevron.className = 'st-val-accordion-icon';
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.textContent = '▶';
+
+      header.appendChild(title);
+      header.appendChild(chevron);
+
+      const content = document.createElement('div');
+      content.className = 'st-val-accordion-content';
+
+      const msgP = document.createElement('p');
+      msgP.style.cssText = 'margin: 0 0 10px 0;';
+      msgP.textContent = issue.message;
+      content.appendChild(msgP);
+
+      if (issue.date) {
+        const dateP = document.createElement('p');
+        dateP.style.cssText = 'margin: 0 0 10px 0; opacity: 0.7;';
+        const small = document.createElement('small');
+        small.textContent = `Date: ${issue.date}`;
+        dateP.appendChild(small);
+        content.appendChild(dateP);
+      }
+
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display: flex; gap: 8px;';
+
+      const dismissBtn = document.createElement('button');
+      dismissBtn.className = 'dt-btn';
+      dismissBtn.textContent = 'Dismiss';
+      const issueId = issue.id;
+      dismissBtn.addEventListener('click', () => {
+        const dismissed = JSON.parse(
+          localStorage.getItem(ST_DISMISSED_VALIDATIONS_KEY) || '[]'
+        );
+        dismissed.push(issueId);
+        localStorage.setItem(ST_DISMISSED_VALIDATIONS_KEY, JSON.stringify(dismissed));
+        renderStudentQualityBanner();
+      });
+      btnRow.appendChild(dismissBtn);
+      content.appendChild(btnRow);
+
+      item.appendChild(header);
+      item.appendChild(content);
+      accordion.appendChild(item);
+
+      header.addEventListener('click', () => {
+        item.classList.toggle('expanded');
+      });
+    });
+  }
+
+  /**
+   * Render cross-student KPI summary cards.
+   * All dynamic values assigned via textContent.
+   */
+  function renderStudentKpiSummary() {
+    const activeStudents = filteredStudents.filter(s => s.status !== 'archived' && s.active !== false);
+    const totalStudents = activeStudents.length;
+
+    const quarterKey = selectedQuarter || getCurrentQuarter();
+    const range = getQuarterDateRange(quarterKey);
+
+    let totalProgressSum = 0;
+    let progressCount = 0;
+    let onTrack = 0;
+    let belowTarget = 0;
+    let goalsWithData = 0;
+    let totalGoals = 0;
+
+    for (const student of activeStudents) {
+      const goals = allGoals.filter(
+        g => g.student_code === student.code && g.status !== 'archived'
+      );
+      totalGoals += goals.length;
+
+      for (const goal of goals) {
+        if (goal.measurement_type === 'Observation') continue;
+        const entries = getProgressForGoal(student.code, goal.code).filter(p => {
+          if (!range) return true;
+          const d = new Date(p.date);
+          return d >= range.start && d <= range.end;
+        });
+
+        if (entries.length > 0) {
+          goalsWithData++;
+          const vals = entries
+            .map(e => parseFloat(e.value ?? e.percent ?? ''))
+            .filter(n => !isNaN(n));
+          if (vals.length > 0) {
+            const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+            totalProgressSum += avg;
+            progressCount++;
+            const mastery = parseGoalValue(goal.mastery || goal.target);
+            if (mastery != null) {
+              if (avg >= mastery) onTrack++;
+              else belowTarget++;
+            }
+          }
+        }
+      }
+    }
+
+    const avgProgress = progressCount > 0
+      ? Math.round(totalProgressSum / progressCount)
+      : null;
+
+    const totalEl = document.getElementById('stKpiTotalStudents');
+    if (totalEl) totalEl.textContent = String(totalStudents);
+
+    const avgEl = document.getElementById('stKpiAvgProgress');
+    if (avgEl) avgEl.textContent = avgProgress != null ? `${avgProgress}%` : '—';
+
+    const onTrackEl = document.getElementById('stKpiOnTrack');
+    if (onTrackEl) onTrackEl.textContent = String(onTrack);
+
+    const belowEl = document.getElementById('stKpiBelowTarget');
+    if (belowEl) belowEl.textContent = String(belowTarget);
+
+    const dataStatusEl = document.getElementById('stKpiDataStatus');
+    if (dataStatusEl) dataStatusEl.textContent = `${goalsWithData} / ${totalGoals}`;
+  }
+
+  /**
+   * Render quarter filter buttons above the student table.
+   * All content set via textContent / className — no innerHTML with dynamic data.
+   */
+  function renderStudentQuarterFilterButtons() {
+    const container = document.getElementById('stQuarterFilterBar');
+    if (!container) return;
+
+    const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const currentQ = getCurrentQuarter();
+    container.innerHTML = '';
+
+    quarters.forEach(q => {
+      const btn = document.createElement('button');
+      btn.className = 'st-q-btn' + (selectedQuarter === q ? ' active' : '');
+      btn.setAttribute('data-quarter', q);
+      btn.setAttribute('aria-pressed', selectedQuarter === q ? 'true' : 'false');
+      btn.textContent = q + (currentQ === q ? ' ★' : '');
+
+      btn.addEventListener('click', () => {
+        selectedQuarter = q;
+        renderStudentQuarterFilterButtons();
+        renderStudentKpiSummary();
+        // Re-render expanded student detail tabs that respect selected quarter
+        for (const studentCode of expandedStudents) {
+          renderExpandedDetail(studentCode).catch(() => {});
+        }
+        renderQuarterBar();
+      });
+
+      container.appendChild(btn);
+    });
+  }
+
+  /**
+   * Set up toggle handlers for the quality banner and KPI summary.
+   */
+  function setupSummaryHandlers() {
+    const refreshBtn = document.getElementById('stValidationRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        renderStudentQualityBanner();
+      });
+    }
+
+    const toggleBtn = document.getElementById('stQualityToggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const details = document.getElementById('stQualityDetails');
+        if (details) {
+          const isOpen = details.classList.toggle('open');
+          toggleBtn.textContent = isOpen ? 'Details ▲' : 'Details ▼';
+          toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }
+      });
+    }
+
+    const summaryToggle = document.getElementById('stSummaryToggle');
+    if (summaryToggle) {
+      summaryToggle.addEventListener('click', () => {
+        const section = document.getElementById('stSummarySection');
+        if (section) {
+          const collapsed = section.classList.toggle('collapsed');
+          summaryToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        }
+      });
+      summaryToggle.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          summaryToggle.click();
+        }
+      });
+    }
+  }
+
+  /**
+   * Render the observation coverage heatmap.
+   * All content built with DOM API methods — no innerHTML with dynamic data.
+   */
+  function renderStudentObsHeatmap() {
+    const container = document.getElementById('stObsHeatmap');
+    if (!container) return;
+
+    const obsGoals = allGoals.filter(g => g.measurement_type === 'Observation');
+    if (obsGoals.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    const periodGoals = {};
+    for (const goal of obsGoals) {
+      const periods = (goal.observation_config || {}).class_periods || [];
+      for (const period of periods) {
+        if (!periodGoals[period]) periodGoals[period] = [];
+        periodGoals[period].push(goal);
+      }
+    }
+
+    const periodLabels = Object.keys(periodGoals).sort();
+    if (periodLabels.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Find last 10 school days (Mon–Fri)
+    const last10 = [];
+    const iterDate = new Date();
+    iterDate.setHours(0, 0, 0, 0);
+    while (last10.length < 10) {
+      const day = iterDate.getDay();
+      if (day >= 1 && day <= 5) {
+        last10.unshift(iterDate.toISOString().split('T')[0]);
+      }
+      iterDate.setDate(iterDate.getDate() - 1);
+    }
+
+    container.innerHTML = '';
+    container.style.display = 'block';
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText =
+      'padding: 12px 14px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: rgba(255,255,255,0.03);';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;';
+
+    const title = document.createElement('h3');
+    title.style.cssText = 'margin: 0; font-size: 14px; font-weight: 600;';
+    title.textContent = 'Observation Coverage by Period';
+    header.appendChild(title);
+
+    wrapper.appendChild(header);
+
+    const overflowDiv = document.createElement('div');
+    overflowDiv.style.cssText = 'overflow-x: auto;';
+
+    const table = document.createElement('table');
+    table.style.cssText = 'border-collapse: collapse; min-width: 100%;';
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+
+    const periodTh = document.createElement('th');
+    periodTh.style.cssText = 'padding: 4px 8px; text-align: left; font-size: 12px; opacity: 0.6;';
+    periodTh.textContent = 'Period';
+    headerRow.appendChild(periodTh);
+
+    last10.forEach(ds => {
+      const th = document.createElement('th');
+      th.style.cssText =
+        'padding: 3px 6px; text-align: center; font-size: 10px; opacity: 0.5; white-space: nowrap;';
+      const d = new Date(ds + 'T00:00:00');
+      th.textContent = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      headerRow.appendChild(th);
+    });
+
+    const goalsTh = document.createElement('th');
+    goalsTh.style.cssText = 'padding: 4px 8px; text-align: right; font-size: 12px; opacity: 0.6;';
+    goalsTh.textContent = 'Goals';
+    headerRow.appendChild(goalsTh);
+
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+
+    periodLabels.forEach(period => {
+      const goals = periodGoals[period];
+      const tr = document.createElement('tr');
+
+      const periodTd = document.createElement('td');
+      periodTd.style.cssText = 'padding: 4px 8px; font-size: 12px; white-space: nowrap;';
+      periodTd.textContent = period;
+      tr.appendChild(periodTd);
+
+      last10.forEach(dateStr => {
+        let recorded = 0;
+        for (const goal of goals) {
+          if (allProgressEntries.some(
+            p => p.goal_code === goal.code &&
+                 p.student_code === goal.student_code &&
+                 p.date === dateStr
+          )) {
+            recorded++;
+          }
+        }
+        const total = goals.length;
+        let color;
+        if (recorded === 0) {
+          color = '#ef4444';
+        } else if (recorded === total) {
+          color = '#22c55e';
+        } else {
+          color = '#eab308';
+        }
+
+        const td = document.createElement('td');
+        td.style.cssText = 'padding: 3px 6px; text-align: center;';
+
+        const dot = document.createElement('div');
+        dot.setAttribute('title', `${dateStr}: ${recorded}/${total} recorded`);
+        dot.style.cssText =
+          `width: 18px; height: 18px; border-radius: 3px; background: ${color}; margin: 0 auto; opacity: 0.85;`;
+        td.appendChild(dot);
+        tr.appendChild(td);
+      });
+
+      const goalsTd = document.createElement('td');
+      goalsTd.style.cssText = 'padding: 4px 8px; text-align: right; font-size: 11px; opacity: 0.6;';
+      goalsTd.textContent = `${goals.length} goal${goals.length !== 1 ? 's' : ''}`;
+      tr.appendChild(goalsTd);
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    overflowDiv.appendChild(table);
+    wrapper.appendChild(overflowDiv);
+
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display: flex; gap: 12px; margin-top: 8px; font-size: 11px; opacity: 0.65;';
+
+    [
+      { color: '#22c55e', label: 'All recorded' },
+      { color: '#eab308', label: 'Partial' },
+      { color: '#ef4444', label: 'None' }
+    ].forEach(({ color, label }) => {
+      const item = document.createElement('span');
+      const swatch = document.createElement('span');
+      swatch.style.cssText =
+        `display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 2px; margin-right: 3px; vertical-align: middle;`;
+      swatch.setAttribute('aria-hidden', 'true');
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(label));
+      legend.appendChild(item);
+    });
+
+    wrapper.appendChild(legend);
+    container.appendChild(wrapper);
+  }
+
 
   function renderQuarterBar() {
     const displayEl = document.getElementById('stQuarterDisplay');
@@ -1108,6 +1641,9 @@
       
       filterStudents();
       renderStudentList();
+      renderStudentQualityBanner();
+      renderStudentKpiSummary();
+      renderStudentObsHeatmap();
       
       // Don't auto-expand first student - let user choose
 
@@ -1121,6 +1657,8 @@
       // Still try to render with whatever data we have
       filterStudents();
       renderStudentList();
+      renderStudentQualityBanner();
+      renderStudentKpiSummary();
     }
   }
 
@@ -3303,6 +3841,7 @@
         searchQuery = e.target.value;
         filterStudents();
         renderStudentList();
+        renderStudentKpiSummary();
       });
     }
 
@@ -3313,6 +3852,7 @@
         selectedClassFilter = e.target.value;
         filterStudents();
         renderStudentList();
+        renderStudentKpiSummary();
       });
     }
 
@@ -3345,6 +3885,7 @@
         showArchived = e.target.checked;
         filterStudents();
         renderStudentList();
+        renderStudentKpiSummary();
       });
     }
 
@@ -7541,7 +8082,9 @@
     renderQuarterBar();
     renderClassFilterOptions();
     renderGoalAreaFilterOptions();
+    renderStudentQuarterFilterButtons();
     setupEventHandlers();
+    setupSummaryHandlers();
     setupTcDotGridPopup();
     injectBulkObsConfigButton();
     loadData();

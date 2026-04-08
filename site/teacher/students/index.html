@@ -1411,6 +1411,154 @@
         outline: none; transition: border-color 0.2s ease;
       }
       .dt-search-input:focus { border-color: var(--rc-brand); }
+
+      /* ── Cross-student summary (Quality Banner + KPI + Heatmap) ─── */
+      .st-quality-banner {
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-radius: var(--rc-radius, 8px);
+        background: rgba(245, 158, 11, 0.08);
+        padding: 10px 14px;
+        margin: 0 20px 12px;
+      }
+      .st-quality-banner-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .st-quality-banner-details {
+        display: none;
+        margin-top: 12px;
+      }
+      .st-quality-banner-details.open {
+        display: block;
+      }
+      .st-val-accordion-item {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .st-val-accordion-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        cursor: pointer;
+        user-select: none;
+        border-radius: 8px;
+        transition: background 0.2s;
+      }
+      .st-val-accordion-header:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .st-val-accordion-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+      }
+      .st-val-accordion-icon {
+        transition: transform 0.2s;
+      }
+      .st-val-accordion-item.expanded .st-val-accordion-icon {
+        transform: rotate(90deg);
+      }
+      .st-val-accordion-content {
+        display: none;
+        padding: 0 14px 14px;
+      }
+      .st-val-accordion-item.expanded .st-val-accordion-content {
+        display: block;
+      }
+      /* KPI summary section */
+      .st-summary-section {
+        margin: 0 20px 12px;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: var(--rc-radius, 8px);
+      }
+      .st-summary-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .st-summary-title {
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0.7;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .st-summary-chevron {
+        font-size: 12px;
+        opacity: 0.5;
+        transition: transform 0.2s;
+      }
+      .st-summary-section.collapsed .st-summary-chevron {
+        transform: rotate(-90deg);
+      }
+      .st-summary-body {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .st-summary-section.collapsed .st-summary-body {
+        display: none;
+      }
+      .st-kpi-card {
+        flex: 1;
+        min-width: 120px;
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 8px;
+        text-align: center;
+      }
+      .st-kpi-value {
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+      .st-kpi-label {
+        font-size: 11px;
+        opacity: 0.6;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      /* Quarter filter buttons */
+      .st-q-group {
+        display: flex;
+        gap: 3px;
+      }
+      .st-q-btn {
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background 0.2s ease;
+        white-space: nowrap;
+      }
+      .st-q-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .st-q-btn.active {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      /* Observation heatmap section */
+      .st-heatmap-section {
+        margin: 0 20px 12px;
+      }
     </style>
   </head>
   <body>
@@ -1590,6 +1738,61 @@
             <button id="stAddStudent" class="st-btn st-btn-primary">+ Add Student</button>
           </div>
 
+          <!-- Quarter Filter Row -->
+          <div style="padding: 10px 20px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 12px; opacity: 0.6; white-space: nowrap;">Quarter:</span>
+            <div id="stQuarterFilterBar" class="st-q-group" aria-label="Quarter filter">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Data Quality Banner (only shown when there are issues) -->
+          <div id="stQualityBanner" class="st-quality-banner" style="display: none;" aria-label="Data quality issues">
+            <div class="st-quality-banner-row">
+              <span style="flex: 1;" id="stQualityBannerText"></span>
+              <button class="dt-btn" id="stQualityToggle" aria-expanded="false" aria-controls="stQualityDetails">Details ▼</button>
+              <button class="dt-btn" id="stValidationRefresh" aria-label="Refresh data quality">🔄</button>
+            </div>
+            <div class="st-quality-banner-details" id="stQualityDetails" role="region">
+              <div id="stValidationAccordion">
+                <!-- Validation issues populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Cross-Student KPI Summary -->
+          <div id="stSummarySection" class="st-summary-section">
+            <div class="st-summary-header" id="stSummaryToggle" role="button" tabindex="0" aria-expanded="true">
+              <span class="st-summary-title">At-a-Glance Summary</span>
+              <span class="st-summary-chevron" aria-hidden="true">▼</span>
+            </div>
+            <div class="st-summary-body" id="stSummaryBody">
+              <div class="st-kpi-card">
+                <div class="st-kpi-value" id="stKpiTotalStudents">—</div>
+                <div class="st-kpi-label">Active Students</div>
+              </div>
+              <div class="st-kpi-card">
+                <div class="st-kpi-value" id="stKpiAvgProgress">—</div>
+                <div class="st-kpi-label">Avg Progress</div>
+              </div>
+              <div class="st-kpi-card">
+                <div class="st-kpi-value" id="stKpiOnTrack">—</div>
+                <div class="st-kpi-label">On Track</div>
+              </div>
+              <div class="st-kpi-card">
+                <div class="st-kpi-value" id="stKpiBelowTarget">—</div>
+                <div class="st-kpi-label">Below Target</div>
+              </div>
+              <div class="st-kpi-card">
+                <div class="st-kpi-value" id="stKpiDataStatus">—</div>
+                <div class="st-kpi-label">Goals w/ Data</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observation Coverage Heatmap (shown when observation goals exist) -->
+          <div id="stObsHeatmap" class="st-heatmap-section" style="display: none;" aria-label="Observation coverage heatmap"></div>
+
           <!-- Caseload Grid Table -->
           <div class="st-table-container">
             <table class="st-table">
@@ -1617,7 +1820,7 @@
     <script src="/web/supabase-config.js?v=20260331"></script>
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260331"></script>
-    <script type="module" src="/web/tc-students.js?v=20260331c"></script>
+    <script type="module" src="/web/tc-students.js?v=20260408a"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
   </body>
