@@ -2405,6 +2405,178 @@
         button.insertAdjacentElement('afterend', rationaleDiv);
         setTimeout(() => { rationaleDiv.classList.add('rv-ai-rationale-fading'); }, 10000);
       }
+
+      // Auto-save the AI-suggested score (only when submission and a real item ID are available)
+      if (suggested_score != null && submission && !String(itemId).startsWith(SYNTHETIC_ID_PREFIX)) {
+        const statusSpan = card.querySelector(`.rv-save-status[data-item-id="${itemId}"]`);
+        if (statusSpan) { statusSpan.textContent = 'Saving…'; statusSpan.className = 'rv-save-status'; }
+
+        const saveRes = await fetch('/.netlify/functions/teacher-review-save', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_score',
+            submissionId,
+            itemId,
+            earnedPoints: suggested_score,
+            teacherNote: suggested_note || '',
+            rationale: rationale || '',
+            aiSuggestedScore: suggested_score,
+          }),
+        });
+
+        if (!saveRes.ok) {
+          if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
+          // Fall back to just having populated the fields — teacher can save manually
+        } else {
+          if (statusSpan) {
+            statusSpan.textContent = 'Saved';
+            statusSpan.className = 'rv-save-status success';
+            setTimeout(() => { statusSpan.textContent = ''; }, 2000);
+          }
+
+          // Update local answer cache with the newly saved score
+          let cachedAnswers = submissionAnswersCache[submissionId];
+          if (!cachedAnswers) {
+            cachedAnswers = [];
+            submissionAnswersCache[submissionId] = cachedAnswers;
+          }
+          const cachedAnswer = cachedAnswers.find(
+            a => String(a.item_id) === String(itemId) || String(a.assignment_item_id) === String(itemId)
+          );
+          if (cachedAnswer) {
+            cachedAnswer.earned_points = suggested_score;
+            cachedAnswer.teacher_note = suggested_note || '';
+          } else {
+            cachedAnswers.push({ item_id: itemId, earned_points: suggested_score, teacher_note: suggested_note || '', rationale: rationale || '' });
+          }
+
+          // Advance submission status to 'in_progress' if it is still 'pending'
+          if (!submission.review_status || submission.review_status === 'pending') {
+            submission.review_status = 'in_progress';
+            db.setSubmissionInProgress(submissionId).catch(err => {
+              console.warn('[tc-review] Could not set in_progress on AI suggest:', err);
+            });
+          }
+
+          // Check whether all constructed items on this submission are now scored
+          const latestAnswers = submissionAnswersCache[submissionId] || [];
+          const constructedItems = items.filter(it => it.answer_type === 'constructed');
+          const allScored = constructedItems.length > 0 &&
+            constructedItems.every(it => isAutoScoredItem(it, latestAnswers));
+
+          if (allScored) {
+            // All constructed items are scored — generate overall feedback and save grade
+            try {
+              const assignmentTitle = instance?.settings?.title || '';
+              const itemSummaries = items.map(it => {
+                const ans = latestAnswers.find(a => a.item_id === it.id);
+                return {
+                  label: it.item_ref || it.ref || 'Item',
+                  type: it.answer_type || 'auto',
+                  earned: ans?.earned_points != null ? Number(ans.earned_points) : null,
+                  max: it.points || 0,
+                  teacher_note: ans?.teacher_note || '',
+                };
+              }).filter(s => s.earned != null || s.type === 'constructed');
+
+              const totalEarned = itemSummaries.reduce((sum, s) => sum + (s.earned || 0), 0);
+              const totalPossible = items.reduce((sum, it) => sum + (it.points || 0), 0);
+              const totalPercent = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
+
+              let suggestedFeedback = '';
+              try {
+                const feedbackRes = await fetch('/.netlify/functions/teacher-ai-suggest-feedback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  body: JSON.stringify({
+                    assignment_title: assignmentTitle,
+                    total_score: totalEarned,
+                    total_possible: totalPossible,
+                    total_percent: totalPercent,
+                    item_summaries: itemSummaries,
+                    student_code: instance?.student_code || '',
+                  }),
+                });
+                if (feedbackRes.ok) {
+                  const feedbackData = await feedbackRes.json();
+                  if (feedbackData.ok && feedbackData.suggested_feedback) {
+                    suggestedFeedback = feedbackData.suggested_feedback;
+                  }
+                }
+              } catch (fbErr) {
+                console.warn('[tc-review] AI suggest feedback error:', submissionId, fbErr);
+              }
+
+              const scoreAuto = latestAnswers.length > 0
+                ? items.filter(it => isAutoScoredItem(it, latestAnswers))
+                    .reduce((sum, it) => {
+                      const ans = latestAnswers.find(a => a.item_id === it.id);
+                      return sum + (Number(ans?.earned_points) || 0);
+                    }, 0)
+                : (Number(submission.score_auto) || 0);
+              let scoreManual = 0;
+              items.filter(it => it.answer_type === 'constructed' && !isAutoScoredItem(it, latestAnswers))
+                .forEach(it => {
+                  const ans = latestAnswers.find(a => a.item_id === it.id);
+                  if (ans) scoreManual += Number(ans.earned_points) || 0;
+                });
+              const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
+              const gradedAt = new Date().toISOString();
+              const gradedBy = localStorage.getItem('rc_teacher_name') || 'Teacher (AI-Assisted)';
+
+              const gradeRes = await fetch('/.netlify/functions/teacher-review-save', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'save_grade',
+                  submissionId,
+                  scoreAuto,
+                  scoreManual,
+                  scoreTotal,
+                  status: 'Graded',
+                  gradedAt,
+                  gradedBy,
+                  feedback: suggestedFeedback,
+                  instanceId: submission.instance_id,
+                }),
+              });
+
+              if (gradeRes.ok) {
+                submission.score_auto = scoreAuto;
+                submission.score_manual = scoreManual;
+                submission.score_total = scoreTotal;
+                submission.review_status = 'reviewed';
+                submission.graded_at = gradedAt;
+                submission.graded_by = gradedBy;
+                if (suggestedFeedback) submission.feedback = suggestedFeedback;
+                delete submissionAnswersCache[submissionId];
+                expandedSubmissions.delete(submissionId);
+                showToast('Score saved — submission moved to Reviewed', '#22c55e', '#0b1220');
+              } else {
+                delete submissionAnswersCache[submissionId];
+                expandedSubmissions.add(submissionId);
+                showToast('Score saved', '#22c55e', '#0b1220');
+              }
+            } catch (gradeErr) {
+              console.error('[tc-review] Error saving grade after AI suggest:', gradeErr);
+              delete submissionAnswersCache[submissionId];
+              expandedSubmissions.add(submissionId);
+              showToast('Score saved', '#22c55e', '#0b1220');
+            }
+          } else {
+            // Not all constructed items scored yet — just update the live summary
+            delete submissionAnswersCache[submissionId];
+            expandedSubmissions.add(submissionId);
+            showToast('Score saved', '#22c55e', '#0b1220');
+          }
+
+          await render();
+        }
+      }
     } catch (err) {
       console.error('[tc-review] AI suggest error:', err);
       const errDiv = document.createElement('div');
