@@ -265,7 +265,8 @@
         },
         reserve: {
           presentationsExpanded: filters.reserve.presentationsExpanded,
-          presentationsSearch: filters.reserve.presentationsSearch
+          presentationsSearch: filters.reserve.presentationsSearch,
+          viewMode: filters.reserve.viewMode
         },
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
@@ -342,6 +343,9 @@
         if (typeof data.reserve.presentationsSearch === 'string') {
           filters.reserve.presentationsSearch = data.reserve.presentationsSearch;
         }
+        if (typeof data.reserve.viewMode === 'string') {
+          filters.reserve.viewMode = data.reserve.viewMode;
+        }
       }
 
       if (Array.isArray(data.collapsedLanes)) {
@@ -372,6 +376,8 @@
   let submissionsData = [];
   let classEnrollmentsData = [];
   let lessonsData = null;
+  // unitMap: Map of unit_id → { unitName, sectionName, sectionId }
+  let unitMap = new Map();
   let syncStatus = "loading";
 
   // Recall Library state
@@ -406,7 +412,8 @@
     },
     reserve: {
       presentationsExpanded: false,
-      presentationsSearch: ""
+      presentationsSearch: "",
+      viewMode: "flat"
     }
   };
 
@@ -686,14 +693,41 @@
       if (response.ok) {
         lessonsData = await response.json();
         console.log(`[tc-library] Loaded ${lessonsData.sections?.length || 0} lesson sections`);
+        // Build unit lookup map: unit_id → { unitName, sectionName, sectionId }
+        unitMap = new Map();
+        if (Array.isArray(lessonsData.sections)) {
+          lessonsData.sections.forEach(section => {
+            const sectionName = section.name || '';
+            const sectionId = (sectionName).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            if (Array.isArray(section.units)) {
+              section.units.forEach(unit => {
+                if (unit.id) {
+                  unitMap.set(unit.id, { unitName: unit.name || unit.id, sectionName, sectionId });
+                }
+              });
+            }
+          });
+        }
       } else {
         console.warn("[tc-library] Lessons index not found");
         lessonsData = null;
+        unitMap = new Map();
       }
     } catch (err) {
       console.error("[tc-library] Error loading lessons:", err);
       lessonsData = null;
+      unitMap = new Map();
     }
+  }
+
+  /**
+   * Returns { unitName, sectionName, sectionId } for the given unit_id, or null if not found.
+   * @param {string|null|undefined} unitId
+   * @returns {{ unitName: string, sectionName: string, sectionId: string }|null}
+   */
+  function getUnitInfo(unitId) {
+    if (!unitId) return null;
+    return unitMap.get(unitId) || null;
   }
 
   // ── Draft ID Helper ───────────────────────────────────────────────────────────
@@ -1710,6 +1744,8 @@
     if (bulkDeleteBtn) bulkDeleteBtn.style.display = count > 0 ? '' : 'none';
     const bulkArchiveBtn = document.getElementById('upcomingBulkArchiveBtn');
     if (bulkArchiveBtn) bulkArchiveBtn.style.display = count > 0 ? '' : 'none';
+    const bulkSetUnitBtn = document.getElementById('upcomingBulkSetUnitBtn');
+    if (bulkSetUnitBtn) bulkSetUnitBtn.style.display = count > 0 ? '' : 'none';
   }
 
   /**
@@ -1896,6 +1932,104 @@
       await executeBulkDeactivate('archived', 'bulk archive');
     });
     controlsRow.appendChild(bulkArchiveBtn);
+
+    // ── Bulk Set Unit button ───────────────────────────────────────────────
+    const bulkSetUnitBtn = document.createElement('button');
+    bulkSetUnitBtn.id = 'upcomingBulkSetUnitBtn';
+    bulkSetUnitBtn.className = 'tc-btn';
+    bulkSetUnitBtn.style.cssText = 'display:none; font-size:12px; padding:5px 12px;';
+    bulkSetUnitBtn.appendChild(createIcon('folderOpen', 14));
+    bulkSetUnitBtn.appendChild(document.createTextNode(' Set Unit'));
+    bulkSetUnitBtn.addEventListener('click', () => {
+      if (!lessonsData || !Array.isArray(lessonsData.sections) || lessonsData.sections.length === 0) {
+        showToast('No lessons data available', '#ef4444', '#fff');
+        return;
+      }
+      const ids = [...selectedUpcoming];
+      if (ids.length === 0) return;
+
+      // Build inline unit picker overlay
+      const pickerOverlay = document.createElement('div');
+      pickerOverlay.style.cssText = [
+        'position:fixed; top:0; left:0; right:0; bottom:0;',
+        'background:rgba(0,0,0,.70); backdrop-filter:blur(4px);',
+        'display:flex; align-items:center; justify-content:center;',
+        'z-index:10001; padding:24px;'
+      ].join('');
+
+      const pickerCard = document.createElement('div');
+      pickerCard.className = 'tc-card';
+      pickerCard.style.cssText = 'max-width:480px; width:100%; padding:28px;';
+
+      const pickerTitle = document.createElement('h3');
+      pickerTitle.style.cssText = 'margin:0 0 16px 0; font-size:18px;';
+      pickerTitle.textContent = 'Set Unit for ' + ids.length + ' Assignment' + (ids.length !== 1 ? 's' : '');
+      pickerCard.appendChild(pickerTitle);
+
+      const pickerSelect = document.createElement('select');
+      pickerSelect.style.cssText = 'width:100%; padding:8px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:14px; margin-bottom:16px;';
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = 'Uncategorized';
+      pickerSelect.appendChild(defaultOpt);
+      lessonsData.sections.forEach(section => {
+        if (!Array.isArray(section.units) || section.units.length === 0) return;
+        const grp = document.createElement('optgroup');
+        grp.label = section.name || '';
+        section.units.forEach(unit => {
+          const opt = document.createElement('option');
+          opt.value = unit.id || '';
+          opt.textContent = unit.name || unit.id || '';
+          grp.appendChild(opt);
+        });
+        pickerSelect.appendChild(grp);
+      });
+      pickerCard.appendChild(pickerSelect);
+
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex; gap:10px; justify-content:flex-end;';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'tc-btn';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => pickerOverlay.remove());
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'tc-btn';
+      confirmBtn.style.background = 'rgba(96,165,250,.2)';
+      confirmBtn.textContent = 'Apply';
+      confirmBtn.addEventListener('click', async () => {
+        const newUnitId = pickerSelect.value || null;
+        const info = newUnitId ? getUnitInfo(newUnitId) : null;
+        const newSectionId = info ? info.sectionId : null;
+        const unitLabel = newUnitId ? (info ? info.unitName : newUnitId) : 'Uncategorized';
+        pickerOverlay.remove();
+        try {
+          await Promise.all(ids.map(id => db.updateAssignment(id, { unit_id: newUnitId, section_id: newSectionId })));
+          ids.forEach(id => {
+            const idx = assignmentsData.findIndex(a => a.id === id);
+            if (idx !== -1) {
+              assignmentsData[idx].unit_id = newUnitId;
+              assignmentsData[idx].section_id = newSectionId;
+            }
+          });
+          selectedUpcoming.clear();
+          refreshCurrentTab();
+          showToast(ids.length + ' assignment' + (ids.length !== 1 ? 's' : '') + ' cataloged to ' + unitLabel);
+        } catch (err) {
+          console.error('[tc-library] Bulk set unit failed:', err);
+          showToast('Failed to set unit', '#ef4444', '#fff');
+        }
+      });
+
+      btnRow.appendChild(cancelBtn);
+      btnRow.appendChild(confirmBtn);
+      pickerCard.appendChild(btnRow);
+      pickerOverlay.appendChild(pickerCard);
+      document.body.appendChild(pickerOverlay);
+      pickerOverlay.addEventListener('click', (e) => { if (e.target === pickerOverlay) pickerOverlay.remove(); });
+    });
+    controlsRow.appendChild(bulkSetUnitBtn);
 
     container.appendChild(controlsRow);
 
@@ -3382,6 +3516,253 @@
     return wrapper;
   }
 
+  /**
+   * Renders the Reserve tab in "By Unit" mode — groups assignments by section → unit
+   * using the unitMap built from lessonsData. Uncategorized assignments appear last.
+   */
+  function renderReserveByUnit(assignments) {
+    const wrapper = document.createElement('div');
+
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:32px 24px; text-align:center;';
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:16px; font-weight:600; margin-bottom:6px;';
+      title.textContent = 'No upcoming assignments';
+      empty.appendChild(title);
+      return empty;
+    }
+
+    // Group by section → unit
+    // Build ordered section list from lessonsData (or empty)
+    const sections = (lessonsData && Array.isArray(lessonsData.sections)) ? lessonsData.sections : [];
+
+    // Map: sectionId → { sectionName, units: Map<unitId, { unitName, assignments[] }> }
+    const sectionMap = new Map();
+    sections.forEach(section => {
+      const sectionName = section.name || '';
+      const sectionId = sectionName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const unitEntries = new Map();
+      if (Array.isArray(section.units)) {
+        section.units.forEach(unit => {
+          if (unit.id) unitEntries.set(unit.id, { unitName: unit.name || unit.id, assignments: [] });
+        });
+      }
+      sectionMap.set(sectionId, { sectionName, units: unitEntries });
+    });
+
+    const uncategorized = [];
+
+    assignments.forEach(a => {
+      if (a.unit_id && a.section_id && sectionMap.has(a.section_id)) {
+        const sec = sectionMap.get(a.section_id);
+        if (sec.units.has(a.unit_id)) {
+          sec.units.get(a.unit_id).assignments.push(a);
+        } else {
+          // unit_id not found in lessons data — put in uncategorized
+          uncategorized.push(a);
+        }
+      } else if (a.unit_id) {
+        // Has unit_id but section_id doesn't match a known section — try unitMap
+        const info = getUnitInfo(a.unit_id);
+        if (info && sectionMap.has(info.sectionId)) {
+          const sec = sectionMap.get(info.sectionId);
+          if (sec.units.has(a.unit_id)) {
+            sec.units.get(a.unit_id).assignments.push(a);
+          } else {
+            uncategorized.push(a);
+          }
+        } else {
+          uncategorized.push(a);
+        }
+      } else {
+        uncategorized.push(a);
+      }
+    });
+
+    function renderUnitAccordion(unitId, unitName, unitAssignments) {
+      const nodeKey = 'reserve-byunit-unit-' + unitId;
+      const isExpanded = hierarchyExpandState.has(nodeKey) ? hierarchyExpandState.get(nodeKey) : unitAssignments.length > 0;
+
+      const unitWrap = document.createElement('div');
+      unitWrap.style.cssText = 'margin-bottom:8px;';
+
+      const unitHeader = document.createElement('div');
+      unitHeader.style.cssText = [
+        'display:flex; align-items:center; gap:8px; padding:8px 12px;',
+        'background:rgba(255,255,255,.05); border-radius:8px; cursor:pointer;',
+        'user-select:none; font-size:14px; font-weight:600;'
+      ].join('');
+
+      const chevronEl = document.createElement('span');
+      chevronEl.style.cssText = 'display:inline-flex; color:rgba(255,255,255,.50); flex-shrink:0;';
+      chevronEl.appendChild(createIcon(isExpanded ? 'chevronDown' : 'chevronRight', 14));
+
+      const titleEl = document.createElement('span');
+      titleEl.style.cssText = 'flex:1;';
+      titleEl.textContent = unitName;
+
+      const countBadge = document.createElement('span');
+      countBadge.style.cssText = 'font-size:11px; font-weight:600; background:rgba(255,255,255,.10); border-radius:20px; padding:2px 8px; color:rgba(255,255,255,.65);';
+      countBadge.textContent = unitAssignments.length + (unitAssignments.length === 1 ? ' assignment' : ' assignments');
+
+      unitHeader.appendChild(chevronEl);
+      unitHeader.appendChild(titleEl);
+      unitHeader.appendChild(countBadge);
+
+      const unitContent = document.createElement('div');
+      unitContent.style.cssText = 'display:' + (isExpanded ? 'block' : 'none') + '; padding:8px 0 0 0;';
+
+      unitHeader.addEventListener('click', () => {
+        const expanded = unitContent.style.display !== 'none';
+        unitContent.style.display = expanded ? 'none' : 'block';
+        hierarchyExpandState.set(nodeKey, !expanded);
+        while (chevronEl.firstChild) chevronEl.removeChild(chevronEl.firstChild);
+        chevronEl.appendChild(createIcon(!expanded ? 'chevronDown' : 'chevronRight', 14));
+      });
+
+      if (unitAssignments.length > 0) {
+        const cardGrid = document.createElement('div');
+        cardGrid.className = 'tc-lib-grid';
+        cardGrid.style.marginLeft = '8px';
+        unitAssignments.forEach(a => cardGrid.appendChild(renderUpcomingCard(a)));
+        unitContent.appendChild(cardGrid);
+      } else {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.style.cssText = 'padding:8px 12px; font-size:13px; color:rgba(255,255,255,.35); font-style:italic;';
+        emptyMsg.textContent = 'No assignments in this unit';
+        unitContent.appendChild(emptyMsg);
+      }
+
+      unitWrap.appendChild(unitHeader);
+      unitWrap.appendChild(unitContent);
+      return unitWrap;
+    }
+
+    // Render section accordions
+    let hasAnyContent = false;
+    sectionMap.forEach(({ sectionName, units }, sectionId) => {
+      // Only show sections that have at least one assignment in some unit
+      let sectionTotal = 0;
+      units.forEach(u => { sectionTotal += u.assignments.length; });
+      if (sectionTotal === 0) return;
+
+      hasAnyContent = true;
+      const nodeKey = 'reserve-byunit-section-' + sectionId;
+      const isExpanded = hierarchyExpandState.has(nodeKey) ? hierarchyExpandState.get(nodeKey) : true;
+
+      const sectionWrap = document.createElement('div');
+      sectionWrap.style.cssText = 'margin-bottom:16px;';
+
+      const sectionHeader = document.createElement('div');
+      sectionHeader.className = 'tc-lib-lane-header';
+      sectionHeader.style.cssText = [
+        'display:flex; align-items:center; gap:10px; padding:10px 16px;',
+        'background:rgba(255,255,255,.06); border-radius:10px; cursor:pointer;',
+        'user-select:none; font-weight:700; font-size:14px; letter-spacing:0.5px;',
+        'margin-bottom:8px; text-transform:uppercase;'
+      ].join('');
+
+      const sectionChevron = document.createElement('span');
+      sectionChevron.style.cssText = 'display:inline-flex; color:rgba(255,255,255,.50); flex-shrink:0;';
+      sectionChevron.appendChild(createIcon(isExpanded ? 'chevronDown' : 'chevronRight', 16));
+
+      const sectionTitle = document.createElement('span');
+      sectionTitle.style.cssText = 'flex:1;';
+      sectionTitle.textContent = sectionName;
+
+      const sectionBadge = document.createElement('span');
+      sectionBadge.style.cssText = 'font-size:11px; font-weight:600; background:rgba(255,255,255,.10); border-radius:20px; padding:2px 9px; color:rgba(255,255,255,.65);';
+      sectionBadge.textContent = String(sectionTotal);
+
+      sectionHeader.appendChild(sectionChevron);
+      sectionHeader.appendChild(sectionTitle);
+      sectionHeader.appendChild(sectionBadge);
+
+      const sectionContent = document.createElement('div');
+      sectionContent.style.display = isExpanded ? 'block' : 'none';
+
+      sectionHeader.addEventListener('click', () => {
+        const expanded = sectionContent.style.display !== 'none';
+        sectionContent.style.display = expanded ? 'none' : 'block';
+        hierarchyExpandState.set(nodeKey, !expanded);
+        while (sectionChevron.firstChild) sectionChevron.removeChild(sectionChevron.firstChild);
+        sectionChevron.appendChild(createIcon(!expanded ? 'chevronDown' : 'chevronRight', 16));
+      });
+
+      units.forEach((unitData, unitId) => {
+        if (unitData.assignments.length === 0) return;
+        sectionContent.appendChild(renderUnitAccordion(unitId, unitData.unitName, unitData.assignments));
+      });
+
+      sectionWrap.appendChild(sectionHeader);
+      sectionWrap.appendChild(sectionContent);
+      wrapper.appendChild(sectionWrap);
+    });
+
+    // Uncategorized section
+    if (uncategorized.length > 0) {
+      const nodeKey = 'reserve-byunit-uncategorized';
+      const isExpanded = hierarchyExpandState.has(nodeKey) ? hierarchyExpandState.get(nodeKey) : true;
+
+      const uncatWrap = document.createElement('div');
+      uncatWrap.style.cssText = 'margin-bottom:16px;';
+
+      const uncatHeader = document.createElement('div');
+      uncatHeader.className = 'tc-lib-lane-header';
+      uncatHeader.style.cssText = [
+        'display:flex; align-items:center; gap:10px; padding:10px 16px;',
+        'background:rgba(255,255,255,.06); border-radius:10px; cursor:pointer;',
+        'user-select:none; font-weight:700; font-size:14px; letter-spacing:0.5px;',
+        'margin-bottom:8px; text-transform:uppercase;'
+      ].join('');
+
+      const uncatChevron = document.createElement('span');
+      uncatChevron.style.cssText = 'display:inline-flex; color:rgba(255,255,255,.50); flex-shrink:0;';
+      uncatChevron.appendChild(createIcon(isExpanded ? 'chevronDown' : 'chevronRight', 16));
+
+      const uncatTitle = document.createElement('span');
+      uncatTitle.style.cssText = 'flex:1;';
+      uncatTitle.textContent = 'UNCATEGORIZED';
+
+      const uncatBadge = document.createElement('span');
+      uncatBadge.style.cssText = 'font-size:11px; font-weight:600; background:rgba(255,255,255,.10); border-radius:20px; padding:2px 9px; color:rgba(255,255,255,.65);';
+      uncatBadge.textContent = String(uncategorized.length);
+
+      uncatHeader.appendChild(uncatChevron);
+      uncatHeader.appendChild(uncatTitle);
+      uncatHeader.appendChild(uncatBadge);
+
+      const uncatContent = document.createElement('div');
+      uncatContent.style.display = isExpanded ? 'block' : 'none';
+
+      uncatHeader.addEventListener('click', () => {
+        const expanded = uncatContent.style.display !== 'none';
+        uncatContent.style.display = expanded ? 'none' : 'block';
+        hierarchyExpandState.set(nodeKey, !expanded);
+        while (uncatChevron.firstChild) uncatChevron.removeChild(uncatChevron.firstChild);
+        uncatChevron.appendChild(createIcon(!expanded ? 'chevronDown' : 'chevronRight', 16));
+      });
+
+      const uncatGrid = document.createElement('div');
+      uncatGrid.className = 'tc-lib-grid';
+      uncategorized.forEach(a => uncatGrid.appendChild(renderUpcomingCard(a)));
+      uncatContent.appendChild(uncatGrid);
+
+      uncatWrap.appendChild(uncatHeader);
+      uncatWrap.appendChild(uncatContent);
+      wrapper.appendChild(uncatWrap);
+    } else if (!hasAnyContent) {
+      // All assignments are uncategorized but we showed them above, or no data
+      const uncatGrid = document.createElement('div');
+      uncatGrid.className = 'tc-lib-grid';
+      assignments.forEach(a => uncatGrid.appendChild(renderUpcomingCard(a)));
+      wrapper.appendChild(uncatGrid);
+    }
+
+    return wrapper;
+  }
+
   function renderReserveTab() {
     const container = $('reserveTab');
     if (!container) return;
@@ -3460,6 +3841,38 @@
       }
       container.appendChild(filterBar);
 
+      // ── View toggle (Flat List / By Unit) ────────────────────────────────
+      const viewToggleRow = document.createElement('div');
+      viewToggleRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:12px;';
+
+      const flatBtn = document.createElement('button');
+      flatBtn.className = 'tc-btn';
+      flatBtn.style.cssText = 'font-size:12px; padding:4px 12px;' + (filters.reserve.viewMode === 'flat' ? ' background:rgba(96,165,250,.25); border-color:rgba(96,165,250,.5);' : '');
+      flatBtn.appendChild(createIcon('table', 13));
+      flatBtn.appendChild(document.createTextNode(' Flat List'));
+      flatBtn.setAttribute('aria-pressed', String(filters.reserve.viewMode === 'flat'));
+      flatBtn.addEventListener('click', () => {
+        filters.reserve.viewMode = 'flat';
+        saveFilters();
+        renderReserveTab();
+      });
+
+      const byUnitBtn = document.createElement('button');
+      byUnitBtn.className = 'tc-btn';
+      byUnitBtn.style.cssText = 'font-size:12px; padding:4px 12px;' + (filters.reserve.viewMode === 'byUnit' ? ' background:rgba(96,165,250,.25); border-color:rgba(96,165,250,.5);' : '');
+      byUnitBtn.appendChild(createIcon('bookOpen', 13));
+      byUnitBtn.appendChild(document.createTextNode(' By Unit'));
+      byUnitBtn.setAttribute('aria-pressed', String(filters.reserve.viewMode === 'byUnit'));
+      byUnitBtn.addEventListener('click', () => {
+        filters.reserve.viewMode = 'byUnit';
+        saveFilters();
+        renderReserveTab();
+      });
+
+      viewToggleRow.appendChild(flatBtn);
+      viewToggleRow.appendChild(byUnitBtn);
+      container.appendChild(viewToggleRow);
+
       // Count label
       const countEl = document.createElement('div');
       countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
@@ -3467,11 +3880,15 @@
         `${reserveList.length} assignment${reserveList.length !== 1 ? 's' : ''} in reserve`;
       container.appendChild(countEl);
 
-      container.appendChild(
-        renderLaneSection('upcoming', 'clipboard', 'Reserve', reserveList.length, (div) => {
-          div.appendChild(renderUpcomingLane(reserveList));
-        })
-      );
+      if (filters.reserve.viewMode === 'byUnit') {
+        container.appendChild(renderReserveByUnit(reserveList));
+      } else {
+        container.appendChild(
+          renderLaneSection('upcoming', 'clipboard', 'Reserve', reserveList.length, (div) => {
+            div.appendChild(renderUpcomingLane(reserveList));
+          })
+        );
+      }
 
       // Presentations & Lessons collapsible section
       container.appendChild(renderPresentationsSection());
@@ -6044,6 +6461,160 @@
           scoreSpan.textContent = `${stats.avgScore}%`;
           grid.appendChild(makeDetailRow('Average Score', scoreSpan));
         }
+      }
+
+      // ── Unit Picker ──────────────────────────────────────────────────────────
+      if (lessonsData && Array.isArray(lessonsData.sections) && lessonsData.sections.length > 0) {
+        const unitRow = document.createElement('div');
+        const unitLbl = document.createElement('div');
+        unitLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 4px;';
+        unitLbl.textContent = 'Unit';
+        unitRow.appendChild(unitLbl);
+
+        const unitSelect = document.createElement('select');
+        unitSelect.style.cssText = 'width:100%; padding:8px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:14px;';
+
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = 'Uncategorized';
+        unitSelect.appendChild(defaultOpt);
+
+        lessonsData.sections.forEach(section => {
+          if (!Array.isArray(section.units) || section.units.length === 0) return;
+          const grp = document.createElement('optgroup');
+          grp.label = section.name || '';
+          section.units.forEach(unit => {
+            const opt = document.createElement('option');
+            opt.value = unit.id || '';
+            opt.textContent = unit.name || unit.id || '';
+            grp.appendChild(opt);
+          });
+          unitSelect.appendChild(grp);
+        });
+
+        unitSelect.value = assignment.unit_id || '';
+
+        unitSelect.addEventListener('change', async () => {
+          const newUnitId = unitSelect.value || null;
+          const info = newUnitId ? getUnitInfo(newUnitId) : null;
+          const newSectionId = info ? info.sectionId : null;
+          try {
+            await db.updateAssignment(assignment.id, { unit_id: newUnitId, section_id: newSectionId });
+            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+            if (idx !== -1) {
+              assignmentsData[idx].unit_id = newUnitId;
+              assignmentsData[idx].section_id = newSectionId;
+            }
+            assignment.unit_id = newUnitId;
+            assignment.section_id = newSectionId;
+            const unitLabel = newUnitId ? (info ? info.unitName : newUnitId) : 'Uncategorized';
+            showToast('Unit set: ' + unitLabel);
+          } catch (err) {
+            console.error('[tc-library] Failed to update unit:', err);
+            showToast('Failed to save unit', '#ef4444', '#fff');
+            unitSelect.value = assignment.unit_id || '';
+          }
+        });
+
+        unitRow.appendChild(unitSelect);
+        grid.appendChild(unitRow);
+      }
+
+      // ── Tag Input ────────────────────────────────────────────────────────────
+      {
+        const tagRow = document.createElement('div');
+        const tagLbl = document.createElement('div');
+        tagLbl.style.cssText = 'color: rgba(255,255,255,.60); font-size: 14px; margin-bottom: 6px;';
+        tagLbl.textContent = 'Tags';
+        tagRow.appendChild(tagLbl);
+
+        let currentTags = Array.isArray(assignment.tags) ? [...assignment.tags] : [];
+
+        const pillsRow = document.createElement('div');
+        pillsRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; min-height:28px;';
+
+        function renderTagPills() {
+          pillsRow.innerHTML = '';
+          currentTags.forEach(tag => {
+            const pill = document.createElement('span');
+            pill.style.cssText = 'display:inline-flex; align-items:center; gap:4px; background:rgba(96,165,250,.18); border:1px solid rgba(96,165,250,.35); border-radius:20px; padding:2px 10px; font-size:12px; color:#93c5fd;';
+            pill.textContent = tag;
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.style.cssText = 'background:none; border:none; color:#93c5fd; cursor:pointer; padding:0; line-height:1; font-size:14px; opacity:0.7;';
+            removeBtn.setAttribute('aria-label', 'Remove tag ' + tag);
+            removeBtn.textContent = '\u00d7';
+            removeBtn.addEventListener('click', async () => {
+              currentTags = currentTags.filter(t => t !== tag);
+              renderTagPills();
+              await saveTags();
+            });
+            pill.appendChild(removeBtn);
+            pillsRow.appendChild(pill);
+          });
+        }
+
+        async function saveTags() {
+          try {
+            await db.updateAssignment(assignment.id, { tags: currentTags });
+            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+            if (idx !== -1) assignmentsData[idx].tags = [...currentTags];
+            assignment.tags = [...currentTags];
+          } catch (err) {
+            console.error('[tc-library] Failed to save tags:', err);
+            showToast('Failed to save tags', '#ef4444', '#fff');
+          }
+        }
+
+        renderTagPills();
+        tagRow.appendChild(pillsRow);
+
+        const tagInputRow = document.createElement('div');
+        tagInputRow.style.cssText = 'display:flex; gap:6px; margin-bottom:8px;';
+        const tagInput = document.createElement('input');
+        tagInput.type = 'text';
+        tagInput.placeholder = 'Add a tag and press Enter...';
+        tagInput.style.cssText = 'flex:1; padding:6px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px;';
+        tagInput.addEventListener('keydown', async (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const newTag = tagInput.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            if (newTag && !currentTags.includes(newTag)) {
+              currentTags = [...currentTags, newTag];
+              renderTagPills();
+              await saveTags();
+            }
+            tagInput.value = '';
+          }
+        });
+        tagInputRow.appendChild(tagInput);
+        tagRow.appendChild(tagInputRow);
+
+        // Suggested tags
+        const SUGGESTED_TAGS = ['quiz', 'homework', 'assessment', 'vocabulary', 'reading', 'writing', 'review', 'daily-work'];
+        const suggestionsRow = document.createElement('div');
+        suggestionsRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:5px;';
+        const suggestLbl = document.createElement('span');
+        suggestLbl.style.cssText = 'font-size:11px; color:rgba(255,255,255,.40); align-self:center; margin-right:2px;';
+        suggestLbl.textContent = 'Suggestions:';
+        suggestionsRow.appendChild(suggestLbl);
+
+        SUGGESTED_TAGS.forEach(sug => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.style.cssText = 'background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); border-radius:20px; padding:2px 9px; font-size:11px; color:rgba(255,255,255,.65); cursor:pointer;';
+          chip.textContent = sug;
+          chip.addEventListener('click', async () => {
+            if (!currentTags.includes(sug)) {
+              currentTags = [...currentTags, sug];
+              renderTagPills();
+              await saveTags();
+            }
+          });
+          suggestionsRow.appendChild(chip);
+        });
+        tagRow.appendChild(suggestionsRow);
+        grid.appendChild(tagRow);
       }
 
       if (assignment.meta) {

@@ -263,6 +263,10 @@ const local = {
     if (updates.meta) {
       arr[idx].meta = { ...(originalMeta || {}), ...updates.meta };
     }
+    // tags replaces entirely (do not merge)
+    if (updates.tags !== undefined) {
+      arr[idx].tags = Array.isArray(updates.tags) ? updates.tags : [];
+    }
     store.set('assignments', arr);
     return arr[idx];
   },
@@ -1420,7 +1424,10 @@ const remote = {
       page: a.page || null,
       hero: a.hero || null,
       meta: a.meta || {},
-      created_by: a.created_by || null
+      created_by: a.created_by || null,
+      unit_id: a.unit_id || null,
+      section_id: a.section_id || null,
+      tags: Array.isArray(a.tags) ? a.tags : []
     };
     const { data, error } = await supabase.from('assignments').insert(payload).select().single();
     if (error) throw error;
@@ -1496,7 +1503,7 @@ const remote = {
     const schoolYear = getCurrentSchoolYear();
     const { data, error } = await supabase
       .from('assignments')
-      .select('id, title, type, series, active, page, hero, meta, created_at, school_year')
+      .select('id, title, type, series, active, page, hero, meta, created_at, school_year, unit_id, section_id, tags')
       .or(`school_year.eq.${schoolYear},school_year.is.null`)
       .order('created_at', { ascending: false });
     if (error) throw error;

@@ -672,6 +672,170 @@ test('730 days ago returns "2 years ago"', () => {
 });
 
 
+// ── Assignment catalog fields (unit_id, section_id, tags) ────────────────────
+
+/**
+ * Mirrors the local updateAssignment logic from data-adapter.js.
+ * For testing the tags-replace (not merge) behavior and catalog field handling.
+ */
+function localUpdateAssignment(assignments, id, updates) {
+  const arr = [...assignments];
+  const idx = arr.findIndex(a => a.id === id);
+  if (idx === -1) throw new Error('Assignment not found');
+  const originalMeta = arr[idx].meta;
+  arr[idx] = { ...arr[idx], ...updates };
+  // For meta, merge rather than replace
+  if (updates.meta) {
+    arr[idx].meta = { ...(originalMeta || {}), ...updates.meta };
+  }
+  // tags replaces entirely (do not merge)
+  if (updates.tags !== undefined) {
+    arr[idx].tags = Array.isArray(updates.tags) ? updates.tags : [];
+  }
+  return arr[idx];
+}
+
+console.log('\n--- Assignment catalog fields (unit_id, section_id, tags) ---');
+
+test('updateAssignment sets unit_id and section_id', () => {
+  const assignments = [{ id: 'A1', title: 'Test', unit_id: null, section_id: null, tags: [] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { unit_id: 'lost-in-kragdon-ah', section_id: 'language-arts' });
+  assert.strictEqual(updated.unit_id, 'lost-in-kragdon-ah');
+  assert.strictEqual(updated.section_id, 'language-arts');
+});
+
+test('updateAssignment clears unit_id by setting to null', () => {
+  const assignments = [{ id: 'A1', title: 'Test', unit_id: 'some-unit', section_id: 'some-section', tags: [] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { unit_id: null, section_id: null });
+  assert.strictEqual(updated.unit_id, null);
+  assert.strictEqual(updated.section_id, null);
+});
+
+test('updateAssignment replaces tags entirely (not merge)', () => {
+  const assignments = [{ id: 'A1', title: 'Test', tags: ['quiz', 'review'] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { tags: ['homework'] });
+  assert.deepStrictEqual(updated.tags, ['homework'], 'tags should replace, not merge');
+});
+
+test('updateAssignment with empty tags array clears all tags', () => {
+  const assignments = [{ id: 'A1', title: 'Test', tags: ['quiz', 'vocabulary'] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { tags: [] });
+  assert.deepStrictEqual(updated.tags, []);
+});
+
+test('updateAssignment with non-array tags value coerces to empty array', () => {
+  const assignments = [{ id: 'A1', title: 'Test', tags: ['quiz'] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { tags: null });
+  assert.deepStrictEqual(updated.tags, []);
+});
+
+test('updateAssignment tags does not affect meta merge behavior', () => {
+  const assignments = [{ id: 'A1', title: 'Test', meta: { key1: 'v1', key2: 'v2' }, tags: ['quiz'] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { meta: { key2: 'updated', key3: 'new' }, tags: ['review'] });
+  // meta should be merged
+  assert.strictEqual(updated.meta.key1, 'v1', 'existing meta key should be preserved');
+  assert.strictEqual(updated.meta.key2, 'updated', 'updated meta key should be updated');
+  assert.strictEqual(updated.meta.key3, 'new', 'new meta key should be added');
+  // tags should be replaced
+  assert.deepStrictEqual(updated.tags, ['review'], 'tags should be replaced');
+});
+
+test('updateAssignment multiple tags replace previous set', () => {
+  const assignments = [{ id: 'A1', title: 'Test', tags: ['quiz', 'review', 'vocabulary'] }];
+  const updated = localUpdateAssignment(assignments, 'A1', { tags: ['homework', 'daily-work'] });
+  assert.deepStrictEqual(updated.tags, ['homework', 'daily-work']);
+  assert.ok(!updated.tags.includes('quiz'), 'old tags should be gone');
+});
+
+// ── getUnitInfo helper logic ───────────────────────────────────────────────────
+
+/**
+ * Mirrors the unitMap building logic from tc-library.js loadLessons().
+ */
+function buildUnitMap(lessonsData) {
+  const unitMap = new Map();
+  if (!lessonsData || !Array.isArray(lessonsData.sections)) return unitMap;
+  lessonsData.sections.forEach(section => {
+    const sectionName = section.name || '';
+    const sectionId = sectionName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (Array.isArray(section.units)) {
+      section.units.forEach(unit => {
+        if (unit.id) {
+          unitMap.set(unit.id, { unitName: unit.name || unit.id, sectionName, sectionId });
+        }
+      });
+    }
+  });
+  return unitMap;
+}
+
+function getUnitInfo(unitMap, unitId) {
+  if (!unitId) return null;
+  return unitMap.get(unitId) || null;
+}
+
+console.log('\n--- getUnitInfo helper ---');
+
+const sampleLessonsData = {
+  sections: [
+    {
+      name: 'LANGUAGE ARTS',
+      units: [
+        { id: 'lost-in-kragdon-ah', name: 'Lost in Kragdon', presentations: [] },
+        { id: 'grammar-toolkit', name: 'Grammar Toolkit', presentations: [] }
+      ]
+    },
+    {
+      name: 'LIFE SKILLS',
+      units: [
+        { id: 'life-skills', name: 'Life Skills', presentations: [] }
+      ]
+    }
+  ]
+};
+
+const sampleUnitMap = buildUnitMap(sampleLessonsData);
+
+test('getUnitInfo returns correct unit info for known unit_id', () => {
+  const info = getUnitInfo(sampleUnitMap, 'lost-in-kragdon-ah');
+  assert.ok(info, 'should return info object');
+  assert.strictEqual(info.unitName, 'Lost in Kragdon');
+  assert.strictEqual(info.sectionName, 'LANGUAGE ARTS');
+  assert.strictEqual(info.sectionId, 'language-arts');
+});
+
+test('getUnitInfo returns correct section id (lowercase kebab)', () => {
+  const info = getUnitInfo(sampleUnitMap, 'life-skills');
+  assert.ok(info);
+  assert.strictEqual(info.sectionId, 'life-skills');
+  assert.strictEqual(info.sectionName, 'LIFE SKILLS');
+});
+
+test('getUnitInfo returns null for unknown unit_id', () => {
+  const info = getUnitInfo(sampleUnitMap, 'unknown-unit');
+  assert.strictEqual(info, null);
+});
+
+test('getUnitInfo returns null for null/undefined unitId', () => {
+  assert.strictEqual(getUnitInfo(sampleUnitMap, null), null);
+  assert.strictEqual(getUnitInfo(sampleUnitMap, undefined), null);
+  assert.strictEqual(getUnitInfo(sampleUnitMap, ''), null);
+});
+
+test('buildUnitMap handles empty lessons data', () => {
+  const map = buildUnitMap(null);
+  assert.strictEqual(map.size, 0);
+});
+
+test('buildUnitMap populates all units across sections', () => {
+  const map = buildUnitMap(sampleLessonsData);
+  assert.strictEqual(map.size, 3);
+  assert.ok(map.has('lost-in-kragdon-ah'));
+  assert.ok(map.has('grammar-toolkit'));
+  assert.ok(map.has('life-skills'));
+});
+
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
