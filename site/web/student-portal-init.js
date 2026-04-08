@@ -3778,6 +3778,13 @@
         if (existing.length > 500) existing.shift();
         localStorage.setItem(key, JSON.stringify(existing));
       }
+      // Update badge counter on the My Words nav button if it exists
+      const badge = document.getElementById('myWordsBadge');
+      if (badge) {
+        const count = existing.length;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+      }
     } catch (e) { /* ignore */ }
   }
 
@@ -3808,6 +3815,7 @@
   let _knownBookResources = [];    // populated by loadStudentResources; each: { link, title, chapters, totalPages }
   let _bookSelectionChangeHandler = null; // stored so it can be removed on close
   let _bookReadingHelperOutsideClickHandler = null; // stored so it can be removed on close
+  let _bookMyWordsOutsideClickHandler = null; // stored so it can be removed on close
   const _bookChunkCache = new Map(); // chunkId -> chunkData (pages array)
   const _vocabPreviewedChapters = new Set(); // chapter startPages previewed this session
   const _vocabImageCache = new Map();        // lowercase term -> base64 image data URL
@@ -4055,6 +4063,11 @@
       _bookReadingHelperOutsideClickHandler = null;
     }
 
+    if (_bookMyWordsOutsideClickHandler) {
+      document.removeEventListener('click', _bookMyWordsOutsideClickHandler);
+      _bookMyWordsOutsideClickHandler = null;
+    }
+
     const panel = document.getElementById('bookPanel');
     const backdrop = document.getElementById('bookPanelBackdrop');
 
@@ -4109,6 +4122,7 @@
           <div class="st-book-bookmarks-panel" id="bookBookmarksPanel" style="display:none;"></div>
         </div>
         ${hasGlossary ? `<button class="st-book-nav-btn" id="bookGlossaryBtn" title="Glossary" style="padding:8px 10px;">📚 Glossary</button>` : ''}
+        ${getBookHelper('word_tracker') ? `<div style="position:relative;"><button class="st-book-nav-btn" id="bookMyWordsBtn" title="My Words" style="padding:8px 10px;">📝 My Words <span class="st-mw-badge" id="myWordsBadge" style="display:none;"></span></button></div>` : ''}
         <div style="position:relative;">
           <button class="st-book-nav-btn" id="bookReadingHelperBtn" title="Reading Helper settings" style="padding:8px 10px;">🛟 Reading Helper</button>
           <div class="st-reading-helper-panel" id="bookReadingHelperPanel" style="display:none;"></div>
@@ -4237,6 +4251,33 @@
           showGlossaryPanel();
         });
       }
+    }
+
+    // My Words button
+    const myWordsBtn = panel.querySelector('#bookMyWordsBtn');
+    if (myWordsBtn) {
+      // Initialize badge with current count
+      const _mwKey = 'rc_book_helper_heard_words';
+      try {
+        const _mwWords = JSON.parse(localStorage.getItem(_mwKey) || '[]');
+        const badge = panel.querySelector('#myWordsBadge');
+        if (badge && _mwWords.length > 0) {
+          badge.textContent = _mwWords.length;
+          badge.style.display = 'inline-block';
+        }
+      } catch (e) { /* ignore */ }
+
+      myWordsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        showMyWordsPanel();
+      });
+      _bookMyWordsOutsideClickHandler = function (e) {
+        const mwPanel = document.getElementById('bookMyWordsPanel');
+        if (mwPanel && !mwPanel.contains(e.target) && e.target !== myWordsBtn && !myWordsBtn.contains(e.target)) {
+          mwPanel.remove();
+        }
+      };
+      document.addEventListener('click', _bookMyWordsOutsideClickHandler);
     }
 
     // Font size controls
@@ -5642,6 +5683,9 @@
   async function showWordPopup(cleanWord, displayWord, clientX, clientY, wordEl) {
     closeWordPopup();
 
+    // Track this word lookup in My Words
+    trackHeardWord(cleanWord);
+
     // Check if word is highlighted — offer remove option
     const isHighlighted = wordEl.classList.contains('st-book-word-highlighted');
 
@@ -5821,6 +5865,163 @@
     // Close on outside click
     function onOutside(e) { if (!modal.contains(e.target)) { modal.remove(); document.removeEventListener('click', onOutside); } }
     setTimeout(function () { document.addEventListener('click', onOutside); }, 50);
+  }
+
+  // ============================================================================
+  // Feature: My Words panel (Word Tracker)
+  // ============================================================================
+
+  function showMyWordsPanel() {
+    // Toggle: if already open, close it
+    const existing = document.getElementById('bookMyWordsPanel');
+    if (existing) { existing.remove(); return; }
+
+    const bookPanel = document.getElementById('bookPanel');
+    if (!bookPanel) return;
+
+    const key = 'rc_book_helper_heard_words';
+
+    function getWords() {
+      try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; }
+    }
+
+    function saveWords(arr) {
+      try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+    }
+
+    function updateBadge(count) {
+      const badge = document.getElementById('myWordsBadge');
+      if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+      }
+    }
+
+    const panel = document.createElement('div');
+    panel.id = 'bookMyWordsPanel';
+    panel.className = 'st-mw-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', 'My Words');
+
+    panel.innerHTML = `
+      <div class="st-mw-header">
+        <span class="st-mw-title">📝 My Words</span>
+        <span class="st-mw-count" id="myWordsPanelCount"></span>
+        <input class="st-mw-search" id="myWordsSearch" type="text" placeholder="Search words..." aria-label="Search my words"/>
+        <button class="st-mw-close" id="myWordsClose" aria-label="Close My Words">✕</button>
+      </div>
+      <div class="st-mw-list" id="myWordsList"></div>
+      <div class="st-mw-footer">
+        <span class="st-mw-footer-count" id="myWordsFooterCount"></span>
+        <button class="st-mw-clear-btn" id="myWordsClearAll">🗑️ Clear All</button>
+      </div>
+    `;
+
+    bookPanel.appendChild(panel);
+
+    function renderWordList(filter) {
+      const words = getWords();
+      // Reverse to show most recently added first
+      const reversed = words.slice().reverse();
+      const f = (filter || '').toLowerCase();
+      const filtered = f ? reversed.filter(function (w) { return w.includes(f); }) : reversed;
+
+      const count = words.length;
+      const countEl = panel.querySelector('#myWordsPanelCount');
+      const footerCount = panel.querySelector('#myWordsFooterCount');
+      if (countEl) countEl.textContent = '(' + count + ' ' + (count === 1 ? 'word' : 'words') + ')';
+      if (footerCount) footerCount.textContent = count + ' ' + (count === 1 ? 'word' : 'words') + ' tracked';
+      updateBadge(count);
+
+      const list = panel.querySelector('#myWordsList');
+      if (!list) return;
+
+      if (!filtered.length) {
+        list.innerHTML = '<div class="st-mw-empty">' + (f ? 'No words match your search.' : 'No words tracked yet. Tap any word while reading to add it here!') + '</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(function (word) {
+        // Look up definition: glossary first, then cached dict
+        let defHtml = '';
+        const glossDef = _bookGlossaryMap ? _bookGlossaryMap.get(word) : null;
+        if (glossDef) {
+          defHtml = '<div class="st-mw-def">📚 ' + escapeHtml(glossDef) + '</div>';
+        } else {
+          const dictData = _wordDefCache.get(word);
+          if (dictData && Array.isArray(dictData) && dictData[0]) {
+            const firstMeaning = dictData[0].meanings && dictData[0].meanings[0];
+            const firstDef = firstMeaning && firstMeaning.definitions && firstMeaning.definitions[0];
+            if (firstDef && firstDef.definition) {
+              defHtml = '<div class="st-mw-def">' + escapeHtml(firstDef.definition) + '</div>';
+            }
+          }
+        }
+        return `<div class="st-mw-entry" data-mw-word="${escapeHtml(word)}">
+          <div class="st-mw-entry-main">
+            <span class="st-mw-word">${escapeHtml(word)}</span>
+            <button class="st-mw-hear-btn" data-mw-hear="${escapeHtml(word)}" title="Hear word">🔊</button>
+            <button class="st-mw-remove-btn" data-mw-remove="${escapeHtml(word)}" title="Remove from My Words">❌</button>
+          </div>
+          ${defHtml}
+        </div>`;
+      }).join('');
+    }
+
+    renderWordList('');
+
+    // Search handler
+    panel.querySelector('#myWordsSearch').addEventListener('input', function (e) {
+      renderWordList(e.target.value);
+    });
+
+    // Close button
+    panel.querySelector('#myWordsClose').addEventListener('click', function () {
+      panel.remove();
+    });
+
+    // Event delegation for hear/remove buttons
+    panel.querySelector('#myWordsList').addEventListener('click', function (e) {
+      const hearBtn = e.target.closest('[data-mw-hear]');
+      if (hearBtn) {
+        const word = hearBtn.getAttribute('data-mw-hear');
+        if (word) speakWord(word);
+        return;
+      }
+      const removeBtn = e.target.closest('[data-mw-remove]');
+      if (removeBtn) {
+        const word = removeBtn.getAttribute('data-mw-remove');
+        if (word) {
+          const words = getWords().filter(function (w) { return w !== word; });
+          saveWords(words);
+          const filter = panel.querySelector('#myWordsSearch') ? panel.querySelector('#myWordsSearch').value : '';
+          renderWordList(filter);
+        }
+      }
+    });
+
+    // Clear All button
+    panel.querySelector('#myWordsClearAll').addEventListener('click', async function () {
+      const words = getWords();
+      if (!words.length) return;
+      const confirmed = await rcConfirm('Clear My Words', 'Remove all ' + words.length + ' tracked words? This cannot be undone.', 'Clear All', { danger: true });
+      if (confirmed) {
+        saveWords([]);
+        updateBadge(0);
+        renderWordList('');
+      }
+    });
+
+    // Close on Escape
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        panel.remove();
+        document.removeEventListener('keydown', onKeyDown);
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    panel.addEventListener('remove', function () { document.removeEventListener('keydown', onKeyDown); });
   }
 
   // ============================================================================
