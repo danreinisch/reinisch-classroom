@@ -2494,7 +2494,9 @@
         setScheduleFrequency(student.code, select.dataset.scheduleGoal, select.value);
         // Re-render the schedule tab to reflect the new frequency
         selectedDetailTabMap.set(student.code, 'schedule');
-        renderExpandedDetail(student.code).catch(() => {});
+        renderExpandedDetail(student.code).catch(err => {
+          console.warn('[tc-students] Schedule tab re-render failed:', err);
+        });
       });
     });
 
@@ -2510,7 +2512,9 @@
           if (!container) return;
           const addBtn = container.querySelector(`.dt-goal-row[data-goal="${CSS.escape(goalCode)}"] [data-action="show-add-form"]`);
           if (addBtn) addBtn.click();
-        }).catch(() => {});
+        }).catch(err => {
+          console.warn('[tc-students] Schedule Collect Now navigation failed:', err);
+        });
       });
     });
 
