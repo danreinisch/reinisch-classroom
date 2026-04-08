@@ -732,6 +732,49 @@
         color: rgba(234, 179, 8, 1);
       }
 
+      /* Mastery Reached nudge card — structured layout */
+      .st-mastery-nudge-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        border-left: 4px solid rgba(34, 197, 94, 0.7);
+      }
+      .st-mastery-nudge-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .st-mastery-nudge-title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .st-mastery-nudge-dismiss {
+        background: none !important;
+        border: none !important;
+        color: rgba(34, 197, 94, 0.7) !important;
+        font-size: 18px !important;
+        line-height: 1 !important;
+        cursor: pointer;
+        padding: 0 4px !important;
+        flex-shrink: 0;
+      }
+      .st-mastery-nudge-dismiss:hover {
+        color: rgba(34, 197, 94, 1) !important;
+      }
+      .st-mastery-nudge-details {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .st-mastery-nudge-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 2px;
+      }
+
       /* Regression/stalled alert strip */
       .st-goal-alert-strip {
         padding: 6px 12px;
