@@ -11,6 +11,7 @@
   const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
+  const { getGoalStaleness, getStudentHealthDot, formatRelativeTime } = await import('/web/staleness-utils.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -97,6 +98,11 @@
 
   // UI indicator for missing dates
   const MISSING_DATE_WARNING = ' <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+  // Milliseconds per calendar day — used for staleness calculations
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  // Sort sentinel used when a student has never had data collected (sort last by data_age)
+  const NULL_DATA_AGE_SORT_VALUE = 99999;
 
   // Inline SVG status icons for table cells and status badges
   const SVG_STATUS_OK   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
@@ -1082,6 +1088,131 @@
 
     const dataStatusEl = document.getElementById('stKpiDataStatus');
     if (dataStatusEl) dataStatusEl.textContent = `${goalsWithData} / ${totalGoals}`;
+
+    // Staleness summary strip — count goals by tier across all active students
+    renderStalenessSummaryStrip(activeStudents);
+  }
+
+  /**
+   * Render (or update) the staleness summary strip inside #stSummaryBody.
+   * Shows counts like: 🟢 12 fresh · 🟡 3 aging · 🟠 2 stale · 🔴 1 critical
+   * Built entirely with DOM API methods (no innerHTML with dynamic data).
+   *
+   * @param {Array} activeStudents
+   */
+  function renderStalenessSummaryStrip(activeStudents) {
+    const summaryBody = document.getElementById('stSummaryBody');
+    if (!summaryBody) return;
+
+    // Remove any existing strip before re-inserting
+    const existing = document.getElementById('stStalenessSummaryStrip');
+    if (existing) existing.remove();
+
+    // Tally per-tier goal counts
+    const counts = { fresh: 0, aging: 0, stale: 0, critical: 0, none: 0 };
+    for (const student of activeStudents) {
+      const goals = allGoals.filter(g => g.student_code === student.code && g.status !== 'archived');
+      for (const goal of goals) {
+        const info = getGoalStalenessInfo(student.code, goal.code);
+        if (info.tier in counts) counts[info.tier]++;
+      }
+    }
+
+    const TIERS = [
+      { key: 'fresh',    icon: '🟢', label: 'fresh' },
+      { key: 'aging',    icon: '🟡', label: 'aging' },
+      { key: 'stale',    icon: '🟠', label: 'stale' },
+      { key: 'critical', icon: '🔴', label: 'critical' },
+      { key: 'none',     icon: '⚪', label: 'no data' },
+    ];
+
+    const strip = document.createElement('div');
+    strip.id = 'stStalenessSummaryStrip';
+    strip.className = 'st-kpi-card st-staleness-strip';
+    strip.setAttribute('aria-label', 'Goal data staleness summary');
+
+    let first = true;
+    for (const { key, icon, label } of TIERS) {
+      const count = counts[key];
+      if (count === 0) continue;
+      if (!first) {
+        const sep = document.createElement('span');
+        sep.className = 'st-staleness-sep';
+        sep.textContent = '·';
+        strip.appendChild(sep);
+      }
+      first = false;
+      const item = document.createElement('span');
+      item.className = 'st-staleness-strip-item';
+      item.textContent = `${icon} ${count} ${label}`;
+      strip.appendChild(item);
+    }
+
+    if (first) {
+      // All counts are zero — no goals yet
+      const empty = document.createElement('span');
+      empty.className = 'st-staleness-strip-item';
+      empty.textContent = '⚪ No goals recorded';
+      strip.appendChild(empty);
+    }
+
+    summaryBody.appendChild(strip);
+  }
+
+  /**
+   * Show or hide the "Collect Now" floating nudge button.
+   * Appears when any goal is in 🟠 Stale or 🔴 Critical tier.
+   * Clicking scrolls to + expands the first affected student and activates Progress tab.
+   */
+  function renderCollectNudge() {
+    // Remove any existing nudge
+    const existing = document.getElementById('stCollectNudge');
+    if (existing) existing.remove();
+
+    const activeStudents = allStudents.filter(s => s.status !== 'archived' && s.active !== false);
+    let staleGoalCount = 0;
+    let firstStaleStudentCode = null;
+
+    for (const student of activeStudents) {
+      const goals = allGoals.filter(g => g.student_code === student.code && g.status !== 'archived');
+      for (const goal of goals) {
+        const info = getGoalStalenessInfo(student.code, goal.code);
+        if (info.tier === 'stale' || info.tier === 'critical') {
+          staleGoalCount++;
+          if (!firstStaleStudentCode) firstStaleStudentCode = student.code;
+        }
+      }
+    }
+
+    if (staleGoalCount === 0 || !firstStaleStudentCode) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'stCollectNudge';
+    btn.className = 'st-collect-nudge';
+    btn.setAttribute('aria-label', `${staleGoalCount} goal${staleGoalCount !== 1 ? 's' : ''} need data collection — scroll to first affected student`);
+
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '📝';
+    btn.appendChild(icon);
+
+    const label = document.createElement('span');
+    const pluralGoals = staleGoalCount === 1 ? 'goal needs' : 'goals need';
+    label.textContent = `${staleGoalCount} ${pluralGoals} data — Collect Now`;
+    btn.appendChild(label);
+
+    btn.addEventListener('click', () => {
+      const code = firstStaleStudentCode;
+      // Expand the student and activate Progress tab
+      expandedStudents.add(code);
+      selectedDetailTabMap.set(code, 'progress');
+      renderStudentList().then(() => {
+        const row = document.querySelector(`tr[data-code="${CSS.escape(code)}"]`);
+        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    document.body.appendChild(btn);
   }
 
   /**
@@ -1533,6 +1664,46 @@
   }
 
   /**
+   * Compute the staleness tier for a single goal using the last progress date.
+   * Returns { tier, label, cssClass, icon, sortOrder } from staleness-utils.
+   */
+  function getGoalStalenessInfo(studentCode, goalCode) {
+    const lastDate = getLastProgressDate(studentCode, goalCode);
+    if (!lastDate) return getGoalStaleness(null);
+    const daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / MS_PER_DAY);
+    return getGoalStaleness(daysSince);
+  }
+
+  /**
+   * Compute the worst staleness tier across all active goals for a student.
+   * Returns { tier, label, cssClass, icon, sortOrder } from staleness-utils.
+   */
+  function getStudentStalenessInfo(studentCode) {
+    const goals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    if (goals.length === 0) return getGoalStaleness(null);
+    const perGoal = goals.map(g => getGoalStalenessInfo(studentCode, g.code));
+    return getStudentHealthDot(perGoal);
+  }
+
+  /**
+   * Get the most recent progress date across all active goals for a student
+   * (used for the relative-time "Data" column).
+   * Returns number of days since the most recent entry, or null if no data ever.
+   */
+  function getStudentDaysSinceLastData(studentCode) {
+    const goals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    let minDays = null;
+    for (const g of goals) {
+      const lastDate = getLastProgressDate(studentCode, g.code);
+      if (lastDate) {
+        const days = Math.floor((Date.now() - new Date(lastDate).getTime()) / MS_PER_DAY);
+        if (minDays === null || days < minDays) minDays = days;
+      }
+    }
+    return minDays;
+  }
+
+  /**
    * Render a compact quarterly-averages row for a goal card.
    * Shows Q1–Q4 avg (collected/expected) for the current school year.
    */
@@ -1645,6 +1816,7 @@
       renderStudentQualityBanner();
       renderStudentKpiSummary();
       renderStudentObsHeatmap();
+      renderCollectNudge();
       
       // Don't auto-expand first student - let user choose
 
@@ -1768,6 +1940,22 @@
         const bDate = b.eval_due ? new Date(b.eval_due) : new Date('9999-12-31');
         return aDate - bDate; // ascending (soonest first, nulls last)
       });
+    } else if (sortBy === 'health') {
+      filtered.sort((a, b) => {
+        // Worst tier (lowest sortOrder) first
+        const aSort = getStudentStalenessInfo(a.code).sortOrder;
+        const bSort = getStudentStalenessInfo(b.code).sortOrder;
+        return aSort - bSort;
+      });
+    } else if (sortBy === 'data_age') {
+      filtered.sort((a, b) => {
+        // Most stale (highest days) first; null (never) = Infinity
+        const aDays = getStudentDaysSinceLastData(a.code);
+        const bDays = getStudentDaysSinceLastData(b.code);
+        const aVal = aDays === null ? Infinity : aDays;
+        const bVal = bDays === null ? Infinity : bDays;
+        return bVal - aVal;
+      });
     }
 
     filteredStudents = filtered;
@@ -1793,10 +1981,19 @@
       const evalUrgency = getDateUrgency(student.eval_due);
       const evalWarning = !student.eval_due ? MISSING_DATE_WARNING : '';
 
+      // Health dot — worst staleness tier across all active goals
+      const healthInfo = getStudentStalenessInfo(student.code);
+      const healthDot = `<span class="st-health-dot" title="${escapeHtml(healthInfo.label)}">${escapeHtml(healthInfo.icon)}</span>`;
+
+      // Data column — relative time of most-recent progress entry + staleness color
+      const daysSince = getStudentDaysSinceLastData(student.code);
+      const dataInfo = getGoalStaleness(daysSince);
+      const dataLabel = formatRelativeTime(daysSince);
+
       let rows = `
-        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}">
+        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
-            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>
+            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>${healthDot}
           </td>
           <td class="st-code-cell">${escapeHtml(student.code)}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
@@ -1805,7 +2002,7 @@
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
-          <td>${getStudentDataStatus(student.code)}</td>
+          <td class="${escapeHtml(dataInfo.cssClass)}">${escapeHtml(dataLabel)}</td>
         </tr>
       `;
 
@@ -3874,6 +4071,24 @@
     if (sortSelect) {
       sortSelect.addEventListener('change', (e) => {
         sortBy = e.target.value;
+        filterStudents();
+        renderStudentList();
+      });
+    }
+
+    // Sortable column header clicks — allow clicking any th[data-sort] in the main table
+    const stTable = document.querySelector('.st-table');
+    if (stTable) {
+      stTable.querySelector('thead')?.addEventListener('click', (e) => {
+        const th = e.target.closest('th[data-sort]');
+        if (!th) return;
+        const key = th.dataset.sort;
+        sortBy = key;
+        // Sync the sort dropdown if it has this option
+        if (sortSelect) {
+          const opt = sortSelect.querySelector(`option[value="${CSS.escape(key)}"]`);
+          if (opt) sortSelect.value = key;
+        }
         filterStudents();
         renderStudentList();
       });
