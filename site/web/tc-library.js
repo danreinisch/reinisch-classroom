@@ -1260,7 +1260,7 @@
     addToReserveBtn.className = 'tc-btn';
     addToReserveBtn.style.cssText = 'font-size:12px; padding:5px 12px;';
     addToReserveBtn.appendChild(createIcon('clipboard', 14));
-    addToReserveBtn.appendChild(document.createTextNode(' Add to Reserve'));
+    addToReserveBtn.appendChild(document.createTextNode(' Create Draft'));
     addToReserveBtn.addEventListener('click', () => {
       const newDraft = {
         id: genDraftId(),
@@ -1279,10 +1279,10 @@
         const drafts = JSON.parse(localStorage.getItem('rc_tc_work_drafts_v1') || '[]');
         drafts.unshift(newDraft);
         localStorage.setItem('rc_tc_work_drafts_v1', JSON.stringify(drafts));
-        showToast('Added to Reserve \u2014 switch to Reserve tab to view.');
+        showToast('Draft created \u2014 go to Work tab to edit and issue.');
       } catch (err) {
         console.error('[tc-library] Failed to add to reserve:', err);
-        showToast('Could not add to Reserve \u2014 storage may be full.', '#ef4444', '#fff');
+        showToast('Could not create draft \u2014 storage may be full.', '#ef4444', '#fff');
       }
     });
     btnRow.appendChild(addToReserveBtn);
@@ -1372,6 +1372,10 @@
     if (score >= 60) return '#fbbf24';
     return '#f87171';
   }
+
+  // ── HTML Escape Helper ────────────────────────────────────────────────────────
+
+  const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
 
   // ── Hierarchical Cataloging Helpers ──────────────────────────────────────────
 
@@ -1937,7 +1941,7 @@
       assignmentsData.splice(tgtIdx, 0, moved);
       // Persist custom order
       try {
-        const order = assignmentsData.map(a => a.id);
+        const order = assignmentsData.filter(a => computeLane(a, instancesData) === 'upcoming').map(a => a.id);
         localStorage.setItem('rc_tc_library_reserve_order_v1', JSON.stringify(order));
       } catch (_) { /* storage full */ }
       filters.assignments.sortBy = 'custom';
@@ -7129,7 +7133,6 @@
    */
   function _buildLibraryRichAnswerHtml(submission, assignment, goalsAll, isParent, darkTheme, studentCode) {
     if (!submission) return '';
-    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
 
     let html = '';
     const hasAuto = submission.score_auto != null;
@@ -7322,7 +7325,6 @@
   }
 
   function _buildLibraryEvidenceHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll) {
-    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
 
     const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const audienceLabel = isParent ? 'Parent' : 'Admin';
@@ -7508,12 +7510,6 @@
    * Build print-safe (light theme) evidence HTML for one student — used by the print window.
    */
   function _buildLibraryEvidenceHtmlPrintSafe(student, quarterRange, isParent, periodLabel, goalsAll, progressAll, instancesAll, subsAll, enrollAll, assignsAll) {
-    const esc = (v) => {
-      if (!v && v !== 0) return '';
-      const d = document.createElement('div');
-      d.textContent = String(v);
-      return d.innerHTML;
-    };
 
     const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const audienceLabel = isParent ? 'Parent' : 'Admin';
@@ -7693,7 +7689,6 @@
   }
 
   function _buildLibraryCoverHtml(student, quarterRange, isParent, sourceLabel, periodLabel, goalsAll, progressAll, instancesAll) {
-    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
     const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const activeGoals = goalsAll.filter((g) => g.student_code === student.code && _isGoalActive(g));
     const goalAreas = [...new Set(activeGoals.map((g) => g.area || g.skill_area || '—'))].join(', ') || '—';
@@ -7733,7 +7728,6 @@
   }
 
   function _buildLibraryAssignmentsHtml(student, quarterRange, isParent, periodLabel, instancesAll, subsAll, assignsAll) {
-    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
     const startDate = new Date(quarterRange.start);
     const endDate = new Date(quarterRange.end);
     const rangedInsts = instancesAll.filter((inst) => {
@@ -7771,7 +7765,6 @@
   }
 
   function _buildLibraryGoalsHtml(student, quarterRange, isParent, periodLabel, goalsAll, progressAll) {
-    const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
     const activeGoals = goalsAll.filter((g) => g.student_code === student.code && _isGoalActive(g));
     const startDate = new Date(quarterRange.start);
     const endDate = new Date(quarterRange.end);
@@ -7874,12 +7867,6 @@
   }
 
   function printFinalizedReport(filteredList) {
-    const esc = (v) => {
-      if (!v && v !== 0) return '';
-      const d = document.createElement('div');
-      d.textContent = String(v);
-      return d.innerHTML;
-    };
     const generatedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const filterParts = [];
     if (filters.finalized.classFilter !== 'All Classes') filterParts.push('Class: ' + filters.finalized.classFilter);
