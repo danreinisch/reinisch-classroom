@@ -727,6 +727,147 @@ test('730 days ago returns "2 years ago"', () => {
 });
 
 
+// ── inferUnitFromAssignment helper ────────────────────────────────────────────
+// Mirrors the inference logic from tc-library.js for isolated unit testing.
+
+const TEST_STOP_WORDS = new Set(['and', 'the', 'for', 'with', 'from', 'this', 'that', 'have', 'will', 'been', 'then', 'them', 'they', 'each', 'were', 'some', 'such', 'when', 'your', 'week', 'chapter', 'chapters', 'day', 'days', 'part']);
+const testExtractKeywords = (text) => text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 4 && !TEST_STOP_WORDS.has(w));
+
+function buildTestMaps(lessonsData) {
+  const unitMap = new Map();
+  const keywordToUnit = new Map();
+  if (lessonsData && Array.isArray(lessonsData.sections)) {
+    lessonsData.sections.forEach(section => {
+      const sectionId = section.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
+      (section.units || []).forEach(unit => {
+        unitMap.set(unit.id, { unitName: unit.name, sectionName: section.name, sectionId });
+        keywordToUnit.set(unit.id, { unitId: unit.id, sectionId });
+        testExtractKeywords(unit.name).forEach(w => {
+          if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+        });
+        (unit.presentations || []).forEach(pres => {
+          testExtractKeywords(pres.name || '').forEach(w => {
+            if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+          });
+        });
+      });
+    });
+  }
+  return { unitMap, keywordToUnit };
+}
+
+function testInferUnit(assignment, unitMap, keywordToUnit, lessonsData) {
+  if (!lessonsData || !Array.isArray(lessonsData.sections)) {
+    return { unitId: null, sectionId: null, confidence: 'low', reason: 'No lessons data' };
+  }
+  const title = (assignment.title || '').toLowerCase();
+  const page = (assignment.page || '').toLowerCase();
+  if (page) {
+    for (const [uid, info] of unitMap.entries()) {
+      if (page.includes(uid)) {
+        return { unitId: uid, sectionId: info.sectionId, confidence: 'high', reason: 'URL matches unit ID' };
+      }
+    }
+  }
+  const titleWords = testExtractKeywords(title);
+  const scores = new Map();
+  titleWords.forEach(w => {
+    const match = keywordToUnit.get(w);
+    if (match) scores.set(match.unitId, (scores.get(match.unitId) || 0) + 1);
+  });
+  if (scores.size === 0) return { unitId: null, sectionId: null, confidence: 'low', reason: 'No keyword match' };
+  let bestUnitId = null, bestScore = 0;
+  scores.forEach((score, uid) => { if (score > bestScore) { bestScore = score; bestUnitId = uid; } });
+  const info = unitMap.get(bestUnitId);
+  if (!info) return { unitId: null, sectionId: null, confidence: 'low', reason: 'No keyword match' };
+  const ratio = titleWords.length > 0 ? bestScore / titleWords.length : 0;
+  const confidence = (ratio >= 0.5 || bestScore >= 3) ? 'high' : (ratio >= 0.25 || bestScore >= 2) ? 'medium' : 'low';
+  return { unitId: bestUnitId, sectionId: info.sectionId, confidence, reason: bestScore + ' keyword match(es)' };
+}
+
+const mockLessonsData = {
+  sections: [
+    {
+      name: 'LANGUAGE ARTS',
+      units: [
+        { id: 'lost-in-kragdon-ah', name: 'Lost in Kragdon', presentations: [{ name: 'Kragdon Vocabulary Review' }, { name: 'Dialogue Punctuation' }] },
+        { id: 'a-door-into-time', name: 'A Door Into Time', presentations: [{ name: 'Setting Focus' }] }
+      ]
+    },
+    {
+      name: 'LIFE SKILLS',
+      units: [
+        { id: 'life-skills', name: 'Life Skills', presentations: [{ name: 'Employment Skills Overview' }] }
+      ]
+    }
+  ]
+};
+
+const { unitMap: mockUnitMap, keywordToUnit: mockKwMap } = buildTestMaps(mockLessonsData);
+
+console.log('\n--- inferUnitFromAssignment ---');
+
+test('keyword map built correctly — unit name keywords are present', () => {
+  assert.ok(mockKwMap.has('lost'), '"lost" should be a keyword');
+  assert.ok(mockKwMap.has('kragdon'), '"kragdon" should be a keyword');
+  assert.ok(mockKwMap.has('life'), '"life" should be a keyword');
+  assert.ok(mockKwMap.has('skills'), '"skills" should be a keyword');
+});
+
+test('keyword map — unit IDs are also direct keys', () => {
+  assert.ok(mockKwMap.has('lost-in-kragdon-ah'), 'unit ID should be in map as direct key');
+  assert.ok(mockKwMap.has('life-skills'), 'life-skills unit ID should be in map');
+});
+
+test('keyword map — stop words are NOT added', () => {
+  assert.ok(!mockKwMap.has('the'), '"the" should not be in keyword map');
+  assert.ok(!mockKwMap.has('and'), '"and" should not be in keyword map');
+  assert.ok(!mockKwMap.has('week'), '"week" should not be in keyword map');
+});
+
+test('high confidence — title strongly matches unit name keywords', () => {
+  const result = testInferUnit({ title: 'Lost in Kragdon Quiz' }, mockUnitMap, mockKwMap, mockLessonsData);
+  assert.strictEqual(result.unitId, 'lost-in-kragdon-ah');
+  assert.strictEqual(result.confidence, 'high');
+});
+
+test('high confidence — URL contains unit ID', () => {
+  const result = testInferUnit({ title: 'Assignment', page: '/presentations/lost-in-kragdon-ah/quiz' }, mockUnitMap, mockKwMap, mockLessonsData);
+  assert.strictEqual(result.unitId, 'lost-in-kragdon-ah');
+  assert.strictEqual(result.confidence, 'high');
+});
+
+test('medium confidence — partial keyword match', () => {
+  const result = testInferUnit({ title: 'Kragdon Reading Assignment' }, mockUnitMap, mockKwMap, mockLessonsData);
+  assert.strictEqual(result.unitId, 'lost-in-kragdon-ah');
+  assert.ok(result.confidence === 'medium' || result.confidence === 'high', 'confidence should be medium or high');
+});
+
+test('low confidence — unrecognizable title returns null', () => {
+  const result = testInferUnit({ title: 'Geography World Atlas Worksheet' }, mockUnitMap, mockKwMap, mockLessonsData);
+  assert.strictEqual(result.unitId, null);
+  assert.strictEqual(result.confidence, 'low');
+});
+
+test('returns low confidence when no lessons data', () => {
+  const result = testInferUnit({ title: 'Kragdon Quiz' }, new Map(), new Map(), null);
+  assert.strictEqual(result.unitId, null);
+  assert.strictEqual(result.confidence, 'low');
+  assert.ok(result.reason.includes('No lessons data'));
+});
+
+test('Life Skills title match', () => {
+  const result = testInferUnit({ title: 'Life Skills Employment Activity' }, mockUnitMap, mockKwMap, mockLessonsData);
+  assert.strictEqual(result.unitId, 'life-skills');
+  assert.ok(['medium', 'high'].includes(result.confidence));
+});
+
+test('presentation keywords also contribute to matching', () => {
+  const result = testInferUnit({ title: 'Dialogue Punctuation Review' }, mockUnitMap, mockKwMap, mockLessonsData);
+  assert.strictEqual(result.unitId, 'lost-in-kragdon-ah');
+});
+
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {

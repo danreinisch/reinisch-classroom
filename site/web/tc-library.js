@@ -391,6 +391,9 @@
   let classEnrollmentsData = [];
   let lessonsData = null;
   let unitMap = new Map(); // unit_id → { unitName, sectionName, sectionId }
+  let keywordToUnit = new Map(); // keyword → { unitId, sectionId }
+  const CATALOG_STOP_WORDS = new Set(['and', 'the', 'for', 'with', 'from', 'this', 'that', 'have', 'will', 'been', 'then', 'them', 'they', 'each', 'were', 'some', 'such', 'when', 'your', 'week', 'chapter', 'chapters', 'day', 'days', 'part']);
+  const extractCatalogKeywords = (text) => text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 4 && !CATALOG_STOP_WORDS.has(w));
   const getUnitInfo = (unitId) => unitMap.get(unitId) || null;
   let syncStatus = "loading";
 
@@ -722,15 +725,60 @@
       lessonsData = null;
     }
     // Build unit lookup map: unit_id → { unitName, sectionName, sectionId }
+    // Also build keyword → unitId map for catalog inference
     unitMap.clear();
+    keywordToUnit.clear();
     if (lessonsData && Array.isArray(lessonsData.sections)) {
       lessonsData.sections.forEach(section => {
         const sectionId = section.name.toLowerCase().replace(/[\s/]+/g, '-').replace(/[^a-z0-9-]/g, '');
         (section.units || []).forEach(unit => {
           unitMap.set(unit.id, { unitName: unit.name, sectionName: section.name, sectionId });
+          keywordToUnit.set(unit.id, { unitId: unit.id, sectionId });
+          extractCatalogKeywords(unit.name).forEach(w => {
+            if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+          });
+          (unit.presentations || []).forEach(pres => {
+            extractCatalogKeywords(pres.name || '').forEach(w => {
+              if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+            });
+          });
         });
       });
     }
+  }
+
+  /**
+   * Infer a unit_id from an assignment's title and page URL.
+   * Returns { unitId, sectionId, confidence: 'high'|'medium'|'low', reason }.
+   * @param {object} assignment
+   */
+  function inferUnitFromAssignment(assignment) {
+    if (!lessonsData || !Array.isArray(lessonsData.sections)) {
+      return { unitId: null, sectionId: null, confidence: 'low', reason: 'No lessons data' };
+    }
+    const title = (assignment.title || '').toLowerCase();
+    const page = (assignment.page || '').toLowerCase();
+    if (page) {
+      for (const [uid, info] of unitMap.entries()) {
+        if (page.includes(uid)) {
+          return { unitId: uid, sectionId: info.sectionId, confidence: 'high', reason: 'URL matches unit ID' };
+        }
+      }
+    }
+    const titleWords = extractCatalogKeywords(title);
+    const scores = new Map();
+    titleWords.forEach(w => {
+      const match = keywordToUnit.get(w);
+      if (match) scores.set(match.unitId, (scores.get(match.unitId) || 0) + 1);
+    });
+    if (scores.size === 0) return { unitId: null, sectionId: null, confidence: 'low', reason: 'No keyword match' };
+    let bestUnitId = null, bestScore = 0;
+    scores.forEach((score, uid) => { if (score > bestScore) { bestScore = score; bestUnitId = uid; } });
+    const info = unitMap.get(bestUnitId);
+    if (!info) return { unitId: null, sectionId: null, confidence: 'low', reason: 'No keyword match' };
+    const ratio = titleWords.length > 0 ? bestScore / titleWords.length : 0;
+    const confidence = (ratio >= 0.5 || bestScore >= 3) ? 'high' : (ratio >= 0.25 || bestScore >= 2) ? 'medium' : 'low';
+    return { unitId: bestUnitId, sectionId: info.sectionId, confidence, reason: bestScore + ' keyword match(es)' };
   }
 
   // ── Draft ID Helper ───────────────────────────────────────────────────────────
@@ -1902,6 +1950,356 @@
         showToast('Failed to set unit', '#ef4444', '#fff');
       }
     });
+  }
+
+  /**
+   * Opens the Catalog Wizard — a full-screen modal for bulk-cataloging
+   * uncategorized reserve assignments using auto-inference suggestions.
+   */
+  function openCatalogWizard() {
+    const triggerEl = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.id = 'catalogWizardOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'catalogWizardTitle');
+    overlay.style.cssText = [
+      'position:fixed; top:0; left:0; right:0; bottom:0;',
+      'background:rgba(0,0,0,.85); backdrop-filter:blur(4px);',
+      'display:flex; align-items:center; justify-content:center;',
+      'z-index:10020; padding:16px;'
+    ].join('');
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width:820px; width:100%; max-height:92vh; display:flex; flex-direction:column; padding:28px;';
+
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-shrink:0;';
+    const hdrLeft = document.createElement('div');
+    hdrLeft.style.cssText = 'display:flex; align-items:center; gap:10px;';
+    const hdrIcon = document.createElement('span');
+    hdrIcon.style.cssText = 'font-size:20px;';
+    hdrIcon.textContent = '📋';
+    const hdrTitle = document.createElement('h2');
+    hdrTitle.id = 'catalogWizardTitle';
+    hdrTitle.style.cssText = 'margin:0; font-size:20px; font-weight:700;';
+    hdrTitle.textContent = 'Catalog Wizard';
+    hdrLeft.appendChild(hdrIcon);
+    hdrLeft.appendChild(hdrTitle);
+    const wzCloseBtn = document.createElement('button');
+    wzCloseBtn.className = 'tc-btn';
+    wzCloseBtn.setAttribute('aria-label', 'Close Catalog Wizard');
+    wzCloseBtn.style.cssText = 'padding:6px 12px;';
+    wzCloseBtn.appendChild(createIcon('x', 14));
+    hdr.appendChild(hdrLeft);
+    hdr.appendChild(wzCloseBtn);
+    card.appendChild(hdr);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1; overflow-y:auto; min-height:0;';
+    card.appendChild(body);
+
+    const ftr = document.createElement('div');
+    ftr.style.cssText = 'display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-shrink:0; border-top:1px solid rgba(255,255,255,.1); padding-top:16px;';
+    card.appendChild(ftr);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    const closeWizard = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', onWizardKey);
+      if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
+    };
+    const onWizardKey = (e) => { if (e.key === 'Escape') closeWizard(); };
+    document.addEventListener('keydown', onWizardKey);
+    wzCloseBtn.addEventListener('click', closeWizard);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeWizard(); });
+
+    // Build suggestions from uncategorized reserve assignments
+    const suggestions = assignmentsData
+      .filter(a => computeLane(a, instancesData) === 'upcoming' && !a.unit_id)
+      .map(a => {
+        const inf = inferUnitFromAssignment(a);
+        return { a, unitId: inf.unitId, sectionId: inf.sectionId, confidence: inf.confidence, override: inf.unitId };
+      });
+
+    const checked = new Set(suggestions.filter(s => s.confidence === 'high' && s.unitId).map(s => s.a.id));
+
+    const confMeta = {
+      high: { label: 'High Confidence', color: '#86efac', bg: 'rgba(34,197,94,.2)', border: 'rgba(34,197,94,.3)' },
+      medium: { label: 'Medium Confidence', color: '#fcd34d', bg: 'rgba(245,158,11,.2)', border: 'rgba(245,158,11,.3)' },
+      low: { label: 'Low / No Match', color: 'rgba(255,255,255,.5)', bg: 'rgba(255,255,255,.07)', border: 'rgba(255,255,255,.12)' }
+    };
+
+    const buildUnitPicker = (labelText, currentValue) => {
+      const picker = document.createElement('select');
+      picker.style.cssText = 'padding:4px 8px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.18); border-radius:6px; color:white; font-size:12px; max-width:210px; flex-shrink:0;';
+      picker.setAttribute('aria-label', labelText);
+      const noOpt = document.createElement('option');
+      noOpt.value = '';
+      noOpt.textContent = '\u2014 No match \u2014';
+      picker.appendChild(noOpt);
+      if (lessonsData && Array.isArray(lessonsData.sections)) {
+        lessonsData.sections.forEach(sec => {
+          const grp = document.createElement('optgroup');
+          grp.label = sec.name;
+          (sec.units || []).forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.name;
+            grp.appendChild(opt);
+          });
+          picker.appendChild(grp);
+        });
+      }
+      picker.value = currentValue || '';
+      return picker;
+    };
+
+    const renderStep1 = () => {
+      body.innerHTML = '';
+      ftr.innerHTML = '';
+
+      if (!suggestions.length) {
+        const okMsg = document.createElement('div');
+        okMsg.style.cssText = 'padding:40px; text-align:center; color:rgba(255,255,255,.65);';
+        okMsg.textContent = '\u2713 All reserve assignments are already cataloged!';
+        body.appendChild(okMsg);
+        const doneBtn = document.createElement('button');
+        doneBtn.className = 'tc-btn';
+        doneBtn.textContent = 'Done';
+        doneBtn.addEventListener('click', closeWizard);
+        ftr.appendChild(doneBtn);
+        return;
+      }
+
+      const intro = document.createElement('p');
+      intro.style.cssText = 'margin:0 0 14px; font-size:13px; color:rgba(255,255,255,.65);';
+      intro.textContent = suggestions.length + ' uncategorized reserve assignment' + (suggestions.length !== 1 ? 's' : '') + ' found. Review suggestions below:';
+      body.appendChild(intro);
+
+      const qRow = document.createElement('div');
+      qRow.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;';
+      const highCount = suggestions.filter(s => s.confidence === 'high' && s.unitId).length;
+      const withMatch = suggestions.filter(s => s.override).length;
+
+      const selHighBtn = document.createElement('button');
+      selHighBtn.className = 'tc-btn';
+      selHighBtn.style.cssText = 'font-size:12px; padding:4px 12px;';
+      selHighBtn.textContent = 'Select All High (' + highCount + ')';
+      selHighBtn.addEventListener('click', () => {
+        suggestions.forEach(s => {
+          if (s.confidence === 'high' && s.unitId) checked.add(s.a.id);
+          else checked.delete(s.a.id);
+        });
+        renderStep1();
+      });
+      qRow.appendChild(selHighBtn);
+
+      const selAllBtn = document.createElement('button');
+      selAllBtn.className = 'tc-btn';
+      selAllBtn.style.cssText = 'font-size:12px; padding:4px 12px;';
+      selAllBtn.textContent = 'Select All (' + withMatch + ')';
+      selAllBtn.addEventListener('click', () => {
+        suggestions.forEach(s => { if (s.override) checked.add(s.a.id); });
+        renderStep1();
+      });
+      qRow.appendChild(selAllBtn);
+
+      const clrBtn = document.createElement('button');
+      clrBtn.className = 'tc-btn';
+      clrBtn.style.cssText = 'font-size:12px; padding:4px 12px; color:rgba(255,255,255,.5);';
+      clrBtn.textContent = 'Clear All';
+      clrBtn.addEventListener('click', () => { checked.clear(); renderStep1(); });
+      qRow.appendChild(clrBtn);
+      body.appendChild(qRow);
+
+      const confGroups = { high: [], medium: [], low: [] };
+      suggestions.forEach(s => confGroups[s.confidence].push(s));
+
+      ['high', 'medium', 'low'].forEach(conf => {
+        const group = confGroups[conf];
+        if (!group.length) return;
+        const gHdr = document.createElement('div');
+        gHdr.style.cssText = 'font-size:12px; font-weight:700; letter-spacing:.04em; padding:4px 2px; margin:10px 0 6px; color:' + confMeta[conf].color + ';';
+        gHdr.textContent = confMeta[conf].label + ' (' + group.length + ')';
+        body.appendChild(gHdr);
+
+        const list = document.createElement('div');
+        list.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+
+        group.forEach(s => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:7px 10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:8px;';
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = checked.has(s.a.id);
+          cb.disabled = !s.override;
+          cb.style.cssText = 'cursor:pointer; width:14px; height:14px; accent-color:#60a5fa; flex-shrink:0;';
+          cb.setAttribute('aria-label', 'Select ' + s.a.title);
+          cb.addEventListener('change', () => { if (cb.checked) checked.add(s.a.id); else checked.delete(s.a.id); });
+          row.appendChild(cb);
+
+          const tSpan = document.createElement('span');
+          tSpan.style.cssText = 'flex:1; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+          tSpan.title = s.a.title;
+          tSpan.textContent = s.a.title;
+          row.appendChild(tSpan);
+
+          const arrSpan = document.createElement('span');
+          arrSpan.style.cssText = 'color:rgba(255,255,255,.35); font-size:12px; flex-shrink:0;';
+          arrSpan.textContent = '\u2192';
+          row.appendChild(arrSpan);
+
+          const picker = buildUnitPicker('Unit for ' + s.a.title, s.override);
+          picker.addEventListener('change', () => {
+            s.override = picker.value || null;
+            cb.disabled = !s.override;
+            if (!s.override) { checked.delete(s.a.id); cb.checked = false; }
+          });
+          row.appendChild(picker);
+
+          const badge = document.createElement('span');
+          badge.style.cssText = 'padding:2px 7px; border-radius:10px; font-size:11px; font-weight:700; flex-shrink:0; background:' + confMeta[conf].bg + '; color:' + confMeta[conf].color + '; border:1px solid ' + confMeta[conf].border + ';';
+          badge.textContent = conf;
+          row.appendChild(badge);
+
+          list.appendChild(row);
+        });
+        body.appendChild(list);
+      });
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'tc-btn';
+      skipBtn.style.cssText = 'color:rgba(255,255,255,.5);';
+      skipBtn.textContent = 'Skip';
+      skipBtn.addEventListener('click', renderStep3);
+      ftr.appendChild(skipBtn);
+
+      const checkedCount = checked.size;
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'tc-btn';
+      applyBtn.disabled = checkedCount === 0;
+      applyBtn.style.cssText = 'background:rgba(96,165,250,.25); border-color:rgba(96,165,250,.4);' + (checkedCount === 0 ? ' opacity:.5;' : '');
+      applyBtn.appendChild(createIcon('folderOpen', 14));
+      applyBtn.appendChild(document.createTextNode(' Apply Selected (' + checkedCount + ')'));
+      applyBtn.addEventListener('click', applySelected);
+      ftr.appendChild(applyBtn);
+    };
+
+    const applySelected = async () => {
+      const toApply = suggestions.filter(s => checked.has(s.a.id));
+      if (!toApply.length) return;
+      body.innerHTML = '';
+      ftr.innerHTML = '';
+
+      const progWrap = document.createElement('div');
+      progWrap.style.cssText = 'padding:40px; text-align:center;';
+      const progText = document.createElement('span');
+      progText.style.cssText = 'color:rgba(255,255,255,.65); font-size:14px;';
+      progText.textContent = 'Applying 0 / ' + toApply.length + '\u2026';
+      progWrap.appendChild(progText);
+      body.appendChild(progWrap);
+
+      let done = 0, fails = 0;
+      for (const s of toApply) {
+        try {
+          const uid = s.override;
+          const uInfo = getUnitInfo(uid);
+          const sid = uInfo ? uInfo.sectionId : null;
+          await db.updateAssignment(s.a.id, { unit_id: uid, section_id: sid });
+          const idx = assignmentsData.findIndex(x => x.id === s.a.id);
+          if (idx !== -1) { assignmentsData[idx].unit_id = uid; assignmentsData[idx].section_id = sid; }
+          done++;
+        } catch (_e) { fails++; }
+        progText.textContent = 'Applying ' + (done + fails) + ' / ' + toApply.length + '\u2026';
+      }
+      showToast(done + ' assignment' + (done !== 1 ? 's' : '') + ' cataloged' + (fails > 0 ? ' (' + fails + ' failed)' : ''));
+      refreshCurrentTab();
+      renderStep3();
+    };
+
+    const renderStep3 = () => {
+      body.innerHTML = '';
+      ftr.innerHTML = '';
+      const remaining = assignmentsData.filter(a => computeLane(a, instancesData) === 'upcoming' && !a.unit_id);
+
+      if (!remaining.length) {
+        const okMsg2 = document.createElement('div');
+        okMsg2.style.cssText = 'padding:40px; text-align:center; color:rgba(255,255,255,.65);';
+        okMsg2.textContent = '\u2713 All reserve assignments are now cataloged!';
+        body.appendChild(okMsg2);
+      } else {
+        const intro2 = document.createElement('p');
+        intro2.style.cssText = 'margin:0 0 14px; font-size:13px; color:rgba(255,255,255,.65);';
+        intro2.textContent = remaining.length + ' assignment' + (remaining.length !== 1 ? 's' : '') + ' still need a unit:';
+        body.appendChild(intro2);
+
+        const list2 = document.createElement('div');
+        list2.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+
+        remaining.forEach(a => {
+          const row2 = document.createElement('div');
+          row2.style.cssText = 'display:flex; align-items:center; gap:8px; padding:7px 10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:8px;';
+
+          const tSpan2 = document.createElement('span');
+          tSpan2.style.cssText = 'flex:1; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+          tSpan2.title = a.title;
+          tSpan2.textContent = a.title;
+          row2.appendChild(tSpan2);
+
+          const picker2 = buildUnitPicker('Set unit for ' + a.title, null);
+          picker2.options[0].textContent = '\u2014 Select unit \u2014';
+          row2.appendChild(picker2);
+
+          const setBtn = document.createElement('button');
+          setBtn.className = 'tc-btn';
+          setBtn.style.cssText = 'font-size:12px; padding:4px 10px; flex-shrink:0;';
+          setBtn.textContent = 'Set';
+          setBtn.addEventListener('click', async () => {
+            const uid2 = picker2.value;
+            if (!uid2) return;
+            const uInfo2 = getUnitInfo(uid2);
+            const sid2 = uInfo2 ? uInfo2.sectionId : null;
+            try {
+              setBtn.disabled = true;
+              setBtn.textContent = '\u2026';
+              await db.updateAssignment(a.id, { unit_id: uid2, section_id: sid2 });
+              const idx2 = assignmentsData.findIndex(x => x.id === a.id);
+              if (idx2 !== -1) { assignmentsData[idx2].unit_id = uid2; assignmentsData[idx2].section_id = sid2; }
+              row2.remove();
+              refreshCurrentTab();
+            } catch (_e2) {
+              setBtn.disabled = false;
+              setBtn.textContent = 'Set';
+              showToast('Failed to update assignment', '#ef4444', '#fff');
+            }
+          });
+          row2.appendChild(setBtn);
+          list2.appendChild(row2);
+        });
+        body.appendChild(list2);
+      }
+
+      const backBtn = document.createElement('button');
+      backBtn.className = 'tc-btn';
+      backBtn.style.cssText = 'color:rgba(255,255,255,.5);';
+      backBtn.textContent = '\u2190 Back';
+      backBtn.addEventListener('click', renderStep1);
+      ftr.appendChild(backBtn);
+
+      const doneBtn2 = document.createElement('button');
+      doneBtn2.className = 'tc-btn';
+      doneBtn2.textContent = 'Done';
+      doneBtn2.addEventListener('click', closeWizard);
+      ftr.appendChild(doneBtn2);
+    };
+
+    renderStep1();
+    wzCloseBtn.focus();
   }
 
   function renderUpcomingLane(assignments) {
@@ -3796,6 +4194,16 @@
     uncatHeader.appendChild(uncatTitle);
     uncatHeader.appendChild(uncatBadge);
 
+    if (uncategorized.length > 0) {
+      const uncatWizBtn = document.createElement('button');
+      uncatWizBtn.className = 'tc-btn';
+      uncatWizBtn.style.cssText = 'font-size:11px; padding:3px 9px; margin-left:auto;';
+      uncatWizBtn.setAttribute('aria-label', 'Open Catalog Wizard for uncategorized assignments');
+      uncatWizBtn.textContent = '📋 Catalog Wizard';
+      uncatWizBtn.addEventListener('click', (e) => { e.stopPropagation(); openCatalogWizard(); });
+      uncatHeader.appendChild(uncatWizBtn);
+    }
+
     const uncatContent = document.createElement('div');
     uncatContent.style.cssText = [
       'display:' + (uncatExpanded ? 'block' : 'none') + ';',
@@ -3954,6 +4362,32 @@
       viewToggleWrap.appendChild(flatViewBtn);
       viewToggleWrap.appendChild(byUnitViewBtn);
       viewToggleRow.appendChild(viewToggleWrap);
+
+      // Uncategorized badge
+      const allReserveItems = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      const uncatCount = allReserveItems.filter(a => !a.unit_id).length;
+      if (uncatCount > 0) {
+        const uncatBadgeEl = document.createElement('span');
+        uncatBadgeEl.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:12px; background:rgba(245,158,11,.2); border:1px solid rgba(245,158,11,.35); color:#fcd34d; cursor:pointer; user-select:none;';
+        uncatBadgeEl.title = 'Click to view uncategorized in By Unit mode';
+        uncatBadgeEl.textContent = '📚 ' + uncatCount + ' uncategorized';
+        uncatBadgeEl.addEventListener('click', () => {
+          filters.reserve.viewMode = 'byUnit';
+          saveFilters();
+          renderReserveTab();
+        });
+        viewToggleRow.appendChild(uncatBadgeEl);
+      }
+
+      // Catalog Wizard button (always visible)
+      const wizardBtn = document.createElement('button');
+      wizardBtn.className = 'tc-btn';
+      wizardBtn.setAttribute('aria-label', 'Open Catalog Wizard');
+      wizardBtn.style.cssText = 'font-size:12px; padding:5px 12px; margin-left:auto;';
+      wizardBtn.textContent = '📋 Catalog Wizard';
+      wizardBtn.addEventListener('click', () => openCatalogWizard());
+      viewToggleRow.appendChild(wizardBtn);
+
       container.appendChild(viewToggleRow);
 
       // Tag filter chips (scan pre-tag-filtered list for all available tags)
