@@ -114,7 +114,7 @@ exports.handler = async (event) => {
 
   const systemPrompt = `You are a reading comprehension assistant for struggling readers in grades 4–8.
 
-Generate exactly 2 multiple-choice comprehension questions about the provided chapter text.
+Generate 1 or 2 multiple-choice comprehension questions about the provided chapter text.
 
 Requirements:
 - Questions should test understanding of key events, character motivations, or important details from the chapter.
@@ -132,17 +132,11 @@ Return ONLY valid JSON in this exact format:
       "choices": ["Choice A", "Choice B", "Choice C", "Choice D"],
       "correctIndex": 0,
       "explanation": "Brief explanation referencing the text."
-    },
-    {
-      "question": "Second question text here?",
-      "choices": ["Choice A", "Choice B", "Choice C", "Choice D"],
-      "correctIndex": 2,
-      "explanation": "Brief explanation referencing the text."
     }
   ]
 }`;
 
-  const userMessage = `Here is ${titleLine}:\n\n${promptText}\n\nPlease generate 2 comprehension questions about this chapter.`;
+  const userMessage = `Here is ${titleLine}:\n\n${promptText}\n\nPlease generate 1 or 2 comprehension questions about this chapter.`;
 
   console.log(`[student-comprehension-check] [${requestId}] Calling OpenAI API - chapter: "${cleanChapterTitle || '(untitled)'}"`);
 

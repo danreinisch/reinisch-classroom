@@ -4518,9 +4518,9 @@
             }
           }
           if (prevChapter && !_comprehensionCheckedChapters.has(prevChapter.startPage)) {
-            // Show comprehension check, then navigate after
-            state.currentPage = newPage;
+            // Show comprehension check over the current chapter, then navigate to new chapter
             showComprehensionCheck(prevChapter, bookData).then(function () {
+              state.currentPage = newPage;
               renderBookPage();
             });
             return;
