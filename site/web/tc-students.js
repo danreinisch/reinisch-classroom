@@ -59,6 +59,7 @@
   };
 
   // Inline SVG icon constants for goal areas and UI elements (Feather/Lucide style)
+  const DEFAULT_DATA_COLLECTOR = 'Dan Reinisch';
   const SVG_ICON_BOOK_OPEN    = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
   const SVG_ICON_PENCIL       = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   const SVG_ICON_BOOK         = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
@@ -6073,7 +6074,7 @@
     form.querySelector('[name="goal_code"]').value = newCode;
     form.querySelector('[name="goal_text"]').value = oldGoal.desc || oldGoal.goal_text || '';
     form.querySelector('[name="baseline"]').value = newBaseline;
-    form.querySelector('[name="target"]').value = '';
+    form.querySelector('[name="target"]').value = oldGoal.target || '';
     form.querySelector('[name="case_manager"]').value = oldGoal.case_manager || '';
 
     const areaSelect = form.querySelector('[name="goal_area"]');
@@ -6110,7 +6111,7 @@
       mastery: formData.get('mastery') || null,
       target: formData.get('target'),
       case_manager: formData.get('case_manager'),
-      data_collector: oldGoal.data_collector || 'Dan Reinisch',
+      data_collector: oldGoal.data_collector || DEFAULT_DATA_COLLECTOR,
       data_collector_email: oldGoal.data_collector_email || null,
       class_context: oldGoal.class_context || null,
       status: 'active',
