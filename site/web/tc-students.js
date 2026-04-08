@@ -3890,10 +3890,13 @@
       });
     }
 
-    // Export button
+    // Export button — show dropdown with format options
     const exportBtn = document.getElementById('stExportBtn');
     if (exportBtn) {
-      exportBtn.addEventListener('click', exportCaseload);
+      exportBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showExportDropdown(exportBtn);
+      });
     }
 
     // Quarter date bar buttons
@@ -4428,7 +4431,7 @@
 
     const importCsvBtn = document.getElementById('stImportCSV');
     if (importCsvBtn) {
-      importCsvBtn.addEventListener('click', showImportCsvModal);
+      importCsvBtn.addEventListener('click', showSpedTrackImportModal);
     }
 
     const masterSpreadsheetBtn = document.getElementById('stMasterSpreadsheet');
@@ -8071,6 +8074,601 @@
         }
       });
     });
+  }
+
+  // ============================================================================
+  // SPEDTRACK IMPORT / EXPORT FUNCTIONALITY
+  // All dynamic HTML is built via DOM API methods to avoid CodeQL violations.
+  // ============================================================================
+
+  const ST_IMPORT_HISTORY_KEY = 'rc_spedtrack_import_history';
+  let stImportPreviewData = [];
+
+  /**
+   * Parse a SpedTrack-style CSV (Student, Goal, Date, Percent/Value, Notes).
+   * Returns an array of plain objects keyed by lowercase header name.
+   */
+  function parseSpedTrackCsv(text) {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const headers = spedtrackSplitCsvLine(lines[0]).map(h => h.toLowerCase());
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = spedtrackSplitCsvLine(lines[i]);
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  /** Split one CSV line respecting double-quoted fields (RFC 4180).
+   *  Handles embedded quotes encoded as "" (two consecutive quotes). */
+  function spedtrackSplitCsvLine(line) {
+    const fields = [];
+    let inQuote = false;
+    let cell = '';
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuote && line[i + 1] === '"') {
+          // Escaped quote inside a quoted field → emit a literal "
+          cell += '"';
+          i++; // skip the second quote
+        } else {
+          inQuote = !inQuote;
+        }
+      } else if (ch === ',' && !inQuote) {
+        fields.push(cell.trim());
+        cell = '';
+      } else {
+        cell += ch;
+      }
+    }
+    fields.push(cell.trim());
+    return fields;
+  }
+
+  /** Quote a single value for CSV output (RFC 4180). */
+  function spedtrackCsvQuote(v) {
+    return '"' + String(v).replace(/"/g, '""') + '"';
+  }
+
+  /**
+   * Validate one row from a SpedTrack CSV against the loaded students/goals data.
+   * Returns an enriched row object with .status ('valid'|'warning'|'error') and .valid boolean.
+   */
+  function validateSpedTrackRow(row) {
+    const student  = row.student || row.student_code || row['student code'] || '';
+    const goal     = row.goal    || row.goal_code    || row['goal code']    || '';
+    const date     = row.date    || '';
+    const valStr   = row.percent || row.score        || row.value           || '';
+    const notes    = row.notes   || row.note         || row.comments        || '';
+
+    const studentMatch = allStudents.find(s =>
+      s.code === student || (s.name && s.name.toLowerCase().includes(student.toLowerCase()))
+    );
+
+    let goalMatch = null;
+    if (studentMatch) {
+      goalMatch = allGoals.find(g => g.student_code === studentMatch.code && g.code === goal);
+    }
+
+    const dateFormatOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const dateValid    = dateFormatOk && (() => {
+      const d = new Date(date);
+      return !isNaN(d.getTime()) && d.toISOString().startsWith(date);
+    })();
+    const parsedValue  = parseFloat(valStr);
+    const valueValid   = !isNaN(parsedValue) && parsedValue >= 0;
+
+    let status  = 'valid';
+    let message = '';
+
+    if (!studentMatch) {
+      status = 'error'; message = 'Student not found';
+    } else if (!goalMatch) {
+      status = 'warning'; message = 'Goal not found for student';
+    } else if (!dateValid) {
+      status = 'warning'; message = 'Invalid date format (use YYYY-MM-DD)';
+    } else if (!valueValid) {
+      status = 'error'; message = 'Invalid value (must be a non-negative number)';
+    }
+
+    return {
+      status,
+      message,
+      student:     studentMatch ? studentMatch.code : student,
+      studentName: studentMatch ? (studentMatch.name || studentMatch.code) : student,
+      goal,
+      date,
+      value:  valueValid ? parsedValue : NaN,
+      notes,
+      valid: status === 'valid'
+    };
+  }
+
+  /**
+   * Parse CSV text, validate rows, populate the preview table (DOM API only),
+   * and show the preview section.
+   */
+  async function processSpedTrackCsv(text, tbody, confirmBtn, previewSection) {
+    try {
+      const rows = parseSpedTrackCsv(text);
+      if (rows.length === 0) {
+        await rcAlert('Validation', 'No data found in CSV');
+        return;
+      }
+
+      stImportPreviewData = rows.map(validateSpedTrackRow);
+
+      // Clear existing rows
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+      for (const row of stImportPreviewData) {
+        const tr = document.createElement('tr');
+
+        // Status cell — set text via textContent, class via className
+        const statusTd = document.createElement('td');
+        if (row.status === 'valid') {
+          statusTd.className = 'dt-score-green';
+          statusTd.textContent = '✓ Valid';
+        } else if (row.status === 'warning') {
+          statusTd.className = 'dt-score-amber';
+          statusTd.textContent = '⚠ ' + row.message;
+        } else {
+          statusTd.className = 'dt-score-red';
+          statusTd.textContent = '✗ ' + row.message;
+        }
+        tr.appendChild(statusTd);
+
+        // Student cell
+        const studentTd = document.createElement('td');
+        studentTd.textContent = row.studentName;
+        if (row.student && row.student !== row.studentName) {
+          const small = document.createElement('small');
+          small.textContent = ' (' + row.student + ')';
+          studentTd.appendChild(small);
+        }
+        tr.appendChild(studentTd);
+
+        // Goal cell
+        const goalTd = document.createElement('td');
+        goalTd.textContent = row.goal;
+        tr.appendChild(goalTd);
+
+        // Date cell
+        const dateTd = document.createElement('td');
+        dateTd.textContent = row.date;
+        tr.appendChild(dateTd);
+
+        // Value cell
+        const valueTd = document.createElement('td');
+        valueTd.textContent = isNaN(row.value) ? '' : String(row.value) + '%';
+        tr.appendChild(valueTd);
+
+        // Notes cell
+        const notesTd = document.createElement('td');
+        const notesSmall = document.createElement('small');
+        notesSmall.textContent = row.notes;
+        notesTd.appendChild(notesSmall);
+        tr.appendChild(notesTd);
+
+        tbody.appendChild(tr);
+      }
+
+      const validCount = stImportPreviewData.filter(r => r.valid).length;
+      confirmBtn.textContent = '✓ Import ' + validCount + ' Record' + (validCount !== 1 ? 's' : '');
+      previewSection.style.display = 'block';
+
+    } catch (err) {
+      console.error('[tc-students] SpedTrack CSV parse error:', err);
+      await rcAlert('Error', 'Error parsing CSV: ' + err.message);
+    }
+  }
+
+  /**
+   * Render import history into `container` using DOM API only.
+   */
+  function renderSpedTrackHistory(container) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+
+    let history = [];
+    try {
+      history = JSON.parse(localStorage.getItem(ST_IMPORT_HISTORY_KEY) || '[]');
+    } catch (_) { /* ignore */ }
+
+    if (history.length === 0) {
+      const p = document.createElement('p');
+      p.style.cssText = 'opacity: 0.7; text-align: center;';
+      p.textContent = 'No imports yet';
+      container.appendChild(p);
+      return;
+    }
+
+    for (const h of history) {
+      const item = document.createElement('div');
+      item.style.cssText = 'padding: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(0,0,0,.2);';
+
+      const strong = document.createElement('strong');
+      const d = new Date(h.date);
+      strong.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      item.appendChild(strong);
+
+      item.appendChild(document.createTextNode(' — ' + h.records + ' record' + (h.records !== 1 ? 's' : '') + ' from ' + h.source));
+
+      container.appendChild(item);
+    }
+  }
+
+  /**
+   * Open the SpedTrack progress-data import modal.
+   * All dynamic content is set via textContent/setAttribute — never innerHTML with user data.
+   */
+  function showSpedTrackImportModal() {
+    // Reset preview state
+    stImportPreviewData = [];
+
+    // ── Overlay ──────────────────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.className = 'st-modal-backdrop active';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'SpedTrack Import');
+
+    // ── Modal shell ───────────────────────────────────────────────────────────
+    const modal = document.createElement('div');
+    modal.className = 'st-modal';
+    modal.style.cssText = 'max-width: 820px; width: 95%;';
+
+    // ── Header ─────────────────────────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.className = 'st-modal-header';
+
+    const titleEl = document.createElement('h2');
+    titleEl.textContent = '📥 SpedTrack Progress Import';
+    header.appendChild(titleEl);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'st-btn';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => overlay.remove());
+    header.appendChild(closeBtn);
+
+    modal.appendChild(header);
+
+    // ── Body ───────────────────────────────────────────────────────────────────
+    const body = document.createElement('div');
+    body.className = 'st-modal-body';
+
+    // Description
+    const desc = document.createElement('p');
+    desc.style.cssText = 'margin: 0 0 16px 0; opacity: 0.85; font-size: 14px;';
+    desc.textContent = 'Import progress data from SpedTrack CSV exports. Paste CSV data or upload a file.';
+    body.appendChild(desc);
+
+    // Mode toggle row
+    const toggleRow = document.createElement('div');
+    toggleRow.style.cssText = 'display: flex; gap: 12px; margin-bottom: 16px;';
+
+    const pasteToggleBtn = document.createElement('button');
+    pasteToggleBtn.className = 'dt-btn';
+    pasteToggleBtn.textContent = '📋 Paste CSV';
+
+    const fileToggleBtn = document.createElement('button');
+    fileToggleBtn.className = 'dt-btn';
+    fileToggleBtn.textContent = '📁 Upload File';
+
+    toggleRow.appendChild(pasteToggleBtn);
+    toggleRow.appendChild(fileToggleBtn);
+    body.appendChild(toggleRow);
+
+    // ── Paste area ─────────────────────────────────────────────────────────────
+    const pasteArea = document.createElement('div');
+    pasteArea.style.display = 'none';
+
+    const pasteLabel = document.createElement('label');
+    pasteLabel.style.cssText = 'display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px;';
+    pasteLabel.textContent = 'Paste CSV Data';
+    pasteArea.appendChild(pasteLabel);
+
+    const csvTextarea = document.createElement('textarea');
+    csvTextarea.className = 'st-form-input';
+    csvTextarea.style.cssText = 'min-height: 150px; width: 100%; font-family: monospace; font-size: 12px; margin-bottom: 12px; box-sizing: border-box;';
+    csvTextarea.placeholder = 'Student,Goal,Date,Percent,Notes\nS001,1.1,2026-01-15,72,Improving\nS001,2.3,2026-01-15,65,Still working on writing';
+    pasteArea.appendChild(csvTextarea);
+
+    const parseCsvBtn = document.createElement('button');
+    parseCsvBtn.className = 'dt-btn primary';
+    parseCsvBtn.textContent = 'Parse CSV';
+    pasteArea.appendChild(parseCsvBtn);
+
+    body.appendChild(pasteArea);
+
+    // ── File upload area ───────────────────────────────────────────────────────
+    const fileArea = document.createElement('div');
+    fileArea.style.display = 'none';
+
+    const fileLabel = document.createElement('label');
+    fileLabel.style.cssText = 'display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px;';
+    fileLabel.textContent = 'Upload CSV File';
+    fileArea.appendChild(fileLabel);
+
+    const csvFileInput = document.createElement('input');
+    csvFileInput.type = 'file';
+    csvFileInput.accept = '.csv';
+    csvFileInput.className = 'st-form-input';
+    csvFileInput.style.cssText = 'display: block; margin-bottom: 12px;';
+    fileArea.appendChild(csvFileInput);
+
+    const uploadParseBtn = document.createElement('button');
+    uploadParseBtn.className = 'dt-btn primary';
+    uploadParseBtn.textContent = 'Upload & Parse';
+    fileArea.appendChild(uploadParseBtn);
+
+    body.appendChild(fileArea);
+
+    // ── Preview section ────────────────────────────────────────────────────────
+    const previewSection = document.createElement('div');
+    previewSection.style.cssText = 'display: none; margin-top: 16px;';
+
+    const previewHeading = document.createElement('h3');
+    previewHeading.style.cssText = 'margin: 0 0 12px 0; font-size: 16px;';
+    previewHeading.textContent = 'Import Preview';
+    previewSection.appendChild(previewHeading);
+
+    const tableWrapper = document.createElement('div');
+    tableWrapper.style.cssText = 'overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; margin-bottom: 12px;';
+
+    const previewTable = document.createElement('table');
+    previewTable.className = 'dt-data-table';
+
+    const thead = document.createElement('thead');
+    const headerTr = document.createElement('tr');
+    ['Status', 'Student', 'Goal', 'Date', 'Percent', 'Notes'].forEach(col => {
+      const th = document.createElement('th');
+      th.textContent = col;
+      headerTr.appendChild(th);
+    });
+    thead.appendChild(headerTr);
+    previewTable.appendChild(thead);
+
+    const previewTbody = document.createElement('tbody');
+    previewTable.appendChild(previewTbody);
+    tableWrapper.appendChild(previewTable);
+    previewSection.appendChild(tableWrapper);
+
+    // Preview action buttons
+    const previewActions = document.createElement('div');
+    previewActions.style.cssText = 'display: flex; gap: 10px;';
+
+    const importConfirmBtn = document.createElement('button');
+    importConfirmBtn.className = 'dt-btn primary';
+    importConfirmBtn.textContent = '✓ Import 0 Records';
+
+    const cancelPreviewBtn = document.createElement('button');
+    cancelPreviewBtn.className = 'dt-btn';
+    cancelPreviewBtn.textContent = 'Cancel';
+
+    previewActions.appendChild(importConfirmBtn);
+    previewActions.appendChild(cancelPreviewBtn);
+    previewSection.appendChild(previewActions);
+
+    body.appendChild(previewSection);
+
+    // ── History section ────────────────────────────────────────────────────────
+    const historySep = document.createElement('div');
+    historySep.style.cssText = 'margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.08);';
+
+    const historyHeading = document.createElement('h3');
+    historyHeading.style.cssText = 'margin: 0 0 12px 0; font-size: 16px;';
+    historyHeading.textContent = 'Import History';
+    historySep.appendChild(historyHeading);
+
+    const historyContainer = document.createElement('div');
+    historySep.appendChild(historyContainer);
+    body.appendChild(historySep);
+
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Render existing history
+    renderSpedTrackHistory(historyContainer);
+
+    // ── Event wiring ───────────────────────────────────────────────────────────
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    pasteToggleBtn.addEventListener('click', () => {
+      pasteArea.style.display = 'block';
+      fileArea.style.display = 'none';
+      previewSection.style.display = 'none';
+    });
+
+    fileToggleBtn.addEventListener('click', () => {
+      pasteArea.style.display = 'none';
+      fileArea.style.display = 'block';
+      previewSection.style.display = 'none';
+    });
+
+    parseCsvBtn.addEventListener('click', async () => {
+      const text = csvTextarea.value;
+      if (!text.trim()) { await rcAlert('Validation', 'Please paste CSV data first'); return; }
+      await processSpedTrackCsv(text, previewTbody, importConfirmBtn, previewSection);
+    });
+
+    uploadParseBtn.addEventListener('click', async () => {
+      const file = csvFileInput.files[0];
+      if (!file) { await rcAlert('Validation', 'Please select a file first'); return; }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        await processSpedTrackCsv(e.target.result, previewTbody, importConfirmBtn, previewSection);
+      };
+      reader.readAsText(file);
+    });
+
+    cancelPreviewBtn.addEventListener('click', () => {
+      previewSection.style.display = 'none';
+      stImportPreviewData = [];
+    });
+
+    importConfirmBtn.addEventListener('click', async () => {
+      const validEntries = stImportPreviewData.filter(r => r.valid);
+      if (validEntries.length === 0) {
+        await rcAlert('Validation', 'No valid entries to import');
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      const importSource = csvFileInput.files[0] ? 'file upload' : 'paste';
+
+      for (const entry of validEntries) {
+        try {
+          await db.upsertGoalProgress({
+            goal_code:    entry.goal,
+            student_code: entry.student,
+            date:         entry.date,
+            value:        entry.value,
+            source:       'spedtrack_import'
+          });
+          successCount++;
+        } catch (err) {
+          console.error('[tc-students] SpedTrack import entry failed:', err);
+          failCount++;
+        }
+      }
+
+      // Save import history
+      try {
+        const history = JSON.parse(localStorage.getItem(ST_IMPORT_HISTORY_KEY) || '[]');
+        history.unshift({
+          date:    new Date().toISOString(),
+          records: successCount,
+          source:  importSource
+        });
+        localStorage.setItem(ST_IMPORT_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+      } catch (_) { /* ignore */ }
+
+      // Refresh page data
+      await loadData();
+
+      previewSection.style.display = 'none';
+      stImportPreviewData = [];
+      renderSpedTrackHistory(historyContainer);
+
+      if (failCount > 0) {
+        await rcAlert('Import Partial', successCount + ' records imported; ' + failCount + ' failed — see console for details.');
+      } else {
+        await rcAlert('Import Complete', '✓ Successfully imported ' + successCount + ' record' + (successCount !== 1 ? 's' : '') + '!');
+      }
+    });
+  }
+
+  /**
+   * Export current filtered progress data as a SpedTrack-compatible CSV.
+   * Columns: Student, Goal, Date, Percent, Notes
+   */
+  function exportSpedTrackProgressCsv() {
+    const { start: qStart, end: qEnd } = selectedQuarter
+      ? (getQuarterDateRange ? getQuarterDateRange(selectedQuarter) : { start: null, end: null })
+      : { start: null, end: null };
+
+    const filteredCodes = new Set(filteredStudents.map(s => s.code));
+
+    const rows = [['Student', 'Goal', 'Date', 'Percent', 'Notes']];
+    for (const entry of allProgressEntries) {
+      if (!filteredCodes.has(entry.student_code)) continue;
+      if (qStart && entry.date < qStart) continue;
+      if (qEnd   && entry.date > qEnd)   continue;
+      rows.push([
+        entry.student_code,
+        entry.goal_code,
+        entry.date,
+        entry.value != null ? entry.value : '',
+        entry.notes || ''
+      ]);
+    }
+
+    const csv = rows.map(r => r.map(spedtrackCsvQuote).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'spedtrack_progress_' + new Date().toISOString().split('T')[0] + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Show an export-options dropdown anchored to `anchorBtn`.
+   * Dismisses when the user clicks away or chooses an option.
+   */
+  function showExportDropdown(anchorBtn) {
+    // Remove any existing dropdown
+    const existing = document.getElementById('stExportDropdown');
+    if (existing) { existing.remove(); return; }
+
+    const dropdown = document.createElement('div');
+    dropdown.id = 'stExportDropdown';
+    dropdown.style.cssText = [
+      'position: absolute',
+      'z-index: 500',
+      'background: rgba(20,20,20,0.98)',
+      'border: 1px solid rgba(255,255,255,0.15)',
+      'border-radius: 10px',
+      'padding: 6px 0',
+      'min-width: 220px',
+      'box-shadow: 0 8px 24px rgba(0,0,0,0.5)',
+    ].join(';');
+
+    // Position below anchor button
+    const rect = anchorBtn.getBoundingClientRect();
+    dropdown.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+    dropdown.style.left = rect.left + 'px';
+
+    function makeOption(label, handler) {
+      const btn = document.createElement('button');
+      btn.style.cssText = [
+        'display: block',
+        'width: 100%',
+        'padding: 8px 16px',
+        'background: none',
+        'border: none',
+        'color: inherit',
+        'font-size: 13px',
+        'text-align: left',
+        'cursor: pointer',
+        'transition: background 0.1s',
+      ].join(';');
+      btn.textContent = label;
+      btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.07)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'none'; });
+      btn.addEventListener('click', () => {
+        dropdown.remove();
+        handler();
+      });
+      return btn;
+    }
+
+    dropdown.appendChild(makeOption('📋 Caseload Summary CSV', exportCaseload));
+    dropdown.appendChild(makeOption('📊 SpedTrack Progress CSV', exportSpedTrackProgressCsv));
+
+    document.body.appendChild(dropdown);
+
+    // Dismiss on outside click
+    function onOutsideClick(e) {
+      if (!dropdown.contains(e.target) && e.target !== anchorBtn) {
+        dropdown.remove();
+        document.removeEventListener('click', onOutsideClick, true);
+      }
+    }
+    // Use capture so it fires before the button's own click re-toggles
+    setTimeout(() => document.addEventListener('click', onOutsideClick, true), 0);
   }
 
   // Initialize
