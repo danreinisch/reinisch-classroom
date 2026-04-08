@@ -576,6 +576,61 @@ test('preserves all other fields when updating meta', () => {
   assert.strictEqual(arr[0].meta.notes, 'hello');
 });
 
+// ── unit_id / section_id / tags fields ───────────────────────────────────────
+
+console.log('\n--- unit_id / section_id / tags handling ---');
+
+test('createAssignment-like spread includes unit_id, section_id, tags', () => {
+  // Mirrors the local createAssignment spread: { id, ...a, school_year, created_at }
+  const a = {
+    title: 'Quiz 1',
+    type: 'html',
+    unit_id: 'lost-in-kragdon-ah',
+    section_id: 'language-arts',
+    tags: ['quiz', 'vocabulary']
+  };
+  const id = 'ATEST01';
+  const entry = { id, ...a, school_year: '2025-2026', created_at: new Date().toISOString() };
+  assert.strictEqual(entry.unit_id, 'lost-in-kragdon-ah');
+  assert.strictEqual(entry.section_id, 'language-arts');
+  assert.deepStrictEqual(entry.tags, ['quiz', 'vocabulary']);
+});
+
+test('createAssignment-like spread preserves null unit_id', () => {
+  const a = { title: 'Uncategorized Assignment', type: 'html', unit_id: null, section_id: null, tags: [] };
+  const entry = { id: 'ATEST02', ...a };
+  assert.strictEqual(entry.unit_id, null);
+  assert.strictEqual(entry.section_id, null);
+  assert.deepStrictEqual(entry.tags, []);
+});
+
+test('updateAssignment replaces unit_id', () => {
+  const arr = [{ id: 'A1', title: 'Quiz', unit_id: null, section_id: null, tags: [] }];
+  const result = updateAssignmentLocal(arr, 'A1', { unit_id: 'lost-in-kragdon-ah', section_id: 'language-arts' });
+  assert.strictEqual(result.unit_id, 'lost-in-kragdon-ah');
+  assert.strictEqual(result.section_id, 'language-arts');
+});
+
+test('updateAssignment replaces tags (does not merge)', () => {
+  const arr = [{ id: 'A1', title: 'Quiz', unit_id: null, tags: ['quiz', 'old-tag'] }];
+  const result = updateAssignmentLocal(arr, 'A1', { tags: ['review'] });
+  assert.deepStrictEqual(result.tags, ['review'], 'tags should be fully replaced, not merged');
+});
+
+test('updateAssignment can clear tags to empty array', () => {
+  const arr = [{ id: 'A1', title: 'Quiz', tags: ['quiz', 'vocabulary'] }];
+  updateAssignmentLocal(arr, 'A1', { tags: [] });
+  assert.deepStrictEqual(arr[0].tags, []);
+});
+
+test('updateAssignment unit_id/section_id does not affect meta (meta still merges)', () => {
+  const arr = [{ id: 'A1', title: 'Quiz', meta: { html_src: '<p>Test</p>' }, unit_id: null, tags: [] }];
+  updateAssignmentLocal(arr, 'A1', { unit_id: 'life-skills', meta: { notes: 'updated' } });
+  assert.strictEqual(arr[0].unit_id, 'life-skills');
+  assert.strictEqual(arr[0].meta.html_src, '<p>Test</p>', 'meta.html_src should be preserved via merge');
+  assert.strictEqual(arr[0].meta.notes, 'updated');
+});
+
 // ── relDate helper ────────────────────────────────────────────────────────────
 
 /**
