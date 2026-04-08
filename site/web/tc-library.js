@@ -949,7 +949,7 @@
       const newDraft = {
         id: genDraftId(),
         title: assignment.title || '(Untitled)',
-        className: assignment.series || '',
+        className: selectedClassName || assignment.series || '',
         batchId: null,
         assignment: {
           kind: assignment.type || 'file',
@@ -984,7 +984,9 @@
       if (e.key === 'Escape') {
         closeModal();
       } else if (e.key === 'Tab') {
-        const focusable = card.querySelectorAll('button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const focusable = Array.from(
+          card.querySelectorAll('button:not([disabled]):not([hidden]), input:not([hidden]), select:not([hidden]), textarea:not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])')
+        ).filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length));
         if (!focusable.length) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
