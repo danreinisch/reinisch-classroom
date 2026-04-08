@@ -787,6 +787,126 @@
         display: block;
       }
 
+      /* Goals hover tooltip wrapper (collapsed row) */
+      .st-goals-tooltip-wrapper {
+        display: inline-flex;
+        align-items: center;
+        vertical-align: middle;
+        cursor: default;
+      }
+
+      /* Tooltip panel — positioned above wrapper via JS */
+      .st-goals-tooltip {
+        position: fixed;
+        z-index: 9999;
+        background: rgba(15, 23, 42, 0.97);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+        padding: 10px 12px;
+        min-width: 240px;
+        max-width: 340px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        font-size: 12px;
+        line-height: 1.4;
+        color: rgba(240, 255, 250, 0.92);
+        display: none;
+      }
+      .st-goals-tooltip.st-goals-tooltip--visible {
+        display: block;
+      }
+
+      /* Downward caret pointing at the hovered element */
+      .st-goals-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: var(--st-caret-x, 50%);
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-bottom: none;
+        border-top-color: rgba(15, 23, 42, 0.97);
+      }
+
+      /* Individual goal row inside the tooltip */
+      .st-tooltip-goal {
+        display: grid;
+        grid-template-columns: auto auto 1fr auto auto;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .st-tooltip-goal:last-of-type {
+        border-bottom: none;
+      }
+      .st-tooltip-goal-code {
+        font-weight: 600;
+        color: #60a5fa;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        white-space: nowrap;
+      }
+      .st-tooltip-goal-area {
+        font-size: 10px;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 70px;
+      }
+      .st-tooltip-goal-value {
+        font-weight: 600;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .st-tooltip-goal-trend {
+        font-size: 14px;
+        line-height: 1;
+      }
+      .st-tooltip-goal-trend--up   { color: #22c55e; }
+      .st-tooltip-goal-trend--flat { color: #94a3b8; }
+      .st-tooltip-goal-trend--down { color: #ef4444; }
+      .st-tooltip-goal-range {
+        font-size: 10px;
+        opacity: 0.6;
+        white-space: nowrap;
+        text-align: right;
+      }
+      .st-tooltip-overflow {
+        font-size: 11px;
+        opacity: 0.65;
+        padding-top: 5px;
+        text-align: center;
+      }
+
+      /* Light theme */
+      @media (prefers-color-scheme: light) {
+        .st-goals-tooltip {
+          background: rgba(255, 255, 255, 0.98);
+          border-color: rgba(0, 0, 0, 0.12);
+          color: #1e293b;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+        .st-goals-tooltip::after {
+          border-top-color: rgba(255, 255, 255, 0.98);
+        }
+        .st-tooltip-goal {
+          border-bottom-color: rgba(0, 0, 0, 0.07);
+        }
+        .st-tooltip-goal-area {
+          background: rgba(0, 0, 0, 0.06);
+        }
+      }
+
+      /* Disable on touch-only devices */
+      @media (hover: none) {
+        .st-goals-tooltip-wrapper { pointer-events: none; }
+        .st-goals-tooltip { display: none !important; }
+      }
+
       /* Needs Attention filter button */
       .st-btn-attention {
         background: rgba(239, 68, 68, 0.08);
@@ -2180,7 +2300,7 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260331"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260408a"></script>
+    <script type="module" src="/web/tc-students.js?v=20260408b"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
   </body>

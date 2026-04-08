@@ -1898,6 +1898,159 @@
     return health.tier === 'stale' || health.tier === 'critical';
   }
 
+  // ── Goals Hover Tooltip ──────────────────────────────────────────────────
+
+  /** Maximum number of goals shown in the hover tooltip. */
+  const MAX_TOOLTIP_GOALS = 8;
+
+  /**
+   * Build the inner HTML for the goals hover tooltip for a student.
+   * Renders up to MAX_TOOLTIP_GOALS active goals, each showing:
+   *   goal code · area badge · staleness icon + latest value · trend arrow · baseline→mastery range
+   * @param {string} studentCode
+   * @returns {string} HTML string
+   */
+  function buildGoalsTooltip(studentCode) {
+    const goals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    if (goals.length === 0) {
+      return '<div style="opacity:0.65;font-size:12px;text-align:center;">No active goals</div>';
+    }
+
+    const shown = goals.slice(0, MAX_TOOLTIP_GOALS);
+    const overflow = goals.length - MAX_TOOLTIP_GOALS;
+
+    const rows = shown.map(goal => {
+      // Latest value (entries are not guaranteed sorted — sort by date)
+      const entries = getProgressForGoal(studentCode, goal.code)
+        .slice()
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+      const latestEntry = entries.length > 0 ? entries[entries.length - 1] : null;
+      const latestRaw = latestEntry != null ? latestEntry.value : null;
+      const valDisplay = latestRaw != null
+        ? `${parseFloat(latestRaw).toFixed(0)}%`
+        : '—';
+
+      // Staleness icon via getGoalStalenessInfo
+      const stalenessInfo = getGoalStalenessInfo(studentCode, goal.code);
+
+      // Trend arrow based on last 3 sorted entries
+      let trendSymbol = '→';
+      let trendClass = 'st-tooltip-goal-trend--flat';
+      if (entries.length >= 2) {
+        const recent = entries.slice(-3);
+        const oldVal = parseFloat(recent[0].value);
+        const newVal = parseFloat(recent[recent.length - 1].value);
+        if (!isNaN(oldVal) && !isNaN(newVal)) {
+          if (newVal > oldVal + 2)      { trendSymbol = '↗'; trendClass = 'st-tooltip-goal-trend--up'; }
+          else if (newVal < oldVal - 2) { trendSymbol = '↘'; trendClass = 'st-tooltip-goal-trend--down'; }
+        }
+      }
+
+      // Baseline → mastery range
+      const baseline = goal.baseline != null ? `${goal.baseline}%` : '?';
+      const mastery = goal.mastery != null
+        ? `${goal.mastery}%`
+        : (goal.target != null ? `${goal.target}%` : '?');
+
+      return `<div class="st-tooltip-goal">` +
+        `<span class="st-tooltip-goal-code">${escapeHtml(goal.code)}</span>` +
+        `<span class="st-tooltip-goal-area">${escapeHtml(goal.goal_area || 'General')}</span>` +
+        `<span class="st-tooltip-goal-value">${escapeHtml(stalenessInfo.icon)} ${escapeHtml(valDisplay)}</span>` +
+        `<span class="st-tooltip-goal-trend ${trendClass}">${trendSymbol}</span>` +
+        `<span class="st-tooltip-goal-range">${escapeHtml(baseline)}→${escapeHtml(mastery)}</span>` +
+        `</div>`;
+    }).join('');
+
+    const overflowHtml = overflow > 0
+      ? `<div class="st-tooltip-overflow">+${overflow} more goal${overflow > 1 ? 's' : ''}</div>`
+      : '';
+
+    return rows + overflowHtml;
+  }
+
+  /** Singleton tooltip element — created once and reused. */
+  let _goalsTooltipEl = null;
+  /** Timer handle for the 200 ms show delay. */
+  let _goalsTooltipTimer = null;
+
+  /** Create (once) and return the singleton tooltip DOM element. */
+  function getGoalsTooltipEl() {
+    if (!_goalsTooltipEl) {
+      _goalsTooltipEl = document.createElement('div');
+      _goalsTooltipEl.id = 'stGoalsTooltip';
+      _goalsTooltipEl.className = 'st-goals-tooltip';
+      _goalsTooltipEl.setAttribute('role', 'tooltip');
+      _goalsTooltipEl.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(_goalsTooltipEl);
+    }
+    return _goalsTooltipEl;
+  }
+
+  /**
+   * Position and show the goals tooltip above the given wrapper element.
+   * @param {HTMLElement} wrapper - The .st-goals-tooltip-wrapper element
+   */
+  function showGoalsTooltip(wrapper) {
+    const studentCode = wrapper.dataset.student;
+    if (!studentCode) return;
+
+    const tooltip = getGoalsTooltipEl();
+    tooltip.innerHTML = buildGoalsTooltip(studentCode);
+
+    // Temporarily make visible off-screen to measure dimensions
+    tooltip.style.left = '-9999px';
+    tooltip.style.top = '-9999px';
+    tooltip.classList.add('st-goals-tooltip--visible');
+
+    const tRect = tooltip.getBoundingClientRect();
+    const wRect = wrapper.getBoundingClientRect();
+
+    // Center tooltip above the wrapper, then clamp to viewport
+    const idealLeft = wRect.left + wRect.width / 2 - tRect.width / 2;
+    const clampedLeft = Math.max(8, Math.min(idealLeft, window.innerWidth - tRect.width - 8));
+    const top = wRect.top - tRect.height - 10;
+
+    tooltip.style.left = `${clampedLeft}px`;
+    tooltip.style.top = `${Math.max(8, top)}px`;
+
+    // Align caret with the center of the wrapper element
+    const caretX = wRect.left + wRect.width / 2 - clampedLeft;
+    const caretPct = Math.max(10, Math.min(90, (caretX / tRect.width) * 100));
+    tooltip.style.setProperty('--st-caret-x', `${caretPct}%`);
+  }
+
+  /** Hide the goals tooltip and cancel any pending show timer. */
+  function hideGoalsTooltip() {
+    clearTimeout(_goalsTooltipTimer);
+    _goalsTooltipTimer = null;
+    if (_goalsTooltipEl) {
+      _goalsTooltipEl.classList.remove('st-goals-tooltip--visible');
+    }
+  }
+
+  /**
+   * Wire up mouseover/mouseout event delegation on the student table body
+   * for the goals hover tooltip. Must be called once after the tbody exists.
+   * @param {HTMLElement} tableBody
+   */
+  function setupGoalsTooltipHandlers(tableBody) {
+    tableBody.addEventListener('mouseover', (e) => {
+      const wrapper = e.target.closest('.st-goals-tooltip-wrapper');
+      if (!wrapper) return;
+      clearTimeout(_goalsTooltipTimer);
+      _goalsTooltipTimer = setTimeout(() => showGoalsTooltip(wrapper), 200);
+    });
+
+    tableBody.addEventListener('mouseout', (e) => {
+      const wrapper = e.target.closest('.st-goals-tooltip-wrapper');
+      if (!wrapper) return;
+      // Only hide if the pointer is truly leaving the wrapper
+      if (e.relatedTarget && wrapper.contains(e.relatedTarget)) return;
+      hideGoalsTooltip();
+    });
+  }
+
   /**
    * Shows Q1–Q4 avg (collected/expected) for the current school year.
    */
@@ -2216,7 +2369,7 @@
           <td class="st-code-cell">${escapeHtml(student.code)}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
           <td class="st-goals-cell">
-            <span class="st-goals-badge">${studentGoals.length}</span>${sparklineHtml}${alertBadgesHtml}
+            <span class="st-goals-tooltip-wrapper" data-student="${escapeHtml(student.code)}"><span class="st-goals-badge">${studentGoals.length}</span>${sparklineHtml}</span>${alertBadgesHtml}
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
@@ -4897,8 +5050,13 @@
           }
         }
       });
+
+      // Goals hover tooltip (event delegation, 200 ms delay)
+      setupGoalsTooltipHandlers(tableBody);
     }
 
+    // Hide goals tooltip on scroll so it doesn't float at a stale position
+    document.addEventListener('scroll', hideGoalsTooltip, { passive: true, capture: true });
 
     document.addEventListener('click', (e) => {
       if (e.target.id === 'stCancelQuarterEdit') {
