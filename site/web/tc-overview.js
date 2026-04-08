@@ -797,7 +797,7 @@
           `<span class="ov-badge" title="${g.goalArea || g.goalCode}">${g.goalCode}</span>`
         ).join(' ');
         return `
-        <a href="/teacher/data/?student=${item.studentCode}" class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
+        <a href="/teacher/students/?student=${item.studentCode}" class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
           <span class="ov-status-dot ov-dot-amber"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -847,7 +847,7 @@
           `<span class="ov-badge" title="${g.goalArea || g.goalCode}">${g.goalCode}</span>`
         ).join(' ');
         return `
-        <a href="/teacher/data/?student=${item.studentCode}" class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
+        <a href="/teacher/students/?student=${item.studentCode}" class="ov-row-card ov-row-card--amber" style="border-left: 3px solid #f59e0b;">
           <span class="ov-status-dot ov-dot-amber"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -1147,7 +1147,7 @@
       const toggleBtn = hasDetails ? `<button class="ov-show-all-btn" style="margin-top:4px;" data-toggle-target="${detailId}" data-toggle-label="▼ Show details" data-toggle-open-label="▲ Hide details">▼ Show details</button>` : '';
 
       return `
-      <a href="/teacher/data/?student=${entry.studentCode}" class="ov-row-card ${cardClass}" style="border-left: 3px solid ${borderColor};">
+      <a href="/teacher/students/?student=${entry.studentCode}" class="ov-row-card ${cardClass}" style="border-left: 3px solid ${borderColor};">
         <span class="ov-status-dot ${dotClass}"></span>
         <div class="ov-row-body">
           <div class="ov-row-primary">
@@ -1206,7 +1206,7 @@
       const shown = noDataStudents.slice(0, NO_DATA_CAP);
       for (const s of shown) {
         html += `
-        <a href="/teacher/data/?student=${s.code}" class="ov-row-card" style="border-left: 3px solid #6b7280;">
+        <a href="/teacher/students/?student=${s.code}" class="ov-row-card" style="border-left: 3px solid #6b7280;">
           <span class="ov-status-dot" style="background:#9ca3af;"></span>
           <div class="ov-row-body">
             <div class="ov-row-primary">
@@ -1309,7 +1309,7 @@
       checklist.push({
         id: "collect-progress",
         text: `Collect progress data for ${overdueGoalsCount} goal${overdueGoalsCount !== 1 ? "s" : ""} (data collection overdue)`,
-        link: "/teacher/data/",
+        link: "/teacher/students/",
         checked: savedChecklist["collect-progress"] || false,
       });
     }

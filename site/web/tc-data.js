@@ -1,7 +1,11 @@
+// DEPRECATED: The Data tab has been retired. All features have moved to tc-students.js
+// and the Students page (/teacher/students/). The /teacher/data/ route now redirects
+// to /teacher/students/. This file is kept only to avoid 404s on any cached imports.
+
 (async () => {
   "use strict";
 
-  // Only run on data page
+  // Only run on data page (now a redirect — this code will not execute in normal use)
   if (!location.pathname.startsWith("/teacher/data")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
