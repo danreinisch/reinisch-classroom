@@ -4,359 +4,963 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Match the Items – Week 1</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
-.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
-.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
-.header p{font-size:0.95rem;color:#8b949e;}
-.main-content{padding:20px 24px 80px;}
-.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:0 0 16px;}
-/* Q-card */
-.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
-.q-card.correct{border-color:#22c55e;}
-.q-card.incorrect{border-color:#ef4444;}
-.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
-.q-prompt{font-size:0.95rem;font-weight:400;color:#8b949e;line-height:1.5;margin-bottom:14px;}
-.q-feedback{font-size:0.8rem;margin-top:10px;min-height:18px;}
-.q-card.correct .q-feedback{color:#22c55e;}
-.q-card.incorrect .q-feedback{color:#ef4444;}
-/* Item display */
-.item-display{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;}
-.item-emoji{font-size:3rem;line-height:1;}
-.item-label{font-size:1.1rem;font-weight:700;color:#e6edf3;}
-/* Category buttons */
-.category-group{display:flex;gap:10px;flex-wrap:wrap;}
-.cat-btn{flex:1 1 calc(33% - 8px);min-width:90px;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:10px 8px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;}
-.cat-btn:hover{border-color:#14b8a6;color:#e6edf3;}
-.cat-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
-.cat-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
-.cat-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
-.cat-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;padding:0 0 120px}
+a{color:#14b8a6}
+
+/* Header */
+.header{text-align:center;padding:32px 20px 16px}
+.header h1{font-size:clamp(1.4rem,4vw,2rem);font-weight:700;color:#e6edf3;margin-bottom:6px}
+.header p{font-size:0.95rem;color:#8b949e}
+
+/* Day tabs */
+.day-tabs{display:flex;gap:8px;justify-content:center;padding:8px 20px 20px;flex-wrap:wrap}
+.day-tab{background:#161b22;border:1.5px solid #30363d;border-radius:10px;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;cursor:pointer;transition:all 0.2s}
+.day-tab:hover{border-color:#14b8a6;color:#14b8a6}
+.day-tab.active{background:#14b8a6;border-color:#14b8a6;color:#0d1117}
+
+/* Day panels */
+.day-panel{display:none;padding:0 16px;max-width:900px;margin:0 auto}
+.day-panel.active{display:block}
+
+/* q-card */
+.q-card{background:#161b22;border:1.5px solid #30363d;border-radius:16px;padding:22px 20px;margin-bottom:20px}
+.q-card-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.q-goal-badge{background:#0d1117;border:1px solid #30363d;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#5eead4;padding:3px 8px;white-space:nowrap}
+.q-instruction{font-size:0.9rem;color:#c9d1d9;margin-bottom:14px;line-height:1.5}
+.q-progress{font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:#8b949e;margin-top:14px}
+.q-progress span{color:#14b8a6;font-weight:700}
+
+/* TTS button */
+.tts-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;opacity:0.7;transition:opacity 0.15s;vertical-align:middle;line-height:1}
+.tts-btn:hover{opacity:1}
+
+/* Day heading */
+.day-heading{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.day-heading h2{font-size:1.15rem;font-weight:700;color:#e6edf3}
+
+/* Sort items grid (Days 1 & 2) */
+.items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:14px}
+.sort-item{background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:14px 10px;text-align:center;transition:border-color 0.3s}
+.sort-item.correct{border-color:#22c55e}
+.sort-item.incorrect{border-color:#ef4444}
+.item-emoji{font-size:2.5rem;display:block;margin-bottom:6px}
+.item-label{font-size:0.85rem;color:#c9d1d9;margin-bottom:10px;font-weight:600}
+.cat-btns{display:flex;flex-direction:column;gap:6px}
+.cat-btn{background:#161b22;border:1.5px solid #30363d;border-radius:8px;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.78rem;padding:5px 8px;cursor:pointer;transition:all 0.2s}
+.cat-btn:hover{border-color:#14b8a6;color:#14b8a6}
+.cat-btn:disabled{opacity:0.5;cursor:not-allowed}
+.item-result{font-size:0.75rem;margin-top:6px;min-height:16px}
+.sort-item.correct .item-result{color:#22c55e}
+.sort-item.incorrect .item-result{color:#ef4444}
+
+/* Drag-and-drop (Days 3 & 4) */
+.shelf{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:20px;margin-bottom:20px}
+.shelf-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin-bottom:14px}
+.shelf-items{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.drag-item{background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:16px 12px;text-align:center;cursor:grab;transition:transform 0.15s,border-color 0.2s,box-shadow 0.2s;min-width:90px;user-select:none;touch-action:none}
+.drag-item:hover{border-color:#14b8a6;transform:translateY(-3px)}
+.drag-item.dragging{opacity:0.4}
+.drag-item.lifting{transform:scale(1.05) translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,0.5);border-color:#14b8a6}
+.drag-item.bounce{animation:bounce-back 0.6s ease;border-color:#ef4444}
+@keyframes bounce-back{0%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+.drag-item.placed{opacity:0.35;cursor:not-allowed;pointer-events:none}
+.drag-emoji{font-size:2.2rem;display:block;margin-bottom:6px}
+.drag-label{font-size:0.82rem;color:#c9d1d9;font-weight:600}
+
+/* Bag zone (Day 3) */
+.bag-zone{background:#161b22;border:2px dashed #30363d;border-radius:14px;padding:20px;min-height:140px;transition:border-color 0.2s,background 0.2s}
+.bag-zone.drag-over{border-color:#14b8a6;background:rgba(20,184,166,0.08)}
+.bag-zone-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin-bottom:10px}
+.bag-count{font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:#8b949e;margin-bottom:12px}
+.bag-count span{color:#14b8a6;font-weight:700}
+.bag-items{display:flex;flex-wrap:wrap;gap:8px}
+.bag-chip{background:#0d1117;border:1.5px solid #22c55e;border-radius:20px;padding:6px 12px;font-size:0.82rem;color:#22c55e;display:flex;align-items:center;gap:6px}
+.bag-success{color:#22c55e;font-weight:700;font-size:1rem;margin-top:12px;display:none}
+
+/* Multi-zone layout (Day 4) */
+.zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:14px}
+.room-zone{background:#161b22;border:2px dashed #30363d;border-radius:14px;padding:16px;min-height:160px;transition:border-color 0.2s,background 0.2s}
+.room-zone.drag-over{border-color:#14b8a6;background:rgba(20,184,166,0.08)}
+.zone-title{font-size:0.9rem;font-weight:700;color:#e6edf3;margin-bottom:4px}
+.zone-emoji{font-size:1.8rem;margin-bottom:10px;display:block}
+.zone-items{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.zone-chip{background:#0d1117;border:1.5px solid #22c55e;border-radius:20px;padding:5px 10px;font-size:0.78rem;color:#22c55e}
+.zone-chip.wrong{border-color:#ef4444;color:#ef4444}
+
 /* Bottom bar */
-.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
-.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
-.score-display span{color:#14b8a6;font-weight:700;}
-.save-status{font-size:0.8rem;opacity:0;transition:opacity 0.3s;color:#22c55e;min-width:100px;}
-.btn-row{display:flex;gap:10px;}
-.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
-.btn-save{background:#30363d;color:#e6edf3;}
-.btn-save:hover{background:#484f58;}
-.btn-submit{background:#14b8a6;color:#0d1117;}
-.btn-submit:hover{background:#0d9488;}
-/* Custom confirm dialog */
-.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
-.confirm-overlay.show{display:flex;}
-.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
-.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
-.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:1.5px solid #30363d;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;z-index:100}
+.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e}
+.score-display span{color:#14b8a6;font-weight:700}
+.save-status{font-size:0.8rem;color:#22c55e;opacity:0;transition:opacity 0.3s;margin-left:auto}
+.btn-row{display:flex;gap:10px;margin-left:auto}
+.btn{font-family:'Outfit',sans-serif;font-size:0.88rem;font-weight:600;padding:9px 20px;border-radius:10px;border:none;cursor:pointer;transition:opacity 0.2s,transform 0.15s}
+.btn:hover{opacity:0.87;transform:translateY(-1px)}
+.btn-save{background:#30363d;color:#e6edf3}
+.btn-submit{background:#14b8a6;color:#0d1117}
+
+/* Confirm overlay */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center}
+.confirm-overlay.visible{display:flex}
+.confirm-box{background:#161b22;border:1.5px solid #30363d;border-radius:16px;padding:28px 24px;max-width:360px;width:90%;text-align:center}
+.confirm-box p{font-size:0.95rem;color:#c9d1d9;line-height:1.6;margin-bottom:20px}
+.confirm-btn-row{display:flex;gap:12px;justify-content:center}
+
+/* Success banner */
+.success-banner{background:rgba(34,197,94,0.12);border:1.5px solid #22c55e;border-radius:12px;padding:14px 18px;color:#22c55e;font-weight:700;font-size:0.95rem;margin-top:16px;display:none}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Match the Items – Week 1</h1>
-  <p>Where does each item belong? Click the correct room for each one.</p>
+  <h1>Match the Items – Week 1 <button class="tts-btn" onclick="speakText('Match the Items, Week 1')">🔊</button></h1>
+  <p>Sort, match, and organize items each day. <button class="tts-btn" onclick="speakText('Sort, match, and organize items each day.')">🔊</button></p>
 </div>
 
-<div class="main-content">
+<div class="day-tabs">
+  <button class="day-tab active" onclick="showDay(0)">Day 1</button>
+  <button class="day-tab" onclick="showDay(1)">Day 2</button>
+  <button class="day-tab" onclick="showDay(2)">Day 3</button>
+  <button class="day-tab" onclick="showDay(3)">Day 4</button>
+</div>
 
-  <div class="part-label">Sort each item into the correct room</div>
-
-  <!-- Q1 -->
-  <div class="q-card" data-qref="W1Q1" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q1">
-    <div class="q-num">Question 1</div>
-    <div class="item-display">
-      <span class="item-emoji">🍳</span>
-      <span class="item-label">Frying Pan</span>
-    </div>
-    <div class="q-prompt">Which room does a Frying Pan belong in?</div>
-    <div class="category-group" data-correct="Kitchen">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
-    </div>
-    <div class="q-feedback"></div>
+<!-- ======================== DAY 1 ======================== -->
+<div class="day-panel active" id="day-0">
+  <div class="day-heading">
+    <h2>Day 1 — Sort Items by Room <button class="tts-btn" onclick="speakText('Day 1. Sort Items by Room.')">🔊</button></h2>
   </div>
 
-  <!-- Q2 -->
-  <div class="q-card" data-qref="W1Q2" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q2">
-    <div class="q-num">Question 2</div>
-    <div class="item-display">
-      <span class="item-emoji">🧴</span>
-      <span class="item-label">Shampoo Bottle</span>
+  <div class="q-card" data-qref="D1Q1" data-goal="S020.12.1" data-points="10" data-answer-type="multiple-choice">
+    <div class="q-card-header">
+      <span class="q-goal-badge">S020.12.1</span>
     </div>
-    <div class="q-prompt">Which room does a Shampoo Bottle belong in?</div>
-    <div class="category-group" data-correct="Bathroom">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
+    <div class="q-instruction">
+      Click on a category button to sort each item into the correct room.
+      <button class="tts-btn" onclick="speakText('Click on a category button to sort each item into the correct room.')">🔊</button>
     </div>
-    <div class="q-feedback"></div>
+    <div class="items-grid" id="day1Grid">
+
+      <div class="sort-item" id="d1-0" data-item-id="d1-0" data-correct="Kitchen">
+        <span class="item-emoji">🍳</span>
+        <div class="item-label">Frying Pan <button class="tts-btn" onclick="speakText('Frying Pan')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-0','Kitchen','Kitchen')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-0','Bathroom','Kitchen')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-0','Bedroom','Kitchen')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-0"></div>
+      </div>
+
+      <div class="sort-item" id="d1-1" data-item-id="d1-1" data-correct="Bathroom">
+        <span class="item-emoji">🧴</span>
+        <div class="item-label">Shampoo <button class="tts-btn" onclick="speakText('Shampoo')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-1','Kitchen','Bathroom')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-1','Bathroom','Bathroom')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-1','Bedroom','Bathroom')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-1"></div>
+      </div>
+
+      <div class="sort-item" id="d1-2" data-item-id="d1-2" data-correct="Bedroom">
+        <span class="item-emoji">🛏️</span>
+        <div class="item-label">Pillow <button class="tts-btn" onclick="speakText('Pillow')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-2','Kitchen','Bedroom')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-2','Bathroom','Bedroom')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-2','Bedroom','Bedroom')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-2"></div>
+      </div>
+
+      <div class="sort-item" id="d1-3" data-item-id="d1-3" data-correct="Kitchen">
+        <span class="item-emoji">🍞</span>
+        <div class="item-label">Toaster <button class="tts-btn" onclick="speakText('Toaster')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-3','Kitchen','Kitchen')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-3','Bathroom','Kitchen')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-3','Bedroom','Kitchen')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-3"></div>
+      </div>
+
+      <div class="sort-item" id="d1-4" data-item-id="d1-4" data-correct="Bathroom">
+        <span class="item-emoji">🛁</span>
+        <div class="item-label">Towel <button class="tts-btn" onclick="speakText('Towel')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-4','Kitchen','Bathroom')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-4','Bathroom','Bathroom')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-4','Bedroom','Bathroom')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-4"></div>
+      </div>
+
+      <div class="sort-item" id="d1-5" data-item-id="d1-5" data-correct="Bedroom">
+        <span class="item-emoji">⏰</span>
+        <div class="item-label">Alarm Clock <button class="tts-btn" onclick="speakText('Alarm Clock')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-5','Kitchen','Bedroom')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-5','Bathroom','Bedroom')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-5','Bedroom','Bedroom')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-5"></div>
+      </div>
+
+      <div class="sort-item" id="d1-6" data-item-id="d1-6" data-correct="Kitchen">
+        <span class="item-emoji">🥄</span>
+        <div class="item-label">Spatula <button class="tts-btn" onclick="speakText('Spatula')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-6','Kitchen','Kitchen')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-6','Bathroom','Kitchen')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-6','Bedroom','Kitchen')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-6"></div>
+      </div>
+
+      <div class="sort-item" id="d1-7" data-item-id="d1-7" data-correct="Bathroom">
+        <span class="item-emoji">🧼</span>
+        <div class="item-label">Soap <button class="tts-btn" onclick="speakText('Soap')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-7','Kitchen','Bathroom')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-7','Bathroom','Bathroom')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-7','Bedroom','Bathroom')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-7"></div>
+      </div>
+
+      <div class="sort-item" id="d1-8" data-item-id="d1-8" data-correct="Bedroom">
+        <span class="item-emoji">🧣</span>
+        <div class="item-label">Blanket <button class="tts-btn" onclick="speakText('Blanket')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-8','Kitchen','Bedroom')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-8','Bathroom','Bedroom')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-8','Bedroom','Bedroom')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-8"></div>
+      </div>
+
+      <div class="sort-item" id="d1-9" data-item-id="d1-9" data-correct="Kitchen">
+        <span class="item-emoji">🍽️</span>
+        <div class="item-label">Plate <button class="tts-btn" onclick="speakText('Plate')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d1-9','Kitchen','Kitchen')">Kitchen</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-9','Bathroom','Kitchen')">Bathroom</button>
+          <button class="cat-btn" onclick="sortItem(this,'d1-9','Bedroom','Kitchen')">Bedroom</button>
+        </div>
+        <div class="item-result" id="res-d1-9"></div>
+      </div>
+
+    </div>
+    <div class="q-progress">Sorted correctly: <span id="d1Count">0</span> / 10</div>
+  </div>
+</div>
+
+<!-- ======================== DAY 2 ======================== -->
+<div class="day-panel" id="day-1">
+  <div class="day-heading">
+    <h2>Day 2 — Sort by Category <button class="tts-btn" onclick="speakText('Day 2. Sort by Category.')">🔊</button></h2>
   </div>
 
-  <!-- Q3 -->
-  <div class="q-card" data-qref="W1Q3" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q3">
-    <div class="q-num">Question 3</div>
-    <div class="item-display">
-      <span class="item-emoji">🛏️</span>
-      <span class="item-label">Pillow</span>
+  <div class="q-card" data-qref="D2Q1" data-goal="S020.12.1" data-points="10" data-answer-type="multiple-choice">
+    <div class="q-card-header">
+      <span class="q-goal-badge">S020.12.1</span>
     </div>
-    <div class="q-prompt">Which room does a Pillow belong in?</div>
-    <div class="category-group" data-correct="Bedroom">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
+    <div class="q-instruction">
+      Click on a category button to sort each item into the correct category.
+      <button class="tts-btn" onclick="speakText('Click on a category button to sort each item into the correct category.')">🔊</button>
     </div>
-    <div class="q-feedback"></div>
+    <div class="items-grid" id="day2Grid">
+
+      <div class="sort-item" id="d2-0" data-item-id="d2-0" data-correct="Cleaning Supplies">
+        <span class="item-emoji">🧽</span>
+        <div class="item-label">Sponge <button class="tts-btn" onclick="speakText('Sponge')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-0','Cleaning Supplies','Cleaning Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-0','Food Items','Cleaning Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-0','School Supplies','Cleaning Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-0"></div>
+      </div>
+
+      <div class="sort-item" id="d2-1" data-item-id="d2-1" data-correct="Food Items">
+        <span class="item-emoji">🍎</span>
+        <div class="item-label">Apple <button class="tts-btn" onclick="speakText('Apple')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-1','Cleaning Supplies','Food Items')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-1','Food Items','Food Items')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-1','School Supplies','Food Items')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-1"></div>
+      </div>
+
+      <div class="sort-item" id="d2-2" data-item-id="d2-2" data-correct="School Supplies">
+        <span class="item-emoji">✏️</span>
+        <div class="item-label">Pencil <button class="tts-btn" onclick="speakText('Pencil')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-2','Cleaning Supplies','School Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-2','Food Items','School Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-2','School Supplies','School Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-2"></div>
+      </div>
+
+      <div class="sort-item" id="d2-3" data-item-id="d2-3" data-correct="Cleaning Supplies">
+        <span class="item-emoji">🧴</span>
+        <div class="item-label">Bleach <button class="tts-btn" onclick="speakText('Bleach')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-3','Cleaning Supplies','Cleaning Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-3','Food Items','Cleaning Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-3','School Supplies','Cleaning Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-3"></div>
+      </div>
+
+      <div class="sort-item" id="d2-4" data-item-id="d2-4" data-correct="Food Items">
+        <span class="item-emoji">🍞</span>
+        <div class="item-label">Bread <button class="tts-btn" onclick="speakText('Bread')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-4','Cleaning Supplies','Food Items')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-4','Food Items','Food Items')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-4','School Supplies','Food Items')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-4"></div>
+      </div>
+
+      <div class="sort-item" id="d2-5" data-item-id="d2-5" data-correct="School Supplies">
+        <span class="item-emoji">📓</span>
+        <div class="item-label">Notebook <button class="tts-btn" onclick="speakText('Notebook')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-5','Cleaning Supplies','School Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-5','Food Items','School Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-5','School Supplies','School Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-5"></div>
+      </div>
+
+      <div class="sort-item" id="d2-6" data-item-id="d2-6" data-correct="Cleaning Supplies">
+        <span class="item-emoji">🧹</span>
+        <div class="item-label">Mop <button class="tts-btn" onclick="speakText('Mop')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-6','Cleaning Supplies','Cleaning Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-6','Food Items','Cleaning Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-6','School Supplies','Cleaning Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-6"></div>
+      </div>
+
+      <div class="sort-item" id="d2-7" data-item-id="d2-7" data-correct="Food Items">
+        <span class="item-emoji">🥛</span>
+        <div class="item-label">Milk <button class="tts-btn" onclick="speakText('Milk')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-7','Cleaning Supplies','Food Items')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-7','Food Items','Food Items')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-7','School Supplies','Food Items')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-7"></div>
+      </div>
+
+      <div class="sort-item" id="d2-8" data-item-id="d2-8" data-correct="School Supplies">
+        <span class="item-emoji">🗑️</span>
+        <div class="item-label">Eraser <button class="tts-btn" onclick="speakText('Eraser')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-8','Cleaning Supplies','School Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-8','Food Items','School Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-8','School Supplies','School Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-8"></div>
+      </div>
+
+      <div class="sort-item" id="d2-9" data-item-id="d2-9" data-correct="Cleaning Supplies">
+        <span class="item-emoji">🪣</span>
+        <div class="item-label">Broom <button class="tts-btn" onclick="speakText('Broom')">🔊</button></div>
+        <div class="cat-btns">
+          <button class="cat-btn" onclick="sortItem(this,'d2-9','Cleaning Supplies','Cleaning Supplies')">Cleaning Supplies</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-9','Food Items','Cleaning Supplies')">Food Items</button>
+          <button class="cat-btn" onclick="sortItem(this,'d2-9','School Supplies','Cleaning Supplies')">School Supplies</button>
+        </div>
+        <div class="item-result" id="res-d2-9"></div>
+      </div>
+
+    </div>
+    <div class="q-progress">Sorted correctly: <span id="d2Count">0</span> / 10</div>
+  </div>
+</div>
+
+<!-- ======================== DAY 3 ======================== -->
+<div class="day-panel" id="day-2">
+  <div class="day-heading">
+    <h2>Day 3 — Pack a Supply Bag <button class="tts-btn" onclick="speakText('Day 3. Pack a Supply Bag.')">🔊</button></h2>
   </div>
 
-  <!-- Q4 -->
-  <div class="q-card" data-qref="W1Q4" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q4">
-    <div class="q-num">Question 4</div>
-    <div class="item-display">
-      <span class="item-emoji">🍽️</span>
-      <span class="item-label">Dinner Plate</span>
+  <div class="q-card" data-qref="D3Q1" data-goal="S020.12.2" data-points="5" data-answer-type="drag-drop">
+    <div class="q-card-header">
+      <span class="q-goal-badge">S020.12.2</span>
     </div>
-    <div class="q-prompt">Which room does a Dinner Plate belong in?</div>
-    <div class="category-group" data-correct="Kitchen">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
+    <div class="q-instruction">
+      Drag the 5 correct school supplies into the bag. Leave out anything that does not belong.
+      <button class="tts-btn" onclick="speakText('Drag the 5 correct school supplies into the bag. Leave out anything that does not belong.')">🔊</button>
     </div>
-    <div class="q-feedback"></div>
+
+    <div class="shelf" id="day3Shelf">
+      <div class="shelf-label">📦 Available Items <button class="tts-btn" onclick="speakText('Available Items')">🔊</button></div>
+      <div class="shelf-items" id="shelfItems3">
+
+        <div class="drag-item" draggable="true" data-item-name="Pencil" id="drag3-0"
+             ondragstart="dragStart(event,'drag3-0')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">✏️</span>
+          <div class="drag-label">Pencil <button class="tts-btn" onclick="speakText('Pencil');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Notebook" id="drag3-1"
+             ondragstart="dragStart(event,'drag3-1')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">📓</span>
+          <div class="drag-label">Notebook <button class="tts-btn" onclick="speakText('Notebook');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Ruler" id="drag3-2"
+             ondragstart="dragStart(event,'drag3-2')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">📏</span>
+          <div class="drag-label">Ruler <button class="tts-btn" onclick="speakText('Ruler');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Scissors" id="drag3-3"
+             ondragstart="dragStart(event,'drag3-3')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">✂️</span>
+          <div class="drag-label">Scissors <button class="tts-btn" onclick="speakText('Scissors');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Paper Clip" id="drag3-4"
+             ondragstart="dragStart(event,'drag3-4')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">📎</span>
+          <div class="drag-label">Paper Clip <button class="tts-btn" onclick="speakText('Paper Clip');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Apple" id="drag3-5"
+             ondragstart="dragStart(event,'drag3-5')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🍎</span>
+          <div class="drag-label">Apple <button class="tts-btn" onclick="speakText('Apple');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Teddy Bear" id="drag3-6"
+             ondragstart="dragStart(event,'drag3-6')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🧸</span>
+          <div class="drag-label">Teddy Bear <button class="tts-btn" onclick="speakText('Teddy Bear');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Game Controller" id="drag3-7"
+             ondragstart="dragStart(event,'drag3-7')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🎮</span>
+          <div class="drag-label">Game Controller <button class="tts-btn" onclick="speakText('Game Controller');event.stopPropagation()">🔊</button></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="bag-zone" id="bagZone"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="dropIntoBag(event)">
+      <div class="bag-zone-label">🎒 Supply Bag <button class="tts-btn" onclick="speakText('Supply Bag')">🔊</button></div>
+      <div class="bag-count">Items in bag: <span id="bagCount">0</span> / 5</div>
+      <div class="bag-items" id="bagItems"></div>
+      <div class="bag-success" id="bagSuccess">🎉 Bag packed! All 5 supplies are in the bag.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================== DAY 4 ======================== -->
+<div class="day-panel" id="day-3">
+  <div class="day-heading">
+    <h2>Day 4 — Gather &amp; Organize Supplies <button class="tts-btn" onclick="speakText('Day 4. Gather and Organize Supplies.')">🔊</button></h2>
   </div>
 
-  <!-- Q5 -->
-  <div class="q-card" data-qref="W1Q5" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q5">
-    <div class="q-num">Question 5</div>
-    <div class="item-display">
-      <span class="item-emoji">🪥</span>
-      <span class="item-label">Toothbrush</span>
+  <div class="q-card" data-qref="D4Q1" data-goal="S020.12.2;S020.12.4" data-points="12" data-answer-type="drag-drop">
+    <div class="q-card-header">
+      <span class="q-goal-badge">S020.12.2</span>
+      <span class="q-goal-badge">S020.12.4</span>
     </div>
-    <div class="q-prompt">Which room does a Toothbrush belong in?</div>
-    <div class="category-group" data-correct="Bathroom">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
+    <div class="q-instruction">
+      Drag each item to the correct room. Sort all 12 items into Kitchen, Bathroom, or Bedroom.
+      <button class="tts-btn" onclick="speakText('Drag each item to the correct room. Sort all 12 items into Kitchen, Bathroom, or Bedroom.')">🔊</button>
     </div>
-    <div class="q-feedback"></div>
+
+    <div class="shelf" id="day4Shelf">
+      <div class="shelf-label">📦 Items to Sort <button class="tts-btn" onclick="speakText('Items to Sort')">🔊</button></div>
+      <div class="shelf-items" id="shelfItems4">
+
+        <div class="drag-item" draggable="true" data-item-name="Frying Pan" data-correct-room="Kitchen" id="drag4-0"
+             ondragstart="dragStart4(event,'drag4-0')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🍳</span>
+          <div class="drag-label">Frying Pan <button class="tts-btn" onclick="speakText('Frying Pan');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Toothbrush" data-correct-room="Bathroom" id="drag4-1"
+             ondragstart="dragStart4(event,'drag4-1')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🪥</span>
+          <div class="drag-label">Toothbrush <button class="tts-btn" onclick="speakText('Toothbrush');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Pillow" data-correct-room="Bedroom" id="drag4-2"
+             ondragstart="dragStart4(event,'drag4-2')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🛏️</span>
+          <div class="drag-label">Pillow <button class="tts-btn" onclick="speakText('Pillow');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Pot" data-correct-room="Kitchen" id="drag4-3"
+             ondragstart="dragStart4(event,'drag4-3')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🥘</span>
+          <div class="drag-label">Pot <button class="tts-btn" onclick="speakText('Pot');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Shampoo" data-correct-room="Bathroom" id="drag4-4"
+             ondragstart="dragStart4(event,'drag4-4')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🧴</span>
+          <div class="drag-label">Shampoo <button class="tts-btn" onclick="speakText('Shampoo');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Alarm Clock" data-correct-room="Bedroom" id="drag4-5"
+             ondragstart="dragStart4(event,'drag4-5')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">⏰</span>
+          <div class="drag-label">Alarm Clock <button class="tts-btn" onclick="speakText('Alarm Clock');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Cutting Board" data-correct-room="Kitchen" id="drag4-6"
+             ondragstart="dragStart4(event,'drag4-6')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🔪</span>
+          <div class="drag-label">Cutting Board <button class="tts-btn" onclick="speakText('Cutting Board');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Towel" data-correct-room="Bathroom" id="drag4-7"
+             ondragstart="dragStart4(event,'drag4-7')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🛁</span>
+          <div class="drag-label">Towel <button class="tts-btn" onclick="speakText('Towel');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Blanket" data-correct-room="Bedroom" id="drag4-8"
+             ondragstart="dragStart4(event,'drag4-8')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🧣</span>
+          <div class="drag-label">Blanket <button class="tts-btn" onclick="speakText('Blanket');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Spatula" data-correct-room="Kitchen" id="drag4-9"
+             ondragstart="dragStart4(event,'drag4-9')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🥄</span>
+          <div class="drag-label">Spatula <button class="tts-btn" onclick="speakText('Spatula');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Soap" data-correct-room="Bathroom" id="drag4-10"
+             ondragstart="dragStart4(event,'drag4-10')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">🧼</span>
+          <div class="drag-label">Soap <button class="tts-btn" onclick="speakText('Soap');event.stopPropagation()">🔊</button></div>
+        </div>
+
+        <div class="drag-item" draggable="true" data-item-name="Lamp" data-correct-room="Bedroom" id="drag4-11"
+             ondragstart="dragStart4(event,'drag4-11')" ondragend="dragEnd(event)">
+          <span class="drag-emoji">💡</span>
+          <div class="drag-label">Lamp <button class="tts-btn" onclick="speakText('Lamp');event.stopPropagation()">🔊</button></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="zones-grid">
+      <div class="room-zone" data-room="Kitchen"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="dropIntoRoom(event)">
+        <span class="zone-emoji">🍳</span>
+        <div class="zone-title">Kitchen <button class="tts-btn" onclick="speakText('Kitchen')">🔊</button></div>
+        <div class="zone-items" id="zone-Kitchen"></div>
+      </div>
+      <div class="room-zone" data-room="Bathroom"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="dropIntoRoom(event)">
+        <span class="zone-emoji">🛁</span>
+        <div class="zone-title">Bathroom <button class="tts-btn" onclick="speakText('Bathroom')">🔊</button></div>
+        <div class="zone-items" id="zone-Bathroom"></div>
+      </div>
+      <div class="room-zone" data-room="Bedroom"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="dropIntoRoom(event)">
+        <span class="zone-emoji">🛏️</span>
+        <div class="zone-title">Bedroom <button class="tts-btn" onclick="speakText('Bedroom')">🔊</button></div>
+        <div class="zone-items" id="zone-Bedroom"></div>
+      </div>
+    </div>
+
+    <div class="q-progress">Items sorted: <span id="d4Count">0</span> / 12</div>
+    <div class="success-banner" id="d4Success">🎉 All 12 items sorted correctly!</div>
   </div>
+</div>
 
-  <!-- Q6 -->
-  <div class="q-card" data-qref="W1Q6" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q6">
-    <div class="q-num">Question 6</div>
-    <div class="item-display">
-      <span class="item-emoji">🧸</span>
-      <span class="item-label">Stuffed Animal</span>
-    </div>
-    <div class="q-prompt">Which room does a Stuffed Animal belong in?</div>
-    <div class="category-group" data-correct="Bedroom">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
-    </div>
-    <div class="q-feedback"></div>
-  </div>
-
-  <!-- Q7 -->
-  <div class="q-card" data-qref="W1Q7" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q7">
-    <div class="q-num">Question 7</div>
-    <div class="item-display">
-      <span class="item-emoji">🥄</span>
-      <span class="item-label">Wooden Spoon</span>
-    </div>
-    <div class="q-prompt">Which room does a Wooden Spoon belong in?</div>
-    <div class="category-group" data-correct="Kitchen">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
-    </div>
-    <div class="q-feedback"></div>
-  </div>
-
-  <!-- Q8 -->
-  <div class="q-card" data-qref="W1Q8" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q8">
-    <div class="q-num">Question 8</div>
-    <div class="item-display">
-      <span class="item-emoji">🧼</span>
-      <span class="item-label">Bar of Soap</span>
-    </div>
-    <div class="q-prompt">Which room does a Bar of Soap belong in?</div>
-    <div class="category-group" data-correct="Bathroom">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
-    </div>
-    <div class="q-feedback"></div>
-  </div>
-
-  <!-- Q9 -->
-  <div class="q-card" data-qref="W1Q9" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q9">
-    <div class="q-num">Question 9</div>
-    <div class="item-display">
-      <span class="item-emoji">📚</span>
-      <span class="item-label">Book</span>
-    </div>
-    <div class="q-prompt">Which room does a Book belong in?</div>
-    <div class="category-group" data-correct="Bedroom">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
-    </div>
-    <div class="q-feedback"></div>
-  </div>
-
-  <!-- Q10 -->
-  <div class="q-card" data-qref="W1Q10" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q10">
-    <div class="q-num">Question 10</div>
-    <div class="item-display">
-      <span class="item-emoji">🥣</span>
-      <span class="item-label">Mixing Bowl</span>
-    </div>
-    <div class="q-prompt">Which room does a Mixing Bowl belong in?</div>
-    <div class="category-group" data-correct="Kitchen">
-      <button class="cat-btn" type="button">Kitchen</button>
-      <button class="cat-btn" type="button">Bathroom</button>
-      <button class="cat-btn" type="button">Bedroom</button>
-    </div>
-    <div class="q-feedback"></div>
-  </div>
-
-</div><!-- /main-content -->
-
-<!-- ══════════ BOTTOM BAR ══════════ -->
+<!-- Bottom bar -->
 <div class="bottom-bar">
-  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">10</span></div>
-  <div id="save-status" class="save-status"></div>
+  <div class="score-display">Progress: <span id="answeredCount">0</span> / <span id="totalCount">32</span></div>
+  <div class="save-status" id="saveStatus">Saved ✓</div>
   <div class="btn-row">
-    <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
-    <button class="btn btn-submit" type="button" onclick="submitAll()">Submit Assignment</button>
+    <button class="btn btn-save" onclick="autosave()">Save Progress</button>
+    <button class="btn btn-submit" onclick="showConfirm()">Submit Assignment</button>
   </div>
 </div>
 
-<!-- ══════════ CUSTOM CONFIRM DIALOG ══════════ -->
-<div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+<!-- Custom confirm overlay -->
+<div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
-    <p id="confirm-msg">Are you sure you want to submit your assignment? You cannot change your answers after submitting.</p>
+    <p>Are you sure you want to submit?<br>You cannot change your answers after submitting.</p>
     <div class="confirm-btn-row">
-      <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
-      <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
+      <button class="btn btn-save" onclick="hideConfirm()">Cancel</button>
+      <button class="btn btn-submit" onclick="confirmSubmit()">Submit</button>
     </div>
   </div>
 </div>
 
 <script>
-(function () {
+(function() {
   'use strict';
 
-  var TOTAL = 10;
-  document.getElementById('totalCount').textContent = String(TOTAL);
+  /* ── TTS ── */
+  function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
+  window.speakText = speakText;
 
-  /* ── Category-button click handling ── */
-  document.querySelectorAll('.category-group').forEach(function (group) {
-    group.addEventListener('click', function (e) {
-      var btn = e.target.closest('.cat-btn');
-      if (!btn) return;
-      var card = btn.closest('.q-card');
-      var correctAnswer = group.dataset.correct;
+  /* ── Day tabs ── */
+  function showDay(index) {
+    document.querySelectorAll('.day-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.day-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById('day-' + index).classList.add('active');
+    document.querySelectorAll('.day-tab')[index].classList.add('active');
+  }
+  window.showDay = showDay;
 
-      /* Clear previous selection styling */
-      group.querySelectorAll('.cat-btn').forEach(function (b) {
-        b.classList.remove('selected', 'is-correct', 'is-incorrect', 'reveal-answer');
-      });
+  /* ── Sort items (Days 1 & 2) ── */
+  var d1Correct = 0;
+  var d2Correct = 0;
 
-      /* Apply selection */
-      btn.classList.add('selected');
-      var isCorrect = btn.textContent.trim() === correctAnswer;
-      btn.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
+  function sortItem(btn, itemId, chosenRoom, correctRoom) {
+    var card = document.getElementById(itemId);
+    if (!card || card.classList.contains('correct')) return;
+    var resultEl = document.getElementById('res-' + itemId);
+    var allBtns = card.querySelectorAll('.cat-btn');
 
-      /* Update card border */
-      card.classList.toggle('correct', isCorrect);
-      card.classList.toggle('incorrect', !isCorrect);
-
-      /* Feedback text */
-      var fb = card.querySelector('.q-feedback');
-      if (fb) {
-        fb.textContent = isCorrect
-          ? '✓ Correct! It belongs in the ' + correctAnswer + '.'
-          : '✗ Not quite — it belongs in the ' + correctAnswer + '.';
+    if (chosenRoom === correctRoom) {
+      card.classList.remove('incorrect');
+      card.classList.add('correct');
+      allBtns.forEach(function(b) { b.disabled = true; });
+      resultEl.textContent = '✓ Correct!';
+      card.dataset.chosen = chosenRoom;
+      if (itemId.startsWith('d1-')) {
+        d1Correct++;
+        document.getElementById('d1Count').textContent = d1Correct;
+      } else {
+        d2Correct++;
+        document.getElementById('d2Count').textContent = d2Correct;
       }
-
-      /* Reveal correct answer if wrong */
-      if (!isCorrect) {
-        group.querySelectorAll('.cat-btn').forEach(function (b) {
-          if (b.textContent.trim() === correctAnswer) {
-            b.classList.add('reveal-answer');
-          }
-        });
-      }
-
       updateCount();
-    });
-  });
+    } else {
+      card.classList.add('incorrect');
+      resultEl.textContent = 'Try again!';
+      setTimeout(function() {
+        card.classList.remove('incorrect');
+        resultEl.textContent = '';
+      }, 1000);
+    }
+  }
+  window.sortItem = sortItem;
 
-  /* ── Answer collection ── */
+  /* ── Drag-and-drop helpers ── */
+  var draggingId = null;
+
+  function dragStart(event, id) {
+    draggingId = id;
+    event.dataTransfer.setData('text/plain', id);
+    setTimeout(function() {
+      var el = document.getElementById(id);
+      if (el) el.classList.add('dragging');
+    }, 0);
+  }
+  window.dragStart = dragStart;
+
+  function dragStart4(event, id) {
+    draggingId = id;
+    event.dataTransfer.setData('text/plain', id);
+    setTimeout(function() {
+      var el = document.getElementById(id);
+      if (el) el.classList.add('dragging');
+    }, 0);
+  }
+  window.dragStart4 = dragStart4;
+
+  function dragEnd(event) {
+    if (draggingId) {
+      var el = document.getElementById(draggingId);
+      if (el) el.classList.remove('dragging');
+    }
+  }
+  window.dragEnd = dragEnd;
+
+  /* ── Day 3: Bag drop ── */
+  var REQUIRED_DAY3 = ['Pencil', 'Notebook', 'Ruler', 'Scissors', 'Paper Clip'];
+  var bagCount = 0;
+
+  function dropItemIntoZone(item, zone) {
+    var itemName = item.dataset.itemName;
+    var isRequired = REQUIRED_DAY3.indexOf(itemName) !== -1;
+    if (!isRequired) {
+      item.classList.add('bounce');
+      setTimeout(function() { item.classList.remove('bounce'); }, 600);
+      return;
+    }
+    item.classList.add('placed');
+    var chip = document.createElement('div');
+    chip.className = 'bag-chip';
+    chip.innerHTML = item.querySelector('.drag-emoji').textContent + ' ' + itemName;
+    zone.querySelector('#bagItems').appendChild(chip);
+    bagCount++;
+    document.getElementById('bagCount').textContent = bagCount;
+    updateCount();
+    if (bagCount >= 5) {
+      document.getElementById('bagSuccess').style.display = 'block';
+    }
+  }
+
+  function dropIntoBag(event) {
+    event.preventDefault();
+    var zone = document.getElementById('bagZone');
+    zone.classList.remove('drag-over');
+    var id = event.dataTransfer.getData('text/plain');
+    var item = document.getElementById(id);
+    if (!item || item.classList.contains('placed')) return;
+    dropItemIntoZone(item, zone);
+  }
+  window.dropIntoBag = dropIntoBag;
+
+  /* ── Day 4: Room drop ── */
+  var d4Correct = 0;
+
+  function dropIntoRoom(event) {
+    event.preventDefault();
+    var zone = event.currentTarget;
+    zone.classList.remove('drag-over');
+    var id = event.dataTransfer.getData('text/plain');
+    var item = document.getElementById(id);
+    if (!item || item.classList.contains('placed')) return;
+
+    var itemName = item.dataset.itemName;
+    var correctRoom = item.dataset.correctRoom;
+    var droppedRoom = zone.dataset.room;
+    var itemsContainer = zone.querySelector('.zone-items');
+
+    var chip = document.createElement('div');
+    chip.className = 'zone-chip';
+    chip.dataset.itemName = itemName;
+    chip.textContent = item.querySelector('.drag-emoji').textContent + ' ' + itemName;
+
+    if (droppedRoom === correctRoom) {
+      item.classList.add('placed');
+      itemsContainer.appendChild(chip);
+      d4Correct++;
+      document.getElementById('d4Count').textContent = d4Correct;
+      updateCount();
+      if (d4Correct >= 12) {
+        document.getElementById('d4Success').style.display = 'block';
+      }
+    } else {
+      chip.classList.add('wrong');
+      itemsContainer.appendChild(chip);
+      setTimeout(function() {
+        if (chip.parentNode) chip.parentNode.removeChild(chip);
+      }, 1500);
+    }
+  }
+  window.dropIntoRoom = dropIntoRoom;
+
+  /* ── Touch drag for Day 3 ── */
+  var touchDragItem = null;
+  var touchClone = null;
+
+  function initTouchDrag3() {
+    document.querySelectorAll('#shelfItems3 .drag-item').forEach(function(item) {
+      item.addEventListener('touchstart', function(e) {
+        if (item.classList.contains('placed')) return;
+        touchDragItem = item;
+        item.classList.add('lifting');
+        var touch = e.touches[0];
+        touchClone = item.cloneNode(true);
+        touchClone.style.cssText = 'position:fixed;top:' + (touch.clientY - 40) + 'px;left:' + (touch.clientX - 45) + 'px;width:90px;opacity:0.85;pointer-events:none;z-index:9999;transform:scale(1.1);';
+        document.body.appendChild(touchClone);
+        e.preventDefault();
+      }, {passive: false});
+
+      item.addEventListener('touchmove', function(e) {
+        if (!touchClone) return;
+        var touch = e.touches[0];
+        touchClone.style.top = (touch.clientY - 40) + 'px';
+        touchClone.style.left = (touch.clientX - 45) + 'px';
+        e.preventDefault();
+      }, {passive: false});
+
+      item.addEventListener('touchend', function(e) {
+        if (!touchDragItem || !touchClone) return;
+        touchDragItem.classList.remove('lifting');
+        document.body.removeChild(touchClone);
+        touchClone = null;
+        var touch = e.changedTouches[0];
+        var el = document.elementFromPoint(touch.clientX, touch.clientY);
+        var zone = el ? el.closest('.bag-zone') : null;
+        if (zone) {
+          dropItemIntoZone(touchDragItem, zone);
+        }
+        touchDragItem = null;
+        e.preventDefault();
+      }, {passive: false});
+    });
+  }
+
+  /* ── Touch drag for Day 4 ── */
+  var touchDragItem4 = null;
+  var touchClone4 = null;
+
+  function initTouchDrag4() {
+    document.querySelectorAll('#shelfItems4 .drag-item').forEach(function(item) {
+      item.addEventListener('touchstart', function(e) {
+        if (item.classList.contains('placed')) return;
+        touchDragItem4 = item;
+        item.classList.add('lifting');
+        var touch = e.touches[0];
+        touchClone4 = item.cloneNode(true);
+        touchClone4.style.cssText = 'position:fixed;top:' + (touch.clientY - 40) + 'px;left:' + (touch.clientX - 45) + 'px;width:90px;opacity:0.85;pointer-events:none;z-index:9999;transform:scale(1.1);';
+        document.body.appendChild(touchClone4);
+        e.preventDefault();
+      }, {passive: false});
+
+      item.addEventListener('touchmove', function(e) {
+        if (!touchClone4) return;
+        var touch = e.touches[0];
+        touchClone4.style.top = (touch.clientY - 40) + 'px';
+        touchClone4.style.left = (touch.clientX - 45) + 'px';
+        e.preventDefault();
+      }, {passive: false});
+
+      item.addEventListener('touchend', function(e) {
+        if (!touchDragItem4 || !touchClone4) return;
+        touchDragItem4.classList.remove('lifting');
+        document.body.removeChild(touchClone4);
+        touchClone4 = null;
+        var touch = e.changedTouches[0];
+        var el = document.elementFromPoint(touch.clientX, touch.clientY);
+        var zone = el ? el.closest('.room-zone') : null;
+        if (zone) {
+          var fakeEvent = { currentTarget: zone, preventDefault: function() {} };
+          /* inline drop logic for touch */
+          var itemName4 = touchDragItem4.dataset.itemName;
+          var correctRoom4 = touchDragItem4.dataset.correctRoom;
+          var droppedRoom4 = zone.dataset.room;
+          var itemsContainer4 = zone.querySelector('.zone-items');
+
+          var chip4 = document.createElement('div');
+          chip4.className = 'zone-chip';
+          chip4.dataset.itemName = itemName4;
+          chip4.textContent = touchDragItem4.querySelector('.drag-emoji').textContent + ' ' + itemName4;
+
+          if (droppedRoom4 === correctRoom4) {
+            touchDragItem4.classList.add('placed');
+            itemsContainer4.appendChild(chip4);
+            d4Correct++;
+            document.getElementById('d4Count').textContent = d4Correct;
+            updateCount();
+            if (d4Correct >= 12) {
+              document.getElementById('d4Success').style.display = 'block';
+            }
+          } else {
+            chip4.classList.add('wrong');
+            itemsContainer4.appendChild(chip4);
+            var item4ref = touchDragItem4;
+            setTimeout(function() {
+              if (chip4.parentNode) chip4.parentNode.removeChild(chip4);
+            }, 1500);
+          }
+        }
+        touchDragItem4 = null;
+        e.preventDefault();
+      }, {passive: false});
+    });
+  }
+
+  /* ── Progress count ── */
+  function updateCount() {
+    var total = d1Correct + d2Correct + bagCount + d4Correct;
+    document.getElementById('answeredCount').textContent = total;
+  }
+  window.updateCount = updateCount;
+
+  /* ── Collect answers ── */
   function getAnswers() {
     var answers = {};
-    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
-      var qref = card.dataset.qref;
-      var sel = card.querySelector('.cat-btn.selected');
-      if (sel) answers[qref] = sel.textContent.trim();
+    document.querySelectorAll('.sort-item[data-item-id]').forEach(function(el) {
+      if (el.dataset.chosen) answers[el.dataset.itemId] = el.dataset.chosen;
+    });
+    var bagItemsList = [];
+    document.querySelectorAll('#bagItems .bag-chip').forEach(function(chip) {
+      bagItemsList.push(chip.textContent.trim());
+    });
+    if (bagItemsList.length > 0) answers['D3_bag'] = bagItemsList.join(',');
+    document.querySelectorAll('.room-zone').forEach(function(zone) {
+      var room = zone.dataset.room;
+      var items = [];
+      zone.querySelectorAll('.zone-chip:not(.wrong)').forEach(function(chip) {
+        items.push(chip.dataset.itemName);
+      });
+      if (items.length > 0) answers['D4_' + room] = items.join(',');
     });
     return answers;
   }
 
-  /* ── Answered count ── */
-  function updateCount() {
-    var filled = 0;
-    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
-      if (card.querySelector('.cat-btn.selected')) filled++;
-    });
-    var el = document.getElementById('answeredCount');
-    if (el) el.textContent = String(filled);
-  }
-
-  /* ── Status toast ── */
-  function showStatus(msg, color) {
-    var el = document.getElementById('save-status');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = color || '#22c55e';
-    el.style.opacity = '1';
-    clearTimeout(el._t);
-    el._t = setTimeout(function () { el.style.opacity = '0'; }, 2500);
-  }
-
-  /* ── Save / Submit ── */
+  /* ── Autosave ── */
   function autosave() {
     var answers = getAnswers();
-    window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
-    showStatus('Progress saved!', '#22c55e');
+    window.parent.postMessage({type: 'rc-assignment-autosave', answers: answers}, '*');
+    var ss = document.getElementById('saveStatus');
+    if (ss) {
+      ss.style.opacity = '1';
+      setTimeout(function() { ss.style.opacity = '0'; }, 2000);
+    }
   }
-
-  function submitAll() {
-    document.getElementById('confirm-overlay').classList.add('show');
-  }
-
-  function cancelSubmit() {
-    document.getElementById('confirm-overlay').classList.remove('show');
-  }
-
-  function confirmSubmit() {
-    document.getElementById('confirm-overlay').classList.remove('show');
-    var answers = getAnswers();
-    window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
-  }
-
-  /* Expose for inline onclick */
   window.autosave = autosave;
-  window.submitAll = submitAll;
-  window.cancelSubmit = cancelSubmit;
+
+  /* ── Confirm overlay ── */
+  function showConfirm() {
+    document.getElementById('confirmOverlay').classList.add('visible');
+  }
+  function hideConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('visible');
+  }
+  function confirmSubmit() {
+    hideConfirm();
+    var answers = getAnswers();
+    window.parent.postMessage({type: 'rc-assignment-submit', answers: answers}, '*');
+  }
+  window.showConfirm = showConfirm;
+  window.hideConfirm = hideConfirm;
   window.confirmSubmit = confirmSubmit;
 
-  updateCount();
+  /* ── Init ── */
+  initTouchDrag3();
+  initTouchDrag4();
+
 }());
 </script>
 </body>
