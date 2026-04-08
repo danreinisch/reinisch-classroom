@@ -14,6 +14,7 @@ const {
 const { requireTeacher } = require('./_lib/auth');
 const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
 const { buildItemsFromMeta } = require('./_lib/build-items');
+const { parseHtmlAssignment } = require('./_lib/parse-html-assignment');
 
 // Class name aliases for backward compatibility with old drafts
 const CLASS_ALIASES = {
@@ -911,10 +912,12 @@ exports.handler = async (event) => {
 
       if (isHtmlFile) {
         // For HTML files, store the raw HTML so the student portal can render it
-        // in a sandboxed iframe via srcdoc.  Structured text parsing is skipped
-        // because DOMParser is not available server-side.
-        parsedMeta = { html_src: draft.assignment.text };
-        console.log(`[teacher-issue-draft] [${requestId}] HTML file detected — storing html_src in meta (${draft.assignment.text.length} chars)`);
+        // in a sandboxed iframe via srcdoc.  Use the regex-based parser to extract
+        // questions, goal codes, and correct answers from data-* attributes so that
+        // buildItemsFromMeta() Path B can create assignment_items rows.
+        const parsed = parseHtmlAssignment(draft.assignment.text);
+        parsedMeta = { html_src: draft.assignment.text, questions: parsed.questions };
+        console.log(`[teacher-issue-draft] [${requestId}] HTML file detected — parsed ${parsed.questions.length} question(s) from data-qref attributes (${draft.assignment.text.length} chars)`);
       } else {
         parsedMeta = parseTxtToMeta(
           draft.assignment.text,

@@ -749,29 +749,10 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       if (!btn) return;
       var card = btn.closest('.q-card');
       if (!card) return;
-      if (card.classList.contains('correct') || card.classList.contains('incorrect')) return;
 
       var allOpts = group.querySelectorAll('.opt-btn');
-      allOpts.forEach(function (o) { o.classList.remove('selected', 'is-correct', 'is-incorrect'); });
-
+      allOpts.forEach(function (o) { o.classList.remove('selected'); });
       btn.classList.add('selected');
-      var isCorrect = btn.hasAttribute('data-correct');
-
-      if (isCorrect) {
-        btn.classList.add('is-correct');
-        card.classList.add('correct');
-      } else {
-        btn.classList.add('is-incorrect');
-        card.classList.add('incorrect');
-        allOpts.forEach(function (o) {
-          if (o.hasAttribute('data-correct')) o.classList.add('reveal-answer');
-        });
-      }
-
-      var fb = card.querySelector('.q-feedback');
-      if (fb) {
-        fb.textContent = isCorrect ? '\u2713 Correct!' : '\u2717 Not quite \u2014 the correct answer is highlighted.';
-      }
       updateAnsweredCount();
     });
   });
@@ -784,7 +765,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   function updateAnsweredCount() {
     var answered = 0;
     document.querySelectorAll('.q-card[data-answer-type="multiple-choice"]').forEach(function (card) {
-      if (card.classList.contains('correct') || card.classList.contains('incorrect')) answered++;
+      if (card.querySelector('.opt-btn.selected')) answered++;
     });
     document.querySelectorAll('.q-input').forEach(function (ta) {
       if (ta.value.trim().length > 0) answered++;
