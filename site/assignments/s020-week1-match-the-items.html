@@ -508,7 +508,7 @@
 
 <!-- BOTTOM BAR -->
 <div class="bottom-bar">
-  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">20</span></div>
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">37</span></div>
   <div id="save-status" class="save-status"></div>
   <div class="btn-row">
     <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
@@ -867,9 +867,14 @@ function getAnswers() {
 // ===== ANSWERED COUNT =====
 function updateAnsweredCount() {
   var count = 0;
+  // Days 1–2: count selected category-button questions
   document.querySelectorAll('.q-card[data-qref]').forEach(function(card) {
     if (card.querySelector('.cat-btn.selected')) { count++; }
   });
+  // Day 3: count items packed into the bag
+  count += document.querySelectorAll('#drop-zone-d3 .bag-chip').length;
+  // Day 4: count items placed into room zones
+  count += document.querySelectorAll('.zone-chips .bag-chip').length;
   document.getElementById('answeredCount').textContent = count;
 }
 

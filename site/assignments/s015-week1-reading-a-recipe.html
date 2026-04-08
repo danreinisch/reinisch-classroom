@@ -501,7 +501,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   /* MCQ Click Handling */
   document.querySelectorAll('.options-group').forEach(function (group) {
     group.addEventListener('click', function (e) {
-      if (e.target.classList.contains('tts-btn') || e.target.closest('.tts-btn')) return;
+      if (e.target.closest('.tts-btn')) return;
       var btn = e.target.closest('.opt-btn');
       if (!btn) return;
       var card = btn.closest('.q-card');
