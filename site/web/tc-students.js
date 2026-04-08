@@ -8,7 +8,7 @@
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
-  const { parseGoalValue } = await import('/web/goal-utils.js');
+  const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
   const { getSchedule } = await import('/web/class-schedule.js');
   const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
 
@@ -781,6 +781,7 @@
   let isSyncing = false;
   let sortBy = 'code'; // 'code', 'goals', 'iep_due', 'eval_due'
   let selectedDetailTabMap = new Map(); // Map<studentCode, tabName> - Per-student tab state
+  let selectedProgressQuarterMap = new Map(); // Map<studentCode, quarter> - Per-student progress tab quarter
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
@@ -1384,6 +1385,8 @@
     let tabContent = '';
     if (selectedDetailTab === 'goals') {
       tabContent = await renderStudentGoalsTab(student, studentGoals);
+    } else if (selectedDetailTab === 'progress') {
+      tabContent = renderStudentProgressTab(student, studentGoals);
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
     } else if (selectedDetailTab === 'skills') {
@@ -1449,6 +1452,7 @@
     tabsDiv.className = 'st-tabs';
     tabsDiv.innerHTML = `
       <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
+      <button class="st-tab ${selectedDetailTab === 'progress' ? 'active' : ''}" data-tab="progress">Progress</button>
       <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
       <button class="st-tab ${selectedDetailTab === 'skills' ? 'active' : ''}" data-tab="skills">Skills Summary</button>
       <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
@@ -1469,6 +1473,11 @@
     // After the goals tab is rendered, batch-fetch data points to show accurate counts
     if (selectedDetailTab === 'goals') {
       batchUpdateGoalDataCounts(contentDiv, studentGoals).catch(() => {});
+    }
+
+    // Wire up progress tab event handlers
+    if (selectedDetailTab === 'progress') {
+      initProgressTabHandlers(contentDiv, student);
     }
 
     // Wire up the AI Commentary button for the skills tab
@@ -1537,6 +1546,666 @@
       </div>
     `;
   }
+
+  // ── Progress Tab ────────────────────────────────────────────────────────────
+
+  /** Return a color CSS class based on a numeric percentage score. */
+  function scoreColorClass(score) {
+    if (score == null || isNaN(score)) return '';
+    if (score >= 80) return 'dt-score-green';
+    if (score >= 60) return 'dt-score-amber';
+    return 'dt-score-red';
+  }
+
+  /** Format today (or a given Date) as YYYY-MM-DD for use in date inputs. */
+  function formatProgressDate(date = new Date()) {
+    return date.toISOString().split('T')[0];
+  }
+
+  /**
+   * Return progress entries for a goal filtered by quarter.
+   * Uses the per-student quarter from selectedProgressQuarterMap (default: current quarter).
+   */
+  function getGoalProgressEntriesForTab(goalCode, studentCode, quarter) {
+    const all = getProgressForGoal(studentCode, goalCode);
+    if (!quarter) return [...all].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const range = getQuarterDateRange(quarter);
+    if (!range) return [...all].sort((a, b) => new Date(a.date) - new Date(b.date));
+    return all.filter(p => {
+      const d = new Date(p.date);
+      return d >= range.start && d <= range.end;
+    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }
+
+  /** Calculate rolling average for a goal in the specified quarter. */
+  function calculateGoalAverageForTab(goalCode, studentCode, quarter) {
+    const entries = getGoalProgressEntriesForTab(goalCode, studentCode, quarter)
+      .filter(p => p.value != null);
+    if (entries.length === 0) return null;
+    const sum = entries.reduce((acc, e) => acc + parseFloat(e.value), 0);
+    return Math.round(sum / entries.length);
+  }
+
+  /** Render SVG sparkline for a goal's progress entries. */
+  function renderProgressSparkline(goal, studentCode, quarter) {
+    const entries = getGoalProgressEntriesForTab(goal.code, studentCode, quarter);
+    if (entries.length < 2) return '';
+
+    const width = 200, height = 40, padding = 4;
+    const values = entries.map(e => parseFloat(e.value));
+    const max = Math.max(...values, 100);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+    const stepX = (width - 2 * padding) / (values.length - 1);
+
+    let points = '';
+    let circles = '';
+    values.forEach((val, i) => {
+      const x = padding + i * stepX;
+      const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+      points += `${x},${y} `;
+      circles += `<circle cx="${x}" cy="${y}" r="2" fill="rgba(34,197,94,0.9)" />`;
+    });
+
+    const firstX = padding;
+    const lastX = padding + (values.length - 1) * stepX;
+    const bottomY = height - padding;
+    const polygonPoints = points + `${lastX},${bottomY} ${firstX},${bottomY}`;
+    const safeId = `sparkGradient-st-${goal.code.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+
+    return `
+      <div class="dt-sparkline">
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+          <defs>
+            <linearGradient id="${safeId}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:rgba(34,197,94,0.2);stop-opacity:1" />
+              <stop offset="100%" style="stop-color:rgba(34,197,94,0.02);stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <polygon points="${polygonPoints.trim()}" fill="url(#${safeId})" />
+          <polyline points="${points.trim()}" fill="none" stroke="rgba(34,197,94,0.8)"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          ${circles}
+        </svg>
+      </div>`;
+  }
+
+  /** Render SVG trend chart for observation goals. */
+  function renderProgressObsTrendChart(goal, studentCode, quarter) {
+    const entries = getGoalProgressEntriesForTab(goal.code, studentCode, quarter);
+    if (entries.length < 2) return '';
+    const obsConfig = goal.observation_config || {};
+    const category = obsConfig.category || '';
+    const VALID = ['session_outcome', 'tally', 'prompt_count', 'behavior_checklist'];
+    if (!VALID.includes(category)) return '';
+
+    const recent = entries.slice(-20);
+    const n = recent.length;
+    const W = 400, H = 120;
+    const padL = 32, padR = 8, padT = 8, padB = 24;
+    const cW = W - padL - padR;
+    const cH = H - padT - padB;
+
+    const iToX = (i) => padL + (n === 1 ? cW / 2 : (i / (n - 1)) * cW);
+    const vToY = (v, maxV = 100) => padT + (1 - Math.min(maxV, Math.max(0, v)) / maxV) * cH;
+
+    const xLbls = recent.map((e, i) => {
+      if (i !== 0 && i % 5 !== 0 && i !== n - 1) return '';
+      const x = iToX(i).toFixed(1);
+      const lbl = new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `<text x="${x}" y="${H - 4}" fill="rgba(255,255,255,0.4)" font-size="8" text-anchor="middle">${lbl}</text>`;
+    }).join('');
+
+    const makeGrid = (steps, maxV = 100, fmt = (v) => `${v}%`) => steps.map(v => {
+      const y = vToY(v, maxV).toFixed(1);
+      return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>` +
+        `<text x="${padL - 3}" y="${(parseFloat(y) + 3.5).toFixed(1)}" fill="rgba(255,255,255,0.35)" font-size="8" text-anchor="end">${fmt(v)}</text>`;
+    }).join('');
+
+    const makeDash = (y, label, color = 'rgba(255,255,255,0.4)') =>
+      `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4"/>` +
+      `<text x="${W - padR - 2}" y="${(y - 3).toFixed(1)}" fill="${color}" font-size="7" text-anchor="end">${label}</text>`;
+
+    let grid = makeGrid([0, 25, 50, 75, 100]);
+    let tLine = '';
+    let body = '';
+
+    if (category === 'session_outcome') {
+      const winSize = obsConfig.target_window || 5;
+      const pts = recent.map((e, i) => {
+        const win = recent.slice(Math.max(0, i - winSize + 1), i + 1);
+        const met = win.filter(w => { const p = parseObservationNotes(w.notes); return p && p.rawData === 'met'; }).length;
+        const valid = win.filter(w => { const p = parseObservationNotes(w.notes); return p && p.rawData !== 'not_applicable'; }).length;
+        const rate = valid > 0 ? (met / valid) * 100 : 0;
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        return { x: iToX(i), y: vToY(rate), title: `${d}: ${rate.toFixed(0)}% (${met}/${valid} met)` };
+      });
+      if (obsConfig.target_met != null && obsConfig.target_window) {
+        tLine = makeDash(vToY((obsConfig.target_met / obsConfig.target_window) * 100), `Target ${obsConfig.target_met}/${obsConfig.target_window}`);
+      }
+      const polyPts = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const botY = (padT + cH).toFixed(1);
+      const fillPts = `${polyPts} ${pts[n - 1].x.toFixed(1)},${botY} ${pts[0].x.toFixed(1)},${botY}`;
+      const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#22c55e"><title>${p.title}</title></circle>`).join('');
+      body = `<polygon points="${fillPts}" fill="rgba(34,197,94,0.1)"/>` +
+        `<polyline points="${polyPts}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` + dots;
+    } else if (category === 'tally') {
+      const pts = recent.map((e, i) => {
+        const rate = e.value != null ? parseFloat(e.value) : 0;
+        const p = parseObservationNotes(e.notes);
+        const raw = p ? p.rawData : '';
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        return { x: iToX(i), y: vToY(rate), title: `${d}: ${rate.toFixed(0)}% (${raw})` };
+      });
+      const mastNum = parseFloat(goal.mastery || goal.target);
+      if (!isNaN(mastNum) && mastNum > 0 && mastNum <= 100) {
+        tLine = makeDash(vToY(mastNum), `Target ${mastNum}%`);
+      }
+      const polyPts = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const botY = (padT + cH).toFixed(1);
+      const fillPts = `${polyPts} ${pts[n - 1].x.toFixed(1)},${botY} ${pts[0].x.toFixed(1)},${botY}`;
+      const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#3b82f6"><title>${p.title}</title></circle>`).join('');
+      body = `<polygon points="${fillPts}" fill="rgba(59,130,246,0.1)"/>` +
+        `<polyline points="${polyPts}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` + dots;
+    } else if (category === 'prompt_count') {
+      const rawCounts = recent.map(e => {
+        const p = parseObservationNotes(e.notes);
+        if (p && p.category === 'prompt_count') {
+          const c = parseFloat(p.rawData);
+          return isNaN(c) ? (e.value != null ? parseFloat(e.value) : 0) : c;
+        }
+        return e.value != null ? parseFloat(e.value) : 0;
+      });
+      const tMax = obsConfig.target_max_prompts != null ? obsConfig.target_max_prompts : null;
+      const maxVal = Math.max(...rawCounts, tMax != null ? tMax : 0, 1);
+      const scale = maxVal * 1.25;
+      const gridStep = Math.max(1, Math.ceil(scale / 4));
+      const gridSteps = [...new Set([0, gridStep, gridStep * 2, gridStep * 3, Math.ceil(scale)])];
+      grid = makeGrid(gridSteps, scale, v => String(v));
+      const pts = recent.map((e, i) => {
+        const count = rawCounts[i];
+        const isGood = tMax == null || count <= tMax;
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        return { x: iToX(i), y: vToY(count, scale), title: `${d}: ${count} prompt${count !== 1 ? 's' : ''}${tMax != null ? ` (target ≤${tMax})` : ''}`, dotColor: isGood ? '#22c55e' : '#ef4444' };
+      });
+      if (tMax != null) tLine = makeDash(vToY(tMax, scale), `Target ≤${tMax}`, '#22c55e');
+      const polyPts = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const botY = (padT + cH).toFixed(1);
+      const fillPts = `${polyPts} ${pts[n - 1].x.toFixed(1)},${botY} ${pts[0].x.toFixed(1)},${botY}`;
+      const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${p.dotColor}"><title>${p.title}</title></circle>`).join('');
+      body = `<polygon points="${fillPts}" fill="rgba(59,130,246,0.08)"/>` +
+        `<polyline points="${polyPts}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` + dots;
+    } else if (category === 'behavior_checklist') {
+      const totalBehaviors = (obsConfig.sub_behaviors || []).length || 1;
+      const barW = Math.max(4, Math.min(18, cW / n - 2));
+      body = recent.map((e, i) => {
+        const p = parseObservationNotes(e.notes);
+        let met = 0, notMet = 0;
+        if (p && p.category === 'checklist' && p.rawData !== 'not_addressed') {
+          const items = p.rawData ? p.rawData.split(',') : [];
+          met = items.filter(it => it.includes('=met')).length;
+          notMet = items.length - met;
+        }
+        const bx = (iToX(i) - barW / 2).toFixed(1);
+        const metH = Math.max(0, (met / totalBehaviors) * cH);
+        const notMetH = Math.max(0, (notMet / totalBehaviors) * cH);
+        const metYv = (padT + cH - metH).toFixed(1);
+        const notMetYv = (padT + cH - metH - notMetH).toFixed(1);
+        const d = new Date(e.date + 'T00:00:00').toLocaleDateString();
+        const total = met + notMet || totalBehaviors;
+        const ttl = `${d}: ${met}/${total} behaviors met`;
+        return `<rect x="${bx}" y="${notMetYv}" width="${barW}" height="${notMetH.toFixed(1)}" fill="#ef4444" opacity="0.8"><title>${ttl}</title></rect>` +
+          `<rect x="${bx}" y="${metYv}" width="${barW}" height="${metH.toFixed(1)}" fill="#22c55e" opacity="0.8"><title>${ttl}</title></rect>`;
+      }).join('');
+    }
+
+    return `<div class="obs-chart-container"><svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${grid}${xLbls}${tLine}${body}</svg></div>`;
+  }
+
+  /** Render the data-points table for a goal in the Progress tab. */
+  function renderProgressDataPointsTable(goal, studentCode, quarter) {
+    const entries = getGoalProgressEntriesForTab(goal.code, studentCode, quarter);
+    const isObs = goal.measurement_type === 'Observation';
+
+    if (entries.length === 0) {
+      if (isObs) {
+        return `<div style="padding:10px;font-size:13px;color:#6b7280;">No observation data recorded for this quarter.</div>`;
+      }
+      return `<div style="padding:10px;opacity:0.7;font-size:13px;">No data points recorded for this quarter.</div>`;
+    }
+
+    const rows = entries.map(entry => {
+      const scoreClass = isObs ? '' : scoreColorClass(entry.value);
+      const displayValue = isObs
+        ? formatObservationValue(entry, goal)
+        : formatGoalValue(parseFloat(entry.value), goal.measurement_type, goal);
+      const safeEntryId = String(entry.id || '').replace(/"/g, '&quot;');
+      const safeGoalCode = String(goal.code).replace(/"/g, '&quot;');
+      const safeStudentCode = String(studentCode).replace(/"/g, '&quot;');
+      return `
+        <tr>
+          <td>${new Date(entry.date + 'T00:00:00').toLocaleDateString()}</td>
+          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${safeEntryId}" data-goal="${safeGoalCode}" data-student="${safeStudentCode}" data-value="${entry.value != null ? entry.value : ''}">${escapeHtml(displayValue)}</td>
+          <td>${escapeHtml(entry.source || 'manual')}</td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div class="dt-data-grid">
+        <table class="dt-data-table">
+          <thead><tr><th>Date</th><th>Value</th><th>Source</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  /** Render the stats row (Baseline · Mastery · Target · Current · Rolling Avg · Delta · Trend). */
+  function renderProgressGoalStats(goal, studentCode, quarter) {
+    const entries = getGoalProgressEntriesForTab(goal.code, studentCode, quarter);
+    const avg = calculateGoalAverageForTab(goal.code, studentCode, quarter);
+    const isObs = goal.measurement_type === 'Observation';
+
+    if (isObs) {
+      const obsConfig = goal.observation_config || {};
+      const category = obsConfig.category || '';
+      const numericEntries = entries.filter(e => e.value != null);
+      let currentDisplay = 'N/A', avgDisplay = 'N/A', avgClass = '';
+
+      if (category === 'session_outcome') {
+        const recentWindow = entries.slice(-5);
+        const metCount = recentWindow.filter(e => { const p = parseObservationNotes(e.notes); return p && p.category === 'session_outcome' && p.rawData === 'met'; }).length;
+        const targetMet = obsConfig.target_met ?? 3;
+        const targetWindow = obsConfig.target_window || 5;
+        currentDisplay = `${metCount} of ${recentWindow.length} met`;
+        avgDisplay = `Target: ${targetMet}/${targetWindow}`;
+        avgClass = metCount >= targetMet ? 'dt-score-green' : metCount >= targetMet - 1 ? 'dt-score-amber' : 'dt-score-red';
+      } else if (category === 'prompt_count') {
+        const avgPc = numericEntries.length > 0 ? numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length : null;
+        currentDisplay = entries.length > 0 ? formatObservationValue(entries[entries.length - 1], goal) : 'N/A';
+        avgDisplay = avgPc !== null ? `avg ${Math.round(avgPc * 10) / 10} prompts` : 'N/A';
+      } else {
+        const obsAvg = numericEntries.length > 0 ? numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length : null;
+        currentDisplay = entries.length > 0 ? formatObservationValue(entries[entries.length - 1], goal) : 'N/A';
+        avgDisplay = obsAvg !== null ? `${Math.round(obsAvg * 10) / 10}%` : 'N/A';
+        avgClass = obsAvg != null ? scoreColorClass(obsAvg) : '';
+      }
+
+      return `<div class="dt-stats">
+        <span>Current: <strong>${escapeHtml(currentDisplay)}</strong></span>
+        <span class="${avgClass}">Rolling Avg: <strong>${escapeHtml(avgDisplay)}</strong></span>
+      </div>`;
+    }
+
+    const baseline = goal.baseline != null ? goal.baseline : 'N/A';
+    const mastery  = goal.mastery  != null ? goal.mastery  : (goal.target != null ? goal.target : 'N/A');
+    const target   = goal.target   != null ? goal.target   : 'N/A';
+    const current  = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
+    const baselineNum = parseGoalValue(goal.baseline) ?? 0;
+    const delta = current != null ? current - baselineNum : null;
+
+    let trend = '→';
+    if (entries.length >= 2) {
+      const firstHalf  = entries.slice(0, Math.floor(entries.length / 2));
+      const secondHalf = entries.slice(Math.floor(entries.length / 2));
+      const firstAvg   = firstHalf.reduce((acc, e)  => acc + parseFloat(e.value), 0) / firstHalf.length;
+      const secondAvg  = secondHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / secondHalf.length;
+      if (secondAvg > firstAvg + 5)      trend = '↗';
+      else if (secondAvg < firstAvg - 5) trend = '↘';
+    }
+
+    const avgClass = avg != null ? scoreColorClass(avg) : '';
+    const currentClass = current != null ? scoreColorClass(current) : '';
+
+    return `<div class="dt-stats">
+      <span>Baseline: <strong>${escapeHtml(String(baseline))}</strong></span>
+      <span>Mastery: <strong>${escapeHtml(String(mastery))}</strong></span>
+      <span>Target: <strong>${escapeHtml(String(target))}</strong></span>
+      <span class="${currentClass}">Current: <strong>${current != null ? escapeHtml(formatGoalValue(current, goal.measurement_type, goal)) : 'N/A'}</strong></span>
+      <span class="${avgClass}">Rolling Avg: <strong>${avg != null ? escapeHtml(formatGoalValue(avg, goal.measurement_type, goal)) : 'N/A'}</strong></span>
+      ${delta != null ? `<span>Delta: <strong>${delta >= 0 ? '+' : ''}${escapeHtml(String(Math.round(delta * 10) / 10))}</strong></span>` : ''}
+      <span>Trend: <strong>${trend}</strong></span>
+    </div>`;
+  }
+
+  /** Render a single goal row inside the Progress tab. */
+  function renderProgressGoalRow(goal, studentCode, quarter) {
+    const isObs = goal.measurement_type === 'Observation';
+    const safeGoalCode   = String(goal.code).replace(/"/g, '&quot;');
+    const safeStudentCode = String(studentCode).replace(/"/g, '&quot;');
+    const safeMt = goal.measurement_type || '';
+    const safeArea = goal.goal_area || 'Uncategorized';
+    const obsConfig = goal.observation_config || {};
+    const categoryLabels = {
+      session_outcome:    'Session Outcome',
+      tally:              'Tally',
+      prompt_count:       'Prompt Count',
+      behavior_checklist: 'Behavior Checklist',
+    };
+
+    let metaBadges = `<span class="dt-badge dt-badge-area">${escapeHtml(safeArea)}</span>`;
+    metaBadges += ` <span class="dt-badge dt-badge-mtype">${escapeHtml(safeMt)}</span>`;
+    if (isObs && obsConfig.category) {
+      metaBadges += ` <span class="dt-badge dt-badge-obs">${escapeHtml(categoryLabels[obsConfig.category] || obsConfig.category)}</span>`;
+    }
+
+    const chart = isObs
+      ? renderProgressObsTrendChart(goal, studentCode, quarter)
+      : renderProgressSparkline(goal, studentCode, quarter);
+
+    return `
+      <div class="dt-goal-row" data-progress-goal="${safeGoalCode}" data-progress-student="${safeStudentCode}">
+        <div class="dt-goal-header">
+          <div>
+            <strong>${escapeHtml(goal.code)}</strong> — ${escapeHtml(goal.desc || 'No description')}
+          </div>
+          <button class="dt-btn st-progress-samples-btn" data-goal="${safeGoalCode}" data-student="${safeStudentCode}">📎 Samples</button>
+        </div>
+        <div class="dt-goal-meta">${metaBadges}</div>
+        ${renderProgressGoalStats(goal, studentCode, quarter)}
+        ${chart}
+        ${renderProgressDataPointsTable(goal, studentCode, quarter)}
+        <button class="dt-btn primary st-progress-add-btn" data-goal="${safeGoalCode}" data-student="${safeStudentCode}">+ Add Data Point</button>
+        <div class="dt-inline-form" style="display:none;" data-form-goal="${safeGoalCode}" data-form-student="${safeStudentCode}">
+          <label style="font-size:13px;opacity:0.9;">Date:</label>
+          <input type="date" class="dt-date-input" value="${formatProgressDate()}" />
+          <label style="font-size:13px;opacity:0.9;">Value:</label>
+          <input type="number" class="dt-value-input" min="0" max="100" step="1" placeholder="0–100" />
+          <label style="font-size:13px;opacity:0.9;">Notes:</label>
+          <input type="text" class="dt-notes-input" placeholder="Optional" />
+          <button class="dt-btn primary st-progress-save-btn">Save</button>
+          <button class="dt-btn st-progress-cancel-btn">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Render the full Progress tab content for a student.
+   * @param {Object} student - Student object
+   * @param {Array}  studentGoals - Goals belonging to this student
+   * @returns {string} HTML string
+   */
+  function renderStudentProgressTab(student, studentGoals) {
+    const quarter = selectedProgressQuarterMap.get(student.code) || getCurrentQuarter();
+    const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const currentQ = getCurrentQuarter();
+    const safeCode = escapeHtml(student.code);
+
+    const quarterBtns = quarters.map(q =>
+      `<button class="dt-q-btn ${q === quarter ? 'active' : ''}" data-progress-quarter="${q}" data-for-student="${safeCode}">${q}${q === currentQ ? ' ✦' : ''}</button>`
+    ).join('');
+
+    const activeGoals = studentGoals.filter(g => g.status !== 'archived' && g.active !== false);
+
+    const goalRows = activeGoals.length > 0
+      ? activeGoals.map(g => renderProgressGoalRow(g, student.code, quarter)).join('')
+      : '<div style="padding:20px;opacity:0.6;text-align:center;">No active IEP goals found.</div>';
+
+    return `
+      <div class="st-detail-section" id="st-progress-tab-${safeCode}">
+        <div class="dt-progress-actions">
+          <div class="dt-q-group">${quarterBtns}</div>
+          <button class="dt-btn st-progress-export-btn" data-student="${safeCode}">📊 Export CSV</button>
+          <button class="dt-btn primary st-progress-bulk-btn" data-student="${safeCode}">+ Bulk Add Progress</button>
+        </div>
+        ${goalRows}
+      </div>`;
+  }
+
+  /**
+   * Export progress data for a single student as CSV.
+   * @param {string} studentCode - Student code
+   * @param {string} quarter     - Quarter label (e.g. 'Q1')
+   */
+  function exportStudentProgressCsv(studentCode, quarter) {
+    const student = allStudents.find(s => s.code === studentCode);
+    const goals   = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived' && g.active !== false);
+
+    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Baseline', 'Mastery', 'Target', 'Date', 'Value', 'Source', 'Quarter']];
+    goals.forEach(goal => {
+      const entries = getGoalProgressEntriesForTab(goal.code, studentCode, quarter);
+      const baseline = goal.baseline != null ? String(goal.baseline) : '';
+      const mastery  = goal.mastery  != null ? String(goal.mastery)  : (goal.target != null ? String(goal.target) : '');
+      const target   = goal.target   != null ? String(goal.target)   : '';
+      if (entries.length === 0) {
+        rows.push([student ? student.name : studentCode, studentCode, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, '', '', '', quarter]);
+      } else {
+        entries.forEach(e => {
+          rows.push([student ? student.name : studentCode, studentCode, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, e.date, e.value != null ? String(e.value) : '', e.source || 'manual', quarter]);
+        });
+      }
+    });
+
+    const csvContent = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `progress_${studentCode}_${quarter}_${formatProgressDate()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Open the work samples modal for a goal (Progress tab version).
+   * Shows assignment-linked work samples for the given goal.
+   */
+  async function openProgressSamplesModal(goalCode, studentCode) {
+    const modal     = document.getElementById('stProgressSamplesModal');
+    const modalBody = document.getElementById('stProgressModalBody');
+    if (!modal || !modalBody) return;
+
+    const goal    = allGoals.find(g => g.code === goalCode && g.student_code === studentCode);
+    const student = allStudents.find(s => s.code === studentCode);
+    if (!goal || !student) {
+      await rcAlert('Error', 'Goal or student not found');
+      return;
+    }
+
+    // Build basic info and data-points section (re-use existing entries in current quarter)
+    const quarter   = selectedProgressQuarterMap.get(studentCode) || getCurrentQuarter();
+    const entries   = getGoalProgressEntriesForTab(goalCode, studentCode, quarter);
+    const dataTable = renderProgressDataPointsTable(goal, studentCode, quarter);
+
+    modalBody.innerHTML = `
+      <h3 style="margin-top:0">${escapeHtml(goal.code)} — ${escapeHtml(goal.desc || '')}</h3>
+      <p><strong>Student:</strong> ${escapeHtml(student.name || student.code)} (${escapeHtml(student.code)})</p>
+      <p><strong>Goal Area:</strong> ${escapeHtml(goal.goal_area || 'Uncategorized')}</p>
+      <p><strong>Baseline:</strong> ${escapeHtml(String(goal.baseline ?? 'N/A'))}</p>
+      <p><strong>Target:</strong> ${escapeHtml(String(goal.target ?? 'N/A'))}</p>
+      <h4 style="margin-top:20px">Data Points (${escapeHtml(quarter)})</h4>
+      ${dataTable}
+      <h4 style="margin-top:20px">Work Samples</h4>
+      <p style="opacity:0.7;font-size:13px;">Work samples appear here when assignments are mapped to this IEP goal and the student submits them.</p>`;
+
+    modal.classList.add('active');
+  }
+
+  /**
+   * Handle inline cell editing for Progress tab data values.
+   * @param {HTMLElement} cell - The .dt-data-value.editable cell
+   * @param {string}      studentCode - Student code (for re-render)
+   */
+  function startProgressCellEdit(cell, studentCode) {
+    if (document.querySelector('#st-progress-tab-' + studentCode + ' .dt-data-value.editing')) return;
+
+    const currentValue = parseFloat(cell.dataset.value);
+    const entryId      = cell.dataset.entryId;
+    const goalCode     = cell.dataset.goal;
+    const safeStudentCode = cell.dataset.student;
+
+    const input = document.createElement('input');
+    input.type = 'number'; input.min = '0'; input.max = '100'; input.step = '1';
+    input.value = isNaN(currentValue) ? '' : currentValue;
+    cell.dataset.originalValue = currentValue;
+    const originalContent = cell.innerHTML;
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    cell.classList.add('editing');
+    input.focus();
+    input.select();
+
+    const cancel = () => {
+      cell.classList.remove('editing');
+      cell.innerHTML = originalContent;
+    };
+
+    const save = async () => {
+      const newValue = parseFloat(input.value);
+      if (isNaN(newValue) || newValue < 0 || newValue > 100) {
+        await rcAlert('Validation', 'Please enter a valid number between 0 and 100');
+        input.focus();
+        return;
+      }
+      if (newValue === currentValue) { cancel(); return; }
+      cell.classList.add('saving');
+      input.disabled = true;
+      try {
+        const entry = allProgressEntries.find(p => String(p.id) === String(entryId));
+        if (!entry) throw new Error('Entry not found');
+        await db.upsertGoalProgress({
+          goal_code:    goalCode,
+          student_code: safeStudentCode,
+          date:         entry.date,
+          value:        newValue,
+          source:       entry.source || 'manual',
+        });
+        allProgressEntries = await loadProgressEntries(allGoals, allStudents);
+        buildProgressLookupMap();
+        await renderExpandedDetail(studentCode);
+      } catch (err) {
+        console.error('[tc-students] Progress edit error:', err);
+        await rcAlert('Error', 'Error updating data point: ' + err.message);
+        cell.classList.remove('saving');
+        input.disabled = false;
+        input.focus();
+      }
+    };
+
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')   { e.preventDefault(); save(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      else if (e.key === 'ArrowUp')   { e.preventDefault(); input.value = Math.min(100, parseFloat(input.value || 0) + (e.shiftKey ? 5 : 1)); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); input.value = Math.max(0,   parseFloat(input.value || 0) - (e.shiftKey ? 5 : 1)); }
+    });
+  }
+
+  /**
+   * Wire up all event handlers inside a rendered Progress tab container.
+   * @param {HTMLElement} contentDiv - The .st-tab-content element
+   * @param {Object}      student    - Student object
+   */
+  function initProgressTabHandlers(contentDiv, student) {
+    const studentCode = student.code;
+
+    // Quarter selector buttons
+    contentDiv.querySelectorAll('[data-progress-quarter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const q = btn.dataset.progressQuarter;
+        selectedProgressQuarterMap.set(studentCode, q);
+        renderExpandedDetail(studentCode).catch(() => {});
+      });
+    });
+
+    // Export CSV
+    contentDiv.querySelectorAll('.st-progress-export-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const quarter = selectedProgressQuarterMap.get(studentCode) || getCurrentQuarter();
+        exportStudentProgressCsv(studentCode, quarter);
+      });
+    });
+
+    // Bulk Add Progress (placeholder)
+    contentDiv.querySelectorAll('.st-progress-bulk-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await rcAlert('Coming Soon', 'Bulk Add Progress for this student is coming soon!');
+      });
+    });
+
+    // Samples buttons
+    contentDiv.querySelectorAll('.st-progress-samples-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openProgressSamplesModal(btn.dataset.goal, btn.dataset.student).catch(() => {});
+      });
+    });
+
+    // Add Data Point buttons – show inline form
+    contentDiv.querySelectorAll('.st-progress-add-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const goalCode = btn.dataset.goal;
+        const studentC = btn.dataset.student;
+        const form = contentDiv.querySelector(`.dt-inline-form[data-form-goal="${goalCode}"][data-form-student="${studentC}"]`);
+        if (form) {
+          form.querySelector('.dt-date-input').value = formatProgressDate();
+          form.querySelector('.dt-value-input').value = '';
+          const notesInput = form.querySelector('.dt-notes-input');
+          if (notesInput) notesInput.value = '';
+          form.style.display = 'flex';
+          setTimeout(() => form.querySelector('.dt-value-input').focus(), 80);
+        }
+      });
+    });
+
+    // Save / Cancel inline form buttons
+    contentDiv.querySelectorAll('.dt-inline-form').forEach(form => {
+      const goalCode  = form.dataset.formGoal;
+      const studentC  = form.dataset.formStudent;
+      const saveBtn   = form.querySelector('.st-progress-save-btn');
+      const cancelBtn = form.querySelector('.st-progress-cancel-btn');
+      const dateInput  = form.querySelector('.dt-date-input');
+      const valueInput = form.querySelector('.dt-value-input');
+      const notesInput = form.querySelector('.dt-notes-input');
+
+      const hideForm = () => { form.style.display = 'none'; if (valueInput) valueInput.value = ''; };
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async e => {
+          e.stopPropagation();
+          const date  = dateInput ? dateInput.value : '';
+          const value = valueInput ? valueInput.value : '';
+          const notes = notesInput ? notesInput.value : '';
+          if (!date) { await rcAlert('Validation', 'Please enter a date'); return; }
+          const numValue = parseFloat(value);
+          if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+            await rcAlert('Validation', 'Please enter a valid number between 0 and 100');
+            return;
+          }
+          try {
+            await db.upsertGoalProgress({ goal_code: goalCode, student_code: studentC, date, value: numValue, source: 'manual', notes: notes || undefined });
+            allProgressEntries = await loadProgressEntries(allGoals, allStudents);
+            buildProgressLookupMap();
+            await renderExpandedDetail(studentCode);
+          } catch (err) {
+            console.error('[tc-students] Add data point error:', err);
+            await rcAlert('Error', 'Error adding data point: ' + err.message);
+          }
+        });
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', e => { e.stopPropagation(); hideForm(); });
+      }
+
+      if (valueInput) {
+        valueInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); if (saveBtn) saveBtn.click(); }
+          else if (e.key === 'Escape') { e.preventDefault(); hideForm(); }
+        });
+      }
+    });
+
+    // Inline cell editing
+    contentDiv.querySelectorAll('.dt-data-value.editable').forEach(cell => {
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
+        startProgressCellEdit(cell, studentCode);
+      });
+    });
+  }
+
+  // ── End Progress Tab ─────────────────────────────────────────────────────────
 
   function renderClassFilterOptions() {
     const selectEl = document.getElementById('stClassFilter');
@@ -2311,6 +2980,14 @@
 
   // Event handlers
   function setupEventHandlers() {
+    // Progress samples modal — close on backdrop click
+    const progressSamplesModal = document.getElementById('stProgressSamplesModal');
+    if (progressSamplesModal) {
+      progressSamplesModal.addEventListener('click', (e) => {
+        if (e.target === progressSamplesModal) progressSamplesModal.classList.remove('active');
+      });
+    }
+
     // Search input
     const searchInput = document.getElementById('stSearchInput');
     if (searchInput) {
@@ -2506,72 +3183,20 @@
           return;
         }
 
-        // Progress detail toggle
+        // Progress detail toggle — now navigates to the Progress tab
         const progressToggleBtn = e.target.closest('.tc-progress-toggle-btn');
         if (progressToggleBtn) {
-          const targetId = progressToggleBtn.dataset.progressId;
-          const panel = document.getElementById(targetId);
-          if (panel) {
-            // Use aria-expanded as source of truth for consistent toggle state
-            const wasExpanded = progressToggleBtn.getAttribute('aria-expanded') === 'true';
-            const nowExpanded = !wasExpanded;
-            panel.hidden = !nowExpanded;
-            panel.setAttribute('aria-hidden', String(!nowExpanded));
-            progressToggleBtn.setAttribute('aria-expanded', String(nowExpanded));
-            // Update button label with SVG icon — use innerHTML since we need SVG markup
-            progressToggleBtn.innerHTML = nowExpanded
-              ? `${SVG_HIDE_DATA}Hide Data`
-              : `${SVG_VIEW_DATA}View Data`;
-
-            // Lazily inject the dot-grid chart when panel is first expanded
-            if (nowExpanded && !panel.dataset.dpLoaded) {
-              const goalId = progressToggleBtn.dataset.goalId;
-              const goal = goalId ? allGoals.find(g => g.id === goalId) : null;
-              if (!goal) {
-                console.warn('[tc-students] dot-grid: goal not found in allGoals for id:', goalId, '— allGoals.length:', allGoals.length);
-              } else {
-                // Prefer goal.student_id (direct FK on the goals row) for reliability;
-                // fall back to looking up by student_code in allStudents.
-                const studentId = goal.student_id || allStudents.find(s => s.code === goal.student_code)?.id;
-                if (!studentId) {
-                  console.warn('[tc-students] dot-grid: could not resolve student_id for goal', goal.id, '(student_code:', goal.student_code, ')');
-                } else {
-                  try {
-                    const dataPoints = await db.listGoalDataPoints({ studentId, goalId: goal.id });
-                    console.log(`[tc-students] dot-grid: loaded ${(dataPoints || []).length} data point(s) for goal ${goal.id}`, { studentId, goalId: goal.id, studentCode: goal.student_code });
-                    const { html: dotHtml, hasData } = buildTcDotGridChart(dataPoints, goal.id);
-                    console.log(`[tc-students] dot-grid: hasData=${hasData}, ${(dataPoints || []).length} point(s), firstElementChild=${panel.firstElementChild?.tagName ?? 'null'}`);
-                    if (hasData) {
-                      const dotWrapper = document.createElement('div');
-                      dotWrapper.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);';
-                      dotWrapper.innerHTML = dotHtml;
-                      panel.prepend(dotWrapper);
-                    }
-
-                    // Update the status count with per-question data points (where available)
-                    if (dataPoints && dataPoints.length > 0) {
-                      try {
-                        const qRange = getQuarterDateRange(getCurrentQuarter());
-                        const dpThisQ = qRange
-                          ? dataPoints.filter(dp => { const d = new Date(dp.date); return d >= qRange.start && d <= qRange.end; })
-                          : dataPoints;
-                        if (dpThisQ.length > 0) {
-                          const statusEl = document.getElementById(`tc-goal-status-count-${goal.id.replace(/[^a-z0-9]/gi, '_')}`);
-                          if (statusEl) {
-                            const n = dpThisQ.length;
-                            statusEl.textContent = `${n} data ${n === 1 ? 'point' : 'points'} this quarter`;
-                          }
-                        }
-                      } catch (_qe) { /* leave existing text unchanged */ }
-                    }
-                    // Mark as loaded only on success so a network failure allows retry
-                    panel.dataset.dpLoaded = '1';
-                  } catch (dpErr) {
-                    console.warn('[tc-students] Could not load goal data points:', dpErr);
-                  }
-                }
-              }
-            }
+          const goalId = progressToggleBtn.dataset.goalId;
+          const goal   = goalId ? allGoals.find(g => g.id === goalId) : null;
+          const expandedDetail = progressToggleBtn.closest('.st-expanded-content');
+          const sCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (sCode && goal) {
+            // Switch to the Progress tab for this student
+            selectedDetailTabMap.set(sCode, 'progress');
+            await renderExpandedDetail(sCode);
+            // Scroll to the goal row if found
+            const targetRow = document.querySelector(`#st-progress-tab-${sCode} [data-progress-goal="${goal.code}"]`);
+            if (targetRow) targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
           e.stopPropagation();
           return;
@@ -2901,6 +3526,13 @@
 
 
     document.addEventListener('click', (e) => {
+      // Progress samples modal close
+      if (e.target.id === 'stProgressModalClose' || (e.target.id === 'stProgressSamplesModal' && e.target === e.currentTarget)) {
+        const modal = document.getElementById('stProgressSamplesModal');
+        if (modal) modal.classList.remove('active');
+        return;
+      }
+
       if (e.target.id === 'stCancelQuarterEdit') {
         const displayEl = document.getElementById('stQuarterDisplay');
         const formEl = document.getElementById('stQuarterEditForm');
