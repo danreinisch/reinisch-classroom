@@ -3781,6 +3781,17 @@
     } catch (e) { /* ignore */ }
   }
 
+  /**
+   * Splits paragraph text into individual sentences for sentence-mode TTS.
+   * Handles common abbreviations to avoid false splits.
+   */
+  function splitIntoSentences(text) {
+    var abbrevs = /(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|approx|dept|govt|inc|corp)\./g;
+    var temp = text.replace(abbrevs, function (m) { return m.replace('.', '\u3008DOT\u3009'); });
+    var parts = temp.split(/(?<=[.!?])\s+/);
+    return parts.map(function (s) { return s.replace(/\u3008DOT\u3009/g, '.').trim(); }).filter(function (s) { return s.length > 0; });
+  }
+
   const DEFAULT_TTS_RATE = 0.92;
   let bookReaderState = null;
   let bookPanelEscapeHandler = null;
@@ -3789,6 +3800,7 @@
   let bookTtsActive = false;
   let bookTtsPaused = false;
   let bookTtsTimeout = null;
+  let bookTtsNextSentenceCallback = null; // set when waiting between sentences in sentence mode
   // New feature state
   const _wordDefCache = new Map(); // session-level dictionary API cache
   let _bookLink = '';              // current book link (used for localStorage keys)
@@ -4113,6 +4125,7 @@
         </div>
         <div class="st-book-tts-controls" id="bookTtsControls" style="display:none;">
           <button class="st-book-nav-btn" id="bookTtsPause">⏸ Pause</button>
+          <button class="st-book-nav-btn" id="bookTtsNextSentence" style="display:none;">▶ Next Sentence</button>
           <button class="st-book-nav-btn" id="bookTtsStop">⏹ Stop</button>
         </div>
       </div>
@@ -4128,6 +4141,9 @@
       toggleBookTts();
     });
     panel.querySelector('#bookTtsPause').addEventListener('click', pauseResumeBookTts);
+    panel.querySelector('#bookTtsNextSentence').addEventListener('click', function () {
+      if (bookTtsNextSentenceCallback) bookTtsNextSentenceCallback();
+    });
     panel.querySelector('#bookTtsStop').addEventListener('click', stopBookTts);
 
     // Double-click word lookup
@@ -4652,6 +4668,139 @@
 
     let lastHighlightedSpan = null;
 
+    // ---- Sentence-mode inner function ----
+    function speakSentence(paraIdx, sentIdx, sentences, sentenceSpanRanges) {
+      if (!bookTtsActive || sentIdx >= sentences.length) {
+        // All sentences in this paragraph done — proceed to next paragraph
+        document.querySelectorAll('.st-book-sentence-active').forEach(function (el) {
+          el.classList.remove('st-book-sentence-active');
+        });
+        bookTtsTimeout = setTimeout(function () {
+          speakPara(paraIdx + 1);
+        }, 100);
+        return;
+      }
+
+      var sentText = sentences[sentIdx];
+      var sentWordOffset = sentenceSpanRanges[sentIdx].offset;
+      var sentSpanCount = sentenceSpanRanges[sentIdx].count;
+
+      // Highlight current sentence spans
+      document.querySelectorAll('.st-book-sentence-active').forEach(function (el) {
+        el.classList.remove('st-book-sentence-active');
+      });
+      for (var wi = sentWordOffset; wi < sentWordOffset + sentSpanCount; wi++) {
+        var sentSpan = allWordSpans[wi];
+        if (sentSpan) sentSpan.classList.add('st-book-sentence-active');
+      }
+
+      fetch('/.netlify/functions/student-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: sentText, voice: savedVoiceName, speed: rate }),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (!bookTtsActive) return;
+
+          if (!data.ok || !data.audio) {
+            console.warn(LOG_PREFIX, 'TTS API error for sentence', sentIdx, data.error);
+            speakSentence(paraIdx, sentIdx + 1, sentences, sentenceSpanRanges);
+            return;
+          }
+
+          const binaryStr = atob(data.audio);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'audio/mpeg' });
+
+          if (bookTtsAudioUrl) URL.revokeObjectURL(bookTtsAudioUrl);
+          bookTtsAudioUrl = URL.createObjectURL(blob);
+
+          const audio = new Audio(bookTtsAudioUrl);
+          bookTtsAudio = audio;
+
+          // Word highlighting scoped to this sentence's spans
+          audio.ontimeupdate = function () {
+            if (!audio.duration || !sentSpanCount) return;
+            const wordDuration = audio.duration / sentSpanCount;
+            const currentWordIdx = Math.min(
+              Math.floor(audio.currentTime / wordDuration),
+              sentSpanCount - 1
+            );
+            const span = allWordSpans[sentWordOffset + currentWordIdx];
+            if (span && span !== lastHighlightedSpan) {
+              if (lastHighlightedSpan) {
+                lastHighlightedSpan.classList.remove('tts-active');
+                lastHighlightedSpan.classList.add('tts-read');
+              }
+              span.classList.add('tts-active');
+              lastHighlightedSpan = span;
+              span.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+          };
+
+          audio.onended = function () {
+            if (!bookTtsActive) return;
+            if (sentIdx >= sentences.length - 1) {
+              // Last sentence — clear sentence highlight and proceed to next paragraph
+              document.querySelectorAll('.st-book-sentence-active').forEach(function (el) {
+                el.classList.remove('st-book-sentence-active');
+              });
+              bookTtsTimeout = setTimeout(function () {
+                speakPara(paraIdx + 1);
+              }, 100);
+            } else {
+              // Show "▶ Next Sentence" button and wait for student to advance
+              var nextSentBtn = document.getElementById('bookTtsNextSentence');
+              if (nextSentBtn) nextSentBtn.classList.add('visible');
+              bookTtsNextSentenceCallback = function () {
+                var btn = document.getElementById('bookTtsNextSentence');
+                if (btn) btn.classList.remove('visible');
+                bookTtsNextSentenceCallback = null;
+                speakSentence(paraIdx, sentIdx + 1, sentences, sentenceSpanRanges);
+              };
+            }
+          };
+
+          audio.onerror = function () {
+            if (!bookTtsActive) return;
+            console.warn(LOG_PREFIX, 'Audio playback error for sentence', sentIdx);
+            speakSentence(paraIdx, sentIdx + 1, sentences, sentenceSpanRanges);
+          };
+
+          // Highlight first word of sentence immediately as a visual cue
+          var firstSentSpan = allWordSpans[sentWordOffset];
+          if (firstSentSpan) {
+            if (lastHighlightedSpan) {
+              lastHighlightedSpan.classList.remove('tts-active');
+              lastHighlightedSpan.classList.add('tts-read');
+            }
+            firstSentSpan.classList.add('tts-active');
+            lastHighlightedSpan = firstSentSpan;
+            firstSentSpan.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
+
+          audio.play().catch(function (err) {
+            console.warn(LOG_PREFIX, 'Audio play() failed:', err);
+            showToast('⚠️ Audio unavailable. Please try again.', 'error');
+            bookTtsActive = false;
+            bookTtsPaused = false;
+            if (ttsBtn) ttsBtn.classList.remove('tts-active');
+            if (ttsControls) ttsControls.style.display = 'none';
+          });
+        })
+        .catch(function (err) {
+          if (!bookTtsActive) return;
+          console.warn(LOG_PREFIX, 'TTS fetch failed:', err);
+          showToast('⚠️ Could not load audio. Check your connection.', 'error');
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+        });
+    }
+
     function speakPara(idx) {
       if (!bookTtsActive || idx >= paraData.length) {
         // All paragraphs done (or TTS was manually stopped)
@@ -4753,6 +4902,25 @@
 
       // Show loading indicator on first paragraph only
       if (idx === 0) showToast('🔊 Loading audio...');
+
+      // Sentence mode: split paragraph into sentences and speak one at a time
+      if (getBookHelper('sentence_mode')) {
+        var sentences = splitIntoSentences(text);
+        if (sentences.length > 1) {
+          // Map each sentence to its corresponding word spans within this paragraph
+          var sentenceSpanRanges = [];
+          var spanCursor = wordOffset;
+          for (var si = 0; si < sentences.length; si++) {
+            var sentWordCount = sentences[si].split(/\s+/).filter(function (w) { return w.length > 0; }).length;
+            var remaining = wordOffset + spanCount - spanCursor;
+            var actualCount = (si === sentences.length - 1) ? remaining : Math.min(sentWordCount, remaining);
+            sentenceSpanRanges.push({ offset: spanCursor, count: Math.max(0, actualCount) });
+            spanCursor += actualCount;
+          }
+          speakSentence(idx, 0, sentences, sentenceSpanRanges);
+          return;
+        }
+      }
 
       fetch('/.netlify/functions/student-tts', {
         method: 'POST',
@@ -4900,18 +5068,24 @@
     if (bookTtsTimeout) { clearTimeout(bookTtsTimeout); bookTtsTimeout = null; }
     bookTtsActive = false;
     bookTtsPaused = false;
+    bookTtsNextSentenceCallback = null;
 
     const ttsBtn = document.getElementById('bookTtsBtn');
     const ttsControls = document.getElementById('bookTtsControls');
     const pauseBtn = document.getElementById('bookTtsPause');
+    const nextSentBtn = document.getElementById('bookTtsNextSentence');
     if (ttsBtn) ttsBtn.classList.remove('tts-active');
     if (ttsControls) ttsControls.style.display = 'none';
     if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
+    if (nextSentBtn) nextSentBtn.classList.remove('visible');
 
     // Remove any active/read word highlights
     document.querySelectorAll('.st-book-word.tts-active, .st-book-word.tts-read').forEach(function (el) {
       el.classList.remove('tts-active');
       el.classList.remove('tts-read');
+    });
+    document.querySelectorAll('.st-book-sentence-active').forEach(function (el) {
+      el.classList.remove('st-book-sentence-active');
     });
 
     // Clear Media Session API handlers

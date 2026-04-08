@@ -2280,6 +2280,29 @@
       }
 
       /* ============================================================
+         Sentence-level highlight for sentence mode (.st-book-sentence-active)
+         ============================================================ */
+      .st-book-sentence-active {
+        background: rgba(59, 130, 246, 0.08);
+        border-radius: 2px;
+      }
+
+      [data-theme="light"] .st-book-sentence-active {
+        background: rgba(59, 130, 246, 0.06);
+      }
+
+      /* ============================================================
+         Next Sentence button (#bookTtsNextSentence)
+         ============================================================ */
+      #bookTtsNextSentence {
+        display: none;
+      }
+
+      #bookTtsNextSentence.visible {
+        display: inline-flex;
+      }
+
+      /* ============================================================
          Glossary term underline (.st-book-word-glossary)
          ============================================================ */
       .st-book-word-glossary {
