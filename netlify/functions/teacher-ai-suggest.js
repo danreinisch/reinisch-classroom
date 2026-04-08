@@ -18,6 +18,40 @@ const {
 const { SESSION_SECRET } = process.env;
 
 /**
+ * Scrub common PII patterns from student response text before sending to OpenAI.
+ * Only affects what is sent to the AI — the original text is never modified in the database.
+ * @param {string} text - raw student response text
+ * @returns {string} text with PII replaced by redaction tokens
+ */
+function scrubPii(text) {
+  if (typeof text !== 'string') return text;
+
+  let scrubbed = text;
+
+  // Email addresses → [EMAIL]
+  scrubbed = scrubbed.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
+
+  // SSN-like patterns (must precede phone to avoid partial match on ddd-dd-dddd)
+  scrubbed = scrubbed.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[REDACTED]');
+
+  // Phone numbers — common US formats
+  // (xxx) xxx-xxxx / (xxx) xxx xxxx / (xxx)xxx-xxxx
+  scrubbed = scrubbed.replace(/\(\d{3}\)\s*\d{3}[\s.\-]\d{4}/g, '[PHONE]');
+  // xxx-xxx-xxxx / xxx.xxx.xxxx
+  scrubbed = scrubbed.replace(/\b\d{3}[.\-]\d{3}[.\-]\d{4}\b/g, '[PHONE]');
+  // xxx xxx xxxx (space-separated)
+  scrubbed = scrubbed.replace(/\b\d{3} \d{3} \d{4}\b/g, '[PHONE]');
+
+  // Street addresses (number + street name + suffix, with optional trailing period)
+  scrubbed = scrubbed.replace(
+    /\b\d+\s+\w[\w\s]*?\s+(?:Street|St\.?|Avenue|Ave\.?|Road|Rd\.?|Drive|Dr\.?|Lane|Ln\.?|Boulevard|Blvd\.?|Way|Court|Ct\.?|Place|Pl\.?)(?=[\s,.]|$)/gi,
+    '[ADDRESS]'
+  );
+
+  return scrubbed;
+}
+
+/**
  * Build the system prompt for the OpenAI grading assistant.
  */
 function buildPrompt({ student_response, rubric_tiers, max_points, item_label, question_text, goal_codes, goal_descriptions }) {
@@ -120,8 +154,14 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'rubric_tiers is required and must be a non-empty array' }, {}, requestId);
   }
 
+  // Scrub PII from student response before sending to OpenAI (non-destructive — DB is unchanged)
+  const scrubbedResponse = scrubPii(student_response);
+  if (scrubbedResponse !== student_response) {
+    console.log('[teacher-ai-suggest] PII scrubbed from student response');
+  }
+
   // Build the prompt
-  const systemPrompt = buildPrompt({ student_response, rubric_tiers, max_points, item_label, question_text, goal_codes, goal_descriptions });
+  const systemPrompt = buildPrompt({ student_response: scrubbedResponse, rubric_tiers, max_points, item_label, question_text, goal_codes, goal_descriptions });
 
   console.log(`[teacher-ai-suggest] [${requestId}] Calling OpenAI API`);
 
@@ -197,3 +237,5 @@ exports.handler = async (event) => {
     requestId
   );
 };
+
+exports.scrubPii = scrubPii;
