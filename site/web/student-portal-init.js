@@ -4492,24 +4492,83 @@
         // Auto-advance only when page finished naturally (not manually stopped)
         const pageFinished = bookTtsActive && idx >= paraData.length;
         if (pageFinished && state && state.currentPage < state.bookData.totalPages) {
-          state.currentPage++;
-          const nextChunk = findChunkForPage(state.bookData, state.currentPage);
-          if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
-            // Chunk not cached — clear TTS UI while chunk loads, restart after
+          // Check if the next page starts a new chapter
+          const chapters = (state.bookData.chapters && state.bookData.chapters.length > 0) ? state.bookData.chapters : null;
+          const nextPage = state.currentPage + 1;
+          let isChapterBoundary = false;
+          let nextChapterLabel = '';
+          if (chapters) {
+            // Check if the next page starts a new chapter
+            for (let ci = 0; ci < chapters.length; ci++) {
+              if (chapters[ci].startPage === nextPage) {
+                isChapterBoundary = true;
+                nextChapterLabel = chapters[ci].label || ('Chapter ' + (ci + 1));
+                break;
+              }
+            }
+          }
+
+          if (isChapterBoundary) {
+            // Pause TTS and prompt user to continue to next chapter
             bookTtsActive = false;
             bookTtsPaused = false;
             if (ttsBtn) ttsBtn.classList.remove('tts-active');
             if (ttsControls) ttsControls.style.display = 'none';
-            fetchBookChunk(nextChunk.id).then(function () {
-              renderBookPage();
-              startBookTts();
+
+            // 60-second auto-stop timeout
+            let chapterPromptTimeout = setTimeout(function () {
+              stopBookTts();
+            }, 60000);
+
+            rcConfirm(
+              '📖 Chapter Complete!',
+              'Continue to: ' + nextChapterLabel + '?',
+              'Continue Reading'
+            ).then(function (confirmed) {
+              clearTimeout(chapterPromptTimeout);
+              if (confirmed) {
+                state.currentPage = nextPage;
+                const nextChunk = findChunkForPage(state.bookData, state.currentPage);
+                if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
+                  fetchBookChunk(nextChunk.id).then(function () {
+                    renderBookPage();
+                    startBookTts();
+                  });
+                } else {
+                  renderBookPage();
+                  setTimeout(startBookTts, 150);
+                }
+              } else {
+                stopBookTts();
+              }
             });
           } else {
-            // Chunk already cached — keep TTS UI active for seamless page transition
-            bookTtsPaused = false;
-            renderBookPage();
-            setTimeout(startBookTts, 150);
+            state.currentPage++;
+            const nextChunk = findChunkForPage(state.bookData, state.currentPage);
+            if (nextChunk && !_bookChunkCache.has(nextChunk.id)) {
+              // Chunk not cached — clear TTS UI while chunk loads, restart after
+              bookTtsActive = false;
+              bookTtsPaused = false;
+              if (ttsBtn) ttsBtn.classList.remove('tts-active');
+              if (ttsControls) ttsControls.style.display = 'none';
+              fetchBookChunk(nextChunk.id).then(function () {
+                renderBookPage();
+                startBookTts();
+              });
+            } else {
+              // Chunk already cached — keep TTS UI active for seamless page transition
+              bookTtsPaused = false;
+              renderBookPage();
+              setTimeout(startBookTts, 150);
+            }
           }
+        } else if (pageFinished && state && state.currentPage >= state.bookData.totalPages) {
+          // Reached the end of the book — prompt user (handles books with no chapters too)
+          bookTtsActive = false;
+          bookTtsPaused = false;
+          if (ttsBtn) ttsBtn.classList.remove('tts-active');
+          if (ttsControls) ttsControls.style.display = 'none';
+          showToast('📖 You have reached the end of the book!');
         } else {
           // Truly done or manually stopped — clear all TTS state
           bookTtsActive = false;
@@ -4579,10 +4638,10 @@
 
           audio.onended = function () {
             if (!bookTtsActive) return;
-            // 300ms natural pause between paragraphs
+            // 100ms natural pause between paragraphs
             bookTtsTimeout = setTimeout(function () {
               speakPara(idx + 1);
-            }, 300);
+            }, 100);
           };
 
           audio.onerror = function () {
@@ -4591,7 +4650,7 @@
             // Try next paragraph on error
             bookTtsTimeout = setTimeout(function () {
               speakPara(idx + 1);
-            }, 300);
+            }, 100);
           };
 
           // Highlight first word immediately as a visual cue
@@ -4627,6 +4686,18 @@
     }
 
     speakPara(0);
+
+    // Register Media Session API handlers for Bluetooth headphone button support
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: (state.bookData && state.bookData.title) ? state.bookData.title : 'Book Reader',
+        artist: 'Read Aloud',
+        album: 'Reinisch Classroom'
+      });
+      navigator.mediaSession.setActionHandler('play', function () { pauseResumeBookTts(); });
+      navigator.mediaSession.setActionHandler('pause', function () { pauseResumeBookTts(); });
+      navigator.mediaSession.setActionHandler('stop', function () { stopBookTts(); });
+    }
   }
 
   function pauseResumeBookTts() {
@@ -4672,6 +4743,13 @@
       el.classList.remove('tts-active');
       el.classList.remove('tts-read');
     });
+
+    // Clear Media Session API handlers
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('stop', null);
+    }
   }
 
   // ============================================================================
