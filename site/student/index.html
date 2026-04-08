@@ -2488,6 +2488,23 @@
       }
 
       /* ============================================================
+         Replay button (.st-book-tts-replay-btn)
+         ============================================================ */
+      .st-book-tts-replay-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      .st-book-tts-replay-btn.replaying {
+        animation: st-replay-pulse 0.6s ease 2;
+      }
+
+      @keyframes st-replay-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+      }
+
+      /* ============================================================
          Glossary term underline (.st-book-word-glossary)
          ============================================================ */
       .st-book-word-glossary {
