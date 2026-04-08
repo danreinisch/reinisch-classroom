@@ -1932,6 +1932,143 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
       }
 
+      /* Display Accessibility section header inside Reading Helper */
+      .st-rh-section-header {
+        padding: 8px 14px 4px;
+        font-size: 11px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.35);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        margin-top: 4px;
+      }
+
+      /* Slider row (full-width, stacked layout) */
+      .st-rh-slider-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 14px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .st-rh-slider-row-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .st-rh-slider-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .st-rh-slider-val {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        min-width: 32px;
+        text-align: right;
+      }
+
+      .st-rh-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.18);
+        outline: none;
+        cursor: pointer;
+      }
+
+      .st-rh-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      }
+
+      .st-rh-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      }
+
+      /* OpenDyslexic font-face (loaded from CDN on demand) */
+      @font-face {
+        font-family: 'OpenDyslexic';
+        src: url('https://cdn.jsdelivr.net/gh/antijingoist/opendyslexic@master/compiled/OpenDyslexic-Regular.otf') format('opentype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Book content: OpenDyslexic font override */
+      .st-book-content.dyslexic-font,
+      .st-book-content.dyslexic-font p,
+      .st-book-content.dyslexic-font h3,
+      .st-book-content.dyslexic-font .st-book-word {
+        font-family: 'OpenDyslexic', sans-serif !important;
+      }
+
+      /* Book content: high contrast override */
+      .st-book-content.high-contrast {
+        background: #000 !important;
+        color: #fff !important;
+      }
+
+      .st-book-content.high-contrast p,
+      .st-book-content.high-contrast h3,
+      .st-book-content.high-contrast .st-book-word {
+        color: #fff !important;
+      }
+
+      .st-book-content.high-contrast .st-book-subheading {
+        color: #ffff00 !important;
+        border-bottom-color: rgba(255, 255, 0, 0.3) !important;
+      }
+
+      .st-book-content.high-contrast .st-book-word.tts-active {
+        background: #ffff00 !important;
+        color: #000 !important;
+      }
+
+      .st-book-content.high-contrast .st-book-word.tts-read {
+        color: rgba(255, 255, 255, 0.55) !important;
+      }
+
+      /* Light theme overrides for Display Accessibility controls */
+      [data-theme="light"] .st-rh-section-header {
+        color: rgba(0, 0, 0, 0.4);
+        border-top-color: rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme="light"] .st-rh-slider-row {
+        border-bottom-color: rgba(0, 0, 0, 0.06);
+      }
+
+      [data-theme="light"] .st-rh-slider-label {
+        color: #1e293b;
+      }
+
+      [data-theme="light"] .st-rh-slider-val {
+        color: rgba(0, 0, 0, 0.45);
+      }
+
+      [data-theme="light"] .st-rh-slider {
+        background: rgba(0, 0, 0, 0.15);
+      }
+
       /* Light theme overrides for book reader */
       [data-theme="light"] .st-book-panel {
         background: var(--surface);
