@@ -1388,6 +1388,8 @@
       tabContent = await renderStudentGoalsTab(student, studentGoals);
     } else if (selectedDetailTab === 'progress') {
       tabContentEl = await renderStudentProgressTab(student, studentGoals);
+    } else if (selectedDetailTab === 'schedule') {
+      tabContentEl = renderStudentScheduleTab(student, studentGoals);
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
     } else if (selectedDetailTab === 'skills') {
@@ -1454,6 +1456,7 @@
     tabsDiv.innerHTML = `
       <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
       <button class="st-tab ${selectedDetailTab === 'progress' ? 'active' : ''}" data-tab="progress">Progress</button>
+      <button class="st-tab ${selectedDetailTab === 'schedule' ? 'active' : ''}" data-tab="schedule">Schedule</button>
       <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
       <button class="st-tab ${selectedDetailTab === 'skills' ? 'active' : ''}" data-tab="skills">Skills Summary</button>
       <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
@@ -2248,6 +2251,277 @@
   }
 
   // ── END PROGRESS TAB ──────────────────────────────────────────────────────
+
+  // ── SCHEDULE TAB ──────────────────────────────────────────────────────────
+
+  const SCHEDULE_KEY = 'rc_data_schedule';
+
+  function getScheduleFrequency(studentCode, goalCode) {
+    const schedules = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '{}');
+    return schedules[`${studentCode}_${goalCode}`] || 'quarterly';
+  }
+
+  function setScheduleFrequency(studentCode, goalCode, frequency) {
+    const schedules = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '{}');
+    schedules[`${studentCode}_${goalCode}`] = frequency;
+    localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedules));
+  }
+
+  function calcNextDue(lastCollected, frequency) {
+    if (!lastCollected) {
+      return new Date();
+    }
+    const next = new Date(lastCollected);
+    switch (frequency) {
+      case 'weekly':   next.setDate(next.getDate() + 7); break;
+      case 'biweekly': next.setDate(next.getDate() + 14); break;
+      case 'monthly':  next.setMonth(next.getMonth() + 1); break;
+      case 'quarterly':
+      default:         next.setMonth(next.getMonth() + 3); break;
+    }
+    return next;
+  }
+
+  function calcCollectionStatus(nextDue) {
+    const now = new Date();
+    const daysUntil = Math.floor((nextDue - now) / (1000 * 60 * 60 * 24));
+    if (daysUntil < 0)    return { status: 'overdue',   icon: '🔴', label: 'Overdue',   days: Math.abs(daysUntil) };
+    if (daysUntil <= 3)   return { status: 'due_soon',  icon: '🟡', label: 'Due Soon',  days: daysUntil };
+    return                       { status: 'on_track',  icon: '🟢', label: 'On Track',  days: daysUntil };
+  }
+
+  /**
+   * Render the Schedule tab for a student.
+   * Returns a DOM element — NOT an HTML string — to avoid CodeQL innerHTML violations.
+   */
+  function renderStudentScheduleTab(student, studentGoals) {
+    const activeGoals = studentGoals.filter(g => g.status !== 'archived');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'dt-schedule-tab';
+
+    // ── This Week section ────────────────────────────────────────────────────
+    const now = new Date();
+    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Build schedule items
+    const scheduleItems = activeGoals.map(goal => {
+      const frequency = getScheduleFrequency(student.code, goal.code);
+      const entries = getProgressForGoal(student.code, goal.code)
+        .slice()
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      const lastCollected = entries.length > 0 ? entries[0].date : null;
+      const nextDue = calcNextDue(lastCollected, frequency);
+      const statusInfo = calcCollectionStatus(nextDue);
+      return { goal, frequency, lastCollected, nextDue, statusInfo };
+    });
+
+    const thisWeekItems = scheduleItems.filter(item => item.nextDue <= weekFromNow);
+    thisWeekItems.sort((a, b) => a.nextDue - b.nextDue);
+    scheduleItems.sort((a, b) => a.nextDue - b.nextDue);
+
+    // "This Week" box
+    const thisWeekBox = document.createElement('div');
+    thisWeekBox.style.cssText = 'background:rgba(0,0,0,0.25);border:1px solid var(--rc-glass-border);border-radius:var(--rc-radius-sm);padding:14px;margin-bottom:16px;';
+
+    const thisWeekTitle = document.createElement('div');
+    thisWeekTitle.style.cssText = 'font-weight:600;margin-bottom:10px;font-size:14px;';
+    thisWeekTitle.textContent = '📅 This Week';
+    thisWeekBox.appendChild(thisWeekTitle);
+
+    if (thisWeekItems.length === 0) {
+      const noItems = document.createElement('p');
+      noItems.style.cssText = 'margin:0;opacity:0.7;font-size:13px;';
+      noItems.textContent = 'No data collection due this week — all goals are on track!';
+      thisWeekBox.appendChild(noItems);
+    } else {
+      thisWeekItems.forEach(item => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px;margin-bottom:8px;border-radius:8px;background:rgba(0,0,0,0.2);';
+
+        const infoDiv = document.createElement('div');
+
+        const goalStrong = document.createElement('strong');
+        goalStrong.textContent = item.goal.code;
+        infoDiv.appendChild(goalStrong);
+
+        if (item.goal.goal_area) {
+          const areaSpan = document.createTextNode(' — ' + item.goal.goal_area);
+          infoDiv.appendChild(areaSpan);
+        }
+
+        const dueSmall = document.createElement('small');
+        dueSmall.style.cssText = 'display:block;opacity:0.7;margin-top:2px;';
+        if (item.statusInfo.status === 'overdue') {
+          dueSmall.textContent = item.statusInfo.days + ' day' + (item.statusInfo.days !== 1 ? 's' : '') + ' overdue';
+        } else {
+          dueSmall.textContent = 'Due in ' + item.statusInfo.days + ' day' + (item.statusInfo.days !== 1 ? 's' : '');
+        }
+        infoDiv.appendChild(dueSmall);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+        const statusSpan = document.createElement('span');
+        statusSpan.textContent = item.statusInfo.icon;
+        actionsDiv.appendChild(statusSpan);
+
+        const collectBtn = document.createElement('button');
+        collectBtn.className = 'dt-btn primary';
+        collectBtn.textContent = 'Collect Now';
+        collectBtn.dataset.scheduleCollectGoal = item.goal.code;
+        actionsDiv.appendChild(collectBtn);
+
+        row.appendChild(infoDiv);
+        row.appendChild(actionsDiv);
+        thisWeekBox.appendChild(row);
+      });
+    }
+    wrapper.appendChild(thisWeekBox);
+
+    // ── Full Schedule table ──────────────────────────────────────────────────
+    if (activeGoals.length === 0) {
+      const empty = stEl('div', null, 'No active IEP goals found for this student.');
+      empty.style.cssText = 'padding:20px;opacity:0.7;';
+      wrapper.appendChild(empty);
+      return wrapper;
+    }
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'dt-data-grid';
+
+    const table = document.createElement('table');
+    table.className = 'dt-data-table';
+
+    // Header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['Goal', 'Frequency', 'Last Collected', 'Next Due', 'Status', 'Actions'].forEach(label => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Body
+    const tbody = document.createElement('tbody');
+
+    scheduleItems.forEach(item => {
+      const tr = document.createElement('tr');
+
+      // Goal cell
+      const goalTd = document.createElement('td');
+      goalTd.style.textAlign = 'left';
+      const goalCodeStrong = document.createElement('strong');
+      goalCodeStrong.textContent = item.goal.code;
+      goalTd.appendChild(goalCodeStrong);
+      if (item.goal.goal_area) {
+        const areaBr = document.createElement('br');
+        goalTd.appendChild(areaBr);
+        const areaSmall = document.createElement('small');
+        areaSmall.style.opacity = '0.7';
+        areaSmall.textContent = item.goal.goal_area;
+        goalTd.appendChild(areaSmall);
+      }
+      tr.appendChild(goalTd);
+
+      // Frequency dropdown cell
+      const freqTd = document.createElement('td');
+      const freqSelect = document.createElement('select');
+      freqSelect.className = 'dt-search-input';
+      freqSelect.style.cssText = 'padding:6px 8px;font-size:13px;width:auto;';
+      freqSelect.dataset.scheduleGoal = item.goal.code;
+      const freqOptions = [
+        { value: 'weekly',    label: 'Weekly' },
+        { value: 'biweekly',  label: 'Biweekly' },
+        { value: 'monthly',   label: 'Monthly' },
+        { value: 'quarterly', label: 'Quarterly' },
+      ];
+      freqOptions.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        if (item.frequency === opt.value) option.selected = true;
+        freqSelect.appendChild(option);
+      });
+      freqTd.appendChild(freqSelect);
+      tr.appendChild(freqTd);
+
+      // Last Collected cell
+      const lastTd = document.createElement('td');
+      lastTd.textContent = item.lastCollected
+        ? new Date(item.lastCollected).toLocaleDateString()
+        : 'Never';
+      tr.appendChild(lastTd);
+
+      // Next Due cell
+      const nextTd = document.createElement('td');
+      nextTd.textContent = item.nextDue.toLocaleDateString();
+      tr.appendChild(nextTd);
+
+      // Status cell
+      const statusTd = document.createElement('td');
+      const statusIcon = document.createElement('span');
+      statusIcon.textContent = item.statusInfo.icon + ' ';
+      const statusLabel = document.createElement('span');
+      statusLabel.textContent = item.statusInfo.label;
+      statusTd.appendChild(statusIcon);
+      statusTd.appendChild(statusLabel);
+      tr.appendChild(statusTd);
+
+      // Actions cell
+      const actionsTd = document.createElement('td');
+      const collectNowBtn = document.createElement('button');
+      collectNowBtn.className = 'dt-btn primary';
+      collectNowBtn.textContent = 'Collect Now';
+      collectNowBtn.dataset.scheduleCollectGoal = item.goal.code;
+      actionsTd.appendChild(collectNowBtn);
+      tr.appendChild(actionsTd);
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    wrapper.appendChild(tableWrap);
+
+    // ── Wire event handlers ──────────────────────────────────────────────────
+
+    // Frequency dropdown changes
+    wrapper.querySelectorAll('[data-schedule-goal]').forEach(select => {
+      select.addEventListener('change', () => {
+        setScheduleFrequency(student.code, select.dataset.scheduleGoal, select.value);
+        // Re-render the schedule tab to reflect the new frequency
+        selectedDetailTabMap.set(student.code, 'schedule');
+        renderExpandedDetail(student.code).catch(err => {
+          console.warn('[tc-students] Schedule tab re-render failed:', err);
+        });
+      });
+    });
+
+    // "Collect Now" buttons — jump to Progress tab and open Add Data Point for this goal
+    wrapper.querySelectorAll('[data-schedule-collect-goal]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const goalCode = btn.dataset.scheduleCollectGoal;
+        // Switch to Progress tab
+        selectedDetailTabMap.set(student.code, 'progress');
+        renderExpandedDetail(student.code).then(() => {
+          // After rendering, trigger the Add Data Point form for the specified goal
+          const container = document.getElementById(`stExpandedDetail-${student.code}`);
+          if (!container) return;
+          const addBtn = container.querySelector(`.dt-goal-row[data-goal="${CSS.escape(goalCode)}"] [data-action="show-add-form"]`);
+          if (addBtn) addBtn.click();
+        }).catch(err => {
+          console.warn('[tc-students] Schedule Collect Now navigation failed:', err);
+        });
+      });
+    });
+
+    return wrapper;
+  }
+
+  // ── END SCHEDULE TAB ──────────────────────────────────────────────────────
 
   function renderClassFilterOptions() {
     const selectEl = document.getElementById('stClassFilter');
