@@ -1831,7 +1831,7 @@
   /**
    * Aggregate progress values for a student across all active, non-prompt_count goals.
    * Groups entries by date, averages all goals' values per date, then returns the last
-   * 5–8 chronological values (oldest → newest).
+   * up to 8 chronological values (oldest → newest).
    * @param {string} studentCode
    * @returns {number[]}
    */
