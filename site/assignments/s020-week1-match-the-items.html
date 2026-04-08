@@ -566,8 +566,8 @@ document.querySelectorAll('.category-group').forEach(function(group) {
       card.classList.remove('correct', 'incorrect');
       card.classList.add(isCorrect ? 'correct' : 'incorrect');
       fb.textContent = isCorrect
-        ? '\u2713 Correct! It belongs in the ' + correctAnswer + '.'
-        : '\u2717 Not quite \u2014 it belongs in the ' + correctAnswer + '.';
+        ? '✓ Correct! It belongs in the ' + correctAnswer + '.'
+        : '✗ Not quite — it belongs in the ' + correctAnswer + '.';
       if (!isCorrect) {
         group.querySelectorAll('.cat-btn').forEach(function(b) {
           if (b.textContent.trim() === correctAnswer) { b.classList.add('reveal-answer'); }
@@ -580,29 +580,29 @@ document.querySelectorAll('.category-group').forEach(function(group) {
 
 // ===== DATA =====
 var DAY3_ITEMS = [
-  { id: 'D3I1', emoji: '\ud83d\udcd3', label: 'Notebook',       correct: true  },
-  { id: 'D3I2', emoji: '\u270f\ufe0f',  label: 'Pencil',         correct: true  },
-  { id: 'D3I3', emoji: '\ud83d\udccf', label: 'Ruler',           correct: true  },
-  { id: 'D3I4', emoji: '\u2702\ufe0f',  label: 'Scissors',       correct: true  },
-  { id: 'D3I5', emoji: '\ud83d\udd8a\ufe0f', label: 'Pen',      correct: true  },
-  { id: 'D3I6', emoji: '\ud83c\udf4e', label: 'Apple',           correct: false },
-  { id: 'D3I7', emoji: '\ud83e\uddf8', label: 'Stuffed Animal',  correct: false },
-  { id: 'D3I8', emoji: '\ud83e\udeb4', label: 'Plant',           correct: false }
+  { id: 'D3I1', emoji: '📓', label: 'Notebook',       correct: true  },
+  { id: 'D3I2', emoji: '✏️',  label: 'Pencil',         correct: true  },
+  { id: 'D3I3', emoji: '📏', label: 'Ruler',           correct: true  },
+  { id: 'D3I4', emoji: '✂️',  label: 'Scissors',       correct: true  },
+  { id: 'D3I5', emoji: '🖊️', label: 'Pen',      correct: true  },
+  { id: 'D3I6', emoji: '🍎', label: 'Apple',           correct: false },
+  { id: 'D3I7', emoji: '🧸', label: 'Stuffed Animal',  correct: false },
+  { id: 'D3I8', emoji: '🪴', label: 'Plant',           correct: false }
 ];
 
 var DAY4_ITEMS = [
-  { id: 'D4I1',  emoji: '\ud83c\udf73', label: 'Frying Pan',     zone: 'Kitchen'  },
-  { id: 'D4I2',  emoji: '\ud83e\uddf4', label: 'Shampoo',        zone: 'Bathroom' },
-  { id: 'D4I3',  emoji: '\ud83d\udecf\ufe0f', label: 'Pillow',  zone: 'Bedroom'  },
-  { id: 'D4I4',  emoji: '\ud83e\udd63', label: 'Mixing Bowl',    zone: 'Kitchen'  },
-  { id: 'D4I5',  emoji: '\ud83e\uddfc', label: 'Bar of Soap',    zone: 'Bathroom' },
-  { id: 'D4I6',  emoji: '\ud83e\uddf8', label: 'Stuffed Animal', zone: 'Bedroom'  },
-  { id: 'D4I7',  emoji: '\ud83c\udf7d\ufe0f', label: 'Dinner Plate', zone: 'Kitchen' },
-  { id: 'D4I8',  emoji: '\ud83e\ude77', label: 'Toothbrush',     zone: 'Bathroom' },
-  { id: 'D4I9',  emoji: '\ud83d\udcda', label: 'Book',           zone: 'Bedroom'  },
-  { id: 'D4I10', emoji: '\ud83e\udd44', label: 'Wooden Spoon',   zone: 'Kitchen'  },
-  { id: 'D4I11', emoji: '\ud83e\uddfb', label: 'Toilet Paper',   zone: 'Bathroom' },
-  { id: 'D4I12', emoji: '\ud83d\udecb\ufe0f', label: 'Blanket', zone: 'Bedroom'  }
+  { id: 'D4I1',  emoji: '🍳', label: 'Frying Pan',     zone: 'Kitchen'  },
+  { id: 'D4I2',  emoji: '🧴', label: 'Shampoo',        zone: 'Bathroom' },
+  { id: 'D4I3',  emoji: '🛏️', label: 'Pillow',  zone: 'Bedroom'  },
+  { id: 'D4I4',  emoji: '🥣', label: 'Mixing Bowl',    zone: 'Kitchen'  },
+  { id: 'D4I5',  emoji: '🧼', label: 'Bar of Soap',    zone: 'Bathroom' },
+  { id: 'D4I6',  emoji: '🧸', label: 'Stuffed Animal', zone: 'Bedroom'  },
+  { id: 'D4I7',  emoji: '🍽️', label: 'Dinner Plate', zone: 'Kitchen' },
+  { id: 'D4I8',  emoji: '🪥', label: 'Toothbrush',     zone: 'Bathroom' },
+  { id: 'D4I9',  emoji: '📚', label: 'Book',           zone: 'Bedroom'  },
+  { id: 'D4I10', emoji: '🥄', label: 'Wooden Spoon',   zone: 'Kitchen'  },
+  { id: 'D4I11', emoji: '🧻', label: 'Toilet Paper',   zone: 'Bathroom' },
+  { id: 'D4I12', emoji: '🛋️', label: 'Blanket', zone: 'Bedroom'  }
 ];
 
 // ===== CHIP FACTORY =====
@@ -618,7 +618,7 @@ function makeChip(item, onRemove) {
   var removeBtn = document.createElement('button');
   removeBtn.type = 'button';
   removeBtn.className = 'chip-remove';
-  removeBtn.textContent = '\u00d7';
+  removeBtn.textContent = '×';
   removeBtn.setAttribute('aria-label', 'Remove ' + item.label);
   removeBtn.addEventListener('click', function() {
     chip.remove();
@@ -648,7 +648,7 @@ function makeDragItem(item) {
   ttsBtn.className = 'tts-btn';
   ttsBtn.type = 'button';
   ttsBtn.setAttribute('aria-label', 'Read aloud');
-  ttsBtn.textContent = '\ud83d\udd0a';
+  ttsBtn.textContent = '🔊';
   (function(lbl) {
     ttsBtn.addEventListener('click', function(e) { e.stopPropagation(); speakText(lbl); });
   }(item.label));
@@ -746,7 +746,7 @@ function setupTouchDrag(shelfEl, onDropCallback) {
       feedbackEl.textContent = '';
       updateScore();
     } else {
-      feedbackEl.textContent = '\u2717 ' + item.label + " doesn\u2019t belong in the supply bag!";
+      feedbackEl.textContent = '✗ ' + item.label + " doesn't belong in the supply bag!";
       var sc = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
       if (sc) {
         sc.classList.add('wrong-bounce');
@@ -812,7 +812,7 @@ function setupTouchDrag(shelfEl, onDropCallback) {
       feedbackEl.textContent = '';
       updateScore();
     } else {
-      feedbackEl.textContent = '\u2717 ' + item.label + " doesn\u2019t belong in the " + zoneName + '!';
+      feedbackEl.textContent = '✗ ' + item.label + " doesn't belong in the " + zoneName + '!';
       var sc = shelfEl.querySelector('[data-item-id="' + itemId + '"]');
       if (sc) {
         sc.classList.add('wrong-bounce');
