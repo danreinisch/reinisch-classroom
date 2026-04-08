@@ -1755,6 +1755,7 @@
   }
 
 
+  function renderStructuredAssignment(panel, instance) {
     const assignment = instance.assignment || {};
     const meta = assignment.meta || {};
     const title = escapeHtml(assignment.title || 'Assignment');
