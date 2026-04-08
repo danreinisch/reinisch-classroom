@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match the Items – Week 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
+.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
+.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
+.header p{font-size:0.95rem;color:#8b949e;}
+.main-content{padding:20px 24px 80px;}
+.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:0 0 16px;}
+/* Q-card */
+.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
+.q-card.correct{border-color:#22c55e;}
+.q-card.incorrect{border-color:#ef4444;}
+.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
+.q-prompt{font-size:0.95rem;font-weight:400;color:#8b949e;line-height:1.5;margin-bottom:14px;}
+.q-feedback{font-size:0.8rem;margin-top:10px;min-height:18px;}
+.q-card.correct .q-feedback{color:#22c55e;}
+.q-card.incorrect .q-feedback{color:#ef4444;}
+/* Item display */
+.item-display{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;}
+.item-emoji{font-size:3rem;line-height:1;}
+.item-label{font-size:1.1rem;font-weight:700;color:#e6edf3;}
+/* Category buttons */
+.category-group{display:flex;gap:10px;flex-wrap:wrap;}
+.cat-btn{flex:1 1 calc(33% - 8px);min-width:90px;background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:10px 8px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;}
+.cat-btn:hover{border-color:#14b8a6;color:#e6edf3;}
+.cat-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
+.cat-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
+.cat-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
+.cat-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
+/* Bottom bar */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
+.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
+.score-display span{color:#14b8a6;font-weight:700;}
+.save-status{font-size:0.8rem;opacity:0;transition:opacity 0.3s;color:#22c55e;min-width:100px;}
+.btn-row{display:flex;gap:10px;}
+.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-save{background:#30363d;color:#e6edf3;}
+.btn-save:hover{background:#484f58;}
+.btn-submit{background:#14b8a6;color:#0d1117;}
+.btn-submit:hover{background:#0d9488;}
+/* Custom confirm dialog */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
+.confirm-overlay.show{display:flex;}
+.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
+.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
+.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Match the Items – Week 1</h1>
+  <p>Where does each item belong? Click the correct room for each one.</p>
+</div>
+
+<div class="main-content">
+
+  <div class="part-label">Sort each item into the correct room</div>
+
+  <!-- Q1 -->
+  <div class="q-card" data-qref="W1Q1" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q1">
+    <div class="q-num">Question 1</div>
+    <div class="item-display">
+      <span class="item-emoji">🍳</span>
+      <span class="item-label">Frying Pan</span>
+    </div>
+    <div class="q-prompt">Which room does a Frying Pan belong in?</div>
+    <div class="category-group" data-correct="Kitchen">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="q-card" data-qref="W1Q2" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q2">
+    <div class="q-num">Question 2</div>
+    <div class="item-display">
+      <span class="item-emoji">🧴</span>
+      <span class="item-label">Shampoo Bottle</span>
+    </div>
+    <div class="q-prompt">Which room does a Shampoo Bottle belong in?</div>
+    <div class="category-group" data-correct="Bathroom">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="q-card" data-qref="W1Q3" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q3">
+    <div class="q-num">Question 3</div>
+    <div class="item-display">
+      <span class="item-emoji">🛏️</span>
+      <span class="item-label">Pillow</span>
+    </div>
+    <div class="q-prompt">Which room does a Pillow belong in?</div>
+    <div class="category-group" data-correct="Bedroom">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="q-card" data-qref="W1Q4" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q4">
+    <div class="q-num">Question 4</div>
+    <div class="item-display">
+      <span class="item-emoji">🍽️</span>
+      <span class="item-label">Dinner Plate</span>
+    </div>
+    <div class="q-prompt">Which room does a Dinner Plate belong in?</div>
+    <div class="category-group" data-correct="Kitchen">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="q-card" data-qref="W1Q5" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q5">
+    <div class="q-num">Question 5</div>
+    <div class="item-display">
+      <span class="item-emoji">🪥</span>
+      <span class="item-label">Toothbrush</span>
+    </div>
+    <div class="q-prompt">Which room does a Toothbrush belong in?</div>
+    <div class="category-group" data-correct="Bathroom">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q6 -->
+  <div class="q-card" data-qref="W1Q6" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q6">
+    <div class="q-num">Question 6</div>
+    <div class="item-display">
+      <span class="item-emoji">🧸</span>
+      <span class="item-label">Stuffed Animal</span>
+    </div>
+    <div class="q-prompt">Which room does a Stuffed Animal belong in?</div>
+    <div class="category-group" data-correct="Bedroom">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="q-card" data-qref="W1Q7" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q7">
+    <div class="q-num">Question 7</div>
+    <div class="item-display">
+      <span class="item-emoji">🥄</span>
+      <span class="item-label">Wooden Spoon</span>
+    </div>
+    <div class="q-prompt">Which room does a Wooden Spoon belong in?</div>
+    <div class="category-group" data-correct="Kitchen">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="q-card" data-qref="W1Q8" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q8">
+    <div class="q-num">Question 8</div>
+    <div class="item-display">
+      <span class="item-emoji">🧼</span>
+      <span class="item-label">Bar of Soap</span>
+    </div>
+    <div class="q-prompt">Which room does a Bar of Soap belong in?</div>
+    <div class="category-group" data-correct="Bathroom">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="q-card" data-qref="W1Q9" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q9">
+    <div class="q-num">Question 9</div>
+    <div class="item-display">
+      <span class="item-emoji">📚</span>
+      <span class="item-label">Book</span>
+    </div>
+    <div class="q-prompt">Which room does a Book belong in?</div>
+    <div class="category-group" data-correct="Bedroom">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="q-card" data-qref="W1Q10" data-goal="S020.11.2" data-points="1" data-answer-type="multiple-choice" id="qW1Q10">
+    <div class="q-num">Question 10</div>
+    <div class="item-display">
+      <span class="item-emoji">🥣</span>
+      <span class="item-label">Mixing Bowl</span>
+    </div>
+    <div class="q-prompt">Which room does a Mixing Bowl belong in?</div>
+    <div class="category-group" data-correct="Kitchen">
+      <button class="cat-btn" type="button">Kitchen</button>
+      <button class="cat-btn" type="button">Bathroom</button>
+      <button class="cat-btn" type="button">Bedroom</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+</div><!-- /main-content -->
+
+<!-- ══════════ BOTTOM BAR ══════════ -->
+<div class="bottom-bar">
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">10</span></div>
+  <div id="save-status" class="save-status"></div>
+  <div class="btn-row">
+    <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
+    <button class="btn btn-submit" type="button" onclick="submitAll()">Submit Assignment</button>
+  </div>
+</div>
+
+<!-- ══════════ CUSTOM CONFIRM DIALOG ══════════ -->
+<div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+  <div class="confirm-box">
+    <p id="confirm-msg">Are you sure you want to submit your assignment? You cannot change your answers after submitting.</p>
+    <div class="confirm-btn-row">
+      <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
+      <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOTAL = 10;
+  document.getElementById('totalCount').textContent = String(TOTAL);
+
+  /* ── Category-button click handling ── */
+  document.querySelectorAll('.category-group').forEach(function (group) {
+    group.addEventListener('click', function (e) {
+      var btn = e.target.closest('.cat-btn');
+      if (!btn) return;
+      var card = btn.closest('.q-card');
+      var correctAnswer = group.dataset.correct;
+
+      /* Clear previous selection styling */
+      group.querySelectorAll('.cat-btn').forEach(function (b) {
+        b.classList.remove('selected', 'is-correct', 'is-incorrect', 'reveal-answer');
+      });
+
+      /* Apply selection */
+      btn.classList.add('selected');
+      var isCorrect = btn.textContent.trim() === correctAnswer;
+      btn.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
+
+      /* Update card border */
+      card.classList.toggle('correct', isCorrect);
+      card.classList.toggle('incorrect', !isCorrect);
+
+      /* Feedback text */
+      var fb = card.querySelector('.q-feedback');
+      if (fb) {
+        fb.textContent = isCorrect
+          ? '✓ Correct! It belongs in the ' + correctAnswer + '.'
+          : '✗ Not quite — it belongs in the ' + correctAnswer + '.';
+      }
+
+      /* Reveal correct answer if wrong */
+      if (!isCorrect) {
+        group.querySelectorAll('.cat-btn').forEach(function (b) {
+          if (b.textContent.trim() === correctAnswer) {
+            b.classList.add('reveal-answer');
+          }
+        });
+      }
+
+      updateCount();
+    });
+  });
+
+  /* ── Answer collection ── */
+  function getAnswers() {
+    var answers = {};
+    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
+      var qref = card.dataset.qref;
+      var sel = card.querySelector('.cat-btn.selected');
+      if (sel) answers[qref] = sel.textContent.trim();
+    });
+    return answers;
+  }
+
+  /* ── Answered count ── */
+  function updateCount() {
+    var filled = 0;
+    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
+      if (card.querySelector('.cat-btn.selected')) filled++;
+    });
+    var el = document.getElementById('answeredCount');
+    if (el) el.textContent = String(filled);
+  }
+
+  /* ── Status toast ── */
+  function showStatus(msg, color) {
+    var el = document.getElementById('save-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || '#22c55e';
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.style.opacity = '0'; }, 2500);
+  }
+
+  /* ── Save / Submit ── */
+  function autosave() {
+    var answers = getAnswers();
+    window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+    showStatus('Progress saved!', '#22c55e');
+  }
+
+  function submitAll() {
+    document.getElementById('confirm-overlay').classList.add('show');
+  }
+
+  function cancelSubmit() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+  }
+
+  function confirmSubmit() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+    var answers = getAnswers();
+    window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
+  }
+
+  /* Expose for inline onclick */
+  window.autosave = autosave;
+  window.submitAll = submitAll;
+  window.cancelSubmit = cancelSubmit;
+  window.confirmSubmit = confirmSubmit;
+
+  updateCount();
+}());
+</script>
+</body>
+</html>

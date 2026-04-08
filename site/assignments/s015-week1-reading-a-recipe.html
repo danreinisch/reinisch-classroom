@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading a Recipe – Week 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
+.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
+.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
+.header p{font-size:0.95rem;color:#8b949e;}
+.main-content{padding:20px 24px 80px;}
+.part-label{font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5eead4;margin:20px 0 10px;}
+/* Recipe section */
+.recipe-intro{font-size:0.9rem;color:#8b949e;margin-bottom:14px;line-height:1.5;}
+.recipes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px;}
+.recipe-card{background:#161b22;border:2px solid #30363d;border-left:4px solid #14b8a6;border-radius:14px;padding:16px 18px;}
+.recipe-title{font-size:1.05rem;font-weight:800;color:#14b8a6;margin-bottom:2px;}
+.recipe-servings{font-size:0.75rem;color:#8b949e;margin-bottom:10px;font-family:'JetBrains Mono',monospace;}
+.recipe-section-heading{font-size:0.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-top:10px;margin-bottom:5px;}
+.recipe-list{list-style:none;padding:0;}
+.recipe-list li{font-size:0.88rem;color:#c9d1d9;padding:3px 0;border-bottom:1px solid #21262d;line-height:1.4;}
+.recipe-list li:last-child{border-bottom:none;}
+.recipe-list.steps{counter-reset:step-counter;}
+.recipe-list.steps li{counter-increment:step-counter;padding-left:22px;position:relative;}
+.recipe-list.steps li::before{content:counter(step-counter)".";position:absolute;left:0;color:#5eead4;font-weight:700;font-size:0.8rem;}
+/* Q-card */
+.q-card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
+.q-card.correct{border-color:#22c55e;}
+.q-card.incorrect{border-color:#ef4444;}
+.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:8px;}
+.q-prompt{font-size:1rem;font-weight:400;color:#e6edf3;line-height:1.5;margin-bottom:12px;}
+.q-feedback{font-size:0.8rem;margin-top:8px;min-height:18px;}
+.q-card.correct .q-feedback{color:#22c55e;}
+.q-card.incorrect .q-feedback{color:#ef4444;}
+/* Multiple choice options */
+.options-group{display:flex;flex-direction:column;gap:8px;}
+.opt-btn{background:#0d1117;border:2px solid #30363d;border-radius:10px;color:#c9d1d9;font-family:'Outfit',sans-serif;font-size:0.95rem;padding:10px 14px;text-align:left;cursor:pointer;transition:border-color 0.2s,background 0.2s,color 0.2s;width:100%;}
+.opt-btn:hover{border-color:#14b8a6;color:#e6edf3;}
+.opt-btn.selected{border-color:#14b8a6;background:rgba(20,184,166,0.1);color:#14b8a6;}
+.opt-btn.selected.is-correct{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#22c55e;}
+.opt-btn.selected.is-incorrect{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#ef4444;}
+.opt-btn.reveal-answer{border-color:#22c55e;color:#22c55e;opacity:0.75;}
+/* Constructed response */
+.q-input-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.q-input{font-family:'JetBrains Mono',monospace;font-size:1rem;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:8px 14px;color:#e6edf3;width:100%;outline:none;transition:border-color 0.2s;resize:vertical;min-height:44px;}
+.q-input:focus{border-color:#14b8a6;}
+/* Bottom bar */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
+.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
+.score-display span{color:#14b8a6;font-weight:700;}
+.save-status{font-size:0.8rem;opacity:0;transition:opacity 0.3s;color:#22c55e;min-width:100px;}
+.btn-row{display:flex;gap:10px;}
+.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-save{background:#30363d;color:#e6edf3;}
+.btn-save:hover{background:#484f58;}
+.btn-submit{background:#14b8a6;color:#0d1117;}
+.btn-submit:hover{background:#0d9488;}
+/* Custom confirm dialog */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
+.confirm-overlay.show{display:flex;}
+.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
+.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
+.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Reading a Recipe – Week 1</h1>
+  <p>Read each recipe carefully, then answer the questions below.</p>
+</div>
+
+<div class="main-content">
+
+  <!-- ══════════ RECIPE REFERENCE CARDS ══════════ -->
+  <div class="part-label">📖 Reference Recipes</div>
+  <p class="recipe-intro">Look at these three recipes to answer the questions. You can scroll back up to check them any time!</p>
+
+  <div class="recipes-grid">
+
+    <!-- Recipe 1 -->
+    <div class="recipe-card">
+      <div class="recipe-title">Recipe 1: Peanut Butter &amp; Jelly Sandwich</div>
+      <div class="recipe-servings">Makes: 1 sandwich</div>
+      <div class="recipe-section-heading">Ingredients</div>
+      <ul class="recipe-list">
+        <li>2 slices of bread</li>
+        <li>2 tablespoons peanut butter</li>
+        <li>1 tablespoon jelly</li>
+      </ul>
+      <div class="recipe-section-heading">Steps</div>
+      <ol class="recipe-list steps">
+        <li>Lay two slices of bread flat on a plate.</li>
+        <li>Spread peanut butter on one slice of bread.</li>
+        <li>Spread jelly on the other slice of bread.</li>
+        <li>Press both slices together.</li>
+        <li>Cut in half and enjoy!</li>
+      </ol>
+    </div>
+
+    <!-- Recipe 2 -->
+    <div class="recipe-card">
+      <div class="recipe-title">Recipe 2: Bowl of Cereal</div>
+      <div class="recipe-servings">Makes: 1 bowl</div>
+      <div class="recipe-section-heading">Ingredients</div>
+      <ul class="recipe-list">
+        <li>1 cup cereal</li>
+        <li>½ cup cold milk</li>
+      </ul>
+      <div class="recipe-section-heading">Steps</div>
+      <ol class="recipe-list steps">
+        <li>Get a bowl from the cabinet.</li>
+        <li>Pour 1 cup of cereal into the bowl.</li>
+        <li>Pour ½ cup of cold milk over the cereal.</li>
+        <li>Add a spoon and enjoy!</li>
+      </ol>
+    </div>
+
+    <!-- Recipe 3 -->
+    <div class="recipe-card">
+      <div class="recipe-title">Recipe 3: Fruit Salad</div>
+      <div class="recipe-servings">Makes: 2 servings</div>
+      <div class="recipe-section-heading">Ingredients</div>
+      <ul class="recipe-list">
+        <li>1 cup strawberries</li>
+        <li>½ cup blueberries</li>
+        <li>½ cup grapes</li>
+        <li>1 teaspoon honey</li>
+      </ul>
+      <div class="recipe-section-heading">Steps</div>
+      <ol class="recipe-list steps">
+        <li>Wash all the fruit under cold water.</li>
+        <li>Cut the strawberries in half.</li>
+        <li>Measure ½ cup of blueberries and add to bowl.</li>
+        <li>Measure ½ cup of grapes and add to bowl.</li>
+        <li>Combine all fruit in a large bowl.</li>
+        <li>Drizzle 1 teaspoon of honey on top.</li>
+        <li>Stir gently and serve.</li>
+      </ol>
+    </div>
+
+  </div><!-- /recipes-grid -->
+
+  <!-- ══════════ PART A: MULTIPLE CHOICE ══════════ -->
+  <div class="part-label">Part A – Multiple Choice</div>
+
+  <div class="q-card" data-qref="W1Q1" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q1">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">What is the title of Recipe 1?</div>
+    <div class="options-group">
+      <button class="opt-btn" type="button">a) Fruit Salad</button>
+      <button class="opt-btn" type="button">b) Bowl of Cereal</button>
+      <button class="opt-btn" type="button" data-correct>c) Peanut Butter &amp; Jelly Sandwich</button>
+      <button class="opt-btn" type="button">d) Oatmeal</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q2" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q2">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">How many ingredients does Recipe 2 (Bowl of Cereal) need?</div>
+    <div class="options-group">
+      <button class="opt-btn" type="button">a) 1</button>
+      <button class="opt-btn" type="button" data-correct>b) 2</button>
+      <button class="opt-btn" type="button">c) 3</button>
+      <button class="opt-btn" type="button">d) 4</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q3" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q3">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">What is Step 1 of Recipe 3 (Fruit Salad)?</div>
+    <div class="options-group">
+      <button class="opt-btn" type="button">a) Cut the strawberries in half</button>
+      <button class="opt-btn" type="button">b) Drizzle honey on top</button>
+      <button class="opt-btn" type="button" data-correct>c) Wash all the fruit under cold water</button>
+      <button class="opt-btn" type="button">d) Combine all fruit in a large bowl</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q4" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q4">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">How many servings does Recipe 1 (PB&amp;J) make?</div>
+    <div class="options-group">
+      <button class="opt-btn" type="button" data-correct>a) 1</button>
+      <button class="opt-btn" type="button">b) 2</button>
+      <button class="opt-btn" type="button">c) 3</button>
+      <button class="opt-btn" type="button">d) 4</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q5" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="multiple-choice" id="qW1Q5">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">What is the last step of Recipe 2 (Bowl of Cereal)?</div>
+    <div class="options-group">
+      <button class="opt-btn" type="button">a) Pour cereal into the bowl</button>
+      <button class="opt-btn" type="button">b) Pour cold milk over the cereal</button>
+      <button class="opt-btn" type="button">c) Get a bowl from the cabinet</button>
+      <button class="opt-btn" type="button" data-correct>d) Add a spoon and enjoy!</button>
+    </div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <!-- ══════════ PART B: CONSTRUCTED RESPONSE ══════════ -->
+  <div class="part-label">Part B – Write Your Answer</div>
+
+  <div class="q-card" data-qref="W1Q6" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q6">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">What is the first step to make a PB&amp;J Sandwich? Write the step in your own words.</div>
+    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q6" autocomplete="off" rows="2"></textarea></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q7" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q7">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">List 2 ingredients you need to make the Fruit Salad.</div>
+    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q7" autocomplete="off" rows="2"></textarea></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q8" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q8">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">How many steps does the Bowl of Cereal recipe have?</div>
+    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q8" autocomplete="off" rows="1"></textarea></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q9" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q9">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">In the Fruit Salad recipe, what do you drizzle on top of the fruit?</div>
+    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q9" autocomplete="off" rows="1"></textarea></div>
+    <div class="q-feedback"></div>
+  </div>
+
+  <div class="q-card" data-qref="W1Q10" data-goal="S015.11.1-1;S015.11.3-1" data-points="1" data-answer-type="constructed" id="qW1Q10">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Which recipe in this assignment makes 2 servings?</div>
+    <div class="q-input-row"><textarea class="q-input" placeholder="Write your answer here…" name="W1Q10" autocomplete="off" rows="1"></textarea></div>
+    <div class="q-feedback"></div>
+  </div>
+
+</div><!-- /main-content -->
+
+<!-- ══════════ BOTTOM BAR ══════════ -->
+<div class="bottom-bar">
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">10</span></div>
+  <div id="save-status" class="save-status"></div>
+  <div class="btn-row">
+    <button class="btn btn-save" type="button" onclick="autosave()">Save Progress</button>
+    <button class="btn btn-submit" type="button" onclick="submitAll()">Submit Assignment</button>
+  </div>
+</div>
+
+<!-- ══════════ CUSTOM CONFIRM DIALOG ══════════ -->
+<div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
+  <div class="confirm-box">
+    <p id="confirm-msg">Are you sure you want to submit your assignment? You cannot change your answers after submitting.</p>
+    <div class="confirm-btn-row">
+      <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
+      <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOTAL = 10;
+  document.getElementById('totalCount').textContent = String(TOTAL);
+
+  /* ── Multiple-choice click handling ── */
+  document.querySelectorAll('.options-group').forEach(function (group) {
+    group.addEventListener('click', function (e) {
+      var btn = e.target.closest('.opt-btn');
+      if (!btn) return;
+      var card = btn.closest('.q-card');
+
+      /* Clear previous selection styling */
+      group.querySelectorAll('.opt-btn').forEach(function (b) {
+        b.classList.remove('selected', 'is-correct', 'is-incorrect', 'reveal-answer');
+      });
+
+      /* Apply selection */
+      btn.classList.add('selected');
+      var isCorrect = btn.hasAttribute('data-correct');
+      btn.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
+
+      /* Update card border */
+      card.classList.toggle('correct', isCorrect);
+      card.classList.toggle('incorrect', !isCorrect);
+
+      /* Feedback text */
+      var fb = card.querySelector('.q-feedback');
+      if (fb) {
+        fb.textContent = isCorrect ? '✓ Correct!' : '✗ Not quite — the correct answer is highlighted below.';
+      }
+
+      /* Reveal correct answer if wrong */
+      if (!isCorrect) {
+        group.querySelectorAll('.opt-btn[data-correct]').forEach(function (b) {
+          b.classList.add('reveal-answer');
+        });
+      }
+
+      updateCount();
+    });
+  });
+
+  /* ── Constructed-response input handling ── */
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.classList.contains('q-input')) {
+      updateCount();
+    }
+  });
+
+  /* ── Answer collection ── */
+  function getAnswers() {
+    var answers = {};
+    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
+      var qref = card.dataset.qref;
+      if (card.dataset.answerType === 'multiple-choice') {
+        var sel = card.querySelector('.opt-btn.selected');
+        if (sel) answers[qref] = sel.textContent.trim();
+      } else {
+        var inp = card.querySelector('.q-input');
+        if (inp && inp.value.trim()) answers[qref] = inp.value.trim();
+      }
+    });
+    return answers;
+  }
+
+  /* ── Answered count ── */
+  function updateCount() {
+    var filled = 0;
+    document.querySelectorAll('.q-card[data-qref]').forEach(function (card) {
+      if (card.dataset.answerType === 'multiple-choice') {
+        if (card.querySelector('.opt-btn.selected')) filled++;
+      } else {
+        var inp = card.querySelector('.q-input');
+        if (inp && inp.value.trim()) filled++;
+      }
+    });
+    var el = document.getElementById('answeredCount');
+    if (el) el.textContent = String(filled);
+  }
+
+  /* ── Status toast ── */
+  function showStatus(msg, color) {
+    var el = document.getElementById('save-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || '#22c55e';
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.style.opacity = '0'; }, 2500);
+  }
+
+  /* ── Save / Submit ── */
+  function autosave() {
+    var answers = getAnswers();
+    window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+    showStatus('Progress saved!', '#22c55e');
+  }
+
+  function submitAll() {
+    document.getElementById('confirm-overlay').classList.add('show');
+  }
+
+  function cancelSubmit() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+  }
+
+  function confirmSubmit() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+    var answers = getAnswers();
+    window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
+  }
+
+  /* Expose for inline onclick */
+  window.autosave = autosave;
+  window.submitAll = submitAll;
+  window.cancelSubmit = cancelSubmit;
+  window.confirmSubmit = confirmSubmit;
+
+  updateCount();
+}());
+</script>
+</body>
+</html>
