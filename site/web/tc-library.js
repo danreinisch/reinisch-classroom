@@ -392,6 +392,7 @@
   let _currentTab = "reserve";
   const tabScrollPositions = {};
   let globalSearchQuery = '';
+  const FILTERS_WIDE_BREAKPOINT = 1200; // px — secondary filters auto-expand above this width
   let assignmentsData = [];
   let instancesData = [];
   let submissionsData = [];
@@ -634,8 +635,10 @@
     });
     // Issue #8: Save scroll position for outgoing tab
     tabScrollPositions[prevTab] = window.scrollY || document.documentElement.scrollTop;
-    // Issue #9: Carry search query to incoming tab
-    globalSearchQuery = filters.assignments.searchQuery;
+    // Issue #9: Carry search query only from tabs that use the assignments search field
+    if (prevTab === 'reserve' || prevTab === 'active') {
+      globalSearchQuery = filters.assignments.searchQuery;
+    }
     const allTabIds = ['reserveTab', 'activeTab', 'finalizedTab', 'overviewTab', 'lessonsTab', 'recallLibraryTab', 'assignmentsTab'];
     allTabIds.forEach(id => {
       const el = $(id);
@@ -4651,7 +4654,7 @@
       container.appendChild(filterBar);
 
       // ── Secondary filter section (collapsible) ────────────────────────────
-      const reserveFiltersExpanded = filters.reserve.filtersExpanded || window.innerWidth > 1200;
+      const reserveFiltersExpanded = filters.reserve.filtersExpanded || window.innerWidth > FILTERS_WIDE_BREAKPOINT;
       const secondaryFilters = document.createElement('div');
       secondaryFilters.id = 'reserveSecondaryFilters';
       secondaryFilters.style.cssText = 'display:' + (reserveFiltersExpanded ? 'flex' : 'none') + '; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px;';
@@ -5422,7 +5425,7 @@
       container.appendChild(filterBar);
 
       // ── Secondary filter section (collapsible) ────────────────────────────
-      const activeFiltersExpanded = filters.active.filtersExpanded || window.innerWidth > 1200;
+      const activeFiltersExpanded = filters.active.filtersExpanded || window.innerWidth > FILTERS_WIDE_BREAKPOINT;
       const activeSecondaryFilters = document.createElement('div');
       activeSecondaryFilters.id = 'activeSecondaryFilters';
       activeSecondaryFilters.style.cssText = 'display:' + (activeFiltersExpanded ? 'flex' : 'none') + '; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px;';
@@ -6141,7 +6144,7 @@
       container.appendChild(filterBar);
 
       // ── Secondary filter section (collapsible) ────────────────────────────
-      const finalizedFiltersExpanded = filters.finalized.filtersExpanded || window.innerWidth > 1200;
+      const finalizedFiltersExpanded = filters.finalized.filtersExpanded || window.innerWidth > FILTERS_WIDE_BREAKPOINT;
       const finalizedSecondaryFilters = document.createElement('div');
       finalizedSecondaryFilters.id = 'finalizedSecondaryFilters';
       finalizedSecondaryFilters.style.cssText = 'display:' + (finalizedFiltersExpanded ? 'flex' : 'none') + '; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:12px;';
