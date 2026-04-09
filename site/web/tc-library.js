@@ -7757,7 +7757,7 @@
       if (assignment.series) grid.appendChild(makeDetailRow('Class', assignment.series));
       grid.appendChild(makeDetailRow('Created', createdDate));
 
-      const lane = laneCache.get(assignment.id) ?? computeLane(assignment, instancesData);
+      const lane = (laneCache.get(assignment.id) ?? computeLane(assignment, instancesData));
       const laneTextMap = { upcoming: 'Upcoming', current: 'Active', finalized: 'Finalized' };
       grid.appendChild(makeDetailRow('Status', laneTextMap[lane] || lane));
 
