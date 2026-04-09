@@ -735,11 +735,11 @@
           unitMap.set(unit.id, { unitName: unit.name, sectionName: section.name, sectionId });
           keywordToUnit.set(unit.id, { unitId: unit.id, sectionId });
           extractCatalogKeywords(unit.name).forEach(w => {
-            if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+            keywordToUnit.set(w, { unitId: unit.id, sectionId });
           });
           (unit.presentations || []).forEach(pres => {
             extractCatalogKeywords(pres.name || '').forEach(w => {
-              if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+              keywordToUnit.set(w, { unitId: unit.id, sectionId });
             });
           });
         });
@@ -2025,7 +2025,7 @@
         return { a, unitId: inf.unitId, sectionId: inf.sectionId, confidence: inf.confidence, override: inf.unitId };
       });
 
-    const checked = new Set(suggestions.filter(s => s.confidence === 'high' && s.unitId).map(s => s.a.id));
+    const checked = new Set();
 
     const confMeta = {
       high: { label: 'High Confidence', color: '#86efac', bg: 'rgba(34,197,94,.2)', border: 'rgba(34,197,94,.3)' },
@@ -2059,8 +2059,8 @@
     };
 
     const renderStep1 = () => {
-      body.innerHTML = '';
-      ftr.innerHTML = '';
+      while (body.firstChild) body.removeChild(body.firstChild);
+      while (ftr.firstChild) ftr.removeChild(ftr.firstChild);
 
       if (!suggestions.length) {
         const okMsg = document.createElement('div');
@@ -2193,8 +2193,8 @@
     const applySelected = async () => {
       const toApply = suggestions.filter(s => checked.has(s.a.id));
       if (!toApply.length) return;
-      body.innerHTML = '';
-      ftr.innerHTML = '';
+      while (body.firstChild) body.removeChild(body.firstChild);
+      while (ftr.firstChild) ftr.removeChild(ftr.firstChild);
 
       const progWrap = document.createElement('div');
       progWrap.style.cssText = 'padding:40px; text-align:center;';
@@ -2205,16 +2205,19 @@
       body.appendChild(progWrap);
 
       let done = 0, fails = 0;
-      for (const s of toApply) {
-        try {
+      const CHUNK = 5;
+      for (let i = 0; i < toApply.length; i += CHUNK) {
+        const chunk = toApply.slice(i, i + CHUNK);
+        const results = await Promise.allSettled(chunk.map(s => {
           const uid = s.override;
           const uInfo = getUnitInfo(uid);
           const sid = uInfo ? uInfo.sectionId : null;
-          await db.updateAssignment(s.a.id, { unit_id: uid, section_id: sid });
-          const idx = assignmentsData.findIndex(x => x.id === s.a.id);
-          if (idx !== -1) { assignmentsData[idx].unit_id = uid; assignmentsData[idx].section_id = sid; }
-          done++;
-        } catch (_e) { fails++; }
+          return db.updateAssignment(s.a.id, { unit_id: uid, section_id: sid }).then(() => {
+            const idx = assignmentsData.findIndex(x => x.id === s.a.id);
+            if (idx !== -1) { assignmentsData[idx].unit_id = uid; assignmentsData[idx].section_id = sid; }
+          });
+        }));
+        results.forEach(r => { if (r.status === 'fulfilled') done++; else fails++; });
         progText.textContent = 'Applying ' + (done + fails) + ' / ' + toApply.length + '\u2026';
       }
       showToast(done + ' assignment' + (done !== 1 ? 's' : '') + ' cataloged' + (fails > 0 ? ' (' + fails + ' failed)' : ''));
@@ -2223,8 +2226,8 @@
     };
 
     const renderStep3 = () => {
-      body.innerHTML = '';
-      ftr.innerHTML = '';
+      while (body.firstChild) body.removeChild(body.firstChild);
+      while (ftr.firstChild) ftr.removeChild(ftr.firstChild);
       const remaining = assignmentsData.filter(a => computeLane(a, instancesData) === 'upcoming' && !a.unit_id);
 
       if (!remaining.length) {

@@ -743,11 +743,11 @@ function buildTestMaps(lessonsData) {
         unitMap.set(unit.id, { unitName: unit.name, sectionName: section.name, sectionId });
         keywordToUnit.set(unit.id, { unitId: unit.id, sectionId });
         testExtractKeywords(unit.name).forEach(w => {
-          if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+          keywordToUnit.set(w, { unitId: unit.id, sectionId });
         });
         (unit.presentations || []).forEach(pres => {
           testExtractKeywords(pres.name || '').forEach(w => {
-            if (!keywordToUnit.has(w)) keywordToUnit.set(w, { unitId: unit.id, sectionId });
+            keywordToUnit.set(w, { unitId: unit.id, sectionId });
           });
         });
       });
