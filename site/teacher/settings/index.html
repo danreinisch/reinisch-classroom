@@ -462,6 +462,68 @@
           </p>
         </div>
 
+        <!-- Daily Digest -->
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg> Daily Digest</h2>
+          <p style="margin: 0 0 16px 0; opacity: 0.85; font-size: 14px;">Configure the weekday morning email digest sent to danielreinisch@winfieldriv.us.</p>
+
+          <div class="settings-form-group">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="digestEnabledToggle" checked />
+              <span>Enable daily digest email</span>
+            </label>
+          </div>
+
+          <div class="settings-form-group">
+            <label>Recipient</label>
+            <input type="text" class="rc-input" value="danielreinisch@winfieldriv.us" readonly style="opacity: 0.7; cursor: default;" />
+          </div>
+
+          <div class="settings-form-group">
+            <label>Schedule</label>
+            <input type="text" class="rc-input" value="Weekdays at 6:00 AM ET" readonly style="opacity: 0.7; cursor: default;" />
+          </div>
+
+          <div class="settings-form-group">
+            <label style="margin-bottom: 10px; display: block;">Sections to Include</label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400;">
+                <input type="checkbox" id="digestSectionRegressing" checked /> Regressing Goals
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400;">
+                <input type="checkbox" id="digestSectionStalled" checked /> Stalled Goals
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400;">
+                <input type="checkbox" id="digestSectionDeadlines" checked /> IEP &amp; Eval Deadlines
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400;">
+                <input type="checkbox" id="digestSectionStale" checked /> Stale Data Collection
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400;">
+                <input type="checkbox" id="digestSectionMastery" checked /> Mastery Reached
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400;">
+                <input type="checkbox" id="digestSectionStats" checked /> Quick Stats
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-form-group">
+            <label for="digestStaleThreshold">Stale data threshold (days)</label>
+            <input type="number" id="digestStaleThreshold" class="rc-input" value="14" min="1" max="90" style="max-width: 120px;" />
+          </div>
+
+          <div class="settings-form-group">
+            <label for="digestIepWindow">IEP/Eval deadline window (days)</label>
+            <input type="number" id="digestIepWindow" class="rc-input" value="30" min="1" max="180" style="max-width: 120px;" />
+          </div>
+
+          <div class="tc-actions">
+            <button id="digestSaveBtn" class="rc-btn primary">Save Digest Settings</button>
+            <button id="digestSendTest" class="rc-btn">Send Test Digest Now</button>
+          </div>
+        </div>
+
         <!-- Change Teacher Password -->
         <div class="rc-card" style="margin-bottom: 16px;">
           <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Change Teacher Password</h2>

@@ -435,12 +435,12 @@ serve(async (_req: Request): Promise<Response> => {
     return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${color};color:#fff;margin-left:6px;">${escHtml(text)}</span>`;
   }
 
-  function sectionHeader(emoji: string, title: string, count: number, badgeColor: string): string {
+  function sectionHeader(icon: string, title: string, count: number, badgeColor: string): string {
     return `
       <tr>
         <td style="padding:24px 0 8px;">
           <h2 style="margin:0;font-size:16px;font-weight:700;color:#111;border-bottom:2px solid #e5e7eb;padding-bottom:8px;">
-            ${emoji} ${escHtml(title)}${badge(String(count), badgeColor)}
+            ${icon} ${escHtml(title)}${badge(String(count), badgeColor)}
           </h2>
         </td>
       </tr>`;
@@ -480,7 +480,7 @@ serve(async (_req: Request): Promise<Response> => {
   let sectionsHtml = "";
 
   // 1. Regressing
-  sectionsHtml += sectionHeader("🔴", "Regressing Goals", regressingAlerts.length, "#ef4444");
+  sectionsHtml += sectionHeader('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" aria-hidden="true"><polyline points="22 17 13 8 9 12 2 5"/><polyline points="16 17 22 17 22 11"/></svg>', "Regressing Goals", regressingAlerts.length, "#ef4444");
   if (regressingAlerts.length === 0) {
     sectionsHtml += emptyRow("No regressing goals — great news!");
   } else {
@@ -490,7 +490,7 @@ serve(async (_req: Request): Promise<Response> => {
   }
 
   // 2. Stalled
-  sectionsHtml += sectionHeader("🟡", "Stalled Goals", stalledAlerts.length, "#eab308");
+  sectionsHtml += sectionHeader('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" aria-hidden="true"><line x1="8" y1="6" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="18"/></svg>', "Stalled Goals", stalledAlerts.length, "#eab308");
   if (stalledAlerts.length === 0) {
     sectionsHtml += emptyRow("No stalled goals.");
   } else {
@@ -500,7 +500,7 @@ serve(async (_req: Request): Promise<Response> => {
   }
 
   // 3. IEP / Eval Deadlines
-  sectionsHtml += sectionHeader("📅", "IEP & Eval Deadlines", iepDeadlines.length, "#7c3aed");
+  sectionsHtml += sectionHeader('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', "IEP & Eval Deadlines", iepDeadlines.length, "#7c3aed");
   if (iepDeadlines.length === 0) {
     sectionsHtml += emptyRow("No upcoming IEP or Eval deadlines in the next 30 days.");
   } else {
@@ -540,7 +540,7 @@ serve(async (_req: Request): Promise<Response> => {
   }
 
   // 4. Stale data collection
-  sectionsHtml += sectionHeader("📊", "Stale Data Collection", staleGoals.length, "#f59e0b");
+  sectionsHtml += sectionHeader('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', "Stale Data Collection", staleGoals.length, "#f59e0b");
   if (staleStudents.length === 0) {
     sectionsHtml += emptyRow("All goals have recent data — you're on top of it!");
   } else {
@@ -560,7 +560,7 @@ serve(async (_req: Request): Promise<Response> => {
   }
 
   // 5. Mastery reached
-  sectionsHtml += sectionHeader("🏆", "Mastery Reached", masteryReached.length, "#16a34a");
+  sectionsHtml += sectionHeader('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>', "Mastery Reached", masteryReached.length, "#16a34a");
   if (masteryReached.length === 0) {
     sectionsHtml += emptyRow("No new mastery reached in the last 30 days.");
   } else {
@@ -581,7 +581,7 @@ serve(async (_req: Request): Promise<Response> => {
     <tr>
       <td style="padding:24px 0 8px;">
         <h2 style="margin:0;font-size:16px;font-weight:700;color:#111;border-bottom:2px solid #e5e7eb;padding-bottom:8px;">
-          📈 Quick Stats
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0;" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Quick Stats
         </h2>
       </td>
     </tr>
@@ -630,7 +630,7 @@ serve(async (_req: Request): Promise<Response> => {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#1e40af,#7c3aed);padding:28px 32px;">
-              <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">📚 Daily Classroom Digest</h1>
+              <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:8px;" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Daily Classroom Digest</h1>
               <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${escHtml(dateLabel)}</p>
             </td>
           </tr>
@@ -685,7 +685,7 @@ serve(async (_req: Request): Promise<Response> => {
     staleStudents.length > 0 ||
     masteryReached.length > 0;
 
-  const subjectPrefix = hasAlerts ? "⚠️" : "✅";
+  const subjectPrefix = hasAlerts ? "[ACTION NEEDED]" : "[All Clear]";
   const subject = `${subjectPrefix} Daily Digest — ${dateLabel}`;
 
   const resendPayload = {
