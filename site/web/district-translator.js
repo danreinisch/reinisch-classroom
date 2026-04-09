@@ -127,9 +127,10 @@ export function reverseTranslateText(inputText) {
   // Escape special regex characters in each name
   const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
-  // Build a single regex — names may contain spaces, so we use word boundary
-  // only at the very start and end of each name token
-  const pattern = new RegExp(`(?<![\\w])(?:${escaped.join('|')})(?![\\w])`, 'gi');
+  // Use word boundaries at the start and end of each name token.
+  // Multi-word names (e.g. "Jane Smith") work correctly: \b applies at the
+  // first and last word-character boundary of the whole name string.
+  const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
 
   return inputText.replace(pattern, (match) => {
     const entry = reverseMap.get(match.toLowerCase());

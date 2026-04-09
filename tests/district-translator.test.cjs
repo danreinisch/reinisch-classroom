@@ -66,7 +66,7 @@ function reverseTranslateText(inputText) {
   }
   const names = [...reverseMap.keys()].sort((a, b) => b.length - a.length);
   const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const pattern = new RegExp(`(?<![\\w])(?:${escaped.join('|')})(?![\\w])`, 'gi');
+  const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
   return inputText.replace(pattern, (match) => {
     const entry = reverseMap.get(match.toLowerCase());
     return entry ? entry.code : match;
@@ -141,6 +141,11 @@ test('reverseTranslateText sorts names longest-first', () => {
   // The reverse function also sorts names longest-first
   const reverseSection = src.slice(src.indexOf('reverseTranslateText'));
   assert.ok(reverseSection.includes('b.length - a.length'), 'reverseTranslateText must sort names longest-first');
+});
+
+test('reverseTranslateText uses word boundaries (\\b)', () => {
+  const reverseSection = src.slice(src.indexOf('export function reverseTranslateText'));
+  assert.ok(reverseSection.includes('\\\\b'), 'reverseTranslateText must use \\b word boundary');
 });
 
 test('translateText uses word boundaries (\\b)', () => {
