@@ -2,6 +2,8 @@
 // Portal B Student Dashboard JavaScript
 // Handles assignment grouping, grades, resubmissions, toasts, and UI interactions
 
+import { isRosterLoaded, loadRoster as loadDistrictRoster, translateAndDownload } from '/web/district-translator.js';
+
 /** Book-open SVG icon for class subheaders — static markup, no user data */
 const BOOK_OPEN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
 
@@ -636,6 +638,77 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
         btnExportCSV.classList.remove('hidden');
         btnExportCSV.addEventListener('click', () => {
           exportGradesCSV(gradedSubmissions, instanceMap, assignmentMap, helpers, quarterAverages);
+        });
+
+        // Insert "Export for District" button after the CSV button
+        const btnExportDistrict = document.createElement('button');
+        btnExportDistrict.id = 'btnExportGradesDistrictCSV';
+        btnExportDistrict.className = btnExportCSV.className;
+        btnExportDistrict.textContent = '🏫 Export for District';
+        btnExportCSV.insertAdjacentElement('afterend', btnExportDistrict);
+        btnExportDistrict.addEventListener('click', async () => {
+          if (!isRosterLoaded()) {
+            await rcAlert(
+              'No Roster Loaded',
+              'To export with real names, please select your student roster CSV file (code,real_name) in the next dialog.'
+            );
+            const loaded = await new Promise((resolve) => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.csv';
+              input.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) { resolve(false); return; }
+                const text = await file.text();
+                const count = loadDistrictRoster(text);
+                if (count === 0) {
+                  await rcAlert('Empty Roster', 'No valid entries found. The roster CSV must have two columns: code,real_name.');
+                  resolve(false);
+                } else {
+                  resolve(true);
+                }
+              });
+              input.addEventListener('cancel', () => resolve(false));
+              input.click();
+            });
+            if (!loaded) return;
+          }
+
+          // Build grades CSV content then translate and download
+          const rows = [['Date', 'Class', 'Assignment', 'Score', 'Quarter']];
+          const sortedSubs = [...gradedSubmissions].sort((a, b) =>
+            new Date(b.submitted_at) - new Date(a.submitted_at)
+          );
+          for (const submission of sortedSubs) {
+            const instance = instanceMap.get(submission.instance_id);
+            if (!instance) continue;
+            const assignment = assignmentMap.get(instance.assignment_id);
+            const date = submission.submitted_at
+              ? new Date(submission.submitted_at).toLocaleDateString() : '';
+            const className = assignment?.meta?.class_name || assignment?.class_id || 'N/A';
+            const title = assignment?.title || 'Unknown';
+            const score = submission.score_total != null ? submission.score_total : '';
+            const quarter = submission.submitted_at
+              ? `Q${helpers.getQuarter(submission.submitted_at)}` : '';
+            rows.push([date, className, title, score, quarter]);
+          }
+          rows.push([], ['Quarterly Summary'], ['Quarter', 'Average']);
+          for (let q = 1; q <= 4; q++) {
+            const avg = quarterAverages[`Q${q}`];
+            rows.push([`Q${q}`, avg !== null ? avg : 'N/A']);
+          }
+          const csv = rows.map(row =>
+            row.map(cell => {
+              const str = String(cell);
+              return str.includes(',') || str.includes('"')
+                ? `"${str.replace(/"/g, '""')}"` : str;
+            }).join(',')
+          ).join('\n');
+          translateAndDownload(
+            csv,
+            `grades_district_${new Date().toISOString().split('T')[0]}.csv`,
+            'text/csv;charset=utf-8;'
+          );
         });
       }
       

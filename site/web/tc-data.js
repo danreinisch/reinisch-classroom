@@ -10,6 +10,7 @@
 
   // Import data adapter for Supabase/localStorage abstraction
   const { db, isRemote } = await import('/web/data-adapter.js');
+  const { isRosterLoaded, loadRoster: loadDistrictRoster, translateAndDownload } = await import('/web/district-translator.js');
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
   const { parseGoalValue, formatGoalValue } = await import('/web/goal-utils.js');
@@ -1544,6 +1545,59 @@
     URL.revokeObjectURL(url);
   }
 
+  async function exportToDistrictCsv() {
+    if (!isRosterLoaded()) {
+      await rcAlert(
+        'No Roster Loaded',
+        'To export with real names, please select your student roster CSV file (code,real_name) in the next dialog.'
+      );
+      const loaded = await new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+        input.addEventListener('change', async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) { resolve(false); return; }
+          const text = await file.text();
+          const count = loadDistrictRoster(text);
+          if (count === 0) {
+            await rcAlert('Empty Roster', 'No valid entries found. The roster CSV must have two columns: code,real_name.');
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        });
+        input.addEventListener('cancel', () => resolve(false));
+        input.click();
+      });
+      if (!loaded) return;
+    }
+
+    const filtered = getFilteredStudents();
+    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Baseline', 'Mastery', 'Target', 'Date', 'Value', 'Source', 'Quarter']];
+    filtered.forEach(student => {
+      let goals = student.goals;
+      if (currentGoalAreaFilter !== 'All') {
+        goals = goals.filter(goal => (goal.goal_area || 'Uncategorized') === currentGoalAreaFilter);
+      }
+      goals.forEach(goal => {
+        const entries = getGoalProgressEntries(goal.code, student.code);
+        const baseline = goal.baseline != null ? String(goal.baseline) : '';
+        const mastery = goal.mastery != null ? String(goal.mastery) : (goal.target != null ? String(goal.target) : '');
+        const target = goal.target != null ? String(goal.target) : '';
+        if (entries.length === 0) {
+          rows.push([student.name, student.code, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, '', '', '', currentQuarterFilter]);
+        } else {
+          entries.forEach(entry => {
+            rows.push([student.name, student.code, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, entry.date, entry.value, entry.source || 'manual', currentQuarterFilter]);
+          });
+        }
+      });
+    });
+    const csvContent = rows.map(row => row.map(cell => { const s = String(cell); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s; }).join(',')).join('\n');
+    translateAndDownload(csvContent, `iep_goal_progress_district_${currentQuarterFilter}_${formatDateYYYYMMDD()}.csv`, 'text/csv;charset=utf-8;');
+  }
+
   // Bulk add progress (placeholder)
   async function bulkAddProgress() {
     await rcAlert('Coming Soon', 'Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple students/goals at once.');
@@ -2388,6 +2442,11 @@
     const csvBtn = $('dtExportCsv');
     if (csvBtn) {
       csvBtn.addEventListener('click', exportToCsv);
+    }
+
+    const districtCsvBtn = $('dtExportDistrictCsv');
+    if (districtCsvBtn) {
+      districtCsvBtn.addEventListener('click', exportToDistrictCsv);
     }
 
     // Set up Observation CSV export button

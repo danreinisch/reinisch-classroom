@@ -13,6 +13,7 @@
 
   // Import data adapter and Supabase client
   const { db, isRemote } = await import("/web/data-adapter.js");
+  const { isRosterLoaded, loadRoster, translateAndDownload } = await import("/web/district-translator.js");
   const { getSupabase } = await import("/web/supabase-client.js");
   const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel, getSchoolYearDateRange, getPeriodLabel, getDateRangeForPeriod } = await import("/web/quarter-utils.js");
   const { parseGoalValue, isGoalActive, formatGoalValue } = await import("/web/goal-utils.js");
@@ -2947,6 +2948,7 @@ ${narrative}`;
     html += `
       <div class="rp-export-actions">
         <button class="tc-btn" id="btnExportClassCSV" type="button">⬇️ Export CSV</button>
+        <button class="tc-btn" id="btnExportClassDistrictCSV" type="button">🏫 Export for District</button>
         <button class="tc-btn" id="btnPrintClass" type="button">📄 Print</button>
       </div>
     `;
@@ -2982,6 +2984,11 @@ ${narrative}`;
     const btnExportCSV = $("btnExportClassCSV");
     if (btnExportCSV) {
       btnExportCSV.addEventListener("click", () => exportClassPerformanceCSV());
+    }
+
+    const btnExportClassDistrict = $("btnExportClassDistrictCSV");
+    if (btnExportClassDistrict) {
+      btnExportClassDistrict.addEventListener("click", () => exportClassPerformanceDistrictCSV());
     }
 
     const btnPrint = $("btnPrintClass");
@@ -3708,6 +3715,7 @@ ${narrative}`;
     html += `
       <div class="rp-export-actions">
         <button class="tc-btn" id="btnExportComplianceCSV" type="button">⬇️ Export CSV</button>
+        <button class="tc-btn" id="btnExportComplianceDistrictCSV" type="button">🏫 Export for District</button>
         <button class="tc-btn" id="btnPrintCompliance" type="button">📄 Print</button>
       </div>
     `;
@@ -3733,6 +3741,11 @@ ${narrative}`;
     const btnExportCSV = $("btnExportComplianceCSV");
     if (btnExportCSV) {
       btnExportCSV.addEventListener("click", () => exportComplianceCSV());
+    }
+
+    const btnExportComplianceDistrict = $("btnExportComplianceDistrictCSV");
+    if (btnExportComplianceDistrict) {
+      btnExportComplianceDistrict.addEventListener("click", () => exportComplianceDistrictCSV());
     }
 
     const btnPrint = $("btnPrintCompliance");
@@ -3901,6 +3914,138 @@ ${narrative}`;
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Escape a value for CSV output: wrap in quotes if it contains commas, quotes, or newlines.
+   * @param {*} val
+   * @returns {string}
+   */
+  function csvField(val) {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  /**
+   * Prompt the user to select a roster CSV file and load it into district-translator.
+   * Returns true if roster was loaded successfully, false if cancelled.
+   * @returns {Promise<boolean>}
+   */
+  async function loadRosterIfNeeded() {
+    if (isRosterLoaded()) return true;
+    await rcAlert(
+      'No Roster Loaded',
+      'To export with real names, please select your student roster CSV file (code,real_name) in the next dialog.'
+    );
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) { resolve(false); return; }
+        const text = await file.text();
+        const count = loadRoster(text);
+        if (count === 0) {
+          await rcAlert('Empty Roster', 'No valid entries found. The roster CSV must have two columns: code,real_name.');
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+      input.addEventListener('cancel', () => resolve(false));
+      input.click();
+    });
+  }
+
+  /**
+   * Export class performance CSV with student codes translated to real names.
+   */
+  async function exportClassPerformanceDistrictCSV() {
+    const ready = await loadRosterIfNeeded();
+    if (!ready) return;
+
+    let csv = "Student Code,Name,Avg Grade,Assignments Complete,Missing,Goals On Track\n";
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab3State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+    const currentQuarter = getCurrentQuarter();
+    const quarterRange = getQuarterDateRange(currentQuarter);
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+      const submissions = studentInstances
+        .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+        .filter((s) => s);
+      const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+      const avgGrade =
+        scores.length > 0
+          ? (scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(1)
+          : "N/A";
+      const complete = submissions.length;
+      const missing = studentInstances.length - submissions.length;
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      const goalsOnTrack = studentGoals.filter((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        return goalData.average != null && goalData.average >= (parseGoalValue(goal.baseline) ?? 0);
+      }).length;
+      csv += [student.code, csvField(student.name || student.code), avgGrade, complete, missing, `${goalsOnTrack}/${studentGoals.length}`].join(',') + '\n';
+    });
+    translateAndDownload(
+      csv,
+      `class_performance_district_${tab3State.classFilter.replace(/\s+/g, "_")}_${formatDateYYYYMMDD()}.csv`,
+      'text/csv;charset=utf-8;'
+    );
+  }
+
+  /**
+   * Export compliance CSV with student codes translated to real names.
+   */
+  async function exportComplianceDistrictCSV() {
+    const ready = await loadRosterIfNeeded();
+    if (!ready) return;
+
+    let csv =
+      "Student Code,Student Name,Goal Code,Goal Area,Data Points (Q),Last Collected,Status\n";
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab4State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+    const quarterRange = getDateRangeForPeriod(tab4State.quarter);
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter(
+        (g) => g.student_code === student.code && isGoalActive(g)
+      );
+      studentGoals.forEach((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const lastCollected = getLastCollectedDate(goal.code, student.code);
+        let status;
+        if (goalData.count >= 3) {
+          status = "On Track";
+        } else if (goalData.count > 0) {
+          status = "Needs Data";
+        } else {
+          status = "No Data";
+        }
+        csv += [student.code, csvField(student.name || student.code), goal.code, csvField(goal.goal_area || 'N/A'), goalData.count, lastCollected, status].join(',') + '\n';
+      });
+    });
+    translateAndDownload(
+      csv,
+      `compliance_district_${tab4State.quarter}_${formatDateYYYYMMDD()}.csv`,
+      'text/csv;charset=utf-8;'
+    );
   }
 
   /**
