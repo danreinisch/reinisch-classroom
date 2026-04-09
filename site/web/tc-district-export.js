@@ -13,6 +13,8 @@ import {
   getRosterCount,
   translateText,
   translateAndDownload,
+  reverseTranslateText,
+  reverseTranslateAndDownload,
 } from '/web/district-translator.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -153,10 +155,33 @@ async function handleTranslateFile(file) {
   }
 
   if (isDocx) {
-    await notify(
-      'DOCX Translation',
-      'Open your .docx file in Google Docs or Word, copy the text, paste it in the text translator above, translate, then paste it back. Direct .docx editing is not available in the browser.'
-    );
+    // Read first bytes to detect real binary .docx (ZIP magic bytes "PK")
+    // vs platform HTML-blob exports that happen to have .docx extension.
+    const slice = file.slice(0, 512);
+    const buffer = await slice.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    // ZIP magic: 0x50 0x4B (ASCII "PK")
+    const isBinaryDocx = bytes[0] === 0x50 && bytes[1] === 0x4B;
+    // Also detect null bytes which indicate binary content
+    const hasNullBytes = !isBinaryDocx && bytes.some(b => b === 0x00);
+
+    if (isBinaryDocx || hasNullBytes) {
+      await notify(
+        'Real Word Document Detected',
+        'This appears to be an actual Word (.docx) file. To translate it:\n\n' +
+        '1. Open the file in Google Docs or Microsoft Word\n' +
+        '2. Copy all the text (Ctrl+A, Ctrl+C)\n' +
+        '3. Paste it into the text translator above (Step 2A)\n' +
+        '4. Translate, then copy the output back into your document.'
+      );
+      return;
+    }
+
+    // HTML-blob .docx (platform export) — treat as plain text
+    const text = await file.text();
+    const baseName = file.name.replace(/\.docx$/i, '');
+    translateAndDownload(text, `${baseName}_district.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     return;
   }
 
@@ -167,6 +192,109 @@ async function handleTranslateFile(file) {
   const mimeType = name.endsWith('.csv') ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;';
 
   translateAndDownload(text, `${baseName}_district${ext}`, mimeType);
+}
+
+// ── Reverse translator (names → codes) ────────────────────────────────────
+
+async function handleReverseTranslateText() {
+  if (!isRosterLoaded()) {
+    await notify('No Roster Loaded', 'Please upload a roster CSV first to enable reverse translation.');
+    return;
+  }
+
+  const inputEl = $('deReverseInputText');
+  const outputEl = $('deReverseOutputText');
+  if (!inputEl || !outputEl) return;
+
+  const input = inputEl.value.trim();
+  if (!input) {
+    await notify('Nothing to Translate', 'Please paste some text containing real student names in the input area.');
+    return;
+  }
+
+  outputEl.value = reverseTranslateText(input);
+}
+
+async function handleReverseCopyOutput() {
+  const outputEl = $('deReverseOutputText');
+  if (!outputEl || !outputEl.value) {
+    await notify('Nothing to Copy', 'Reverse-translate some text first.');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(outputEl.value);
+    const btn = $('deReverseCopyOutputBtn');
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = original; }, 2000);
+    }
+  } catch (_err) {
+    await notify('Copy Failed', 'Unable to copy to clipboard. Please select and copy the text manually.');
+  }
+}
+
+async function handleReverseDownloadOutput() {
+  const outputEl = $('deReverseOutputText');
+  if (!outputEl || !outputEl.value) {
+    await notify('Nothing to Download', 'Reverse-translate some text first.');
+    return;
+  }
+  const blob = new Blob([outputEl.value], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `district_coded_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function handleReverseTranslateFile(file) {
+  if (!file) return;
+
+  if (!isRosterLoaded()) {
+    await notify('No Roster Loaded', 'Please upload a roster CSV first to enable reverse translation.');
+    return;
+  }
+
+  const name = file.name.toLowerCase();
+  const isText = name.endsWith('.csv') || name.endsWith('.txt');
+  const isDocx = name.endsWith('.docx');
+
+  if (!isText && !isDocx) {
+    await notify('Unsupported File', 'Please upload a .csv, .txt, or .docx file.');
+    return;
+  }
+
+  if (isDocx) {
+    const slice = file.slice(0, 512);
+    const buffer = await slice.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const isBinaryDocx = bytes[0] === 0x50 && bytes[1] === 0x4B;
+    const hasNullBytes = !isBinaryDocx && bytes.some(b => b === 0x00);
+
+    if (isBinaryDocx || hasNullBytes) {
+      await notify(
+        'Real Word Document Detected',
+        'This appears to be an actual Word (.docx) file. Open it in Google Docs or Word, copy the text, paste it in the textarea above, reverse-translate, then copy the output back.'
+      );
+      return;
+    }
+
+    const text = await file.text();
+    const baseName = file.name.replace(/\.docx$/i, '');
+    reverseTranslateAndDownload(text, `${baseName}_coded.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    return;
+  }
+
+  const text = await file.text();
+  const baseName = file.name.replace(/\.(csv|txt)$/i, '');
+  const ext = name.endsWith('.csv') ? '.csv' : '.txt';
+  const mimeType = name.endsWith('.csv') ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;';
+
+  reverseTranslateAndDownload(text, `${baseName}_coded${ext}`, mimeType);
 }
 
 // ── Initialization ─────────────────────────────────────────────────────────
@@ -255,6 +383,50 @@ function init() {
       fileDropZone.classList.remove('de-dragover');
       const file = e.dataTransfer && e.dataTransfer.files[0];
       if (file) handleTranslateFile(file);
+    });
+  }
+
+  // Reverse translator (names → codes)
+  const reverseTranslateTextBtn = $('deReverseTranslateTextBtn');
+  if (reverseTranslateTextBtn) {
+    reverseTranslateTextBtn.addEventListener('click', handleReverseTranslateText);
+  }
+
+  const reverseCopyOutputBtn = $('deReverseCopyOutputBtn');
+  if (reverseCopyOutputBtn) {
+    reverseCopyOutputBtn.addEventListener('click', handleReverseCopyOutput);
+  }
+
+  const reverseDownloadOutputBtn = $('deReverseDownloadOutputBtn');
+  if (reverseDownloadOutputBtn) {
+    reverseDownloadOutputBtn.addEventListener('click', handleReverseDownloadOutput);
+  }
+
+  const reverseFileInput = $('deReverseFileInput');
+  const reverseFileDropZone = $('deReverseFileDropZone');
+
+  if (reverseFileInput) {
+    reverseFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleReverseTranslateFile(e.target.files[0]);
+      }
+    });
+  }
+
+  if (reverseFileDropZone) {
+    reverseFileDropZone.addEventListener('click', () => reverseFileInput && reverseFileInput.click());
+    reverseFileDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      reverseFileDropZone.classList.add('de-dragover');
+    });
+    reverseFileDropZone.addEventListener('dragleave', () => {
+      reverseFileDropZone.classList.remove('de-dragover');
+    });
+    reverseFileDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      reverseFileDropZone.classList.remove('de-dragover');
+      const file = e.dataTransfer && e.dataTransfer.files[0];
+      if (file) handleReverseTranslateFile(file);
     });
   }
 
