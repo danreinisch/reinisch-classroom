@@ -2403,8 +2403,8 @@
     let deadlineCount = 0;
 
     const today = new Date();
-    const thirtyDays = new Date(today);
-    thirtyDays.setDate(today.getDate() + 30);
+    const deadlineThreshold = new Date(today);
+    deadlineThreshold.setDate(today.getDate() + 30);
 
     for (const student of activeStudents) {
       const alerts = getStudentAlertCounts(student.code);
@@ -2418,11 +2418,11 @@
       // IEP/Eval deadlines within 30 days
       if (student.iep_due) {
         const d = new Date(student.iep_due);
-        if (d >= today && d <= thirtyDays) deadlineCount++;
+        if (d >= today && d <= deadlineThreshold) deadlineCount++;
       }
       if (student.eval_due) {
         const d = new Date(student.eval_due);
-        if (d >= today && d <= thirtyDays) deadlineCount++;
+        if (d >= today && d <= deadlineThreshold) deadlineCount++;
       }
     }
 
@@ -3153,10 +3153,14 @@
         ? `<button class="st-seen-today-btn st-btn st-btn-small${alreadyPresent ? ' st-seen-today-btn--present' : ''}" data-code="${escapeHtml(student.code)}" title="Mark present &amp; enter data" aria-label="Mark ${escapeHtml(student.code)} present and enter data" style="display:inline-flex;align-items:center;gap:4px;${alreadyPresent ? 'color:var(--rc-success);border-color:var(--rc-success);' : ''}">${svgCheckCircle}${alreadyPresent ? 'Present' : 'Seen today'}</button>`
         : '';
 
+      const svgChevron = isExpanded
+        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>`
+        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''} ${needsAttention ? 'st-needs-attention' : ''} ${isPinned ? 'st-row-pinned' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
-            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">&#9654;</span>${healthDot}
+            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">${svgChevron}</span>${healthDot}
           </td>
           <td class="st-code-cell">${escapeHtml(student.code)}${urgencyHtml}${pinBtn}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
@@ -3849,7 +3853,8 @@
       ? (lastEntry.value != null ? parseFloat(lastEntry.value) : (lastEntry.percent != null ? parseFloat(lastEntry.percent) : null))
       : null;
 
-    // Detect a clear upward trend: 3+ consecutive increases (newest → oldest means values should be descending)
+    // Detect a clear upward trend: 3+ consecutive increases over time.
+    // vals is newest-first, so an upward trend = vals[0] > vals[1] > vals[2]...
     let suggestedValue = null;
     let hasTrend = false;
     if (allEntries.length >= 3) {
@@ -3858,13 +3863,13 @@
       ).filter(v => v != null && !isNaN(v));
 
       if (vals.length >= 3) {
-        // vals[0] is newest; if vals are descending (newest is smallest = increasing trend)
-        const allIncreasing = vals.every((v, i) => i === 0 || vals[i - 1] < v);
+        // vals[0] is newest; upward trend means vals[i-1] > vals[i] (newer > older)
+        const allIncreasing = vals.every((v, i) => i === 0 || vals[i - 1] > v);
         if (allIncreasing) {
           hasTrend = true;
-          // Project next value: last step size added to newest
-          const step = vals[1] - vals[0]; // step between oldest-visible and second
-          suggestedValue = Math.min(100, Math.max(0, Math.round(vals[0] - step)));
+          // Project next value: add the most-recent step size to the current (newest) value
+          const recentStep = vals[0] - vals[1]; // positive since newest > second-newest
+          suggestedValue = Math.min(100, Math.max(0, Math.round(vals[0] + recentStep)));
         }
       }
     }
@@ -6485,7 +6490,7 @@
               const firstGoal = allGoals.find(g => g.student_code === code && g.status !== 'archived');
               if (firstGoal) {
                 const goalRow = document.querySelector(`.dt-goal-row[data-goal="${CSS.escape(firstGoal.code)}"][data-student="${CSS.escape(code)}"]`);
-                const enterBtn = goalRow?.querySelector('.dt-enter-btn, .dt-save-btn')?.closest('.dt-goal-row')?.querySelector('[data-action="enter-data"], .dt-enter-btn');
+                const enterBtn = goalRow?.querySelector('[data-action="enter-data"], .dt-enter-btn');
                 if (enterBtn) enterBtn.click();
               }
             });
