@@ -28,6 +28,12 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .money-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 14px;}
 .coin-wrap{cursor:pointer;display:inline-block;transition:transform 0.15s;position:relative;}
 .coin-wrap:hover{transform:translateY(-3px);}
+.coin-wrap:hover svg{filter:drop-shadow(0 0 10px rgba(20,184,166,0.65));}
+.coin-wrap.hairy svg{filter:drop-shadow(0 0 6px rgba(20,184,166,0.4));}
+.coin-wrap .hg{opacity:0;transition:opacity 0.25s;}
+.coin-wrap.hairy .hg{opacity:1;}
+.coin-wrap .ct{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:0.55rem;color:#484f58;white-space:nowrap;pointer-events:none;}
+.coin-wrap.hairy .ct{opacity:0;}
 .bill-wrap{display:inline-block;transition:transform 0.15s;}
 .bill-wrap:hover{transform:translateY(-3px);}
 .sep{width:2px;height:44px;background:#30363d;border-radius:1px;margin:0 4px;align-self:center;}
@@ -832,21 +838,33 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   'use strict';
 
   var COIN_DATA = {
-    quarter: { r: 28, fill: '#C0C0C0', stroke: '#888', label: '25¢', w: 66, h: 66 },
-    dime:    { r: 22, fill: '#D4D4D4', stroke: '#999', label: '10¢', w: 54, h: 54 },
-    nickel:  { r: 26, fill: '#C0C0C0', stroke: '#888', label: '5¢',  w: 62, h: 62 },
-    penny:   { r: 26, fill: '#b87333', stroke: '#8B5A2B', label: '1¢', w: 62, h: 62 }
+    quarter: { r: 28, fill: '#C0C0C0', stroke: '#888', label: '25¢', w: 66, h: 66, hairs: 5, tf: '#444' },
+    dime:    { r: 22, fill: '#D4D4D4', stroke: '#999', label: '10¢', w: 54, h: 54, hairs: 2, tf: '#555' },
+    nickel:  { r: 26, fill: '#C0C0C0', stroke: '#888', label: '5¢',  w: 62, h: 62, hairs: 1, tf: '#444' },
+    penny:   { r: 26, fill: '#b87333', stroke: '#8B5A2B', label: '1¢', w: 62, h: 62, hairs: 0, tf: '#5a3a1a' }
   };
 
   var BILL_NAMES = { 1: 'ONE', 5: 'FIVE', 10: 'TEN', 20: 'TWENTY' };
 
   function makeCoinSVG(type) {
     var c = COIN_DATA[type];
-    var cx = c.w / 2, cy = c.h / 2;
-    return '<svg width="' + c.w + '" height="' + c.h + '" viewBox="0 0 ' + c.w + ' ' + c.h + '" aria-hidden="true">'
+    var cx = c.w / 2, cy = c.h / 2 + 10, sh = c.h + 8, hm = '';
+    if (type === 'penny') {
+      hm = '<circle class="hg" cx="' + cx + '" cy="' + (cy - c.r - 8) + '" r="5.5" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="3.5 2.5"/>';
+    } else {
+      var sp = type === 'quarter' ? 58 : type === 'dime' ? 20 : 0;
+      for (var i = 0; i < c.hairs; i++) {
+        var a = -90 + (c.hairs === 1 ? 0 : (i / (c.hairs - 1) * sp * 2 - sp));
+        var rad = a * Math.PI / 180;
+        hm += '<line class="hg" x1="' + (cx + Math.cos(rad) * (c.r - 1)) + '" y1="' + (cy + Math.sin(rad) * (c.r - 1) - 2) + '" x2="' + (cx + Math.cos(rad) * (c.r + 17)) + '" y2="' + (cy + Math.sin(rad) * (c.r + 17) - 2) + '" stroke="#14b8a6" stroke-width="3.5" stroke-linecap="round"/>';
+      }
+    }
+    return '<svg width="' + c.w + '" height="' + sh + '" viewBox="0 0 ' + c.w + ' ' + sh + '" aria-hidden="true">'
+      + hm
       + '<circle cx="' + cx + '" cy="' + cy + '" r="' + c.r + '" fill="' + c.fill + '" stroke="' + c.stroke + '" stroke-width="2"/>'
-      + '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="#333" font-family="Outfit,sans-serif" font-weight="700" font-size="11">' + c.label + '</text>'
-      + '</svg>';
+      + '<text x="' + cx + '" y="' + (cy + 4) + '" text-anchor="middle" fill="' + c.tf + '" font-family="Outfit,sans-serif" font-weight="700" font-size="11">' + c.label + '</text>'
+      + '</svg>'
+      + '<span class="ct">tap coin</span>';
   }
 
   function makeBillSVG(value) {
@@ -864,6 +882,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       el.className = 'coin-wrap';
       el.innerHTML = makeCoinSVG(el.dataset.coin);
       el.title = el.dataset.coin + ' (' + COIN_DATA[el.dataset.coin].label + ')';
+      el.addEventListener('click', function () { this.classList.toggle('hairy'); });
     });
     document.querySelectorAll('[data-bill]').forEach(function (el) {
       el.className = 'bill-wrap';
