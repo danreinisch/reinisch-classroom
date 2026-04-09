@@ -833,6 +833,9 @@
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
   let progressTabQuarterMap = new Map(); // Map<studentCode, quarterKey> - Per-student quarter selection on Progress tab
   let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
+  let offlineBannerEl = null; // Reference to the persistent offline warning banner
+  let undoToastTimer = null;  // Timer for the undo toast auto-dismiss
+  let pendingUndo = null;     // Snapshot for the most recent Quick Entry save (for undo)
   let allAttendanceLogs = []; // Attendance records loaded on page init
 
   // ── Per-question skill gap thresholds ─────────────────────────────────────
@@ -4346,6 +4349,251 @@
     }, 3000);
   }
 
+  /**
+   * Show error toast notification (red, with inline SVG alert icon)
+   */
+  function showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(239, 68, 68, 0.95);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      font-size: 14px;
+      max-width: 320px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('width', '16');
+    icon.setAttribute('height', '16');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.5');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>';
+    toast.appendChild(icon);
+    toast.appendChild(document.createTextNode(message));
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.3s';
+      toast.style.opacity = '0';
+      setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 4000);
+  }
+
+  /**
+   * Show a persistent offline warning banner at the top of the Students page.
+   * Uses rc-theme.css design tokens and an inline SVG wifi-off icon.
+   */
+  function showOfflineBanner() {
+    if (offlineBannerEl) return;
+    offlineBannerEl = document.createElement('div');
+    offlineBannerEl.id = 'stOfflineBanner';
+    offlineBannerEl.className = 'rc-card';
+    offlineBannerEl.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-color: var(--rc-warning);
+      background: rgba(245, 158, 11, 0.08);
+      padding: 12px 20px;
+      margin: 8px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--rc-warning, #f59e0b);
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+    `;
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('width', '20');
+    icon.setAttribute('height', '20');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.5');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.style.flexShrink = '0';
+    icon.innerHTML = '<line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line>';
+    const text = document.createElement('span');
+    text.textContent = 'You appear to be offline. Changes may not be saved until your connection is restored.';
+    offlineBannerEl.appendChild(icon);
+    offlineBannerEl.appendChild(text);
+    const main = document.querySelector('.tc-main');
+    if (main) main.insertBefore(offlineBannerEl, main.firstChild);
+  }
+
+  /**
+   * Remove the offline warning banner and show a brief "Back online" success toast.
+   */
+  function hideOfflineBanner() {
+    if (offlineBannerEl) {
+      offlineBannerEl.remove();
+      offlineBannerEl = null;
+    }
+    showToast('Back online. Your connection has been restored.');
+  }
+
+  /**
+   * Show a temporary undo toast after a Quick Entry save.
+   * @param {Array<{studentCode, goalCode, previousValue, previousDate, savedDate}>} snapshot
+   */
+  function showUndoToast(snapshot) {
+    // Dismiss any existing undo toast
+    const existingToast = document.getElementById('stUndoToast');
+    if (existingToast) {
+      existingToast.remove();
+      clearTimeout(undoToastTimer);
+    }
+    pendingUndo = snapshot;
+
+    const UNDO_DELAY_MS = 5000;
+    const toast = document.createElement('div');
+    toast.id = 'stUndoToast';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      background: var(--rc-glass, rgba(15, 23, 42, 0.92));
+      border: 1px solid var(--rc-glass-border, rgba(255, 255, 255, 0.1));
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 12px 18px;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--rc-ink, #e2e8f0);
+      min-width: 260px;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      overflow: hidden;
+    `;
+
+    // SVG rotate-ccw (undo) icon
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('width', '16');
+    icon.setAttribute('height', '16');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.5');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.4"></path>';
+
+    const count = snapshot.length;
+    const label = document.createElement('span');
+    label.textContent = `${count} entr${count === 1 ? 'y' : 'ies'} saved`;
+
+    // Progress bar (counts down over UNDO_DELAY_MS)
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = `
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: var(--rc-brand, #22c55e);
+      border-radius: 0 0 0 12px;
+      width: 100%;
+      transition: width ${UNDO_DELAY_MS}ms linear;
+    `;
+
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'rc-btn';
+    undoBtn.style.cssText = 'padding: 5px 12px; font-size: 13px; margin-left: auto; flex-shrink: 0;';
+    const undoBtnIcon = document.createElementNS(svgNS, 'svg');
+    undoBtnIcon.setAttribute('width', '13');
+    undoBtnIcon.setAttribute('height', '13');
+    undoBtnIcon.setAttribute('viewBox', '0 0 24 24');
+    undoBtnIcon.setAttribute('fill', 'none');
+    undoBtnIcon.setAttribute('stroke', 'currentColor');
+    undoBtnIcon.setAttribute('stroke-width', '1.5');
+    undoBtnIcon.setAttribute('stroke-linecap', 'round');
+    undoBtnIcon.setAttribute('stroke-linejoin', 'round');
+    undoBtnIcon.setAttribute('aria-hidden', 'true');
+    undoBtnIcon.innerHTML = '<polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.4"></path>';
+    undoBtn.appendChild(undoBtnIcon);
+    undoBtn.appendChild(document.createTextNode('Undo'));
+
+    undoBtn.addEventListener('click', async () => {
+      if (!pendingUndo) return;
+      clearTimeout(undoToastTimer);
+      const entries = pendingUndo;
+      pendingUndo = null;
+      toast.remove();
+      // Restore each saved entry with its pre-save value
+      let undone = 0;
+      for (const snap of entries) {
+        if (snap.previousValue !== null && snap.previousDate) {
+          try {
+            await db.upsertGoalProgress({
+              goal_code:    snap.goalCode,
+              student_code: snap.studentCode,
+              date:         snap.previousDate,
+              value:        snap.previousValue,
+              source:       'manual',
+            });
+            undone++;
+          } catch (err) {
+            console.error('[tc-students] Undo failed for entry:', snap, err);
+          }
+        }
+      }
+      await reloadProgressEntries();
+      filterStudents();
+      await renderStudentList();
+      renderStudentKpiSummary();
+      renderCollectNudge();
+      if (undone > 0) {
+        showToast('Entry undone.');
+      } else {
+        showErrorToast('Nothing to undo (no prior values found).');
+      }
+    });
+
+    toast.appendChild(icon);
+    toast.appendChild(label);
+    toast.appendChild(undoBtn);
+    toast.appendChild(progressBar);
+    document.body.appendChild(toast);
+
+    // Slide up animation
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        toast.style.opacity = '1';
+        // Start progress bar countdown
+        progressBar.style.width = '0%';
+      });
+    });
+
+    undoToastTimer = setTimeout(() => {
+      pendingUndo = null;
+      toast.style.transform = 'translateX(-50%) translateY(20px)';
+      toast.style.opacity = '0';
+      setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 250);
+    }, UNDO_DELAY_MS);
+  }
+
   function showObsToast(container, message, isError) {
     const toast = document.createElement('div');
     toast.style.cssText = `
@@ -5668,7 +5916,10 @@
               renderStudentList();
               renderAttendanceReport();
             })
-            .catch(err => console.warn('[tc-students] Attendance save failed:', err.message));
+            .catch(err => {
+              console.warn('[tc-students] Attendance save failed:', err.message);
+              showErrorToast('Failed to save attendance. Please try again.');
+            });
           return;
         }
         
@@ -10753,6 +11004,21 @@
       return;
     }
 
+    // Build pre-save snapshots for undo (most recent existing entry per goal)
+    const undoSnapshot = toSave.map(entry => {
+      const prior = allProgressEntries
+        .filter(p => p.goal_code === entry.goal_code && p.student_code === entry.student_code)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const mostRecent = prior[0] || null;
+      return {
+        studentCode:   entry.student_code,
+        goalCode:      entry.goal_code,
+        previousValue: mostRecent ? mostRecent.value : null,
+        previousDate:  mostRecent ? mostRecent.date  : null,
+        savedDate:     date,
+      };
+    });
+
     // Disable buttons during save
     if (saveBtn)      { saveBtn.disabled = true; }
     if (saveCloseBtn) { saveCloseBtn.disabled = true; }
@@ -10792,11 +11058,13 @@
     renderStudentKpiSummary();
     renderCollectNudge();
 
-    // Show result toast
+    // Show result toast / undo toast
     if (failed === 0) {
-      showToast(`✅ ${saved} entr${saved === 1 ? 'y' : 'ies'} saved`);
+      showUndoToast(undoSnapshot);
+    } else if (saved > 0) {
+      showErrorToast(`${saved} saved, ${failed} failed. Check console for details.`);
     } else {
-      showToast(`⚠️ ${saved} saved, ${failed} failed — check console`);
+      showErrorToast(`Save failed. Please check your connection and try again.`);
     }
 
     updateQuickEntryCount();
@@ -10826,6 +11094,11 @@
     setupTcDotGridPopup();
     injectBulkObsConfigButton();
     loadData();
+
+    // Offline / online detection
+    if (!navigator.onLine) showOfflineBanner();
+    window.addEventListener('offline', () => showOfflineBanner());
+    window.addEventListener('online',  () => hideOfflineBanner());
   }
 
   if (document.readyState === 'loading') {
