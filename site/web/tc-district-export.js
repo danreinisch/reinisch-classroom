@@ -22,6 +22,16 @@ function $(id) {
   return document.getElementById(id);
 }
 
+// Wrapper so the module can call the globally-loaded rcAlert (from rc-modal.js)
+// Falls back to native alert() if rc-modal.js isn't present (e.g., in tests).
+async function notify(title, message) {
+  if (typeof window !== 'undefined' && typeof window.rcAlert === 'function') {
+    return window.rcAlert(title, message);
+  }
+  // eslint-disable-next-line no-alert
+  window.alert(`${title}: ${message}`);
+}
+
 function updateRosterStatus() {
   const statusEl = $('deRosterStatus');
   if (!statusEl) return;
