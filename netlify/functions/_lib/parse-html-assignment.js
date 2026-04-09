@@ -14,9 +14,30 @@
  *   Pattern 3 – S020 Match the Items (data-goal, category-group div with
  *               data-correct="value" attribute)
  *
+ * Embedded JSON manifest (Step 0 / highest priority):
+ *   If the HTML file contains a <script type="application/json"
+ *   id="assignment-manifest"> block, its JSON is parsed and used as the
+ *   authoritative source of item metadata, bypassing regex extraction.
+ *   Expected JSON schema:
+ *     {
+ *       "questions": [
+ *         {
+ *           "ref":        "D1Q1",          // required (also accept "q_ref")
+ *           "label":      "Count 4 quarters",
+ *           "answer_type": "constructed",
+ *           "correct":    "1.00",
+ *           "goal_codes": ["S008.11.1"],   // array, not semicolon-delimited
+ *           "dese_codes": ["MLS.5.1"],     // array
+ *           "points":     1
+ *         }
+ *       ]
+ *     }
+ *   If the manifest is absent, malformed, or has an empty questions array,
+ *   the parser falls back to regex extraction (existing behaviour).
+ *
  * Returns { questions: Array } where each question object has the fields
  * expected by buildItemsFromMeta() Path B:
- *   q_ref, label, default_goal_codes, answer_type, points, correct
+ *   q_ref, label, default_goal_codes, default_dese_codes, answer_type, points, correct
  */
 
 /**
@@ -105,13 +126,55 @@ function parseHtmlAssignment(htmlText) {
     return { questions: [] };
   }
 
-  var questions = [];
-  var seenQrefs = {};
+  // ── Step 0: check for embedded JSON manifest ──────────────────────────────
+  // If the HTML contains <script type="application/json" id="assignment-manifest">,
+  // use it as the authoritative source of question metadata.
+  var manifestMatch =
+    /<script\b[^>]*\btype\s*=\s*["']application\/json["'][^>]*\bid\s*=\s*["']assignment-manifest["'][^>]*>([\s\S]*?)<\/script>/i.exec(htmlText);
+  if (!manifestMatch) {
+    // Also check for the attributes in reverse order (id before type)
+    manifestMatch =
+      /<script\b[^>]*\bid\s*=\s*["']assignment-manifest["'][^>]*\btype\s*=\s*["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i.exec(htmlText);
+  }
 
-  // ── Step 1: find every opening tag that has a data-qref attribute ──────────
+  if (manifestMatch) {
+    try {
+      var manifest = JSON.parse(manifestMatch[1]);
+      if (manifest && Array.isArray(manifest.questions) && manifest.questions.length > 0) {
+        var manifestQuestions = [];
+        var seenManifestRefs = {};
+        for (var j = 0; j < manifest.questions.length; j++) {
+          var mq = manifest.questions[j];
+          var ref = mq.ref || mq.q_ref || ('Q' + (j + 1));
+          if (seenManifestRefs[ref]) {
+            console.warn('Duplicate ref in manifest: ' + ref + ' — skipping');
+            continue;
+          }
+          seenManifestRefs[ref] = true;
+          manifestQuestions.push({
+            q_ref:              ref,
+            label:              mq.label || ref,
+            default_goal_codes: Array.isArray(mq.goal_codes) ? mq.goal_codes : [],
+            default_dese_codes: Array.isArray(mq.dese_codes) ? mq.dese_codes : [],
+            answer_type:        normalizeAnswerType(mq.answer_type || ''),
+            points:             (typeof mq.points === 'number') ? mq.points : 1,
+            correct:            (mq.correct !== undefined && mq.correct !== null) ? mq.correct : null,
+          });
+        }
+        console.log('Parsed ' + manifestQuestions.length + ' question(s) from embedded assignment-manifest');
+        return { questions: manifestQuestions };
+      }
+    } catch (e) {
+      console.warn('Failed to parse embedded assignment-manifest JSON — falling back to regex extraction:', e.message);
+    }
+  }
+
+  // ── Step 1 (regex fallback): find every opening tag with data-qref ─────────
   // We capture the full opening tag so we can extract sibling attributes.
   // seenQrefs tracks already-processed q_ref values to deduplicate: if an HTML
   // file has two elements with the same data-qref, only the first is kept.
+  var questions = [];
+  var seenQrefs = {};
   var qCardTagPattern = /<[a-z][a-z0-9]*\b([^>]*\bdata-qref="([^"]+)"[^>]*)>/gi;
 
   var allMatches = [];
@@ -146,6 +209,12 @@ function parseHtmlAssignment(htmlText) {
     var goalRaw = extractAttr(openTag, 'data-goal') || extractAttr(openTag, 'data-iep') || '';
     var default_goal_codes = goalRaw
       ? goalRaw.split(/[;,]/).map(function (s) { return s.trim(); }).filter(Boolean)
+      : [];
+
+    // DESE standard codes
+    var deseRaw = extractAttr(openTag, 'data-dese') || '';
+    var default_dese_codes = deseRaw
+      ? deseRaw.split(/[;,]/).map(function (s) { return s.trim(); }).filter(Boolean)
       : [];
 
     // Answer type
@@ -200,6 +269,7 @@ function parseHtmlAssignment(htmlText) {
       q_ref:              m.qref,
       label:              m.qref,
       default_goal_codes: default_goal_codes,
+      default_dese_codes: default_dese_codes,
       answer_type:        answer_type,
       points:             points,
       correct:            correct,

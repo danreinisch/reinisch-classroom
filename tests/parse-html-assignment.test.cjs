@@ -250,6 +250,194 @@ test('no data-goal or data-iep → empty default_goal_codes', () => {
   assert.deepStrictEqual(questions[0].default_goal_codes, []);
 });
 
+// ── DESE code extraction ──────────────────────────────────────────────────────
+
+console.log('\n--- DESE code extraction (data-dese) ---');
+
+test('data-dese with semicolon-separated codes → correct default_dese_codes', () => {
+  const html = `
+    <div class="q-card" data-qref="D1Q1" data-iep="S008.11.1" data-dese="MLS.5.1;MLS.5.2" data-points="1" data-answer-type="constructed" data-correct="1.00" id="d0q0">
+    </div>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.deepStrictEqual(questions[0].default_dese_codes, ['MLS.5.1', 'MLS.5.2']);
+});
+
+test('data-dese with comma-separated codes → correct default_dese_codes', () => {
+  const html = `
+    <div class="q-card" data-qref="Q1" data-dese="MLS.5.1,MLS.5.2" data-points="1" data-answer-type="constructed" id="q0">
+    </div>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.deepStrictEqual(questions[0].default_dese_codes, ['MLS.5.1', 'MLS.5.2']);
+});
+
+test('missing data-dese → empty default_dese_codes', () => {
+  const html = `
+    <div class="q-card" data-qref="Q1" data-iep="S008.11.1" data-points="1" data-answer-type="constructed" data-correct="1.00" id="q0">
+    </div>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.deepStrictEqual(questions[0].default_dese_codes, []);
+});
+
+test('data-iep and data-dese on same element are parsed independently', () => {
+  const html = `
+    <div class="q-card" data-qref="Q1" data-iep="S008.11.1;S016.11.4" data-dese="MLS.5.1" data-points="1" data-answer-type="constructed" data-correct="1.00" id="q0">
+    </div>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.deepStrictEqual(questions[0].default_goal_codes, ['S008.11.1', 'S016.11.4']);
+  assert.deepStrictEqual(questions[0].default_dese_codes, ['MLS.5.1']);
+});
+
+// ── Embedded JSON manifest (Step 0) ──────────────────────────────────────────
+
+console.log('\n--- Embedded JSON manifest ---');
+
+test('HTML with valid manifest → questions from manifest, not data-qref regex', () => {
+  const html = `
+    <html><body>
+      <div class="q-card" data-qref="OLD_REF" data-points="1" data-answer-type="constructed" data-correct="9.99" id="q0">
+      </div>
+      <script type="application/json" id="assignment-manifest">
+      {
+        "questions": [
+          { "ref": "D1Q1", "answer_type": "constructed", "correct": "1.00", "goal_codes": ["S008.11.1"], "dese_codes": [], "points": 1, "label": "Count 4 quarters" }
+        ]
+      }
+      </script>
+    </body></html>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.strictEqual(questions.length, 1);
+  assert.strictEqual(questions[0].q_ref, 'D1Q1');
+  assert.strictEqual(questions[0].correct, '1.00');
+  assert.strictEqual(questions[0].label, 'Count 4 quarters');
+  assert.deepStrictEqual(questions[0].default_goal_codes, ['S008.11.1']);
+  assert.deepStrictEqual(questions[0].default_dese_codes, []);
+});
+
+test('manifest with id before type attribute → also parsed correctly', () => {
+  const html = `
+    <html><body>
+      <script id="assignment-manifest" type="application/json">
+      { "questions": [{ "ref": "Q1", "answer_type": "mcq", "correct": "A", "points": 2 }] }
+      </script>
+    </body></html>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.strictEqual(questions.length, 1);
+  assert.strictEqual(questions[0].q_ref, 'Q1');
+  assert.strictEqual(questions[0].answer_type, 'mcq');
+  assert.strictEqual(questions[0].points, 2);
+});
+
+test('manifest wins over data-qref elements when both present', () => {
+  const html = `
+    <html><body>
+      <div class="q-card" data-qref="REGEX_REF" data-points="5" data-answer-type="constructed" data-correct="9.99" id="q0"></div>
+      <script type="application/json" id="assignment-manifest">
+      { "questions": [{ "ref": "MANIFEST_REF", "correct": "1.00", "points": 1 }] }
+      </script>
+    </body></html>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.strictEqual(questions.length, 1);
+  assert.strictEqual(questions[0].q_ref, 'MANIFEST_REF');
+  assert.strictEqual(questions[0].correct, '1.00');
+});
+
+test('malformed manifest JSON → falls back to regex extraction', () => {
+  const html = `
+    <html><body>
+      <div class="q-card" data-qref="D1Q1" data-points="1" data-answer-type="constructed" data-correct="1.00" id="q0"></div>
+      <script type="application/json" id="assignment-manifest">
+      { this is not valid json }
+      </script>
+    </body></html>
+  `;
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args.join(' '));
+  const { questions } = parseHtmlAssignment(html);
+  console.warn = originalWarn;
+
+  assert.strictEqual(questions.length, 1);
+  assert.strictEqual(questions[0].q_ref, 'D1Q1', 'Should fall back to regex extraction');
+  assert.ok(warnings.some(w => w.includes('assignment-manifest')), 'Should warn about malformed JSON');
+});
+
+test('manifest with empty questions array → falls back to regex extraction', () => {
+  const html = `
+    <html><body>
+      <div class="q-card" data-qref="D1Q1" data-points="1" data-answer-type="constructed" data-correct="1.00" id="q0"></div>
+      <script type="application/json" id="assignment-manifest">
+      { "questions": [] }
+      </script>
+    </body></html>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.strictEqual(questions.length, 1);
+  assert.strictEqual(questions[0].q_ref, 'D1Q1', 'Should fall back to regex when manifest.questions is empty');
+});
+
+test('manifest with duplicate refs → deduplicates', () => {
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args.join(' '));
+
+  const html = `
+    <script type="application/json" id="assignment-manifest">
+    { "questions": [
+        { "ref": "D1Q1", "correct": "1.00", "points": 1 },
+        { "ref": "D1Q1", "correct": "9.99", "points": 1 }
+      ]
+    }
+    </script>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  console.warn = originalWarn;
+
+  assert.strictEqual(questions.length, 1, 'Duplicate manifest refs should be deduped');
+  assert.strictEqual(questions[0].correct, '1.00', 'First occurrence should be kept');
+  assert.ok(warnings.some(w => w.includes('D1Q1') && w.includes('skipping')), 'Should warn about duplicate manifest ref');
+});
+
+test('manifest questions with dese_codes → passed through correctly', () => {
+  const html = `
+    <script type="application/json" id="assignment-manifest">
+    { "questions": [
+        { "ref": "Q1", "correct": "A", "goal_codes": ["S008.11.1"], "dese_codes": ["MLS.5.1", "MLS.5.2"], "points": 1 }
+      ]
+    }
+    </script>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.deepStrictEqual(questions[0].default_dese_codes, ['MLS.5.1', 'MLS.5.2']);
+  assert.deepStrictEqual(questions[0].default_goal_codes, ['S008.11.1']);
+});
+
+test('manifest with q_ref field (instead of ref) → works correctly', () => {
+  const html = `
+    <script type="application/json" id="assignment-manifest">
+    { "questions": [{ "q_ref": "D1Q1", "correct": "1.00", "points": 1 }] }
+    </script>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.strictEqual(questions[0].q_ref, 'D1Q1');
+});
+
+test('manifest answer_type goes through normalizeAnswerType', () => {
+  const html = `
+    <script type="application/json" id="assignment-manifest">
+    { "questions": [{ "ref": "Q1", "answer_type": "multiple-choice", "points": 1 }] }
+    </script>
+  `;
+  const { questions } = parseHtmlAssignment(html);
+  assert.strictEqual(questions[0].answer_type, 'mcq');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed`);
