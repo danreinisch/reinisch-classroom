@@ -253,32 +253,14 @@
 
   function saveFilters() {
     try {
+      const {assignments: a, lessons: l, finalized: f, reserve: r, active: ac} = filters;
       const data = {
-        assignments: {
-          classFilter: filters.assignments.classFilter,
-          searchQuery: filters.assignments.searchQuery,
-          typeFilter: filters.assignments.typeFilter,
-          sortBy: filters.assignments.sortBy
-        },
-        lessons: {searchQuery: filters.lessons.searchQuery},
-        finalized: {
-          classFilter: filters.finalized.classFilter,
-          studentFilter: filters.finalized.studentFilter,
-          weekFilter: filters.finalized.weekFilter,
-          dateFrom: filters.finalized.dateFrom,
-          dateTo: filters.finalized.dateTo,
-          viewMode: filters.finalized.viewMode,
-          sortColumn: filters.finalized.sortColumn,
-          sortDirection: filters.finalized.sortDirection,
-          selectedTags: filters.finalized.selectedTags
-        },
-        reserve: {
-          presentationsExpanded: filters.reserve.presentationsExpanded,
-          presentationsSearch: filters.reserve.presentationsSearch,
-          viewMode: filters.reserve.viewMode,
-          selectedTags: filters.reserve.selectedTags
-        },
-        active: {viewMode: filters.active.viewMode, selectedTags: filters.active.selectedTags},
+        globalSearchQuery,
+        assignments: {classFilter: a.classFilter, searchQuery: a.searchQuery, typeFilter: a.typeFilter, sortBy: a.sortBy},
+        lessons: {searchQuery: l.searchQuery},
+        finalized: {classFilter: f.classFilter, studentFilter: f.studentFilter, weekFilter: f.weekFilter, dateFrom: f.dateFrom, dateTo: f.dateTo, viewMode: f.viewMode, sortColumn: f.sortColumn, sortDirection: f.sortDirection, selectedTags: f.selectedTags, filtersExpanded: f.filtersExpanded},
+        reserve: {presentationsExpanded: r.presentationsExpanded, presentationsSearch: r.presentationsSearch, viewMode: r.viewMode, selectedTags: r.selectedTags, filtersExpanded: r.filtersExpanded},
+        active: {viewMode: ac.viewMode, selectedTags: ac.selectedTags, filtersExpanded: ac.filtersExpanded},
         collapsedLanes: [...collapsedLanes],
         hierarchyExpandState: [...hierarchyExpandState.entries()]
       };
@@ -298,6 +280,10 @@
       if (!raw) return;
       const data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return;
+
+      if (typeof data.globalSearchQuery === 'string') {
+        globalSearchQuery = data.globalSearchQuery;
+      }
 
       if (data.assignments && typeof data.assignments === 'object') {
         if (typeof data.assignments.classFilter === 'string') {
@@ -346,6 +332,9 @@
           filters.finalized.sortDirection = data.finalized.sortDirection;
         }
         if (Array.isArray(data.finalized.selectedTags)) filters.finalized.selectedTags = data.finalized.selectedTags.filter(t => typeof t === 'string');
+        if (typeof data.finalized.filtersExpanded === 'boolean') {
+          filters.finalized.filtersExpanded = data.finalized.filtersExpanded;
+        }
       }
 
       if (data.reserve && typeof data.reserve === 'object') {
@@ -361,6 +350,9 @@
         if (Array.isArray(data.reserve.selectedTags)) {
           filters.reserve.selectedTags = data.reserve.selectedTags.filter(t => typeof t === 'string');
         }
+        if (typeof data.reserve.filtersExpanded === 'boolean') {
+          filters.reserve.filtersExpanded = data.reserve.filtersExpanded;
+        }
       }
 
       if (data.active && typeof data.active === 'object') {
@@ -369,6 +361,9 @@
         }
         if (Array.isArray(data.active.selectedTags)) {
           filters.active.selectedTags = data.active.selectedTags.filter(t => typeof t === 'string');
+        }
+        if (typeof data.active.filtersExpanded === 'boolean') {
+          filters.active.filtersExpanded = data.active.filtersExpanded;
         }
       }
 
@@ -395,6 +390,8 @@
   // ── State ─────────────────────────────────────────────────────────────────────
 
   let _currentTab = "reserve";
+  const tabScrollPositions = {};
+  let globalSearchQuery = '';
   let assignmentsData = [];
   let instancesData = [];
   let submissionsData = [];
@@ -438,17 +435,20 @@
       viewMode: "tree",
       sortColumn: "date",
       sortDirection: "desc",
-      selectedTags: []
+      selectedTags: [],
+      filtersExpanded: false
     },
     reserve: {
       presentationsExpanded: false,
       presentationsSearch: "",
       viewMode: "flat",
-      selectedTags: []
+      selectedTags: [],
+      filtersExpanded: false
     },
     active: {
       viewMode: "flat",
-      selectedTags: []
+      selectedTags: [],
+      filtersExpanded: false
     }
   };
 
@@ -625,12 +625,17 @@
   }
 
   function switchTab(tabName) {
+    const prevTab = _currentTab;
     _currentTab = tabName;
     document.querySelectorAll('.tc-lib-tab-btn').forEach(btn => {
       const active = btn.dataset.tab === tabName;
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
+    // Issue #8: Save scroll position for outgoing tab
+    tabScrollPositions[prevTab] = window.scrollY || document.documentElement.scrollTop;
+    // Issue #9: Carry search query to incoming tab
+    globalSearchQuery = filters.assignments.searchQuery;
     const allTabIds = ['reserveTab', 'activeTab', 'finalizedTab', 'overviewTab', 'lessonsTab', 'recallLibraryTab', 'assignmentsTab'];
     allTabIds.forEach(id => {
       const el = $(id);
@@ -650,6 +655,10 @@
       const panel = $(panelId);
       if (panel) panel.style.display = 'block';
     }
+    // Pre-fill search query for the incoming tab (Reserve / Active share assignments.searchQuery)
+    if ((tabName === 'reserve' || tabName === 'active') && globalSearchQuery) {
+      filters.assignments.searchQuery = globalSearchQuery;
+    }
     if (tabName === 'reserve') {
       renderReserveTab();
     } else if (tabName === 'active') {
@@ -665,6 +674,9 @@
     } else if (tabName === 'assignments') {
       renderAssignmentsTab();
     }
+    // Issue #8: Restore scroll position for incoming tab after render
+    const savedScroll = tabScrollPositions[tabName] || 0;
+    requestAnimationFrame(() => window.scrollTo(0, savedScroll));
   }
 
   /**
@@ -4587,9 +4599,9 @@
         });
       }
 
-      // Filter bar
+      // ── Primary filter bar (always visible) ──────────────────────────────
       const filterBar = document.createElement('div');
-      filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+      filterBar.style.cssText = 'margin-bottom:8px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
       const classBtnWrap = document.createElement('div');
       classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
@@ -4615,6 +4627,35 @@
       searchInput.style.cssText = 'flex:1; min-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
       filterBar.appendChild(searchInput);
 
+      // Count active secondary filters for badge
+      const reserveSecondaryCount = (filters.assignments.typeFilter !== 'All' ? 1 : 0)
+        + (filters.assignments.sortBy !== 'newest' ? 1 : 0)
+        + (filters.reserve.selectedTags.length > 0 ? 1 : 0)
+        + (filters.reserve.viewMode !== 'flat' ? 1 : 0);
+
+      // More Filters toggle
+      const moreFiltersBtn = document.createElement('button');
+      moreFiltersBtn.className = 'tc-btn' + (reserveSecondaryCount > 0 ? ' active' : '');
+      moreFiltersBtn.setAttribute('aria-expanded', filters.reserve.filtersExpanded ? 'true' : 'false');
+      moreFiltersBtn.setAttribute('aria-controls', 'reserveSecondaryFilters');
+      moreFiltersBtn.setAttribute('aria-label', reserveSecondaryCount > 0 ? `Filters (${reserveSecondaryCount} active)` : 'Filters');
+      moreFiltersBtn.style.cssText = 'white-space:nowrap; display:inline-flex; align-items:center; gap:5px;';
+      moreFiltersBtn.appendChild(createIcon('filter', 14));
+      moreFiltersBtn.appendChild(document.createTextNode(reserveSecondaryCount > 0 ? ` Filters (${reserveSecondaryCount})` : ' Filters'));
+      moreFiltersBtn.addEventListener('click', () => {
+        filters.reserve.filtersExpanded = !filters.reserve.filtersExpanded;
+        saveFilters();
+        renderReserveTab();
+      });
+      filterBar.appendChild(moreFiltersBtn);
+      container.appendChild(filterBar);
+
+      // ── Secondary filter section (collapsible) ────────────────────────────
+      const reserveFiltersExpanded = filters.reserve.filtersExpanded || window.innerWidth > 1200;
+      const secondaryFilters = document.createElement('div');
+      secondaryFilters.id = 'reserveSecondaryFilters';
+      secondaryFilters.style.cssText = 'display:' + (reserveFiltersExpanded ? 'flex' : 'none') + '; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px;';
+
       const typeFilter = document.createElement('select');
       typeFilter.id = 'assignmentTypeFilter';
       typeFilter.style.cssText = 'padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
@@ -4625,7 +4666,7 @@
         typeFilter.appendChild(opt);
       });
       typeFilter.value = filters.assignments.typeFilter;
-      filterBar.appendChild(typeFilter);
+      secondaryFilters.appendChild(typeFilter);
 
       const sortSelect = document.createElement('select');
       sortSelect.id = 'assignmentSortBy';
@@ -4637,31 +4678,11 @@
         sortSelect.appendChild(opt);
       });
       sortSelect.value = filters.assignments.sortBy;
-      filterBar.appendChild(sortSelect);
+      secondaryFilters.appendChild(sortSelect);
 
-      const hasActiveFilters = Boolean(filters.assignments.searchQuery.trim()) || filters.assignments.typeFilter !== 'All';
-      if (hasActiveFilters) {
-        const clearBtn = document.createElement('button');
-        clearBtn.className = 'tc-btn';
-        clearBtn.title = 'Clear filters';
-        clearBtn.style.opacity = '0.7';
-        clearBtn.textContent = '\u00d7 Clear';
-        clearBtn.addEventListener('click', () => {
-          filters.assignments.searchQuery = '';
-          filters.assignments.typeFilter = 'All';
-          saveFilters();
-          renderReserveTab();
-        });
-        filterBar.appendChild(clearBtn);
-      }
-      container.appendChild(filterBar);
-
-      // View toggle row
-      const viewToggleRow = document.createElement('div');
-      viewToggleRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
+      // View mode toggle (secondary)
       const viewToggleWrap = document.createElement('div');
       viewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
-
       const flatViewBtn = document.createElement('button');
       flatViewBtn.className = 'tc-btn';
       flatViewBtn.setAttribute('aria-pressed', filters.reserve.viewMode === 'flat' ? 'true' : 'false');
@@ -4676,7 +4697,6 @@
           renderReserveTab();
         }
       });
-
       const byUnitViewBtn = document.createElement('button');
       byUnitViewBtn.className = 'tc-btn';
       byUnitViewBtn.setAttribute('aria-pressed', filters.reserve.viewMode === 'byUnit' ? 'true' : 'false');
@@ -4691,10 +4711,66 @@
           renderReserveTab();
         }
       });
-
       viewToggleWrap.appendChild(flatViewBtn);
       viewToggleWrap.appendChild(byUnitViewBtn);
-      viewToggleRow.appendChild(viewToggleWrap);
+      secondaryFilters.appendChild(viewToggleWrap);
+
+      // Tag filter chips (secondary)
+      const allReserveForTags = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
+      const reserveTagSet = new Set();
+      allReserveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) reserveTagSet.add(t); }); });
+      if (reserveTagSet.size > 0) {
+        const allTagsBtn = document.createElement('button');
+        allTagsBtn.className = 'tc-btn' + (filters.reserve.selectedTags.length === 0 ? ' active' : '');
+        allTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+        allTagsBtn.textContent = 'All Tags';
+        allTagsBtn.addEventListener('click', () => {
+          filters.reserve.selectedTags = [];
+          saveFilters();
+          renderReserveTab();
+        });
+        secondaryFilters.appendChild(allTagsBtn);
+        [...reserveTagSet].sort().forEach(tag => {
+          const tagBtn = document.createElement('button');
+          const isActive = filters.reserve.selectedTags.includes(tag);
+          tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
+          tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
+          tagBtn.textContent = tag;
+          tagBtn.addEventListener('click', () => {
+            const idx = filters.reserve.selectedTags.indexOf(tag);
+            if (idx === -1) {
+              filters.reserve.selectedTags = [...filters.reserve.selectedTags, tag];
+            } else {
+              filters.reserve.selectedTags = filters.reserve.selectedTags.filter(t => t !== tag);
+            }
+            saveFilters();
+            renderReserveTab();
+          });
+          secondaryFilters.appendChild(tagBtn);
+        });
+      }
+
+      const hasActiveFilters = Boolean(filters.assignments.searchQuery.trim()) || filters.assignments.typeFilter !== 'All';
+      if (hasActiveFilters) {
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'tc-btn';
+        clearBtn.title = 'Clear filters';
+        clearBtn.style.opacity = '0.7';
+        clearBtn.textContent = '\u00d7 Clear';
+        clearBtn.addEventListener('click', () => {
+          filters.assignments.searchQuery = '';
+          filters.assignments.typeFilter = 'All';
+          globalSearchQuery = '';
+          saveFilters();
+          renderReserveTab();
+        });
+        secondaryFilters.appendChild(clearBtn);
+      }
+      container.appendChild(secondaryFilters);
+
+      // ── Always-visible action row (uncategorized badge + catalog wizard) ──
+      const viewToggleRow = document.createElement('div');
+      viewToggleRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
 
       // Uncategorized badge
       const allReserveItems = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
@@ -4722,44 +4798,6 @@
       viewToggleRow.appendChild(wizardBtn);
 
       container.appendChild(viewToggleRow);
-
-      // Tag filter chips (scan pre-tag-filtered list for all available tags)
-      const allReserveForTags = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
-      const reserveTagSet = new Set();
-      allReserveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) reserveTagSet.add(t); }); });
-      if (reserveTagSet.size > 0) {
-        const tagFilterRow = document.createElement('div');
-        tagFilterRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;';
-        const allTagsBtn = document.createElement('button');
-        allTagsBtn.className = 'tc-btn' + (filters.reserve.selectedTags.length === 0 ? ' active' : '');
-        allTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
-        allTagsBtn.textContent = 'All Tags';
-        allTagsBtn.addEventListener('click', () => {
-          filters.reserve.selectedTags = [];
-          saveFilters();
-          renderReserveTab();
-        });
-        tagFilterRow.appendChild(allTagsBtn);
-        [...reserveTagSet].sort().forEach(tag => {
-          const tagBtn = document.createElement('button');
-          const isActive = filters.reserve.selectedTags.includes(tag);
-          tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
-          tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
-          tagBtn.textContent = tag;
-          tagBtn.addEventListener('click', () => {
-            const idx = filters.reserve.selectedTags.indexOf(tag);
-            if (idx === -1) {
-              filters.reserve.selectedTags = [...filters.reserve.selectedTags, tag];
-            } else {
-              filters.reserve.selectedTags = filters.reserve.selectedTags.filter(t => t !== tag);
-            }
-            saveFilters();
-            renderReserveTab();
-          });
-          tagFilterRow.appendChild(tagBtn);
-        });
-        container.appendChild(tagFilterRow);
-      }
 
       // Count label
       const countEl = document.createElement('div');
@@ -5308,9 +5346,9 @@
         });
       }
 
-      // Filter bar (class + search)
+      // ── Primary filter bar (always visible) ──────────────────────────────
       const filterBar = document.createElement('div');
-      filterBar.style.cssText = 'margin-bottom:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+      filterBar.style.cssText = 'margin-bottom:8px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
       const classBtnWrap = document.createElement('div');
       classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
@@ -5336,7 +5374,7 @@
       searchInput.style.cssText = 'flex:1; min-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white;';
       filterBar.appendChild(searchInput);
 
-      // Missing Work button
+      // Missing Work button (action, always visible)
       const missingWorkBtn = document.createElement('button');
       missingWorkBtn.className = 'tc-btn';
       missingWorkBtn.style.cssText = 'white-space:nowrap; display:flex; align-items:center; gap:6px;';
@@ -5348,7 +5386,7 @@
       missingWorkBtn.addEventListener('click', () => renderMissingWorkModal());
       filterBar.appendChild(missingWorkBtn);
 
-      // Issue #7: Bulk Finalize by date range button
+      // Issue #7: Bulk Finalize by date range button (action, always visible)
       const bulkFinalizeByDateBtn = document.createElement('button');
       bulkFinalizeByDateBtn.className = 'tc-btn';
       bulkFinalizeByDateBtn.style.cssText = 'white-space:nowrap; display:flex; align-items:center; gap:6px;';
@@ -5361,14 +5399,37 @@
       bulkFinalizeByDateBtn.addEventListener('click', () => openBulkFinalizeByDateModal());
       filterBar.appendChild(bulkFinalizeByDateBtn);
 
+      // Count active secondary filters for badge
+      const activeSecondaryCount = (filters.active.selectedTags.length > 0 ? 1 : 0)
+        + (filters.active.viewMode !== 'flat' ? 1 : 0);
+
+      // More Filters toggle
+      const activeMoreFiltersBtn = document.createElement('button');
+      activeMoreFiltersBtn.className = 'tc-btn' + (activeSecondaryCount > 0 ? ' active' : '');
+      activeMoreFiltersBtn.setAttribute('aria-expanded', filters.active.filtersExpanded ? 'true' : 'false');
+      activeMoreFiltersBtn.setAttribute('aria-controls', 'activeSecondaryFilters');
+      activeMoreFiltersBtn.setAttribute('aria-label', activeSecondaryCount > 0 ? `Filters (${activeSecondaryCount} active)` : 'Filters');
+      activeMoreFiltersBtn.style.cssText = 'white-space:nowrap; display:inline-flex; align-items:center; gap:5px;';
+      activeMoreFiltersBtn.appendChild(createIcon('filter', 14));
+      activeMoreFiltersBtn.appendChild(document.createTextNode(activeSecondaryCount > 0 ? ` Filters (${activeSecondaryCount})` : ' Filters'));
+      activeMoreFiltersBtn.addEventListener('click', () => {
+        filters.active.filtersExpanded = !filters.active.filtersExpanded;
+        saveFilters();
+        renderActiveTab();
+      });
+      filterBar.appendChild(activeMoreFiltersBtn);
+
       container.appendChild(filterBar);
 
-      // View toggle row
-      const activeViewToggleRow = document.createElement('div');
-      activeViewToggleRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
+      // ── Secondary filter section (collapsible) ────────────────────────────
+      const activeFiltersExpanded = filters.active.filtersExpanded || window.innerWidth > 1200;
+      const activeSecondaryFilters = document.createElement('div');
+      activeSecondaryFilters.id = 'activeSecondaryFilters';
+      activeSecondaryFilters.style.cssText = 'display:' + (activeFiltersExpanded ? 'flex' : 'none') + '; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px;';
+
+      // View mode toggle (secondary)
       const activeViewToggleWrap = document.createElement('div');
       activeViewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
-
       const activeFlatViewBtn = document.createElement('button');
       activeFlatViewBtn.className = 'tc-btn';
       activeFlatViewBtn.setAttribute('aria-pressed', filters.active.viewMode === 'flat' ? 'true' : 'false');
@@ -5383,7 +5444,6 @@
           renderActiveTab();
         }
       });
-
       const activeByUnitViewBtn = document.createElement('button');
       activeByUnitViewBtn.className = 'tc-btn';
       activeByUnitViewBtn.setAttribute('aria-pressed', filters.active.viewMode === 'byUnit' ? 'true' : 'false');
@@ -5398,19 +5458,15 @@
           renderActiveTab();
         }
       });
-
       activeViewToggleWrap.appendChild(activeFlatViewBtn);
       activeViewToggleWrap.appendChild(activeByUnitViewBtn);
-      activeViewToggleRow.appendChild(activeViewToggleWrap);
-      container.appendChild(activeViewToggleRow);
+      activeSecondaryFilters.appendChild(activeViewToggleWrap);
 
-      // Tag filter chips (scan pre-tag-filtered list for all available tags)
+      // Tag filter chips (secondary)
       const allActiveForTags = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'current'));
       const activeTagSet = new Set();
       allActiveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) activeTagSet.add(t); }); });
       if (activeTagSet.size > 0) {
-        const activeTagFilterRow = document.createElement('div');
-        activeTagFilterRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;';
         const allActiveTagsBtn = document.createElement('button');
         allActiveTagsBtn.className = 'tc-btn' + (filters.active.selectedTags.length === 0 ? ' active' : '');
         allActiveTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
@@ -5420,7 +5476,7 @@
           saveFilters();
           renderActiveTab();
         });
-        activeTagFilterRow.appendChild(allActiveTagsBtn);
+        activeSecondaryFilters.appendChild(allActiveTagsBtn);
         [...activeTagSet].sort().forEach(tag => {
           const tagBtn = document.createElement('button');
           const isActive = filters.active.selectedTags.includes(tag);
@@ -5437,10 +5493,10 @@
             saveFilters();
             renderActiveTab();
           });
-          activeTagFilterRow.appendChild(tagBtn);
+          activeSecondaryFilters.appendChild(tagBtn);
         });
-        container.appendChild(activeTagFilterRow);
       }
+      container.appendChild(activeSecondaryFilters);
 
       // Count / status row
       const countEl = document.createElement('div');
@@ -6038,11 +6094,11 @@
 
       container.appendChild(toolbarRow);
 
-      // ── Multi-axis filter bar ──────────────────────────────────────────────
+      // ── Multi-axis filter bar (primary: class filter + More Filters toggle) ──
       const filterBar = document.createElement('div');
-      filterBar.style.cssText = 'margin-bottom:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
+      filterBar.style.cssText = 'margin-bottom:8px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
 
-      // Class filter pills
+      // Class filter pills (primary)
       const classBtnWrap = document.createElement('div');
       classBtnWrap.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
       const allClassBtn = document.createElement('button');
@@ -6061,25 +6117,54 @@
       });
       filterBar.appendChild(classBtnWrap);
 
-      // Student name filter
+      // Count active secondary filters for badge
+      const finalizedSecondaryCount = (filters.finalized.studentFilter.trim() ? 1 : 0)
+        + (filters.finalized.weekFilter.trim() ? 1 : 0)
+        + (filters.finalized.dateFrom.trim() ? 1 : 0)
+        + (filters.finalized.dateTo.trim() ? 1 : 0);
+
+      // More Filters toggle (primary)
+      const finMoreFiltersBtn = document.createElement('button');
+      finMoreFiltersBtn.className = 'tc-btn' + (finalizedSecondaryCount > 0 ? ' active' : '');
+      finMoreFiltersBtn.setAttribute('aria-expanded', filters.finalized.filtersExpanded ? 'true' : 'false');
+      finMoreFiltersBtn.setAttribute('aria-controls', 'finalizedSecondaryFilters');
+      finMoreFiltersBtn.setAttribute('aria-label', finalizedSecondaryCount > 0 ? `Filters (${finalizedSecondaryCount} active)` : 'Filters');
+      finMoreFiltersBtn.style.cssText = 'white-space:nowrap; display:inline-flex; align-items:center; gap:5px;';
+      finMoreFiltersBtn.appendChild(createIcon('filter', 14));
+      finMoreFiltersBtn.appendChild(document.createTextNode(finalizedSecondaryCount > 0 ? ` Filters (${finalizedSecondaryCount})` : ' Filters'));
+      finMoreFiltersBtn.addEventListener('click', () => {
+        filters.finalized.filtersExpanded = !filters.finalized.filtersExpanded;
+        saveFilters();
+        renderFinalizedTab();
+      });
+      filterBar.appendChild(finMoreFiltersBtn);
+      container.appendChild(filterBar);
+
+      // ── Secondary filter section (collapsible) ────────────────────────────
+      const finalizedFiltersExpanded = filters.finalized.filtersExpanded || window.innerWidth > 1200;
+      const finalizedSecondaryFilters = document.createElement('div');
+      finalizedSecondaryFilters.id = 'finalizedSecondaryFilters';
+      finalizedSecondaryFilters.style.cssText = 'display:' + (finalizedFiltersExpanded ? 'flex' : 'none') + '; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:12px;';
+
+      // Student name filter (secondary)
       const studentInput = document.createElement('input');
       studentInput.type = 'text';
       studentInput.id = 'finalizedStudentFilter';
       studentInput.placeholder = 'Filter by student...';
       studentInput.value = filters.finalized.studentFilter;
       studentInput.style.cssText = 'flex:1; min-width:160px; max-width:220px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px;';
-      filterBar.appendChild(studentInput);
+      finalizedSecondaryFilters.appendChild(studentInput);
 
-      // Week filter
+      // Week filter (secondary)
       const weekInput = document.createElement('input');
       weekInput.type = 'text';
       weekInput.id = 'finalizedWeekFilter';
       weekInput.placeholder = 'Filter by week...';
       weekInput.value = filters.finalized.weekFilter;
       weekInput.style.cssText = 'min-width:140px; max-width:180px; padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px;';
-      filterBar.appendChild(weekInput);
+      finalizedSecondaryFilters.appendChild(weekInput);
 
-      // Date range filter (From – To)
+      // Date range filter (secondary)
       const dateRangeWrap = document.createElement('div');
       dateRangeWrap.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
       const dateIcon = document.createElement('span');
@@ -6105,9 +6190,9 @@
       dateToInput.setAttribute('aria-label', 'To date');
       dateToInput.style.cssText = 'padding:7px 10px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:white; font-size:13px; color-scheme:dark;';
       dateRangeWrap.appendChild(dateToInput);
-      filterBar.appendChild(dateRangeWrap);
+      finalizedSecondaryFilters.appendChild(dateRangeWrap);
 
-      // Clear filters button
+      // Clear filters button (secondary, when active)
       const hasFilters = filters.finalized.classFilter !== 'All Classes' ||
         filters.finalized.studentFilter.trim() ||
         filters.finalized.weekFilter.trim() ||
@@ -6127,9 +6212,9 @@
           saveFilters();
           renderFinalizedTab();
         });
-        filterBar.appendChild(clearBtn);
+        finalizedSecondaryFilters.appendChild(clearBtn);
       }
-      container.appendChild(filterBar);
+      container.appendChild(finalizedSecondaryFilters);
 
       // ── Compute and filter finalized list ─────────────────────────────────
       finalizedList = sortAssignments(
