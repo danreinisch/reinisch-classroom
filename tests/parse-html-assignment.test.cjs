@@ -331,8 +331,12 @@ test('HTML with malformed JSON in manifest → falls back to regex extraction', 
     </script>
     </body></html>
   `;
-  const { questions } = parseHtmlAssignment(html);
-  console.warn = originalWarn;
+  let questions;
+  try {
+    ({ questions } = parseHtmlAssignment(html));
+  } finally {
+    console.warn = originalWarn;
+  }
 
   assert.strictEqual(questions.length, 1);
   assert.strictEqual(questions[0].q_ref, 'FallbackQ1');
@@ -366,8 +370,12 @@ test('manifest with duplicate refs → deduplicates', () => {
     ]}
     </script>
   `;
-  const { questions } = parseHtmlAssignment(html);
-  console.warn = originalWarn;
+  let questions;
+  try {
+    ({ questions } = parseHtmlAssignment(html));
+  } finally {
+    console.warn = originalWarn;
+  }
 
   assert.strictEqual(questions.length, 1);
   assert.strictEqual(questions[0].correct, '1.00', 'First occurrence should be kept');
