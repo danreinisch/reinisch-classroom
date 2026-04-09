@@ -510,8 +510,8 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Content-Type must be application/json' }, {}, requestId);
   }
 
-  // Validate body size (allow up to 100KB for draft content)
-  const bodySizeCheck = validateBodySize(event.body, 100);
+  // Validate body size (allow up to 500KB for large HTML assignments with inline content)
+  const bodySizeCheck = validateBodySize(event.body, 500);
   if (!bodySizeCheck.valid) {
     console.log(`[teacher-issue-draft] [${requestId}] Body too large: ${bodySizeCheck.error}`);
     return jsonResponse(event, 400, { ok: false, error: 'Request body too large' }, {}, requestId);
@@ -915,9 +915,14 @@ exports.handler = async (event) => {
         // in a sandboxed iframe via srcdoc.  Use the regex-based parser to extract
         // questions, goal codes, and correct answers from data-* attributes so that
         // buildItemsFromMeta() Path B can create assignment_items rows.
-        const parsed = parseHtmlAssignment(draft.assignment.text);
-        parsedMeta = { html_src: draft.assignment.text, questions: parsed.questions };
-        console.log(`[teacher-issue-draft] [${requestId}] HTML file detected — parsed ${parsed.questions.length} question(s) from data-qref attributes (${draft.assignment.text.length} chars)`);
+        try {
+          const parsed = parseHtmlAssignment(draft.assignment.text);
+          parsedMeta = { html_src: draft.assignment.text, questions: parsed.questions };
+          console.log(`[teacher-issue-draft] [${requestId}] HTML file detected — parsed ${parsed.questions.length} question(s) from data-qref attributes (${draft.assignment.text.length} chars)`);
+        } catch (err) {
+          console.error(`[teacher-issue-draft] [${requestId}] HTML parsing failed:`, err.message);
+          parsedMeta = { html_src: draft.assignment.text };
+        }
       } else {
         parsedMeta = parseTxtToMeta(
           draft.assignment.text,
@@ -1114,6 +1119,66 @@ exports.handler = async (event) => {
             console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${mappingsToUpsert.length} assignment_item_mappings`);
           }
         }
+
+        // Step 5d: Delete stale assignment_items from previous HTML upload versions.
+        // Only for HTML assignments with at least one successfully upserted item.
+        const isHtmlAssignment = parsedMeta.html_src != null;
+        if (isHtmlAssignment && itemsToUpsert.length > 0) {
+          const freshItemRefs = itemsToUpsert.map(i => i.item_ref).filter(Boolean);
+          if (freshItemRefs.length > 0) {
+            try {
+              // First: identify stale item IDs before deleting
+              const staleItemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?select=id,item_ref&assignment_id=eq.${assignmentId}&item_ref=not.in.(${freshItemRefs.map(r => encodeURIComponent(r)).join(',')})`;
+              const staleItemsResponse = await fetch(staleItemsUrl, {
+                method: 'GET',
+                headers: {
+                  'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                }
+              });
+              const staleItems = staleItemsResponse.ok
+                ? (await staleItemsResponse.json().catch(() => []))
+                : [];
+
+              if (staleItems.length > 0) {
+                const staleIds = staleItems.map(i => i.id).filter(Boolean);
+
+                // Delete stale mappings first (foreign key dependency)
+                if (staleIds.length > 0) {
+                  const staleMappingsUrl = `${SUPABASE_URL}/rest/v1/assignment_item_mappings?item_id=in.(${staleIds.join(',')})`;
+                  const staleMappingsResponse = await fetch(staleMappingsUrl, {
+                    method: 'DELETE',
+                    headers: {
+                      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                    }
+                  });
+                  if (!staleMappingsResponse.ok) {
+                    console.warn(`[teacher-issue-draft] [${requestId}] Stale mapping cleanup failed: ${staleMappingsResponse.status}`);
+                  }
+                }
+
+                // Delete stale assignment_items
+                const staleDeleteUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${assignmentId}&item_ref=not.in.(${freshItemRefs.map(r => encodeURIComponent(r)).join(',')})`;
+                const staleDeleteResponse = await fetch(staleDeleteUrl, {
+                  method: 'DELETE',
+                  headers: {
+                    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                  }
+                });
+                if (staleDeleteResponse.ok) {
+                  console.log(`[teacher-issue-draft] [${requestId}] Deleted ${staleItems.length} stale assignment_item(s) for re-uploaded HTML`);
+                } else {
+                  console.warn(`[teacher-issue-draft] [${requestId}] Stale item cleanup failed: ${staleDeleteResponse.status}`);
+                }
+              }
+            } catch (cleanupErr) {
+              console.warn(`[teacher-issue-draft] [${requestId}] Stale item cleanup error:`, cleanupErr.message);
+            }
+          }
+        }
+
       }
     }
 
