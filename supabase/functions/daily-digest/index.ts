@@ -224,7 +224,7 @@ serve(async (_req: Request): Promise<Response> => {
       if (currentNum < baselineNum) {
         isRegressing = true;
       } else if (last3.length >= 2) {
-        const allDecline = last3.every((v, i) => i === 0 || v > last3[i - 1]);
+        const allDecline = last3.every((v, i) => i === 0 || v < last3[i - 1]);
         if (allDecline) isRegressing = true;
       }
 
@@ -341,18 +341,18 @@ serve(async (_req: Request): Promise<Response> => {
     }
   }
   // Group by student for a cleaner display
-  const staleByStudent = new Map<string, { studentName: string; studentCode: string; goals: StaleGoal[] }>();
+  const staleGoalsByStudentCode = new Map<string, { studentName: string; studentCode: string; goals: StaleGoal[] }>();
   for (const sg of staleGoals) {
-    if (!staleByStudent.has(sg.studentCode)) {
-      staleByStudent.set(sg.studentCode, {
+    if (!staleGoalsByStudentCode.has(sg.studentCode)) {
+      staleGoalsByStudentCode.set(sg.studentCode, {
         studentName: sg.studentName,
         studentCode: sg.studentCode,
         goals: [],
       });
     }
-    staleByStudent.get(sg.studentCode)!.goals.push(sg);
+    staleGoalsByStudentCode.get(sg.studentCode)!.goals.push(sg);
   }
-  const staleStudents = Array.from(staleByStudent.values()).sort(
+  const staleStudents = Array.from(staleGoalsByStudentCode.values()).sort(
     (a, b) => b.goals.length - a.goals.length
   );
 
@@ -540,7 +540,7 @@ serve(async (_req: Request): Promise<Response> => {
   }
 
   // 4. Stale data collection
-  sectionsHtml += sectionHeader("📊", "Stale Data Collection", staleStudents.length, "#f59e0b");
+  sectionsHtml += sectionHeader("📊", "Stale Data Collection", staleGoals.length, "#f59e0b");
   if (staleStudents.length === 0) {
     sectionsHtml += emptyRow("All goals have recent data — you're on top of it!");
   } else {
@@ -664,7 +664,7 @@ serve(async (_req: Request): Promise<Response> => {
             <td style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;">
               <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
                 Reinisch Classroom · Daily digest sent each weekday morning ·
-                <a href="${SUPABASE_URL ? escHtml(SUPABASE_URL.replace("https://", "https://app.reinisch-classroom.app")) : "#"}" style="color:#6b7280;">Open Teacher Center</a>
+                <a href="https://reinisch-classroom.netlify.app/teacher/overview/" style="color:#6b7280;">Open Teacher Center</a>
               </p>
             </td>
           </tr>
