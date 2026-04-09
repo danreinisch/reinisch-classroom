@@ -2473,6 +2473,7 @@
               <!-- goal area options rendered by JS -->
             </select>
             <select id="stSortSelect">
+              <option value="urgency">Sort: Urgency (Critical First)</option>
               <option value="code">Sort: Code (A-Z)</option>
               <option value="goals">Sort: Goal Count</option>
               <option value="iep_due">Sort: IEP Due Date</option>
@@ -2482,17 +2483,21 @@
             <label class="st-toggle-label">
               <input type="checkbox" id="stShowArchived" /> Show Archived
             </label>
-            <button id="stFilterAttention" class="st-btn st-btn-small st-btn-attention" type="button">⚠️ Needs Attention</button>
-            <button id="stFocusToggle" class="st-btn st-btn-small st-btn-focus" type="button">🎯 Focus</button>
-            <button id="stShortcutsBtn" class="st-btn st-btn-small st-btn-shortcuts" type="button" title="Keyboard shortcuts (?)">⌨️</button>
-            <button id="stExpandAllBtn" class="st-btn st-btn-small">▼ Collapse All</button>
-            <button id="stExpandStudentsBtn" class="st-btn st-btn-small">▶ Expand Students</button>
-            <button id="stExpandAllFullBtn" class="st-btn st-btn-small">▶▶ Expand All</button>
-            <button id="stExportBtn" class="st-btn st-btn-small">📤 Export</button>
-            <button id="stImportCSV" class="st-btn st-btn-small">📥 Import</button>
-            <button id="stMasterSpreadsheet" class="st-btn st-btn-small">📊 Master Spreadsheet</button>
-            <button id="stQuickEntry" class="st-btn st-btn-small st-btn-quick-entry" type="button">⚡ Quick Entry</button>
-            <button id="stAddStudent" class="st-btn st-btn-primary">+ Add Student</button>
+            <label class="st-toggle-label" title="Auto-expand students with alerts on page load">
+              <input type="checkbox" id="stAutoExpandToggle" /> Auto-expand alerts
+            </label>
+            <button id="stFilterAttention" class="st-btn st-btn-small st-btn-attention" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Needs Attention</button>
+            <button id="stDailyReview" class="st-btn st-btn-small" type="button" title="Step through students needing attention" style="display:inline-flex;align-items:center;gap:5px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Daily Review</button>
+            <button id="stFocusToggle" class="st-btn st-btn-small st-btn-focus" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus</button>
+            <button id="stShortcutsBtn" class="st-btn st-btn-small st-btn-shortcuts" type="button" title="Keyboard shortcuts (?)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg></button>
+            <button id="stExpandAllBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg> Collapse All</button>
+            <button id="stExpandStudentsBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg> Expand Students</button>
+            <button id="stExpandAllFullBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/><polyline points="6 14 12 20 18 14"/></svg> Expand All</button>
+            <button id="stExportBtn" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Export</button>
+            <button id="stImportCSV" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import</button>
+            <button id="stMasterSpreadsheet" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> Spreadsheet</button>
+            <button id="stQuickEntry" class="st-btn st-btn-small st-btn-quick-entry" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Entry</button>
+            <button id="stAddStudent" class="st-btn st-btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Student</button>
           </div>
 
           <!-- Quick Entry Panel (toggled by ⚡ Quick Entry button) -->
@@ -2558,6 +2563,9 @@
           <!-- Attendance Summary Report (shown when attendance data exists) -->
           <div id="stAttendanceReport" class="st-attendance-report" style="display: none;" aria-label="Attendance summary"></div>
 
+          <!-- Mini Digest Summary (populated by JS) -->
+          <div id="stDigestSummary" aria-label="Daily situation summary"></div>
+
           <!-- Caseload Grid Table -->
           <div class="st-table-container">
             <table class="st-table">
@@ -2586,8 +2594,12 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260331"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260408c"></script>
+    <script type="module" src="/web/tc-students.js?v=20260409a"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
+    <style>
+      @keyframes st-spin { to { transform: rotate(360deg); } }
+      .st-spin { animation: st-spin 1s linear infinite; display:inline-block; }
+    </style>
   </body>
 </html>

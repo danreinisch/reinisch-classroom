@@ -838,6 +838,27 @@
   let pendingUndo = null;     // Snapshot for the most recent Quick Entry save (for undo)
   let allAttendanceLogs = []; // Attendance records loaded on page init
 
+  // ── Urgency Sort ─────────────────────────────────────────────────────────────
+  const ST_SORT_PREF_KEY = 'rc_students_sort';
+  const URGENCY_SCORE_REGRESSING = 30;
+  const URGENCY_SCORE_STALE_GOAL = 20;
+  const URGENCY_SCORE_STALLED    = 10;
+  const URGENCY_SCORE_MASTERED   = 5;
+
+  // ── Auto-Expand Alerts ────────────────────────────────────────────────────────
+  const ST_AUTO_EXPAND_KEY = 'rc_students_auto_expand';
+  let autoExpandAlerts = localStorage.getItem(ST_AUTO_EXPAND_KEY) !== 'false'; // default true
+  let _initialLoadDone = false; // guard so auto-expand only fires on first load
+
+  // ── Daily Review ─────────────────────────────────────────────────────────────
+  let dailyReviewActive = false;
+  let dailyReviewStudents = []; // ordered list of student codes needing attention
+  let dailyReviewIndex = 0;     // current position in review
+
+  // ── Auto-Refresh ─────────────────────────────────────────────────────────────
+  const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+  let autoRefreshTimer = null;
+
   // ── Per-question skill gap thresholds ─────────────────────────────────────
   /** Badge shows on goal card when any question accuracy is below this threshold */
   const SKILL_GAP_BADGE_THRESHOLD = 50;
@@ -1177,11 +1198,11 @@
     }
 
     const TIERS = [
-      { key: 'fresh',    icon: '🟢', label: 'fresh' },
-      { key: 'aging',    icon: '🟡', label: 'aging' },
-      { key: 'stale',    icon: '🟠', label: 'stale' },
-      { key: 'critical', icon: '🔴', label: 'critical' },
-      { key: 'none',     icon: '⚪', label: 'no data' },
+      { key: 'fresh',    color: 'var(--rc-success)',  svgPath: '<circle cx="12" cy="12" r="10" fill="var(--rc-success)" opacity="0.8"/>', label: 'fresh' },
+      { key: 'aging',    color: 'var(--rc-warning)',  svgPath: '<circle cx="12" cy="12" r="10" fill="var(--rc-warning)" opacity="0.8"/>', label: 'aging' },
+      { key: 'stale',    color: '#f97316',            svgPath: '<circle cx="12" cy="12" r="10" fill="#f97316" opacity="0.8"/>',           label: 'stale' },
+      { key: 'critical', color: 'var(--rc-danger)',   svgPath: '<circle cx="12" cy="12" r="10" fill="var(--rc-danger)" opacity="0.8"/>',  label: 'critical' },
+      { key: 'none',     color: 'var(--rc-muted)',    svgPath: '<circle cx="12" cy="12" r="10" fill="none" stroke="var(--rc-muted)" stroke-width="2"/>', label: 'no data' },
     ];
 
     const strip = document.createElement('div');
@@ -1190,7 +1211,7 @@
     strip.setAttribute('aria-label', 'Goal data staleness summary');
 
     let first = true;
-    for (const { key, icon, label } of TIERS) {
+    for (const { key, color, svgPath, label } of TIERS) {
       const count = counts[key];
       if (count === 0) continue;
       if (!first) {
@@ -1202,7 +1223,15 @@
       first = false;
       const item = document.createElement('span');
       item.className = 'st-staleness-strip-item';
-      item.textContent = `${icon} ${count} ${label}`;
+      item.style.cssText = `display:inline-flex;align-items:center;gap:4px;color:${color};`;
+      const svgDot = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgDot.setAttribute('width', '10');
+      svgDot.setAttribute('height', '10');
+      svgDot.setAttribute('viewBox', '0 0 24 24');
+      svgDot.setAttribute('aria-hidden', 'true');
+      svgDot.innerHTML = svgPath;
+      item.appendChild(svgDot);
+      item.appendChild(document.createTextNode(`${count} ${label}`));
       strip.appendChild(item);
     }
 
@@ -1210,7 +1239,7 @@
       // All counts are zero — no goals yet
       const empty = document.createElement('span');
       empty.className = 'st-staleness-strip-item';
-      empty.textContent = '⚪ No goals recorded';
+      empty.textContent = 'No goals recorded';
       strip.appendChild(empty);
     }
 
@@ -1249,9 +1278,18 @@
     btn.className = 'st-collect-nudge';
     btn.setAttribute('aria-label', `${staleGoalCount} goal${staleGoalCount !== 1 ? 's' : ''} need data collection — scroll to first affected student`);
 
-    const icon = document.createElement('span');
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('width', '16');
+    icon.setAttribute('height', '16');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.5');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '📝';
+    icon.innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
     btn.appendChild(icon);
 
     const label = document.createElement('span');
@@ -2081,6 +2119,390 @@
   }
 
   /**
+   * Compute an urgency score for a student.
+   * Higher score = more critical. Used for default sort order.
+   */
+  function computeUrgencyScore(studentCode) {
+    let score = 0;
+    const goals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    for (const goal of goals) {
+      const s = computeGoalAlertStatus(goal);
+      if (s.isRegressing) score += URGENCY_SCORE_REGRESSING;
+      else if (s.isStalled) score += URGENCY_SCORE_STALLED;
+      if (s.isMastered) score += URGENCY_SCORE_MASTERED;
+    }
+    const health = getStudentStalenessInfo(studentCode);
+    if (health.tier === 'critical' || health.tier === 'stale') score += URGENCY_SCORE_STALE_GOAL;
+    return score;
+  }
+
+  // ── Daily Review helpers ────────────────────────────────────────────────────
+
+  /** Returns student codes of students needing attention, in filteredStudents order. */
+  function getDailyReviewStudentCodes() {
+    return filteredStudents
+      .filter(s => studentNeedsAttention(s.code))
+      .map(s => s.code);
+  }
+
+  /** Scroll the student row into view. */
+  function scrollToStudent(code) {
+    const row = document.querySelector(`tr[data-code="${CSS.escape(code)}"]`);
+    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /** Persist current daily review state to sessionStorage so refreshes resume. */
+  function saveDailyReviewProgress() {
+    try {
+      sessionStorage.setItem('rc_daily_review', JSON.stringify({
+        students: dailyReviewStudents,
+        index: dailyReviewIndex,
+      }));
+    } catch (_) { /* ignore */ }
+  }
+
+  /** Build the inner HTML for the Daily Review floating bar. */
+  function renderDailyReviewBarHTML() {
+    const total = dailyReviewStudents.length;
+    const current = dailyReviewIndex + 1;
+    const isLast = dailyReviewIndex === total - 1;
+    const studentCode = dailyReviewStudents[dailyReviewIndex] || '';
+
+    const svgArrowLeft  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
+    const svgArrowRight = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+    const svgCheckCircle = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+    const svgXCircle    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+
+    return `
+      <button id="drPrevBtn" class="rc-btn" ${dailyReviewIndex === 0 ? 'disabled' : ''} title="Previous student" aria-label="Previous student" style="display:flex;align-items:center;gap:6px;padding:7px 14px;">
+        ${svgArrowLeft} Prev
+      </button>
+      <div style="text-align:center;flex:1;font-size:13px;color:var(--rc-ink-dim);min-width:120px;">
+        <div style="font-weight:600;color:var(--rc-ink);font-size:14px;">${escapeHtml(studentCode)}</div>
+        <div>Student ${current} of ${total}</div>
+      </div>
+      ${isLast ? `
+        <button id="drNextBtn" class="rc-btn" style="display:flex;align-items:center;gap:6px;padding:7px 14px;color:var(--rc-success);border-color:var(--rc-success);" title="Review complete" aria-label="Review complete">
+          ${svgCheckCircle} Done
+        </button>
+      ` : `
+        <button id="drNextBtn" class="rc-btn" style="display:flex;align-items:center;gap:6px;padding:7px 14px;" title="Next student" aria-label="Next student">
+          Next ${svgArrowRight}
+        </button>
+      `}
+      <button id="drExitBtn" class="rc-btn" style="display:flex;align-items:center;gap:6px;padding:7px 14px;color:var(--rc-danger);border-color:var(--rc-danger);" title="Exit Daily Review" aria-label="Exit Daily Review">
+        ${svgXCircle} Exit
+      </button>
+    `;
+  }
+
+  /** Wire up event listeners on the Daily Review bar buttons. */
+  function wireDailyReviewBar(bar) {
+    bar.querySelector('#drPrevBtn')?.addEventListener('click', () => dailyReviewGoTo(dailyReviewIndex - 1));
+    bar.querySelector('#drNextBtn')?.addEventListener('click', () => {
+      if (dailyReviewIndex === dailyReviewStudents.length - 1) exitDailyReview();
+      else dailyReviewGoTo(dailyReviewIndex + 1);
+    });
+    bar.querySelector('#drExitBtn')?.addEventListener('click', () => exitDailyReview());
+  }
+
+  /** Create and attach the floating Daily Review navigation bar. */
+  function renderDailyReviewBar() {
+    removeDailyReviewBar();
+    const bar = document.createElement('div');
+    bar.id = 'stDailyReviewBar';
+    bar.className = 'rc-card';
+    bar.setAttribute('role', 'navigation');
+    bar.setAttribute('aria-label', 'Daily Review navigation');
+    bar.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10002;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      min-width: 360px;
+    `;
+    bar.innerHTML = renderDailyReviewBarHTML();
+    document.body.appendChild(bar);
+    wireDailyReviewBar(bar);
+  }
+
+  /** Update the Daily Review bar content in-place. */
+  function updateDailyReviewBar() {
+    const bar = document.getElementById('stDailyReviewBar');
+    if (!bar) return;
+    bar.innerHTML = renderDailyReviewBarHTML();
+    wireDailyReviewBar(bar);
+  }
+
+  /** Remove the Daily Review bar from the DOM. */
+  function removeDailyReviewBar() {
+    const bar = document.getElementById('stDailyReviewBar');
+    if (bar) bar.remove();
+  }
+
+  /** Navigate to a position in the Daily Review sequence. */
+  function dailyReviewGoTo(newIndex) {
+    if (newIndex < 0 || newIndex >= dailyReviewStudents.length) return;
+    expandedStudents.delete(dailyReviewStudents[dailyReviewIndex]);
+    dailyReviewIndex = newIndex;
+    expandedStudents.add(dailyReviewStudents[dailyReviewIndex]);
+    saveDailyReviewProgress();
+    renderStudentList().then(() => {
+      scrollToStudent(dailyReviewStudents[dailyReviewIndex]);
+      updateDailyReviewBar();
+    });
+  }
+
+  /** Start Daily Review mode. */
+  function startDailyReview() {
+    dailyReviewStudents = getDailyReviewStudentCodes();
+    if (dailyReviewStudents.length === 0) {
+      showToast('No students need attention right now.');
+      return;
+    }
+    dailyReviewActive = true;
+    dailyReviewIndex = 0;
+
+    // Attempt to resume from sessionStorage
+    try {
+      const saved = sessionStorage.getItem('rc_daily_review');
+      if (saved) {
+        const { students, index } = JSON.parse(saved);
+        if (JSON.stringify(students) === JSON.stringify(dailyReviewStudents)) {
+          dailyReviewIndex = Math.min(index, dailyReviewStudents.length - 1);
+        }
+      }
+    } catch (_) { /* ignore */ }
+
+    // Expand only the current review student
+    expandedStudents.clear();
+    expandedStudents.add(dailyReviewStudents[dailyReviewIndex]);
+    saveDailyReviewProgress();
+
+    const btn = document.getElementById('stDailyReview');
+    if (btn) btn.classList.add('active');
+
+    renderStudentList().then(() => {
+      scrollToStudent(dailyReviewStudents[dailyReviewIndex]);
+      renderDailyReviewBar();
+    });
+  }
+
+  /** Exit Daily Review mode. */
+  function exitDailyReview() {
+    dailyReviewActive = false;
+    dailyReviewStudents = [];
+    dailyReviewIndex = 0;
+    sessionStorage.removeItem('rc_daily_review');
+    removeDailyReviewBar();
+    const btn = document.getElementById('stDailyReview');
+    if (btn) btn.classList.remove('active');
+    filterStudents();
+    renderStudentList();
+  }
+
+  // ── Auto-Refresh ────────────────────────────────────────────────────────────
+
+  /** Show a brief "Data refreshed" toast. */
+  function showRefreshToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: var(--rc-glass, rgba(15,23,42,0.92));
+      border: 1px solid var(--rc-glass-border, rgba(255,255,255,0.08));
+      border-radius: var(--rc-radius, 12px);
+      padding: 8px 14px;
+      z-index: 9999;
+      font-size: 13px;
+      color: var(--rc-ink-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      transition: opacity 0.3s;
+    `;
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('width', '14');
+    icon.setAttribute('height', '14');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'var(--rc-success, #22c55e)');
+    icon.setAttribute('stroke-width', '1.5');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+    toast.appendChild(icon);
+    toast.appendChild(document.createTextNode('Data refreshed'));
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 2000);
+  }
+
+  /** Set up the 5-minute auto-refresh timer. */
+  function setupAutoRefresh() {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(async () => {
+      // Skip refresh under any of these conditions
+      if (document.hidden) return;
+      if (quickEntryOpen) return;
+      if (focusModeActive) return;
+      if (!navigator.onLine) return;
+
+      // Animate the refresh icon
+      const icon = document.getElementById('stRefreshIcon');
+      if (icon) icon.classList.add('st-spin');
+
+      // Preserve expanded/collapsed state across the refresh
+      const wasExpanded = new Set(expandedStudents);
+      await loadData().catch(() => { /* non-fatal */ });
+      for (const code of wasExpanded) {
+        if (allStudents.some(s => s.code === code)) expandedStudents.add(code);
+      }
+      await renderStudentList();
+
+      if (icon) icon.classList.remove('st-spin');
+      showRefreshToast();
+    }, AUTO_REFRESH_MS);
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => clearInterval(autoRefreshTimer), { once: true });
+  }
+
+  // ── Digest Summary ──────────────────────────────────────────────────────────
+
+  /**
+   * Render the mini digest summary card above the student list.
+   * Shows counts: regressing, stalled, stale, mastered, deadlines.
+   * Each badge is clickable to filter the student list.
+   */
+  function renderDigestSummary() {
+    const container = document.getElementById('stDigestSummary');
+    if (!container) return;
+
+    const activeStudents = allStudents.filter(s => s.status !== 'archived' && s.active !== false);
+    let regressingCount = 0;
+    let stalledCount = 0;
+    let staleCount = 0;
+    let masteredCount = 0;
+    let deadlineCount = 0;
+
+    const today = new Date();
+    const thirtyDays = new Date(today);
+    thirtyDays.setDate(today.getDate() + 30);
+
+    for (const student of activeStudents) {
+      const alerts = getStudentAlertCounts(student.code);
+      regressingCount += alerts.regressingCount;
+      stalledCount    += alerts.stalledCount;
+      masteredCount   += alerts.masteredCount;
+
+      const health = getStudentStalenessInfo(student.code);
+      if (health.tier === 'stale' || health.tier === 'critical') staleCount++;
+
+      // IEP/Eval deadlines within 30 days
+      if (student.iep_due) {
+        const d = new Date(student.iep_due);
+        if (d >= today && d <= thirtyDays) deadlineCount++;
+      }
+      if (student.eval_due) {
+        const d = new Date(student.eval_due);
+        if (d >= today && d <= thirtyDays) deadlineCount++;
+      }
+    }
+
+    // SVG icons
+    const svgDown    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`;
+    const svgPause   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+    const svgClock   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+    const svgTrophy  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="8 21 12 21 16 21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M5 4H3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2 5 5 0 0 0 5 5 5 5 0 0 0 5-5 2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><path d="M5 4h14"/></svg>`;
+    const svgCalendar = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+
+    const badges = [
+      { icon: svgDown,     count: regressingCount, label: 'regressing', color: 'var(--rc-danger)',  filter: 'regressing' },
+      { icon: svgPause,    count: stalledCount,    label: 'stalled',    color: 'var(--rc-warning)', filter: 'stalled' },
+      { icon: svgClock,    count: staleCount,      label: 'stale',      color: 'var(--rc-warning)', filter: 'stale' },
+      { icon: svgTrophy,   count: masteredCount,   label: 'mastered',   color: 'var(--rc-success)', filter: 'mastered' },
+      { icon: svgCalendar, count: deadlineCount,   label: 'deadlines',  color: '#a855f7',            filter: 'deadlines' },
+    ];
+
+    // Clear and rebuild
+    while (container.firstChild) container.removeChild(container.firstChild);
+
+    const card = document.createElement('div');
+    card.className = 'rc-card';
+    card.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 18px;margin:10px 20px;';
+    card.setAttribute('aria-label', 'Daily situation summary');
+
+    const title = document.createElement('span');
+    title.style.cssText = 'font-size:12px;opacity:0.55;margin-right:4px;white-space:nowrap;';
+    title.textContent = 'Today:';
+    card.appendChild(title);
+
+    for (const { icon, count, label, color, filter } of badges) {
+      const badge = document.createElement('button');
+      badge.className = 'rc-btn';
+      badge.dataset.digestFilter = filter;
+      badge.title = `Filter to ${label} students`;
+      badge.style.cssText = `
+        display:inline-flex;align-items:center;gap:5px;
+        padding:4px 10px;font-size:13px;
+        color:${count > 0 ? color : 'var(--rc-muted)'};
+        border-color:${count > 0 ? color : 'transparent'};
+        background:${count > 0 ? `color-mix(in srgb, ${color} 10%, transparent)` : 'transparent'};
+        cursor:${count > 0 ? 'pointer' : 'default'};
+        opacity:${count > 0 ? '1' : '0.45'};
+      `;
+      badge.innerHTML = `${icon}<span style="font-weight:600">${count}</span><span style="opacity:0.8">${label}</span>`;
+      if (count > 0) {
+        badge.addEventListener('click', () => applyDigestFilter(filter));
+      }
+      card.appendChild(badge);
+    }
+
+    container.appendChild(card);
+  }
+
+  /**
+   * Apply a digest filter — sets the needs-attention or sort controls to highlight
+   * students matching the selected digest category.
+   */
+  function applyDigestFilter(filter) {
+    // Map digest filter types to a needsAttentionFilter + sort combination
+    if (filter === 'regressing' || filter === 'stalled' || filter === 'stale') {
+      needsAttentionFilter = true;
+      const btn = document.getElementById('stFilterAttention');
+      if (btn) btn.classList.add('active');
+    } else if (filter === 'mastered') {
+      needsAttentionFilter = true;
+      const btn = document.getElementById('stFilterAttention');
+      if (btn) btn.classList.add('active');
+    } else if (filter === 'deadlines') {
+      sortBy = 'iep_due';
+      const sel = document.getElementById('stSortSelect');
+      if (sel) sel.value = 'iep_due';
+    }
+    filterStudents();
+    renderStudentList();
+    renderStudentKpiSummary();
+  }
+
+  /**
    * Toggle Focus Mode: dims non-attention rows to 30% opacity so needs-attention
    * students stand out clearly.
    */
@@ -2419,14 +2841,24 @@
       }
       
       filterStudents();
+
+      // Auto-expand students with alerts on the very first load (if preference is enabled)
+      if (!_initialLoadDone && autoExpandAlerts) {
+        for (const student of filteredStudents) {
+          if (studentNeedsAttention(student.code)) {
+            expandedStudents.add(student.code);
+          }
+        }
+      }
+      _initialLoadDone = true;
+
       renderStudentList();
       renderStudentQualityBanner();
       renderStudentKpiSummary();
       renderStudentObsHeatmap();
       renderAttendanceReport();
       renderCollectNudge();
-      
-      // Don't auto-expand first student - let user choose
+      renderDigestSummary();
 
       isSyncing = false;
       updateSyncIndicator();
@@ -2440,6 +2872,7 @@
       renderStudentList();
       renderStudentQualityBanner();
       renderStudentKpiSummary();
+      renderDigestSummary();
     }
   }
 
@@ -2470,8 +2903,18 @@
     banner.style.cssText = 'background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;';
     
     // Create warning icon
-    const icon = document.createElement('span');
-    icon.textContent = '⚠️';
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('width', '16');
+    icon.setAttribute('height', '16');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', '#92400e');
+    icon.setAttribute('stroke-width', '1.5');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>';
     
     // Create content wrapper
     const content = document.createElement('div');
@@ -2569,6 +3012,13 @@
         const bVal = bDays === null ? Infinity : bDays;
         return bVal - aVal;
       });
+    } else if (sortBy === 'urgency') {
+      filtered.sort((a, b) => {
+        const aScore = computeUrgencyScore(a.code);
+        const bScore = computeUrgencyScore(b.code);
+        if (bScore !== aScore) return bScore - aScore; // highest urgency first
+        return a.code.localeCompare(b.code); // alphabetical tiebreaker
+      });
     }
 
     // Pinned students always float to the top, preserving the chosen sort within each group
@@ -2640,17 +3090,26 @@
 
       // Alert badge counts for this student
       const alertCounts = getStudentAlertCounts(student.code);
+      const svgWarn = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+      const svgTrophyBadge = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="8 21 12 21 16 21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M5 4H3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2 5 5 0 0 0 5 5 5 5 0 0 0 5-5 2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><path d="M5 4h14"/></svg>`;
+      const svgPauseBadge = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
       const alertBadgesHtml = [
         alertCounts.regressingCount > 0
-          ? `<span class="st-alert-badge st-alert-badge--regressing" title="Regressing goals">⚠️ ${alertCounts.regressingCount} regressing</span>`
+          ? `<span class="st-alert-badge st-alert-badge--regressing" title="Regressing goals">${svgWarn} ${alertCounts.regressingCount} regressing</span>`
           : '',
         alertCounts.masteredCount > 0
-          ? `<span class="st-alert-badge st-alert-badge--mastered" title="Mastered goals">🎉 ${alertCounts.masteredCount} mastered</span>`
+          ? `<span class="st-alert-badge st-alert-badge--mastered" title="Mastered goals">${svgTrophyBadge} ${alertCounts.masteredCount} mastered</span>`
           : '',
         alertCounts.stalledCount > 0
-          ? `<span class="st-alert-badge st-alert-badge--stalled" title="Stalled goals">⏸️ ${alertCounts.stalledCount} stalled</span>`
+          ? `<span class="st-alert-badge st-alert-badge--stalled" title="Stalled goals">${svgPauseBadge} ${alertCounts.stalledCount} stalled</span>`
           : '',
       ].join('');
+
+      // Urgency score indicator (shown as a subtle colored dot with number)
+      const urgencyScore = computeUrgencyScore(student.code);
+      const urgencyHtml = urgencyScore > 0
+        ? `<span class="st-urgency-score" title="Urgency score: ${urgencyScore}" style="font-size:10px;opacity:0.65;margin-left:4px;color:${urgencyScore >= 30 ? 'var(--rc-danger)' : urgencyScore >= 15 ? 'var(--rc-warning)' : 'var(--rc-info)'};">${urgencyScore}</span>`
+        : '';
 
       // Mini sparkline — only shown in collapsed row
       const sparklineValues = getStudentSparklineValues(student.code);
@@ -2661,16 +3120,18 @@
       const needsAttention = alertCounts.regressingCount > 0 || alertCounts.stalledCount > 0 ||
         healthInfo.tier === 'critical' || healthInfo.tier === 'stale' || healthInfo.tier === 'none';
 
-      // Pin button — shown in collapsed (non-expanded) rows
+      // Pin button — shown in collapsed (non-expanded) rows — SVG pin icon instead of emoji
+      const svgPin = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17H19V13L17 7V3H7V7L5 13V17Z"/></svg>`;
       const pinBtn = !isExpanded
-        ? `<button class="st-pin-btn${isPinned ? ' active' : ''}" data-code="${escapeHtml(student.code)}" title="${isPinned ? 'Unpin student' : 'Pin student to top'}" aria-label="${isPinned ? 'Unpin ' + escapeHtml(student.code) : 'Pin ' + escapeHtml(student.code) + ' to top'}" aria-pressed="${isPinned ? 'true' : 'false'}">📌</button>`
+        ? `<button class="st-pin-btn${isPinned ? ' active' : ''}" data-code="${escapeHtml(student.code)}" title="${isPinned ? 'Unpin student' : 'Pin student to top'}" aria-label="${isPinned ? 'Unpin ' + escapeHtml(student.code) : 'Pin ' + escapeHtml(student.code) + ' to top'}" aria-pressed="${isPinned ? 'true' : 'false'}">${svgPin}</button>`
         : '';
 
-      // "Last seen" attendance indicator
+      // "Last seen" attendance indicator — SVG calendar icon instead of emoji
+      const svgCalIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
       const lastSeenDate = getStudentLastAttendanceDate(student.code);
       const lastSeenLabel = formatLastSeen(lastSeenDate);
       const lastSeenHtml = lastSeenLabel
-        ? `<span class="st-last-seen" title="Last attendance recorded">📅 ${escapeHtml(lastSeenLabel)}</span>`
+        ? `<span class="st-last-seen" title="Last attendance recorded">${svgCalIcon}${escapeHtml(lastSeenLabel)}</span>`
         : `<span class="st-last-seen st-last-seen--none" title="No attendance data">No attendance data</span>`;
 
       // Mark attendance button (bonus: quick toggle for today)
@@ -2679,22 +3140,32 @@
         return e.student_code === student.code && e.date === todayISO;
       });
       const attStatus = todayAttEntry ? todayAttEntry.status : null;
-      const attBtnLabel = attStatus ? `✓ ${attStatus.charAt(0).toUpperCase() + attStatus.slice(1)}` : '+ Attendance';
-      const markAttBtn = `<button class="st-attendance-btn" data-code="${escapeHtml(student.code)}" title="Mark attendance for today" aria-label="Mark attendance for ${escapeHtml(student.code)}">${escapeHtml(attBtnLabel)}</button>`;
+      const svgCheckAtt = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+      const svgPlusAtt  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      const attBtnLabel = attStatus ? `${attStatus.charAt(0).toUpperCase() + attStatus.slice(1)}` : 'Attendance';
+      const attBtnIcon  = attStatus ? svgCheckAtt : svgPlusAtt;
+      const markAttBtn = `<button class="st-attendance-btn" data-code="${escapeHtml(student.code)}" title="Mark attendance for today" aria-label="Mark attendance for ${escapeHtml(student.code)}">${attBtnIcon} ${escapeHtml(attBtnLabel)}</button>`;
+
+      // "I Saw This Student Today" one-click button
+      const alreadyPresent = attStatus === 'present';
+      const svgCheckCircle = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+      const seenTodayBtn = !isExpanded
+        ? `<button class="st-seen-today-btn st-btn st-btn-small${alreadyPresent ? ' st-seen-today-btn--present' : ''}" data-code="${escapeHtml(student.code)}" title="Mark present &amp; enter data" aria-label="Mark ${escapeHtml(student.code)} present and enter data" style="display:inline-flex;align-items:center;gap:4px;${alreadyPresent ? 'color:var(--rc-success);border-color:var(--rc-success);' : ''}">${svgCheckCircle}${alreadyPresent ? 'Present' : 'Seen today'}</button>`
+        : '';
 
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''} ${needsAttention ? 'st-needs-attention' : ''} ${isPinned ? 'st-row-pinned' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
-            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>${healthDot}
+            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">&#9654;</span>${healthDot}
           </td>
-          <td class="st-code-cell">${escapeHtml(student.code)}${pinBtn}</td>
+          <td class="st-code-cell">${escapeHtml(student.code)}${urgencyHtml}${pinBtn}</td>
           <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
           <td class="st-goals-cell">
             <span class="st-goals-tooltip-wrapper" data-student="${escapeHtml(student.code)}"><span class="st-goals-badge">${studentGoals.length}</span>${sparklineHtml}</span>${alertBadgesHtml}
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
-          <td class="${escapeHtml(dataInfo.cssClass)}">${escapeHtml(dataLabel)}<br>${lastSeenHtml}${markAttBtn}</td>
+          <td class="${escapeHtml(dataInfo.cssClass)}">${escapeHtml(dataLabel)}<br>${lastSeenHtml}${markAttBtn}${seenTodayBtn}</td>
         </tr>
       `;
 
@@ -3368,6 +3839,36 @@
     dateInput.className = 'dt-date-input';
     dateInput.value = todayISO();
 
+    // ── Smart Defaults: compute last value and trend ─────────────────────────
+    const allEntries = getProgressForGoal(studentCode, goal.code)
+      .slice()
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '')); // newest first
+
+    const lastEntry = allEntries[0];
+    const lastValue = lastEntry
+      ? (lastEntry.value != null ? parseFloat(lastEntry.value) : (lastEntry.percent != null ? parseFloat(lastEntry.percent) : null))
+      : null;
+
+    // Detect a clear upward trend: 3+ consecutive increases (newest → oldest means values should be descending)
+    let suggestedValue = null;
+    let hasTrend = false;
+    if (allEntries.length >= 3) {
+      const vals = allEntries.slice(0, 4).map(e =>
+        e.value != null ? parseFloat(e.value) : (e.percent != null ? parseFloat(e.percent) : null)
+      ).filter(v => v != null && !isNaN(v));
+
+      if (vals.length >= 3) {
+        // vals[0] is newest; if vals are descending (newest is smallest = increasing trend)
+        const allIncreasing = vals.every((v, i) => i === 0 || vals[i - 1] < v);
+        if (allIncreasing) {
+          hasTrend = true;
+          // Project next value: last step size added to newest
+          const step = vals[1] - vals[0]; // step between oldest-visible and second
+          suggestedValue = Math.min(100, Math.max(0, Math.round(vals[0] - step)));
+        }
+      }
+    }
+
     const valLabel = stEl('label', null, 'Value:');
     valLabel.style.cssText = 'font-size:13px;opacity:0.9;';
     const valInput = document.createElement('input');
@@ -3378,6 +3879,23 @@
     valInput.step = '1';
     valInput.placeholder = '0–100';
 
+    // Pre-fill with last value (or trend suggestion)
+    if (hasTrend && suggestedValue != null) {
+      valInput.value = String(suggestedValue);
+    } else if (lastValue != null) {
+      valInput.value = String(lastValue);
+    }
+
+    // "Last: XX%" label shown when there is a previous value
+    if (lastValue != null) {
+      const lastLabel = document.createElement('span');
+      lastLabel.style.cssText = 'font-size:11px;opacity:0.55;margin-left:4px;';
+      lastLabel.textContent = hasTrend
+        ? `Last: ${lastValue}% (suggested based on trend)`
+        : `Last: ${lastValue}%`;
+      valLabel.appendChild(lastLabel);
+    }
+
     const saveBtn = stEl('button', 'dt-btn primary dt-save-btn', 'Save');
     const cancelBtn = stEl('button', 'dt-btn dt-cancel-btn', 'Cancel');
 
@@ -3387,6 +3905,12 @@
     form.appendChild(valInput);
     form.appendChild(saveBtn);
     form.appendChild(cancelBtn);
+
+    // Select pre-filled value so teacher can immediately type to override
+    if (lastValue != null || (hasTrend && suggestedValue != null)) {
+      requestAnimationFrame(() => { try { valInput.select(); } catch (_) { /* ignore */ } });
+    }
+
     return form;
   }
 
@@ -5308,6 +5832,7 @@
     if (sortSelect) {
       sortSelect.addEventListener('change', (e) => {
         sortBy = e.target.value;
+        localStorage.setItem(ST_SORT_PREF_KEY, sortBy);
         filterStudents();
         renderStudentList();
       });
@@ -5358,6 +5883,25 @@
     const focusToggleBtn = document.getElementById('stFocusToggle');
     if (focusToggleBtn) {
       focusToggleBtn.addEventListener('click', () => toggleFocusMode());
+    }
+
+    // Daily Review button
+    const dailyReviewBtn = document.getElementById('stDailyReview');
+    if (dailyReviewBtn) {
+      dailyReviewBtn.addEventListener('click', () => {
+        if (dailyReviewActive) exitDailyReview();
+        else startDailyReview();
+      });
+    }
+
+    // Auto-expand alerts toggle
+    const autoExpandToggle = document.getElementById('stAutoExpandToggle');
+    if (autoExpandToggle) {
+      autoExpandToggle.checked = autoExpandAlerts;
+      autoExpandToggle.addEventListener('change', (e) => {
+        autoExpandAlerts = e.target.checked;
+        localStorage.setItem(ST_AUTO_EXPAND_KEY, autoExpandAlerts ? 'true' : 'false');
+      });
     }
 
     // Shortcuts help button
@@ -5919,6 +6463,52 @@
             .catch(err => {
               console.warn('[tc-students] Attendance save failed:', err.message);
               showErrorToast('Failed to save attendance. Please try again.');
+            });
+          return;
+        }
+
+        // PRIORITY 3d: "Seen Today" button — mark present + expand + open Quick Entry
+        const seenTodayBtn = e.target.closest('.st-seen-today-btn');
+        if (seenTodayBtn) {
+          const code = seenTodayBtn.dataset.code;
+          if (!code) return;
+          e.stopPropagation();
+          const today = new Date().toISOString().slice(0, 10);
+          const alreadyPresent = allAttendanceLogs.some(e2 => e2.student_code === code && e2.date === today && e2.status === 'present');
+
+          const _doExpandAndQuickEntry = () => {
+            // Expand the student
+            expandedStudents.add(code);
+            selectedDetailTabMap.set(code, 'goals');
+            renderStudentList().then(() => {
+              // Auto-open Quick Entry for first active goal
+              const firstGoal = allGoals.find(g => g.student_code === code && g.status !== 'archived');
+              if (firstGoal) {
+                const goalRow = document.querySelector(`.dt-goal-row[data-goal="${CSS.escape(firstGoal.code)}"][data-student="${CSS.escape(code)}"]`);
+                const enterBtn = goalRow?.querySelector('.dt-enter-btn, .dt-save-btn')?.closest('.dt-goal-row')?.querySelector('[data-action="enter-data"], .dt-enter-btn');
+                if (enterBtn) enterBtn.click();
+              }
+            });
+          };
+
+          if (alreadyPresent) {
+            _doExpandAndQuickEntry();
+            return;
+          }
+
+          // Mark present, then expand
+          db.upsertAttendance({ student_code: code, date: today, status: 'present', source: 'manual' })
+            .then(saved => {
+              const idx = allAttendanceLogs.findIndex(e2 => e2.student_code === code && e2.date === today);
+              if (idx >= 0) allAttendanceLogs[idx] = saved;
+              else allAttendanceLogs.push(saved);
+              _doExpandAndQuickEntry();
+              renderAttendanceReport();
+            })
+            .catch(err => {
+              console.warn('[tc-students] Seen-today attendance save failed:', err.message);
+              showErrorToast('Failed to mark attendance. Expanding student anyway.');
+              _doExpandAndQuickEntry();
             });
           return;
         }
@@ -11084,6 +11674,12 @@
     
     // Set default quarter filter to current quarter
     selectedQuarter = getCurrentQuarter();
+
+    // Restore sort preference (default: urgency)
+    const savedSort = localStorage.getItem(ST_SORT_PREF_KEY);
+    sortBy = savedSort || 'urgency';
+    const sortSelect = document.getElementById('stSortSelect');
+    if (sortSelect) sortSelect.value = sortBy;
     
     renderQuarterBar();
     renderClassFilterOptions();
@@ -11093,6 +11689,7 @@
     setupSummaryHandlers();
     setupTcDotGridPopup();
     injectBulkObsConfigButton();
+    setupAutoRefresh();
     loadData();
 
     // Offline / online detection
