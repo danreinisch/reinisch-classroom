@@ -822,6 +822,97 @@
     }
   }
 
+  var DIGEST_SECTION_IDS = [
+    'digestSectionRegressing', 'digestSectionStalled', 'digestSectionDeadlines',
+    'digestSectionStale', 'digestSectionMastery', 'digestSectionStats',
+  ];
+  var DIGEST_DEFAULT_STALE = 14;
+  var DIGEST_DEFAULT_IEP = 30;
+
+  /**
+   * Load digest settings from localStorage and populate the form
+   */
+  function loadDigestSettings() {
+    var raw = localStorage.getItem('rc_digest_settings');
+    var settings = {};
+    try {
+      if (raw) settings = JSON.parse(raw);
+    } catch (e) { /* noop */ }
+
+    var enabled = $('digestEnabledToggle');
+    if (enabled) enabled.checked = settings.enabled !== false;
+
+    DIGEST_SECTION_IDS.forEach(function(id) {
+      var el = $(id);
+      if (el) el.checked = settings[id] !== false;
+    });
+
+    var staleEl = $('digestStaleThreshold');
+    if (staleEl) staleEl.value = settings.staleThreshold != null ? settings.staleThreshold : DIGEST_DEFAULT_STALE;
+
+    var iepEl = $('digestIepWindow');
+    if (iepEl) iepEl.value = settings.iepWindow != null ? settings.iepWindow : DIGEST_DEFAULT_IEP;
+  }
+
+  /**
+   * Save digest settings to localStorage
+   */
+  function saveDigestSettings() {
+    var enabled = $('digestEnabledToggle');
+    var staleEl = $('digestStaleThreshold');
+    var iepEl = $('digestIepWindow');
+
+    var settings = { enabled: enabled ? enabled.checked : true };
+    DIGEST_SECTION_IDS.forEach(function(id) {
+      var el = $(id);
+      settings[id] = el ? el.checked : true;
+    });
+    settings.staleThreshold = staleEl ? parseInt(staleEl.value, 10) || DIGEST_DEFAULT_STALE : DIGEST_DEFAULT_STALE;
+    settings.iepWindow = iepEl ? parseInt(iepEl.value, 10) || DIGEST_DEFAULT_IEP : DIGEST_DEFAULT_IEP;
+
+    localStorage.setItem('rc_digest_settings', JSON.stringify(settings));
+    console.log('[tc-settings] Digest settings saved:', settings);
+    showToast('✓ Digest settings saved.', '#22c55e', '#0b1220');
+  }
+
+  /**
+   * Send a test digest email by invoking the Edge Function directly
+   */
+  async function sendTestDigest() {
+    var btn = $('digestSendTest');
+    if (btn) btn.disabled = true;
+    try {
+      var supabaseUrl = (window.SUPABASE_URL || '').replace(/\/$/, '');
+      var anonKey = window.SUPABASE_ANON_KEY || '';
+      if (!supabaseUrl || !anonKey) {
+        showToast('Supabase not configured — cannot send test digest.', '#ef4444', '#fff');
+        return;
+      }
+      var url = supabaseUrl + '/functions/v1/daily-digest';
+      showToast('Sending test digest…', 'rgba(100,116,139,0.95)', '#fff');
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + anonKey,
+          'apikey': anonKey,
+        },
+      });
+      var data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast('✓ Test digest sent! Check your inbox.', '#22c55e', '#0b1220');
+      } else {
+        console.error('[tc-settings] Test digest failed:', data);
+        showToast('Failed to send test digest. Check console for details.', '#ef4444', '#fff');
+      }
+    } catch (err) {
+      console.error('[tc-settings] Error sending test digest:', err);
+      showToast('Error sending test digest. Check console for details.', '#ef4444', '#fff');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   /**
    * Setup event listeners
    */
@@ -929,6 +1020,15 @@
     if (downloadLsFocusBtn) {
       downloadLsFocusBtn.addEventListener('click', downloadHomeConfig);
     }
+
+    var digestSaveBtn = $('digestSaveBtn');
+    if (digestSaveBtn) {
+      digestSaveBtn.addEventListener('click', saveDigestSettings);
+    }
+    var digestSendTest = $('digestSendTest');
+    if (digestSendTest) {
+      digestSendTest.addEventListener('click', sendTestDigest);
+    }
   }
 
   /**
@@ -941,6 +1041,7 @@
     setupEventListeners();
     loadStudentPasswords();
     loadHomeConfig();
+    loadDigestSettings();
     console.log("[tc-settings] Settings page initialized");
   }
 
