@@ -465,6 +465,7 @@
   let selectedActive = new Set();
 
   // Recently finalized IDs for Issue #11 (Recently Finalized quick-view)
+  const FINALIZED_HIGHLIGHT_DURATION_MS = 60000; // 60 seconds
   let lastFinalizedIds = new Set();
   let _lastFinalizedClearTimer = null;
 
@@ -2124,7 +2125,9 @@
     setTimeout(() => dateInput.focus(), 50);
   }
 
-
+  /**
+   * Opens a modal that lets the teacher pick a unit and bulk-assign it to the
+   * selected upcoming assignments.
    * @param {string[]} ids - Assignment IDs to update.
    */
   function openBulkSetUnitModal(ids) {
@@ -5354,7 +5357,7 @@
       bfdIcon.style.cssText = 'display:inline-flex; align-items:center;';
       bfdIcon.appendChild(createIcon('checkCircle', 14));
       bulkFinalizeByDateBtn.appendChild(bfdIcon);
-      bulkFinalizeByDateBtn.appendChild(document.createTextNode(' Bulk Finalize\u2026'));
+      bulkFinalizeByDateBtn.appendChild(document.createTextNode(' Bulk Finalize…'));
       bulkFinalizeByDateBtn.addEventListener('click', () => openBulkFinalizeByDateModal());
       filterBar.appendChild(bulkFinalizeByDateBtn);
 
@@ -8912,7 +8915,7 @@
     // Track the recently finalized IDs
     if (_lastFinalizedClearTimer) clearTimeout(_lastFinalizedClearTimer);
     lastFinalizedIds = new Set(ids);
-    _lastFinalizedClearTimer = setTimeout(() => { lastFinalizedIds = new Set(); }, 60000);
+    _lastFinalizedClearTimer = setTimeout(() => { lastFinalizedIds = new Set(); }, FINALIZED_HIGHLIGHT_DURATION_MS);
 
     const toast = document.createElement('div');
     toast.setAttribute('role', 'status');
