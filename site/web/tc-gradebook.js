@@ -1328,7 +1328,7 @@
       for (const group of groups) {
         const isExpanded = expandedGroups.has(group.series);
         const groupAvg = calculateGroupAverage(student.code, scoreMap, group.drafts);
-        const done = countGroupCompleted(student.code, scoreMap, group.drafts);
+        const _done = countGroupCompleted(student.code, scoreMap, group.drafts);
 
         if (!isExpanded) {
           // Collapsed: single group summary cell
