@@ -129,23 +129,33 @@ function parseHtmlAssignment(htmlText) {
   // ── Step 0: check for embedded JSON manifest ──────────────────────────────
   // If the HTML contains <script type="application/json" id="assignment-manifest">,
   // use it as the authoritative source of question metadata.
-  var manifestMatch =
-    /<script\b[^>]*\btype\s*=\s*["']application\/json["'][^>]*\bid\s*=\s*["']assignment-manifest["'][^>]*>([\s\S]*?)<\/script>/i.exec(htmlText);
-  if (!manifestMatch) {
-    // Also check for the attributes in reverse order (id before type)
-    manifestMatch =
-      /<script\b[^>]*\bid\s*=\s*["']assignment-manifest["'][^>]*\btype\s*=\s*["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i.exec(htmlText);
+  // Match any <script> block then check both required attributes independently,
+  // so attribute order does not matter.
+  var scriptTagPattern = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  var manifestContent = null;
+  var scriptMatch;
+  while ((scriptMatch = scriptTagPattern.exec(htmlText)) !== null) {
+    var scriptAttrs = scriptMatch[1];
+    if (/\btype\s*=\s*["']application\/json["']/i.test(scriptAttrs) &&
+        /\bid\s*=\s*["']assignment-manifest["']/i.test(scriptAttrs)) {
+      manifestContent = scriptMatch[2];
+      break;
+    }
   }
 
-  if (manifestMatch) {
+  if (manifestContent !== null) {
     try {
-      var manifest = JSON.parse(manifestMatch[1]);
+      var manifest = JSON.parse(manifestContent);
       if (manifest && Array.isArray(manifest.questions) && manifest.questions.length > 0) {
         var manifestQuestions = [];
         var seenManifestRefs = {};
         for (var j = 0; j < manifest.questions.length; j++) {
           var mq = manifest.questions[j];
-          var ref = mq.ref || mq.q_ref || ('Q' + (j + 1));
+          var ref = mq.ref || mq.q_ref;
+          if (!ref) {
+            ref = 'Q' + (j + 1);
+            console.warn('assignment-manifest question at index ' + j + ' has no ref/q_ref — using fallback: ' + ref);
+          }
           if (seenManifestRefs[ref]) {
             console.warn('Duplicate ref in manifest: ' + ref + ' — skipping');
             continue;
