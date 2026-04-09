@@ -2769,6 +2769,10 @@
       isSyncing = true;
       updateSyncIndicator();
 
+      // Invalidate per-student DESE rollup cache on each data refresh so stale
+      // data doesn't persist if a student completes new graded assignments.
+      deseRollupCache.clear();
+
       // Load schedule periods for observation config UI (best-effort, don't block on failure)
       getSchedule().then(s => {
         _cachedSchedulePeriods = (s?.periods || []).filter(p => !p.planning);
@@ -8854,6 +8858,9 @@
   /** In-memory cache: student_code → { iepCards, deseCards } for button click handler */
   const skillsCardsCache = new Map();
 
+  /** In-memory cache: student_code → deseRollup[] to avoid re-fetching on tab switch */
+  const deseRollupCache = new Map();
+
   /** Guard against duplicate in-flight AI generation requests (e.g. rapid tab switching) */
   const skillsGenerationInFlight = new Map(); // student.code → true
 
@@ -9095,54 +9102,21 @@
     // Determine which DESE domain prefixes correspond to this student's IEP goal areas
     const iepDesePrefixes = [...getIepDeseDomainPrefixes(studentGoals)];
 
-    // Fetch DESE rollups from Supabase RPC
+    // Fetch DESE rollups via the dedicated cached function
     let deseCards = [];
     try {
-      const supabase = await getSupabase();
-      if (supabase && student.id) {
-        const schoolYear = (() => {
-          const now = new Date();
-          const m = now.getMonth() + 1;
-          return m >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-        })();
-        const { data: deseData, error: deseError } = await supabase.rpc('student_dese_rollups', {
-          p_student_id: student.id,
-          p_school_year: schoolYear,
-        });
-        if (!deseError && Array.isArray(deseData)) {
-          deseCards = deseData
-            .filter(d => d.dese_code && d.percent_correct !== null)
-            .map(d => ({
-              type: 'dese',
-              code: d.dese_code,
-              area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
-              displayScore: parseFloat(d.percent_correct),
-              itemCount: parseInt(d.item_count, 10) || 0,
-              iepAligned: iepDesePrefixes.length > 0 && iepDesePrefixes.some(p => d.dese_code.startsWith(p)),
-            }))
-            .sort((a, b) => b.displayScore - a.displayScore);
-        } else if (deseError) {
-          console.warn('[tc-students] renderSkillsSummaryTab: DESE RPC error:', deseError.message, '— trying client-side fallback');
-          // Client-side fallback: query the underlying tables directly
-          try {
-            const fallbackRows = await fetchDeseRollupsFallback(supabase, student.id, schoolYear);
-            deseCards = fallbackRows
-              .filter(d => d.dese_code && d.percent_correct !== null)
-              .map(d => ({
-                type: 'dese',
-                code: d.dese_code,
-                area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
-                displayScore: parseFloat(d.percent_correct),
-                itemCount: parseInt(d.item_count, 10) || 0,
-                // Note: iepAligned is computed below (not in fetchDeseRollupsFallback) to keep
-                // the fallback function a pure data-fetching utility, matching the RPC path.
-                iepAligned: iepDesePrefixes.length > 0 && iepDesePrefixes.some(p => d.dese_code.startsWith(p)),
-              }));
-          } catch (fbErr) {
-            console.warn('[tc-students] renderSkillsSummaryTab: DESE fallback also failed:', fbErr);
-          }
-        }
-      }
+      const rollups = await fetchDeseRollups(student);
+      deseCards = rollups
+        .filter(d => d.dese_code && d.percent_correct !== null)
+        .map(d => ({
+          type: 'dese',
+          code: d.dese_code,
+          area: DESE_FRIENDLY_NAMES[d.dese_code] || d.dese_code,
+          displayScore: parseFloat(d.percent_correct),
+          itemCount: parseInt(d.item_count, 10) || 0,
+          iepAligned: iepDesePrefixes.length > 0 && iepDesePrefixes.some(p => d.dese_code.startsWith(p)),
+        }))
+        .sort((a, b) => b.displayScore - a.displayScore);
     } catch (err) {
       console.warn('[tc-students] renderSkillsSummaryTab: DESE fetch failed:', err);
     }
@@ -9347,6 +9321,51 @@
       console.warn('[tc-students] requestSkillsNarratives failed:', err);
       // Silently remove loading spinners — user still sees the data cards
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+    }
+  }
+
+  /**
+   * Fetch DESE standard rollups for a student from the `student_dese_rollups` RPC.
+   * Results are cached in `deseRollupCache` to avoid redundant round-trips when the
+   * teacher switches tabs and back within the same data-load cycle.
+   *
+   * Returns an array of raw rollup rows:
+   *   { dese_code, percent_correct, total_earned, total_possible, item_count }
+   */
+  async function fetchDeseRollups(student) {
+    if (!student?.id) return [];
+
+    const cached = deseRollupCache.get(student.code);
+    if (cached) return cached;
+
+    const now = new Date();
+    const m = now.getMonth() + 1; // 1-based month
+    const schoolYear = m >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return [];
+
+      const { data, error } = await supabase.rpc('student_dese_rollups', {
+        p_student_id: student.id,
+        p_school_year: schoolYear,
+      });
+
+      let rows;
+      if (!error && Array.isArray(data)) {
+        rows = data;
+      } else {
+        if (error) {
+          console.warn('[tc-students] fetchDeseRollups: RPC error:', error.message, '— trying client-side fallback');
+        }
+        rows = await fetchDeseRollupsFallback(supabase, student.id, schoolYear);
+      }
+
+      deseRollupCache.set(student.code, rows);
+      return rows;
+    } catch (err) {
+      console.warn('[tc-students] fetchDeseRollups: failed:', err);
+      return [];
     }
   }
 
