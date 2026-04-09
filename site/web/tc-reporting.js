@@ -3917,6 +3917,17 @@ ${narrative}`;
   }
 
   /**
+   * Escape a value for CSV output: wrap in quotes if it contains commas, quotes, or newlines.
+   * @param {*} val
+   * @returns {string}
+   */
+  function csvField(val) {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  /**
    * Prompt the user to select a roster CSV file and load it into district-translator.
    * Returns true if roster was loaded successfully, false if cancelled.
    * @returns {Promise<boolean>}
@@ -3985,7 +3996,7 @@ ${narrative}`;
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
         return goalData.average != null && goalData.average >= (parseGoalValue(goal.baseline) ?? 0);
       }).length;
-      csv += `${student.code},"${student.name || student.code}",${avgGrade},${complete},${missing},${goalsOnTrack}/${studentGoals.length}\n`;
+      csv += [student.code, csvField(student.name || student.code), avgGrade, complete, missing, `${goalsOnTrack}/${studentGoals.length}`].join(',') + '\n';
     });
     translateAndDownload(
       csv,
@@ -4027,7 +4038,7 @@ ${narrative}`;
         } else {
           status = "No Data";
         }
-        csv += `${student.code},"${student.name || student.code}",${goal.code},"${goal.goal_area || "N/A"}",${goalData.count},${lastCollected},${status}\n`;
+        csv += [student.code, csvField(student.name || student.code), goal.code, csvField(goal.goal_area || 'N/A'), goalData.count, lastCollected, status].join(',') + '\n';
       });
     });
     translateAndDownload(

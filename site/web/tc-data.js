@@ -1594,7 +1594,7 @@
         }
       });
     });
-    const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const csvContent = rows.map(row => row.map(cell => { const s = String(cell); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s; }).join(',')).join('\n');
     translateAndDownload(csvContent, `iep_goal_progress_district_${currentQuarterFilter}_${formatDateYYYYMMDD()}.csv`, 'text/csv;charset=utf-8;');
   }
 
