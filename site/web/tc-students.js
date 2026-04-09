@@ -6862,7 +6862,11 @@
     const masteredGoals = studentGoals.filter(g => computeGoalAlertStatus(g).isMastered);
     if (masteredGoals.length === 0) return;
 
-    const goalList = masteredGoals.map(g => `• ${g.code}`).join('\n');
+    const goalList = masteredGoals.map(g => {
+      const desc = g.desc || g.goal_text || '';
+      const shortDesc = desc.length > 60 ? desc.slice(0, 57) + '…' : desc;
+      return shortDesc ? `• ${g.code}: ${shortDesc}` : `• ${g.code}`;
+    }).join('\n');
     const confirmed = await showConfirmModal(
       'Archive All Mastered Goals',
       `The following ${masteredGoals.length} goal${masteredGoals.length === 1 ? '' : 's'} will be archived:\n\n${goalList}`,
@@ -11889,13 +11893,19 @@
       const rawVal = valueInput.value.trim();
       const date = dateInput.value;
 
-      if (!studentCode || !goalCode || rawVal === '' || !date) {
-        showToast('Please fill in student code, goal code, and value before saving.');
+      // Identify which required fields are missing for a specific error message
+      const missing = [];
+      if (!studentCode) missing.push('student code');
+      if (!goalCode) missing.push('goal code');
+      if (rawVal === '') missing.push('value');
+      if (!date) missing.push('date');
+      if (missing.length > 0) {
+        showToast(`Please fill in: ${missing.join(', ')}.`);
         return;
       }
       const numVal = parseFloat(rawVal);
       if (isNaN(numVal)) {
-        showToast('Value must be a number.');
+        showToast(`Value must be a number (received: "${rawVal}").`);
         return;
       }
 
