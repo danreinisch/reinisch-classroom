@@ -6,6 +6,7 @@
 
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
+  const { isRosterLoaded, loadRoster: loadDistrictRoster, translateAndDownload } = await import('/web/district-translator.js');
 
   // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -2784,6 +2785,58 @@
     showToast('CSV exported');
   }
 
+  async function loadSpreadsheetRosterIfNeeded() {
+    if (isRosterLoaded()) return true;
+    await rcAlert(
+      'No Roster Loaded',
+      'To export with real names, please select your student roster CSV file (code,real_name) in the next dialog.'
+    );
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) { resolve(false); return; }
+        const text = await file.text();
+        const count = loadDistrictRoster(text);
+        if (count === 0) {
+          await rcAlert('Empty Roster', 'No valid entries found. The roster CSV must have two columns: code,real_name.');
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+      input.addEventListener('cancel', () => resolve(false));
+      input.click();
+    });
+  }
+
+  async function exportDistrictCsv() {
+    const ready = await loadSpreadsheetRosterIfNeeded();
+    if (!ready) return;
+    const customCols = customColumns;
+    const headers = [...CSV_HEADERS, ...customCols.map(c => c.label)];
+    const lines = [headers.join(',')];
+    for (const r of allRows) {
+      if (!showArchived && (!r.active || !r._goal_active)) continue;
+      const baseCells = [
+        r.student_code, r.goal_desc, r.goal_code,
+        r.active ? 'Active' : 'Inactive',
+        r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
+        r.data_collector, r.data_collector_email, r.measurement_type,
+        r.addressed_in_class !== false ? 'Yes' : 'No',
+        r.individual_delivery ? 'Yes' : 'No',
+        r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
+        r.notes || '',
+      ];
+      const customCells = customCols.map(c => getCustomVal(r, c.key));
+      lines.push([...baseCells, ...customCells].map(csvEscape).join(','));
+    }
+    translateAndDownload(lines.join('\n'), `master_spreadsheet_district_${dateTag()}.csv`, 'text/csv;charset=utf-8;');
+    showToast('District CSV exported');
+  }
+
   function exportJson() {
     const byStudent = {};
     for (const r of allRows) {
@@ -3959,6 +4012,8 @@
     }
     const exportCsvBtn = document.getElementById('sprExportCsv');
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
+    const exportDistrictCsvBtn = document.getElementById('sprExportDistrictCsv');
+    if (exportDistrictCsvBtn) exportDistrictCsvBtn.addEventListener('click', exportDistrictCsv);
     const exportJsonBtn = document.getElementById('sprExportJson');
     if (exportJsonBtn) exportJsonBtn.addEventListener('click', exportJson);
     const exportMdBtn = document.getElementById('sprExportMd');
