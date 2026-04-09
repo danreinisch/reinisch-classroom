@@ -833,6 +833,7 @@
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
   let progressTabQuarterMap = new Map(); // Map<studentCode, quarterKey> - Per-student quarter selection on Progress tab
   let _cachedSchedulePeriods = []; // Cached bell schedule periods for observation config UI
+  let allAttendanceLogs = []; // Attendance records loaded on page init
 
   // ── Per-question skill gap thresholds ─────────────────────────────────────
   /** Badge shows on goal card when any question accuracy is below this threshold */
@@ -1510,6 +1511,105 @@
     container.appendChild(wrapper);
   }
 
+  /**
+   * Render (or update) the attendance summary report in #stAttendanceReport.
+   * Shows per-student attendance rate for the current month with color coding:
+   *   green ≥ 90%, amber 75-89%, red < 75%
+   */
+  function renderAttendanceReport() {
+    const container = document.getElementById('stAttendanceReport');
+    if (!container) return;
+
+    if (allAttendanceLogs.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Determine school days in the current month (Mon–Fri up to today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const schoolDays = [];
+    const iterDate = new Date(monthStart);
+    while (iterDate <= today) {
+      const dow = iterDate.getDay();
+      if (dow >= 1 && dow <= 5) {
+        schoolDays.push(iterDate.toISOString().slice(0, 10));
+      }
+      iterDate.setDate(iterDate.getDate() + 1);
+    }
+    const totalSchoolDays = schoolDays.length;
+
+    // Filter attendance for current month
+    const monthStartStr = monthStart.toISOString().slice(0, 10);
+    const todayStr = today.toISOString().slice(0, 10);
+    const monthLogs = allAttendanceLogs.filter(
+      e => e.date >= monthStartStr && e.date <= todayStr && e.status === 'present'
+    );
+
+    if (monthLogs.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Aggregate per student
+    const byStudent = new Map();
+    for (const entry of monthLogs) {
+      const set = byStudent.get(entry.student_code) || new Set();
+      set.add(entry.date);
+      byStudent.set(entry.student_code, set);
+    }
+
+    container.replaceChildren();
+    container.style.display = 'block';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;';
+    const title = document.createElement('h3');
+    title.textContent = '📅 Attendance — This Month';
+    header.appendChild(title);
+    const meta = document.createElement('span');
+    meta.style.cssText = 'font-size: 11px; opacity: 0.55;';
+    meta.textContent = `${totalSchoolDays} school day${totalSchoolDays !== 1 ? 's' : ''}`;
+    header.appendChild(meta);
+    container.appendChild(header);
+
+    // Sort by attendance rate ascending (worst first)
+    const entries = Array.from(byStudent.entries()).map(([code, datesSet]) => ({
+      code,
+      days: datesSet.size,
+      rate: totalSchoolDays > 0 ? Math.round((datesSet.size / totalSchoolDays) * 100) : 0,
+    })).sort((a, b) => a.rate - b.rate);
+
+    for (const entry of entries) {
+      const barClass = entry.rate >= 90 ? 'st-att-bar--green' : entry.rate >= 75 ? 'st-att-bar--amber' : 'st-att-bar--red';
+
+      const row = document.createElement('div');
+      row.className = 'st-att-row';
+
+      const codeEl = document.createElement('span');
+      codeEl.className = 'st-att-code';
+      codeEl.textContent = entry.code;
+      row.appendChild(codeEl);
+
+      const barWrap = document.createElement('div');
+      barWrap.className = 'st-att-bar-wrap';
+      barWrap.setAttribute('title', `${entry.days} / ${totalSchoolDays} days present`);
+      const bar = document.createElement('div');
+      bar.className = `st-att-bar ${barClass}`;
+      bar.style.width = `${entry.rate}%`;
+      barWrap.appendChild(bar);
+      row.appendChild(barWrap);
+
+      const pctEl = document.createElement('span');
+      pctEl.className = 'st-att-pct';
+      pctEl.textContent = `${entry.rate}%`;
+      row.appendChild(pctEl);
+
+      container.appendChild(row);
+    }
+  }
+
 
   function renderQuarterBar() {
     const displayEl = document.getElementById('stQuarterDisplay');
@@ -1757,7 +1857,33 @@
     return minDays;
   }
 
-  // ── Alert Detection Constants ─────────────────────────────────────────────
+  /**
+   * Get the most recent attendance date for a student from allAttendanceLogs.
+   * Returns a Date object or null if no attendance data is available.
+   */
+  function getStudentLastAttendanceDate(studentCode) {
+    const entries = allAttendanceLogs.filter(e => e.student_code === studentCode);
+    if (entries.length === 0) return null;
+    const sorted = entries.slice().sort((a, b) => b.date.localeCompare(a.date));
+    return new Date(sorted[0].date + 'T00:00:00');
+  }
+
+  /**
+   * Format a "Last seen" label from a Date or null.
+   * Returns strings like "Today", "Yesterday", "3 days ago", or "No attendance data".
+   */
+  function formatLastSeen(lastDate) {
+    if (!lastDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(lastDate);
+    d.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today - d) / MS_PER_DAY);
+    if (diffDays < 0) return 'Today'; // future dates treated as today
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return `${diffDays} days ago`;
+  }
   const ALERT_TREND_WINDOW = 30; // analyze data from last 30 days
   const ALERT_STALLED_BAND = 5;  // last 3+ points within ≤5% range = stalled
 
@@ -2266,6 +2392,21 @@
       }
 
       console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals,', allProgressEntries.length, 'progress entries');
+
+      // Load attendance for the last 30 days (best-effort, don't block on failure)
+      try {
+        const today = new Date();
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - 30);
+        const startDateStr = startDate.toISOString().slice(0, 10);
+        const endDateStr = today.toISOString().slice(0, 10);
+        if (db.listAttendanceAll) {
+          allAttendanceLogs = await db.listAttendanceAll(startDateStr, endDateStr);
+        }
+      } catch (e) {
+        console.warn('[tc-students] Failed to load attendance logs (non-critical):', e.message);
+        allAttendanceLogs = [];
+      }
       
       // Show schema drift banner if any call failed
       if (schemaDriftDetected) {
@@ -2279,6 +2420,7 @@
       renderStudentQualityBanner();
       renderStudentKpiSummary();
       renderStudentObsHeatmap();
+      renderAttendanceReport();
       renderCollectNudge();
       
       // Don't auto-expand first student - let user choose
@@ -2521,6 +2663,22 @@
         ? `<button class="st-pin-btn${isPinned ? ' active' : ''}" data-code="${escapeHtml(student.code)}" title="${isPinned ? 'Unpin student' : 'Pin student to top'}" aria-label="${isPinned ? 'Unpin ' + escapeHtml(student.code) : 'Pin ' + escapeHtml(student.code) + ' to top'}" aria-pressed="${isPinned ? 'true' : 'false'}">📌</button>`
         : '';
 
+      // "Last seen" attendance indicator
+      const lastSeenDate = getStudentLastAttendanceDate(student.code);
+      const lastSeenLabel = formatLastSeen(lastSeenDate);
+      const lastSeenHtml = lastSeenLabel
+        ? `<span class="st-last-seen" title="Last attendance recorded">📅 ${escapeHtml(lastSeenLabel)}</span>`
+        : `<span class="st-last-seen st-last-seen--none" title="No attendance data">No attendance data</span>`;
+
+      // Mark attendance button (bonus: quick toggle for today)
+      const todayAttEntry = allAttendanceLogs.find(e => {
+        const todayISO = new Date().toISOString().slice(0, 10);
+        return e.student_code === student.code && e.date === todayISO;
+      });
+      const attStatus = todayAttEntry ? todayAttEntry.status : null;
+      const attBtnLabel = attStatus ? `✓ ${attStatus.charAt(0).toUpperCase() + attStatus.slice(1)}` : '+ Attendance';
+      const markAttBtn = `<button class="st-attendance-btn" data-code="${escapeHtml(student.code)}" title="Mark attendance for today" aria-label="Mark attendance for ${escapeHtml(student.code)}">${escapeHtml(attBtnLabel)}</button>`;
+
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''} ${needsAttention ? 'st-needs-attention' : ''} ${isPinned ? 'st-row-pinned' : ''}" data-code="${escapeHtml(student.code)}" data-health-sort="${healthInfo.sortOrder}" data-data-age="${daysSince === null ? NULL_DATA_AGE_SORT_VALUE : daysSince}">
           <td class="st-chevron-cell">
@@ -2533,7 +2691,7 @@
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
-          <td class="${escapeHtml(dataInfo.cssClass)}">${escapeHtml(dataLabel)}</td>
+          <td class="${escapeHtml(dataInfo.cssClass)}">${escapeHtml(dataLabel)}<br>${lastSeenHtml}${markAttBtn}</td>
         </tr>
       `;
 
@@ -5485,6 +5643,32 @@
           const code = pinBtn.dataset.code;
           if (code) togglePinStudent(code);
           e.stopPropagation();
+          return;
+        }
+
+        // PRIORITY 3c: Attendance button (mark present/absent/tardy for today)
+        const attBtn = e.target.closest('.st-attendance-btn');
+        if (attBtn) {
+          const code = attBtn.dataset.code;
+          if (!code) return;
+          e.stopPropagation();
+          const today = new Date().toISOString().slice(0, 10);
+          const existing = allAttendanceLogs.find(e2 => e2.student_code === code && e2.date === today);
+          const cycle = ['present', 'absent', 'tardy'];
+          const currentStatus = existing ? existing.status : null;
+          const nextStatus = currentStatus ? cycle[(cycle.indexOf(currentStatus) + 1) % cycle.length] : 'present';
+          db.upsertAttendance({ student_code: code, date: today, status: nextStatus, source: 'manual' })
+            .then(saved => {
+              const idx = allAttendanceLogs.findIndex(e2 => e2.student_code === code && e2.date === today);
+              if (idx >= 0) {
+                allAttendanceLogs[idx] = saved;
+              } else {
+                allAttendanceLogs.push(saved);
+              }
+              renderStudentList();
+              renderAttendanceReport();
+            })
+            .catch(err => console.warn('[tc-students] Attendance save failed:', err.message));
           return;
         }
         
