@@ -6,7 +6,8 @@
  *
  * Usage:
  *   import { loadRoster, clearRoster, isRosterLoaded, getRosterCount,
- *            translateText, translateAndDownload } from '/web/district-translator.js';
+ *            translateText, translateAndDownload,
+ *            reverseTranslateText, reverseTranslateAndDownload } from '/web/district-translator.js';
  */
 
 // Module-scoped roster map: { "S001": "Jane Smith", ... }
@@ -92,6 +93,60 @@ export function translateText(inputText) {
  */
 export function translateAndDownload(content, filename, mimeType) {
   const translated = translateText(content);
+  const blob = new Blob([translated], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Replace all real student names in inputText with their student codes.
+ * Uses longest-match-first ordering (e.g. "Jane Smith" before "Jane") and
+ * case-insensitive matching so names are found regardless of casing.
+ *
+ * @param {string} inputText - Text containing real names to reverse-translate
+ * @returns {string} Text with real names replaced by student codes
+ */
+export function reverseTranslateText(inputText) {
+  if (!_rosterMap.size) return inputText;
+
+  // Build reverse map: name (lowercase) → code
+  const reverseMap = new Map();
+  for (const [code, name] of _rosterMap) {
+    reverseMap.set(name.toLowerCase(), { code, name });
+  }
+
+  // Sort names longest-first to prevent "Jane" matching before "Jane Smith"
+  const names = [...reverseMap.keys()].sort((a, b) => b.length - a.length);
+
+  // Escape special regex characters in each name
+  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  // Use word boundaries at the start and end of each name token.
+  // Multi-word names (e.g. "Jane Smith") work correctly: \b applies at the
+  // first and last word-character boundary of the whole name string.
+  const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+
+  return inputText.replace(pattern, (match) => {
+    const entry = reverseMap.get(match.toLowerCase());
+    return entry ? entry.code : match;
+  });
+}
+
+/**
+ * Reverse-translate content (names → codes) and trigger a browser download.
+ *
+ * @param {string} content - Text content containing real names to reverse-translate
+ * @param {string} filename - Filename for the download (e.g. "data_coded.csv")
+ * @param {string} mimeType - MIME type (e.g. "text/csv;charset=utf-8;")
+ */
+export function reverseTranslateAndDownload(content, filename, mimeType) {
+  const translated = reverseTranslateText(content);
   const blob = new Blob([translated], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

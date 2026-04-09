@@ -304,6 +304,34 @@
             <input type="file" id="deFileInput" accept=".csv,.txt,.docx" style="display:none;" aria-label="Choose file to translate" />
           </div>
 
+          <!-- Step 3: Reverse Translate (Names → Codes) -->
+          <div class="de-section">
+            <h2>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2H3v16h5l3 3 3-3h7z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+              Step 3 — Reverse Translate (Names → Codes)
+            </h2>
+            <p>
+              Received district data with real student names? Paste it below to convert names back to Student Code Names (e.g., "Jane Smith" → "S001"). Uses the same roster loaded in Step 1.
+            </p>
+            <textarea class="de-textarea" id="deReverseInputText" placeholder="Paste text containing real student names here…" aria-label="Input text with real names to reverse-translate"></textarea>
+            <div class="de-btnrow">
+              <button class="tc-btn" id="deReverseTranslateTextBtn" type="button">🔄 Reverse Translate</button>
+            </div>
+            <textarea class="de-textarea" id="deReverseOutputText" placeholder="Output with student codes will appear here…" readonly aria-label="Reverse-translated output" style="margin-top:12px; opacity:0.9;"></textarea>
+            <div class="de-btnrow">
+              <button class="tc-btn" id="deReverseCopyOutputBtn" type="button">📋 Copy Output</button>
+              <button class="tc-btn" id="deReverseDownloadOutputBtn" type="button">⬇️ Download</button>
+            </div>
+            <p style="margin-top:16px;">
+              Or upload a file with real names — a translated copy will be downloaded automatically with a <code>_coded</code> suffix.
+            </p>
+            <div class="de-drop-zone" id="deReverseFileDropZone" role="button" tabindex="0" aria-label="Upload file to reverse-translate">
+              <div>📄 Click or drag &amp; drop a .csv or .txt file here</div>
+              <div style="margin-top:6px; font-size:12px; opacity:0.65;">A coded copy is downloaded automatically — your original is not modified</div>
+            </div>
+            <input type="file" id="deReverseFileInput" accept=".csv,.txt,.docx" style="display:none;" aria-label="Choose file to reverse-translate" />
+          </div>
+
           <!-- Tips -->
           <div class="de-section" style="border-color: rgba(99,102,241,0.25); background: rgba(99,102,241,0.05);">
             <h2>
@@ -315,6 +343,7 @@
               <li>The roster is kept in memory only — it is cleared when you close or refresh this page.</li>
               <li>Translation handles codes embedded in narrative text: <em>"S001 will increase reading skills…"</em> → <em>"Jane Smith will increase reading skills…"</em></li>
               <li>Codes are sorted longest-first (S0011 before S001) to prevent partial matches.</li>
+              <li>Your roster is loaded per page. If you navigate to Reporting, Spreadsheet, or Data pages and use their "Export for District" buttons, you'll be prompted to upload your roster again on that page.</li>
             </ul>
           </div>
         </div>
