@@ -162,6 +162,14 @@
     ]
   };
 
+  function debounce(fn, delay = 250) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
   function createIcon(name, size = 16) {
     const shapes = ICON_PATHS[name];
     if (!shapes) {
@@ -392,6 +400,7 @@
   let lessonsData = null;
   let unitMap = new Map(); // unit_id → { unitName, sectionName, sectionId }
   let keywordToUnit = new Map(); // keyword → { unitId, sectionId }
+  const laneCache = new Map(); // assignment.id → lane ('upcoming' | 'current' | 'finalized')
   const CATALOG_STOP_WORDS = new Set(['and', 'the', 'for', 'with', 'from', 'this', 'that', 'have', 'will', 'been', 'then', 'them', 'they', 'each', 'were', 'some', 'such', 'when', 'your', 'week', 'chapter', 'chapters', 'day', 'days', 'part']);
   const extractCatalogKeywords = (text) => text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 4 && !CATALOG_STOP_WORDS.has(w));
   const getUnitInfo = (unitId) => unitMap.get(unitId) || null;
@@ -716,6 +725,7 @@
       instancesData = [];
       submissionsData = [];
     }
+    rebuildLaneCache();
   }
 
   async function loadLessons() {
@@ -1454,6 +1464,13 @@
     return 'upcoming';
   }
 
+  function rebuildLaneCache() {
+    laneCache.clear();
+    for (const a of assignmentsData) {
+      laneCache.set(a.id, computeLane(a, instancesData));
+    }
+  }
+
   // ── Assignment Stats ──────────────────────────────────────────────────────────
 
   function getAssignmentStats(assignment, allInstances, allSubmissions) {
@@ -1612,7 +1629,7 @@
     let upcomingCount = 0, currentCount = 0, finalizedCount = 0;
     const finalizedScores = [];
     assignmentsData.forEach(a => {
-      const lane = computeLane(a, instancesData);
+      const lane = (laneCache.get(a.id) ?? computeLane(a, instancesData));
       if (lane === 'upcoming') {
         upcomingCount++;
       } else if (lane === 'current') {
@@ -2056,7 +2073,7 @@
 
     // Build suggestions from uncategorized reserve assignments
     const suggestions = assignmentsData
-      .filter(a => computeLane(a, instancesData) === 'upcoming' && !a.unit_id)
+      .filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming' && !a.unit_id)
       .map(a => {
         const inf = inferUnitFromAssignment(a);
         return { a, unitId: inf.unitId, sectionId: inf.sectionId, confidence: inf.confidence, override: inf.unitId };
@@ -2265,7 +2282,7 @@
     const renderStep3 = () => {
       while (body.firstChild) body.removeChild(body.firstChild);
       while (ftr.firstChild) ftr.removeChild(ftr.firstChild);
-      const remaining = assignmentsData.filter(a => computeLane(a, instancesData) === 'upcoming' && !a.unit_id);
+      const remaining = assignmentsData.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming' && !a.unit_id);
 
       if (!remaining.length) {
         const okMsg2 = document.createElement('div');
@@ -2450,6 +2467,7 @@
           if (idx !== -1) assignmentsData[idx].active = false;
         });
         selectedUpcoming.clear();
+        rebuildLaneCache();
         refreshCurrentTab();
         showToast(count + ' assignment' + (count !== 1 ? 's' : '') + ' ' + actionLabel);
       } catch (err) {
@@ -2458,6 +2476,7 @@
           const idx = assignmentsData.findIndex(a => a.id === id);
           if (idx !== -1) assignmentsData[idx] = snap;
         });
+        rebuildLaneCache();
         refreshCurrentTab();
         showToast('Bulk ' + logTag + ' failed', '#ef4444', '#fff');
       }
@@ -2561,7 +2580,7 @@
       assignmentsData.splice(tgtIdx, 0, moved);
       // Persist custom order
       try {
-        const order = assignmentsData.filter(a => computeLane(a, instancesData) === 'upcoming').map(a => a.id);
+        const order = assignmentsData.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming').map(a => a.id);
         localStorage.setItem('rc_tc_library_reserve_order_v1', JSON.stringify(order));
       } catch (_) { /* storage full */ }
       filters.assignments.sortBy = 'custom';
@@ -2770,11 +2789,13 @@
         try {
           await db.updateAssignment(assignment.id, { active: false });
           if (idx !== -1) assignmentsData[idx].active = false;
+          rebuildLaneCache();
           refreshCurrentTab();
           showToast('Assignment deleted');
         } catch (err) {
           console.error('[tc-library] Failed to delete assignment:', err);
           if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+          rebuildLaneCache();
           refreshCurrentTab();
           showToast('Failed to delete assignment', '#ef4444', '#fff');
         }
@@ -2825,7 +2846,7 @@
    * A student is "missing" if they have no instance, or their instance status is 'Assigned'.
    */
   function computeMissingWork() {
-    const activeList = assignmentsData.filter(a => computeLane(a, instancesData) === 'current');
+    const activeList = assignmentsData.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'current');
     // Map: studentCode → { studentCode, studentName, className, missingAssignments: [] }
     const studentMap = new Map();
 
@@ -3277,11 +3298,13 @@
         try {
           await db.updateAssignment(assignment.id, { active: false });
           if (idx !== -1) assignmentsData[idx].active = false;
+          rebuildLaneCache();
           refreshCurrentTab();
           showToast('Assignment archived');
         } catch (err) {
           console.error('[tc-library] Failed to archive:', err);
           if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+          rebuildLaneCache();
           refreshCurrentTab();
           showToast('Failed to archive assignment', '#ef4444', '#fff');
         }
@@ -3306,11 +3329,13 @@
         try {
           await db.updateAssignment(assignment.id, { active: true });
           if (idx !== -1) assignmentsData[idx].active = true;
+          rebuildLaneCache();
           refreshCurrentTab();
           showToast('Assignment unarchived');
         } catch (err) {
           console.error('[tc-library] Failed to unarchive:', err);
           if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+          rebuildLaneCache();
           refreshCurrentTab();
           showToast('Failed to unarchive assignment', '#ef4444', '#fff');
         }
@@ -3636,9 +3661,9 @@
 
     // Pre-compute filtered + lane lists (shared by analytics section and lane rendering)
     const filtered = filterAssignments();
-    const upcomingList   = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
-    const currentList    = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
-    const finalizedList  = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'finalized'));
+    const upcomingList   = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
+    const currentList    = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'current'));
+    const finalizedList  = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'finalized'));
 
     // Analytics section (between KPI row and filter bar)
     container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
@@ -3955,10 +3980,10 @@
       'background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15);',
       'border-radius:8px; color:white; font-size:13px;'
     ].join('');
+    const debouncedPresSearch = debounce(() => { renderPresGrid(); saveFilters(); }, 250);
     searchInput.addEventListener('input', () => {
       filters.reserve.presentationsSearch = searchInput.value;
-      saveFilters();
-      renderPresGrid();
+      debouncedPresSearch();
     });
     searchWrap.appendChild(searchInput);
     content.appendChild(searchWrap);
@@ -4305,7 +4330,7 @@
       container.innerHTML = '';
 
       const filtered = filterAssignments();
-      let reserveList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      let reserveList = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
 
       // Apply tag filter
       if (filters.reserve.selectedTags.length > 0) {
@@ -4425,7 +4450,7 @@
       viewToggleRow.appendChild(viewToggleWrap);
 
       // Uncategorized badge
-      const allReserveItems = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      const allReserveItems = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
       const uncatCount = allReserveItems.filter(a => !a.unit_id).length;
       if (uncatCount > 0) {
         const uncatBadgeEl = document.createElement('span');
@@ -4452,7 +4477,7 @@
       container.appendChild(viewToggleRow);
 
       // Tag filter chips (scan pre-tag-filtered list for all available tags)
-      const allReserveForTags = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
+      const allReserveForTags = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
       const reserveTagSet = new Set();
       allReserveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) reserveTagSet.add(t); }); });
       if (reserveTagSet.size > 0) {
@@ -5026,7 +5051,7 @@
       container.innerHTML = '';
 
       const filtered = filterAssignments();
-      let activeList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+      let activeList = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'current'));
 
       // Apply tag filter
       if (filters.active.selectedTags.length > 0) {
@@ -5120,7 +5145,7 @@
       container.appendChild(activeViewToggleRow);
 
       // Tag filter chips (scan pre-tag-filtered list for all available tags)
-      const allActiveForTags = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
+      const allActiveForTags = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'current'));
       const activeTagSet = new Set();
       allActiveForTags.forEach(a => { (Array.isArray(a.tags) ? a.tags : []).forEach(t => { if (t) activeTagSet.add(t); }); });
       if (activeTagSet.size > 0) {
@@ -5259,6 +5284,7 @@
               assignmentsData[idx].finalized_at = now;
             }
           });
+          rebuildLaneCache();
           refreshActiveTab();
           showToast(n + ' assignment' + (n !== 1 ? 's' : '') + ' finalized');
         } catch (err) {
@@ -5267,6 +5293,7 @@
             const idx = assignmentsData.findIndex(a => a.id === id);
             if (idx !== -1) assignmentsData[idx] = snap;
           });
+          rebuildLaneCache();
           refreshActiveTab();
           showToast('Failed to finalize assignments', '#ef4444', '#fff');
         }
@@ -5808,7 +5835,7 @@
 
       // ── Compute and filter finalized list ─────────────────────────────────
       finalizedList = sortAssignments(
-        assignmentsData.filter(a => computeLane(a, instancesData) === 'finalized')
+        assignmentsData.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'finalized')
       );
 
       // Apply class filter
@@ -5916,7 +5943,7 @@
       const countEl = document.createElement('div');
       countEl.setAttribute('aria-live', 'polite');
       countEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.45); margin-bottom:12px;';
-      const total = assignmentsData.filter(a => computeLane(a, instancesData) === 'finalized').length;
+      const total = assignmentsData.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'finalized').length;
       countEl.textContent = finalizedList.length === total
         ? `${total} finalized assignment${total !== 1 ? 's' : ''}`
         : `Showing ${finalizedList.length} of ${total} finalized assignment${total !== 1 ? 's' : ''}`;
@@ -6466,7 +6493,7 @@
 
     // All finalized assignments for this student
     const finalizedForStudent = assignmentsData.filter(a => {
-      if (computeLane(a, instancesData) !== 'finalized') return false;
+      if ((laneCache.get(a.id) ?? computeLane(a, instancesData)) !== 'finalized') return false;
       return instancesData.some(i => i.assignment_id === a.id && i.student_code === studentCode);
     });
 
@@ -6638,9 +6665,9 @@
 
       // Analytics section
       const filtered = filterAssignments();
-      const upcomingList  = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'upcoming'));
-      const currentList   = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'current'));
-      const finalizedList = sortAssignments(filtered.filter(a => computeLane(a, instancesData) === 'finalized'));
+      const upcomingList  = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'));
+      const currentList   = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'current'));
+      const finalizedList = sortAssignments(filtered.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'finalized'));
       container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
 
       // Pre-compute weekly data once for both charts
@@ -7010,7 +7037,7 @@
     assignmentsData.forEach(a => {
       const cls = inferClassName(a);
       if (!cls || !classDataMap.has(cls)) return;
-      const lane = computeLane(a, instancesData);
+      const lane = (laneCache.get(a.id) ?? computeLane(a, instancesData));
       const classMetrics = classDataMap.get(cls);
       if (lane === 'upcoming') {
         classMetrics.upcoming++;
@@ -7363,23 +7390,24 @@
     });
 
     // Assignment search
+    const _debouncedRefreshWithSave = debounce(() => { refreshCurrentTab(); saveFilters(); }, 250);
+    const _debouncedFinalizedTabWithSave = debounce(() => { renderFinalizedTab(); saveFilters(); }, 250);
+    const _debouncedLessonsTabWithSave = debounce(() => { renderLessonsTab(); saveFilters(); }, 250);
+
     document.addEventListener('input', (e) => {
       if (e.target.id === 'assignmentSearch') {
         filters.assignments.searchQuery = e.target.value;
-        refreshCurrentTab();
-        saveFilters();
+        _debouncedRefreshWithSave();
       }
       // Finalized tab student filter
       if (e.target.id === 'finalizedStudentFilter') {
         filters.finalized.studentFilter = e.target.value;
-        renderFinalizedTab();
-        saveFilters();
+        _debouncedFinalizedTabWithSave();
       }
       // Finalized tab week filter
       if (e.target.id === 'finalizedWeekFilter') {
         filters.finalized.weekFilter = e.target.value;
-        renderFinalizedTab();
-        saveFilters();
+        _debouncedFinalizedTabWithSave();
       }
     });
 
@@ -7412,8 +7440,7 @@
     document.addEventListener('input', (e) => {
       if (e.target.id === 'lessonSearch') {
         filters.lessons.searchQuery = e.target.value;
-        renderLessonsTab();
-        saveFilters();
+        _debouncedLessonsTabWithSave();
       }
     });
 
@@ -7730,7 +7757,7 @@
       if (assignment.series) grid.appendChild(makeDetailRow('Class', assignment.series));
       grid.appendChild(makeDetailRow('Created', createdDate));
 
-      const lane = computeLane(assignment, instancesData);
+      const lane = laneCache.get(assignment.id) ?? computeLane(assignment, instancesData);
       const laneTextMap = { upcoming: 'Upcoming', current: 'Active', finalized: 'Finalized' };
       grid.appendChild(makeDetailRow('Status', laneTextMap[lane] || lane));
 
@@ -7971,12 +7998,14 @@
           try {
             await db.updateAssignment(assignment.id, { active: false });
             if (idx !== -1) assignmentsData[idx].active = false;
+            rebuildLaneCache();
             closeModal();
             refreshCurrentTab();
             showToast('Assignment deleted');
           } catch (err) {
             console.error('[tc-library] Failed to delete assignment:', err);
             if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+            rebuildLaneCache();
             showToast('Failed to delete assignment', '#ef4444', '#fff');
           }
         });
@@ -8000,12 +8029,14 @@
           try {
             await db.updateAssignment(assignment.id, { active: false });
             if (idx !== -1) assignmentsData[idx].active = false;
+            rebuildLaneCache();
             closeModal();
             refreshCurrentTab();
             showToast('Assignment archived');
           } catch (err) {
             console.error('[tc-library] Failed to archive:', err);
             if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+            rebuildLaneCache();
             showToast('Failed to archive assignment', '#ef4444', '#fff');
           }
         });
