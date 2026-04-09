@@ -943,7 +943,7 @@
       series: assignment.series || null,
       page: assignment.page || null,
       hero: assignment.hero || null,
-      meta: assignment.meta ? { ...assignment.meta, cloned_from: assignment.id, suggested_due_at: suggestedDueAt } : { cloned_from: assignment.id, suggested_due_at: suggestedDueAt },
+      meta: { cloned_from: assignment.id, suggested_due_at: suggestedDueAt, ...(assignment.meta || {}) },
       unit_id: assignment.unit_id || null,
       section_id: assignment.section_id || null,
       tags: Array.isArray(assignment.tags) ? [...assignment.tags] : [],
@@ -2775,7 +2775,7 @@
       applyAllBtn.disabled = true;
       applyAllBtn.setAttribute('aria-label', 'Apply all unit selections');
       applyAllBtn.appendChild(createIcon('checkCircle', 14));
-      applyAllBtn.appendChild(document.createTextNode(' \u2713 Apply All (0 of ' + remaining.length + ' selected)'));
+      applyAllBtn.appendChild(document.createTextNode(' Apply All (0 of ' + remaining.length + ' selected)'));
       applyAllBtn.addEventListener('click', async () => {
         const toApply = Array.from(step3Picks.entries()).map(([id, uid]) => ({ id, uid }));
         if (!toApply.length) return;
@@ -2822,7 +2822,7 @@
         applyAllBtn.style.opacity = count === 0 ? '.5' : '1';
         while (applyAllBtn.firstChild) applyAllBtn.removeChild(applyAllBtn.firstChild);
         applyAllBtn.appendChild(createIcon('checkCircle', 14));
-        applyAllBtn.appendChild(document.createTextNode(' \u2713 Apply All (' + count + ' of ' + total + ' selected)'));
+        applyAllBtn.appendChild(document.createTextNode(' Apply All (' + count + ' of ' + total + ' selected)'));
       }
     };
 

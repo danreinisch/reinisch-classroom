@@ -334,7 +334,7 @@ console.log('\n--- Clone for Next Week: button placement ---');
 test('"Clone for Next Week" button added to renderUpcomingCard', () => {
   const cardIdx = src.indexOf('function renderUpcomingCard(');
   assert.ok(cardIdx !== -1, 'renderUpcomingCard not found');
-  // Use a large enough window to cover the full function (~9000 chars)
+  // renderUpcomingCard is ~9000 chars long; use a 10000-char window to cover it fully
   const cardSection = src.slice(cardIdx, cardIdx + 10000);
   assert.ok(
     cardSection.includes('cloneForNextWeek(assignment)'),
@@ -345,6 +345,7 @@ test('"Clone for Next Week" button added to renderUpcomingCard', () => {
 test('"Clone for Next Week" button has aria-label in renderUpcomingCard', () => {
   const cardIdx = src.indexOf('function renderUpcomingCard(');
   assert.ok(cardIdx !== -1, 'renderUpcomingCard not found');
+  // renderUpcomingCard is ~9000 chars long; use a 10000-char window to cover it fully
   const cardSection = src.slice(cardIdx, cardIdx + 10000);
   assert.ok(
     cardSection.includes("'aria-label', 'Clone for next week:"),
@@ -355,7 +356,7 @@ test('"Clone for Next Week" button has aria-label in renderUpcomingCard', () => 
 test('"Clone for Next Week" button added to renderFinalizedEntry', () => {
   const finIdx = src.indexOf('function renderFinalizedEntry(');
   assert.ok(finIdx !== -1, 'renderFinalizedEntry not found');
-  // Use a large enough window to cover the full function (~7000 chars)
+  // renderFinalizedEntry is ~7000 chars long; use an 8000-char window to cover it fully
   const finSection = src.slice(finIdx, finIdx + 8000);
   assert.ok(
     finSection.includes('cloneForNextWeek(assignment)'),
@@ -366,6 +367,7 @@ test('"Clone for Next Week" button added to renderFinalizedEntry', () => {
 test('"Clone for Next Week" button has aria-label in renderFinalizedEntry', () => {
   const finIdx = src.indexOf('function renderFinalizedEntry(');
   assert.ok(finIdx !== -1, 'renderFinalizedEntry not found');
+  // renderFinalizedEntry is ~7000 chars long; use an 8000-char window to cover it fully
   const finSection = src.slice(finIdx, finIdx + 8000);
   assert.ok(
     finSection.includes("'aria-label', 'Clone for next week:"),
