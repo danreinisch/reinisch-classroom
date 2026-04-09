@@ -215,6 +215,8 @@
       .tc-lib-shimmer { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 75%); background-size: 200% 100%; animation: rc-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
       .assignment-card.dragging { opacity: 0.4; }
       .assignment-card.drag-over { border-top: 3px solid #60a5fa; }
+      @keyframes tc-lib-finalize-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(52,211,153,.0); } 40% { box-shadow:0 0 0 6px rgba(52,211,153,.30); } }
+      .tc-lib-recently-finalized { animation: tc-lib-finalize-pulse 1.4s ease 0.2s 3; border-color: rgba(52,211,153,.40) !important; }
     `;
     document.head.appendChild(style);
   }
@@ -461,6 +463,10 @@
 
   // Bulk selection state for the Active tab
   let selectedActive = new Set();
+
+  // Recently finalized IDs for Issue #11 (Recently Finalized quick-view)
+  let lastFinalizedIds = new Set();
+  let _lastFinalizedClearTimer = null;
 
   // ── Initialization ────────────────────────────────────────────────────────────
 
@@ -1879,8 +1885,246 @@
   }
 
   /**
-   * Opens a modal that lets the teacher pick a unit and bulk-assign it to the
-   * selected upcoming assignments.
+   * Issue #7: Opens a modal that lets the teacher bulk-finalize active assignments
+   * created before a chosen date, with a live preview of affected assignments.
+   */
+  function openBulkFinalizeByDateModal() {
+    const triggerEl = document.activeElement;
+
+    // Default cutoff: 2 weeks ago
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() - 14);
+    const defaultDateStr = defaultDate.toISOString().split('T')[0];
+
+    const overlay = document.createElement('div');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'bulkFinalizeDateTitle');
+    overlay.style.cssText = [
+      'position:fixed; top:0; left:0; right:0; bottom:0;',
+      'background:rgba(0,0,0,.80); backdrop-filter:blur(4px);',
+      'display:flex; align-items:center; justify-content:center;',
+      'z-index:10000; padding:24px; overflow-y:auto;'
+    ].join('');
+
+    const card = document.createElement('div');
+    card.className = 'tc-card';
+    card.style.cssText = 'max-width:540px; width:100%; padding:28px; display:flex; flex-direction:column; gap:16px;';
+
+    // Title
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'bulkFinalizeDateTitle';
+    titleEl.style.cssText = 'margin:0; font-size:20px; display:flex; align-items:center; gap:8px;';
+    const titleIcon = document.createElement('span');
+    titleIcon.style.cssText = 'display:inline-flex; align-items:center; color:#34d399;';
+    titleIcon.appendChild(createIcon('checkCircle', 18));
+    titleEl.appendChild(titleIcon);
+    titleEl.appendChild(document.createTextNode(' Bulk Finalize'));
+    card.appendChild(titleEl);
+
+    // Date picker row
+    const dateRow = document.createElement('div');
+    dateRow.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+    const dateLabel = document.createElement('label');
+    dateLabel.htmlFor = 'bulkFinalizeCutoffDate';
+    dateLabel.style.cssText = 'font-size:13px; color:rgba(255,255,255,.70); font-weight:500;';
+    dateLabel.textContent = 'Finalize all active assignments created before:';
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.id = 'bulkFinalizeCutoffDate';
+    dateInput.value = defaultDateStr;
+    dateInput.style.cssText = 'padding:8px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.20); border-radius:8px; color:white; font-size:14px; color-scheme:dark; width:200px;';
+    dateInput.setAttribute('aria-label', 'Finalize active assignments created before this date');
+    dateRow.appendChild(dateLabel);
+    dateRow.appendChild(dateInput);
+    card.appendChild(dateRow);
+
+    // Preview count label
+    const previewCountEl = document.createElement('div');
+    previewCountEl.style.cssText = 'font-size:13px; font-weight:600; color:#60a5fa;';
+    card.appendChild(previewCountEl);
+
+    // Preview list
+    const previewList = document.createElement('div');
+    previewList.style.cssText = 'max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;';
+    card.appendChild(previewList);
+
+    // Action buttons
+    const actionsRow = document.createElement('div');
+    actionsRow.style.cssText = 'display:flex; gap:10px; justify-content:flex-end; padding-top:4px;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'tc-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+      overlay.remove();
+      if (triggerEl && triggerEl.focus) triggerEl.focus();
+    });
+
+    const finalizeAllBtn = document.createElement('button');
+    finalizeAllBtn.className = 'tc-btn';
+    finalizeAllBtn.style.cssText = 'border-color:rgba(52,211,153,.40); color:#34d399;';
+    finalizeAllBtn.setAttribute('aria-label', 'Finalize all matching assignments');
+    const faIcon = document.createElement('span');
+    faIcon.style.cssText = 'display:inline-flex; align-items:center;';
+    faIcon.appendChild(createIcon('checkCircle', 14));
+    finalizeAllBtn.appendChild(faIcon);
+    finalizeAllBtn.appendChild(document.createTextNode(' Finalize All'));
+
+    actionsRow.appendChild(cancelBtn);
+    actionsRow.appendChild(finalizeAllBtn);
+    card.appendChild(actionsRow);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // Helper: get active assignments created before the cutoff date
+    function getMatchingAssignments(cutoffDateStr) {
+      if (!cutoffDateStr) return [];
+      const cutoff = new Date(cutoffDateStr);
+      cutoff.setHours(23, 59, 59, 999);
+      if (isNaN(cutoff.getTime())) return [];
+      return assignmentsData.filter(a => {
+        if ((laneCache.get(a.id) ?? computeLane(a, instancesData)) !== 'current') return false;
+        const created = a.created_at ? new Date(a.created_at) : null;
+        if (!created || isNaN(created.getTime())) return false;
+        return created <= cutoff;
+      });
+    }
+
+    // Helper: refresh the preview list
+    function refreshPreview() {
+      const matches = getMatchingAssignments(dateInput.value);
+      previewCountEl.textContent = 'This will finalize ' + matches.length + ' assignment' + (matches.length !== 1 ? 's' : '');
+      previewList.innerHTML = '';
+      finalizeAllBtn.disabled = matches.length === 0;
+
+      if (matches.length === 0) {
+        const noMatchEl = document.createElement('div');
+        noMatchEl.style.cssText = 'font-size:12px; color:rgba(255,255,255,.35); padding:8px 0;';
+        noMatchEl.textContent = 'No active assignments match this date.';
+        previewList.appendChild(noMatchEl);
+        return;
+      }
+
+      matches.forEach(a => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:8px 12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:7px; display:flex; align-items:center; gap:8px; font-size:12px;';
+        const itemIcon = document.createElement('span');
+        itemIcon.style.cssText = 'color:rgba(255,255,255,.40); flex-shrink:0; display:inline-flex;';
+        itemIcon.appendChild(createIcon('fileText', 13));
+        const itemTitle = document.createElement('span');
+        itemTitle.style.cssText = 'flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500;';
+        itemTitle.textContent = a.title || 'Untitled';
+        const itemClass = document.createElement('span');
+        itemClass.style.cssText = 'color:rgba(255,255,255,.40); flex-shrink:0;';
+        itemClass.textContent = inferClassName(a) || '';
+        const itemDate = document.createElement('span');
+        itemDate.style.cssText = 'color:rgba(255,255,255,.30); flex-shrink:0;';
+        itemDate.textContent = a.created_at ? new Date(a.created_at).toLocaleDateString() : '';
+        item.appendChild(itemIcon);
+        item.appendChild(itemTitle);
+        if (itemClass.textContent) item.appendChild(itemClass);
+        item.appendChild(itemDate);
+        previewList.appendChild(item);
+      });
+    }
+
+    // Wire up date input to refresh preview dynamically
+    dateInput.addEventListener('input', refreshPreview);
+    dateInput.addEventListener('change', refreshPreview);
+
+    // Finalize All handler with Promise.allSettled and progress
+    finalizeAllBtn.addEventListener('click', async () => {
+      const matches = getMatchingAssignments(dateInput.value);
+      if (matches.length === 0) return;
+
+      cancelBtn.disabled = true;
+      finalizeAllBtn.disabled = true;
+      finalizeAllBtn.textContent = 'Finalizing\u2026';
+
+      const now = new Date().toISOString();
+      const snapshots = new Map();
+      matches.forEach(a => {
+        const idx = assignmentsData.findIndex(x => x.id === a.id);
+        if (idx !== -1) snapshots.set(a.id, { ...assignmentsData[idx] });
+      });
+
+      // Optimistic update
+      matches.forEach(a => {
+        const idx = assignmentsData.findIndex(x => x.id === a.id);
+        if (idx !== -1) {
+          assignmentsData[idx].active = false;
+          assignmentsData[idx].finalized_at = now;
+        }
+      });
+      rebuildLaneCache();
+
+      let done = 0;
+      const total = matches.length;
+      const results = await Promise.allSettled(
+        matches.map(async (a) => {
+          await db.updateAssignment(a.id, { active: false, finalized_at: now });
+          done++;
+          finalizeAllBtn.textContent = 'Finalizing ' + done + ' of ' + total + '\u2026';
+        })
+      );
+
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+
+      // Roll back any that failed
+      if (failed > 0) {
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') {
+            const a = matches[i];
+            const idx = assignmentsData.findIndex(x => x.id === a.id);
+            const snap = snapshots.get(a.id);
+            if (idx !== -1 && snap) assignmentsData[idx] = snap;
+          }
+        });
+        rebuildLaneCache();
+      }
+
+      overlay.remove();
+      if (triggerEl && triggerEl.focus) triggerEl.focus();
+      refreshActiveTab();
+
+      const succeededIds = results
+        .map((r, i) => r.status === 'fulfilled' ? matches[i].id : null)
+        .filter(Boolean);
+
+      if (failed === 0) {
+        showFinalizeToast('\u2713 Finalized ' + succeeded + ' assignment' + (succeeded !== 1 ? 's' : ''), succeededIds);
+      } else {
+        showToast('Finalized ' + succeeded + ' of ' + total + ' \u2014 ' + failed + ' failed', '#f59e0b', '#0b1220');
+      }
+    });
+
+    // Escape key closes the modal
+    const handleKey = (e) => {
+      if (e.key === 'Escape') {
+        overlay.remove();
+        document.removeEventListener('keydown', handleKey);
+        if (triggerEl && triggerEl.focus) triggerEl.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        document.removeEventListener('keydown', handleKey);
+        if (triggerEl && triggerEl.focus) triggerEl.focus();
+      }
+    });
+
+    // Initial preview render and focus
+    refreshPreview();
+    setTimeout(() => dateInput.focus(), 50);
+  }
+
+
    * @param {string[]} ids - Assignment IDs to update.
    */
   function openBulkSetUnitModal(ids) {
@@ -5101,6 +5345,19 @@
       missingWorkBtn.addEventListener('click', () => renderMissingWorkModal());
       filterBar.appendChild(missingWorkBtn);
 
+      // Issue #7: Bulk Finalize by date range button
+      const bulkFinalizeByDateBtn = document.createElement('button');
+      bulkFinalizeByDateBtn.className = 'tc-btn';
+      bulkFinalizeByDateBtn.style.cssText = 'white-space:nowrap; display:flex; align-items:center; gap:6px;';
+      bulkFinalizeByDateBtn.setAttribute('aria-label', 'Bulk finalize active assignments by date range');
+      const bfdIcon = document.createElement('span');
+      bfdIcon.style.cssText = 'display:inline-flex; align-items:center;';
+      bfdIcon.appendChild(createIcon('checkCircle', 14));
+      bulkFinalizeByDateBtn.appendChild(bfdIcon);
+      bulkFinalizeByDateBtn.appendChild(document.createTextNode(' Bulk Finalize\u2026'));
+      bulkFinalizeByDateBtn.addEventListener('click', () => openBulkFinalizeByDateModal());
+      filterBar.appendChild(bulkFinalizeByDateBtn);
+
       container.appendChild(filterBar);
 
       // View toggle row
@@ -5286,7 +5543,7 @@
           });
           rebuildLaneCache();
           refreshActiveTab();
-          showToast(n + ' assignment' + (n !== 1 ? 's' : '') + ' finalized');
+          showFinalizeToast('\u2713 Finalized ' + n + ' assignment' + (n !== 1 ? 's' : ''), ids);
         } catch (err) {
           console.error('[tc-library] Batch finalize failed:', err);
           snapshots.forEach((snap, id) => {
@@ -5624,6 +5881,44 @@
     issueBtn.textContent = '+ Issue';
     btnRow.appendChild(viewBtn);
     btnRow.appendChild(issueBtn);
+
+    // Issue #6: Inline "✓ Finalize" quick-action button
+    const quickFinalizeBtn = document.createElement('button');
+    quickFinalizeBtn.className = 'tc-btn';
+    quickFinalizeBtn.style.cssText = 'font-size:12px; padding:5px 10px; border-color:rgba(52,211,153,.35); color:#34d399;';
+    quickFinalizeBtn.setAttribute('aria-label', 'Finalize ' + (assignment.title || 'Untitled'));
+    quickFinalizeBtn.appendChild(createIcon('checkCircle', 13));
+    quickFinalizeBtn.appendChild(document.createTextNode(' Finalize'));
+    quickFinalizeBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const title = assignment.title || 'Untitled';
+      const confirmed = await rcConfirm(
+        'Finalize Assignment',
+        'Finalize \u201c' + title + '\u201d? This will move it to the Finalized tab.',
+        'Finalize'
+      );
+      if (!confirmed) return;
+      const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+      const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
+      try {
+        const now = new Date().toISOString();
+        await db.updateAssignment(assignment.id, { active: false, finalized_at: now });
+        if (idx !== -1) {
+          assignmentsData[idx].active = false;
+          assignmentsData[idx].finalized_at = now;
+        }
+        rebuildLaneCache();
+        showFinalizeToast('\u2713 Finalized \u201c' + title + '\u201d', [assignment.id]);
+        refreshActiveTab();
+      } catch (err) {
+        console.error('[tc-library] Quick finalize failed:', err);
+        if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+        rebuildLaneCache();
+        showToast('Failed to finalize assignment', '#ef4444', '#fff');
+      }
+    });
+    btnRow.appendChild(quickFinalizeBtn);
+
     card.appendChild(btnRow);
 
     // Gradebook cross-link
@@ -5981,6 +6276,18 @@
           })
         );
       }
+
+      // Issue #11: Highlight recently finalized assignments with a pulse animation
+      if (lastFinalizedIds.size > 0) {
+        requestAnimationFrame(() => {
+          container.querySelectorAll('[data-id]').forEach(el => {
+            if (lastFinalizedIds.has(el.dataset.id)) {
+              el.classList.add('tc-lib-recently-finalized');
+              el.addEventListener('animationend', () => el.classList.remove('tc-lib-recently-finalized'), { once: true });
+            }
+          });
+        });
+      }
     } catch (err) {
       console.error('[tc-library] Error rendering Finalized tab:', err);
       container.innerHTML = '';
@@ -6099,6 +6406,7 @@
       const studentCodes = [...new Set(instances.map(i => i.student_code).filter(Boolean))];
 
       const tr = document.createElement('tr');
+      tr.dataset.id = a.id || '';
       tr.style.cssText = 'cursor:pointer; transition:background .1s ease;'
         + (idx % 2 === 1 ? 'background:rgba(255,255,255,.02);' : '');
       tr.addEventListener('mouseenter', () => { tr.style.background = 'rgba(96,165,250,.08)'; });
@@ -8591,6 +8899,45 @@
     msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
     document.body.appendChild(msg);
     setTimeout(() => msg.remove(), 3500);
+  }
+
+  /**
+   * Issue #11: Show a finalize toast with a "View in Finalized tab" action link.
+   * Stores IDs in lastFinalizedIds and auto-applies a pulse highlight when
+   * the teacher clicks through to the Finalized tab.
+   * @param {string} text - Toast message
+   * @param {string[]} ids - Assignment IDs that were just finalized
+   */
+  function showFinalizeToast(text, ids) {
+    // Track the recently finalized IDs
+    if (_lastFinalizedClearTimer) clearTimeout(_lastFinalizedClearTimer);
+    lastFinalizedIds = new Set(ids);
+    _lastFinalizedClearTimer = setTimeout(() => { lastFinalizedIds = new Set(); }, 60000);
+
+    const toast = document.createElement('div');
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#22c55e;color:#0b1220;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;';
+
+    const textNode = document.createTextNode(text + '\u00a0');
+    toast.appendChild(textNode);
+
+    const viewLink = document.createElement('button');
+    viewLink.textContent = 'View in Finalized tab';
+    viewLink.style.cssText = 'background:rgba(0,0,0,.20);border:1px solid rgba(0,0,0,.25);color:#0b1220;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;';
+    viewLink.setAttribute('aria-label', 'View recently finalized assignments in Finalized tab');
+    viewLink.addEventListener('click', () => {
+      toast.remove();
+      // Apply today-only date filter so teacher sees what they just finalized
+      const today = new Date().toISOString().split('T')[0];
+      filters.finalized.dateFrom = today;
+      filters.finalized.dateTo = today;
+      switchTab('finalized');
+    });
+    toast.appendChild(viewLink);
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 6000);
   }
 
   // ── Banners ───────────────────────────────────────────────────────────────────
