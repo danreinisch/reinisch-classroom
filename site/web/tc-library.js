@@ -849,6 +849,143 @@
       : 'draft-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
   }
 
+  /**
+   * Parses a week number out of an assignment title and returns the new title
+   * with the week number incremented by 1.
+   *
+   * Supports:
+   *   - Digits:    "Week 3 Reading Quiz"   → "Week 4 Reading Quiz"
+   *   - Zero-pad:  "Week 03 Worksheet"     → "Week 04 Worksheet"
+   *   - Word form: "Week Three Homework"   → "Week 4 Homework"
+   *   - Short:     "Wk 7 / W7 Assessment"  → "Wk 8 / W8 Assessment"
+   *
+   * Increments the *last* match to handle edge cases with multiple occurrences.
+   * Returns null if no week-number pattern is found.
+   *
+   * @param {string} title
+   * @returns {string|null}
+   */
+  function incrementWeekInTitle(title) {
+    const WORD_TO_NUM = {
+      one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+      seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+      thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+      seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20
+    };
+    const weekRegex = /\b(?:week|wk|w)\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/gi;
+
+    let lastMatch = null;
+    let m;
+    weekRegex.lastIndex = 0;
+    while ((m = weekRegex.exec(title)) !== null) {
+      lastMatch = m;
+    }
+    if (!lastMatch) return null;
+
+    const rawNum = lastMatch[1];
+    let weekNum;
+    let zeroPadded = false;
+    let padLen = 0;
+    if (/^\d+$/.test(rawNum)) {
+      weekNum = parseInt(rawNum, 10);
+      if (rawNum.length > 1 && rawNum.startsWith('0')) {
+        zeroPadded = true;
+        padLen = rawNum.length;
+      }
+    } else {
+      weekNum = WORD_TO_NUM[rawNum.toLowerCase()] || 1;
+    }
+
+    const newNum = weekNum + 1;
+    const newNumStr = zeroPadded ? String(newNum).padStart(padLen, '0') : String(newNum);
+    const matchStart = lastMatch.index;
+    const matchEnd = matchStart + lastMatch[0].length;
+    const newMatch = lastMatch[0].replace(rawNum, newNumStr);
+    return title.slice(0, matchStart) + newMatch + title.slice(matchEnd);
+  }
+
+  /**
+   * Clones an assignment for the next week.
+   * - Increments the week number in the title (prompts if none found).
+   * - Copies all metadata from the original.
+   * - Creates a new reserve (non-issued) assignment via db.createAssignment().
+   * - Shows a success toast with a "View in Reserve tab" link.
+   *
+   * @param {Object} assignment
+   */
+  async function cloneForNextWeek(assignment) {
+    const origTitle = assignment.title || 'Untitled';
+    let newTitle = incrementWeekInTitle(origTitle);
+
+    if (!newTitle) {
+      // No week number detected — prompt the teacher for a new title
+      const prompted = window.prompt(
+        'No week number detected in the title.\nEnter the new title:',
+        origTitle
+      );
+      if (!prompted || !prompted.trim()) return; // cancelled or empty
+      newTitle = prompted.trim();
+    }
+
+    // Calculate suggested due date: nearest existing instance due_at + 7 days
+    const instances = instancesData.filter(i => i.assignment_id === assignment.id);
+    const dueDates = instances.map(i => i.due_at).filter(Boolean);
+    const nearestDue = dueDates.length > 0
+      ? new Date(Math.min(...dueDates.map(d => new Date(d).getTime())))
+      : null;
+    const suggestedDueAt = nearestDue
+      ? new Date(nearestDue.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
+    const newAssignmentPayload = {
+      title: newTitle,
+      type: assignment.type || null,
+      series: assignment.series || null,
+      page: assignment.page || null,
+      hero: assignment.hero || null,
+      meta: { cloned_from: assignment.id, suggested_due_at: suggestedDueAt, ...(assignment.meta || {}) },
+      unit_id: assignment.unit_id || null,
+      section_id: assignment.section_id || null,
+      tags: Array.isArray(assignment.tags) ? [...assignment.tags] : [],
+    };
+
+    let newAssignment;
+    try {
+      newAssignment = await db.createAssignment(newAssignmentPayload);
+    } catch (err) {
+      console.error('[tc-library] cloneForNextWeek: createAssignment failed:', err);
+      showToast('Failed to clone assignment \u2014 please try again.', '#ef4444', '#fff');
+      return;
+    }
+
+    // Update in-memory data and rebuild cache
+    if (newAssignment) {
+      assignmentsData.push(newAssignment);
+    }
+    rebuildLaneCache();
+    if (_currentTab === 'reserve') {
+      refreshCurrentTab();
+    }
+
+    // Show a rich toast with a "View in Reserve tab" action button
+    const toast = document.createElement('div');
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#22c55e;color:#0b1220;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;max-width:460px;';
+    toast.appendChild(document.createTextNode('\u2713 Created \u201c' + newTitle + '\u201d\u00a0'));
+    const viewBtn = document.createElement('button');
+    viewBtn.textContent = 'View in Reserve tab';
+    viewBtn.setAttribute('aria-label', 'View cloned assignment in Reserve tab');
+    viewBtn.style.cssText = 'background:rgba(0,0,0,.20);border:1px solid rgba(0,0,0,.25);color:#0b1220;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+    viewBtn.addEventListener('click', () => {
+      toast.remove();
+      switchTab('reserve');
+    });
+    toast.appendChild(viewBtn);
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 6000);
+  }
+
   // ── Re-Issue Helpers ──────────────────────────────────────────────────────────
 
   /**
@@ -2546,6 +2683,9 @@
       while (ftr.firstChild) ftr.removeChild(ftr.firstChild);
       const remaining = assignmentsData.filter(a => (laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming' && !a.unit_id);
 
+      // Track per-row unit picker selections: assignment.id -> selected unit_id
+      const step3Picks = new Map();
+
       if (!remaining.length) {
         const okMsg2 = document.createElement('div');
         okMsg2.style.cssText = 'padding:40px; text-align:center; color:rgba(255,255,255,.65);';
@@ -2572,6 +2712,14 @@
 
           const picker2 = buildUnitPicker('Set unit for ' + a.title, null);
           picker2.options[0].textContent = '\u2014 Select unit \u2014';
+          picker2.addEventListener('change', () => {
+            if (picker2.value) {
+              step3Picks.set(a.id, picker2.value);
+            } else {
+              step3Picks.delete(a.id);
+            }
+            refreshApplyAllBtn();
+          });
           row2.appendChild(picker2);
 
           const setBtn = document.createElement('button');
@@ -2590,8 +2738,10 @@
               setBtn.disabled = true;
               setBtn.textContent = '\u2026';
               await db.updateAssignment(a.id, { unit_id: uid2, section_id: sid2 });
+              step3Picks.delete(a.id);
               row2.remove();
               refreshCurrentTab();
+              refreshApplyAllBtn();
             } catch (_e2) {
               if (idx2 !== -1 && snapshot2) assignmentsData[idx2] = snapshot2;
               setBtn.disabled = false;
@@ -2617,6 +2767,63 @@
       doneBtn2.textContent = 'Done';
       doneBtn2.addEventListener('click', closeWizard);
       ftr.appendChild(doneBtn2);
+
+      // Apply All button — disabled until at least one picker has a selection
+      const applyAllBtn = document.createElement('button');
+      applyAllBtn.className = 'tc-btn';
+      applyAllBtn.style.cssText = 'background:rgba(96,165,250,.25); border-color:rgba(96,165,250,.4); opacity:.5;';
+      applyAllBtn.disabled = true;
+      applyAllBtn.setAttribute('aria-label', 'Apply all unit selections');
+      applyAllBtn.appendChild(createIcon('checkCircle', 14));
+      applyAllBtn.appendChild(document.createTextNode(' Apply All (0 of ' + remaining.length + ' selected)'));
+      applyAllBtn.addEventListener('click', async () => {
+        const toApply = Array.from(step3Picks.entries()).map(([id, uid]) => ({ id, uid }));
+        if (!toApply.length) return;
+        while (body.firstChild) body.removeChild(body.firstChild);
+        while (ftr.firstChild) ftr.removeChild(ftr.firstChild);
+
+        const progWrap = document.createElement('div');
+        progWrap.style.cssText = 'padding:40px; text-align:center;';
+        const progText = document.createElement('span');
+        progText.style.cssText = 'color:rgba(255,255,255,.65); font-size:14px;';
+        progText.textContent = 'Applying ' + toApply.length + ' of ' + remaining.length + '\u2026';
+        progWrap.appendChild(progText);
+        body.appendChild(progWrap);
+
+        let done = 0, fails = 0;
+        const CHUNK = 5;
+        for (let i = 0; i < toApply.length; i += CHUNK) {
+          const chunk = toApply.slice(i, i + CHUNK);
+          const results = await Promise.allSettled(chunk.map(({ id, uid }) => {
+            const uInfo = getUnitInfo(uid);
+            const sid = uInfo ? uInfo.sectionId : null;
+            return db.updateAssignment(id, { unit_id: uid, section_id: sid }).then(() => {
+              const idx = assignmentsData.findIndex(x => x.id === id);
+              if (idx !== -1) { assignmentsData[idx].unit_id = uid; assignmentsData[idx].section_id = sid; }
+            });
+          }));
+          results.forEach(r => { if (r.status === 'fulfilled') done++; else fails++; });
+          progText.textContent = 'Applying ' + (done + fails) + ' of ' + toApply.length + '\u2026';
+        }
+        const summary = fails > 0
+          ? '\u2713 Applied ' + done + ' of ' + toApply.length + ' \u2014 ' + fails + ' failed'
+          : '\u2713 Applied ' + done + ' unit assignment' + (done !== 1 ? 's' : '');
+        showToast(summary);
+        rebuildLaneCache();
+        refreshCurrentTab();
+        renderStep3();
+      });
+      ftr.appendChild(applyAllBtn);
+
+      function refreshApplyAllBtn() {
+        const count = step3Picks.size;
+        const total = remaining.length;
+        applyAllBtn.disabled = count === 0;
+        applyAllBtn.style.opacity = count === 0 ? '.5' : '1';
+        while (applyAllBtn.firstChild) applyAllBtn.removeChild(applyAllBtn.firstChild);
+        applyAllBtn.appendChild(createIcon('checkCircle', 14));
+        applyAllBtn.appendChild(document.createTextNode(' Apply All (' + count + ' of ' + total + ' selected)'));
+      }
     };
 
     renderStep1();
@@ -3029,6 +3236,20 @@
       renderReserveTab();
     });
     btnRow.appendChild(dupBtn);
+
+    const cloneWeekBtn = document.createElement('button');
+    cloneWeekBtn.className = 'tc-btn';
+    cloneWeekBtn.title = 'Clone this assignment for the next week';
+    cloneWeekBtn.setAttribute('aria-label', 'Clone for next week: ' + (assignment.title || 'Untitled'));
+    cloneWeekBtn.style.cssText = 'font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:6px;';
+    cloneWeekBtn.appendChild(createIcon('refreshCw', 14));
+    cloneWeekBtn.appendChild(document.createTextNode('\u21bb Clone for Next Week'));
+    cloneWeekBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cloneForNextWeek(assignment);
+    });
+    btnRow.appendChild(cloneWeekBtn);
+
     card.appendChild(btnRow);
 
     if (instances.length === 0) {
@@ -3615,6 +3836,19 @@
       showReIssueModal(assignment, 'finalized');
     });
     btnGroup.appendChild(reIssueBtn);
+
+    const cloneWeekFinBtn = document.createElement('button');
+    cloneWeekFinBtn.className = 'tc-btn';
+    cloneWeekFinBtn.style.cssText = 'font-size:11px; padding:4px 10px; flex-shrink:0;';
+    cloneWeekFinBtn.setAttribute('title', 'Clone for next week');
+    cloneWeekFinBtn.setAttribute('aria-label', 'Clone for next week: ' + (assignment.title || 'Untitled'));
+    cloneWeekFinBtn.appendChild(createIcon('refreshCw', 12));
+    cloneWeekFinBtn.appendChild(document.createTextNode(' \u21bb Clone for Next Week'));
+    cloneWeekFinBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cloneForNextWeek(assignment);
+    });
+    btnGroup.appendChild(cloneWeekFinBtn);
 
     const gbFinalizedBtn = document.createElement('button');
     gbFinalizedBtn.className = 'tc-btn';
