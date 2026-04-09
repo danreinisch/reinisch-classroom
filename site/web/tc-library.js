@@ -396,6 +396,7 @@
   const extractCatalogKeywords = (text) => text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 4 && !CATALOG_STOP_WORDS.has(w));
   const getUnitInfo = (unitId) => unitMap.get(unitId) || null;
   let syncStatus = "loading";
+  let _lessonsLoadFailed = false;
 
   // Recall Library state
   let _recallLibraryEntries = null;
@@ -494,6 +495,14 @@
     if (skeleton) skeleton.remove();
     attachEventListeners();
     switchTab("reserve");
+
+    // ── Issue #19: Offline/online resilience ─────────────────────────────────
+    if (!navigator.onLine) showOfflineBanner();
+    window.addEventListener('offline', showOfflineBanner);
+    window.addEventListener('online', () => {
+      hideOfflineBanner();
+      showToast('Back online', '#22c55e', '#0b1220');
+    });
   }
 
   // ── Tab Bar ───────────────────────────────────────────────────────────────────
@@ -711,6 +720,7 @@
 
   async function loadLessons() {
     console.log("[tc-library] Loading lessons...");
+    let loadFailed = false;
     try {
       const response = await fetch('/assets/content/lessons-index.json');
       if (response.ok) {
@@ -719,10 +729,12 @@
       } else {
         console.warn("[tc-library] Lessons index not found");
         lessonsData = null;
+        loadFailed = true;
       }
     } catch (err) {
       console.error("[tc-library] Error loading lessons:", err);
       lessonsData = null;
+      loadFailed = true;
     }
     // Build unit lookup map: unit_id → { unitName, sectionName, sectionId }
     // Also build keyword → unitId map for catalog inference
@@ -744,6 +756,21 @@
           });
         });
       });
+    }
+    // ── Issue #17: show or hide lessons error banner ──────────────────────────
+    _lessonsLoadFailed = loadFailed;
+    if (loadFailed) {
+      showLessonsErrorBanner(retryLoadLessons);
+    } else {
+      hideLessonsErrorBanner();
+    }
+  }
+
+  /** Retry helper for the lessons error banner [Retry] button. */
+  async function retryLoadLessons() {
+    await loadLessons();
+    if (!_lessonsLoadFailed) {
+      refreshCurrentTab();
     }
   }
 
@@ -1933,6 +1960,11 @@
       const chosenSectionId = unitInfo ? unitInfo.sectionId : null;
       const unitLabel = unitInfo ? unitInfo.unitName : 'Uncategorized';
       closeModal();
+      const snapshots = new Map();
+      ids.forEach(id => {
+        const idx = assignmentsData.findIndex(a => a.id === id);
+        if (idx !== -1) snapshots.set(id, { ...assignmentsData[idx] });
+      });
       try {
         await Promise.all(ids.map(id => db.updateAssignment(id, { unit_id: chosenUnitId || null, section_id: chosenSectionId })));
         ids.forEach(id => {
@@ -1947,6 +1979,11 @@
         showToast(ids.length + ' assignment' + (ids.length !== 1 ? 's' : '') + ' cataloged to ' + unitLabel);
       } catch (err) {
         console.error('[tc-library] Bulk set unit failed:', err);
+        snapshots.forEach((snap, id) => {
+          const idx = assignmentsData.findIndex(a => a.id === id);
+          if (idx !== -1) assignmentsData[idx] = snap;
+        });
+        refreshCurrentTab();
         showToast('Failed to set unit', '#ef4444', '#fff');
       }
     });
@@ -2267,15 +2304,17 @@
             if (!uid2) return;
             const uInfo2 = getUnitInfo(uid2);
             const sid2 = uInfo2 ? uInfo2.sectionId : null;
+            const idx2 = assignmentsData.findIndex(x => x.id === a.id);
+            const snapshot2 = idx2 !== -1 ? { ...assignmentsData[idx2] } : null;
+            if (idx2 !== -1) { assignmentsData[idx2].unit_id = uid2; assignmentsData[idx2].section_id = sid2; }
             try {
               setBtn.disabled = true;
               setBtn.textContent = '\u2026';
               await db.updateAssignment(a.id, { unit_id: uid2, section_id: sid2 });
-              const idx2 = assignmentsData.findIndex(x => x.id === a.id);
-              if (idx2 !== -1) { assignmentsData[idx2].unit_id = uid2; assignmentsData[idx2].section_id = sid2; }
               row2.remove();
               refreshCurrentTab();
             } catch (_e2) {
+              if (idx2 !== -1 && snapshot2) assignmentsData[idx2] = snapshot2;
               setBtn.disabled = false;
               setBtn.textContent = 'Set';
               showToast('Failed to update assignment', '#ef4444', '#fff');
@@ -2399,6 +2438,11 @@
       const ids = [...selectedUpcoming];
       const count = ids.length;
       if (count === 0) return;
+      const snapshots = new Map();
+      ids.forEach(id => {
+        const idx = assignmentsData.findIndex(a => a.id === id);
+        if (idx !== -1) snapshots.set(id, { ...assignmentsData[idx] });
+      });
       try {
         await Promise.all(ids.map(id => db.updateAssignment(id, { active: false })));
         ids.forEach(id => {
@@ -2410,6 +2454,11 @@
         showToast(count + ' assignment' + (count !== 1 ? 's' : '') + ' ' + actionLabel);
       } catch (err) {
         console.error('[tc-library] ' + logTag + ' failed:', err);
+        snapshots.forEach((snap, id) => {
+          const idx = assignmentsData.findIndex(a => a.id === id);
+          if (idx !== -1) assignmentsData[idx] = snap;
+        });
+        refreshCurrentTab();
         showToast('Bulk ' + logTag + ' failed', '#ef4444', '#fff');
       }
     }
@@ -2716,14 +2765,17 @@
           { danger: true }
         );
         if (!confirmed) return;
+        const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+        const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
         try {
           await db.updateAssignment(assignment.id, { active: false });
-          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
           if (idx !== -1) assignmentsData[idx].active = false;
           refreshCurrentTab();
           showToast('Assignment deleted');
         } catch (err) {
           console.error('[tc-library] Failed to delete assignment:', err);
+          if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+          refreshCurrentTab();
           showToast('Failed to delete assignment', '#ef4444', '#fff');
         }
       });
@@ -3220,14 +3272,17 @@
           'Archive'
         );
         if (!confirmed) return;
+        const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+        const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
         try {
           await db.updateAssignment(assignment.id, { active: false });
-          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
           if (idx !== -1) assignmentsData[idx].active = false;
           refreshCurrentTab();
           showToast('Assignment archived');
         } catch (err) {
           console.error('[tc-library] Failed to archive:', err);
+          if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+          refreshCurrentTab();
           showToast('Failed to archive assignment', '#ef4444', '#fff');
         }
       });
@@ -3246,14 +3301,17 @@
           'Unarchive'
         );
         if (!confirmed) return;
+        const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+        const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
         try {
           await db.updateAssignment(assignment.id, { active: true });
-          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
           if (idx !== -1) assignmentsData[idx].active = true;
           refreshCurrentTab();
           showToast('Assignment unarchived');
         } catch (err) {
           console.error('[tc-library] Failed to unarchive:', err);
+          if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
+          refreshCurrentTab();
           showToast('Failed to unarchive assignment', '#ef4444', '#fff');
         }
       });
@@ -5186,6 +5244,11 @@
           'Finalize'
         );
         if (!confirmed) return;
+        const snapshots = new Map();
+        ids.forEach(id => {
+          const idx = assignmentsData.findIndex(a => a.id === id);
+          if (idx !== -1) snapshots.set(id, { ...assignmentsData[idx] });
+        });
         try {
           const now = new Date().toISOString();
           await Promise.all(ids.map(id => db.updateAssignment(id, { active: false, finalized_at: now })));
@@ -5200,6 +5263,11 @@
           showToast(n + ' assignment' + (n !== 1 ? 's' : '') + ' finalized');
         } catch (err) {
           console.error('[tc-library] Batch finalize failed:', err);
+          snapshots.forEach((snap, id) => {
+            const idx = assignmentsData.findIndex(a => a.id === id);
+            if (idx !== -1) assignmentsData[idx] = snap;
+          });
+          refreshActiveTab();
           showToast('Failed to finalize assignments', '#ef4444', '#fff');
         }
       });
@@ -7755,16 +7823,18 @@
         const newUnitId = unitSelect.value || null;
         const unitInfo = newUnitId ? getUnitInfo(newUnitId) : null;
         const newSectionId = unitInfo ? unitInfo.sectionId : null;
+        const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+        const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
+        if (idx !== -1) {
+          assignmentsData[idx].unit_id = newUnitId;
+          assignmentsData[idx].section_id = newSectionId;
+        }
         try {
           await db.updateAssignment(assignment.id, { unit_id: newUnitId, section_id: newSectionId });
-          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
-          if (idx !== -1) {
-            assignmentsData[idx].unit_id = newUnitId;
-            assignmentsData[idx].section_id = newSectionId;
-          }
           showToast('Unit updated');
         } catch (err) {
           console.error('[tc-library] Failed to update unit:', err);
+          if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
           showToast('Failed to update unit', '#ef4444', '#fff');
         }
       });
@@ -7782,12 +7852,22 @@
       tagPillsWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; min-height:28px;';
 
       const saveTags = async (newTags) => {
+        const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+        const previousTags = idx !== -1 ? (Array.isArray(assignmentsData[idx].tags) ? [...assignmentsData[idx].tags] : []) : null;
+        if (idx !== -1) assignmentsData[idx].tags = newTags;
         try {
           await db.updateAssignment(assignment.id, { tags: newTags });
-          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
-          if (idx !== -1) assignmentsData[idx].tags = newTags;
         } catch (err) {
           console.error('[tc-library] Failed to update tags:', err);
+          if (idx !== -1 && previousTags !== null) {
+            assignmentsData[idx].tags = previousTags;
+            // Mutate currentTags in place (not reassign) so that closures in
+            // renderTagPills and the tag-removal handlers still reference the
+            // same array instance and reflect the rolled-back state correctly.
+            currentTags.length = 0;
+            previousTags.forEach(t => currentTags.push(t));
+            renderTagPills();
+          }
           showToast('Failed to update tags', '#ef4444', '#fff');
         }
       };
@@ -7886,15 +7966,17 @@
             { danger: true }
           );
           if (!confirmed) return;
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
           try {
             await db.updateAssignment(assignment.id, { active: false });
-            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
             if (idx !== -1) assignmentsData[idx].active = false;
             closeModal();
             refreshCurrentTab();
             showToast('Assignment deleted');
           } catch (err) {
             console.error('[tc-library] Failed to delete assignment:', err);
+            if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
             showToast('Failed to delete assignment', '#ef4444', '#fff');
           }
         });
@@ -7913,15 +7995,17 @@
             'Archive'
           );
           if (!confirmed) return;
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          const snapshot = idx !== -1 ? { ...assignmentsData[idx] } : null;
           try {
             await db.updateAssignment(assignment.id, { active: false });
-            const idx = assignmentsData.findIndex(a => a.id === assignment.id);
             if (idx !== -1) assignmentsData[idx].active = false;
             closeModal();
             refreshCurrentTab();
             showToast('Assignment archived');
           } catch (err) {
             console.error('[tc-library] Failed to archive:', err);
+            if (idx !== -1 && snapshot) assignmentsData[idx] = snapshot;
             showToast('Failed to archive assignment', '#ef4444', '#fff');
           }
         });
@@ -8478,6 +8562,63 @@
     setTimeout(() => msg.remove(), 3500);
   }
 
+  // ── Banners ───────────────────────────────────────────────────────────────────
+
+  /** Issue #17: Show a persistent warning banner when lessonsData fails to load. */
+  function showLessonsErrorBanner(retryFn) {
+    const existing = document.getElementById('tcLibLessonsErrorBanner');
+    if (existing) existing.remove();
+    const banner = document.createElement('div');
+    banner.id = 'tcLibLessonsErrorBanner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'polite');
+    banner.style.cssText = 'background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.40);border-radius:8px;padding:10px 16px;margin:0 0 12px;display:flex;align-items:center;gap:10px;font-size:13px;color:#fbbf24;';
+    const icon = createIcon('alertTriangle', 16);
+    icon.style.cssText = 'flex-shrink:0;';
+    banner.appendChild(icon);
+    const msg = document.createElement('span');
+    msg.style.cssText = 'flex:1;';
+    msg.textContent = 'Could not load unit data. "By Unit" views may be incomplete.';
+    banner.appendChild(msg);
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'tc-btn';
+    retryBtn.style.cssText = 'font-size:12px;padding:4px 10px;flex-shrink:0;';
+    retryBtn.textContent = 'Retry';
+    retryBtn.addEventListener('click', retryFn);
+    banner.appendChild(retryBtn);
+    const main = $('tcLibraryMain');
+    if (main) main.insertBefore(banner, main.firstChild);
+  }
+
+  /** Issue #17: Dismiss the lessons error banner. */
+  function hideLessonsErrorBanner() {
+    const banner = document.getElementById('tcLibLessonsErrorBanner');
+    if (banner) banner.remove();
+  }
+
+  /** Issue #19: Show a persistent offline warning banner. */
+  function showOfflineBanner() {
+    if (document.getElementById('tcLibOfflineBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'tcLibOfflineBanner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'assertive');
+    banner.style.cssText = 'background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.40);border-radius:8px;padding:10px 16px;margin:0 0 12px;display:flex;align-items:center;gap:10px;font-size:13px;color:#fbbf24;';
+    const icon = createIcon('alertTriangle', 16);
+    icon.style.cssText = 'flex-shrink:0;';
+    banner.appendChild(icon);
+    const msg = document.createElement('span');
+    msg.textContent = 'You appear to be offline. Changes may not be saved until your connection is restored.';
+    banner.appendChild(msg);
+    const main = $('tcLibraryMain');
+    if (main) main.insertBefore(banner, main.firstChild);
+  }
+
+  /** Issue #19: Dismiss the offline warning banner. */
+  function hideOfflineBanner() {
+    const banner = document.getElementById('tcLibOfflineBanner');
+    if (banner) banner.remove();
+  }
 
   // ── Evidence Report Modal ─────────────────────────────────────────────────────
 
