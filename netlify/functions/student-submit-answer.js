@@ -392,6 +392,8 @@ exports.handler = async (event) => {
                     const studentVal = normalizeMonetaryAnswer(studentAnswer);
                     maxPoints = item.points != null ? Number(item.points) : 1;
                     if (correctVal !== null && studentVal !== null) {
+                      // Tolerance of 0.001 (one tenth of a cent) avoids floating-point
+                      // precision issues when comparing parsed monetary values (e.g. 1.0 vs 1.00).
                       isCorrect = Math.abs(correctVal - studentVal) < 0.001;
                     } else {
                       // Fall back to case-insensitive string comparison

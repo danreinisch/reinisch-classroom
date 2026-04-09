@@ -110,6 +110,8 @@ function parseHtmlAssignment(htmlText) {
 
   // ── Step 1: find every opening tag that has a data-qref attribute ──────────
   // We capture the full opening tag so we can extract sibling attributes.
+  // seenQrefs tracks already-processed q_ref values to deduplicate: if an HTML
+  // file has two elements with the same data-qref, only the first is kept.
   var qCardTagPattern = /<[a-z][a-z0-9]*\b([^>]*\bdata-qref="([^"]+)"[^>]*)>/gi;
 
   var allMatches = [];
