@@ -1037,6 +1037,60 @@
         font-weight: 600;
       }
 
+      /* Global Quick Entry Bar */
+      .st-gqe-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        margin: 8px 20px 4px;
+        background: var(--rc-glass, rgba(255,255,255,0.04));
+        border: 1px solid var(--rc-glass-border, rgba(255,255,255,0.10));
+        border-radius: 10px;
+        flex-wrap: wrap;
+        min-height: 42px;
+      }
+      .st-gqe-bar:empty { display: none; }
+      .st-gqe-label {
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0.65;
+        white-space: nowrap;
+      }
+      .st-gqe-input {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 6px;
+        color: inherit;
+        font-size: 13px;
+        padding: 4px 8px;
+        height: 30px;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        width: 130px;
+      }
+      .st-gqe-input.st-gqe-value { width: 80px; }
+      .st-gqe-input.st-gqe-date  { width: 140px; }
+      .st-gqe-input:focus {
+        border-color: var(--rc-glow-ring, rgba(99,102,241,0.5));
+        box-shadow: 0 0 0 2px var(--rc-glow-ring, rgba(99,102,241,0.25));
+      }
+      .st-gqe-input::placeholder { opacity: 0.45; }
+
+      /* Archive All Mastered button */
+      .st-btn-archive-all {
+        background: rgba(245,158,11,0.08);
+        border-color: rgba(245,158,11,0.3);
+        color: rgba(245,158,11,0.95);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .st-btn-archive-all:hover {
+        background: rgba(245,158,11,0.16);
+        box-shadow: 0 0 0 2px rgba(245,158,11,0.25);
+      }
+
       /* Focus Mode table dimming */
       .st-focus-active tr[data-code]:not(.st-needs-attention) {
         opacity: 0.3;
@@ -2573,6 +2627,9 @@
           <!-- Mini Digest Summary (populated by JS) -->
           <div id="stDigestSummary" aria-label="Daily situation summary"></div>
 
+          <!-- Global Quick Entry Bar (populated by JS after data loads) -->
+          <div id="stGlobalQuickEntryBar" class="st-gqe-bar" role="region" aria-label="Global quick entry"></div>
+
           <!-- Caseload Grid Table -->
           <div class="st-table-container">
             <table class="st-table">
@@ -2601,7 +2658,7 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260331"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260409a"></script>
+    <script type="module" src="/web/tc-students.js?v=20260409b"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
     <style>
