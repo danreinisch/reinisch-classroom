@@ -1825,6 +1825,11 @@
   // Issue Assignment from Draft
   // ========================================
 
+  /** Returns true if the draft is scheduled for a future auto-release and should not be issued manually yet. */
+  function isDraftScheduledForFutureRelease(draft, now) {
+    return !!(draft.autoRelease && draft.releaseAt && new Date(draft.releaseAt) > (now || new Date()));
+  }
+
   /**
    * Handle issuing an assignment from a draft to all enrolled students in the draft's class
    * @param {string} draftId - The ID of the draft to issue
@@ -1833,6 +1838,7 @@
    */
   async function handleIssueDraft(draftId, options) {
     const skipConfirmation = options && options.skipConfirmation;
+    const now = new Date();
     const drafts = readDrafts();
     const draft = drafts.find(d => d.id === draftId);
     
@@ -1849,8 +1855,25 @@
       return;
     }
 
+    // Guard: if the draft is scheduled for future auto-release, don't issue it now
+    const hasFutureRelease = isDraftScheduledForFutureRelease(draft, now);
+    if (hasFutureRelease) {
+      if (skipConfirmation) {
+        // Called from a batch — silently skip so scheduled drafts aren't accidentally pushed out
+        return;
+      }
+      // Individual issue — warn the teacher and let them decide
+      const releaseLabel = new Date(draft.releaseAt).toLocaleString();
+      const override = await rcConfirm(
+        "Scheduled Auto-Release",
+        `"${draft.title}" is scheduled to auto-release on ${releaseLabel}.\n\nIssue it now anyway?`,
+        "Issue Now"
+      );
+      if (!override) return;
+    }
+
     // Show pre-issue confirmation (unless called from a batch that already confirmed)
-    if (!skipConfirmation) {
+    if (!skipConfirmation && !hasFutureRelease) {
       let confirmed = false;
 
       if (draft.studentCode) {
@@ -1959,10 +1982,18 @@
   async function issueAllInBatch(batchId) {
     const allDrafts = readDrafts();
     const batchDrafts = allDrafts.filter(d => d.batchId === batchId);
-    const pending = batchDrafts.filter(d => !d.issuedAt && d.className);
+    const now = new Date();
+    const allPending = batchDrafts.filter(d => !d.issuedAt && d.className);
+
+    // Separate out drafts scheduled for future auto-release — don't issue those now
+    const scheduled = allPending.filter(d => isDraftScheduledForFutureRelease(d, now));
+    const pending = allPending.filter(d => !isDraftScheduledForFutureRelease(d, now));
 
     if (pending.length === 0) {
-      await rcAlert("Nothing to Issue", "All drafts in this batch have already been issued.");
+      const msg = scheduled.length > 0
+        ? `All remaining drafts in this batch are scheduled for future auto-release (${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''}).`
+        : "All drafts in this batch have already been issued.";
+      await rcAlert("Nothing to Issue", msg);
       return;
     }
 
@@ -1975,9 +2006,12 @@
       }
       return `\u2022 "${d.title}" \u2192 ${d.className} (all enrolled students)`;
     }).join("\n");
+    const scheduledNote = scheduled.length > 0
+      ? `\n\n⏰ ${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''} with future release dates will be skipped (they will auto-release on schedule).`
+      : "";
     const confirmed = await rcConfirm(
       "Issue Batch",
-      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""}?\n\n${draftLines}`,
+      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""}?\n\n${draftLines}${scheduledNote}`,
       "Issue All"
     );
     if (!confirmed) return;
@@ -2003,6 +2037,9 @@
     } else {
       setMsg("err", `Issued ${successCount} of ${pending.length}. ${failures.length} failed — check console.`);
       setTimeout(clearMsg, 6000);
+    }
+    if (scheduled.length > 0) {
+      showToast(`⏰ Skipped ${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''} with future release dates — they will auto-release on schedule.`, '#f59e0b', '#1a0f00');
     }
     renderTable(readDrafts());
   }
@@ -2403,10 +2440,18 @@
 
   async function handleIssueAllDrafts() {
     const drafts = readDrafts();
-    const pending = drafts.filter((d) => !d.issuedAt && d.className);
+    const now = new Date();
+    const allPending = drafts.filter((d) => !d.issuedAt && d.className);
+
+    // Separate out drafts that are scheduled for future auto-release — don't issue those now
+    const scheduled = allPending.filter(d => isDraftScheduledForFutureRelease(d, now));
+    const pending = allPending.filter(d => !isDraftScheduledForFutureRelease(d, now));
 
     if (pending.length === 0) {
-      await rcAlert("No Drafts to Issue", "All drafts have already been issued, or no drafts have a class assigned.");
+      const msg = scheduled.length > 0
+        ? `All remaining drafts are scheduled for future auto-release (${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''}).`
+        : "All drafts have already been issued, or no drafts have a class assigned.";
+      await rcAlert("No Drafts to Issue", msg);
       return;
     }
 
@@ -2419,9 +2464,12 @@
       }
       return `\u2022 "${d.title}" \u2192 ${d.className} (all enrolled students)`;
     }).join("\n");
+    const scheduledNote = scheduled.length > 0
+      ? `\n\n⏰ ${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''} with future release dates will be skipped (they will auto-release on schedule).`
+      : "";
     const confirmed = await rcConfirm(
       "Issue All Drafts",
-      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""} to their respective classes?\n\n${draftLines}`,
+      `Issue ${pending.length} draft${pending.length !== 1 ? "s" : ""} to their respective classes?\n\n${draftLines}${scheduledNote}`,
       "Issue All"
     );
     if (!confirmed) return;
@@ -2446,6 +2494,9 @@
       setMsg("ok", `✓ Issued all ${successCount} draft${successCount !== 1 ? "s" : ""} successfully.`);
     } else {
       setMsg("err", `Issued ${successCount} of ${pending.length}. ${failures.length} failed — check the browser console for details.`);
+    }
+    if (scheduled.length > 0) {
+      showToast(`⏰ Skipped ${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''} with future release dates — they will auto-release on schedule.`, '#f59e0b', '#1a0f00');
     }
     setTimeout(clearMsg, 6000);
     renderTable(readDrafts());
