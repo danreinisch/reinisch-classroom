@@ -167,7 +167,8 @@ test('.drag-over CSS class is used', () => {
 test('drag reorder persists only upcoming (reserve) IDs', () => {
   // The drop handler must filter to upcoming lane before saving order
   assert.ok(
-    src.includes("computeLane(a, instancesData) === 'upcoming'") &&
+    (src.includes("computeLane(a, instancesData) === 'upcoming'") ||
+     src.includes("laneCache.get(a.id) ?? computeLane(a, instancesData)) === 'upcoming'")) &&
     src.includes('rc_tc_library_reserve_order_v1'),
     'drop handler does not filter to upcoming lane before persisting order'
   );
