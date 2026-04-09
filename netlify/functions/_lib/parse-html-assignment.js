@@ -8,7 +8,7 @@
  * that buildItemsFromMeta() Path B can create assignment_items rows.
  *
  * Supported patterns (all use data-qref on .q-card elements):
- *   Pattern 1 – Counting Money (data-iep, constructed, no inline data-correct)
+ *   Pattern 1 – Counting Money (data-iep, constructed, data-correct="X.XX" on .q-card)
  *   Pattern 2 – S015 Reading a Recipe (data-goal, opt-btn with boolean
  *               data-correct attribute on the correct answer button)
  *   Pattern 3 – S020 Match the Items (data-goal, category-group div with
@@ -106,6 +106,7 @@ function parseHtmlAssignment(htmlText) {
   }
 
   var questions = [];
+  var seenQrefs = {};
 
   // ── Step 1: find every opening tag that has a data-qref attribute ──────────
   // We capture the full opening tag so we can extract sibling attributes.
@@ -114,8 +115,14 @@ function parseHtmlAssignment(htmlText) {
   var allMatches = [];
   var tagMatch;
   while ((tagMatch = qCardTagPattern.exec(htmlText)) !== null) {
+    var qrefValue = tagMatch[2];
+    if (seenQrefs[qrefValue]) {
+      console.warn('Duplicate data-qref found: ' + qrefValue + ' — skipping');
+      continue;
+    }
+    seenQrefs[qrefValue] = true;
     allMatches.push({
-      qref:     tagMatch[2],
+      qref:     qrefValue,
       openTag:  tagMatch[0],   // the full opening tag
       tagStart: tagMatch.index,
       tagEnd:   tagMatch.index + tagMatch[0].length,
@@ -178,9 +185,14 @@ function parseHtmlAssignment(htmlText) {
           correct = catMatch[1];
         }
       }
+    } else if (answer_type === 'constructed') {
+      // Pattern 1 (Counting Money): data-correct="value" on the .q-card element itself
+      // e.g. <div class="q-card" data-qref="D1Q1" ... data-correct="1.00">
+      var cardCorrect = extractAttr(openTag, 'data-correct');
+      if (cardCorrect !== null) {
+        correct = cardCorrect;
+      }
     }
-    // For constructed type there is no inline correct answer in the HTML;
-    // correct stays null (server-side scoring will be manual or via scoring keywords).
 
     questions.push({
       q_ref:              m.qref,

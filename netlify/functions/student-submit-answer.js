@@ -23,6 +23,18 @@ function getCurrentSchoolYear() {
   return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
+/**
+ * Normalize a monetary answer string for comparison.
+ * Strips a leading '$', trims whitespace, parses as float.
+ * Returns null if not a valid number.
+ */
+function normalizeMonetaryAnswer(str) {
+  if (str == null) return null;
+  const s = String(str).trim().replace(/^\$/, '').trim();
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-submit-answer] [${requestId}] Request received`);
@@ -372,6 +384,20 @@ exports.handler = async (event) => {
                     isCorrect = foundCount >= minKeywords;
                     maxPoints = item.points != null ? Number(item.points) : 1;
                     earnedPoints = Math.round(maxPoints * ratio * 100) / 100;
+                  } else if (item.meta && typeof item.meta.correct === 'string') {
+                    // Exact-match scoring for constructed items with a simple string correct answer
+                    // (e.g. Counting Money: "1.00"). Supports monetary normalization so that
+                    // "$1.00", "1", and "1.00" all match "1.00".
+                    const correctVal = normalizeMonetaryAnswer(item.meta.correct);
+                    const studentVal = normalizeMonetaryAnswer(studentAnswer);
+                    maxPoints = item.points != null ? Number(item.points) : 1;
+                    if (correctVal !== null && studentVal !== null) {
+                      isCorrect = Math.abs(correctVal - studentVal) < 0.001;
+                    } else {
+                      // Fall back to case-insensitive string comparison
+                      isCorrect = String(studentAnswer).trim().toLowerCase() === String(item.meta.correct).trim().toLowerCase();
+                    }
+                    earnedPoints = isCorrect ? maxPoints : 0;
                   }
                 }
 
@@ -486,7 +512,8 @@ exports.handler = async (event) => {
                       if (i.answer_type !== 'constructed') return false;
                       const hasKeywords = (i.meta && i.meta.scoring && Array.isArray(i.meta.scoring.keywords) && i.meta.scoring.keywords.length > 0)
                         || (i.meta && Array.isArray(i.meta.correct));
-                      return !hasKeywords;
+                      const hasExactMatch = i.meta && typeof i.meta.correct === 'string';
+                      return !hasKeywords && !hasExactMatch;
                     });
 
                     if (hasUnscoredConstructed) {
