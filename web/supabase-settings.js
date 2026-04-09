@@ -62,7 +62,7 @@ export function writeConfig(config = {}, options = {}) {
   const { preserveAnonIfMasked = true } = options;
   
   // Read current config to check for masked values
-  const current = readConfig();
+  const _current = readConfig();
   
   // Update URL if provided
   if (config.url !== undefined) {
@@ -103,7 +103,7 @@ export function writeConfig(config = {}, options = {}) {
  * Migrate legacy keys to unified keys if unified keys don't exist
  */
 export function migrateLegacyKeys() {
-  const current = readConfig();
+  const _current = readConfig();
   let migrated = false;
   
   // Check if we need migration (unified keys are empty but legacy exist)
