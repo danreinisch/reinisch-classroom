@@ -13,6 +13,8 @@
   const { formatObservationValue, parseObservationNotes } = await import('/web/obs-utils.js');
   const { getGoalStaleness, getStudentHealthDot, formatRelativeTime } = await import('/web/staleness-utils.js');
   const { buildItemsFromMeta } = await import('/web/shared-build-items.js');
+  // District Export translator — all translation is client-side only (FERPA compliance)
+  const { isRosterLoaded: isDistrictRosterLoaded, translateAndDownload: districtTranslateAndDownload } = await import('/web/district-translator.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -3519,6 +3521,29 @@
   }
 
   /**
+   * Export student progress CSV with student codes replaced by real names.
+   * Requires a roster loaded in district-translator.js (FERPA: client-side only).
+   */
+  function exportStudentProgressCsvForDistrict(student, studentGoals, quarter) {
+    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Baseline', 'Mastery', 'Target', 'Date', 'Value', 'Source', 'Quarter']];
+    studentGoals.forEach(goal => {
+      const entries = getProgressEntriesForTab(student.code, goal.code, quarter);
+      const baseline = goal.baseline != null ? String(goal.baseline) : '';
+      const mastery = goal.mastery != null ? String(goal.mastery) : (goal.target != null ? String(goal.target) : '');
+      const target = goal.target != null ? String(goal.target) : '';
+      if (entries.length === 0) {
+        rows.push([student.name || student.code, student.code, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, '', '', '', quarter || 'All']);
+      } else {
+        entries.forEach(entry => {
+          rows.push([student.name || student.code, student.code, goal.code, goal.goal_area || 'Uncategorized', baseline, mastery, target, entry.date, entry.value != null ? String(entry.value) : '', entry.source || 'manual', quarter || 'All']);
+        });
+      }
+    });
+    const csvContent = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    districtTranslateAndDownload(csvContent, `progress_${student.code}_${quarter || 'all'}_${todayISO()}_district.csv`, 'text/csv');
+  }
+
+  /**
    * Build the "📊 Question Breakdown" collapsible DOM element for the Work Samples modal.
    * Uses per-question aggregation data. All user strings set via textContent.
    */
@@ -3734,6 +3759,17 @@
       exportStudentProgressCsv(student, activeGoals, quarter);
     });
     actionsBar.appendChild(exportBtn);
+
+    const exportDistrictBtn = stEl('button', 'dt-btn');
+    exportDistrictBtn.textContent = '🏛️ Export for District';
+    exportDistrictBtn.addEventListener('click', () => {
+      if (!isDistrictRosterLoaded()) {
+        alert('No roster loaded. Please visit the District Export page (/teacher/district-export/) to upload your roster CSV first.');
+        return;
+      }
+      exportStudentProgressCsvForDistrict(student, activeGoals, quarter);
+    });
+    actionsBar.appendChild(exportDistrictBtn);
 
     const bulkBtn = stEl('button', 'dt-btn');
     bulkBtn.textContent = '+ Bulk Add Progress';

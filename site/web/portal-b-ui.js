@@ -631,11 +631,24 @@ export async function loadGradesCard(db, currentUser, qs, helpers, feature = {})
     if (feature.portalQuarterlyExport !== false) {
       const btnExportCSV = qs('#btnExportGradesCSV');
       const btnExportPDF = qs('#btnExportGradesPDF');
+      const btnExportCSVDistrict = qs('#btnExportGradesCSVDistrict');
       
       if (btnExportCSV) {
         btnExportCSV.classList.remove('hidden');
         btnExportCSV.addEventListener('click', () => {
           exportGradesCSV(gradedSubmissions, instanceMap, assignmentMap, helpers, quarterAverages);
+        });
+      }
+
+      if (btnExportCSVDistrict) {
+        btnExportCSVDistrict.classList.remove('hidden');
+        btnExportCSVDistrict.addEventListener('click', async () => {
+          const { isRosterLoaded, translateAndDownload } = await import('/web/district-translator.js');
+          if (!isRosterLoaded()) {
+            alert('No roster loaded. Please visit the District Export page (/teacher/district-export/) to upload your roster CSV first.');
+            return;
+          }
+          exportGradesCSVForDistrict(gradedSubmissions, instanceMap, assignmentMap, helpers, quarterAverages, currentUser, translateAndDownload);
         });
       }
       
@@ -819,8 +832,50 @@ function exportGradesCSV(submissions, instanceMap, assignmentMap, helpers, quart
 }
 
 /**
- * Export grades to PDF with quarterly summary
+ * Export grades CSV with student codes replaced by real names.
+ * Translation happens entirely client-side via district-translator.js (FERPA compliant).
+ *
+ * @param {Array} submissions - Graded submissions
+ * @param {Map} instanceMap - Assignment instance map
+ * @param {Map} assignmentMap - Assignment map
+ * @param {Object} helpers - Helper functions
+ * @param {Object} quarterAverages - Quarterly averages
+ * @param {Object} currentUser - Current user (student)
+ * @param {Function} translateAndDownload - From district-translator.js
  */
+function exportGradesCSVForDistrict(submissions, instanceMap, assignmentMap, helpers, quarterAverages, currentUser, translateAndDownload) {
+  const rows = [];
+  rows.push(['Date', 'Class', 'Assignment', 'Score', 'Quarter']);
+  const sorted = [...submissions].sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+  for (const submission of sorted) {
+    const instance = instanceMap.get(submission.instance_id);
+    if (!instance) continue;
+    const assignment = assignmentMap.get(instance.assignment_id);
+    const date = submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString() : '';
+    const className = assignment?.meta?.class_name || assignment?.class_id || 'N/A';
+    const title = assignment?.title || 'Unknown';
+    const score = submission.score_total != null ? submission.score_total : '';
+    const quarter = submission.submitted_at ? `Q${helpers.getQuarter(submission.submitted_at)}` : '';
+    rows.push([date, className, title, score, quarter]);
+  }
+  rows.push([]);
+  rows.push(['Quarterly Summary']);
+  rows.push(['Quarter', 'Average']);
+  for (let q = 1; q <= 4; q++) {
+    const avg = quarterAverages[`Q${q}`];
+    rows.push([`Q${q}`, avg !== null ? avg : 'N/A']);
+  }
+  const csv = rows.map(row =>
+    row.map(cell => {
+      const str = String(cell);
+      return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+    }).join(',')
+  ).join('\n');
+  const studentCode = currentUser && currentUser.code ? currentUser.code : 'student';
+  translateAndDownload(csv, `grades_export_${studentCode}_${new Date().toISOString().split('T')[0]}_district.csv`, 'text/csv');
+}
+
+
 function exportGradesPDF(submissions, instanceMap, assignmentMap, helpers, quarterAverages, currentUser) {
   // Simple HTML-based PDF generation (browser print to PDF)
   const sorted = [...submissions].sort((a, b) => 

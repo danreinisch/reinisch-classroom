@@ -6,6 +6,8 @@
 
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
+  // District Export translator — all translation is client-side only (FERPA compliance)
+  const { isRosterLoaded: isDistrictRosterLoaded, translateAndDownload: districtTranslateAndDownload } = await import('/web/district-translator.js');
 
   // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -2784,6 +2786,37 @@
     showToast('CSV exported');
   }
 
+  /**
+   * Export master spreadsheet CSV with student codes translated to real names.
+   * Requires a roster loaded in district-translator.js (FERPA: client-side only).
+   */
+  function exportCsvForDistrict() {
+    if (!isDistrictRosterLoaded()) {
+      alert('No roster loaded. Please visit the District Export page (/teacher/district-export/) to upload your roster CSV first.');
+      return;
+    }
+    const customCols = customColumns;
+    const headers = [...CSV_HEADERS, ...customCols.map(c => c.label)];
+    const lines = [headers.join(',')];
+    for (const r of allRows) {
+      if (!showArchived && (!r.active || !r._goal_active)) continue;
+      const baseCells = [
+        r.student_code, r.goal_desc, r.goal_code,
+        r.active ? 'Active' : 'Inactive',
+        r.baseline, r.mastery, r.class_context, r.goal_area, r.case_manager,
+        r.data_collector, r.data_collector_email, r.measurement_type,
+        r.addressed_in_class !== false ? 'Yes' : 'No',
+        r.individual_delivery ? 'Yes' : 'No',
+        r.iep_due ? formatDate(r.iep_due) : '', r.eval_due ? formatDate(r.eval_due) : '',
+        r.notes || '',
+      ];
+      const customCells = customCols.map(c => getCustomVal(r, c.key));
+      lines.push([...baseCells, ...customCells].map(csvEscape).join(','));
+    }
+    districtTranslateAndDownload(lines.join('\n'), `master_spreadsheet_export_${dateTag()}_district.csv`, 'text/csv;charset=utf-8;');
+    showToast('District CSV exported');
+  }
+
   function exportJson() {
     const byStudent = {};
     for (const r of allRows) {
@@ -3959,6 +3992,8 @@
     }
     const exportCsvBtn = document.getElementById('sprExportCsv');
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
+    const exportCsvDistrictBtn = document.getElementById('sprExportCsvDistrict');
+    if (exportCsvDistrictBtn) exportCsvDistrictBtn.addEventListener('click', exportCsvForDistrict);
     const exportJsonBtn = document.getElementById('sprExportJson');
     if (exportJsonBtn) exportJsonBtn.addEventListener('click', exportJson);
     const exportMdBtn = document.getElementById('sprExportMd');

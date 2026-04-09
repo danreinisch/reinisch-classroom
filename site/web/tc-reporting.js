@@ -18,6 +18,8 @@
   const { parseGoalValue, isGoalActive, formatGoalValue } = await import("/web/goal-utils.js");
   const { parseObservationNotes } = await import("/web/obs-utils.js");
   const { buildItemsFromMeta } = await import("/web/shared-build-items.js");
+  // District Export translator — all translation is client-side only (FERPA compliance)
+  const { isRosterLoaded, translateAndDownload } = await import("/web/district-translator.js");
 
   // Constants - keep in sync with other teacher pages
   const CANON_CLASSES = [
@@ -661,6 +663,7 @@
         <button class="tc-btn" id="btnCopyAllSpedTrack" type="button">📋 Copy All Goals for SpedTrack</button>
         <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
         <button class="tc-btn" id="btnExportDOCX" type="button">📄 Export as DOCX</button>
+        <button class="tc-btn" id="btnExportDOCXDistrict" type="button">🏛️ Export for District (DOCX)</button>
         <button class="tc-btn" id="btnCopyEmailBody" type="button">📋 Copy as Email Body</button>
       </div>
     `;
@@ -1671,6 +1674,7 @@ ${narrative}`;
     // Attach export listeners
     const btnPDF = $("btnExportPDF");
     const btnDOCX = $("btnExportDOCX");
+    const btnDOCXDistrict = $("btnExportDOCXDistrict");
     const btnCopyAllSpedTrack = $("btnCopyAllSpedTrack");
     
     if (btnPDF) {
@@ -1678,6 +1682,9 @@ ${narrative}`;
     }
     if (btnDOCX) {
       btnDOCX.addEventListener("click", () => exportReportAsDOCX());
+    }
+    if (btnDOCXDistrict) {
+      btnDOCXDistrict.addEventListener("click", () => exportReportAsDOCXForDistrict());
     }
     if (btnCopyAllSpedTrack) {
       btnCopyAllSpedTrack.addEventListener("click", () => {
@@ -2462,8 +2469,53 @@ ${narrative}`;
   }
 
   /**
-   * TAB 2: Student Summary (One-Pager)
+   * Export IEP Progress Report as DOCX with student codes replaced by real names.
+   * Requires a roster to be loaded in district-translator.js (client-side only).
    */
+  async function exportReportAsDOCXForDistrict() {
+    if (!isRosterLoaded()) {
+      await rcAlert('No Roster Loaded', 'Please visit the District Export page (/teacher/district-export/) to upload your roster CSV first.');
+      return;
+    }
+    const reportCard = $("iepReportCard");
+    if (!reportCard) return;
+    const student = studentsData.find((s) => s.code === tab1State.studentCode);
+    if (!student) return;
+    const cleanedContent = cleanHtmlForExport(reportCard.innerHTML);
+    const generatedDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const htmlContent = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+  <meta charset="utf-8">
+  <title>IEP Progress Report</title>
+  <style>
+    body { font-family: 'Calibri', Georgia, Arial, sans-serif; margin: 1in; font-size: 11pt; line-height: 1.5; color: #000; }
+    h1 { font-size: 20pt; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.02em; }
+    h2 { font-size: 16pt; font-weight: 700; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    h3 { font-size: 13pt; font-weight: 700; margin-top: 16px; margin-bottom: 8px; }
+    p { margin: 5px 0; line-height: 1.5; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10pt; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: 700; }
+    .rp-goal-card { border: 1px solid #ccc; border-left: 3px solid #2563eb; padding: 12px 14px; margin-bottom: 12px; }
+    .rp-goal-code { font-weight: 700; color: #1e3a5f; }
+    .rp-trend-up { color: #15803d; }
+    .rp-trend-down { color: #dc2626; }
+    .rp-trend-neutral { color: #6b7280; }
+  </style>
+</head>
+<body>
+  ${cleanedContent}
+  <p style="margin-top: 30px; font-size: 9pt; color: #666;"><em>Generated on ${escapeXml(generatedDate)}</em></p>
+</body>
+</html>
+    `;
+    translateAndDownload(htmlContent, `${student.code}_IEP_Progress_${tab1State.quarter}_district.docx`, "application/msword");
+    console.log("[tc-reporting] District DOCX export complete");
+  }
+
+
   function renderTab2() {
     const container = $("tab2Content");
     if (!container) return;
@@ -2947,6 +2999,7 @@ ${narrative}`;
     html += `
       <div class="rp-export-actions">
         <button class="tc-btn" id="btnExportClassCSV" type="button">⬇️ Export CSV</button>
+        <button class="tc-btn" id="btnExportClassCSVDistrict" type="button">🏛️ Export for District (CSV)</button>
         <button class="tc-btn" id="btnPrintClass" type="button">📄 Print</button>
       </div>
     `;
@@ -2982,6 +3035,11 @@ ${narrative}`;
     const btnExportCSV = $("btnExportClassCSV");
     if (btnExportCSV) {
       btnExportCSV.addEventListener("click", () => exportClassPerformanceCSV());
+    }
+
+    const btnExportCSVDistrict = $("btnExportClassCSVDistrict");
+    if (btnExportCSVDistrict) {
+      btnExportCSVDistrict.addEventListener("click", () => exportClassPerformanceCSVForDistrict());
     }
 
     const btnPrint = $("btnPrintClass");
@@ -3525,8 +3583,41 @@ ${narrative}`;
   }
 
   /**
-   * TAB 4: Data Collection Compliance Log
+   * Export Class Performance CSV with student codes translated to real names.
+   * Requires a roster loaded in district-translator.js (FERPA: client-side only).
    */
+  async function exportClassPerformanceCSVForDistrict() {
+    if (!isRosterLoaded()) {
+      await rcAlert('No Roster Loaded', 'Please visit the District Export page (/teacher/district-export/) to upload your roster CSV first.');
+      return;
+    }
+    let csv = "Student Code,Name,Avg Grade,Assignments Complete,Missing,Goals On Track\n";
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter((e) => e.class_name === tab3State.classFilter);
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+    const currentQuarter = getCurrentQuarter();
+    const quarterRange = getQuarterDateRange(currentQuarter);
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter((inst) => inst.student_code === student.code || inst.student_id === student.code);
+      const submissions = studentInstances.map((inst) => submissionsData.find((s) => s.instance_id === inst.id)).filter((s) => s);
+      const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+      const avgGrade = scores.length > 0 ? (scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(1) : "N/A";
+      const complete = submissions.length;
+      const missing = studentInstances.length - submissions.length;
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      const goalsOnTrack = studentGoals.filter((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        return goalData.average != null && goalData.average >= (parseGoalValue(goal.baseline) ?? 0);
+      }).length;
+      csv += `${student.code},"${student.name || student.code}",${avgGrade},${complete},${missing},${goalsOnTrack}/${studentGoals.length}\n`;
+    });
+    translateAndDownload(csv, `class_performance_${tab3State.classFilter.replace(/\s+/g, "_")}_${formatDateYYYYMMDD()}_district.csv`, "text/csv;charset=utf-8");
+  }
+
+
   function renderTab4() {
     const container = $("tab4Content");
     if (!container) return;
@@ -3708,6 +3799,7 @@ ${narrative}`;
     html += `
       <div class="rp-export-actions">
         <button class="tc-btn" id="btnExportComplianceCSV" type="button">⬇️ Export CSV</button>
+        <button class="tc-btn" id="btnExportComplianceCSVDistrict" type="button">🏛️ Export for District (CSV)</button>
         <button class="tc-btn" id="btnPrintCompliance" type="button">📄 Print</button>
       </div>
     `;
@@ -3733,6 +3825,11 @@ ${narrative}`;
     const btnExportCSV = $("btnExportComplianceCSV");
     if (btnExportCSV) {
       btnExportCSV.addEventListener("click", () => exportComplianceCSV());
+    }
+
+    const btnExportCSVDistrict = $("btnExportComplianceCSVDistrict");
+    if (btnExportCSVDistrict) {
+      btnExportCSVDistrict.addEventListener("click", () => exportComplianceCSVForDistrict());
     }
 
     const btnPrint = $("btnPrintCompliance");
@@ -3901,6 +3998,38 @@ ${narrative}`;
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Export Compliance Log CSV with student codes translated to real names.
+   * Requires a roster loaded in district-translator.js (FERPA: client-side only).
+   */
+  async function exportComplianceCSVForDistrict() {
+    if (!isRosterLoaded()) {
+      await rcAlert('No Roster Loaded', 'Please visit the District Export page (/teacher/district-export/) to upload your roster CSV first.');
+      return;
+    }
+    let csv = "Student Code,Student Name,Goal Code,Goal Area,Data Points (Q),Last Collected,Status\n";
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter((e) => e.class_name === tab4State.classFilter);
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+    const quarterRange = getDateRangeForPeriod(tab4State.quarter);
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code && isGoalActive(g));
+      studentGoals.forEach((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const lastCollected = getLastCollectedDate(goal.code, student.code);
+        let status;
+        if (goalData.count >= 3) { status = "On Track"; }
+        else if (goalData.count > 0) { status = "Needs Data"; }
+        else { status = "No Data"; }
+        csv += `${student.code},"${student.name || student.code}",${goal.code},"${goal.goal_area || "N/A"}",${goalData.count},${lastCollected},${status}\n`;
+      });
+    });
+    translateAndDownload(csv, `compliance_log_${tab4State.quarter}_${formatDateYYYYMMDD()}_district.csv`, "text/csv;charset=utf-8");
   }
 
   /**
