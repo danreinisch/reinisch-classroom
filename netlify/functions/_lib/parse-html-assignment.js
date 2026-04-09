@@ -130,8 +130,9 @@ function parseHtmlAssignment(htmlText) {
   // If the HTML contains <script type="application/json" id="assignment-manifest">,
   // use it as the authoritative source of question metadata.
   // Match any <script> block then check both required attributes independently,
-  // so attribute order does not matter.
-  var scriptTagPattern = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  // so attribute order does not matter. The closing tag pattern allows optional
+  // whitespace before '>' to handle all valid HTML forms (e.g. </script >).
+  var scriptTagPattern = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
   var manifestContent = null;
   var scriptMatch;
   while ((scriptMatch = scriptTagPattern.exec(htmlText)) !== null) {
@@ -154,7 +155,7 @@ function parseHtmlAssignment(htmlText) {
           var ref = mq.ref || mq.q_ref;
           if (!ref) {
             ref = 'Q' + (j + 1);
-            console.warn('assignment-manifest question at index ' + j + ' has no ref/q_ref — using fallback: ' + ref);
+            console.warn('assignment-manifest question at index ' + j + ' is missing required ref/q_ref — using fallback: ' + ref + '. Add a ref or q_ref field to fix this warning.');
           }
           if (seenManifestRefs[ref]) {
             console.warn('Duplicate ref in manifest: ' + ref + ' — skipping');
@@ -168,7 +169,7 @@ function parseHtmlAssignment(htmlText) {
             default_dese_codes: Array.isArray(mq.dese_codes) ? mq.dese_codes : [],
             answer_type:        normalizeAnswerType(mq.answer_type || ''),
             points:             (typeof mq.points === 'number') ? mq.points : 1,
-            correct:            (mq.correct !== undefined && mq.correct !== null) ? mq.correct : null,
+            correct:            (mq.correct == null) ? null : mq.correct,
           });
         }
         console.log('Parsed ' + manifestQuestions.length + ' question(s) from embedded assignment-manifest');
