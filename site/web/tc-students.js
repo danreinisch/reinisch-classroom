@@ -1542,9 +1542,9 @@
 
     // Filter attendance for current month
     const monthStartStr = monthStart.toISOString().slice(0, 10);
-    const todayStr2 = today.toISOString().slice(0, 10);
+    const todayStr = today.toISOString().slice(0, 10);
     const monthLogs = allAttendanceLogs.filter(
-      e => e.date >= monthStartStr && e.date <= todayStr2 && e.status === 'present'
+      e => e.date >= monthStartStr && e.date <= todayStr && e.status === 'present'
     );
 
     if (monthLogs.length === 0) {
@@ -1879,6 +1879,7 @@
     const d = new Date(lastDate);
     d.setHours(0, 0, 0, 0);
     const diffDays = Math.round((today - d) / MS_PER_DAY);
+    if (diffDays < 0) return 'Today'; // future dates treated as today
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     return `${diffDays} days ago`;
