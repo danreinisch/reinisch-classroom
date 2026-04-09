@@ -1089,6 +1089,48 @@ const local = {
     store.set('aiBuilderOutputs', outputs);
     return outputs[idx];
   },
+
+  // ============================================================================
+  // Attendance Log
+  // ============================================================================
+
+  async upsertAttendance({ student_code, date, status = 'present', source = 'manual', notes = null }) {
+    const arr = store.get('attendanceLog', []);
+    const idx = arr.findIndex(e => e.student_code === student_code && e.date === date);
+    const entry = {
+      id: idx >= 0 ? arr[idx].id : ('att_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9)),
+      student_code,
+      date,
+      status,
+      source,
+      notes,
+      created_at: idx >= 0 ? arr[idx].created_at : new Date().toISOString(),
+    };
+    if (idx >= 0) {
+      arr[idx] = entry;
+    } else {
+      arr.push(entry);
+    }
+    store.set('attendanceLog', arr);
+    return entry;
+  },
+
+  async listAttendance(student_code, startDate, endDate) {
+    const arr = store.get('attendanceLog', []);
+    return arr.filter(e =>
+      e.student_code === student_code &&
+      (!startDate || e.date >= startDate) &&
+      (!endDate || e.date <= endDate)
+    );
+  },
+
+  async listAttendanceAll(startDate, endDate) {
+    const arr = store.get('attendanceLog', []);
+    return arr.filter(e =>
+      (!startDate || e.date >= startDate) &&
+      (!endDate || e.date <= endDate)
+    );
+  },
 };
 
 const remote = {
@@ -2753,7 +2795,60 @@ const remote = {
 
     if (error) throw error;
     return value;
-  }
+  },
+
+  // ============================================================================
+  // Attendance Log
+  // ============================================================================
+
+  async upsertAttendance({ student_code, date, status = 'present', source = 'manual', notes = null }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { data, error } = await supabase
+      .from('attendance_log')
+      .upsert({ student_code, date, status, source, notes }, { onConflict: 'student_code,date' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async listAttendance(student_code, startDate, endDate) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    let query = supabase
+      .from('attendance_log')
+      .select('*')
+      .eq('student_code', student_code)
+      .order('date', { ascending: false });
+
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async listAttendanceAll(startDate, endDate) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    let query = supabase
+      .from('attendance_log')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
 };
 
 // Dynamic adapter: tries remote first, falls back to local if not configured

@@ -830,6 +830,63 @@
         display: block;
       }
 
+      /* "Last seen" attendance indicator in student rows */
+      .st-last-seen {
+        display: inline-block;
+        font-size: 11px;
+        color: rgba(148, 163, 184, 0.85);
+        margin-top: 2px;
+      }
+      .st-last-seen--none {
+        color: rgba(100, 116, 139, 0.55);
+        font-style: italic;
+      }
+
+      /* Mark attendance button */
+      .st-attendance-btn {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(100, 116, 139, 0.4);
+        background: rgba(255,255,255,0.04);
+        color: rgba(148, 163, 184, 0.9);
+        cursor: pointer;
+        margin-left: 6px;
+        vertical-align: middle;
+        transition: background 0.15s;
+      }
+      .st-attendance-btn:hover { background: rgba(255,255,255,0.10); }
+
+      /* Attendance report section */
+      .st-attendance-report {
+        margin: 10px 0;
+        padding: 12px 14px;
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 8px;
+        background: rgba(255,255,255,0.03);
+      }
+      .st-attendance-report h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .st-att-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 13px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
+      .st-att-row:first-of-type { border-top: none; }
+      .st-att-code { min-width: 70px; font-weight: 600; }
+      .st-att-bar-wrap { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+      .st-att-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+      .st-att-bar--green  { background: #22c55e; }
+      .st-att-bar--amber  { background: #f59e0b; }
+      .st-att-bar--red    { background: #ef4444; }
+      .st-att-pct { min-width: 40px; text-align: right; font-size: 12px; opacity: 0.8; }
+
       /* Goals hover tooltip wrapper (collapsed row) */
       .st-goals-tooltip-wrapper {
         display: inline-flex;
@@ -2497,6 +2554,9 @@
 
           <!-- Observation Coverage Heatmap (shown when observation goals exist) -->
           <div id="stObsHeatmap" class="st-heatmap-section" style="display: none;" aria-label="Observation coverage heatmap"></div>
+
+          <!-- Attendance Summary Report (shown when attendance data exists) -->
+          <div id="stAttendanceReport" class="st-attendance-report" style="display: none;" aria-label="Attendance summary"></div>
 
           <!-- Caseload Grid Table -->
           <div class="st-table-container">
