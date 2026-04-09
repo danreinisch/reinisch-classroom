@@ -2306,11 +2306,11 @@
             const sid2 = uInfo2 ? uInfo2.sectionId : null;
             const idx2 = assignmentsData.findIndex(x => x.id === a.id);
             const snapshot2 = idx2 !== -1 ? { ...assignmentsData[idx2] } : null;
+            if (idx2 !== -1) { assignmentsData[idx2].unit_id = uid2; assignmentsData[idx2].section_id = sid2; }
             try {
               setBtn.disabled = true;
               setBtn.textContent = '\u2026';
               await db.updateAssignment(a.id, { unit_id: uid2, section_id: sid2 });
-              if (idx2 !== -1) { assignmentsData[idx2].unit_id = uid2; assignmentsData[idx2].section_id = sid2; }
               row2.remove();
               refreshCurrentTab();
             } catch (_e2) {
@@ -7861,6 +7861,9 @@
           console.error('[tc-library] Failed to update tags:', err);
           if (idx !== -1 && previousTags !== null) {
             assignmentsData[idx].tags = previousTags;
+            // Mutate currentTags in place (not reassign) so that closures in
+            // renderTagPills and the tag-removal handlers still reference the
+            // same array instance and reflect the rolled-back state correctly.
             currentTags.length = 0;
             previousTags.forEach(t => currentTags.push(t));
             renderTagPills();
