@@ -110,6 +110,7 @@ function buildItemsFromMeta(assignmentId, meta) {
         answer_type: q.answer_type || 'constructed',
         points: (typeof q.points === 'number') ? q.points : 1,
         goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
+        dese_codes: Array.isArray(q.default_dese_codes) ? q.default_dese_codes : [],
         meta: {
           question_number: qRef,
           text: q.label || '',
