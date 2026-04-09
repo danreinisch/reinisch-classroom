@@ -838,6 +838,12 @@
   let pendingUndo = null;     // Snapshot for the most recent Quick Entry save (for undo)
   let allAttendanceLogs = []; // Attendance records loaded on page init
 
+  /**
+   * Per-student AbortControllers for event listeners attached to expanded content.
+   * Aborted when the student row is collapsed or re-rendered, preventing accumulation.
+   */
+  const expandedContentControllers = new Map(); // Map<studentCode, AbortController>
+
   // ── Urgency Sort ─────────────────────────────────────────────────────────────
   const ST_SORT_PREF_KEY = 'rc_students_sort';
   const URGENCY_SCORE_REGRESSING = 30;
@@ -2859,6 +2865,7 @@
       renderAttendanceReport();
       renderCollectNudge();
       renderDigestSummary();
+      initGlobalQuickEntryBar();
 
       isSyncing = false;
       updateSyncIndicator();
@@ -3098,7 +3105,7 @@
           ? `<span class="st-alert-badge st-alert-badge--regressing" title="Regressing goals">${svgWarn} ${alertCounts.regressingCount} regressing</span>`
           : '',
         alertCounts.masteredCount > 0
-          ? `<span class="st-alert-badge st-alert-badge--mastered" title="Mastered goals">${svgTrophyBadge} ${alertCounts.masteredCount} mastered</span>`
+          ? `<span class="st-alert-badge st-alert-badge--mastered" title="${alertCounts.masteredCount} goal${alertCounts.masteredCount === 1 ? '' : 's'} at mastery — consider archiving">${svgTrophyBadge} ${alertCounts.masteredCount} mastered</span>`
           : '',
         alertCounts.stalledCount > 0
           ? `<span class="st-alert-badge st-alert-badge--stalled" title="Stalled goals">${svgPauseBadge} ${alertCounts.stalledCount} stalled</span>`
@@ -3327,6 +3334,13 @@
     const container = document.getElementById(`stExpandedDetail-${studentCode}`);
     if (!container) return;
 
+    // Abort any previous listeners attached to this student's expanded content,
+    // then create a fresh controller for this render cycle.
+    const prevController = expandedContentControllers.get(studentCode);
+    if (prevController) prevController.abort();
+    const expandController = new AbortController();
+    expandedContentControllers.set(studentCode, expandController);
+
     const student = allStudents.find(s => s.code === studentCode);
     if (!student) {
       container.innerHTML = '<div class="empty-state">Student not found</div>';
@@ -3445,7 +3459,7 @@
 
     // Wire up the AI Commentary button for the skills tab
     if (selectedDetailTab === 'skills') {
-      initSkillsTabButton(contentDiv, student);
+      initSkillsTabButton(contentDiv, student, expandController.signal);
     }
   }
 
@@ -3472,7 +3486,10 @@
       outsideGoals = outsideGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
     }
 
-    return renderStudentGoals(inContextGoals, outsideGoals);
+    // Detect mastered goals across all active goals (not just filtered view)
+    const masteredGoals = studentGoals.filter(g => g.status !== 'archived' && computeGoalAlertStatus(g).isMastered);
+
+    return renderStudentGoals(inContextGoals, outsideGoals, student.code, masteredGoals);
   }
 
   function renderStudentClassesTab(student, enrollments) {
@@ -5200,7 +5217,7 @@
     `;
   }
 
-  function renderStudentGoals(inContextGoals, outsideGoals) {
+  function renderStudentGoals(inContextGoals, outsideGoals, studentCode = null, masteredGoals = []) {
     const inContextHtml = inContextGoals.map(goal => renderGoalCard(goal)).join('');
     
     let outsideHtml = '';
@@ -5217,12 +5234,24 @@
       `;
     }
 
+    // "Archive All Mastered" button — only shown when 2+ goals are mastered
+    const svgArchive = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`;
+    const archiveAllBtnHtml = masteredGoals.length >= 2 && studentCode ? `
+      <button class="st-btn st-btn-small st-btn-archive-all"
+        data-action="archive-all-mastered"
+        data-student-code="${escapeHtml(studentCode)}"
+        title="Archive all ${masteredGoals.length} mastered goals at once">
+        ${svgArchive} Archive All Mastered (${masteredGoals.length})
+      </button>
+    ` : '';
+
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
           <h3>IEP Goals</h3>
           ${selectedGoalAreaFilter !== 'All' ? `<span class="st-badge" style="background: ${ACTIVE_STATE_STYLES.background}; color: ${ACTIVE_STATE_STYLES.color}; margin-left: 8px;">Filtered: ${escapeHtml(selectedGoalAreaFilter)}</span>` : ''}
           <div class="st-section-actions">
+            ${archiveAllBtnHtml}
             <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add Goal</button>
           </div>
         </div>
@@ -6146,6 +6175,15 @@
           return;
         }
 
+        // Archive All Mastered button
+        const archiveAllBtn = e.target.closest('[data-action="archive-all-mastered"]');
+        if (archiveAllBtn) {
+          const studentCode = archiveAllBtn.dataset.studentCode;
+          await handleArchiveAllMastered(studentCode);
+          e.stopPropagation();
+          return;
+        }
+
         // Skills Summary callout buttons
         const skillCalloutBtn = e.target.closest('.st-skill-callout-btn');
         if (skillCalloutBtn) {
@@ -6524,8 +6562,10 @@
           const studentCode = row.dataset.code;
           if (expandedStudents.has(studentCode)) {
             expandedStudents.delete(studentCode);
-            // Clean up tab state for closed student
+            // Clean up tab state and abort any pending content listeners for closed student
             selectedDetailTabMap.delete(studentCode);
+            const ctrl = expandedContentControllers.get(studentCode);
+            if (ctrl) { ctrl.abort(); expandedContentControllers.delete(studentCode); }
           } else {
             expandedStudents.add(studentCode);
             // Set default tab for newly expanded student
@@ -6810,6 +6850,52 @@
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
       await rcAlert('Error', 'Failed to archive goal');
+    }
+  }
+
+  /**
+   * Archive all mastered goals for a student in one action.
+   * Shows a confirmation dialog listing the goals before proceeding.
+   */
+  async function handleArchiveAllMastered(studentCode) {
+    const studentGoals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    const masteredGoals = studentGoals.filter(g => computeGoalAlertStatus(g).isMastered);
+    if (masteredGoals.length === 0) return;
+
+    const goalList = masteredGoals.map(g => {
+      const desc = g.desc || g.goal_text || '';
+      const shortDesc = desc.length > 60 ? desc.slice(0, 57) + '…' : desc;
+      return shortDesc ? `• ${g.code}: ${shortDesc}` : `• ${g.code}`;
+    }).join('\n');
+    const confirmed = await showConfirmModal(
+      'Archive All Mastered Goals',
+      `The following ${masteredGoals.length} goal${masteredGoals.length === 1 ? '' : 's'} will be archived:\n\n${goalList}`,
+      `Archive ${masteredGoals.length} Goal${masteredGoals.length === 1 ? '' : 's'}`,
+      { danger: true }
+    );
+    if (!confirmed) return;
+
+    let archived = 0;
+    let failed = 0;
+    for (const goal of masteredGoals) {
+      try {
+        await db.upsertGoal({ id: goal.id, status: 'archived' });
+        archived++;
+      } catch (err) {
+        console.error('[tc-students] handleArchiveAllMastered: failed for goal', goal.code, err);
+        failed++;
+      }
+    }
+
+    await loadData();
+    if (expandedStudents.has(studentCode)) {
+      await renderExpandedDetail(studentCode);
+    }
+
+    if (failed === 0) {
+      showToast(`Archived ${archived} mastered goal${archived === 1 ? '' : 's'} successfully.`);
+    } else {
+      showErrorToast(`Archived ${archived}, failed ${failed}. Check console for details.`);
     }
   }
 
@@ -9144,7 +9230,7 @@
         <div class="st-skill-cards-container">
           ${hasDese
             ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null, student.code)).join('')
-            : '<p class="st-skill-no-data">No assignment-based standards data yet.</p>'
+            : `<p class="st-skill-no-data"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px;opacity:0.5;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>No DESE standard data yet. Standards data appears here once students complete graded assignments with DESE-tagged questions.</p>`
           }
         </div>
       </div>
@@ -9337,10 +9423,12 @@
    * Wire up the "Generate AI Commentary" button in the Skills Summary tab.
    * Must be called after the tab HTML has been inserted into the DOM.
    */
-  function initSkillsTabButton(contentDiv, student) {
+  function initSkillsTabButton(contentDiv, student, signal) {
     const btnId = `ai-generate-btn-${student.code}`;
     const btn = document.getElementById(btnId);
     if (!btn || !contentDiv.contains(btn)) return;
+
+    const listenerOpts = signal ? { signal } : undefined;
 
     // Wire up collapsible section toggles
     contentDiv.querySelectorAll('.st-skill-section-toggle').forEach(header => {
@@ -9349,7 +9437,7 @@
         if (section) {
           section.classList.toggle('collapsed');
         }
-      });
+      }, listenerOpts);
     });
 
     btn.addEventListener('click', async () => {
@@ -9390,7 +9478,7 @@
           }
         });
       }
-    });
+    }, listenerOpts);
   }
 
   // ── End Skills Summary Tab ───────────────────────────────────────────────────
@@ -11671,6 +11759,203 @@
       if (saveBtn)      saveBtn.disabled      = false;
       if (saveCloseBtn) saveCloseBtn.disabled = false;
     }
+  }
+
+  // ── Global Quick Entry Bar ────────────────────────────────────────────────
+
+  /**
+   * Build and wire up the Global Quick Entry Bar: a persistent bar above the
+   * student table for rapid data entry without expanding a student row.
+   * Provides student code + goal code autocomplete, value input, and Enter-to-save.
+   */
+  function initGlobalQuickEntryBar() {
+    const bar = document.getElementById('stGlobalQuickEntryBar');
+    if (!bar) return;
+
+    // Clear any previous content
+    while (bar.firstChild) bar.removeChild(bar.firstChild);
+
+    // SVG lightning bolt icon
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const iconSvg = document.createElementNS(svgNS, 'svg');
+    iconSvg.setAttribute('width', '16'); iconSvg.setAttribute('height', '16');
+    iconSvg.setAttribute('viewBox', '0 0 24 24'); iconSvg.setAttribute('fill', 'none');
+    iconSvg.setAttribute('stroke', 'currentColor'); iconSvg.setAttribute('stroke-width', '1.5');
+    iconSvg.setAttribute('stroke-linecap', 'round'); iconSvg.setAttribute('stroke-linejoin', 'round');
+    iconSvg.setAttribute('aria-hidden', 'true');
+    iconSvg.style.flexShrink = '0';
+    const iconPath = document.createElementNS(svgNS, 'polygon');
+    iconPath.setAttribute('points', '13 2 3 14 12 14 11 22 21 10 12 10 13 2');
+    iconSvg.appendChild(iconPath);
+    bar.appendChild(iconSvg);
+
+    // Label
+    const label = document.createElement('span');
+    label.className = 'st-gqe-label';
+    label.textContent = 'Quick Entry:';
+    bar.appendChild(label);
+
+    // Datalist for student codes
+    const studentDatalist = document.createElement('datalist');
+    studentDatalist.id = 'stGqeStudentList';
+    const activeStudents = allStudents.filter(s => s.active !== false && s.status !== 'archived');
+    activeStudents.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.code;
+      studentDatalist.appendChild(opt);
+    });
+    bar.appendChild(studentDatalist);
+
+    // Datalist for goal codes (updated when student is selected)
+    const goalDatalist = document.createElement('datalist');
+    goalDatalist.id = 'stGqeGoalList';
+    bar.appendChild(goalDatalist);
+
+    // Student code input
+    const studentInput = document.createElement('input');
+    studentInput.type = 'text';
+    studentInput.id = 'stGqeStudent';
+    studentInput.className = 'st-gqe-input';
+    studentInput.placeholder = 'Student code';
+    studentInput.setAttribute('list', 'stGqeStudentList');
+    studentInput.setAttribute('autocomplete', 'off');
+    studentInput.setAttribute('aria-label', 'Student code for quick entry');
+    bar.appendChild(studentInput);
+
+    // Goal code input
+    const goalInput = document.createElement('input');
+    goalInput.type = 'text';
+    goalInput.id = 'stGqeGoal';
+    goalInput.className = 'st-gqe-input';
+    goalInput.placeholder = 'Goal code';
+    goalInput.setAttribute('list', 'stGqeGoalList');
+    goalInput.setAttribute('autocomplete', 'off');
+    goalInput.setAttribute('aria-label', 'Goal code for quick entry');
+    bar.appendChild(goalInput);
+
+    // Value input
+    const valueInput = document.createElement('input');
+    valueInput.type = 'number';
+    valueInput.id = 'stGqeValue';
+    valueInput.className = 'st-gqe-input st-gqe-value';
+    valueInput.placeholder = 'Value';
+    valueInput.setAttribute('aria-label', 'Progress value for quick entry');
+    valueInput.step = 'any';
+    bar.appendChild(valueInput);
+
+    // Date input (hidden by default — defaults to today)
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.id = 'stGqeDate';
+    dateInput.className = 'st-gqe-input st-gqe-date';
+    dateInput.value = todayISO();
+    dateInput.setAttribute('aria-label', 'Date for quick entry');
+    bar.appendChild(dateInput);
+
+    // Save button
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.id = 'stGqeSaveBtn';
+    saveBtn.className = 'st-btn st-btn-small st-btn-primary';
+    saveBtn.textContent = 'Save';
+    saveBtn.setAttribute('aria-label', 'Save quick entry');
+    bar.appendChild(saveBtn);
+
+    // Wire: update goal datalist when student code changes
+    function updateGoalDatalist() {
+      const code = studentInput.value.trim().toUpperCase();
+      while (goalDatalist.firstChild) goalDatalist.removeChild(goalDatalist.firstChild);
+      if (!code) return;
+      const studentGoals = allGoals.filter(g => g.student_code === code && g.status !== 'archived');
+      studentGoals.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.code;
+        goalDatalist.appendChild(opt);
+      });
+      // Pre-fill smart default: most-stale active goal for this student
+      if (studentGoals.length === 1 && !goalInput.value) {
+        goalInput.value = studentGoals[0].code;
+        valueInput.focus();
+      }
+    }
+
+    studentInput.addEventListener('input', updateGoalDatalist);
+    studentInput.addEventListener('change', () => {
+      updateGoalDatalist();
+      if (goalInput.value) valueInput.focus();
+      else goalInput.focus();
+    });
+
+    // Wire: Enter on goal or value input → save
+    const doSave = async () => {
+      const studentCode = studentInput.value.trim().toUpperCase();
+      const goalCode = goalInput.value.trim().toUpperCase();
+      const rawVal = valueInput.value.trim();
+      const date = dateInput.value;
+
+      // Identify which required fields are missing for a specific error message
+      const missing = [];
+      if (!studentCode) missing.push('student code');
+      if (!goalCode) missing.push('goal code');
+      if (rawVal === '') missing.push('value');
+      if (!date) missing.push('date');
+      if (missing.length > 0) {
+        showToast(`Please fill in: ${missing.join(', ')}.`);
+        return;
+      }
+      const numVal = parseFloat(rawVal);
+      if (isNaN(numVal)) {
+        showToast(`Value must be a number (received: "${rawVal}").`);
+        return;
+      }
+
+      // Validate student and goal exist in memory
+      const student = allStudents.find(s => s.code === studentCode);
+      if (!student) { showToast(`Student "${studentCode}" not found.`); return; }
+      const goal = allGoals.find(g => g.student_code === studentCode && g.code === goalCode && g.status !== 'archived');
+      if (!goal) { showToast(`Goal "${goalCode}" not found for student "${studentCode}".`); return; }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      // Snapshot for undo
+      const prior = allProgressEntries
+        .filter(p => p.goal_code === goalCode && p.student_code === studentCode)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const undoSnapshot = [{
+        studentCode, goalCode,
+        previousValue: prior[0]?.value ?? null,
+        previousDate:  prior[0]?.date  ?? null,
+        savedDate: date,
+      }];
+
+      try {
+        await db.upsertGoalProgress({ goal_code: goalCode, student_code: studentCode, date, value: numVal, source: 'manual' });
+        await reloadProgressEntries();
+        filterStudents();
+        renderStudentList();
+        renderStudentKpiSummary();
+        renderCollectNudge();
+        showUndoToast(undoSnapshot);
+
+        // Reset for next entry — keep student code but clear goal + value, re-focus goal
+        goalInput.value = '';
+        valueInput.value = '';
+        updateGoalDatalist();
+        studentInput.focus();
+        studentInput.select();
+      } catch (err) {
+        console.error('[tc-students] Global Quick Entry save failed:', err);
+        showErrorToast('Save failed. Check your connection and try again.');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    };
+
+    saveBtn.addEventListener('click', doSave);
+    goalInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } });
+    valueInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } });
   }
 
   // Initialize
