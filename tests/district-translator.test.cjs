@@ -458,8 +458,7 @@ test('tc-district-export.js uses a patched PDF.js version (>= 4.2.67)', () => {
   const parts = match[1].split('.').map(Number);
   const major = parts[0];
   const minor = parts[1] || 0;
-  const patch = parts[2] || 0;
-  const isPatched = major > 4 || (major === 4 && minor > 1) || (major === 4 && minor === 1 && patch >= 393);
+  const isPatched = major > 4 || (major === 4 && minor >= 2);
   assert.ok(isPatched, `PDF.js version ${match[1]} must be >= 4.2.x (patched version)`);
 });
 
