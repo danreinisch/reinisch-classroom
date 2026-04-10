@@ -61,7 +61,6 @@ create table if not exists progress_entries (
   student_id uuid not null references students(id) on delete cascade,
   goal_id uuid references goals(id) on delete set null,
   date date not null,
-  points text,
   percent int check (percent between 0 and 100),
   method text,
   by_name text,                            -- who added (Teacher or colleague)
