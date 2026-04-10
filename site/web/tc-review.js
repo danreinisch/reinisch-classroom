@@ -2166,6 +2166,7 @@
           if (suggestedFeedback) submission.feedback = suggestedFeedback;
 
           expandedSubmissions.delete(submission.id);
+          delete submissionAnswersCache[submission.id];
           processed++;
         } catch (err) {
           console.error('[tc-review] Auto-grade error:', submission.id, err);
