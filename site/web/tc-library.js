@@ -8737,7 +8737,7 @@
             const cls = best.assignment.series ? ` (${best.assignment.series}, ${laneLabel[bLane] || bLane})` : ` (${laneLabel[bLane] || bLane})`;
             if (best.similarity === 'high') {
               titleDupWarn.style.cssText = 'display:block; margin-top:5px; font-size:12px; padding:6px 10px; border-radius:7px; line-height:1.5; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fcd34d;';
-              titleDupWarn.textContent = '\u26A0\uFE0F Very similar title already exists: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
+              titleDupWarn.textContent = '⚠️ Very similar title already exists: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
             } else {
               titleDupWarn.style.cssText = 'display:block; margin-top:5px; font-size:12px; padding:6px 10px; border-radius:7px; line-height:1.5; background:rgba(99,102,241,.10); border:1px solid rgba(99,102,241,.30); color:rgba(199,210,254,.90);';
               titleDupWarn.textContent = '💡 Similar assignment: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
@@ -9186,7 +9186,7 @@
         const cls = best.assignment.series ? ` (${best.assignment.series}, ${laneLabel[aLane] || aLane})` : ` (${laneLabel[aLane] || aLane})`;
         if (best.similarity === 'high') {
           dupWarning.style.cssText = 'display:block; margin-top:6px; font-size:12px; padding:8px 12px; border-radius:8px; line-height:1.5; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fcd34d;';
-          dupWarning.textContent = '\u26A0\uFE0F An assignment with a very similar title already exists: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
+          dupWarning.textContent = '⚠️ An assignment with a very similar title already exists: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
         } else {
           dupWarning.style.cssText = 'display:block; margin-top:6px; font-size:12px; padding:8px 12px; border-radius:8px; line-height:1.5; background:rgba(99,102,241,.10); border:1px solid rgba(99,102,241,.30); color:rgba(199,210,254,.90);';
           dupWarning.textContent = '💡 Similar assignment found: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
