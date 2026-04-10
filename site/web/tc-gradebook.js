@@ -2142,8 +2142,7 @@
     for (const qo of quarterOptions) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "gb-export-preset" + (state.dateMode === "quarter" && state.selectedQuarter === qo.value && (qo.value !== "" || state.dateMode === "all") ? " active" : "");
-      if (qo.value === "" && state.dateMode === "all") btn.classList.add("active");
+      btn.className = "gb-export-preset";
       btn.textContent = qo.label || "All Quarters";
       btn.dataset.qval = qo.value;
       btn.addEventListener("click", () => {
@@ -2623,7 +2622,7 @@
 
   async function exportToCSVWithVLOOKUP(opts) {
     const { students, drafts, colScores, colAverage, colWeighted, colTrend } = opts;
-    const LOOKUP_ROWS = 200; // number of empty lookup rows
+    const LOOKUP_ROWS = 200; // pre-allocated empty rows for teacher to paste roster (future-proof for S001–S200+)
 
     const scoreMap = buildScoreMapForStudents(students, drafts);
 
@@ -2692,7 +2691,7 @@
             const score = studentScores.get(draft.id);
             if (typeof score === "number") {
               const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              row[gi] = totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : score;
+              row[gi] = totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`;
             }
           }
           gi++;
@@ -2893,9 +2892,8 @@
         : "All Quarters";
 
     // Build the document using DOM APIs to avoid XSS
+    // A newly opened blank window already has html/head/body structure
     const doc = printWin.document;
-    doc.write("<!doctype html><html><head></head><body></body></html>");
-    doc.close();
 
     const head = doc.head;
     const titleEl = doc.createElement("title");
