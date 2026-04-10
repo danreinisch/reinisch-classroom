@@ -188,6 +188,35 @@ function makeSaveFiltersContext(storage) {
   return { filters, collapsedLanes, hierarchyExpandState, saveFilters, loadFilters };
 }
 
+// ── extractFunctionBody helper ───────────────────────────────────────────────
+
+/**
+ * Extracts the full body of a function (or block) from source code using
+ * brace-counting, avoiding the fragility of fixed character-count slices.
+ * Note: this simple counter is intentionally used on well-formed JS source
+ * where string/template literals do not contain unbalanced braces.
+ *
+ * @param {string} source    - Full source text to search within.
+ * @param {string} signature - Substring to locate (e.g. 'function foo(').
+ * @returns {string} The slice from `signature` through its matching closing
+ *                   brace, or '' if the signature is not found.
+ */
+function extractFunctionBody(source, signature) {
+  const sigIdx = source.indexOf(signature);
+  if (sigIdx === -1) return '';
+  const braceStart = source.indexOf('{', sigIdx);
+  if (braceStart === -1) return source.slice(sigIdx);
+  let depth = 0;
+  for (let i = braceStart; i < source.length; i++) {
+    if (source[i] === '{') depth++;
+    else if (source[i] === '}') {
+      depth--;
+      if (depth === 0) return source.slice(sigIdx, i + 1);
+    }
+  }
+  return source.slice(sigIdx);
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 console.log('\n--- createIcon aria-hidden ---');
@@ -242,9 +271,8 @@ test('source sets role="tabpanel" on tab content', () => {
 });
 
 test('switchTab updates aria-selected on both buttons', () => {
-  const switchTabIdx = src.indexOf('function switchTab(');
-  assert.ok(switchTabIdx !== -1, 'switchTab function not found');
-  const switchTabSection = src.slice(switchTabIdx, switchTabIdx + 400);
+  const switchTabSection = extractFunctionBody(src, 'function switchTab(');
+  assert.ok(switchTabSection.length > 0, 'switchTab function not found');
   assert.ok(
     switchTabSection.includes('aria-selected'),
     'switchTab should update aria-selected'
@@ -254,9 +282,8 @@ test('switchTab updates aria-selected on both buttons', () => {
 console.log('\n--- Lane ARIA attributes ---');
 
 test('renderLaneSection sets aria-expanded on header', () => {
-  const fnIdx = src.indexOf('function renderLaneSection(');
-  assert.ok(fnIdx !== -1, 'renderLaneSection not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 1200);
+  const fnSection = extractFunctionBody(src, 'function renderLaneSection(');
+  assert.ok(fnSection.length > 0, 'renderLaneSection not found');
   assert.ok(
     fnSection.includes('aria-expanded'),
     'renderLaneSection should set aria-expanded on header'
@@ -264,9 +291,8 @@ test('renderLaneSection sets aria-expanded on header', () => {
 });
 
 test('renderAnalyticsSection sets aria-expanded on header', () => {
-  const fnIdx = src.indexOf('function renderAnalyticsSection(');
-  assert.ok(fnIdx !== -1, 'renderAnalyticsSection not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 800);
+  const fnSection = extractFunctionBody(src, 'function renderAnalyticsSection(');
+  assert.ok(fnSection.length > 0, 'renderAnalyticsSection not found');
   assert.ok(
     fnSection.includes('aria-expanded'),
     'renderAnalyticsSection should set aria-expanded on header'
@@ -274,9 +300,8 @@ test('renderAnalyticsSection sets aria-expanded on header', () => {
 });
 
 test('lesson section toggle buttons set aria-expanded', () => {
-  const fnIdx = src.indexOf('function renderLessonSection(');
-  assert.ok(fnIdx !== -1, 'renderLessonSection not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 600);
+  const fnSection = extractFunctionBody(src, 'function renderLessonSection(');
+  assert.ok(fnSection.length > 0, 'renderLessonSection not found');
   assert.ok(
     fnSection.includes('aria-expanded'),
     'renderLessonSection toggleBtn should have aria-expanded'
@@ -284,9 +309,8 @@ test('lesson section toggle buttons set aria-expanded', () => {
 });
 
 test('lesson unit toggle buttons set aria-expanded', () => {
-  const fnIdx = src.indexOf('function renderLessonUnit(');
-  assert.ok(fnIdx !== -1, 'renderLessonUnit not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 600);
+  const fnSection = extractFunctionBody(src, 'function renderLessonUnit(');
+  assert.ok(fnSection.length > 0, 'renderLessonUnit not found');
   assert.ok(
     fnSection.includes('aria-expanded'),
     'renderLessonUnit toggleBtn should have aria-expanded'
@@ -294,10 +318,11 @@ test('lesson unit toggle buttons set aria-expanded', () => {
 });
 
 test('lesson toggle event handler updates aria-expanded', () => {
-  // Find the event delegation handler for lesson toggles
-  const toggleIdx = src.indexOf('.lesson-section-toggle, .lesson-unit-toggle');
-  assert.ok(toggleIdx !== -1, 'lesson toggle handler not found');
-  const handlerSection = src.slice(toggleIdx, toggleIdx + 500);
+  // The selector string anchors into the `if (toggle) { ... }` block that
+  // immediately follows it in the click-delegation handler; that block
+  // contains the setAttribute('aria-expanded', ...) call we want to verify.
+  const handlerSection = extractFunctionBody(src, '.lesson-section-toggle, .lesson-unit-toggle');
+  assert.ok(handlerSection.length > 0, 'lesson toggle handler not found');
   assert.ok(
     handlerSection.includes('aria-expanded'),
     'lesson toggle handler should update aria-expanded'
@@ -364,9 +389,8 @@ test('saveFilters catches generic errors without crashing', () => {
 });
 
 test('source catch block distinguishes QuotaExceededError', () => {
-  const saveIdx = src.indexOf('function saveFilters(');
-  assert.ok(saveIdx !== -1, 'saveFilters not found in source');
-  const saveSection = src.slice(saveIdx, saveIdx + 1500);
+  const saveSection = extractFunctionBody(src, 'function saveFilters(');
+  assert.ok(saveSection.length > 0, 'saveFilters not found in source');
   assert.ok(
     saveSection.includes('QuotaExceededError'),
     'saveFilters should handle QuotaExceededError specifically'
@@ -395,9 +419,8 @@ test('saveFilters + loadFilters round-trip preserves filter values', () => {
 console.log('\n--- Error boundaries ---');
 
 test('renderAssignmentsTab has try/catch error boundary', () => {
-  const fnIdx = src.indexOf('function renderAssignmentsTab(');
-  assert.ok(fnIdx !== -1, 'renderAssignmentsTab not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 12000);
+  const fnSection = extractFunctionBody(src, 'function renderAssignmentsTab(');
+  assert.ok(fnSection.length > 0, 'renderAssignmentsTab not found');
   assert.ok(fnSection.includes('try {'), 'renderAssignmentsTab should have try block');
   assert.ok(fnSection.includes('} catch (err)'), 'renderAssignmentsTab should have catch block');
   assert.ok(fnSection.includes('Something went wrong'), 'error boundary should show error message');
@@ -405,17 +428,15 @@ test('renderAssignmentsTab has try/catch error boundary', () => {
 });
 
 test('renderLessonsTab has try/catch error boundary', () => {
-  const fnIdx = src.indexOf('function renderLessonsTab(');
-  assert.ok(fnIdx !== -1, 'renderLessonsTab not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 3000);
+  const fnSection = extractFunctionBody(src, 'function renderLessonsTab(');
+  assert.ok(fnSection.length > 0, 'renderLessonsTab not found');
   assert.ok(fnSection.includes('try {'), 'renderLessonsTab should have try block');
   assert.ok(fnSection.includes('} catch (err)'), 'renderLessonsTab should have catch block');
 });
 
 test('renderAnalyticsSection has try/catch error boundary', () => {
-  const fnIdx = src.indexOf('function renderAnalyticsSection(');
-  assert.ok(fnIdx !== -1, 'renderAnalyticsSection not found');
-  const fnSection = src.slice(fnIdx, fnIdx + 14000);
+  const fnSection = extractFunctionBody(src, 'function renderAnalyticsSection(');
+  assert.ok(fnSection.length > 0, 'renderAnalyticsSection not found');
   assert.ok(fnSection.includes('try {'), 'renderAnalyticsSection should have try block');
   assert.ok(fnSection.includes('} catch (err)'), 'renderAnalyticsSection should have catch block');
 });
