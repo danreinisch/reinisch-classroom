@@ -2030,6 +2030,73 @@
     return str;
   }
 
+  // ─── Export deduplication helpers ───────────────────────────────────────────
+
+  /**
+   * Group drafts by title so that per-student assignment instances collapse into
+   * one column per unique assignment title in the export.
+   *
+   * @param {Array} drafts - Array of draft/assignment objects
+   * @returns {Array} Array of group objects: { title, draftIds, totalPossible, dateStr }
+   */
+  function deduplicateAssignmentsForExport(drafts) {
+    const groups = [];
+    const titleMap = new Map(); // title → group index
+    for (const draft of drafts) {
+      const title = (draft.title || "(untitled)").trim();
+      if (titleMap.has(title)) {
+        const g = groups[titleMap.get(title)];
+        g.draftIds.push(draft.id);
+        if (g.totalPossible == null && draft.meta && draft.meta.total_possible) {
+          g.totalPossible = draft.meta.total_possible;
+        }
+      } else {
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        titleMap.set(title, groups.length);
+        groups.push({ title, draftIds: [draft.id], totalPossible, dateStr });
+      }
+    }
+    return groups;
+  }
+
+  /**
+   * Find a student's score for a deduplicated assignment group.
+   * Checks each draftId in the group and returns the first non-null score found.
+   *
+   * @param {string} studentCode
+   * @param {{ draftIds: string[] }} group
+   * @param {Map} scoreMap - Map of studentCode → Map of draftId → score
+   * @returns {number|null}
+   */
+  function getStudentScoreForGroup(studentCode, group, scoreMap) {
+    const studentScores = scoreMap.get(studentCode);
+    if (!studentScores) return null;
+    for (const draftId of group.draftIds) {
+      if (studentScores.has(draftId)) {
+        const score = studentScores.get(draftId);
+        if (typeof score === "number") return score;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Format a score cell for CSV/PDF/Print export.
+   *
+   * @param {number|null} score - percentage 0-100, or null
+   * @param {number|null} totalPossible - max points, or null
+   * @returns {string} e.g. "17/20 (85%)", "85%", or "—"
+   */
+  function formatScoreCell(score, totalPossible) {
+    if (score === null) return "—";
+    if (totalPossible) {
+      const earned = Math.round(score * totalPossible / 100);
+      return `${earned}/${totalPossible} (${score}%)`;
+    }
+    return `${score}%`;
+  }
+
   /**
    * Open the Export / Print modal.
    */
@@ -2545,15 +2612,15 @@
     // Build scoreMap for these students/drafts
     const scoreMap = buildScoreMapForStudents(students, drafts);
 
+    // Deduplicate assignments: collapse per-student instances of the same assignment
+    const groups = deduplicateAssignmentsForExport(drafts);
+
     const rows = [];
-    const headers = ["Student"];
+    const headers = ["Student Code"];
     if (colScores) {
-      for (const draft of drafts) {
-        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        let headerLabel = draft.title || "(untitled)";
-        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
-        if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+      for (const group of groups) {
+        let headerLabel = group.title;
+        if (group.totalPossible) headerLabel += ` (${group.totalPossible} pts)`;
         headers.push(headerLabel);
       }
     }
@@ -2564,20 +2631,10 @@
 
     for (const student of students) {
       const row = [formatStudentLabel(student, nameFormat)];
-      const studentScores = scoreMap.get(student.code);
       if (colScores) {
-        for (const draft of drafts) {
-          if (studentScores && studentScores.has(draft.id)) {
-            const score = studentScores.get(draft.id);
-            if (typeof score === "number") {
-              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              row.push(totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`);
-            } else {
-              row.push("");
-            }
-          } else {
-            row.push("");
-          }
+        for (const group of groups) {
+          const score = getStudentScoreForGroup(student.code, group, scoreMap);
+          row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "—");
         }
       }
       if (colAverage) {
@@ -2597,9 +2654,11 @@
     // Summary row
     const summaryRow = ["Class Average"];
     if (colScores) {
-      for (const draft of drafts) {
-        const avg = calculateColumnAverage(draft.id, scoreMap, students);
-        summaryRow.push(avg !== null ? avg : "");
+      for (const group of groups) {
+        const scores = students
+          .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+          .filter((v) => v !== null);
+        summaryRow.push(scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "");
       }
     }
     if (colAverage) {
@@ -2626,6 +2685,9 @@
 
     const scoreMap = buildScoreMapForStudents(students, drafts);
 
+    // Deduplicate assignments: collapse per-student instances of the same assignment
+    const groups = deduplicateAssignmentsForExport(drafts);
+
     // ── Build column layout ──────────────────────────────────────────────
     // Col 0: Student Code (A)
     // Col 1: Real Name (VLOOKUP) (B)
@@ -2635,12 +2697,9 @@
 
     const gradeHeaders = [];
     if (colScores) {
-      for (const draft of drafts) {
-        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        let h = draft.title || "(untitled)";
-        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
-        if (extras.length) h += ` (${extras.join(", ")})`;
+      for (const group of groups) {
+        let h = group.title;
+        if (group.totalPossible) h += ` (${group.totalPossible} pts)`;
         gradeHeaders.push(h);
       }
     }
@@ -2683,17 +2742,11 @@
       // VLOOKUP formula referencing lookup table
       row[1] = `=VLOOKUP(A${excelRowNum},${lookupRange},2,FALSE)`;
 
-      const studentScores = scoreMap.get(student.code);
       let gi = 2;
       if (colScores) {
-        for (const draft of drafts) {
-          if (studentScores && studentScores.has(draft.id)) {
-            const score = studentScores.get(draft.id);
-            if (typeof score === "number") {
-              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              row[gi] = totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`;
-            }
-          }
+        for (const group of groups) {
+          const score = getStudentScoreForGroup(student.code, group, scoreMap);
+          row[gi] = score !== null ? formatScoreCell(score, group.totalPossible) : "—";
           gi++;
         }
       }
@@ -2719,9 +2772,11 @@
     summaryRow[1] = "";
     let si = 2;
     if (colScores) {
-      for (const draft of drafts) {
-        const avg = calculateColumnAverage(draft.id, scoreMap, students);
-        summaryRow[si++] = avg !== null ? `${avg}%` : "";
+      for (const group of groups) {
+        const scores = students
+          .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+          .filter((v) => v !== null);
+        summaryRow[si++] = scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "";
       }
     }
     if (colAverage) {
@@ -2735,21 +2790,15 @@
     if (colTrend) summaryRow[si++] = "—";
     rows.push(summaryRow);
 
-    // Blank row before lookup table header (in the lookup columns, back-fill)
-    // The lookup table header is already in row 1 (index 0), so we just need
-    // to emit LOOKUP_ROWS empty rows in the lookup columns (rows 2 .. LOOKUP_ROWS+1).
-    // We already have student data rows; we may need to pad with extra blank rows
-    // to fill all LOOKUP_ROWS slots.
-
-    // Rows we've emitted so far after the header: students.length + 1 (summary)
+    // Pad with empty rows to fill all LOOKUP_ROWS slots in the lookup columns
+    // Rows emitted so far after the header: students.length + 1 (summary)
     const dataRowCount = students.length + 1;
     const extraRows = LOOKUP_ROWS - dataRowCount;
     for (let i = 0; i < extraRows; i++) {
       rows.push(emptyRow(totalCols));
     }
 
-    // Instruction row at very top of lookup table (append at end — after all lookup slots)
-    // Actually add a note row just below the last lookup row so teacher sees it
+    // Instruction row at very end of lookup table area
     const noteRow = emptyRow(totalCols);
     noteRow[lookupCodeCol] = "--- PASTE YOUR STUDENT ROSTER ABOVE (Code in col " + lookupCodeLetter + ", Name in col " + lookupNameLetter + ") ---";
     rows.push(noteRow);
@@ -2773,6 +2822,9 @@
 
     const scoreMap = buildScoreMapForStudents(students, drafts);
 
+    // Deduplicate assignments: collapse per-student instances of the same assignment
+    const groups = deduplicateAssignmentsForExport(drafts);
+
     try {
       const { jsPDF } = await import("../vendor/jspdf.mjs");
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -2785,12 +2837,9 @@
 
       const headers = ["Student"];
       if (colScores) {
-        for (const draft of drafts) {
-          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-          let lbl = (draft.title || "(untitled)").substring(0, 20);
-          if (dateStr) lbl += ` ${dateStr}`;
-          if (totalPossible) lbl += ` ${totalPossible}pt`;
+        for (const group of groups) {
+          let lbl = group.title.substring(0, 20);
+          if (group.totalPossible) lbl += ` ${group.totalPossible}pt`;
           headers.push(lbl);
         }
       }
@@ -2801,16 +2850,10 @@
       const tableData = [];
       for (const student of students) {
         const row = [formatStudentLabel(student, nameFormat)];
-        const studentScores = scoreMap.get(student.code);
         if (colScores) {
-          for (const draft of drafts) {
-            if (studentScores && studentScores.has(draft.id)) {
-              const score = studentScores.get(draft.id);
-              if (typeof score === "number") {
-                const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-                row.push(totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`);
-              } else { row.push("—"); }
-            } else { row.push("—"); }
+          for (const group of groups) {
+            const score = getStudentScoreForGroup(student.code, group, scoreMap);
+            row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "—");
           }
         }
         if (colAverage) {
@@ -2865,6 +2908,9 @@
     const scoreMap = buildScoreMapForStudents(students, drafts);
     const classLabel = opts.selectedClass || "All Classes";
 
+    // Deduplicate assignments: collapse per-student instances of the same assignment
+    const groups = deduplicateAssignmentsForExport(drafts);
+
     // Build a minimal print window
     const printWin = window.open("", "_blank");
     if (!printWin) {
@@ -2874,10 +2920,9 @@
 
     const headers = ["Student"];
     if (colScores) {
-      for (const draft of drafts) {
-        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-        let h = draft.title || "(untitled)";
-        if (dateStr) h += ` (${dateStr})`;
+      for (const group of groups) {
+        let h = group.title;
+        if (group.totalPossible) h += ` (${group.totalPossible} pts)`;
         headers.push(h);
       }
     }
@@ -2935,7 +2980,6 @@
 
     const tbody = doc.createElement("tbody");
     for (const student of students) {
-      const studentScores = scoreMap.get(student.code);
       const tr = doc.createElement("tr");
 
       const nameTd = doc.createElement("td");
@@ -2943,17 +2987,10 @@
       tr.appendChild(nameTd);
 
       if (colScores) {
-        for (const draft of drafts) {
+        for (const group of groups) {
           const td = doc.createElement("td");
-          let val = "—";
-          if (studentScores && studentScores.has(draft.id)) {
-            const score = studentScores.get(draft.id);
-            if (typeof score === "number") {
-              const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              val = tp ? `${calculateEarnedPoints(score, tp)}/${tp}` : `${score}%`;
-            }
-          }
-          td.textContent = val;
+          const score = getStudentScoreForGroup(student.code, group, scoreMap);
+          td.textContent = score !== null ? formatScoreCell(score, group.totalPossible) : "—";
           tr.appendChild(td);
         }
       }
@@ -3140,15 +3177,13 @@
       );
       rows.push(summaryRow);
     } else {
-      // ── Individual (flat) CSV export ──────────────────────────────────────
+      // ── Individual (flat) CSV export — deduplicated by title ────────────────
       // Build CSV header
+      const dedupGroups = deduplicateAssignmentsForExport(drafts);
       const headers = ["Student"];
-      for (const draft of drafts) {
-        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        let headerLabel = draft.title || "(untitled)";
-        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
-        if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+      for (const group of dedupGroups) {
+        let headerLabel = group.title;
+        if (group.totalPossible) headerLabel += ` (${group.totalPossible} pts)`;
         headers.push(headerLabel);
       }
       headers.push("Average", "Weighted", "Trend");
@@ -3158,29 +3193,15 @@
       for (const student of students) {
         const row = [student.name || student.code];
 
-        const studentScores = scoreMap.get(student.code);
-        for (const draft of drafts) {
-          if (studentScores && studentScores.has(draft.id)) {
-            const score = studentScores.get(draft.id);
-            if (typeof score === "number") {
-              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              if (totalPossible) {
-                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
-              } else {
-                row.push(score);
-              }
-            } else {
-              row.push("");
-            }
-          } else {
-            row.push("");
-          }
+        for (const group of dedupGroups) {
+          const score = getStudentScoreForGroup(student.code, group, scoreMap);
+          row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "—");
         }
 
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row.push(avg !== null ? avg : "");
+        row.push(avg !== null ? `${avg}%` : "");
         const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row.push(weighted !== null ? weighted : "");
+        row.push(weighted !== null ? `${weighted}%` : "");
         const trend = calculateTrend(student.code, scoreMap, drafts);
         row.push(trend || "");
 
@@ -3189,9 +3210,11 @@
 
       // Add summary row
       const summaryRow = ["Class Average"];
-      for (const draft of drafts) {
-        const avg = calculateColumnAverage(draft.id, scoreMap, students);
-        summaryRow.push(avg !== null ? avg : "");
+      for (const group of dedupGroups) {
+        const scores = students
+          .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+          .filter((v) => v !== null);
+        summaryRow.push(scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "");
       }
       const allScores = [];
       const allWeightedScores = [];
@@ -3203,11 +3226,11 @@
       }
       const overallAvg =
         allScores.length > 0
-          ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+          ? `${Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)}%`
           : "";
       const overallWeighted =
         allWeightedScores.length > 0
-          ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+          ? `${Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)}%`
           : "";
       summaryRow.push(overallAvg, overallWeighted, "—");
       rows.push(summaryRow);

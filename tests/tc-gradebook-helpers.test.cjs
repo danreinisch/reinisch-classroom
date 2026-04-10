@@ -1,6 +1,7 @@
 // Unit tests for tc-gradebook.js helper logic
 // Tests: calculateEarnedPoints, calculateWeightedAverage, calculateRowAverage,
-//        buildGradebookData edge cases, localStorage resilience
+//        buildGradebookData edge cases, localStorage resilience,
+//        deduplicateAssignmentsForExport, getStudentScoreForGroup, formatScoreCell
 // Run with: node tests/tc-gradebook-helpers.test.cjs
 
 'use strict';
@@ -424,3 +425,128 @@ console.log('\n--- scoreColorClass ---');
 }
 
 console.log('\n✓ All tc-gradebook-helpers tests passed!');
+
+// ── deduplicateAssignmentsForExport ──────────────────────────────────────────
+
+function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${mm}/${dd}`;
+}
+
+function deduplicateAssignmentsForExport(drafts) {
+  const groups = [];
+  const titleMap = new Map();
+  for (const draft of drafts) {
+    const title = (draft.title || '(untitled)').trim();
+    if (titleMap.has(title)) {
+      const g = groups[titleMap.get(title)];
+      g.draftIds.push(draft.id);
+      if (g.totalPossible == null && draft.meta && draft.meta.total_possible) {
+        g.totalPossible = draft.meta.total_possible;
+      }
+    } else {
+      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+      const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+      titleMap.set(title, groups.length);
+      groups.push({ title, draftIds: [draft.id], totalPossible, dateStr });
+    }
+  }
+  return groups;
+}
+
+function getStudentScoreForGroup(studentCode, group, scoreMap) {
+  const studentScores = scoreMap.get(studentCode);
+  if (!studentScores) return null;
+  for (const draftId of group.draftIds) {
+    if (studentScores.has(draftId)) {
+      const score = studentScores.get(draftId);
+      if (typeof score === 'number') return score;
+    }
+  }
+  return null;
+}
+
+function formatScoreCell(score, totalPossible) {
+  if (score === null) return '—';
+  if (totalPossible) {
+    const earned = Math.round(score * totalPossible / 100);
+    return `${earned}/${totalPossible} (${score}%)`;
+  }
+  return `${score}%`;
+}
+
+console.log('\n--- deduplicateAssignmentsForExport ---');
+
+{
+  const drafts = [
+    { id: 'a1', title: 'WEEK 9 — Chapter 18-20', meta: { total_possible: 20 }, due_at: '2024-03-20' },
+    { id: 'a2', title: 'WEEK 9 — Chapter 18-20', meta: { total_possible: 20 }, due_at: '2024-03-20' },
+    { id: 'b1', title: 'WEEK 10 — Chapter 21-24', meta: { total_possible: 15 }, due_at: '2024-03-27' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 2, 'two unique titles → two groups');
+  assert.strictEqual(groups[0].title, 'WEEK 9 — Chapter 18-20');
+  assert.deepStrictEqual(groups[0].draftIds, ['a1', 'a2'], 'both draft IDs in first group');
+  assert.strictEqual(groups[0].totalPossible, 20);
+  assert.strictEqual(groups[1].title, 'WEEK 10 — Chapter 21-24');
+  assert.deepStrictEqual(groups[1].draftIds, ['b1']);
+  assert.strictEqual(groups[1].totalPossible, 15);
+  console.log('✓ deduplicates by title and collects all draft IDs');
+}
+
+{
+  const drafts = [
+    { id: 'x1', title: '  Trimmed Title  ', meta: null },
+    { id: 'x2', title: 'Trimmed Title', meta: { total_possible: 10 } },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, 'titles should be trimmed before comparison');
+  assert.strictEqual(groups[0].totalPossible, 10, 'picks up total_possible from second draft');
+  console.log('✓ trims whitespace from titles and picks up totalPossible from any draft');
+}
+
+{
+  const groups = deduplicateAssignmentsForExport([]);
+  assert.deepStrictEqual(groups, [], 'empty drafts → empty groups');
+  console.log('✓ handles empty drafts array');
+}
+
+console.log('\n--- getStudentScoreForGroup ---');
+
+{
+  const scoreMap = new Map([
+    ['S001', new Map([['a1', 85], ['b1', 70]])],
+    ['S002', new Map([['a2', 90]])],
+  ]);
+  const group = { draftIds: ['a1', 'a2'] };
+  assert.strictEqual(getStudentScoreForGroup('S001', group, scoreMap), 85, 'S001 has score via a1');
+  assert.strictEqual(getStudentScoreForGroup('S002', group, scoreMap), 90, 'S002 has score via a2');
+  assert.strictEqual(getStudentScoreForGroup('S003', group, scoreMap), null, 'unknown student → null');
+  console.log('✓ finds score across any draft ID in the group');
+}
+
+{
+  const scoreMap = new Map([['S001', new Map()]]);
+  const group = { draftIds: ['x1', 'x2'] };
+  assert.strictEqual(getStudentScoreForGroup('S001', group, scoreMap), null, 'no matching draft → null');
+  console.log('✓ returns null when student has no score for any draft in group');
+}
+
+console.log('\n--- formatScoreCell ---');
+
+{
+  assert.strictEqual(formatScoreCell(null, 20), '—', 'null score → em dash');
+  assert.strictEqual(formatScoreCell(85, 20), '17/20 (85%)', '85% of 20 = 17 pts');
+  assert.strictEqual(formatScoreCell(90, 20), '18/20 (90%)', '90% of 20 = 18 pts');
+  assert.strictEqual(formatScoreCell(50, 10), '5/10 (50%)', '50% of 10 = 5 pts');
+  assert.strictEqual(formatScoreCell(75, null), '75%', 'no totalPossible → percentage only');
+  assert.strictEqual(formatScoreCell(100, 0), '100%', 'totalPossible=0 is falsy → percentage only');
+  console.log('✓ formatScoreCell formats correctly in all cases');
+}
+
+console.log('\n✓ All deduplication export helper tests passed!');
+
