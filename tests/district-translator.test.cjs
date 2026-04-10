@@ -465,13 +465,15 @@ test('tc-district-export.js uses a patched PDF.js version (>= 4.2.67)', () => {
 test('tc-district-export.js handles .pdf in handleTranslateFile', () => {
   const section = tcSrc.slice(tcSrc.indexOf('handleTranslateFile'));
   assert.ok(section.includes('.pdf'), 'handleTranslateFile must handle .pdf files');
-  assert.ok(section.includes('_district.txt'), 'PDF forward translation must output _district.txt');
+  assert.ok(section.includes('handlePdfFile'), 'handleTranslateFile must delegate to handlePdfFile');
+  assert.ok(section.includes("'_district'"), 'handleTranslateFile must pass _district suffix to handlePdfFile');
 });
 
 test('tc-district-export.js handles .pdf in handleReverseTranslateFile', () => {
   const section = tcSrc.slice(tcSrc.indexOf('handleReverseTranslateFile'));
   assert.ok(section.includes('.pdf'), 'handleReverseTranslateFile must handle .pdf files');
-  assert.ok(section.includes('_coded.txt'), 'PDF reverse translation must output _coded.txt');
+  assert.ok(section.includes('handlePdfFile'), 'handleReverseTranslateFile must delegate to handlePdfFile');
+  assert.ok(section.includes("'_coded'"), 'handleReverseTranslateFile must pass _coded suffix to handlePdfFile');
 });
 
 test('tc-district-export.js shows error via notify() when PDF extraction fails', () => {
@@ -507,6 +509,70 @@ test('HTML: Step 3 reverse drop zone mentions PDF', () => {
 test('HTML: Tips section mentions PDF support', () => {
   const tipsSection = html.slice(html.indexOf('Tips'));
   assert.ok(tipsSection.includes('PDF'), 'Tips section must mention PDF support');
+});
+
+// ── Shared helper / optimization checks ──────────────────────────────────────
+
+console.log('\n--- Shared helper and optimization checks ---');
+
+test('tc-district-export.js defines isBinaryDocx shared helper', () => {
+  assert.ok(tcSrc.includes('async function isBinaryDocx('), 'isBinaryDocx helper must be defined');
+});
+
+test('tc-district-export.js defines handlePdfFile shared helper', () => {
+  assert.ok(tcSrc.includes('async function handlePdfFile('), 'handlePdfFile helper must be defined');
+});
+
+test('tc-district-export.js defines BATCH_SIZE constant', () => {
+  assert.ok(tcSrc.includes('BATCH_SIZE'), 'BATCH_SIZE constant must be defined');
+  assert.ok(/const BATCH_SIZE\s*=\s*\d+/.test(tcSrc), 'BATCH_SIZE must be a numeric constant');
+});
+
+test('extractPdfText accepts an onProgress callback parameter', () => {
+  const fnMatch = tcSrc.match(/async function extractPdfText\(([^)]*)\)/);
+  assert.ok(fnMatch, 'extractPdfText must be defined as an async function');
+  assert.ok(fnMatch[1].includes('onProgress'), 'extractPdfText must accept an onProgress parameter');
+});
+
+test('extractPdfText processes pages in parallel batches using Promise.all', () => {
+  const fnStart = tcSrc.indexOf('async function extractPdfText(');
+  const fnSection = tcSrc.slice(fnStart, tcSrc.indexOf('\nasync function', fnStart + 1));
+  assert.ok(fnSection.includes('Promise.all('), 'extractPdfText must use Promise.all for parallel batch processing');
+  assert.ok(fnSection.includes('BATCH_SIZE'), 'extractPdfText must use BATCH_SIZE for batching');
+});
+
+test('tc-district-export.js handles CDN failures with PDF Library Unavailable notification', () => {
+  assert.ok(tcSrc.includes('PDF Library Unavailable'), 'must notify user when PDF.js CDN is unreachable');
+});
+
+test('handlePdfFile shows progress indicator during extraction', () => {
+  const fnStart = tcSrc.indexOf('async function handlePdfFile(');
+  const fnSection = tcSrc.slice(fnStart, tcSrc.indexOf('\nasync function', fnStart + 1));
+  assert.ok(fnSection.includes('Extracting text'), 'handlePdfFile must show an extraction progress message');
+  assert.ok(fnSection.includes('onProgress'), 'handlePdfFile must pass onProgress to extractPdfText');
+});
+
+test('handlePdfFile restores drop zone text after extraction', () => {
+  const fnStart = tcSrc.indexOf('async function handlePdfFile(');
+  const fnSection = tcSrc.slice(fnStart, tcSrc.indexOf('\nasync function', fnStart + 1));
+  assert.ok(fnSection.includes('originalHtml'), 'handlePdfFile must save and restore the original drop zone content');
+  assert.ok(fnSection.includes('dropZoneEl.innerHTML = originalHtml'), 'handlePdfFile must restore innerHTML on completion');
+});
+
+test('tc-district-export.js does not duplicate PDF extraction logic', () => {
+  // handleTranslateFile and handleReverseTranslateFile should both delegate to handlePdfFile
+  // rather than each containing their own extraction try/catch
+  const translateFileSection = tcSrc.slice(
+    tcSrc.indexOf('async function handleTranslateFile'),
+    tcSrc.indexOf('async function handleReverseTranslateText')
+  );
+  const reverseFileSection = tcSrc.slice(
+    tcSrc.indexOf('async function handleReverseTranslateFile'),
+    tcSrc.indexOf('// ── Initialization')
+  );
+  // Neither handler should contain a raw arrayBuffer() + extractPdfText() call
+  assert.ok(!translateFileSection.includes('extractPdfText('), 'handleTranslateFile must not call extractPdfText directly');
+  assert.ok(!reverseFileSection.includes('extractPdfText('), 'handleReverseTranslateFile must not call extractPdfText directly');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
