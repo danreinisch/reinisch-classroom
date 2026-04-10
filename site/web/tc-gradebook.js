@@ -1947,6 +1947,1084 @@
     }
   }
 
+  // ─── Export / Print Modal ───────────────────────────────────────────────────
+
+  /**
+   * Build a filtered list of students for export based on export options.
+   * Does NOT modify global filter state.
+   */
+  function getExportStudents(opts) {
+    let students;
+    if (opts.studentMode === "class" && opts.selectedClass && opts.selectedClass !== "All Classes") {
+      const enrolledCodes = classEnrollmentsData
+        .filter((e) => e.class_name === opts.selectedClass && e.active !== false)
+        .map((e) => e.student_code);
+      students = studentsData.filter((s) => enrolledCodes.includes(s.code));
+    } else if (opts.studentMode === "individual" && opts.selectedStudentCodes && opts.selectedStudentCodes.length > 0) {
+      const codes = new Set(opts.selectedStudentCodes);
+      students = studentsData.filter((s) => codes.has(s.code));
+    } else {
+      students = studentsData;
+    }
+    return students;
+  }
+
+  /**
+   * Build a filtered list of drafts for export based on export options.
+   * Does NOT modify global filter state.
+   */
+  function getExportDrafts(opts) {
+    let drafts = [...draftsData];
+
+    // Filter by quarter or custom date range
+    if (opts.dateMode === "quarter" && opts.selectedQuarter) {
+      drafts = drafts.filter((d) => {
+        const dateStr = d.created_at || d.created || d.release;
+        if (!dateStr) return false;
+        return getQuarterForDate(dateStr) === opts.selectedQuarter;
+      });
+    } else if (opts.dateMode === "custom" && (opts.dateStart || opts.dateEnd)) {
+      const start = opts.dateStart ? new Date(opts.dateStart) : null;
+      const end = opts.dateEnd ? new Date(opts.dateEnd + "T23:59:59") : null;
+      drafts = drafts.filter((d) => {
+        const dateStr = d.dueAt || d.due_at || d.created_at || d.created;
+        if (!dateStr) return !start; // include undated only if no start filter
+        const dt = new Date(dateStr);
+        if (start && dt < start) return false;
+        if (end && dt > end) return false;
+        return true;
+      });
+    }
+
+    return sortDrafts(drafts);
+  }
+
+  /** Format a student label according to the chosen name format. */
+  function formatStudentLabel(student, nameFormat) {
+    const code = student.code || "";
+    const name = student.name || "";
+    if (nameFormat === "name") return name || code;
+    if (nameFormat === "both") return name ? `${name} (${code})` : code;
+    return code; // default: "code"
+  }
+
+  /** Convert a 0-based column index to Excel column letters (A, B, …, Z, AA, AB, …). */
+  function colIndexToLetter(idx) {
+    let letter = "";
+    let n = idx;
+    do {
+      letter = String.fromCharCode(65 + (n % 26)) + letter;
+      n = Math.floor(n / 26) - 1;
+    } while (n >= 0);
+    return letter;
+  }
+
+  /**
+   * Escape a CSV cell value.
+   */
+  function csvCell(value) {
+    const str = String(value == null ? "" : value);
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  /**
+   * Open the Export / Print modal.
+   */
+  function openExportModal() {
+    // Remove any existing overlay
+    const existing = document.getElementById("exportModalOverlay");
+    if (existing) existing.remove();
+
+    // ── Snapshot current gradebook state as defaults ──────────────────────
+    const defaultQuarter = currentQuarterFilter || "";
+    const defaultClass = currentClassFilter || "All Classes";
+
+    // State for the modal
+    const state = {
+      dateMode: defaultQuarter ? "quarter" : "all",
+      selectedQuarter: defaultQuarter,
+      dateStart: "",
+      dateEnd: "",
+      studentMode: defaultClass !== "All Classes" ? "class" : "all",
+      selectedClass: defaultClass,
+      selectedStudentCodes: [],  // used when studentMode === "individual"
+      colScores: true,
+      colAverage: true,
+      colWeighted: false,
+      colTrend: false,
+      nameFormat: "code",  // "code" | "name" | "both"
+    };
+
+    // ── Overlay ───────────────────────────────────────────────────────────
+    const overlay = document.createElement("div");
+    overlay.id = "exportModalOverlay";
+    overlay.className = "gb-export-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "exportModalTitle");
+
+    const card = document.createElement("div");
+    card.className = "gb-export-card";
+
+    // ── Header ────────────────────────────────────────────────────────────
+    const header = document.createElement("div");
+    header.className = "gb-export-header";
+    const titleEl = document.createElement("h2");
+    titleEl.id = "exportModalTitle";
+    titleEl.className = "gb-export-title";
+    titleEl.textContent = "📤 Export / Print";
+    header.appendChild(titleEl);
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "gb-export-close";
+    closeBtn.setAttribute("aria-label", "Close export dialog");
+    closeBtn.textContent = "✕";
+    closeBtn.addEventListener("click", () => overlay.remove());
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    // ── Helper: create collapsible section ────────────────────────────────
+    function makeSection(emoji, title, startOpen) {
+      const wrap = document.createElement("div");
+      wrap.className = "gb-export-section";
+
+      const hdr = document.createElement("div");
+      hdr.className = "gb-export-section-header";
+      hdr.setAttribute("role", "button");
+      hdr.setAttribute("tabindex", "0");
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = `${emoji} ${title}`;
+      hdr.appendChild(labelSpan);
+      const chevron = document.createElement("span");
+      chevron.className = "gb-export-section-chevron" + (startOpen ? " open" : "");
+      chevron.textContent = "▼";
+      hdr.appendChild(chevron);
+
+      const body = document.createElement("div");
+      body.className = "gb-export-section-body" + (startOpen ? " open" : "");
+
+      const toggle = () => {
+        const isOpen = body.classList.contains("open");
+        body.classList.toggle("open", !isOpen);
+        chevron.classList.toggle("open", !isOpen);
+      };
+      hdr.addEventListener("click", toggle);
+      hdr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+
+      wrap.appendChild(hdr);
+      wrap.appendChild(body);
+      card.appendChild(wrap);
+      return body;
+    }
+
+    // ── Section A: Date Range ─────────────────────────────────────────────
+    const dateBody = makeSection("📅", "Date Range", true);
+
+    const presetRow = document.createElement("div");
+    presetRow.className = "gb-export-preset-row";
+
+    const quarterOptions = [
+      { label: "All Quarters", value: "" },
+      { label: "Q1", value: "Q1" },
+      { label: "Q2", value: "Q2" },
+      { label: "Q3", value: "Q3" },
+      { label: "Q4", value: "Q4" },
+    ];
+
+    const dateStartInput = document.createElement("input");
+    const dateEndInput = document.createElement("input");
+
+    // Track which preset is active
+    const presetBtns = [];
+    for (const qo of quarterOptions) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "gb-export-preset";
+      btn.textContent = qo.label || "All Quarters";
+      btn.dataset.qval = qo.value;
+      btn.addEventListener("click", () => {
+        state.dateMode = qo.value ? "quarter" : "all";
+        state.selectedQuarter = qo.value;
+        dateStartInput.value = "";
+        dateEndInput.value = "";
+        state.dateStart = "";
+        state.dateEnd = "";
+        presetBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        updatePreview();
+      });
+      presetBtns.push(btn);
+      presetRow.appendChild(btn);
+    }
+
+    // Set initial active preset btn
+    presetBtns.forEach((b) => {
+      const isAll = b.dataset.qval === "" && (state.dateMode === "all" || state.selectedQuarter === "");
+      const isQ = b.dataset.qval !== "" && b.dataset.qval === state.selectedQuarter;
+      if (isAll || isQ) b.classList.add("active");
+      else b.classList.remove("active");
+    });
+
+    dateBody.appendChild(presetRow);
+
+    // Custom date range
+    const customLabel = document.createElement("span");
+    customLabel.className = "gb-export-label";
+    customLabel.textContent = "Custom Date Range";
+    dateBody.appendChild(customLabel);
+
+    const dateRow = document.createElement("div");
+    dateRow.className = "gb-export-date-row";
+
+    function makeDateGroup(labelText, inputEl, stateKey) {
+      const grp = document.createElement("div");
+      grp.className = "gb-export-date-group";
+      const lbl = document.createElement("label");
+      lbl.textContent = labelText;
+      lbl.style.fontSize = "12px";
+      lbl.style.opacity = "0.7";
+      grp.appendChild(lbl);
+      inputEl.type = "date";
+      inputEl.className = "gb-export-date-input";
+      lbl.htmlFor = "exportDate_" + stateKey;
+      inputEl.id = "exportDate_" + stateKey;
+      inputEl.addEventListener("change", () => {
+        state[stateKey] = inputEl.value;
+        if (inputEl.value) {
+          state.dateMode = "custom";
+          state.selectedQuarter = "";
+          presetBtns.forEach((b) => b.classList.remove("active"));
+        }
+        updatePreview();
+      });
+      grp.appendChild(inputEl);
+      return grp;
+    }
+
+    dateRow.appendChild(makeDateGroup("Start Date", dateStartInput, "dateStart"));
+    dateRow.appendChild(makeDateGroup("End Date", dateEndInput, "dateEnd"));
+    dateBody.appendChild(dateRow);
+
+    // ── Section B: Student Selection ──────────────────────────────────────
+    const studentBody = makeSection("👥", "Student Selection", true);
+
+    const studentModeGroup = document.createElement("div");
+    studentModeGroup.className = "gb-export-radio-group";
+    studentModeGroup.style.marginBottom = "12px";
+
+    const studentModes = [
+      { value: "all", label: "All Students" },
+      { value: "class", label: "By Class" },
+      { value: "individual", label: "Individual Students" },
+    ];
+
+    let classSubSection, individualSubSection;
+
+    const studentModeRadios = [];
+    for (const sm of studentModes) {
+      const item = document.createElement("label");
+      item.className = "gb-export-radio-item";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "exportStudentMode";
+      radio.value = sm.value;
+      radio.checked = state.studentMode === sm.value;
+      studentModeRadios.push(radio);
+      radio.addEventListener("change", () => {
+        if (radio.checked) {
+          state.studentMode = sm.value;
+          classSubSection.style.display = sm.value === "class" ? "" : "none";
+          individualSubSection.style.display = sm.value === "individual" ? "" : "none";
+          updatePreview();
+        }
+      });
+      item.appendChild(radio);
+      const labelText = document.createTextNode(sm.label);
+      item.appendChild(labelText);
+      studentModeGroup.appendChild(item);
+    }
+    studentBody.appendChild(studentModeGroup);
+
+    // Class sub-section
+    classSubSection = document.createElement("div");
+    classSubSection.style.display = state.studentMode === "class" ? "" : "none";
+    classSubSection.style.marginBottom = "12px";
+    const classLabel = document.createElement("span");
+    classLabel.className = "gb-export-label";
+    classLabel.textContent = "Select Class";
+    classSubSection.appendChild(classLabel);
+
+    const classRadioGroup = document.createElement("div");
+    classRadioGroup.className = "gb-export-radio-group";
+    const classOptions = ["All Classes", ...CANON_CLASSES];
+    for (const cls of classOptions) {
+      const item = document.createElement("label");
+      item.className = "gb-export-radio-item";
+      item.style.fontSize = "13px";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "exportClassChoice";
+      radio.value = cls;
+      radio.checked = state.selectedClass === cls;
+      radio.addEventListener("change", () => {
+        if (radio.checked) { state.selectedClass = cls; updatePreview(); }
+      });
+      item.appendChild(radio);
+      item.appendChild(document.createTextNode(cls));
+      classRadioGroup.appendChild(item);
+    }
+    classSubSection.appendChild(classRadioGroup);
+    studentBody.appendChild(classSubSection);
+
+    // Individual sub-section (searchable checklist)
+    individualSubSection = document.createElement("div");
+    individualSubSection.style.display = state.studentMode === "individual" ? "" : "none";
+    const indivLabel = document.createElement("span");
+    indivLabel.className = "gb-export-label";
+    indivLabel.textContent = "Select Students";
+    individualSubSection.appendChild(indivLabel);
+
+    const studentSearchInput = document.createElement("input");
+    studentSearchInput.type = "text";
+    studentSearchInput.className = "gb-export-student-search";
+    studentSearchInput.placeholder = "🔍 Search students…";
+    studentSearchInput.setAttribute("aria-label", "Search students");
+    individualSubSection.appendChild(studentSearchInput);
+
+    // Select all / none controls
+    const selAllRow = document.createElement("div");
+    selAllRow.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
+    const selAllBtn = document.createElement("button");
+    selAllBtn.type = "button";
+    selAllBtn.className = "gb-export-preset";
+    selAllBtn.textContent = "Select All";
+    const selNoneBtn = document.createElement("button");
+    selNoneBtn.type = "button";
+    selNoneBtn.className = "gb-export-preset";
+    selNoneBtn.textContent = "Clear";
+    selAllRow.appendChild(selAllBtn);
+    selAllRow.appendChild(selNoneBtn);
+    individualSubSection.appendChild(selAllRow);
+
+    const studentChecklist = document.createElement("div");
+    studentChecklist.className = "gb-export-checklist";
+    studentChecklist.setAttribute("role", "group");
+    studentChecklist.setAttribute("aria-label", "Student list");
+
+    const studentCheckboxes = new Map(); // code -> checkbox el
+
+    function buildStudentChecklist(filter) {
+      studentChecklist.innerHTML = "";
+      for (const student of studentsData) {
+        const code = student.code || "";
+        const name = student.name || "";
+        const searchStr = (code + " " + name).toLowerCase();
+        if (filter && !searchStr.includes(filter.toLowerCase())) continue;
+        const item = document.createElement("label");
+        item.className = "gb-export-checklist-item";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = code;
+        cb.checked = state.selectedStudentCodes.includes(code);
+        studentCheckboxes.set(code, cb);
+        cb.addEventListener("change", () => {
+          if (cb.checked) {
+            if (!state.selectedStudentCodes.includes(code)) state.selectedStudentCodes.push(code);
+          } else {
+            state.selectedStudentCodes = state.selectedStudentCodes.filter((c) => c !== code);
+          }
+          updatePreview();
+        });
+        item.appendChild(cb);
+        const nameEl = document.createElement("span");
+        nameEl.textContent = name ? `${code} — ${name}` : code;
+        item.appendChild(nameEl);
+        studentChecklist.appendChild(item);
+      }
+    }
+
+    buildStudentChecklist("");
+    studentSearchInput.addEventListener("input", () => buildStudentChecklist(studentSearchInput.value));
+
+    selAllBtn.addEventListener("click", () => {
+      const visibleCodes = [];
+      studentChecklist.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = true;
+        visibleCodes.push(cb.value);
+      });
+      // Merge with any already selected
+      for (const c of visibleCodes) {
+        if (!state.selectedStudentCodes.includes(c)) state.selectedStudentCodes.push(c);
+      }
+      updatePreview();
+    });
+    selNoneBtn.addEventListener("click", () => {
+      studentChecklist.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+      state.selectedStudentCodes = [];
+      updatePreview();
+    });
+
+    individualSubSection.appendChild(studentChecklist);
+    studentBody.appendChild(individualSubSection);
+
+    // ── Section C: Data Columns ───────────────────────────────────────────
+    const colBody = makeSection("📊", "Data Columns", false);
+    const colGroup = document.createElement("div");
+    colGroup.className = "gb-export-checkbox-group";
+
+    const columnDefs = [
+      { key: "colScores", label: "Individual assignment scores" },
+      { key: "colAverage", label: "Average" },
+      { key: "colWeighted", label: "Weighted Average" },
+      { key: "colTrend", label: "Trend" },
+    ];
+
+    for (const col of columnDefs) {
+      const item = document.createElement("label");
+      item.className = "gb-export-checkbox-item";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = state[col.key];
+      cb.addEventListener("change", () => { state[col.key] = cb.checked; updatePreview(); });
+      item.appendChild(cb);
+      item.appendChild(document.createTextNode(col.label));
+      colGroup.appendChild(item);
+    }
+    colBody.appendChild(colGroup);
+
+    // ── Section D: Student Name Format ────────────────────────────────────
+    const nameBody = makeSection("🏷️", "Student Name Format", false);
+    const nameGroup = document.createElement("div");
+    nameGroup.className = "gb-export-radio-group";
+
+    const nameFormats = [
+      { value: "code", label: "Code only (e.g. S001)" },
+      { value: "name", label: "Real name only (e.g. Alex Smith)" },
+      { value: "both", label: "Both (e.g. Alex Smith (S001))" },
+    ];
+    for (const nf of nameFormats) {
+      const item = document.createElement("label");
+      item.className = "gb-export-radio-item";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "exportNameFormat";
+      radio.value = nf.value;
+      radio.checked = state.nameFormat === nf.value;
+      radio.addEventListener("change", () => { if (radio.checked) state.nameFormat = nf.value; });
+      item.appendChild(radio);
+      item.appendChild(document.createTextNode(nf.label));
+      nameGroup.appendChild(item);
+    }
+    nameBody.appendChild(nameGroup);
+
+    // ── Section E: Export Format ──────────────────────────────────────────
+    const fmtBody = makeSection("💾", "Export Format", true);
+    const fmtGrid = document.createElement("div");
+    fmtGrid.className = "gb-export-format-grid";
+
+    const formats = [
+      {
+        id: "csv",
+        icon: "📄",
+        label: "CSV",
+        desc: "Standard spreadsheet file",
+        action: () => runExport("csv"),
+      },
+      {
+        id: "vlookup",
+        icon: "🔗",
+        label: "CSV + VLOOKUP",
+        desc: "Includes lookup table for real names (paste your roster)",
+        action: () => runExport("vlookup"),
+      },
+      {
+        id: "pdf",
+        icon: "🖨️",
+        label: "PDF",
+        desc: "Save as PDF document",
+        action: () => runExport("pdf"),
+      },
+      {
+        id: "print",
+        icon: "🖨️",
+        label: "Print",
+        desc: "Open print dialog",
+        action: () => runExport("print"),
+      },
+    ];
+
+    for (const fmt of formats) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "gb-export-format-btn";
+      const iconEl = document.createElement("div");
+      iconEl.className = "gb-export-format-icon";
+      iconEl.textContent = fmt.icon;
+      const labelEl = document.createElement("div");
+      labelEl.textContent = fmt.label;
+      const descEl = document.createElement("div");
+      descEl.className = "gb-export-format-desc";
+      descEl.textContent = fmt.desc;
+      btn.appendChild(iconEl);
+      btn.appendChild(labelEl);
+      btn.appendChild(descEl);
+      btn.addEventListener("click", fmt.action);
+      fmtGrid.appendChild(btn);
+    }
+    fmtBody.appendChild(fmtGrid);
+
+    // ── Footer: Preview + Cancel ──────────────────────────────────────────
+    const footer = document.createElement("div");
+    footer.className = "gb-export-footer";
+
+    const previewEl = document.createElement("div");
+    previewEl.className = "gb-export-preview";
+    footer.appendChild(previewEl);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "gb-btn";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => overlay.remove());
+    footer.appendChild(cancelBtn);
+
+    card.appendChild(footer);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // Close on backdrop click
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+
+    // ── Preview counter ───────────────────────────────────────────────────
+    function updatePreview() {
+      const students = getExportStudents(state);
+      const drafts = getExportDrafts(state);
+      previewEl.textContent = `Preview: ${students.length} student${students.length !== 1 ? "s" : ""} × ${drafts.length} assignment${drafts.length !== 1 ? "s" : ""}`;
+    }
+    updatePreview();
+
+    // ── Run the chosen export ─────────────────────────────────────────────
+    async function runExport(format) {
+      const students = getExportStudents(state);
+      const drafts = getExportDrafts(state);
+
+      if (!students.length) {
+        await rcAlert("No Data", "No students match the current selection.");
+        return;
+      }
+
+      const opts = { ...state, students, drafts };
+
+      if (format === "csv") {
+        overlay.remove();
+        await exportToCSVWithOptions(opts);
+      } else if (format === "vlookup") {
+        overlay.remove();
+        await exportToCSVWithVLOOKUP(opts);
+      } else if (format === "pdf") {
+        overlay.remove();
+        await exportToPDFWithOptions(opts);
+      } else if (format === "print") {
+        overlay.remove();
+        printWithOptions(opts);
+      }
+    }
+
+    // Focus first interactive element
+    closeBtn.focus();
+  }
+
+  // ─── Export: Standard CSV with options ──────────────────────────────────────
+
+  async function exportToCSVWithOptions(opts) {
+    const { students, drafts, nameFormat, colScores, colAverage, colWeighted, colTrend } = opts;
+
+    // Build scoreMap for these students/drafts
+    const scoreMap = buildScoreMapForStudents(students, drafts);
+
+    const rows = [];
+    const headers = ["Student"];
+    if (colScores) {
+      for (const draft of drafts) {
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        let headerLabel = draft.title || "(untitled)";
+        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
+        if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+        headers.push(headerLabel);
+      }
+    }
+    if (colAverage) headers.push("Average");
+    if (colWeighted) headers.push("Weighted");
+    if (colTrend) headers.push("Trend");
+    rows.push(headers);
+
+    for (const student of students) {
+      const row = [formatStudentLabel(student, nameFormat)];
+      const studentScores = scoreMap.get(student.code);
+      if (colScores) {
+        for (const draft of drafts) {
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            if (typeof score === "number") {
+              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              row.push(totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`);
+            } else {
+              row.push("");
+            }
+          } else {
+            row.push("");
+          }
+        }
+      }
+      if (colAverage) {
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        row.push(avg !== null ? `${avg}%` : "");
+      }
+      if (colWeighted) {
+        const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+        row.push(w !== null ? `${w}%` : "");
+      }
+      if (colTrend) {
+        row.push(calculateTrend(student.code, scoreMap, drafts) || "");
+      }
+      rows.push(row);
+    }
+
+    // Summary row
+    const summaryRow = ["Class Average"];
+    if (colScores) {
+      for (const draft of drafts) {
+        const avg = calculateColumnAverage(draft.id, scoreMap, students);
+        summaryRow.push(avg !== null ? avg : "");
+      }
+    }
+    if (colAverage) {
+      const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+      summaryRow.push(avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "");
+    }
+    if (colWeighted) {
+      const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+      summaryRow.push(ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "");
+    }
+    if (colTrend) summaryRow.push("—");
+    rows.push(summaryRow);
+
+    const csvContent = rows.map((r) => r.map(csvCell).join(",")).join("\n");
+    const safeLabel = (opts.selectedClass || "gradebook").replace(/[^a-zA-Z0-9]/g, "-");
+    download(`gradebook-${safeLabel}-${nowISO()}.csv`, csvContent);
+  }
+
+  // ─── Export: CSV with VLOOKUP ───────────────────────────────────────────────
+
+  async function exportToCSVWithVLOOKUP(opts) {
+    const { students, drafts, colScores, colAverage, colWeighted, colTrend } = opts;
+    const LOOKUP_ROWS = 200; // pre-allocated empty rows for teacher to paste roster (future-proof for S001–S200+)
+
+    const scoreMap = buildScoreMapForStudents(students, drafts);
+
+    // ── Build column layout ──────────────────────────────────────────────
+    // Col 0: Student Code (A)
+    // Col 1: Real Name (VLOOKUP) (B)
+    // Col 2+: Grade columns
+    // Blank separator column
+    // Then: Lookup Table (Code | Name)
+
+    const gradeHeaders = [];
+    if (colScores) {
+      for (const draft of drafts) {
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        let h = draft.title || "(untitled)";
+        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
+        if (extras.length) h += ` (${extras.join(", ")})`;
+        gradeHeaders.push(h);
+      }
+    }
+    if (colAverage) gradeHeaders.push("Average");
+    if (colWeighted) gradeHeaders.push("Weighted");
+    if (colTrend) gradeHeaders.push("Trend");
+
+    // Grade data starts at col 0 (A), lookup formula at col 1 (B), grade scores at col 2 (C)
+    // Blank separator at col 2 + gradeHeaders.length
+    // Lookup table starts at col 2 + gradeHeaders.length + 1
+    const lookupCodeCol = 2 + gradeHeaders.length + 1; // 0-based
+    const lookupNameCol = lookupCodeCol + 1;
+    const lookupCodeLetter = colIndexToLetter(lookupCodeCol);
+    const lookupNameLetter = colIndexToLetter(lookupNameCol);
+
+    // VLOOKUP range: from row 2 to row LOOKUP_ROWS+1 (1-indexed, header at row 1)
+    const lookupRange = `$${lookupCodeLetter}$2:$${lookupNameLetter}$${LOOKUP_ROWS + 1}`;
+
+    // ── Build rows ───────────────────────────────────────────────────────
+    // Header row
+    const totalCols = 2 + gradeHeaders.length + 1 + 2; // code + vlookup + grades + blank + lookupCode + lookupName
+    function emptyRow(len) { return Array(len).fill(""); }
+
+    const headerRow = emptyRow(totalCols);
+    headerRow[0] = "Student Code";
+    headerRow[1] = "Real Name (VLOOKUP)";
+    let ci = 2;
+    for (const h of gradeHeaders) { headerRow[ci++] = h; }
+    // blank separator already ""
+    headerRow[lookupCodeCol] = "Student Code";
+    headerRow[lookupNameCol] = "Student Name";
+
+    const rows = [headerRow];
+
+    // Data rows (students)
+    let excelRowNum = 2; // 1-indexed; row 1 is header
+    for (const student of students) {
+      const row = emptyRow(totalCols);
+      row[0] = student.code || "";
+      // VLOOKUP formula referencing lookup table
+      row[1] = `=VLOOKUP(A${excelRowNum},${lookupRange},2,FALSE)`;
+
+      const studentScores = scoreMap.get(student.code);
+      let gi = 2;
+      if (colScores) {
+        for (const draft of drafts) {
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            if (typeof score === "number") {
+              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              row[gi] = totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`;
+            }
+          }
+          gi++;
+        }
+      }
+      if (colAverage) {
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        row[gi++] = avg !== null ? `${avg}%` : "";
+      }
+      if (colWeighted) {
+        const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+        row[gi++] = w !== null ? `${w}%` : "";
+      }
+      if (colTrend) {
+        row[gi++] = calculateTrend(student.code, scoreMap, drafts) || "";
+      }
+      // Lookup table columns stay empty (teacher will paste roster)
+      rows.push(row);
+      excelRowNum++;
+    }
+
+    // Summary row
+    const summaryRow = emptyRow(totalCols);
+    summaryRow[0] = "Class Average";
+    summaryRow[1] = "";
+    let si = 2;
+    if (colScores) {
+      for (const draft of drafts) {
+        const avg = calculateColumnAverage(draft.id, scoreMap, students);
+        summaryRow[si++] = avg !== null ? `${avg}%` : "";
+      }
+    }
+    if (colAverage) {
+      const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+      summaryRow[si++] = avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "";
+    }
+    if (colWeighted) {
+      const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+      summaryRow[si++] = ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "";
+    }
+    if (colTrend) summaryRow[si++] = "—";
+    rows.push(summaryRow);
+
+    // Blank row before lookup table header (in the lookup columns, back-fill)
+    // The lookup table header is already in row 1 (index 0), so we just need
+    // to emit LOOKUP_ROWS empty rows in the lookup columns (rows 2 .. LOOKUP_ROWS+1).
+    // We already have student data rows; we may need to pad with extra blank rows
+    // to fill all LOOKUP_ROWS slots.
+
+    // Rows we've emitted so far after the header: students.length + 1 (summary)
+    const dataRowCount = students.length + 1;
+    const extraRows = LOOKUP_ROWS - dataRowCount;
+    for (let i = 0; i < extraRows; i++) {
+      rows.push(emptyRow(totalCols));
+    }
+
+    // Instruction row at very top of lookup table (append at end — after all lookup slots)
+    // Actually add a note row just below the last lookup row so teacher sees it
+    const noteRow = emptyRow(totalCols);
+    noteRow[lookupCodeCol] = "--- PASTE YOUR STUDENT ROSTER ABOVE (Code in col " + lookupCodeLetter + ", Name in col " + lookupNameLetter + ") ---";
+    rows.push(noteRow);
+
+    const csvContent = rows.map((r) => r.map(csvCell).join(",")).join("\n");
+    const safeLabel = (opts.selectedClass || "gradebook").replace(/[^a-zA-Z0-9]/g, "-");
+    download(`gradebook-vlookup-${safeLabel}-${nowISO()}.csv`, csvContent);
+  }
+
+  // ─── Export: PDF with options ────────────────────────────────────────────────
+
+  async function exportToPDFWithOptions(opts) {
+    const { students, drafts, nameFormat, colScores, colAverage, colWeighted, colTrend } = opts;
+    const PDF_LANDSCAPE_USABLE_WIDTH = 280;
+    const PDF_MAX_PAGE_HEIGHT = 190;
+
+    if (!students.length) {
+      await rcAlert("No Data", "No data to export.");
+      return;
+    }
+
+    const scoreMap = buildScoreMapForStudents(students, drafts);
+
+    try {
+      const { jsPDF } = await import("../vendor/jspdf.mjs");
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+      const classLabel = opts.selectedClass || "All Classes";
+      doc.setFontSize(16);
+      doc.text(`Gradebook — ${classLabel}`, 15, 15);
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 15, 22);
+
+      const headers = ["Student"];
+      if (colScores) {
+        for (const draft of drafts) {
+          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+          let lbl = (draft.title || "(untitled)").substring(0, 20);
+          if (dateStr) lbl += ` ${dateStr}`;
+          if (totalPossible) lbl += ` ${totalPossible}pt`;
+          headers.push(lbl);
+        }
+      }
+      if (colAverage) headers.push("Avg");
+      if (colWeighted) headers.push("Wtd");
+      if (colTrend) headers.push("Trend");
+
+      const tableData = [];
+      for (const student of students) {
+        const row = [formatStudentLabel(student, nameFormat)];
+        const studentScores = scoreMap.get(student.code);
+        if (colScores) {
+          for (const draft of drafts) {
+            if (studentScores && studentScores.has(draft.id)) {
+              const score = studentScores.get(draft.id);
+              if (typeof score === "number") {
+                const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+                row.push(totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`);
+              } else { row.push("—"); }
+            } else { row.push("—"); }
+          }
+        }
+        if (colAverage) {
+          const avg = calculateRowAverage(student.code, scoreMap, drafts);
+          row.push(avg !== null ? `${avg}%` : "—");
+        }
+        if (colWeighted) {
+          const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+          row.push(w !== null ? `${w}%` : "—");
+        }
+        if (colTrend) row.push(calculateTrend(student.code, scoreMap, drafts) || "—");
+        tableData.push(row);
+      }
+
+      if (doc.autoTable) {
+        doc.autoTable({ head: [headers], body: tableData, startY: 28, theme: "grid", headStyles: { fillColor: [34, 197, 94] }, styles: { fontSize: 8, cellPadding: 2 } });
+      } else {
+        doc.setFontSize(8);
+        let y = 28;
+        const colWidth = PDF_LANDSCAPE_USABLE_WIDTH / headers.length;
+        let x = 15;
+        doc.setFont(undefined, "bold");
+        for (const h of headers) { doc.text(h.substring(0, 15), x, y); x += colWidth; }
+        y += 6;
+        doc.setFont(undefined, "normal");
+        for (const row of tableData) {
+          x = 15;
+          for (const cell of row) { doc.text(String(cell).substring(0, 15), x, y); x += colWidth; }
+          y += 5;
+          if (y > PDF_MAX_PAGE_HEIGHT) break;
+        }
+      }
+
+      const safeLabel = classLabel.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
+      doc.save(`gradebook-${safeLabel}-${nowISO()}.pdf`);
+    } catch (err) {
+      console.error("[gradebook] PDF export error:", err);
+      if (await rcConfirm("PDF Library Not Available", "jsPDF library not available. Would you like to use the browser Print dialog instead?", "Use Print Dialog")) {
+        window.print();
+      } else {
+        await rcAlert("PDF Not Available", "PDF export requires the jsPDF library. Please use Export CSV or try printing.");
+      }
+    }
+  }
+
+  // ─── Export: Print ───────────────────────────────────────────────────────────
+
+  function printWithOptions(opts) {
+    const { students, drafts, nameFormat, colScores, colAverage, colWeighted, colTrend } = opts;
+    if (!students.length) return;
+
+    const scoreMap = buildScoreMapForStudents(students, drafts);
+    const classLabel = opts.selectedClass || "All Classes";
+
+    // Build a minimal print window
+    const printWin = window.open("", "_blank");
+    if (!printWin) {
+      window.alert("Please allow popups for this page to use the print feature.");
+      return;
+    }
+
+    const headers = ["Student"];
+    if (colScores) {
+      for (const draft of drafts) {
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        let h = draft.title || "(untitled)";
+        if (dateStr) h += ` (${dateStr})`;
+        headers.push(h);
+      }
+    }
+    if (colAverage) headers.push("Average");
+    if (colWeighted) headers.push("Weighted");
+    if (colTrend) headers.push("Trend");
+
+    const dateRange = opts.dateMode === "quarter" && opts.selectedQuarter
+      ? opts.selectedQuarter
+      : opts.dateMode === "custom"
+        ? `${opts.dateStart || "?"} – ${opts.dateEnd || "?"}`
+        : "All Quarters";
+
+    // Build the document using DOM APIs to avoid XSS
+    // A newly opened blank window already has html/head/body structure
+    const doc = printWin.document;
+
+    const head = doc.head;
+    const titleEl = doc.createElement("title");
+    titleEl.textContent = `Gradebook — ${classLabel}`;
+    head.appendChild(titleEl);
+
+    const style = doc.createElement("style");
+    style.textContent = [
+      "body{font-family:Arial,sans-serif;font-size:12px;margin:16px;color:#000}",
+      "h1{font-size:16px;margin-bottom:2px}",
+      "p{font-size:11px;color:#555;margin:0 0 12px}",
+      "table{border-collapse:collapse;width:100%}",
+      "th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;font-size:11px}",
+      "th{background:#e8f5e9;font-weight:bold}",
+      "tr:nth-child(even){background:#f9f9f9}",
+      "@media print{body{margin:0}}",
+    ].join("");
+    head.appendChild(style);
+
+    const body = doc.body;
+    const h1 = doc.createElement("h1");
+    h1.textContent = `Gradebook — ${classLabel}`;
+    body.appendChild(h1);
+
+    const meta = doc.createElement("p");
+    meta.textContent = `Date range: ${dateRange}  |  Generated: ${new Date().toLocaleDateString()}`;
+    body.appendChild(meta);
+
+    const table = doc.createElement("table");
+    const thead = doc.createElement("thead");
+    const headerRow = doc.createElement("tr");
+    for (const h of headers) {
+      const th = doc.createElement("th");
+      th.textContent = h;
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = doc.createElement("tbody");
+    for (const student of students) {
+      const studentScores = scoreMap.get(student.code);
+      const tr = doc.createElement("tr");
+
+      const nameTd = doc.createElement("td");
+      nameTd.textContent = formatStudentLabel(student, nameFormat);
+      tr.appendChild(nameTd);
+
+      if (colScores) {
+        for (const draft of drafts) {
+          const td = doc.createElement("td");
+          let val = "—";
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            if (typeof score === "number") {
+              const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              val = tp ? `${calculateEarnedPoints(score, tp)}/${tp}` : `${score}%`;
+            }
+          }
+          td.textContent = val;
+          tr.appendChild(td);
+        }
+      }
+      if (colAverage) {
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        const td = doc.createElement("td");
+        td.textContent = avg !== null ? `${avg}%` : "—";
+        tr.appendChild(td);
+      }
+      if (colWeighted) {
+        const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+        const td = doc.createElement("td");
+        td.textContent = w !== null ? `${w}%` : "—";
+        tr.appendChild(td);
+      }
+      if (colTrend) {
+        const td = doc.createElement("td");
+        td.textContent = calculateTrend(student.code, scoreMap, drafts) || "—";
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    body.appendChild(table);
+    printWin.print();
+  }
+
+  // ─── Shared helper: build scoreMap for a given students/drafts subset ────────
+
+  function buildScoreMapForStudents(students, drafts) {
+    const studentCodes = new Set(students.map((s) => s.code));
+    const draftIds = new Set(drafts.map((d) => d.id));
+    const scoreMap = new Map();
+
+    for (const submission of submissionsData) {
+      const instance = assignmentInstancesData.find((inst) => inst.id === submission.instance_id);
+      let studentCode, draftId;
+      if (instance) {
+        studentCode = instance.student_code;
+        draftId = instance.assignment_id;
+      } else {
+        const nestedInstance = Array.isArray(submission.assignment_instances)
+          ? submission.assignment_instances[0]
+          : submission.assignment_instances;
+        if (!nestedInstance) continue;
+        studentCode = nestedInstance.students?.code || nestedInstance.student_code;
+        draftId = nestedInstance.assignment_id || submission.assignment_id;
+      }
+      if (!studentCode || !draftId) continue;
+      if (!studentCodes.has(studentCode) || !draftIds.has(draftId)) continue;
+      if (!scoreMap.has(studentCode)) scoreMap.set(studentCode, new Map());
+      if (scoreMap.get(studentCode).has(draftId)) continue; // keep first (most recent)
+      let score = submission.score_total ?? submission.score;
+      if (score != null) score = Number(score);
+      if (isNaN(score)) score = null;
+      if (score == null && typeof submission.answers === "object" && submission.answers !== null) {
+        const totalQuestions = Object.keys(submission.answers).length;
+        if (totalQuestions > 0) {
+          const correctAnswers = Object.values(submission.answers).filter(
+            (a) => a.correct === true || a.isCorrect === true
+          ).length;
+          score = Math.round((correctAnswers / totalQuestions) * 100);
+        }
+      }
+      if (score != null) {
+        scoreMap.get(studentCode).set(draftId, score);
+      }
+    }
+    return scoreMap;
+  }
+
   // Export gradebook to CSV
   async function exportToCSV() {
     const data = buildGradebookData();
@@ -3769,16 +4847,10 @@
       btnManualAssignment.addEventListener("click", openManualAssignmentModal);
     }
 
-    // Wire export button
-    const btnExport = $("btnExportCSV");
-    if (btnExport) {
-      btnExport.addEventListener("click", exportToCSV);
-    }
-    
-    // Wire PDF export button
-    const btnExportPDF = $("btnExportPDF");
-    if (btnExportPDF) {
-      btnExportPDF.addEventListener("click", exportToPDF);
+    // Wire export / print modal button
+    const btnExportModal = $("btnExportModal");
+    if (btnExportModal) {
+      btnExportModal.addEventListener("click", openExportModal);
     }
     
     // Wire quarter filter
