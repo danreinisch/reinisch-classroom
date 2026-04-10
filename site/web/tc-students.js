@@ -9184,26 +9184,26 @@
     `;
 
     const iepSectionHtml = hasIep ? `
-      <div class="st-skill-section">
+      <div class="st-skill-section" data-section="iep">
         <h3 class="st-skill-section-title st-skill-section-toggle">
           🎯 IEP Goal Skills
           <span class="st-skill-section-chevron">▼</span>
         </h3>
         <div class="st-skill-cards-container">
-          ${iepCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null, student.code)).join('')}
+          ${iepCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code, 'iep') : null, student.code)).join('')}
         </div>
       </div>
     ` : '';
 
     const deseSectionHtml = `
-      <div class="st-skill-section">
+      <div class="st-skill-section" data-section="dese">
         <h3 class="st-skill-section-title st-skill-section-toggle">
           📚 DESE Standards Performance
           <span class="st-skill-section-chevron">▼</span>
         </h3>
         <div class="st-skill-cards-container">
           ${hasDese
-            ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code) : null, student.code)).join('')
+            ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code, 'dese') : null, student.code)).join('')
             : `<p class="st-skill-no-data"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px;opacity:0.5;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>No DESE standard data yet. Standards data appears here once students complete graded assignments with DESE-tagged questions.</p>`
           }
         </div>
@@ -9224,10 +9224,18 @@
 
   /**
    * Extract the narrative HTML for a given code from a cached AI result.
+   * When `source` is provided ('iep' or 'dese'), only matches entries with that
+   * source value to prevent cross-contamination between IEP and DESE narratives.
+   * Entries that lack a source field always match (backward compat with older cache).
    */
-  function getNarrativeHtml(cached, code) {
+  function getNarrativeHtml(cached, code, source) {
     if (!cached || !Array.isArray(cached.skills)) return '';
-    const entry = cached.skills.find(s => s.code === code);
+    const entry = cached.skills.find(s => {
+      if (s.code !== code) return false;
+      // If a source filter is given and the entry has a source, they must match.
+      if (source && s.source && s.source !== source) return false;
+      return true;
+    });
     if (!entry || !entry.summary) return '';
     return `<p>${escapeHtml(entry.summary)}</p>`;
   }
@@ -9304,11 +9312,17 @@
       // Cache the result
       skillsAiCache.set(student.code, data);
 
-      // Inject narratives into the already-rendered cards
+      // Inject narratives into the already-rendered cards, scoped to the correct student
+      // and section to prevent cross-contamination between IEP/DESE narratives.
+      const skillsTab = document.getElementById(`skills-tab-${student.code}`);
       for (const skill of data.skills) {
         if (!skill.code || !skill.summary) continue;
+        // Only handle known source values; skip any unexpected values.
+        if (skill.source !== 'iep' && skill.source !== 'dese') continue;
         const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
-        const el = document.getElementById(safeId);
+        const sectionEl = skillsTab ? skillsTab.querySelector(`[data-section="${skill.source}"]`) : null;
+        const searchRoot = sectionEl || skillsTab || document;
+        const el = searchRoot.querySelector(`[id="${safeId}"]`);
         if (el && document.body.contains(el)) {
           el.innerHTML = `<p>${escapeHtml(skill.summary)}</p>`;
         }
