@@ -1178,7 +1178,7 @@
   }
 
   // Build a <td> for a student's score in a deduplicated assignment group (individual mode)
-  function buildGroupScoreTd(group, studentCode, scoreMap, studentLabel) {
+  function buildGroupScoreTd(group, studentCode, scoreMap, studentLabel, studentInstanceDraftIds) {
     const td = document.createElement("td");
     td.setAttribute("role", "gridcell");
     td.className = "gb-score-cell editable";
@@ -1204,18 +1204,20 @@
     }
 
     // Check for missing-work highlight (only if the student actually has this draft instance).
-    // Build a Set of assignment IDs this student has instances for (O(1) lookup per draftId).
-    const studentInstanceDraftIds = new Set(
+    // studentInstanceDraftIds is pre-computed per-student in the render loop for efficiency.
+    // If not provided, compute it here as a fallback (less efficient for bulk rendering).
+    const instanceDraftIds = studentInstanceDraftIds || new Set(
       assignmentInstancesData
         .filter(inst => inst.student_code === studentCode)
         .map(inst => inst.assignment_id)
     );
     for (const draftId of group.draftIds) {
       if (missingWorkPairs.has(`${studentCode}::${draftId}`)) {
-        const hasInstance = studentInstanceDraftIds.has(draftId);
+        const hasInstance = instanceDraftIds.has(draftId);
         const hasScore = studentScores && studentScores.has(draftId);
         // If assignmentInstancesData is empty (not yet loaded), fall back to highlighting
         // any flagged draftId so the indicator still works when instance data is unavailable.
+        // Note: this may show false positives until assignmentInstancesData is populated.
         if (hasInstance || hasScore || assignmentInstancesData.length === 0) {
           td.classList.add("gb-missing-highlight");
           break;
@@ -1444,6 +1446,12 @@
       }
 
       const studentScoreMap = scoreMap.get(student.code);
+      // Pre-compute assignment instances for this student once (avoids re-filtering per group cell)
+      const studentInstanceDraftIds = new Set(
+        assignmentInstancesData
+          .filter(inst => inst.student_code === student.code)
+          .map(inst => inst.assignment_id)
+      );
       const completedCount = studentScoreMap
         ? [...studentScoreMap.values()].filter(v => typeof v === "number").length
         : 0;
@@ -1527,7 +1535,7 @@
           // Expanded: individual score cells — deduplicated
           const expandedDeduped = deduplicateAssignmentsForExport(group.drafts);
           for (const dedupGroup of expandedDeduped) {
-            tr.appendChild(buildGroupScoreTd(dedupGroup, student.code, scoreMap, student.name || student.code));
+            tr.appendChild(buildGroupScoreTd(dedupGroup, student.code, scoreMap, student.name || student.code, studentInstanceDraftIds));
           }
         }
       }
@@ -1880,6 +1888,12 @@
       // Compute per-student metrics once so they can be reused for the
       // hover-card tooltip and the Average/Trend cells later in this row.
       const studentScoreMap = scoreMap.get(student.code);
+      // Pre-compute assignment instances for this student once (avoids re-filtering per group cell)
+      const studentInstanceDraftIds = new Set(
+        assignmentInstancesData
+          .filter(inst => inst.student_code === student.code)
+          .map(inst => inst.assignment_id)
+      );
       const completedCount = assignmentGroups.filter(
         g => getStudentScoreForGroup(student.code, g, scoreMap) !== null
       ).length;
@@ -1910,7 +1924,7 @@
 
       // Score cells — one per deduplicated group
       for (const group of assignmentGroups) {
-        tr.appendChild(buildGroupScoreTd(group, student.code, scoreMap, student.name || student.code));
+        tr.appendChild(buildGroupScoreTd(group, student.code, scoreMap, student.name || student.code, studentInstanceDraftIds));
       }
 
       // Average / Weighted / Trend cells
