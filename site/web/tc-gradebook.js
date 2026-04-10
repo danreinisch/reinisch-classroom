@@ -2144,7 +2144,6 @@
       btn.type = "button";
       btn.className = "gb-export-preset" + (state.dateMode === "quarter" && state.selectedQuarter === qo.value && (qo.value !== "" || state.dateMode === "all") ? " active" : "");
       if (qo.value === "" && state.dateMode === "all") btn.classList.add("active");
-      if (qo.value === "" && state.dateMode === "all") {/* already handled */}
       btn.textContent = qo.label || "All Quarters";
       btn.dataset.qval = qo.value;
       btn.addEventListener("click", () => {
@@ -2573,7 +2572,7 @@
             const score = studentScores.get(draft.id);
             if (typeof score === "number") {
               const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              row.push(totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : score);
+              row.push(totalPossible ? `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}` : `${score}%`);
             } else {
               row.push("");
             }
@@ -2584,11 +2583,11 @@
       }
       if (colAverage) {
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row.push(avg !== null ? avg : "");
+        row.push(avg !== null ? `${avg}%` : "");
       }
       if (colWeighted) {
         const w = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row.push(w !== null ? w : "");
+        row.push(w !== null ? `${w}%` : "");
       }
       if (colTrend) {
         row.push(calculateTrend(student.code, scoreMap, drafts) || "");
@@ -2606,11 +2605,11 @@
     }
     if (colAverage) {
       const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
-      summaryRow.push(avgs.length > 0 ? Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length) : "");
+      summaryRow.push(avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "");
     }
     if (colWeighted) {
       const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
-      summaryRow.push(ws.length > 0 ? Math.round(ws.reduce((a, b) => a + b, 0) / ws.length) : "");
+      summaryRow.push(ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "");
     }
     if (colTrend) summaryRow.push("—");
     rows.push(summaryRow);
@@ -2815,8 +2814,14 @@
             } else { row.push("—"); }
           }
         }
-        if (colAverage) row.push(calculateRowAverage(student.code, scoreMap, drafts) !== null ? `${calculateRowAverage(student.code, scoreMap, drafts)}%` : "—");
-        if (colWeighted) row.push(calculateWeightedAverage(student.code, scoreMap, drafts) !== null ? `${calculateWeightedAverage(student.code, scoreMap, drafts)}%` : "—");
+        if (colAverage) {
+          const avg = calculateRowAverage(student.code, scoreMap, drafts);
+          row.push(avg !== null ? `${avg}%` : "—");
+        }
+        if (colWeighted) {
+          const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+          row.push(w !== null ? `${w}%` : "—");
+        }
         if (colTrend) row.push(calculateTrend(student.code, scoreMap, drafts) || "—");
         tableData.push(row);
       }
@@ -2881,12 +2886,67 @@
     if (colWeighted) headers.push("Weighted");
     if (colTrend) headers.push("Trend");
 
-    let tableRows = "";
+    const dateRange = opts.dateMode === "quarter" && opts.selectedQuarter
+      ? opts.selectedQuarter
+      : opts.dateMode === "custom"
+        ? `${opts.dateStart || "?"} – ${opts.dateEnd || "?"}`
+        : "All Quarters";
+
+    // Build the document using DOM APIs to avoid XSS
+    const doc = printWin.document;
+    doc.write("<!doctype html><html><head></head><body></body></html>");
+    doc.close();
+
+    const head = doc.head;
+    const titleEl = doc.createElement("title");
+    titleEl.textContent = `Gradebook — ${classLabel}`;
+    head.appendChild(titleEl);
+
+    const style = doc.createElement("style");
+    style.textContent = [
+      "body{font-family:Arial,sans-serif;font-size:12px;margin:16px;color:#000}",
+      "h1{font-size:16px;margin-bottom:2px}",
+      "p{font-size:11px;color:#555;margin:0 0 12px}",
+      "table{border-collapse:collapse;width:100%}",
+      "th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;font-size:11px}",
+      "th{background:#e8f5e9;font-weight:bold}",
+      "tr:nth-child(even){background:#f9f9f9}",
+      "@media print{body{margin:0}}",
+    ].join("");
+    head.appendChild(style);
+
+    const body = doc.body;
+    const h1 = doc.createElement("h1");
+    h1.textContent = `Gradebook — ${classLabel}`;
+    body.appendChild(h1);
+
+    const meta = doc.createElement("p");
+    meta.textContent = `Date range: ${dateRange}  |  Generated: ${new Date().toLocaleDateString()}`;
+    body.appendChild(meta);
+
+    const table = doc.createElement("table");
+    const thead = doc.createElement("thead");
+    const headerRow = doc.createElement("tr");
+    for (const h of headers) {
+      const th = doc.createElement("th");
+      th.textContent = h;
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = doc.createElement("tbody");
     for (const student of students) {
       const studentScores = scoreMap.get(student.code);
-      let cells = `<td>${formatStudentLabel(student, nameFormat)}</td>`;
+      const tr = doc.createElement("tr");
+
+      const nameTd = doc.createElement("td");
+      nameTd.textContent = formatStudentLabel(student, nameFormat);
+      tr.appendChild(nameTd);
+
       if (colScores) {
         for (const draft of drafts) {
+          const td = doc.createElement("td");
           let val = "—";
           if (studentScores && studentScores.has(draft.id)) {
             const score = studentScores.get(draft.id);
@@ -2895,46 +2955,31 @@
               val = tp ? `${calculateEarnedPoints(score, tp)}/${tp}` : `${score}%`;
             }
           }
-          cells += `<td>${val}</td>`;
+          td.textContent = val;
+          tr.appendChild(td);
         }
       }
       if (colAverage) {
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        cells += `<td>${avg !== null ? avg + "%" : "—"}</td>`;
+        const td = doc.createElement("td");
+        td.textContent = avg !== null ? `${avg}%` : "—";
+        tr.appendChild(td);
       }
       if (colWeighted) {
         const w = calculateWeightedAverage(student.code, scoreMap, drafts);
-        cells += `<td>${w !== null ? w + "%" : "—"}</td>`;
+        const td = doc.createElement("td");
+        td.textContent = w !== null ? `${w}%` : "—";
+        tr.appendChild(td);
       }
       if (colTrend) {
-        cells += `<td>${calculateTrend(student.code, scoreMap, drafts) || "—"}</td>`;
+        const td = doc.createElement("td");
+        td.textContent = calculateTrend(student.code, scoreMap, drafts) || "—";
+        tr.appendChild(td);
       }
-      tableRows += `<tr>${cells}</tr>\n`;
+      tbody.appendChild(tr);
     }
-
-    const headCells = headers.map((h) => `<th>${h}</th>`).join("");
-    const dateRange = opts.dateMode === "quarter" && opts.selectedQuarter
-      ? opts.selectedQuarter
-      : opts.dateMode === "custom"
-        ? `${opts.dateStart || "?"} – ${opts.dateEnd || "?"}`
-        : "All Quarters";
-
-    printWin.document.write(`<!doctype html><html><head><title>Gradebook — ${classLabel}</title><style>
-      body { font-family: Arial, sans-serif; font-size: 12px; margin: 16px; color: #000; }
-      h1 { font-size: 16px; margin-bottom: 2px; }
-      p { font-size: 11px; color: #555; margin: 0 0 12px; }
-      table { border-collapse: collapse; width: 100%; }
-      th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; font-size: 11px; }
-      th { background: #e8f5e9; font-weight: bold; }
-      tr:nth-child(even) { background: #f9f9f9; }
-      @media print { body { margin: 0; } }
-    </style></head><body>
-      <h1>Gradebook — ${classLabel}</h1>
-      <p>Date range: ${dateRange} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</p>
-      <table><thead><tr>${headCells}</tr></thead><tbody>${tableRows}</tbody></table>
-    </body></html>`);
-    printWin.document.close();
-    printWin.focus();
+    table.appendChild(tbody);
+    body.appendChild(table);
     printWin.print();
   }
 
