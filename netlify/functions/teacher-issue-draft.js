@@ -1071,9 +1071,9 @@ exports.handler = async (event) => {
         const upsertedItems = await itemsResponse.json();
         console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} assignment_items`);
 
-        // Step 5c: Populate assignment_item_mappings for items that have goal codes
-        // Use original itemsToUpsert (which has goal_codes from the parser) matched to
-        // upserted IDs by item_ref, since the Supabase response may return stale values
+        // Step 5c: Populate assignment_item_mappings for items that have goal codes or DESE codes.
+        // Use original itemsToUpsert (which has goal_codes and dese_codes from the parser) matched
+        // to upserted IDs by item_ref, since the Supabase response may return stale values
         // when resolution=merge-duplicates is used.
         const upsertedMap = {};
         (Array.isArray(upsertedItems) ? upsertedItems : []).forEach(item => {
@@ -1087,11 +1087,16 @@ exports.handler = async (event) => {
           if (!upserted || !upserted.id) continue;
 
           const goalCodes = original.goal_codes || [];
+          const deseCodes = original.dese_codes || [];
 
-          if (goalCodes.length > 0) {
+          // Create a mapping row whenever the item has either goal codes or DESE codes.
+          // Previously this only triggered on goal_codes, which silently omitted dese_codes
+          // for DESE-only students (no IEP goals), causing the skills summary to show no data.
+          if (goalCodes.length > 0 || deseCodes.length > 0) {
             mappingsToUpsert.push({
               item_id: upserted.id,
               goal_codes: goalCodes,
+              dese_codes: deseCodes,
               weight: 1.0
             });
           }
