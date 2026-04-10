@@ -1947,6 +1947,76 @@
     }
   }
 
+  // ── Export helpers ──────────────────────────────────────────────────────
+
+  // Group drafts by title so that the same assignment assigned to multiple
+  // class sections produces ONE column in the export rather than N duplicates.
+  // Returns an ordered array of groups (insertion order = first occurrence).
+  // Each group: { title, drafts: [...], totalPossible: number|null }
+  function deduplicateAssignmentsForExport(drafts) {
+    const groups = new Map(); // key = normalised title
+    const order = [];        // preserve insertion order
+    for (const draft of drafts) {
+      const key = (draft.title || '(untitled)').trim().toLowerCase();
+      if (!groups.has(key)) {
+        const group = {
+          title: (draft.title || '(untitled)').trim(),
+          drafts: [],
+          totalPossible: null
+        };
+        groups.set(key, group);
+        order.push(group);
+      }
+      const group = groups.get(key);
+      group.drafts.push(draft);
+      if (group.totalPossible === null && draft.meta && draft.meta.total_possible) {
+        group.totalPossible = draft.meta.total_possible;
+      }
+    }
+    return order;
+  }
+
+  // Look up a student's score across every draft in a deduplicated group.
+  // Returns { score, totalPossible } or null if none found.
+  function getStudentScoreForGroup(studentCode, group, scoreMap) {
+    const studentScores = scoreMap.get(studentCode);
+    if (!studentScores) return null;
+    for (const draft of group.drafts) {
+      if (studentScores.has(draft.id)) {
+        const score = studentScores.get(draft.id);
+        if (typeof score === 'number') {
+          return { score, totalPossible: group.totalPossible };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Format a score result for CSV/PDF: "17/20 (85%)" or "85%" if no total.
+  function formatScoreCell(result) {
+    if (!result) return '—';
+    const { score, totalPossible } = result;
+    const pct = Math.round(score);
+    if (totalPossible) {
+      const earned = calculateEarnedPoints(score, totalPossible);
+      return `${earned}/${totalPossible} (${pct}%)`;
+    }
+    return `${pct}%`;
+  }
+
+  // Convert a 1-based column number to an Excel column letter (A, B, ..., Z, AA, …)
+  function colIndexToLetter(n) {
+    let result = '';
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      result = String.fromCharCode(65 + rem) + result;
+      n = Math.floor((n - 1) / 26);
+    }
+    return result;
+  }
+
+  // ── End export helpers ──────────────────────────────────────────────────
+
   // Export gradebook to CSV
   async function exportToCSV() {
     const data = buildGradebookData();
@@ -2063,14 +2133,14 @@
       rows.push(summaryRow);
     } else {
       // ── Individual (flat) CSV export ──────────────────────────────────────
-      // Build CSV header
-      const headers = ["Student"];
-      for (const draft of drafts) {
-        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        let headerLabel = draft.title || "(untitled)";
-        const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
-        if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+      // Deduplicate: collapse multiple drafts with the same title into one column
+      const dedupGroups = deduplicateAssignmentsForExport(drafts);
+
+      // Build CSV header: one column per unique assignment title
+      const headers = ["Student Code"];
+      for (const group of dedupGroups) {
+        let headerLabel = group.title;
+        if (group.totalPossible) headerLabel += ` (${group.totalPossible} pts)`;
         headers.push(headerLabel);
       }
       headers.push("Average", "Weighted", "Trend");
@@ -2080,29 +2150,15 @@
       for (const student of students) {
         const row = [student.name || student.code];
 
-        const studentScores = scoreMap.get(student.code);
-        for (const draft of drafts) {
-          if (studentScores && studentScores.has(draft.id)) {
-            const score = studentScores.get(draft.id);
-            if (typeof score === "number") {
-              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              if (totalPossible) {
-                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
-              } else {
-                row.push(score);
-              }
-            } else {
-              row.push("");
-            }
-          } else {
-            row.push("");
-          }
+        for (const group of dedupGroups) {
+          const result = getStudentScoreForGroup(student.code, group, scoreMap);
+          row.push(result ? formatScoreCell(result) : "—");
         }
 
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row.push(avg !== null ? avg : "");
+        row.push(avg !== null ? `${avg}%` : "");
         const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row.push(weighted !== null ? weighted : "");
+        row.push(weighted !== null ? `${weighted}%` : "");
         const trend = calculateTrend(student.code, scoreMap, drafts);
         row.push(trend || "");
 
@@ -2111,9 +2167,15 @@
 
       // Add summary row
       const summaryRow = ["Class Average"];
-      for (const draft of drafts) {
-        const avg = calculateColumnAverage(draft.id, scoreMap, students);
-        summaryRow.push(avg !== null ? avg : "");
+      for (const group of dedupGroups) {
+        const groupScores = [];
+        for (const student of students) {
+          const result = getStudentScoreForGroup(student.code, group, scoreMap);
+          if (result) groupScores.push(result.score);
+        }
+        summaryRow.push(groupScores.length > 0
+          ? `${Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length)}%`
+          : "");
       }
       const allScores = [];
       const allWeightedScores = [];
@@ -2125,11 +2187,11 @@
       }
       const overallAvg =
         allScores.length > 0
-          ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+          ? `${Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)}%`
           : "";
       const overallWeighted =
         allWeightedScores.length > 0
-          ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+          ? `${Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)}%`
           : "";
       summaryRow.push(overallAvg, overallWeighted, "—");
       rows.push(summaryRow);
@@ -2156,7 +2218,113 @@
     download(`gradebook-${safeClassName}-${nowISO()}.csv`, csvContent);
   }
 
-  // Export gradebook to PDF
+  // Export gradebook to CSV with a built-in VLOOKUP lookup table for name resolution.
+  // The exported file has:
+  //   Col A : Student Code
+  //   Col B : Real Name  (VLOOKUP formula referencing the lookup table)
+  //   Cols C–…: deduplicated assignment scores as "earned/possible (pct%)"
+  //   … : Average, Weighted, Trend
+  //   (blank separator column)
+  //   Lookup Code col : Student Code header + 200 empty rows
+  //   Lookup Name col : Student Name header + 200 empty rows
+  // Paste your roster into the lookup table columns to resolve names instantly.
+  async function exportToCSVVLOOKUP() {
+    const data = buildGradebookData();
+    if (!data) {
+      await rcAlert('No Data', 'No data to export.');
+      return;
+    }
+
+    const { students, drafts, scoreMap } = data;
+
+    // Deduplicate assignments by title
+    const dedupGroups = deduplicateAssignmentsForExport(drafts);
+
+    // Column layout (1-based):
+    //  1 = Student Code
+    //  2 = Real Name (VLOOKUP)
+    //  3 … 2+N = Assignment scores  (N = dedupGroups.length)
+    //  3+N = Average
+    //  3+N+1 = Weighted
+    //  3+N+2 = Trend
+    //  3+N+3 = (blank separator)
+    //  3+N+4 = Lookup Code
+    //  3+N+5 = Lookup Name
+    const N = dedupGroups.length;
+    const LOOKUP_CODE_COL = 3 + N + 3 + 1; // 1-based
+    const LOOKUP_NAME_COL = LOOKUP_CODE_COL + 1;
+    const LOOKUP_ROWS = Math.max(200, students.length + 50); // cover all students + future growth
+
+    const lookupCodeLetter = colIndexToLetter(LOOKUP_CODE_COL);
+    const lookupNameLetter = colIndexToLetter(LOOKUP_NAME_COL);
+    // Lookup range covers header row + LOOKUP_ROWS data rows (rows 2 to LOOKUP_ROWS+1)
+    const lookupRange = `$${lookupCodeLetter}$2:$${lookupNameLetter}$${LOOKUP_ROWS + 1}`;
+
+    const rows = [];
+
+    // Header row
+    const headers = ['Student Code', 'Real Name (VLOOKUP)'];
+    for (const group of dedupGroups) {
+      let headerLabel = group.title;
+      if (group.totalPossible) headerLabel += ` (${group.totalPossible} pts)`;
+      headers.push(headerLabel);
+    }
+    headers.push('Average', 'Weighted', 'Trend');
+    headers.push(''); // blank separator
+    headers.push('Student Code', 'Student Name');
+    rows.push(headers);
+
+    // Data rows
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
+      const excelRow = i + 2; // row 1 is header, data starts at row 2
+      const codeCell = `A${excelRow}`;
+      const vlookupFormula = `=VLOOKUP(${codeCell},${lookupRange},2,FALSE)`;
+
+      const row = [student.code, vlookupFormula];
+
+      for (const group of dedupGroups) {
+        const result = getStudentScoreForGroup(student.code, group, scoreMap);
+        row.push(result ? formatScoreCell(result) : '—');
+      }
+
+      const avg = calculateRowAverage(student.code, scoreMap, drafts);
+      row.push(avg !== null ? `${avg}%` : '');
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      row.push(weighted !== null ? `${weighted}%` : '');
+      const trend = calculateTrend(student.code, scoreMap, drafts);
+      row.push(trend || '');
+
+      row.push(''); // blank separator; lookup table columns left empty for rows after header
+      rows.push(row);
+    }
+
+    // Fill remaining lookup table rows (blank) up to LOOKUP_ROWS total data rows
+    const dataRowsFilled = students.length;
+    for (let r = dataRowsFilled; r < LOOKUP_ROWS; r++) {
+      // Only need the blank separator at minimum so CSV columns align
+      rows.push(Array(headers.length).fill(''));
+    }
+
+    // Convert to CSV
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((cell) => {
+            const str = String(cell);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const safeClassName = currentClassFilter.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
+    download(`gradebook-vlookup-${safeClassName}-${nowISO()}.csv`, csvContent);
+  }
+
   async function exportToPDF() {
     // PDF layout constants
     const PDF_LANDSCAPE_USABLE_WIDTH = 280; // mm for A4 landscape
@@ -2299,53 +2467,44 @@
         tableData.push(summaryRow);
       } else {
         // ── Individual (flat) PDF export ────────────────────────────────────
-        for (const draft of drafts) {
-          const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-          let label = (draft.title || "(untitled)").substring(0, 20);
-          if (dateStr) label += ` ${dateStr}`;
-          if (totalPossible) label += ` ${totalPossible}pt`;
+        // Deduplicate: collapse same-titled drafts into one column
+        const dedupGroups = deduplicateAssignmentsForExport(drafts);
+        for (const group of dedupGroups) {
+          let label = group.title.substring(0, 20);
+          if (group.totalPossible) label += ` (${group.totalPossible}pt)`;
           headers.push(label);
         }
         headers.push("Avg", "Wtd", "Trend");
 
         for (const student of students) {
           const row = [student.name || student.code];
-          const studentScores = scoreMap.get(student.code);
-          
-          for (const draft of drafts) {
-            if (studentScores && studentScores.has(draft.id)) {
-              const score = studentScores.get(draft.id);
-              if (typeof score === "number") {
-                const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-                if (totalPossible) {
-                  row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
-                } else {
-                  row.push(`${score}%`);
-                }
-              } else {
-                row.push("—");
-              }
-            } else {
-              row.push("—");
-            }
+
+          for (const group of dedupGroups) {
+            const result = getStudentScoreForGroup(student.code, group, scoreMap);
+            row.push(result ? formatScoreCell(result) : "—");
           }
-          
+
           const avg = calculateRowAverage(student.code, scoreMap, drafts);
           row.push(avg !== null ? `${avg}%` : "—");
           const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
           row.push(weighted !== null ? `${weighted}%` : "—");
           const trend = calculateTrend(student.code, scoreMap, drafts);
           row.push(trend || "—");
-          
+
           tableData.push(row);
         }
-        
+
         // Add summary row
         const summaryRow = ["Class Avg"];
-        for (const draft of drafts) {
-          const avg = calculateColumnAverage(draft.id, scoreMap, students);
-          summaryRow.push(avg !== null ? `${avg}%` : "—");
+        for (const group of dedupGroups) {
+          const groupScores = [];
+          for (const student of students) {
+            const result = getStudentScoreForGroup(student.code, group, scoreMap);
+            if (result) groupScores.push(result.score);
+          }
+          summaryRow.push(groupScores.length > 0
+            ? `${Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length)}%`
+            : "—");
         }
         const allScores = [];
         const allWeightedScores = [];
@@ -3773,6 +3932,12 @@
     const btnExport = $("btnExportCSV");
     if (btnExport) {
       btnExport.addEventListener("click", exportToCSV);
+    }
+
+    // Wire CSV+VLOOKUP export button
+    const btnExportVLOOKUP = $("btnExportVLOOKUP");
+    if (btnExportVLOOKUP) {
+      btnExportVLOOKUP.addEventListener("click", exportToCSVVLOOKUP);
     }
     
     // Wire PDF export button
