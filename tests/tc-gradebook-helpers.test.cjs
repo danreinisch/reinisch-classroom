@@ -443,19 +443,20 @@ function normalizeAssignmentTitle(rawTitle) {
 
 function deduplicateAssignmentsForExport(drafts) {
   const groups = [];
-  const titleMap = new Map();
+  const keyMap = new Map(); // compound key (title + "|" + dateStr) → group index
   for (const draft of drafts) {
     const title = normalizeAssignmentTitle(draft.title);
-    if (titleMap.has(title)) {
-      const g = groups[titleMap.get(title)];
+    const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+    const key = title + '|' + dateStr;
+    if (keyMap.has(key)) {
+      const g = groups[keyMap.get(key)];
       g.draftIds.push(draft.id);
       if (g.totalPossible == null && draft.meta && draft.meta.total_possible) {
         g.totalPossible = draft.meta.total_possible;
       }
     } else {
-      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
       const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-      titleMap.set(title, groups.length);
+      keyMap.set(key, groups.length);
       groups.push({ title, draftIds: [draft.id], totalPossible, dateStr });
     }
   }
@@ -539,6 +540,8 @@ console.log('\n--- normalizeAssignmentTitle ---');
   assert.strictEqual(normalizeAssignmentTitle('  Trimmed  '), 'Trimmed', 'whitespace trimmed');
   assert.strictEqual(normalizeAssignmentTitle(''), '(untitled)', 'empty string → (untitled)');
   assert.strictEqual(normalizeAssignmentTitle(null), '(untitled)', 'null → (untitled)');
+  // Hyphenated word at end (not S###) should NOT be stripped
+  assert.strictEqual(normalizeAssignmentTitle('Reading — Context-Clues'), 'Reading — Context-Clues', 'hyphenated word (not S###) → unchanged');
   console.log('✓ leaves titles without suffixes unchanged and handles edge cases');
 }
 
@@ -559,6 +562,24 @@ console.log('\n--- normalizeAssignmentTitle ---');
   assert.strictEqual(groups[1].title, 'Week 10: Vocabulary', 'normalized title strips — S045 suffix');
   assert.deepStrictEqual(groups[1].draftIds, ['x1', 'x2'], 'both Week 10 draft IDs in one group');
   console.log('✓ collapses per-student suffixed drafts into one group per assignment');
+}
+
+// Same normalized title but different dates → should NOT merge (compound key)
+{
+  const drafts = [
+    { id: 'q1a', title: 'Vocabulary Quiz — S045', meta: { total_possible: 10 }, due_at: '2024-03-01' },
+    { id: 'q1b', title: 'Vocabulary Quiz — S001', meta: { total_possible: 10 }, due_at: '2024-03-01' },
+    { id: 'q3a', title: 'Vocabulary Quiz — S045', meta: { total_possible: 10 }, due_at: '2024-09-15' },
+    { id: 'q3b', title: 'Vocabulary Quiz — S001', meta: { total_possible: 10 }, due_at: '2024-09-15' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 2, 'same title but different dates → two separate groups');
+  assert.strictEqual(groups[0].title, 'Vocabulary Quiz');
+  assert.deepStrictEqual(groups[0].draftIds, ['q1a', 'q1b']);
+  assert.strictEqual(groups[1].title, 'Vocabulary Quiz');
+  assert.deepStrictEqual(groups[1].draftIds, ['q3a', 'q3b']);
+  assert.notStrictEqual(groups[0].dateStr, groups[1].dateStr, 'dateStr must differ between groups');
+  console.log('✓ same title on different dates stays as two separate groups (no over-merge)');
 }
 
 console.log('\n--- getStudentScoreForGroup ---');
