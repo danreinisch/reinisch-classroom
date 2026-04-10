@@ -25,23 +25,70 @@ const $ = (id) => document.getElementById(id);
 const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs';
 const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
 
+// Number of PDF pages to extract per parallel batch
+const BATCH_SIZE = 10;
+
+/**
+ * Detect whether a .docx file is a real binary Word document (ZIP format)
+ * vs a platform HTML-blob export that happens to use the .docx extension.
+ *
+ * @param {File} file
+ * @returns {Promise<boolean>}
+ */
+async function isBinaryDocx(file) {
+  const slice = file.slice(0, 512);
+  const buffer = await slice.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const isPK = bytes[0] === 0x50 && bytes[1] === 0x4B;
+  const hasNull = !isPK && bytes.some(b => b === 0x00);
+  return isPK || hasNull;
+}
+
 /**
  * Extract all text from a PDF ArrayBuffer using PDF.js.
- * Iterates through every page and concatenates text items.
+ * Pages are processed in parallel batches for performance on large documents.
+ * If the PDF.js CDN is unreachable, shows a helpful notify() message.
  *
  * @param {ArrayBuffer} arrayBuffer - Raw PDF bytes
+ * @param {Function} [onProgress] - Called with (currentPage, totalPages) after each batch
  * @returns {Promise<string>} Full extracted text (pages separated by newlines)
  */
-async function extractPdfText(arrayBuffer) {
-  const pdfjs = await import(PDFJS_URL);
+async function extractPdfText(arrayBuffer, onProgress) {
+  let pdfjs;
+  try {
+    pdfjs = await import(PDFJS_URL);
+  } catch (_err) {
+    await notify(
+      'PDF Library Unavailable',
+      'Could not load the PDF processing library. Check your internet connection and try again. ' +
+      'If the problem persists, you can open the PDF manually, copy the text, and paste it into the text translator above.'
+    );
+    const e = new Error('PDF library could not be loaded from CDN');
+    e.isPdfLibUnavailable = true;
+    throw e;
+  }
   pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-  const pageTexts = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items.map(item => item.str).join(' ');
-    pageTexts.push(text);
+  const totalPages = pdf.numPages;
+  const pageTexts = new Array(totalPages).fill('');
+
+  for (let start = 1; start <= totalPages; start += BATCH_SIZE) {
+    const end = Math.min(start + BATCH_SIZE - 1, totalPages);
+    const batch = [];
+    for (let i = start; i <= end; i++) {
+      batch.push(
+        (async (pageNum) => {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          return { index: pageNum, text: content.items.map(item => item.str).join(' ') };
+        })(i)
+      );
+    }
+    const results = await Promise.all(batch);
+    for (const { index, text } of results) {
+      pageTexts[index - 1] = text;
+    }
+    if (onProgress) onProgress(end, totalPages);
   }
   return pageTexts.join('\n');
 }
@@ -61,6 +108,66 @@ async function notify(title, message) {
     // eslint-disable-next-line no-restricted-globals
     window.alert(`${title}\n\n${message}`);
   }
+}
+
+/**
+ * Shared handler for PDF file translation.
+ * Extracts text from a PDF, translates it, and triggers a download.
+ * Shows a live progress indicator in the drop zone during extraction.
+ *
+ * @param {File} file
+ * @param {Function} downloadFn - translateAndDownload or reverseTranslateAndDownload
+ * @param {string} suffix - '_district' or '_coded'
+ * @param {Element|null} dropZoneEl - Drop zone element for progress display
+ * @param {string} stepLabel - Label used in error messages (e.g. 'Step 2A')
+ */
+async function handlePdfFile(file, downloadFn, suffix, dropZoneEl, stepLabel) {
+  const originalHtml = dropZoneEl ? dropZoneEl.innerHTML : '';
+
+  const onProgress = (currentPage, totalPages) => {
+    if (dropZoneEl) {
+      dropZoneEl.textContent = `📄 Extracting text: page ${currentPage} of ${totalPages}...`;
+    }
+  };
+
+  const buffer = await file.arrayBuffer();
+  let pdfText;
+  try {
+    pdfText = await extractPdfText(buffer, onProgress);
+  } catch (err) {
+    if (dropZoneEl) dropZoneEl.innerHTML = originalHtml;
+    // CDN errors: already notified inside extractPdfText; skip double-notification
+    if (!err.isPdfLibUnavailable) {
+      await notify(
+        'PDF Extraction Failed',
+        'Unable to extract text from this PDF. It may be a scanned or image-only PDF with no text layer. ' +
+        `Try using an OCR tool first, or copy the text manually and paste it into the translator above (${stepLabel}).`
+      );
+    }
+    return;
+  }
+
+  if (dropZoneEl) dropZoneEl.innerHTML = originalHtml;
+
+  if (!pdfText || !pdfText.trim()) {
+    await notify(
+      'No Text Found in PDF',
+      'No text could be extracted from this PDF. It appears to be a scanned or image-only PDF with no text layer. ' +
+      `Try using an OCR tool first, or copy the text manually and paste it into the translator above (${stepLabel}).`
+    );
+    return;
+  }
+
+  const isReverse = suffix === '_coded';
+  const successTitle = isReverse ? 'PDF Reverse-Translated' : 'PDF Translated';
+  const actionWord = isReverse ? 'reverse-translated' : 'translated';
+  const baseName = file.name.replace(/\.pdf$/i, '');
+  downloadFn(pdfText, `${baseName}${suffix}.txt`, 'text/plain;charset=utf-8;');
+  await notify(
+    successTitle,
+    `The text extracted from the PDF has been ${actionWord} and downloaded as a plain text file (.txt). ` +
+    'Note: the output is plain text — the original PDF formatting is not preserved.'
+  );
 }
 
 // ── Roster status bar ──────────────────────────────────────────────────────
@@ -181,49 +288,12 @@ async function handleTranslateFile(file) {
   }
 
   if (isPdf) {
-    const buffer = await file.arrayBuffer();
-    let pdfText;
-    try {
-      pdfText = await extractPdfText(buffer);
-    } catch (_err) {
-      await notify(
-        'PDF Extraction Failed',
-        'Unable to extract text from this PDF. It may be a scanned or image-only PDF with no text layer. ' +
-        'Try using an OCR tool first, or copy the text manually and paste it into the text translator above (Step 2A).'
-      );
-      return;
-    }
-    if (!pdfText || !pdfText.trim()) {
-      await notify(
-        'No Text Found in PDF',
-        'No text could be extracted from this PDF. It appears to be a scanned or image-only PDF with no text layer. ' +
-        'Try using an OCR tool first, or copy the text manually and paste it into the text translator above (Step 2A).'
-      );
-      return;
-    }
-    const baseName = file.name.replace(/\.pdf$/i, '');
-    translateAndDownload(pdfText, `${baseName}_district.txt`, 'text/plain;charset=utf-8;');
-    await notify(
-      'PDF Translated',
-      'The text extracted from the PDF has been translated and downloaded as a plain text file (.txt). ' +
-      'Note: the output is plain text — the original PDF formatting is not preserved.'
-    );
+    await handlePdfFile(file, translateAndDownload, '_district', $('deFileDropZone'), 'Step 2A');
     return;
   }
 
   if (isDocx) {
-    // Read first bytes to detect real binary .docx (ZIP magic bytes "PK")
-    // vs platform HTML-blob exports that happen to have .docx extension.
-    const slice = file.slice(0, 512);
-    const buffer = await slice.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-
-    // ZIP magic: 0x50 0x4B (ASCII "PK")
-    const isBinaryDocx = bytes[0] === 0x50 && bytes[1] === 0x4B;
-    // Also detect null bytes which indicate binary content
-    const hasNullBytes = !isBinaryDocx && bytes.some(b => b === 0x00);
-
-    if (isBinaryDocx || hasNullBytes) {
+    if (await isBinaryDocx(file)) {
       await notify(
         'Real Word Document Detected',
         'This appears to be an actual Word (.docx) file. To translate it:\n\n' +
@@ -327,44 +397,12 @@ async function handleReverseTranslateFile(file) {
   }
 
   if (isPdf) {
-    const buffer = await file.arrayBuffer();
-    let pdfText;
-    try {
-      pdfText = await extractPdfText(buffer);
-    } catch (_err) {
-      await notify(
-        'PDF Extraction Failed',
-        'Unable to extract text from this PDF. It may be a scanned or image-only PDF with no text layer. ' +
-        'Try using an OCR tool first, or copy the text manually and paste it into the reverse translator above.'
-      );
-      return;
-    }
-    if (!pdfText || !pdfText.trim()) {
-      await notify(
-        'No Text Found in PDF',
-        'No text could be extracted from this PDF. It appears to be a scanned or image-only PDF with no text layer. ' +
-        'Try using an OCR tool first, or copy the text manually and paste it into the reverse translator above.'
-      );
-      return;
-    }
-    const baseName = file.name.replace(/\.pdf$/i, '');
-    reverseTranslateAndDownload(pdfText, `${baseName}_coded.txt`, 'text/plain;charset=utf-8;');
-    await notify(
-      'PDF Reverse-Translated',
-      'The text extracted from the PDF has been reverse-translated and downloaded as a plain text file (.txt). ' +
-      'Note: the output is plain text — the original PDF formatting is not preserved.'
-    );
+    await handlePdfFile(file, reverseTranslateAndDownload, '_coded', $('deReverseFileDropZone'), 'Step 3');
     return;
   }
 
   if (isDocx) {
-    const slice = file.slice(0, 512);
-    const buffer = await slice.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    const isBinaryDocx = bytes[0] === 0x50 && bytes[1] === 0x4B;
-    const hasNullBytes = !isBinaryDocx && bytes.some(b => b === 0x00);
-
-    if (isBinaryDocx || hasNullBytes) {
+    if (await isBinaryDocx(file)) {
       await notify(
         'Real Word Document Detected',
         'This appears to be an actual Word (.docx) file. Open it in Google Docs or Word, copy the text, paste it in the textarea above, reverse-translate, then copy the output back.'
