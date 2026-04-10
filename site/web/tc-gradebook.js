@@ -367,8 +367,9 @@
 
   // Apply column sort to a students array based on columnSortKey / columnSortDir.
   // groups is optional (used when sorting by group series key).
+  // assignmentGroups is optional (used when sorting by deduplicated assignment group key "grp:title").
   // Null/missing values always sort to the bottom regardless of direction.
-  function applyColumnSort(students, scoreMap, drafts, groups) {
+  function applyColumnSort(students, scoreMap, drafts, groups, assignmentGroups) {
     if (!columnSortKey || !columnSortDir) return students;
     const sorted = [...students];
     const dir = columnSortDir === "asc" ? 1 : -1;
@@ -395,6 +396,17 @@
         const trendOrder = { up: 0, flat: 1, down: 2 };
         va = trendOrder[calculateTrend(a.code, scoreMap, drafts)] ?? 3;
         vb = trendOrder[calculateTrend(b.code, scoreMap, drafts)] ?? 3;
+      } else if (columnSortKey.startsWith("grp:") && assignmentGroups) {
+        // Sort by deduplicated assignment group score
+        const groupTitle = columnSortKey.slice(4);
+        const ag = assignmentGroups.find(g => g.title === groupTitle);
+        if (ag) {
+          va = getStudentScoreForGroup(a.code, ag, scoreMap);
+          vb = getStudentScoreForGroup(b.code, ag, scoreMap);
+        } else {
+          va = null;
+          vb = null;
+        }
       } else {
         // Try to match a collapsed group series
         const group = groups && groups.find(g => g.series === columnSortKey);
@@ -1132,6 +1144,125 @@
     return td;
   }
 
+  // Build a <th> for a deduplicated assignment group (used in individual mode)
+  function buildAssignmentGroupTh(group) {
+    const th = document.createElement("th");
+    th.setAttribute("role", "columnheader");
+    th.setAttribute("aria-sort", getAriaSortAttr("grp:" + group.title));
+    th.style.minWidth = isCompact ? "56px" : "68px";
+
+    const titleEl = document.createElement("div");
+    titleEl.className = "gb-col-title";
+    const displayTitle = group.title.length > 10 ? group.title.substring(0, 10) + "…" : group.title;
+    titleEl.textContent = displayTitle + columnSortIndicator("grp:" + group.title);
+    titleEl.title = group.title;
+    th.appendChild(titleEl);
+
+    if (group.dateStr) {
+      const dateEl = document.createElement("div");
+      dateEl.className = "gb-col-date";
+      dateEl.textContent = group.dateStr;
+      th.appendChild(dateEl);
+    }
+
+    if (group.totalPossible) {
+      const ptsEl = document.createElement("div");
+      ptsEl.className = "gb-col-pts";
+      ptsEl.textContent = `${group.totalPossible} pts`;
+      th.appendChild(ptsEl);
+    }
+
+    attachColumnSortClick(th, "grp:" + group.title, group.title);
+    return th;
+  }
+
+  // Build a <td> for a student's score in a deduplicated assignment group (individual mode)
+  function buildGroupScoreTd(group, studentCode, scoreMap, studentLabel) {
+    const td = document.createElement("td");
+    td.setAttribute("role", "gridcell");
+    td.className = "gb-score-cell editable";
+    td.tabIndex = 0;
+
+    const resolvedStudentLabel = studentLabel || studentCode;
+
+    // Find which draftId in the group the student has a score for
+    let currentScore = null;
+    let scoreDraftId = null;
+    const studentScores = scoreMap.get(studentCode);
+    if (studentScores) {
+      for (const draftId of group.draftIds) {
+        if (studentScores.has(draftId)) {
+          const score = studentScores.get(draftId);
+          if (typeof score === "number") {
+            currentScore = score;
+            scoreDraftId = draftId;
+            break;
+          }
+        }
+      }
+    }
+
+    // Check for missing-work highlight (check any draft in the group)
+    for (const draftId of group.draftIds) {
+      if (missingWorkPairs.has(`${studentCode}::${draftId}`)) {
+        td.classList.add("gb-missing-highlight");
+        break;
+      }
+    }
+
+    if (currentScore !== null) {
+      const pctLine = document.createElement("div");
+      pctLine.className = "gb-score-pct";
+      pctLine.textContent = `${currentScore}%`;
+      td.appendChild(pctLine);
+
+      if (group.totalPossible) {
+        const ptsLine = document.createElement("div");
+        ptsLine.className = "gb-score-pts-line";
+        ptsLine.textContent = `${calculateEarnedPoints(currentScore, group.totalPossible)}/${group.totalPossible}`;
+        td.appendChild(ptsLine);
+      }
+
+      const colorClass = scoreColorClass(currentScore);
+      if (colorClass) td.classList.add(colorClass);
+      td.setAttribute("aria-label", `Score for ${resolvedStudentLabel} on ${group.title}: ${currentScore}%. Press Enter to edit`);
+    } else {
+      td.textContent = "—";
+      td.setAttribute("aria-label", `No score for ${resolvedStudentLabel} on ${group.title}. Press Enter to edit`);
+    }
+
+    td.addEventListener("click", () => {
+      // Find which specific draftId to edit: prefer the one with an existing score,
+      // fall back to the one where the student has an assignment instance, then first in group.
+      let editDraftId = scoreDraftId;
+      if (!editDraftId) {
+        const instance = assignmentInstancesData.find(
+          inst => group.draftIds.includes(inst.assignment_id) && inst.student_code === studentCode
+        );
+        editDraftId = instance ? instance.assignment_id : group.draftIds[0];
+      }
+      // Find totalPossible from the specific draft being edited (fallback to group.totalPossible)
+      const editDraft = draftsData.find(d => d.id === editDraftId);
+      const totalPossible = (editDraft && editDraft.meta && editDraft.meta.total_possible)
+        ? editDraft.meta.total_possible
+        : group.totalPossible;
+      makeScoreEditable(td, studentCode, editDraftId, currentScore, totalPossible);
+    });
+
+    return td;
+  }
+
+  // Calculate column average for a deduplicated assignment group
+  function calculateGroupColumnAverage(group, scoreMap, students) {
+    const scores = [];
+    for (const student of students) {
+      const score = getStudentScoreForGroup(student.code, group, scoreMap);
+      if (typeof score === "number") scores.push(score);
+    }
+    if (scores.length === 0) return null;
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  }
+
   // Render gradebook in grouped/collapsed column mode (Option A)
   function renderGroupedGradebook(tableHead, tableBody, students, drafts, scoreMap) {
     const { groups, ungrouped } = groupMode === "week"
@@ -1661,6 +1792,10 @@
       restoreFocusFromPos();
       return;
     }
+
+    // Deduplicate assignments: collapse per-student instances (e.g. "— S045") into one column
+    const assignmentGroups = deduplicateAssignmentsForExport(drafts);
+
     const headerRow = document.createElement("tr");
     headerRow.setAttribute("role", "row");
 
@@ -1673,9 +1808,9 @@
     attachColumnSortClick(thStudent, "student", "Student");
     headerRow.appendChild(thStudent);
 
-    // Assignment columns
-    for (const draft of drafts) {
-      headerRow.appendChild(buildAssignmentTh(draft));
+    // Assignment columns — one per deduplicated group
+    for (const group of assignmentGroups) {
+      headerRow.appendChild(buildAssignmentGroupTh(group));
     }
 
     // Average / Weighted / Trend columns (shown only when showMoreColumns is true)
@@ -1714,7 +1849,7 @@
     // Build data rows
     tableBody.innerHTML = "";
 
-    const sortedStudents = applyColumnSort(students, scoreMap, drafts, []);
+    const sortedStudents = applyColumnSort(students, scoreMap, drafts, [], assignmentGroups);
     let isFirstRow = true; // Track first student row for auto-highlight
     for (const student of sortedStudents) {
       const tr = document.createElement("tr");
@@ -1730,7 +1865,7 @@
       // hover-card tooltip and the Average/Trend cells later in this row.
       const studentScoreMap = scoreMap.get(student.code);
       const completedCount = studentScoreMap ? [...studentScoreMap.values()].filter(v => typeof v === "number").length : 0;
-      const totalAssigned = drafts.length;
+      const totalAssigned = assignmentGroups.length;
       const rowAverage = calculateRowAverage(student.code, scoreMap, drafts);
       const trend = calculateTrend(student.code, scoreMap, drafts);
 
@@ -1755,9 +1890,9 @@
 
       tr.appendChild(tdStudent);
 
-      // Score cells
-      for (const draft of drafts) {
-        tr.appendChild(buildScoreTd(draft, student.code, scoreMap, student.name || student.code));
+      // Score cells — one per deduplicated group
+      for (const group of assignmentGroups) {
+        tr.appendChild(buildGroupScoreTd(group, student.code, scoreMap, student.name || student.code));
       }
 
       // Average / Weighted / Trend cells
@@ -1824,12 +1959,12 @@
     tdSummaryLabel.textContent = "Class Average";
     summaryRow.appendChild(tdSummaryLabel);
 
-    // Calculate column averages
-    for (const draft of drafts) {
+    // Calculate column averages — one per deduplicated group
+    for (const group of assignmentGroups) {
       const td = document.createElement("td");
       td.setAttribute("role", "gridcell");
       td.className = "gb-score-cell";
-      const avg = calculateColumnAverage(draft.id, scoreMap, students);
+      const avg = calculateGroupColumnAverage(group, scoreMap, students);
       if (avg !== null) {
         td.textContent = `${avg}%`;
         const colorClass = scoreColorClass(avg);
@@ -2033,6 +2168,17 @@
   // ─── Export deduplication helpers ───────────────────────────────────────────
 
   /**
+   * Normalize an assignment title by removing trailing per-student code suffixes
+   * like " — S045", " – S001", " - S044" etc., then trimming whitespace.
+   *
+   * @param {string|null|undefined} rawTitle
+   * @returns {string}
+   */
+  function normalizeAssignmentTitle(rawTitle) {
+    return (rawTitle || "(untitled)").trim().replace(/\s*[—–-]\s*S\d+\s*$/, "");
+  }
+
+  /**
    * Group drafts by title so that per-student assignment instances collapse into
    * one column per unique assignment title in the export.
    *
@@ -2041,9 +2187,9 @@
    */
   function deduplicateAssignmentsForExport(drafts) {
     const groups = [];
-    const titleMap = new Map(); // title → group index
+    const titleMap = new Map(); // normalized title → group index
     for (const draft of drafts) {
-      const title = (draft.title || "(untitled)").trim();
+      const title = normalizeAssignmentTitle(draft.title);
       if (titleMap.has(title)) {
         const g = groups[titleMap.get(title)];
         g.draftIds.push(draft.id);
