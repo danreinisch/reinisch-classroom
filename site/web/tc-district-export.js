@@ -21,6 +21,31 @@ import {
 
 const $ = (id) => document.getElementById(id);
 
+// PDF.js CDN (4.2.67 — no known vulnerabilities; all processing is client-side)
+const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs';
+const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
+
+/**
+ * Extract all text from a PDF ArrayBuffer using PDF.js.
+ * Iterates through every page and concatenates text items.
+ *
+ * @param {ArrayBuffer} arrayBuffer - Raw PDF bytes
+ * @returns {Promise<string>} Full extracted text (pages separated by newlines)
+ */
+async function extractPdfText(arrayBuffer) {
+  const pdfjs = await import(PDFJS_URL);
+  pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const pageTexts = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const text = content.items.map(item => item.str).join(' ');
+    pageTexts.push(text);
+  }
+  return pageTexts.join('\n');
+}
+
 /**
  * Show a styled alert using rcAlert (from rc-modal.js).
  * Falls back to window.alert if rcModal is not loaded.
@@ -148,9 +173,41 @@ async function handleTranslateFile(file) {
   const name = file.name.toLowerCase();
   const isText = name.endsWith('.csv') || name.endsWith('.txt');
   const isDocx = name.endsWith('.docx');
+  const isPdf = name.endsWith('.pdf');
 
-  if (!isText && !isDocx) {
-    await notify('Unsupported File', 'Please upload a .csv, .txt, or .docx file.');
+  if (!isText && !isDocx && !isPdf) {
+    await notify('Unsupported File', 'Please upload a .csv, .txt, .docx, or .pdf file.');
+    return;
+  }
+
+  if (isPdf) {
+    const buffer = await file.arrayBuffer();
+    let pdfText;
+    try {
+      pdfText = await extractPdfText(buffer);
+    } catch (_err) {
+      await notify(
+        'PDF Extraction Failed',
+        'Unable to extract text from this PDF. It may be a scanned or image-only PDF with no text layer. ' +
+        'Try using an OCR tool first, or copy the text manually and paste it into the text translator above (Step 2A).'
+      );
+      return;
+    }
+    if (!pdfText || !pdfText.trim()) {
+      await notify(
+        'No Text Found in PDF',
+        'No text could be extracted from this PDF. It appears to be a scanned or image-only PDF with no text layer. ' +
+        'Try using an OCR tool first, or copy the text manually and paste it into the text translator above (Step 2A).'
+      );
+      return;
+    }
+    const baseName = file.name.replace(/\.pdf$/i, '');
+    translateAndDownload(pdfText, `${baseName}_district.txt`, 'text/plain;charset=utf-8;');
+    await notify(
+      'PDF Translated',
+      'The text extracted from the PDF has been translated and downloaded as a plain text file (.txt). ' +
+      'Note: the output is plain text — the original PDF formatting is not preserved.'
+    );
     return;
   }
 
@@ -262,9 +319,41 @@ async function handleReverseTranslateFile(file) {
   const name = file.name.toLowerCase();
   const isText = name.endsWith('.csv') || name.endsWith('.txt');
   const isDocx = name.endsWith('.docx');
+  const isPdf = name.endsWith('.pdf');
 
-  if (!isText && !isDocx) {
-    await notify('Unsupported File', 'Please upload a .csv, .txt, or .docx file.');
+  if (!isText && !isDocx && !isPdf) {
+    await notify('Unsupported File', 'Please upload a .csv, .txt, .docx, or .pdf file.');
+    return;
+  }
+
+  if (isPdf) {
+    const buffer = await file.arrayBuffer();
+    let pdfText;
+    try {
+      pdfText = await extractPdfText(buffer);
+    } catch (_err) {
+      await notify(
+        'PDF Extraction Failed',
+        'Unable to extract text from this PDF. It may be a scanned or image-only PDF with no text layer. ' +
+        'Try using an OCR tool first, or copy the text manually and paste it into the reverse translator above.'
+      );
+      return;
+    }
+    if (!pdfText || !pdfText.trim()) {
+      await notify(
+        'No Text Found in PDF',
+        'No text could be extracted from this PDF. It appears to be a scanned or image-only PDF with no text layer. ' +
+        'Try using an OCR tool first, or copy the text manually and paste it into the reverse translator above.'
+      );
+      return;
+    }
+    const baseName = file.name.replace(/\.pdf$/i, '');
+    reverseTranslateAndDownload(pdfText, `${baseName}_coded.txt`, 'text/plain;charset=utf-8;');
+    await notify(
+      'PDF Reverse-Translated',
+      'The text extracted from the PDF has been reverse-translated and downloaded as a plain text file (.txt). ' +
+      'Note: the output is plain text — the original PDF formatting is not preserved.'
+    );
     return;
   }
 
