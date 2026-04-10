@@ -295,13 +295,13 @@
               Step 2B — Translate a File
             </h2>
             <p>
-              Upload a <strong>.csv</strong> or <strong>.txt</strong> file exported from the platform. A translated copy will be downloaded automatically with student codes replaced by real names.
+              Upload a <strong>.csv</strong>, <strong>.txt</strong>, or <strong>.pdf</strong> file exported from the platform. A translated copy will be downloaded automatically with student codes replaced by real names.
             </p>
             <div class="de-drop-zone" id="deFileDropZone" role="button" tabindex="0" aria-label="Upload file to translate">
-              <div>📄 Click or drag &amp; drop a .csv or .txt file here</div>
+              <div>📄 Click or drag &amp; drop a .csv, .txt, or .pdf file here</div>
               <div style="margin-top:6px; font-size:12px; opacity:0.65;">A translated copy is downloaded automatically — your original is not modified</div>
             </div>
-            <input type="file" id="deFileInput" accept=".csv,.txt,.docx" style="display:none;" aria-label="Choose file to translate" />
+            <input type="file" id="deFileInput" accept=".csv,.txt,.docx,.pdf" style="display:none;" aria-label="Choose file to translate" />
           </div>
 
           <!-- Step 3: Reverse Translate (Names → Codes) -->
@@ -326,10 +326,10 @@
               Or upload a file with real names — a translated copy will be downloaded automatically with a <code>_coded</code> suffix.
             </p>
             <div class="de-drop-zone" id="deReverseFileDropZone" role="button" tabindex="0" aria-label="Upload file to reverse-translate">
-              <div>📄 Click or drag &amp; drop a .csv or .txt file here</div>
+              <div>📄 Click or drag &amp; drop a .csv, .txt, or .pdf file here</div>
               <div style="margin-top:6px; font-size:12px; opacity:0.65;">A coded copy is downloaded automatically — your original is not modified</div>
             </div>
-            <input type="file" id="deReverseFileInput" accept=".csv,.txt,.docx" style="display:none;" aria-label="Choose file to reverse-translate" />
+            <input type="file" id="deReverseFileInput" accept=".csv,.txt,.docx,.pdf" style="display:none;" aria-label="Choose file to reverse-translate" />
           </div>
 
           <!-- Tips -->
@@ -344,6 +344,7 @@
               <li>Translation handles codes embedded in narrative text: <em>"S001 will increase reading skills…"</em> → <em>"Jane Smith will increase reading skills…"</em></li>
               <li>Codes are sorted longest-first (S0011 before S001) to prevent partial matches.</li>
               <li>Your roster is loaded per page. If you navigate to Reporting, Spreadsheet, or Data pages and use their "Export for District" buttons, you'll be prompted to upload your roster again on that page.</li>
+              <li><strong>PDF files are supported</strong> — text is extracted from the PDF and translated. The output is a plain text file (not a formatted PDF). Scanned or image-only PDFs without a text layer are not supported; use an OCR tool first or copy the text manually.</li>
             </ul>
           </div>
         </div>

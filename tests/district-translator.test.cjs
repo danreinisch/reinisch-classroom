@@ -14,6 +14,12 @@ const path = require('path');
 const srcPath = path.join(__dirname, '..', 'site', 'web', 'district-translator.js');
 const src = fs.readFileSync(srcPath, 'utf8');
 
+const tcSrcPath = path.join(__dirname, '..', 'site', 'web', 'tc-district-export.js');
+const tcSrc = fs.readFileSync(tcSrcPath, 'utf8');
+
+const htmlPath = path.join(__dirname, '..', 'site', 'teacher', 'district-export', 'index.html');
+const html = fs.readFileSync(htmlPath, 'utf8');
+
 // ── Inline mirrors of district-translator.js functions ────────────────────────
 // district-translator.js is an ES module; we mirror the logic here for CJS testing.
 
@@ -427,6 +433,81 @@ test('reverseTranslateAndDownload creates a Blob and triggers download', () => {
   assert.ok(section.includes('URL.createObjectURL'), 'must use createObjectURL');
   assert.ok(section.includes('.click()'), 'must trigger click to download');
   assert.ok(section.includes('URL.revokeObjectURL'), 'must revoke URL to avoid memory leaks');
+});
+
+// ── PDF support source checks ─────────────────────────────────────────────────
+
+console.log('\n--- PDF support checks ---');
+
+test('tc-district-export.js defines extractPdfText helper', () => {
+  assert.ok(tcSrc.includes('extractPdfText'), 'extractPdfText helper must be defined');
+});
+
+test('tc-district-export.js imports PDF.js dynamically', () => {
+  assert.ok(tcSrc.includes('pdf.min.mjs'), 'must reference PDF.js .mjs module');
+});
+
+test('tc-district-export.js sets GlobalWorkerOptions.workerSrc', () => {
+  assert.ok(tcSrc.includes('GlobalWorkerOptions.workerSrc'), 'must set PDF.js worker URL');
+});
+
+test('tc-district-export.js uses a patched PDF.js version (>= 4.2.67)', () => {
+  // Ensure we are not using a vulnerable version (<= 4.1.392)
+  const match = tcSrc.match(/pdf\.js\/([\d.]+)\//);
+  assert.ok(match, 'PDF.js CDN URL must include a version number');
+  const parts = match[1].split('.').map(Number);
+  const major = parts[0];
+  const minor = parts[1] || 0;
+  const patch = parts[2] || 0;
+  const isPatched = major > 4 || (major === 4 && minor > 1) || (major === 4 && minor === 1 && patch >= 393);
+  assert.ok(isPatched, `PDF.js version ${match[1]} must be >= 4.2.x (patched version)`);
+});
+
+test('tc-district-export.js handles .pdf in handleTranslateFile', () => {
+  const section = tcSrc.slice(tcSrc.indexOf('handleTranslateFile'));
+  assert.ok(section.includes('.pdf'), 'handleTranslateFile must handle .pdf files');
+  assert.ok(section.includes('_district.txt'), 'PDF forward translation must output _district.txt');
+});
+
+test('tc-district-export.js handles .pdf in handleReverseTranslateFile', () => {
+  const section = tcSrc.slice(tcSrc.indexOf('handleReverseTranslateFile'));
+  assert.ok(section.includes('.pdf'), 'handleReverseTranslateFile must handle .pdf files');
+  assert.ok(section.includes('_coded.txt'), 'PDF reverse translation must output _coded.txt');
+});
+
+test('tc-district-export.js shows error via notify() when PDF extraction fails', () => {
+  assert.ok(tcSrc.includes('PDF Extraction Failed'), 'must notify user when PDF extraction fails');
+});
+
+test('tc-district-export.js shows error when no text found in PDF', () => {
+  assert.ok(tcSrc.includes('No Text Found in PDF'), 'must notify user when no text could be extracted from PDF');
+});
+
+test('HTML: deFileInput accept attribute includes .pdf', () => {
+  const fileInputMatch = html.match(/id="deFileInput"[^>]*accept="([^"]*)"/);
+  assert.ok(fileInputMatch, 'deFileInput must have an accept attribute');
+  assert.ok(fileInputMatch[1].includes('.pdf'), 'deFileInput accept must include .pdf');
+});
+
+test('HTML: deReverseFileInput accept attribute includes .pdf', () => {
+  const reverseInputMatch = html.match(/id="deReverseFileInput"[^>]*accept="([^"]*)"/);
+  assert.ok(reverseInputMatch, 'deReverseFileInput must have an accept attribute');
+  assert.ok(reverseInputMatch[1].includes('.pdf'), 'deReverseFileInput accept must include .pdf');
+});
+
+test('HTML: Step 2B drop zone mentions PDF', () => {
+  const dropZoneSection = html.slice(html.indexOf('deFileDropZone'));
+  assert.ok(dropZoneSection.includes('.pdf'), 'Step 2B drop zone text must mention .pdf');
+});
+
+test('HTML: Step 3 reverse drop zone mentions PDF', () => {
+  const reverseDropZoneSection = html.slice(html.indexOf('deReverseFileDropZone'));
+  assert.ok(reverseDropZoneSection.includes('.pdf'), 'Step 3 reverse drop zone text must mention .pdf');
+});
+
+test('HTML: Tips section mentions PDF support', () => {
+  const tipsSection = html.slice(html.indexOf('Tips'));
+  assert.ok(tipsSection.includes('PDF'), 'Tips section must mention PDF support');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
