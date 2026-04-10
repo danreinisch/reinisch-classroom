@@ -3195,13 +3195,13 @@
 
         for (const group of dedupGroups) {
           const score = getStudentScoreForGroup(student.code, group, scoreMap);
-          row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "");
+          row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "—");
         }
 
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row.push(avg !== null ? avg : "");
+        row.push(avg !== null ? `${avg}%` : "");
         const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row.push(weighted !== null ? weighted : "");
+        row.push(weighted !== null ? `${weighted}%` : "");
         const trend = calculateTrend(student.code, scoreMap, drafts);
         row.push(trend || "");
 
@@ -3214,7 +3214,7 @@
         const scores = students
           .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
           .filter((v) => v !== null);
-        summaryRow.push(scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : "");
+        summaryRow.push(scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "");
       }
       const allScores = [];
       const allWeightedScores = [];
@@ -3226,11 +3226,11 @@
       }
       const overallAvg =
         allScores.length > 0
-          ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+          ? `${Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)}%`
           : "";
       const overallWeighted =
         allWeightedScores.length > 0
-          ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+          ? `${Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)}%`
           : "";
       summaryRow.push(overallAvg, overallWeighted, "—");
       rows.push(summaryRow);
