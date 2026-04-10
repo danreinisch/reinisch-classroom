@@ -1690,6 +1690,44 @@
 
   const esc = (v) => { if (!v && v !== 0) return ''; const d = document.createElement('div'); d.textContent = String(v); return d.innerHTML; };
 
+  // ── Focus Trap Utility (Issues #22) ──────────────────────────────────────────
+
+  const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  /**
+   * Traps keyboard focus within a modal element.
+   * Adds a document-level Tab keydown handler that cycles focus within the
+   * modal. Returns a `release()` function to remove the handler when the
+   * modal closes.
+   * @param {HTMLElement} modalEl - The container to trap focus within.
+   * @returns {Function} release - Call this when the modal closes.
+   */
+  function trapFocus(modalEl) {
+    function onKeyDown(e) {
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(modalEl.querySelectorAll(FOCUSABLE_SELECTOR))
+        .filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return function release() {
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }
+
   // ── Hierarchical Cataloging Helpers ──────────────────────────────────────────
 
   /**
@@ -2406,8 +2444,10 @@
     });
 
     // Escape key closes the modal
+    const releaseTrapBulk = trapFocus(card);
     const handleKey = (e) => {
       if (e.key === 'Escape') {
+        releaseTrapBulk();
         overlay.remove();
         document.removeEventListener('keydown', handleKey);
         if (triggerEl && triggerEl.focus) triggerEl.focus();
@@ -2417,6 +2457,7 @@
 
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
+        releaseTrapBulk();
         overlay.remove();
         document.removeEventListener('keydown', handleKey);
         if (triggerEl && triggerEl.focus) triggerEl.focus();
@@ -2508,7 +2549,10 @@
     document.body.appendChild(overlay);
     unitSelect.focus();
 
+    const releaseTrapUnit = trapFocus(card);
+
     const closeModal = () => {
+      releaseTrapUnit();
       overlay.remove();
       document.removeEventListener('keydown', onKeyDown);
       if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
@@ -2611,7 +2655,11 @@
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
+    const releaseTrap = trapFocus(card);
+    wzCloseBtn.focus();
+
     const closeWizard = () => {
+      releaseTrap();
       overlay.remove();
       document.removeEventListener('keydown', onWizardKey);
       if (triggerEl && typeof triggerEl.focus === 'function') triggerEl.focus();
@@ -5109,9 +5157,12 @@
       // View mode toggle (secondary)
       const viewToggleWrap = document.createElement('div');
       viewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
+      viewToggleWrap.setAttribute('role', 'group');
+      viewToggleWrap.setAttribute('aria-label', 'View mode');
       const flatViewBtn = document.createElement('button');
       flatViewBtn.className = 'tc-btn';
       flatViewBtn.setAttribute('aria-pressed', filters.reserve.viewMode === 'flat' ? 'true' : 'false');
+      flatViewBtn.setAttribute('aria-label', 'Flat list view');
       flatViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.reserve.viewMode === 'flat' ? 'background:rgba(96,165,250,.18);' : '');
       flatViewBtn.appendChild(createIcon('clipboard', 14));
@@ -5126,6 +5177,7 @@
       const byUnitViewBtn = document.createElement('button');
       byUnitViewBtn.className = 'tc-btn';
       byUnitViewBtn.setAttribute('aria-pressed', filters.reserve.viewMode === 'byUnit' ? 'true' : 'false');
+      byUnitViewBtn.setAttribute('aria-label', 'Group by unit view');
       byUnitViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.reserve.viewMode === 'byUnit' ? 'background:rgba(96,165,250,.18);' : '');
       byUnitViewBtn.appendChild(createIcon('folderOpen', 14));
@@ -5150,6 +5202,8 @@
         allTagsBtn.className = 'tc-btn' + (filters.reserve.selectedTags.length === 0 ? ' active' : '');
         allTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
         allTagsBtn.textContent = 'All Tags';
+        allTagsBtn.setAttribute('aria-label', 'Show all tags');
+        allTagsBtn.setAttribute('aria-pressed', filters.reserve.selectedTags.length === 0 ? 'true' : 'false');
         allTagsBtn.addEventListener('click', () => {
           filters.reserve.selectedTags = [];
           saveFilters();
@@ -5162,6 +5216,8 @@
           tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
           tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
           tagBtn.textContent = tag;
+          tagBtn.setAttribute('aria-label', 'Filter by tag: ' + tag);
+          tagBtn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           tagBtn.addEventListener('click', () => {
             const idx = filters.reserve.selectedTags.indexOf(tag);
             if (idx === -1) {
@@ -5988,9 +6044,12 @@
       // View mode toggle (secondary)
       const activeViewToggleWrap = document.createElement('div');
       activeViewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
+      activeViewToggleWrap.setAttribute('role', 'group');
+      activeViewToggleWrap.setAttribute('aria-label', 'View mode');
       const activeFlatViewBtn = document.createElement('button');
       activeFlatViewBtn.className = 'tc-btn';
       activeFlatViewBtn.setAttribute('aria-pressed', filters.active.viewMode === 'flat' ? 'true' : 'false');
+      activeFlatViewBtn.setAttribute('aria-label', 'Flat list view');
       activeFlatViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.active.viewMode === 'flat' ? 'background:rgba(96,165,250,.18);' : '');
       activeFlatViewBtn.appendChild(createIcon('clipboard', 14));
@@ -6005,6 +6064,7 @@
       const activeByUnitViewBtn = document.createElement('button');
       activeByUnitViewBtn.className = 'tc-btn';
       activeByUnitViewBtn.setAttribute('aria-pressed', filters.active.viewMode === 'byUnit' ? 'true' : 'false');
+      activeByUnitViewBtn.setAttribute('aria-label', 'Group by unit view');
       activeByUnitViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.active.viewMode === 'byUnit' ? 'background:rgba(96,165,250,.18);' : '');
       activeByUnitViewBtn.appendChild(createIcon('folderOpen', 14));
@@ -6029,6 +6089,8 @@
         allActiveTagsBtn.className = 'tc-btn' + (filters.active.selectedTags.length === 0 ? ' active' : '');
         allActiveTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
         allActiveTagsBtn.textContent = 'All Tags';
+        allActiveTagsBtn.setAttribute('aria-label', 'Show all tags');
+        allActiveTagsBtn.setAttribute('aria-pressed', filters.active.selectedTags.length === 0 ? 'true' : 'false');
         allActiveTagsBtn.addEventListener('click', () => {
           filters.active.selectedTags = [];
           saveFilters();
@@ -6041,6 +6103,8 @@
           tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
           tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
           tagBtn.textContent = tag;
+          tagBtn.setAttribute('aria-label', 'Filter by tag: ' + tag);
+          tagBtn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           tagBtn.addEventListener('click', () => {
             const idx = filters.active.selectedTags.indexOf(tag);
             if (idx === -1) {
@@ -6576,10 +6640,13 @@
       // View toggle group
       const viewToggleWrap = document.createElement('div');
       viewToggleWrap.style.cssText = 'display:inline-flex; border:1px solid rgba(255,255,255,.15); border-radius:8px; overflow:hidden;';
+      viewToggleWrap.setAttribute('role', 'group');
+      viewToggleWrap.setAttribute('aria-label', 'View mode');
 
       const treeViewBtn = document.createElement('button');
       treeViewBtn.className = 'tc-btn';
       treeViewBtn.setAttribute('aria-pressed', filters.finalized.viewMode === 'tree' ? 'true' : 'false');
+      treeViewBtn.setAttribute('aria-label', 'Tree view');
       treeViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.finalized.viewMode === 'tree' ? 'background:rgba(96,165,250,.18);' : '');
       treeViewBtn.appendChild(createIcon('folderOpen', 14));
@@ -6595,6 +6662,7 @@
       const tableViewBtn = document.createElement('button');
       tableViewBtn.className = 'tc-btn';
       tableViewBtn.setAttribute('aria-pressed', filters.finalized.viewMode === 'table' ? 'true' : 'false');
+      tableViewBtn.setAttribute('aria-label', 'Table view');
       tableViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.finalized.viewMode === 'table' ? 'background:rgba(96,165,250,.18);' : '');
       tableViewBtn.appendChild(createIcon('table', 14));
@@ -6613,6 +6681,7 @@
       const byUnitViewBtn = document.createElement('button');
       byUnitViewBtn.className = 'tc-btn';
       byUnitViewBtn.setAttribute('aria-pressed', filters.finalized.viewMode === 'byUnit' ? 'true' : 'false');
+      byUnitViewBtn.setAttribute('aria-label', 'Group by unit view');
       byUnitViewBtn.style.cssText = 'border-radius:0; border:none; gap:6px; padding:7px 12px;'
         + (filters.finalized.viewMode === 'byUnit' ? 'background:rgba(96,165,250,.18);' : '');
       byUnitViewBtn.appendChild(createIcon('folderOpen', 14));
@@ -6845,6 +6914,8 @@
         allFinTagsBtn.className = 'tc-btn' + (filters.finalized.selectedTags.length === 0 ? ' active' : '');
         allFinTagsBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
         allFinTagsBtn.textContent = 'All Tags';
+        allFinTagsBtn.setAttribute('aria-label', 'Show all tags');
+        allFinTagsBtn.setAttribute('aria-pressed', filters.finalized.selectedTags.length === 0 ? 'true' : 'false');
         allFinTagsBtn.addEventListener('click', () => {
           filters.finalized.selectedTags = [];
           saveFilters();
@@ -6857,6 +6928,8 @@
           tagBtn.className = 'tc-btn' + (isActive ? ' active' : '');
           tagBtn.style.cssText = 'font-size:12px; padding:3px 10px; border-radius:10px;';
           tagBtn.textContent = tag;
+          tagBtn.setAttribute('aria-label', 'Filter by tag: ' + tag);
+          tagBtn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           tagBtn.addEventListener('click', () => {
             const idx = filters.finalized.selectedTags.indexOf(tag);
             if (idx === -1) {
