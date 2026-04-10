@@ -437,11 +437,15 @@ function formatShortDate(dateStr) {
   return `${mm}/${dd}`;
 }
 
+function normalizeAssignmentTitle(rawTitle) {
+  return (rawTitle || '(untitled)').trim().replace(/\s*[—–-]\s*S\d+\s*$/, '');
+}
+
 function deduplicateAssignmentsForExport(drafts) {
   const groups = [];
   const titleMap = new Map();
   for (const draft of drafts) {
-    const title = (draft.title || '(untitled)').trim();
+    const title = normalizeAssignmentTitle(draft.title);
     if (titleMap.has(title)) {
       const g = groups[titleMap.get(title)];
       g.draftIds.push(draft.id);
@@ -513,6 +517,48 @@ console.log('\n--- deduplicateAssignmentsForExport ---');
   const groups = deduplicateAssignmentsForExport([]);
   assert.deepStrictEqual(groups, [], 'empty drafts → empty groups');
   console.log('✓ handles empty drafts array');
+}
+
+// ── normalizeAssignmentTitle ──────────────────────────────────────────────────
+
+console.log('\n--- normalizeAssignmentTitle ---');
+
+{
+  // em dash variants
+  assert.strictEqual(normalizeAssignmentTitle('Week 9: Context Clues — S045'), 'Week 9: Context Clues', 'strips em dash + S045');
+  assert.strictEqual(normalizeAssignmentTitle('Week 9: Context Clues — S001'), 'Week 9: Context Clues', 'strips em dash + S001');
+  assert.strictEqual(normalizeAssignmentTitle('Week 9: Context Clues – S012'), 'Week 9: Context Clues', 'strips en dash + S012');
+  assert.strictEqual(normalizeAssignmentTitle('Week 9: Context Clues - S033'), 'Week 9: Context Clues', 'strips hyphen + S033');
+  console.log('✓ strips em/en/hyphen-dash student code suffixes');
+}
+
+{
+  // Titles without suffixes should be unchanged
+  assert.strictEqual(normalizeAssignmentTitle('Week 9: Context Clues'), 'Week 9: Context Clues', 'no suffix → unchanged');
+  assert.strictEqual(normalizeAssignmentTitle('WEEK 9 — Chapter 18-20'), 'WEEK 9 — Chapter 18-20', 'em dash not followed by S+digits → unchanged');
+  assert.strictEqual(normalizeAssignmentTitle('  Trimmed  '), 'Trimmed', 'whitespace trimmed');
+  assert.strictEqual(normalizeAssignmentTitle(''), '(untitled)', 'empty string → (untitled)');
+  assert.strictEqual(normalizeAssignmentTitle(null), '(untitled)', 'null → (untitled)');
+  console.log('✓ leaves titles without suffixes unchanged and handles edge cases');
+}
+
+// deduplicateAssignmentsForExport with per-student suffixes (the core fix)
+{
+  const drafts = [
+    { id: 'w1', title: 'Week 9: Ch. 26-28 — S045', meta: { total_possible: 20 }, due_at: '2024-03-20' },
+    { id: 'w2', title: 'Week 9: Ch. 26-28 — S044', meta: { total_possible: 20 }, due_at: '2024-03-20' },
+    { id: 'w3', title: 'Week 9: Ch. 26-28 — S001', meta: { total_possible: 20 }, due_at: '2024-03-20' },
+    { id: 'x1', title: 'Week 10: Vocabulary — S045', meta: { total_possible: 10 }, due_at: '2024-03-27' },
+    { id: 'x2', title: 'Week 10: Vocabulary — S001', meta: { total_possible: 10 }, due_at: '2024-03-27' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 2, 'three per-student Week 9 drafts → one group; two per-student Week 10 drafts → one group');
+  assert.strictEqual(groups[0].title, 'Week 9: Ch. 26-28', 'normalized title strips — S045 suffix');
+  assert.deepStrictEqual(groups[0].draftIds, ['w1', 'w2', 'w3'], 'all three Week 9 draft IDs in one group');
+  assert.strictEqual(groups[0].totalPossible, 20);
+  assert.strictEqual(groups[1].title, 'Week 10: Vocabulary', 'normalized title strips — S045 suffix');
+  assert.deepStrictEqual(groups[1].draftIds, ['x1', 'x2'], 'both Week 10 draft IDs in one group');
+  console.log('✓ collapses per-student suffixed drafts into one group per assignment');
 }
 
 console.log('\n--- getStudentScoreForGroup ---');
