@@ -1408,12 +1408,12 @@ const remote = {
       notes: g.notes
     }));
   },
-  async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
+  async addProgress({ student_code, goal_id, date, percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
     if (e1) throw e1;
-    const { error } = await supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes });
+    const { error } = await supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, percent, method, by_name, via, notes });
     if (error) throw error; return true;
   },
   async addEvent({ type, student_code, date, due, notes }) {
