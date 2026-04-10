@@ -407,6 +407,31 @@
   let syncStatus = "loading";
   let _lessonsLoadFailed = false;
 
+  // ── Auto-tag pattern list (Issue #14) ───────────────────────────────────────
+  // Each entry: { pattern: RegExp, tag: (match) => string }
+  const AUTOTAG_PATTERNS = [
+    { pattern: /\bweek\s*(\d+)\b/i,      tag: m => `week-${m[1]}` },
+    { pattern: /\bquiz\b/i,              tag: () => 'quiz' },
+    { pattern: /\btest\b/i,              tag: () => 'test' },
+    { pattern: /\bessay\b/i,             tag: () => 'essay' },
+    { pattern: /\bvocabulary\b/i,        tag: () => 'vocabulary' },
+    { pattern: /\breading\b/i,           tag: () => 'reading' },
+    { pattern: /\bwriting\b/i,           tag: () => 'writing' },
+    { pattern: /\bhomework\b/i,          tag: () => 'homework' },
+    { pattern: /\bproject\b/i,           tag: () => 'project' },
+    { pattern: /\bpresentation\b/i,      tag: () => 'presentation' },
+    { pattern: /\bworksheet\b/i,         tag: () => 'worksheet' },
+    { pattern: /\breview\b/i,            tag: () => 'review' },
+    { pattern: /\bpractice\b/i,          tag: () => 'practice' },
+    { pattern: /\bjournal\b/i,           tag: () => 'journal' },
+    { pattern: /\bassessment\b/i,        tag: () => 'assessment' },
+  ];
+
+  // ── Session-level smart automation state (Issues #13–#15) ───────────────────
+  let dismissedSuggestions = false;          // Issue #13: nudge dismissed this session
+  let _activeTabSuggestionsChecked = false;  // Issue #13: only compute once per session
+  let _suggestedFinalizations = [];          // Issue #13: cached suggestions
+
   // Recall Library state
   let _recallLibraryEntries = null;
   let _recallLibraryLoading = false;
@@ -1824,6 +1849,132 @@
     return card;
   }
 
+  // ── Smart Automation Helpers (Issues #13–#15) ──────────────────────────────────
+
+  /**
+   * Suggests tags for an assignment based on its title.
+   * Uses AUTOTAG_PATTERNS and CANON_CLASSES for matching.
+   * @param {string} title
+   * @returns {string[]} deduplicated, lowercased tag strings
+   */
+  function suggestTags(title) {
+    if (!title || typeof title !== 'string') return [];
+    try {
+      const tags = new Set();
+      for (const { pattern, tag } of AUTOTAG_PATTERNS) {
+        const m = title.match(pattern);
+        if (m) tags.add(tag(m).toLowerCase());
+      }
+      // Match CANON_CLASSES keywords in title
+      const lc = title.toLowerCase();
+      CANON_CLASSES.forEach(cls => {
+        const significant = cls.toLowerCase().split(/\s+/).filter(w => w.length >= 4 && !CATALOG_STOP_WORDS.has(w));
+        if (significant.length > 0 && significant.some(w => lc.includes(w))) {
+          tags.add(cls.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+        }
+      });
+      return [...tags];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  /**
+   * Normalizes a title for duplicate comparison:
+   * lowercase, strip punctuation, collapse whitespace.
+   */
+  function _normalizeTitle(t) {
+    return (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Normalizes week abbreviations so "Wk 3", "W3", and "week three" all become "week 3".
+   */
+  function _normalizeWeekRef(t) {
+    const ordinals = ['zero','one','two','three','four','five','six','seven','eight','nine','ten',
+      'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
+    let r = t.replace(/\bwk\.?\s*(\d+)\b/gi, 'week $1')
+             .replace(/\bw(\d+)\b/gi, 'week $1');
+    ordinals.forEach((word, n) => {
+      r = r.replace(new RegExp(`\\bweek\\s+${word}\\b`, 'gi'), `week ${n}`);
+    });
+    return r;
+  }
+
+  /**
+   * Finds existing assignments with titles similar to the given title.
+   * Returns matches above a Jaccard keyword-overlap threshold of 0.6.
+   * @param {string} title - Title to check
+   * @param {string|null} excludeId - Assignment ID to exclude (for edit mode)
+   * @returns {{ assignment: Object, similarity: 'high'|'medium', reason: string }[]}
+   */
+  function findSimilarAssignments(title, excludeId) {
+    if (!title || !assignmentsData || assignmentsData.length === 0) return [];
+    try {
+      const norm = _normalizeWeekRef(_normalizeTitle(title));
+      const titleKws = new Set(extractCatalogKeywords(norm));
+      const results = [];
+      for (const a of assignmentsData) {
+        if (a.id === excludeId) continue;
+        if (!a.title) continue;
+        const aNorm = _normalizeWeekRef(_normalizeTitle(a.title));
+        if (aNorm === norm) {
+          results.push({ assignment: a, similarity: 'high', reason: 'Identical title (after normalization)' });
+          continue;
+        }
+        if (titleKws.size === 0) continue;
+        const aKws = new Set(extractCatalogKeywords(aNorm));
+        if (aKws.size === 0) continue;
+        const intersection = [...titleKws].filter(w => aKws.has(w));
+        const union = new Set([...titleKws, ...aKws]);
+        const jaccard = intersection.length / union.size;
+        if (jaccard >= 0.6) {
+          results.push({ assignment: a, similarity: 'medium', reason: `Similar keywords (${Math.round(jaccard * 100)}% match)` });
+        }
+      }
+      return results;
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  /**
+   * Scans active assignments and returns those that may be ready for finalization:
+   * - Created more than staleDays ago AND (100% submitted OR active longActiveDays+)
+   * @param {number} staleDays    Minimum age in days (default 14)
+   * @param {number} longActiveDays  Always suggest if this old regardless of submission rate (default 30)
+   * @returns {{ assignment: Object, daysActive: number, instanceCount: number, submissionCount: number }[]}
+   */
+  function getSuggestedFinalizations(staleDays = 14, longActiveDays = 30) {
+    if (!assignmentsData || !instancesData || !submissionsData) return [];
+    try {
+      const now = Date.now();
+      const results = [];
+      for (const a of assignmentsData) {
+        const lane = laneCache.get(a.id) ?? computeLane(a, instancesData);
+        if (lane !== 'current') continue;
+        if (!a.created_at) continue;
+        const daysActive = Math.floor((now - new Date(a.created_at).getTime()) / 86400000);
+        if (daysActive < staleDays) continue;
+        const aInstances = instancesData.filter(i => i.assignment_id === a.id);
+        const instanceCount = aInstances.length;
+        if (instanceCount === 0) continue; // skip unissued
+        const instanceIds = new Set(aInstances.map(i => i.id));
+        const subCount = submissionsData.filter(s => {
+          const iid = s.instance_id || (s.assignment_instances && s.assignment_instances.id);
+          return iid && instanceIds.has(iid);
+        }).length;
+        const fullySubmitted = subCount >= instanceCount;
+        if (fullySubmitted || daysActive >= longActiveDays) {
+          results.push({ assignment: a, daysActive, instanceCount, submissionCount: subCount });
+        }
+      }
+      return results;
+    } catch (_e) {
+      return [];
+    }
+  }
+
   // ── Filtering ─────────────────────────────────────────────────────────────────
 
   function filterAssignments() {
@@ -2701,8 +2852,11 @@
         list2.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
 
         remaining.forEach(a => {
+          const rowWrap = document.createElement('div');
+          rowWrap.style.cssText = 'background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:8px; overflow:hidden;';
+
           const row2 = document.createElement('div');
-          row2.style.cssText = 'display:flex; align-items:center; gap:8px; padding:7px 10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:8px;';
+          row2.style.cssText = 'display:flex; align-items:center; gap:8px; padding:7px 10px;';
 
           const tSpan2 = document.createElement('span');
           tSpan2.style.cssText = 'flex:1; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
@@ -2739,7 +2893,7 @@
               setBtn.textContent = '\u2026';
               await db.updateAssignment(a.id, { unit_id: uid2, section_id: sid2 });
               step3Picks.delete(a.id);
-              row2.remove();
+              rowWrap.remove();
               refreshCurrentTab();
               refreshApplyAllBtn();
             } catch (_e2) {
@@ -2750,7 +2904,42 @@
             }
           });
           row2.appendChild(setBtn);
-          list2.appendChild(row2);
+          rowWrap.appendChild(row2);
+
+          // Issue #14: Tag suggestions sub-row
+          const wizTagSuggestions = suggestTags(a.title || '');
+          const currentATags = Array.isArray(a.tags) ? [...a.tags] : [];
+          const wizTagsToShow = [...new Set(wizTagSuggestions)].filter(t => !currentATags.includes(t));
+          if (wizTagsToShow.length > 0) {
+            const tagSugRow = document.createElement('div');
+            tagSugRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:5px; padding:5px 10px 8px; border-top:1px solid rgba(255,255,255,.06);';
+            const lbl = document.createElement('span');
+            lbl.style.cssText = 'font-size:10px; color:rgba(255,255,255,.35); align-self:center;';
+            lbl.textContent = 'Tags:';
+            tagSugRow.appendChild(lbl);
+            wizTagsToShow.forEach(tag => {
+              const chip = document.createElement('button');
+              chip.className = 'tc-btn';
+              chip.style.cssText = 'font-size:10px; padding:2px 7px; opacity:0.65; border-style:dashed;';
+              chip.textContent = tag;
+              chip.setAttribute('aria-label', 'Add tag ' + tag + ' to ' + (a.title || 'assignment'));
+              chip.addEventListener('click', async () => {
+                if (currentATags.includes(tag)) return;
+                currentATags.push(tag);
+                chip.style.opacity = '0.3';
+                chip.disabled = true;
+                const idxA = assignmentsData.findIndex(x => x.id === a.id);
+                if (idxA !== -1) assignmentsData[idxA].tags = [...currentATags];
+                try {
+                  await db.updateAssignment(a.id, { tags: [...currentATags] });
+                } catch (_eTag) { /* non-critical */ }
+              });
+              tagSugRow.appendChild(chip);
+            });
+            rowWrap.appendChild(tagSugRow);
+          }
+
+          list2.appendChild(rowWrap);
         });
         body.appendChild(list2);
       }
@@ -5583,6 +5772,138 @@
         });
       }
 
+      // ── Issue #13: Suggested Finalizations nudge banner ───────────────────
+      // Compute suggestions only once per session (first time Active tab opens).
+      if (!_activeTabSuggestionsChecked) {
+        _activeTabSuggestionsChecked = true;
+        _suggestedFinalizations = getSuggestedFinalizations();
+      }
+      if (!dismissedSuggestions && _suggestedFinalizations.length > 0) {
+        const nudge = document.createElement('div');
+        nudge.style.cssText = [
+          'background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.35);',
+          'border-radius:10px; padding:12px 16px; margin-bottom:14px;',
+        ].join('');
+
+        const nudgeHdr = document.createElement('div');
+        nudgeHdr.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px;';
+
+        const nudgeMsg = document.createElement('span');
+        nudgeMsg.style.cssText = 'font-size:13px; color:rgba(255,255,255,.90);';
+        nudgeMsg.textContent = `💡 ${_suggestedFinalizations.length} assignment${_suggestedFinalizations.length !== 1 ? 's' : ''} may be ready to finalize \u2014 they\u2019re 14+ days old with all submissions in.`;
+
+        const nudgeActions = document.createElement('span');
+        nudgeActions.style.cssText = 'display:flex; gap:8px; flex-shrink:0;';
+
+        const reviewBtn = document.createElement('button');
+        reviewBtn.className = 'tc-btn';
+        reviewBtn.style.cssText = 'font-size:12px; padding:4px 10px; background:rgba(99,102,241,.30); border-color:rgba(99,102,241,.50);';
+        reviewBtn.textContent = 'Review & Finalize';
+
+        const dismissLink = document.createElement('button');
+        dismissLink.style.cssText = 'background:none; border:none; color:rgba(255,255,255,.45); font-size:12px; cursor:pointer; padding:0;';
+        dismissLink.textContent = 'Dismiss';
+        dismissLink.addEventListener('click', () => {
+          dismissedSuggestions = true;
+          nudge.remove();
+        });
+
+        nudgeActions.appendChild(reviewBtn);
+        nudgeActions.appendChild(dismissLink);
+        nudgeHdr.appendChild(nudgeMsg);
+        nudgeHdr.appendChild(nudgeActions);
+        nudge.appendChild(nudgeHdr);
+
+        // Expandable list of suggested assignments
+        const suggestList = document.createElement('div');
+        suggestList.style.cssText = 'display:none; margin-top:12px; border-top:1px solid rgba(99,102,241,.25); padding-top:10px;';
+
+        const checkedIds = new Set();
+
+        const buildSuggestList = () => {
+          suggestList.innerHTML = '';
+          const table = document.createElement('div');
+          table.style.cssText = 'display:flex; flex-direction:column; gap:5px;';
+          _suggestedFinalizations.forEach(({ assignment: sa, daysActive, instanceCount, submissionCount }) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:7px;';
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = checkedIds.has(sa.id);
+            cb.style.cssText = 'cursor:pointer; accent-color:#818cf8; width:14px; height:14px;';
+            cb.addEventListener('change', () => {
+              if (cb.checked) checkedIds.add(sa.id); else checkedIds.delete(sa.id);
+              finalizeSelectedBtn.disabled = checkedIds.size === 0;
+              finalizeSelectedBtn.style.opacity = checkedIds.size === 0 ? '.4' : '1';
+            });
+            row.appendChild(cb);
+
+            const info = document.createElement('span');
+            info.style.cssText = 'flex:1; font-size:12px; min-width:0;';
+            const titlePart = document.createElement('strong');
+            titlePart.textContent = sa.title || '(Untitled)';
+            const detailPart = document.createElement('span');
+            detailPart.style.cssText = 'color:rgba(255,255,255,.50); margin-left:6px;';
+            detailPart.textContent = `${sa.series || 'No class'} \u00b7 ${daysActive}d active \u00b7 ${submissionCount}/${instanceCount} submitted`;
+            info.appendChild(titlePart);
+            info.appendChild(detailPart);
+            row.appendChild(info);
+
+            table.appendChild(row);
+          });
+          suggestList.appendChild(table);
+
+          const btnRow = document.createElement('div');
+          btnRow.style.cssText = 'margin-top:10px; display:flex; justify-content:flex-end;';
+          const finalizeSelectedBtn = document.createElement('button');
+          finalizeSelectedBtn.className = 'tc-btn';
+          finalizeSelectedBtn.disabled = true;
+          finalizeSelectedBtn.style.cssText = 'font-size:12px; background:rgba(99,102,241,.30); border-color:rgba(99,102,241,.50); opacity:.4;';
+          finalizeSelectedBtn.textContent = 'Finalize Selected';
+          finalizeSelectedBtn.addEventListener('click', async () => {
+            const toFinalize = _suggestedFinalizations.filter(s => checkedIds.has(s.assignment.id));
+            if (!toFinalize.length) return;
+            finalizeSelectedBtn.disabled = true;
+            finalizeSelectedBtn.textContent = 'Finalizing\u2026';
+            const now = new Date().toISOString();
+            let done = 0;
+            for (const { assignment: sa } of toFinalize) {
+              try {
+                await db.updateAssignment(sa.id, { active: false, finalized_at: now });
+                const idx = assignmentsData.findIndex(a => a.id === sa.id);
+                if (idx !== -1) { assignmentsData[idx].active = false; assignmentsData[idx].finalized_at = now; }
+                done++;
+              } catch (_e) { /* non-critical */ }
+            }
+            rebuildLaneCache();
+            _suggestedFinalizations = _suggestedFinalizations.filter(s => !checkedIds.has(s.assignment.id));
+            checkedIds.clear();
+            if (_suggestedFinalizations.length === 0) dismissedSuggestions = true;
+            showToast(`${done} assignment${done !== 1 ? 's' : ''} finalized`);
+            refreshCurrentTab();
+          });
+          btnRow.appendChild(finalizeSelectedBtn);
+          suggestList.appendChild(btnRow);
+        };
+
+        let listVisible = false;
+        reviewBtn.addEventListener('click', () => {
+          listVisible = !listVisible;
+          if (listVisible) {
+            buildSuggestList();
+            suggestList.style.display = 'block';
+            reviewBtn.textContent = 'Hide List';
+          } else {
+            suggestList.style.display = 'none';
+            reviewBtn.textContent = 'Review & Finalize';
+          }
+        });
+
+        nudge.appendChild(suggestList);
+        container.appendChild(nudge);
+      }
+
       // ── Primary filter bar (always visible) ──────────────────────────────
       const filterBar = document.createElement('div');
       filterBar.style.cssText = 'margin-bottom:8px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;';
@@ -8394,6 +8715,58 @@
       const laneTextMap = { upcoming: 'Upcoming', current: 'Active', finalized: 'Finalized' };
       grid.appendChild(makeDetailRow('Status', laneTextMap[lane] || lane));
 
+      // Issue #15: Inline title edit (with duplicate detection) for reserve assignments
+      if (lane === 'upcoming') {
+        const titleEditWrap = document.createElement('div');
+        const titleEditInput = document.createElement('input');
+        titleEditInput.type = 'text';
+        titleEditInput.value = assignment.title || '';
+        titleEditInput.style.cssText = 'width:100%; padding:7px 10px; background:rgba(0,0,0,.30); border:1px solid rgba(255,255,255,.18); border-radius:8px; color:white; font-size:14px; box-sizing:border-box;';
+        titleEditInput.setAttribute('aria-label', 'Edit assignment title');
+        const titleDupWarn = document.createElement('div');
+        titleDupWarn.style.cssText = 'display:none; margin-top:5px; font-size:12px; padding:6px 10px; border-radius:7px; line-height:1.5;';
+        const _checkDetailDup = debounce(() => {
+          const val = titleEditInput.value.trim();
+          if (val.length < 4) { titleDupWarn.style.display = 'none'; return; }
+          try {
+            const matches = findSimilarAssignments(val, assignment.id);
+            if (!matches.length) { titleDupWarn.style.display = 'none'; return; }
+            const laneLabel = { upcoming: 'Reserve', current: 'Active', finalized: 'Finalized' };
+            const best = matches[0];
+            const bLane = laneCache.get(best.assignment.id) ?? computeLane(best.assignment, instancesData);
+            const cls = best.assignment.series ? ` (${best.assignment.series}, ${laneLabel[bLane] || bLane})` : ` (${laneLabel[bLane] || bLane})`;
+            if (best.similarity === 'high') {
+              titleDupWarn.style.cssText = 'display:block; margin-top:5px; font-size:12px; padding:6px 10px; border-radius:7px; line-height:1.5; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fcd34d;';
+              titleDupWarn.textContent = '⚠️ Very similar title already exists: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
+            } else {
+              titleDupWarn.style.cssText = 'display:block; margin-top:5px; font-size:12px; padding:6px 10px; border-radius:7px; line-height:1.5; background:rgba(99,102,241,.10); border:1px solid rgba(99,102,241,.30); color:rgba(199,210,254,.90);';
+              titleDupWarn.textContent = '💡 Similar assignment: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
+            }
+          } catch (_e) { titleDupWarn.style.display = 'none'; }
+        }, 500);
+        titleEditInput.addEventListener('input', _checkDetailDup);
+        titleEditInput.addEventListener('change', async () => {
+          const newTitle = titleEditInput.value.trim();
+          if (!newTitle || newTitle === assignment.title) return;
+          const idx = assignmentsData.findIndex(a => a.id === assignment.id);
+          const snap = idx !== -1 ? { ...assignmentsData[idx] } : null;
+          if (idx !== -1) assignmentsData[idx].title = newTitle;
+          try {
+            await db.updateAssignment(assignment.id, { title: newTitle });
+            assignment.title = newTitle;
+            titleEl.textContent = newTitle;
+            showToast('Title updated');
+          } catch (_err) {
+            if (idx !== -1 && snap) assignmentsData[idx] = snap;
+            titleEditInput.value = assignment.title || '';
+            showToast('Failed to update title', '#ef4444', '#fff');
+          }
+        });
+        titleEditWrap.appendChild(titleEditInput);
+        titleEditWrap.appendChild(titleDupWarn);
+        grid.appendChild(makeDetailRow('Title', titleEditWrap));
+      }
+
       const stats = getAssignmentStats(assignment, instancesData, submissionsData);
       if (stats.studentCount > 0) {
         grid.appendChild(makeDetailRow('Students', String(stats.studentCount)));
@@ -8578,18 +8951,28 @@
 
       const suggestedTagsWrap = document.createElement('div');
       suggestedTagsWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:5px;';
-      const SUGGESTED_TAGS = ['quiz', 'homework', 'assessment', 'vocabulary', 'reading', 'writing', 'review', 'daily-work'];
-      SUGGESTED_TAGS.forEach(tag => {
+      // Issue #14: Dynamic tag suggestions from title keywords + AUTOTAG_PATTERNS
+      const autoSuggestedTags = suggestTags(assignment.title || '');
+      // Filter out tags already applied; de-duplicate
+      const tagsToShow = [...new Set(autoSuggestedTags)].filter(tag => !currentTags.includes(tag));
+      if (tagsToShow.length > 0) {
+        const sugLabel = document.createElement('span');
+        sugLabel.style.cssText = 'font-size:11px; color:rgba(255,255,255,.40); align-self:center; white-space:nowrap;';
+        sugLabel.textContent = 'Suggested:';
+        suggestedTagsWrap.appendChild(sugLabel);
+      }
+      tagsToShow.forEach(tag => {
         const chip = document.createElement('button');
         chip.className = 'tc-btn';
-        chip.style.cssText = 'font-size:11px; padding:3px 9px; opacity:' + (currentTags.includes(tag) ? '0.4' : '0.75') + ';';
-        chip.textContent = '+ ' + tag;
+        // Dashed border + dimmer style to distinguish from applied tags
+        chip.style.cssText = 'font-size:11px; padding:3px 9px; opacity:0.70; border-style:dashed;';
+        chip.textContent = tag;
         chip.setAttribute('aria-label', 'Add suggested tag ' + tag);
         chip.addEventListener('click', async () => {
           if (!currentTags.includes(tag)) {
             currentTags.push(tag);
             renderTagPills();
-            chip.style.opacity = '0.4';
+            chip.remove();
             await saveTags([...currentTags]);
           }
         });
@@ -8781,7 +9164,36 @@
     titleInput.required = true;
     titleInput.style.cssText = fieldStyle;
     titleInput.placeholder = 'Assignment title';
-    form.appendChild(makeField('Title', true, titleInput));
+    const titleField = makeField('Title', true, titleInput);
+
+    // Issue #15: Duplicate detection warning element (hidden by default)
+    const dupWarning = document.createElement('div');
+    dupWarning.id = 'up_dup_warning';
+    dupWarning.style.cssText = 'display:none; margin-top:6px; font-size:12px; padding:8px 12px; border-radius:8px; line-height:1.5;';
+    titleField.appendChild(dupWarning);
+    form.appendChild(titleField);
+
+    // Issue #15: Debounced duplicate check on title input
+    const _checkDuplicateTitle = debounce(() => {
+      const val = titleInput.value.trim();
+      if (val.length < 4) { dupWarning.style.display = 'none'; return; }
+      try {
+        const matches = findSimilarAssignments(val, null);
+        if (!matches.length) { dupWarning.style.display = 'none'; return; }
+        const laneLabel = { upcoming: 'Reserve', current: 'Active', finalized: 'Finalized' };
+        const best = matches[0];
+        const aLane = laneCache.get(best.assignment.id) ?? computeLane(best.assignment, instancesData);
+        const cls = best.assignment.series ? ` (${best.assignment.series}, ${laneLabel[aLane] || aLane})` : ` (${laneLabel[aLane] || aLane})`;
+        if (best.similarity === 'high') {
+          dupWarning.style.cssText = 'display:block; margin-top:6px; font-size:12px; padding:8px 12px; border-radius:8px; line-height:1.5; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fcd34d;';
+          dupWarning.textContent = '⚠️ An assignment with a very similar title already exists: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
+        } else {
+          dupWarning.style.cssText = 'display:block; margin-top:6px; font-size:12px; padding:8px 12px; border-radius:8px; line-height:1.5; background:rgba(99,102,241,.10); border:1px solid rgba(99,102,241,.30); color:rgba(199,210,254,.90);';
+          dupWarning.textContent = '💡 Similar assignment found: \u201C' + (best.assignment.title || '') + '\u201D' + cls;
+        }
+      } catch (_e) { dupWarning.style.display = 'none'; }
+    }, 500);
+    titleInput.addEventListener('input', _checkDuplicateTitle);
 
     // Class
     const classSelect = document.createElement('select');
