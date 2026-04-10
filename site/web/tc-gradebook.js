@@ -1203,13 +1203,19 @@
       }
     }
 
-    // Check for missing-work highlight (only if the student actually has this draft instance)
+    // Check for missing-work highlight (only if the student actually has this draft instance).
+    // Build a Set of assignment IDs this student has instances for (O(1) lookup per draftId).
+    const studentInstanceDraftIds = new Set(
+      assignmentInstancesData
+        .filter(inst => inst.student_code === studentCode)
+        .map(inst => inst.assignment_id)
+    );
     for (const draftId of group.draftIds) {
       if (missingWorkPairs.has(`${studentCode}::${draftId}`)) {
-        const hasInstance = assignmentInstancesData.some(
-          inst => inst.assignment_id === draftId && inst.student_code === studentCode
-        );
+        const hasInstance = studentInstanceDraftIds.has(draftId);
         const hasScore = studentScores && studentScores.has(draftId);
+        // If assignmentInstancesData is empty (not yet loaded), fall back to highlighting
+        // any flagged draftId so the indicator still works when instance data is unavailable.
         if (hasInstance || hasScore || assignmentInstancesData.length === 0) {
           td.classList.add("gb-missing-highlight");
           break;
