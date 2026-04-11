@@ -250,6 +250,79 @@
       }
       .home-footer-row .home-stats { margin-top: 0; padding-top: 0; text-align: left; }
 
+      /* Standards Focus card */
+      .hd-standards-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .hd-standards-card .focus-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .hd-standards-count {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 13px;
+      }
+
+      .hd-standards-count-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+
+      .hd-standards-count-item.tier-critical {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+      }
+
+      .hd-standards-count-item.tier-needs-support {
+        background: rgba(234, 179, 8, 0.15);
+        color: #fde68a;
+      }
+
+      .hd-standards-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 2px;
+      }
+
+      .hd-standards-list-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+      }
+
+      .hd-standards-list-item .hd-std-code {
+        font-weight: 600;
+      }
+
+      .hd-standards-list-item .hd-std-pct {
+        color: var(--rc-ink-dim);
+      }
+
+      .hd-standards-link {
+        margin-top: 6px;
+        font-size: 12px;
+        color: rgba(134, 239, 172, 0.85);
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .hd-standards-link:hover {
+        text-decoration: underline;
+      }
+
       /* Mobile */
       @media (max-width: 767px) {
         .home-hero-title { font-size: 1.75rem; }
@@ -424,6 +497,9 @@
               <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> UPCOMING</div>
               <div id="home-countdowns" class="home-countdowns"></div>
             </div>
+
+            <!-- Standards Focus card (populated by home-dashboard.js when teacher session active) -->
+            <div class="home-focus-card hd-standards-card" id="focus-standards" style="display:none" aria-live="polite"></div>
 
             <!-- Student Quick Login (inside grid, full-width row) -->
             <a class="home-student-cta" href="/student/">
