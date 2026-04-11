@@ -433,6 +433,205 @@
       border-color: rgba(59, 130, 246, 0.4);
       color: rgba(147, 197, 253, 0.9);
     }
+
+    /* ── Standards Pulse KPI card ────────────────────────────────────────── */
+    #kpiStandardsPulseCard {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    #kpiStandardsPulseCard:hover {
+      background: var(--rc-glass-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* ── Tier colors (shared between KPI and modal) ──────────────────────── */
+    .tier-excellent    { color: rgba(34,  197, 94,  0.9); }
+    .tier-on-track     { color: rgba(59,  130, 246, 0.9); }
+    .tier-needs-support{ color: rgba(245, 158, 11,  0.9); }
+    .tier-critical     { color: rgba(239, 68,  68,  0.9); }
+
+    /* ── Standards Pulse overlay modal ──────────────────────────────────── */
+    #spOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(4px);
+      overflow-y: auto;
+      padding: 24px 16px 40px;
+    }
+    #spOverlay.sp-open {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sp-panel {
+      width: 100%;
+      max-width: 1100px;
+      background: var(--rc-surface, #16241e);
+      border: 1px solid var(--rc-glass-border, rgba(255,255,255,.1));
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+    }
+    .sp-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .sp-title {
+      font-size: 20px;
+      font-weight: 700;
+      flex: 1;
+    }
+    .sp-close-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 8px;
+      color: rgba(255,255,255,.7);
+      cursor: pointer;
+      padding: 6px 12px;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    .sp-close-btn:hover {
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.25);
+    }
+    .sp-back-btn {
+      display: none;
+      background: none;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 8px;
+      color: rgba(255,255,255,.7);
+      cursor: pointer;
+      padding: 6px 12px;
+      font-size: 13px;
+      gap: 4px;
+      align-items: center;
+      transition: all 0.15s;
+    }
+    .sp-back-btn.sp-visible {
+      display: inline-flex;
+    }
+    .sp-back-btn:hover {
+      background: rgba(255,255,255,.08);
+    }
+
+    /* Heatmap table */
+    .sp-heatmap-wrap {
+      overflow-x: auto;
+      margin-top: 6px;
+    }
+    .sp-heatmap-table {
+      border-collapse: collapse;
+      min-width: 100%;
+      font-size: 13px;
+    }
+    .sp-heatmap-table th {
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,.55);
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .sp-heatmap-table th.sp-std-header {
+      text-align: left;
+      min-width: 110px;
+    }
+    .sp-heatmap-table td {
+      padding: 6px 8px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,.05);
+      vertical-align: middle;
+    }
+    .sp-heatmap-table td.sp-std-cell {
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      color: rgba(255,255,255,.8);
+      white-space: nowrap;
+      padding-left: 10px;
+    }
+    .sp-heatmap-table tr:hover td {
+      background: rgba(255,255,255,.03) !important;
+    }
+
+    /* Data cells */
+    .sp-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 3px 6px;
+      transition: all 0.15s;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .sp-cell:hover {
+      filter: brightness(1.25);
+    }
+    .sp-cell-empty {
+      color: rgba(255,255,255,.18);
+      font-size: 11px;
+      cursor: default;
+    }
+    .sp-cell svg {
+      flex-shrink: 0;
+    }
+
+    /* Cell backgrounds by tier */
+    .sp-bg-excellent     { background: rgba(34,  197, 94,  0.12); }
+    .sp-bg-on-track      { background: rgba(59,  130, 246, 0.12); }
+    .sp-bg-needs-support { background: rgba(245, 158, 11,  0.12); }
+    .sp-bg-critical      { background: rgba(239, 68,  68,  0.12); }
+
+    /* Level 3 student breakdown table */
+    .sp-breakdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .sp-breakdown-table th {
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,.5);
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    .sp-breakdown-table td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      vertical-align: middle;
+    }
+    .sp-breakdown-table tr:hover td {
+      background: rgba(255,255,255,.03);
+    }
+    .sp-loading {
+      padding: 30px;
+      text-align: center;
+      color: rgba(255,255,255,.5);
+      font-size: 14px;
+    }
+    .sp-no-data {
+      padding: 24px;
+      text-align: center;
+      color: rgba(255,255,255,.4);
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -613,6 +812,11 @@
             <div class="tc-kpi-value" id="kpiIepEval">—</div>
             <div class="tc-kpi-sub" id="kpiIepEvalSub"></div>
           </div>
+          <div class="rc-card" id="kpiStandardsPulseCard" role="button" tabindex="0" aria-label="Standards Pulse — open drill-down" style="display: none;">
+            <div class="tc-kpi-label">Standards Pulse</div>
+            <div class="tc-kpi-value" id="kpiStandardsPulse">—</div>
+            <div class="tc-kpi-sub" id="kpiStandardsPulseSub"></div>
+          </div>
         </div>
         <div id="ovLastEntry" style="margin-top: 8px; font-size: 12px; opacity: 0.6;"></div>
 
@@ -692,7 +896,22 @@
     </div>
   </div>
 
-  <script src="/web/supabase-config.js"></script>
+  <!-- Standards Pulse drill-down overlay -->
+  <div id="spOverlay" role="dialog" aria-modal="true" aria-labelledby="spTitle">
+    <div class="sp-panel">
+      <div class="sp-header">
+        <button class="sp-back-btn" id="spBackBtn" aria-label="Back to heatmap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <span class="sp-title" id="spTitle">Standards Pulse</span>
+        <button class="sp-close-btn" id="spCloseBtn" aria-label="Close Standards Pulse">✕ Close</button>
+      </div>
+      <div id="spContent">
+        <div class="sp-loading">Loading standards data…</div>
+      </div>
+    </div>
+  </div>
   <script defer src="/web/teacher-shell.js"></script>
   <script defer src="/web/tc-overview.js"></script>
   <script type="module" src="/web/tc-observation.js"></script>
