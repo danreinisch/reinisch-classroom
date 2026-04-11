@@ -9546,6 +9546,52 @@
   }
 
   /**
+   * Compute the earliest and latest dates from IEP card progress entries.
+   * Returns { earliestDate, latestDate } (both Date | null).
+   */
+  function getSkillsDateRange(studentCode, iepCards) {
+    const entries = getProgressForGoal
+      ? (iepCards || []).flatMap(c => {
+          try { return getProgressForGoal(studentCode, c.code); } catch (_e) { return []; }
+        })
+      : [];
+    let earliestDate = null;
+    let latestDate = null;
+    for (const e of entries) {
+      if (!e.date) continue;
+      const d = new Date(e.date);
+      if (!earliestDate || d < earliestDate) earliestDate = d;
+      if (!latestDate || d > latestDate) latestDate = d;
+    }
+    return { earliestDate, latestDate };
+  }
+
+  /**
+   * Sort concern cards by severity (critical first, then needs-support),
+   * then by percentage ascending within each tier.
+   */
+  function sortConcernCards(cards) {
+    const tierOrder = { critical: 0, 'needs-support': 1 };
+    return [...cards].sort((a, b) => {
+      const ta = tierOrder[getSkillTier(a.displayScore).tier] ?? 2;
+      const tb = tierOrder[getSkillTier(b.displayScore).tier] ?? 2;
+      if (ta !== tb) return ta - tb;
+      return (a.displayScore ?? 0) - (b.displayScore ?? 0);
+    });
+  }
+
+  /**
+   * Return a formatted item count string for a skill card.
+   * e.g. "(9 items)" for DESE cards, "(5 pts)" for IEP cards.
+   */
+  function skillCardCountLabel(card, parens) {
+    const count = card.type === 'dese'
+      ? `${card.itemCount} items`
+      : `${card.dataPoints} pts`;
+    return parens ? `(${count})` : count;
+  }
+
+  /**
    * Build a plain-text Skills Summary report suitable for pasting into a plain-text editor.
    * Reads from cached card data and AI narratives — no new API calls.
    * Uses simple unicode symbols instead of emojis for consistent rendering.
@@ -9557,20 +9603,7 @@
     const status = student.status ? (student.status.charAt(0).toUpperCase() + student.status.slice(1)) : 'N/A';
     const studentName = student.name || student.code;
 
-    // Compute earliest and latest data dates from progress entries
-    const entries = getProgressForGoal
-      ? (iepCards || []).flatMap(c => {
-          try { return getProgressForGoal(student.code, c.code); } catch (_e) { return []; }
-        })
-      : [];
-    let earliestDate = null;
-    let latestDate = null;
-    for (const e of entries) {
-      if (!e.date) continue;
-      const d = new Date(e.date);
-      if (!earliestDate || d < earliestDate) earliestDate = d;
-      if (!latestDate || d > latestDate) latestDate = d;
-    }
+    const { earliestDate, latestDate } = getSkillsDateRange(student.code, iepCards);
     const dataRange = (earliestDate && latestDate)
       ? `${earliestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} \u2013 ${latestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
       : 'N/A';
@@ -9640,24 +9673,17 @@
       const t = getSkillTier(c.displayScore).tier;
       return t === 'excellent' || t === 'on-track';
     });
-    const concernCards = allCards.filter(c => {
+    const concernCards = sortConcernCards(allCards.filter(c => {
       const t = getSkillTier(c.displayScore).tier;
       return t === 'needs-support' || t === 'critical';
-    }).sort((a, b) => {
-      const tierOrder = { critical: 0, 'needs-support': 1 };
-      const ta = tierOrder[getSkillTier(a.displayScore).tier] ?? 2;
-      const tb = tierOrder[getSkillTier(b.displayScore).tier] ?? 2;
-      if (ta !== tb) return ta - tb;
-      return (a.displayScore ?? 0) - (b.displayScore ?? 0);
-    });
+    }));
 
     lines.push('');
     lines.push(`[\u2713] Strengths (\u2265${SKILL_TIER_ON_TRACK}%)`);
     if (strengthCards.length > 0) {
       for (const c of strengthCards) {
         const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
-        const count = c.type === 'dese' ? ` (${c.itemCount} items)` : ` (${c.dataPoints} pts)`;
-        lines.push(`  \u25cf ${c.code} \u2014 ${score}${count}`);
+        lines.push(`  \u25cf ${c.code} \u2014 ${score} ${skillCardCountLabel(c, true)}`);
       }
     } else {
       lines.push('  None identified yet');
@@ -9668,12 +9694,11 @@
     if (concernCards.length > 0) {
       for (const c of concernCards) {
         const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
-        const count = c.type === 'dese' ? `(${c.itemCount} items)` : `(${c.dataPoints} pts)`;
         const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
         const description = ai ? ai.description || '' : '';
         const symbol = tierSymbol(c.displayScore);
         const label = tierLabel(c.displayScore);
-        let line = `  ${symbol} ${c.code} \u2014 ${score} ${count} ${label}`;
+        let line = `  ${symbol} ${c.code} \u2014 ${score} ${skillCardCountLabel(c, true)} ${label}`;
         if (description) line += ` \u2014 ${description}`;
         lines.push(line);
       }
@@ -9722,20 +9747,7 @@
     const status = student.status ? (student.status.charAt(0).toUpperCase() + student.status.slice(1)) : 'N/A';
     const studentName = student.name || student.code;
 
-    // Compute earliest and latest data dates from progress entries
-    const entries = getProgressForGoal
-      ? (iepCards || []).flatMap(c => {
-          try { return getProgressForGoal(student.code, c.code); } catch (_e) { return []; }
-        })
-      : [];
-    let earliestDate = null;
-    let latestDate = null;
-    for (const e of entries) {
-      if (!e.date) continue;
-      const d = new Date(e.date);
-      if (!earliestDate || d < earliestDate) earliestDate = d;
-      if (!latestDate || d > latestDate) latestDate = d;
-    }
+    const { earliestDate, latestDate } = getSkillsDateRange(student.code, iepCards);
     const dataRange = (earliestDate && latestDate)
       ? `${earliestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} \u2013 ${latestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
       : 'N/A';
@@ -9830,16 +9842,10 @@
       const t = getSkillTier(c.displayScore).tier;
       return t === 'excellent' || t === 'on-track';
     });
-    const concernCards = allCards.filter(c => {
+    const concernCards = sortConcernCards(allCards.filter(c => {
       const t = getSkillTier(c.displayScore).tier;
       return t === 'needs-support' || t === 'critical';
-    }).sort((a, b) => {
-      const tierOrder = { critical: 0, 'needs-support': 1 };
-      const ta = tierOrder[getSkillTier(a.displayScore).tier] ?? 2;
-      const tb = tierOrder[getSkillTier(b.displayScore).tier] ?? 2;
-      if (ta !== tb) return ta - tb;
-      return (a.displayScore ?? 0) - (b.displayScore ?? 0);
-    });
+    }));
 
     // Strengths section
     html += `<h3 style="font-size:15px;color:#16a34a;margin:0 0 10px;">${SVG_CHECK_CIRCLE}Strengths (\u2265${SKILL_TIER_ON_TRACK}%)</h3>`;
@@ -9847,8 +9853,7 @@
       html += `<ul style="margin:0;padding-left:20px;font-size:13px;color:#374151;">`;
       for (const c of strengthCards) {
         const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
-        const count = c.type === 'dese' ? `${c.itemCount} items` : `${c.dataPoints} pts`;
-        html += `<li style="margin-bottom:4px;">${SVG_CHECK}<strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} (${escapeHtml(count)})</li>`;
+        html += `<li style="margin-bottom:4px;">${SVG_CHECK}<strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} (${escapeHtml(skillCardCountLabel(c, false))})</li>`;
       }
       html += `</ul>`;
     } else {
@@ -9863,7 +9868,6 @@
       html += `<ul style="margin:0;padding-left:20px;font-size:13px;">`;
       for (const c of concernCards) {
         const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
-        const count = c.type === 'dese' ? `${c.itemCount} items` : `${c.dataPoints} pts`;
         const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
         const description = ai ? ai.description || '' : '';
         const tierInfo = getSkillTier(c.displayScore);
@@ -9871,7 +9875,7 @@
         const itemColor = isCritical ? '#dc2626' : '#d97706';
         const icon = isCritical ? SVG_X_CIRCLE : SVG_WARN;
 
-        html += `<li style="margin-bottom:6px;color:${itemColor};">${icon}<strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} (${escapeHtml(count)}) <span style="font-weight:600;">${escapeHtml(tierInfo.label)}</span>`;
+        html += `<li style="margin-bottom:6px;color:${itemColor};">${icon}<strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} (${escapeHtml(skillCardCountLabel(c, false))}) <span style="font-weight:600;">${escapeHtml(tierInfo.label)}</span>`;
         if (description) {
           html += `<div style="font-size:12px;color:#6b7280;font-style:italic;margin-top:2px;">${escapeHtml(description)}</div>`;
         }
