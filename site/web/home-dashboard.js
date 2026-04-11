@@ -328,9 +328,131 @@ window.addEventListener('resize', function() {
   }, 100);
 });
 
+// ── Standards Focus Card ──────────────────────────────────────────────────────
+// Fetches DESE rollup data and renders a compact "Standards Focus" card on the
+// home dashboard when there are critical or needs-support standards.
+// Only fires when the user has a Supabase (teacher) session.
+
+function hdGetTier(pct) {
+  if (pct >= 80) return 'excellent';
+  if (pct >= 60) return 'on-track';
+  if (pct >= 40) return 'needs-support';
+  return 'critical';
+}
+
+function hdCurrentSchoolYear() {
+  var now = new Date();
+  return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+function renderStandardsFocusCard() {
+  var cardEl = document.getElementById('focus-standards');
+  if (!cardEl) return;
+
+  import('/web/supabase-client.js').then(function(mod) {
+    return mod.getSupabase();
+  }).then(function(supabase) {
+    if (!supabase) return; // Not a teacher session — leave card hidden
+
+    return supabase.rpc('all_students_dese_rollups', {
+      p_school_year: hdCurrentSchoolYear(),
+    }).then(function(result) {
+      if (result.error || !Array.isArray(result.data) || result.data.length === 0) return;
+
+      var rows = result.data;
+
+      // Aggregate per-standard: average percent_correct across all students
+      var stdAccum = {};
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var std = row.dese_code;
+        var pct = Number(row.percent_correct);
+        if (!std || isNaN(pct)) continue;
+        if (!stdAccum[std]) stdAccum[std] = { sum: 0, count: 0 };
+        stdAccum[std].sum += pct;
+        stdAccum[std].count++;
+      }
+
+      // Build list of standards with their average pct and tier
+      var standards = [];
+      for (var code in stdAccum) {
+        if (!Object.hasOwn(stdAccum, code)) continue;
+        var avg = Math.round(stdAccum[code].sum / stdAccum[code].count);
+        var tier = hdGetTier(avg);
+        if (tier === 'critical' || tier === 'needs-support') {
+          standards.push({ code: code, pct: avg, tier: tier });
+        }
+      }
+
+      if (standards.length === 0) return; // All good — keep card hidden
+
+      // Sort by pct ascending (worst first)
+      standards.sort(function(a, b) { return a.pct - b.pct; });
+
+      var critCount = standards.filter(function(s) { return s.tier === 'critical'; }).length;
+      var needsCount = standards.filter(function(s) { return s.tier === 'needs-support'; }).length;
+      var overallSeverity = critCount > 0 ? 'critical' : 'needs-support';
+
+      // Top 3 worst standards
+      var topStds = standards.slice(0, 3);
+
+      // Build card HTML
+      var alertIcon = overallSeverity === 'critical'
+        ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+        : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+      var labelColor = overallSeverity === 'critical' ? '#fca5a5' : '#fde68a';
+      var borderColor = overallSeverity === 'critical'
+        ? 'rgba(239, 68, 68, 0.5)'
+        : 'rgba(234, 179, 8, 0.5)';
+
+      var countHtml = '';
+      if (critCount > 0) {
+        countHtml += '<span class="hd-standards-count-item tier-critical">' + critCount + ' critical</span>';
+      }
+      if (needsCount > 0) {
+        countHtml += '<span class="hd-standards-count-item tier-needs-support">' + needsCount + ' needs-support</span>';
+      }
+
+      var listHtml = topStds.map(function(s) {
+        var itemIcon = s.tier === 'critical'
+          ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+          : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        var color = s.tier === 'critical' ? '#fca5a5' : '#fde68a';
+        return '<div class="hd-standards-list-item" style="color:' + color + '">' +
+          itemIcon +
+          ' <span class="hd-std-code">' + escHtml(s.code) + '</span>' +
+          ' <span class="hd-std-pct">— ' + s.pct + '%</span>' +
+          '</div>';
+      }).join('');
+
+      cardEl.innerHTML =
+        '<div class="focus-label" style="color:' + labelColor + '">' + alertIcon + ' STANDARDS FOCUS</div>' +
+        '<div class="hd-standards-count">' + countHtml + '</div>' +
+        '<div class="hd-standards-list">' + listHtml + '</div>' +
+        '<a class="hd-standards-link" href="/teacher/">View Details →</a>';
+
+      cardEl.style.borderLeft = '3px solid ' + borderColor;
+      cardEl.style.display = '';
+
+      // Ensure focus section is visible
+      var focusSection = document.getElementById('home-focus-section');
+      if (focusSection) focusSection.style.display = '';
+
+      console.log('[home-dashboard] Standards Focus card rendered —', standards.length, 'standard(s) needing attention');
+    });
+  }).catch(function(err) {
+    // Non-blocking — just silently omit the card if anything fails
+    console.warn('[home-dashboard] Standards Focus card failed to load:', err);
+  });
+}
+
 function init() {
   setGreeting();
   renderDailyQuote();
+
+  // Attempt to load Standards Focus card (teacher-only, non-blocking)
+  renderStandardsFocusCard();
 
   var t = '?t=' + Date.now();
 

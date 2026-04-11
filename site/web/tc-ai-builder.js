@@ -86,6 +86,8 @@
   const aibSourceCount = document.getElementById('aibSourceCount');
   const aibExtraStudentsWarn = document.getElementById('aibExtraStudentsWarn');
 
+  const aibStandardsCallout = document.getElementById('aibStandardsCallout');
+
   // Tab elements
   const aibTabCreate = document.getElementById('aibTabCreate');
   const aibTabManage = document.getElementById('aibTabManage');
@@ -1375,6 +1377,239 @@
     aibIssueBtn.addEventListener('click', handleIssueToClass);
   }
 
+  // ── Standards Needing Attention Callout ──────────────────────────────────────
+
+  /** Tier constants and helpers (mirrors tc-overview.js Standards Pulse) */
+  const AIB_SP_TIERS = {
+    excellent:        { label: 'Excellent' },
+    'on-track':       { label: 'On-Track' },
+    'needs-support':  { label: 'Needs Support' },
+    critical:         { label: 'Critical' },
+  };
+
+  function aibSpGetTier(pct) {
+    if (pct >= 80) return 'excellent';
+    if (pct >= 60) return 'on-track';
+    if (pct >= 40) return 'needs-support';
+    return 'critical';
+  }
+
+  function aibSpCurrentSchoolYear() {
+    const now = new Date();
+    return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  }
+
+  /** Session-level cache: null = not fetched yet */
+  let aibRollupCache = null;
+
+  async function aibFetchRollups() {
+    if (aibRollupCache !== null) return aibRollupCache;
+    try {
+      const { getSupabase } = await import('/web/supabase-client.js');
+      const supabase = await getSupabase();
+      if (!supabase) { aibRollupCache = []; return aibRollupCache; }
+      const { data, error } = await supabase.rpc('all_students_dese_rollups', {
+        p_school_year: aibSpCurrentSchoolYear(),
+      });
+      aibRollupCache = error || !Array.isArray(data) ? [] : data;
+      if (error) console.warn('[tc-ai-builder] all_students_dese_rollups error:', error.message);
+    } catch (err) {
+      console.warn('[tc-ai-builder] all_students_dese_rollups failed:', err);
+      aibRollupCache = [];
+    }
+    return aibRollupCache;
+  }
+
+  /**
+   * Build a studentCode→Set<className> map from enrollment data or student class_id.
+   */
+  async function aibBuildStudentClassMap(students) {
+    const map = new Map();
+    try {
+      if (db.listClassEnrollments) {
+        const enrollments = await db.listClassEnrollments();
+        for (const e of (enrollments || [])) {
+          if (!e.student_code) continue;
+          if (!map.has(e.student_code)) map.set(e.student_code, new Set());
+          if (e.class_name) map.get(e.student_code).add(e.class_name);
+        }
+      }
+    } catch { /* fall through to student fallback */ }
+    if (map.size === 0) {
+      for (const s of students) {
+        if (s.class_id || s.class_name) {
+          const name = s.class_name || s.class_id;
+          if (!map.has(s.code)) map.set(s.code, new Set());
+          map.get(s.code).add(name);
+        }
+      }
+    }
+    return map;
+  }
+
+  /**
+   * Render the "Standards Needing Attention" callout above the tab bar.
+   * Only appears when there are critical or needs-support standards.
+   */
+  async function aibRenderStandardsCallout(students) {
+    if (!aibStandardsCallout) return;
+
+    // Skip if dismissed this session
+    if (sessionStorage.getItem('aib_standards_callout_dismissed') === '1') return;
+
+    let rows;
+    try {
+      rows = await aibFetchRollups();
+    } catch { return; }
+
+    if (!rows || rows.length === 0) return;
+
+    // Filter to critical and needs-support rows only
+    const attnRows = rows.filter(r => {
+      const tier = aibSpGetTier(Number(r.percent_correct));
+      return tier === 'critical' || tier === 'needs-support';
+    });
+    if (attnRows.length === 0) return;
+
+    // Build student→class map for grouping
+    const studentClassMap = await aibBuildStudentClassMap(students);
+
+    // Aggregate per-(standard, class): best (lowest) percent to surface the worst
+    const stdClassMap = new Map(); // key: `${desCode}||${className}` → {sum, count, tier}
+    const noClassStds = new Map(); // fallback when class data isn't available
+
+    for (const row of attnRows) {
+      const std = row.dese_code;
+      const pct = Number(row.percent_correct);
+      const tier = aibSpGetTier(pct);
+      if (!std || isNaN(pct)) continue;
+
+      const classes = studentClassMap.get(row.student_code);
+      if (!classes || classes.size === 0) {
+        // No class data — track globally
+        if (!noClassStds.has(std)) noClassStds.set(std, { sum: 0, count: 0 });
+        const acc = noClassStds.get(std);
+        acc.sum += pct;
+        acc.count++;
+        continue;
+      }
+      for (const cls of classes) {
+        const key = JSON.stringify([std, cls]);
+        if (!stdClassMap.has(key)) stdClassMap.set(key, { sum: 0, count: 0, cls });
+        const acc = stdClassMap.get(key);
+        acc.sum += pct;
+        acc.count++;
+      }
+    }
+
+    // Build display groups: { className, items: [{std, pct, tier}] }
+    const groups = new Map();
+    for (const [keyStr, acc] of stdClassMap) {
+      const [std, cls] = JSON.parse(keyStr);
+      const avg = Math.round(acc.sum / acc.count);
+      const tier = aibSpGetTier(avg);
+      if (tier !== 'critical' && tier !== 'needs-support') continue;
+      if (!groups.has(cls)) groups.set(cls, []);
+      groups.get(cls).push({ std, pct: avg, tier });
+    }
+    // Sort items within each group by pct ascending (worst first)
+    for (const items of groups.values()) {
+      items.sort((a, b) => a.pct - b.pct);
+    }
+
+    // Fallback: no class grouping — show ungrouped list
+    if (groups.size === 0 && noClassStds.size > 0) {
+      const items = [];
+      for (const [std, acc] of noClassStds) {
+        const avg = Math.round(acc.sum / acc.count);
+        const tier = aibSpGetTier(avg);
+        if (tier === 'critical' || tier === 'needs-support') items.push({ std, pct: avg, tier });
+      }
+      items.sort((a, b) => a.pct - b.pct);
+      if (items.length > 0) groups.set('', items);
+    }
+
+    if (groups.size === 0) return;
+
+    // Determine overall severity (critical wins over needs-support)
+    let overallSeverity = 'needs-support';
+    outer: for (const items of groups.values()) {
+      for (const item of items) {
+        if (item.tier === 'critical') { overallSeverity = 'critical'; break outer; }
+      }
+    }
+
+    const warningIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    const critIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    const chevronIcon = '<svg class="aib-standards-callout-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    // Build group HTML
+    let groupsHtml = '';
+    for (const [cls, items] of [...groups.entries()].sort()) {
+      const itemsHtml = items.map(item => {
+        const icon = item.tier === 'critical' ? critIcon : warningIcon;
+        return `<span class="aib-sca-item tier-${item.tier}">${icon} ${item.std} (${item.pct}%)</span>`;
+      }).join(' ');
+      if (cls) {
+        groupsHtml += `<div class="aib-standards-callout-group"><span class="aib-standards-callout-class">${cls}:</span> ${itemsHtml}</div>`;
+      } else {
+        groupsHtml += `<div class="aib-standards-callout-group">${itemsHtml}</div>`;
+      }
+    }
+
+    const borderColor = overallSeverity === 'critical'
+      ? 'rgba(239, 68, 68, 0.35)'
+      : 'rgba(234, 179, 8, 0.35)';
+    const bgColor = overallSeverity === 'critical'
+      ? 'rgba(239, 68, 68, 0.07)'
+      : 'rgba(234, 179, 8, 0.07)';
+    const titleColor = overallSeverity === 'critical' ? '#fca5a5' : '#fde68a';
+
+    aibStandardsCallout.innerHTML = `
+      <div class="aib-standards-callout" style="border-color:${borderColor};background:${bgColor}">
+        <div class="aib-standards-callout-header" role="button" tabindex="0" aria-expanded="true" aria-label="Standards Needing Attention — toggle">
+          <span class="aib-standards-callout-title" style="color:${titleColor}">
+            ${overallSeverity === 'critical' ? critIcon : warningIcon}
+            Standards Needing Attention
+          </span>
+          ${chevronIcon}
+        </div>
+        <div class="aib-standards-callout-body">
+          <p class="aib-standards-callout-tip">Consider adding more questions targeting these standards in this week's assignments.</p>
+          <div class="aib-standards-callout-groups">${groupsHtml}</div>
+          <div class="aib-standards-callout-footer">
+            <a class="aib-standards-callout-link" href="/teacher/">View full Standards Pulse →</a>
+            <button class="aib-standards-callout-dismiss" type="button">Dismiss</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    aibStandardsCallout.style.display = '';
+
+    // Toggle collapse on header click / keydown
+    const calloutEl = aibStandardsCallout.querySelector('.aib-standards-callout');
+    const headerEl = aibStandardsCallout.querySelector('.aib-standards-callout-header');
+    function toggleCallout() {
+      calloutEl.classList.toggle('collapsed');
+      const expanded = !calloutEl.classList.contains('collapsed');
+      headerEl.setAttribute('aria-expanded', String(expanded));
+    }
+    headerEl.addEventListener('click', toggleCallout);
+    headerEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCallout(); }
+    });
+
+    // Dismiss permanently for this session
+    const dismissBtn = aibStandardsCallout.querySelector('.aib-standards-callout-dismiss');
+    dismissBtn.addEventListener('click', () => {
+      aibStandardsCallout.style.display = 'none';
+      try { sessionStorage.setItem('aib_standards_callout_dismissed', '1'); } catch { /* noop */ }
+    });
+
+    console.log('[tc-ai-builder] Standards callout rendered —', groups.size, 'class group(s)');
+  }
+
   // ── Init ────────────────────────────────────────────────────────────────────
 
   restorePrefs();
@@ -1451,6 +1686,9 @@
     } catch (e) {
       console.warn('[tc-ai-builder] Could not prefetch classes:', e.message);
     }
+
+    // Render standards callout after all prefetch data is available
+    aibRenderStandardsCallout(cachedStudents).catch(() => { /* non-blocking */ });
   })();
 
   console.log('[tc-ai-builder] Ready');

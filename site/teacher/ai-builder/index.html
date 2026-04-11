@@ -671,6 +671,134 @@
         margin-top: 4px;
         margin-bottom: 6px;
       }
+
+      /* ── Standards Needing Attention callout ─────────────────────────────── */
+      .aib-standards-callout {
+        border-radius: 14px;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        background: rgba(239, 68, 68, 0.07);
+        padding: 14px 16px;
+        margin-bottom: 18px;
+        font-size: 13px;
+      }
+
+      .aib-standards-callout-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .aib-standards-callout-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #fca5a5;
+      }
+
+      .aib-standards-callout-chevron {
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
+        opacity: 0.7;
+      }
+
+      .aib-standards-callout.collapsed .aib-standards-callout-chevron {
+        transform: rotate(-90deg);
+      }
+
+      .aib-standards-callout-body {
+        margin-top: 10px;
+      }
+
+      .aib-standards-callout.collapsed .aib-standards-callout-body {
+        display: none;
+      }
+
+      .aib-standards-callout-tip {
+        color: var(--rc-ink-dim);
+        margin-bottom: 10px;
+        line-height: 1.5;
+        font-size: 12px;
+      }
+
+      .aib-standards-callout-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .aib-standards-callout-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 8px;
+        line-height: 1.6;
+      }
+
+      .aib-standards-callout-class {
+        font-weight: 600;
+        color: var(--rc-ink);
+        white-space: nowrap;
+      }
+
+      .aib-sca-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 12px;
+      }
+
+      .aib-sca-item.tier-critical {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+      }
+
+      .aib-sca-item.tier-needs-support {
+        background: rgba(234, 179, 8, 0.15);
+        color: #fde68a;
+      }
+
+      .aib-standards-callout-footer {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .aib-standards-callout-link {
+        font-size: 12px;
+        color: rgba(134, 239, 172, 0.85);
+        text-decoration: none;
+      }
+
+      .aib-standards-callout-link:hover {
+        text-decoration: underline;
+      }
+
+      .aib-standards-callout-dismiss {
+        font-size: 12px;
+        color: var(--rc-ink-dim);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .aib-standards-callout-dismiss:hover {
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--rc-ink);
+      }
     </style>
   </head>
   <body>
@@ -824,6 +952,9 @@
           <p class="aib-subtle" style="margin-top: -6px; margin-bottom: 20px;">
             Generate AI-powered assignments, presentations, and data probes tailored to your students.
           </p>
+
+          <!-- ── Standards Needing Attention callout (populated by tc-ai-builder.js) -->
+          <div id="aibStandardsCallout" style="display:none" aria-live="polite"></div>
 
           <!-- ── Create / Manage Tab Bar ─────────────────────────────────── -->
           <div class="aib-tabs" role="tablist" aria-label="AI Builder tabs">
