@@ -9546,8 +9546,9 @@
   }
 
   /**
-   * Build a plain-text Skills Summary report suitable for pasting into an email.
+   * Build a plain-text Skills Summary report suitable for pasting into a plain-text editor.
    * Reads from cached card data and AI narratives — no new API calls.
+   * Uses simple unicode symbols instead of emojis for consistent rendering.
    */
   function buildSkillsSummaryText(student, iepCards, deseCards) {
     const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -9571,18 +9572,18 @@
       if (!latestDate || d > latestDate) latestDate = d;
     }
     const dataRange = (earliestDate && latestDate)
-      ? `${earliestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} – ${latestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+      ? `${earliestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} \u2013 ${latestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
       : 'N/A';
 
-    const divider = '━'.repeat(51);
+    const divider = '\u2500'.repeat(51);
     const cached = skillsAiCache.get(student.code);
     const hasAi = cached && Array.isArray(cached.skills) && cached.skills.length > 0;
 
-    const tierEmoji = (score) => {
-      if (score === null || score === undefined) return '🟡';
-      if (score >= SKILL_TIER_ON_TRACK) return '✅';   // covers both excellent and on-track
-      if (score >= SKILL_TIER_NEEDS_SUPPORT) return '🟡';
-      return '🔴';
+    const tierSymbol = (score) => {
+      if (score === null || score === undefined) return '[!]';
+      if (score >= SKILL_TIER_ON_TRACK) return '[\u2713]';
+      if (score >= SKILL_TIER_NEEDS_SUPPORT) return '[!]';
+      return '[X]';
     };
     const tierLabel = (score) => getSkillTier(score).label;
 
@@ -9597,36 +9598,36 @@
 
     let lines = [];
 
-    lines.push(`📊 Skills Summary Report — ${student.code} (${studentName})`);
-    lines.push(`IEP Date: ${iepDate} · Evaluation: ${evalDate} · Status: ${status}`);
-    lines.push(`Data collected: ${dataRange} · Generated: ${today}`);
+    lines.push(`[REPORT] Skills Summary Report \u2014 ${student.code} (${studentName})`);
+    lines.push(`IEP Date: ${iepDate} \u00b7 Evaluation: ${evalDate} \u00b7 Status: ${status}`);
+    lines.push(`Data collected: ${dataRange} \u00b7 Generated: ${today}`);
     lines.push('');
     lines.push(divider);
 
     // IEP Goals section
     if (iepCards && iepCards.length > 0) {
       lines.push('');
-      lines.push('🎯 IEP Goal Skills');
+      lines.push('[GOALS] IEP Goal Skills');
       lines.push('');
       for (const c of iepCards) {
-        const score = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
         const ai = getAiEntry(c.code, 'iep');
         const description = ai ? ai.description || '' : '';
         const summary = ai ? ai.summary || '' : '';
         const goalRec = ai ? ai.goal_recommendation || '' : '';
         const tier = tierLabel(c.displayScore);
 
-        lines.push(`${c.code} — ${c.area} · ${score} · ${tierEmoji(c.displayScore)} ${tier}`);
+        lines.push(`${c.code} \u2014 ${c.area} \u00b7 ${score} \u00b7 ${tierSymbol(c.displayScore)} ${tier}`);
         if (description) lines.push(`  ${description}`);
 
         const baseline = c.baseline !== null ? `${c.baseline}%` : '?';
-        const current = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const current = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
         const target = c.target !== null ? `${c.target}%` : '?';
-        lines.push(`📈 ${c.dataPoints} data point${c.dataPoints !== 1 ? 's' : ''} · Baseline: ${baseline} → Current: ${current} (Target: ${target})`);
+        lines.push(`\u2192 ${c.dataPoints} data point${c.dataPoints !== 1 ? 's' : ''} \u00b7 Baseline: ${baseline} \u2192 Current: ${current} (Target: ${target})`);
 
         if (summary) lines.push(summary);
         if (goalRec && (c.displayScore === null || c.displayScore < SKILL_TIER_ON_TRACK)) {
-          lines.push(`  Goal recommendation: ${goalRec}`);
+          lines.push(`  [*] Goal recommendation: ${goalRec}`);
         }
         lines.push('');
       }
@@ -9642,37 +9643,42 @@
     const concernCards = allCards.filter(c => {
       const t = getSkillTier(c.displayScore).tier;
       return t === 'needs-support' || t === 'critical';
+    }).sort((a, b) => {
+      const tierOrder = { critical: 0, 'needs-support': 1 };
+      const ta = tierOrder[getSkillTier(a.displayScore).tier] ?? 2;
+      const tb = tierOrder[getSkillTier(b.displayScore).tier] ?? 2;
+      if (ta !== tb) return ta - tb;
+      return (a.displayScore ?? 0) - (b.displayScore ?? 0);
     });
 
     lines.push('');
-    lines.push(`✅ Strengths (≥${SKILL_TIER_ON_TRACK}%)`);
+    lines.push(`[\u2713] Strengths (\u2265${SKILL_TIER_ON_TRACK}%)`);
     if (strengthCards.length > 0) {
-      const parts = strengthCards.map(c => {
-        const score = c.displayScore !== null ? `${c.displayScore}%` : '—';
+      for (const c of strengthCards) {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
         const count = c.type === 'dese' ? ` (${c.itemCount} items)` : ` (${c.dataPoints} pts)`;
-        return `${c.code} — ${score}${count}`;
-      });
-      lines.push(parts.join(' · '));
+        lines.push(`  \u25cf ${c.code} \u2014 ${score}${count}`);
+      }
     } else {
-      lines.push('None identified yet');
+      lines.push('  None identified yet');
     }
     lines.push('');
 
-    lines.push(`⚠️ Needs Attention (<${SKILL_TIER_ON_TRACK}%)`);
+    lines.push(`[!] Needs Attention (<${SKILL_TIER_ON_TRACK}%)`);
     if (concernCards.length > 0) {
       for (const c of concernCards) {
-        const score = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
         const count = c.type === 'dese' ? `(${c.itemCount} items)` : `(${c.dataPoints} pts)`;
         const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
         const description = ai ? ai.description || '' : '';
-        const emoji = tierEmoji(c.displayScore);
+        const symbol = tierSymbol(c.displayScore);
         const label = tierLabel(c.displayScore);
-        let line = `${emoji} ${c.code} — ${score} ${count} ${label}`;
-        if (description) line += ` — ${description}`;
+        let line = `  ${symbol} ${c.code} \u2014 ${score} ${count} ${label}`;
+        if (description) line += ` \u2014 ${description}`;
         lines.push(line);
       }
     } else {
-      lines.push('None identified');
+      lines.push('  None identified');
     }
 
     // Goal recommendations from AI
@@ -9690,18 +9696,219 @@
       lines.push('');
       lines.push(divider);
       lines.push('');
-      lines.push('💡 Goal Recommendations (AI-generated)');
+      lines.push('[*] Goal Recommendations (AI-generated)');
       for (const r of recommendations) {
-        lines.push(`• ${r.code}: "${r.rec}"`);
+        lines.push(`  \u25cf ${r.code}: "${r.rec}"`);
       }
     }
 
     if (!hasAi) {
       lines.push('');
-      lines.push('(AI commentary not yet generated — click "Generate AI Commentary" on the Skills Summary tab.)');
+      lines.push('(AI commentary not yet generated \u2014 click "Generate AI Commentary" on the Skills Summary tab.)');
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Build a rich HTML Skills Summary report suitable for pasting into Gmail, Outlook, or Apple Mail.
+   * Uses inline styles and inline SVG icons for maximum email-client compatibility.
+   * Reads from cached card data and AI narratives — no new API calls.
+   */
+  function buildSkillsSummaryHtml(student, iepCards, deseCards) {
+    const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const iepDate = student.iep_due ? formatDate(student.iep_due) : 'N/A';
+    const evalDate = student.eval_due ? formatDate(student.eval_due) : 'N/A';
+    const status = student.status ? (student.status.charAt(0).toUpperCase() + student.status.slice(1)) : 'N/A';
+    const studentName = student.name || student.code;
+
+    // Compute earliest and latest data dates from progress entries
+    const entries = getProgressForGoal
+      ? (iepCards || []).flatMap(c => {
+          try { return getProgressForGoal(student.code, c.code); } catch (_e) { return []; }
+        })
+      : [];
+    let earliestDate = null;
+    let latestDate = null;
+    for (const e of entries) {
+      if (!e.date) continue;
+      const d = new Date(e.date);
+      if (!earliestDate || d < earliestDate) earliestDate = d;
+      if (!latestDate || d > latestDate) latestDate = d;
+    }
+    const dataRange = (earliestDate && latestDate)
+      ? `${earliestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} \u2013 ${latestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+      : 'N/A';
+
+    const cached = skillsAiCache.get(student.code);
+    const hasAi = cached && Array.isArray(cached.skills) && cached.skills.length > 0;
+
+    const getAiEntry = (code, source) => {
+      if (!hasAi) return null;
+      return cached.skills.find(s => {
+        if (s.code !== code) return false;
+        if (source && s.source && s.source !== source) return false;
+        return true;
+      }) || null;
+    };
+
+    // Tier color mapping for HTML output
+    const tierHtmlColor = (score) => {
+      if (score === null || score === undefined) return '#d97706';
+      if (score >= SKILL_TIER_ON_TRACK) return '#16a34a';
+      if (score >= SKILL_TIER_NEEDS_SUPPORT) return '#d97706';
+      return '#dc2626';
+    };
+
+    // Inline SVG icons
+    const SVG_BAR_CHART = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>';
+    const SVG_TARGET = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    const SVG_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>';
+    const SVG_WARN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    const SVG_X_CIRCLE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    const SVG_TREND = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+    const SVG_CHECK_CIRCLE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    const SVG_WARN_SECTION = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    const SVG_BULB = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
+
+    const tierIcon = (score) => {
+      if (score === null || score === undefined) return SVG_WARN;
+      if (score >= SKILL_TIER_ON_TRACK) return SVG_CHECK;
+      if (score >= SKILL_TIER_NEEDS_SUPPORT) return SVG_WARN;
+      return SVG_X_CIRCLE;
+    };
+
+    const HR = '<hr style="border:none;border-top:2px solid #e5e7eb;margin:20px 0;" />';
+    const fontStack = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+
+    let html = `<div style="font-family:${fontStack};max-width:680px;color:#1f2937;line-height:1.6;">`;
+
+    // Header
+    html += `<div style="border-bottom:3px solid #10b981;padding-bottom:12px;margin-bottom:16px;">`;
+    html += `<h2 style="margin:0 0 4px;font-size:18px;color:#111827;">${SVG_BAR_CHART}Skills Summary Report \u2014 ${escapeHtml(student.code)} (${escapeHtml(studentName)})</h2>`;
+    html += `<div style="font-size:13px;color:#6b7280;">IEP Date: ${escapeHtml(iepDate)} \u00b7 Evaluation: ${escapeHtml(evalDate)} \u00b7 Status: ${escapeHtml(status)}<br/>Data collected: ${escapeHtml(dataRange)} \u00b7 Generated: ${escapeHtml(today)}</div>`;
+    html += `</div>`;
+
+    // IEP Goals section
+    if (iepCards && iepCards.length > 0) {
+      html += `<h3 style="font-size:15px;color:#111827;margin:20px 0 12px;">${SVG_TARGET}IEP Goal Skills</h3>`;
+
+      for (const c of iepCards) {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
+        const ai = getAiEntry(c.code, 'iep');
+        const description = ai ? ai.description || '' : '';
+        const summary = ai ? ai.summary || '' : '';
+        const goalRec = ai ? ai.goal_recommendation || '' : '';
+        const tierInfo = getSkillTier(c.displayScore);
+        const borderColor = tierHtmlColor(c.displayScore);
+
+        const baseline = c.baseline !== null ? `${c.baseline}%` : '?';
+        const current = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
+        const target = c.target !== null ? `${c.target}%` : '?';
+
+        html += `<div style="border-left:3px solid ${borderColor};padding:10px 14px;margin-bottom:14px;background:#f9fafb;border-radius:0 6px 6px 0;">`;
+        html += `<div style="font-size:14px;font-weight:600;color:#111827;">${tierIcon(c.displayScore)}${escapeHtml(c.code)} \u2014 ${escapeHtml(c.area)} \u00b7 ${escapeHtml(score)} \u00b7 ${escapeHtml(tierInfo.label)}</div>`;
+        if (description) {
+          html += `<div style="font-size:12px;color:#6b7280;font-style:italic;margin:4px 0;">${escapeHtml(description)}</div>`;
+        }
+        html += `<div style="font-size:12px;color:#4b5563;margin:4px 0;">${SVG_TREND}${escapeHtml(String(c.dataPoints))} data point${c.dataPoints !== 1 ? 's' : ''} \u00b7 Baseline: ${escapeHtml(baseline)} \u2192 Current: ${escapeHtml(current)} (Target: ${escapeHtml(target)})</div>`;
+        if (summary) {
+          html += `<div style="font-size:13px;color:#374151;margin-top:6px;">${escapeHtml(summary)}</div>`;
+        }
+        if (goalRec && (c.displayScore === null || c.displayScore < SKILL_TIER_ON_TRACK)) {
+          html += `<div style="font-size:12px;color:#6366f1;margin-top:6px;font-style:italic;">${SVG_BULB}Recommendation: ${escapeHtml(goalRec)}</div>`;
+        }
+        html += `</div>`;
+      }
+
+      html += HR;
+    }
+
+    // DESE Standards sections
+    const allCards = [...(iepCards || []), ...(deseCards || [])];
+    const strengthCards = allCards.filter(c => {
+      const t = getSkillTier(c.displayScore).tier;
+      return t === 'excellent' || t === 'on-track';
+    });
+    const concernCards = allCards.filter(c => {
+      const t = getSkillTier(c.displayScore).tier;
+      return t === 'needs-support' || t === 'critical';
+    }).sort((a, b) => {
+      const tierOrder = { critical: 0, 'needs-support': 1 };
+      const ta = tierOrder[getSkillTier(a.displayScore).tier] ?? 2;
+      const tb = tierOrder[getSkillTier(b.displayScore).tier] ?? 2;
+      if (ta !== tb) return ta - tb;
+      return (a.displayScore ?? 0) - (b.displayScore ?? 0);
+    });
+
+    // Strengths section
+    html += `<h3 style="font-size:15px;color:#16a34a;margin:0 0 10px;">${SVG_CHECK_CIRCLE}Strengths (\u2265${SKILL_TIER_ON_TRACK}%)</h3>`;
+    if (strengthCards.length > 0) {
+      html += `<ul style="margin:0;padding-left:20px;font-size:13px;color:#374151;">`;
+      for (const c of strengthCards) {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
+        const count = c.type === 'dese' ? `${c.itemCount} items` : `${c.dataPoints} pts`;
+        html += `<li style="margin-bottom:4px;">${SVG_CHECK}<strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} (${escapeHtml(count)})</li>`;
+      }
+      html += `</ul>`;
+    } else {
+      html += `<p style="font-size:13px;color:#6b7280;margin:0;">None identified yet</p>`;
+    }
+
+    html += HR;
+
+    // Needs Attention section
+    html += `<h3 style="font-size:15px;color:#d97706;margin:0 0 10px;">${SVG_WARN_SECTION}Needs Attention (&lt;${SKILL_TIER_ON_TRACK}%)</h3>`;
+    if (concernCards.length > 0) {
+      html += `<ul style="margin:0;padding-left:20px;font-size:13px;">`;
+      for (const c of concernCards) {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '\u2014';
+        const count = c.type === 'dese' ? `${c.itemCount} items` : `${c.dataPoints} pts`;
+        const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
+        const description = ai ? ai.description || '' : '';
+        const tierInfo = getSkillTier(c.displayScore);
+        const isCritical = tierInfo.tier === 'critical';
+        const itemColor = isCritical ? '#dc2626' : '#d97706';
+        const icon = isCritical ? SVG_X_CIRCLE : SVG_WARN;
+
+        html += `<li style="margin-bottom:6px;color:${itemColor};">${icon}<strong>${escapeHtml(c.code)}</strong> \u2014 ${escapeHtml(score)} (${escapeHtml(count)}) <span style="font-weight:600;">${escapeHtml(tierInfo.label)}</span>`;
+        if (description) {
+          html += `<div style="font-size:12px;color:#6b7280;font-style:italic;margin-top:2px;">${escapeHtml(description)}</div>`;
+        }
+        html += `</li>`;
+      }
+      html += `</ul>`;
+    } else {
+      html += `<p style="font-size:13px;color:#6b7280;margin:0;">None identified</p>`;
+    }
+
+    // Goal recommendations from AI
+    const recommendations = [];
+    for (const c of [...(iepCards || []), ...(deseCards || [])]) {
+      const t = getSkillTier(c.displayScore).tier;
+      if (t !== 'needs-support' && t !== 'critical') continue;
+      const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
+      if (ai && ai.goal_recommendation) {
+        recommendations.push({ code: c.code, rec: ai.goal_recommendation });
+      }
+    }
+
+    if (recommendations.length > 0) {
+      html += HR;
+      html += `<h3 style="font-size:15px;color:#6366f1;margin:0 0 10px;">${SVG_BULB}Goal Recommendations (AI-generated)</h3>`;
+      html += `<ul style="margin:0;padding-left:20px;font-size:13px;color:#374151;">`;
+      for (const r of recommendations) {
+        html += `<li style="margin-bottom:6px;"><strong>${escapeHtml(r.code)}:</strong> <em>\u201c${escapeHtml(r.rec)}\u201d</em></li>`;
+      }
+      html += `</ul>`;
+    }
+
+    if (!hasAi) {
+      html += `<div style="font-size:12px;color:#9ca3af;margin-top:20px;font-style:italic;">AI commentary not yet generated \u2014 click \u201cGenerate AI Commentary\u201d on the Skills Summary tab.</div>`;
+    }
+
+    html += `</div>`;
+    return html;
   }
 
   /**
@@ -9718,15 +9925,28 @@
       copyBtn.addEventListener('click', async () => {
         const cards = skillsCardsCache.get(student.code);
         if (!cards) return;
+        const html = buildSkillsSummaryHtml(student, cards.iepCards, cards.deseCards);
         const text = buildSkillsSummaryText(student, cards.iepCards, cards.deseCards);
         try {
-          await navigator.clipboard.writeText(text);
+          const blob = new Blob([html], { type: 'text/html' });
+          const textBlob = new Blob([text], { type: 'text/plain' });
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'text/html': blob, 'text/plain': textBlob })
+          ]);
           const orig = copyBtn.textContent;
           copyBtn.textContent = '✓ Copied!';
           setTimeout(() => { copyBtn.textContent = orig; }, 2000);
         } catch (_e) {
-          copyBtn.textContent = '⚠️ Copy failed — check browser permissions';
-          setTimeout(() => { copyBtn.textContent = '📋 Copy for Email'; }, 2000);
+          // Fallback to plain text for browsers that don't support ClipboardItem
+          try {
+            await navigator.clipboard.writeText(text);
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+          } catch (_e2) {
+            copyBtn.textContent = '⚠️ Copy failed — check browser permissions';
+            setTimeout(() => { copyBtn.textContent = '📋 Copy for Email'; }, 2000);
+          }
         }
       }, listenerOpts);
     }
