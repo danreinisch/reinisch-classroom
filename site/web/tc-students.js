@@ -9385,8 +9385,13 @@
 
   /**
    * Client-side fallback for DESE rollups when the RPC function is not deployed.
-   * Queries assignment_instances → submissions → submission_answers → assignment_item_mappings
+   * Queries assignment_instances → submissions → submission_answers → assignment_items
    * and aggregates earned/max points by dese_code.
+   *
+   * Reads dese_codes directly from assignment_items (always populated by the
+   * parser) rather than from assignment_item_mappings, which was previously
+   * only populated for items that also had IEP goal_codes.  This ensures that
+   * DESE-only students (no IEP goals) see their skills data.
    */
   async function fetchDeseRollupsFallback(supabase, studentId, schoolYear) {
     const { data, error } = await supabase
@@ -9397,9 +9402,7 @@
             earned_points,
             max_points,
             assignment_items!assignment_item_id (
-              assignment_item_mappings (
-                dese_codes
-              )
+              dese_codes
             )
           )
         )
@@ -9422,19 +9425,16 @@
           const max = typeof sa.max_points === 'number' ? sa.max_points : 0;
           if (max <= 0) continue;
 
-          const mappings = sa.assignment_items?.assignment_item_mappings;
-          if (!Array.isArray(mappings)) continue;
+          const item = sa.assignment_items;
+          if (!item || !Array.isArray(item.dese_codes)) continue;
 
-          for (const mapping of mappings) {
-            if (!Array.isArray(mapping.dese_codes)) continue;
-            for (const code of mapping.dese_codes) {
-              if (!code) continue;
-              const existing = rollupMap.get(code) || { earnedSum: 0, maxSum: 0, count: 0 };
-              existing.earnedSum += earned;
-              existing.maxSum += max;
-              existing.count += 1;
-              rollupMap.set(code, existing);
-            }
+          for (const code of item.dese_codes) {
+            if (!code) continue;
+            const existing = rollupMap.get(code) || { earnedSum: 0, maxSum: 0, count: 0 };
+            existing.earnedSum += earned;
+            existing.maxSum += max;
+            existing.count += 1;
+            rollupMap.set(code, existing);
           }
         }
       }
