@@ -1284,6 +1284,7 @@
       ? buildWeekGroupsFromDrafts(drafts)
       : buildGroupsFromDrafts(drafts);
     const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
+    const allAssignmentGroups = deduplicateAssignmentsForExport(allDraftsFlat);
 
     // Warn about assignments missing total_possible metadata
     const missingTotalPossible = allDraftsFlat.filter(d => !d.meta || !d.meta.total_possible);
@@ -1452,10 +1453,10 @@
           .filter(inst => inst.student_code === student.code)
           .map(inst => inst.assignment_id)
       );
-      const completedCount = studentScoreMap
-        ? [...studentScoreMap.values()].filter(v => typeof v === "number").length
-        : 0;
-      const totalAssigned = allDraftsFlat.length;
+      const completedCount = allAssignmentGroups.filter(
+        g => getStudentScoreForGroup(student.code, g, scoreMap) !== null
+      ).length;
+      const totalAssigned = allAssignmentGroups.length;
       const rowAverage = calculateRowAverage(student.code, scoreMap, allDraftsFlat);
       const trend = calculateTrend(student.code, scoreMap, allDraftsFlat);
 
