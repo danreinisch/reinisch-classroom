@@ -9580,8 +9580,7 @@
 
     const tierEmoji = (score) => {
       if (score === null || score === undefined) return '🟡';
-      if (score >= SKILL_TIER_EXCELLENT) return '✅';
-      if (score >= SKILL_TIER_ON_TRACK) return '✅';
+      if (score >= SKILL_TIER_ON_TRACK) return '✅';   // covers both excellent and on-track
       if (score >= SKILL_TIER_NEEDS_SUPPORT) return '🟡';
       return '🔴';
     };
@@ -9726,7 +9725,7 @@
           copyBtn.textContent = '✓ Copied!';
           setTimeout(() => { copyBtn.textContent = orig; }, 2000);
         } catch (_e) {
-          copyBtn.textContent = '⚠️ Copy failed';
+          copyBtn.textContent = '⚠️ Copy failed — check browser permissions';
           setTimeout(() => { copyBtn.textContent = '📋 Copy for Email'; }, 2000);
         }
       }, listenerOpts);
