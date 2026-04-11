@@ -1631,6 +1631,466 @@
     }
   }
 
+  // ─── Standards Pulse ───────────────────────────────────────────────────────
+
+  /**
+   * Tier thresholds and helpers — shared between KPI, heatmap, and Level 3.
+   */
+  const SP_TIERS = {
+    excellent:      { min: 80,  cls: 'tier-excellent',      bgCls: 'sp-bg-excellent',     label: 'Excellent' },
+    'on-track':     { min: 60,  cls: 'tier-on-track',       bgCls: 'sp-bg-on-track',      label: 'On-Track' },
+    'needs-support':{ min: 40,  cls: 'tier-needs-support',  bgCls: 'sp-bg-needs-support', label: 'Needs Support' },
+    critical:       { min: 0,   cls: 'tier-critical',       bgCls: 'sp-bg-critical',      label: 'Critical' },
+  };
+
+  function spGetTier(pct) {
+    if (pct >= 80) return 'excellent';
+    if (pct >= 60) return 'on-track';
+    if (pct >= 40) return 'needs-support';
+    return 'critical';
+  }
+
+  /** SVG icons by tier — monochrome, uses currentColor for stroke/fill */
+  const SP_ICONS = {
+    excellent: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Excellent" role="img"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>',
+    'on-track': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="On-Track" role="img"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+    'needs-support': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Needs Support" role="img"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    critical: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Critical" role="img"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+  };
+
+  /** Cache: null = not loaded, [] = no data, Array = loaded rows */
+  let spRollupCache = null;
+
+  /**
+   * Derive the current school year (August 1 is the boundary).
+   */
+  function spCurrentSchoolYear() {
+    const now = new Date();
+    return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  }
+
+  /**
+   * Fetch all-student DESE rollups via Supabase RPC.
+   * Falls back gracefully when the RPC isn't deployed yet.
+   */
+  async function spFetchRollups() {
+    if (spRollupCache !== null) return spRollupCache;
+
+    const { getSupabase } = await import('/web/supabase-client.js');
+    const supabase = await getSupabase();
+    if (!supabase) {
+      spRollupCache = [];
+      return spRollupCache;
+    }
+
+    const schoolYear = spCurrentSchoolYear();
+    try {
+      const { data, error } = await supabase.rpc('all_students_dese_rollups', {
+        p_school_year: schoolYear,
+      });
+      if (error) {
+        console.warn('[tc-overview] all_students_dese_rollups RPC error:', error.message);
+        spRollupCache = [];
+      } else {
+        spRollupCache = Array.isArray(data) ? data : [];
+      }
+    } catch (err) {
+      console.warn('[tc-overview] all_students_dese_rollups failed:', err);
+      spRollupCache = [];
+    }
+    return spRollupCache;
+  }
+
+  /**
+   * Compute the median of a numeric array.
+   */
+  function spMedian(arr) {
+    if (!arr.length) return null;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  /**
+   * Render the Standards Pulse KPI card.
+   * Loads data async — card starts hidden and appears when data arrives.
+   */
+  async function renderStandardsPulseKPI(students) {
+    const card = $('kpiStandardsPulseCard');
+    const valEl = $('kpiStandardsPulse');
+    const subEl = $('kpiStandardsPulseSub');
+    if (!card || !valEl || !subEl) return;
+
+    let rows;
+    try {
+      rows = await spFetchRollups();
+    } catch {
+      return;
+    }
+
+    if (!rows || rows.length === 0) {
+      // No DESE data yet — keep card hidden
+      card.style.display = 'none';
+      return;
+    }
+
+    // All per-standard percent_correct values (one per student×standard row)
+    const pcts = rows.map(r => Number(r.percent_correct)).filter(v => !isNaN(v));
+    const median = spMedian(pcts);
+    if (median === null) {
+      card.style.display = 'none';
+      return;
+    }
+
+    // Count critical and needs-support (per unique student×standard pair)
+    let critical = 0;
+    let needsSupport = 0;
+    for (const r of rows) {
+      const pct = Number(r.percent_correct);
+      const tier = spGetTier(pct);
+      if (tier === 'critical') critical++;
+      else if (tier === 'needs-support') needsSupport++;
+    }
+
+    const tier = spGetTier(Math.round(median));
+    const tierInfo = SP_TIERS[tier];
+
+    valEl.textContent = `${Math.round(median)}%`;
+    valEl.className = 'tc-kpi-value ' + tierInfo.cls;
+
+    const parts = [];
+    if (critical > 0) parts.push(`${critical} critical`);
+    if (needsSupport > 0) parts.push(`${needsSupport} needs-support`);
+    subEl.textContent = parts.length ? parts.join(' · ') : 'All standards on track';
+
+    card.style.display = '';
+
+    // Click / keyboard handler to open modal
+    function openModal() { spOpenModal(students); }
+    card.addEventListener('click', openModal);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(); }
+    });
+
+    console.log('[tc-overview] Standards Pulse KPI rendered — median:', Math.round(median), '%, rows:', rows.length);
+  }
+
+  /**
+   * Build the standards × class heatmap data structure from rollup rows
+   * and the class enrollment list.
+   * Returns: { standards: string[], classes: string[], cells: Map<`std|cls`, {pct, tier}> }
+   */
+  async function spBuildHeatmapData(students) {
+    const rows = await spFetchRollups();
+    if (!rows || rows.length === 0) return null;
+
+    // Get class enrollments from data adapter
+    let enrollments = [];
+    try {
+      if (db.listClassEnrollments) {
+        enrollments = await db.listClassEnrollments();
+      }
+    } catch {
+      // If enrollments unavailable, fall back to students with class_id
+    }
+
+    // Build map: studentCode → Set<className>
+    const studentClassMap = new Map();
+    for (const enr of enrollments) {
+      const code = enr.student_code;
+      if (!code) continue;
+      if (!studentClassMap.has(code)) studentClassMap.set(code, new Set());
+      if (enr.class_name) studentClassMap.get(code).add(enr.class_name);
+    }
+    // Fallback: use students array (which may have class_id/class_name)
+    if (studentClassMap.size === 0) {
+      for (const s of students) {
+        if (s.class_id || s.class_name) {
+          const name = s.class_name || s.class_id;
+          if (!studentClassMap.has(s.code)) studentClassMap.set(s.code, new Set());
+          studentClassMap.get(s.code).add(name);
+        }
+      }
+    }
+
+    // Build per-(standard, class) accumulator
+    // Map key: `${desCode}||${className}`  value: {sum, count}
+    const accumulator = new Map();
+    const standardSet = new Set();
+    const classSet = new Set();
+
+    for (const row of rows) {
+      const code = row.student_code;
+      const std = row.dese_code;
+      const pct = Number(row.percent_correct);
+      if (!std || isNaN(pct)) continue;
+      standardSet.add(std);
+
+      const classes = studentClassMap.get(code);
+      if (!classes || classes.size === 0) continue;
+      for (const cls of classes) {
+        classSet.add(cls);
+        const key = JSON.stringify([std, cls]);
+        if (!accumulator.has(key)) accumulator.set(key, { sum: 0, count: 0 });
+        const acc = accumulator.get(key);
+        acc.sum += pct;
+        acc.count++;
+      }
+    }
+
+    if (classSet.size === 0) return null;
+
+    // Sort standards alphabetically; classes by name
+    const standards = [...standardSet].sort();
+    const classes = [...classSet].sort();
+
+    // Build cell map: key → {pct, tier}
+    const cells = new Map();
+    for (const [key, acc] of accumulator) {
+      const avg = acc.sum / acc.count;
+      cells.set(key, { pct: Math.round(avg * 10) / 10, tier: spGetTier(avg) });
+    }
+
+    return { standards, classes, cells, rows, _sClassMap: studentClassMap };
+  }
+
+  /** Current modal view: 'heatmap' | 'breakdown' */
+  let spCurrentView = 'heatmap';
+  let spHeatmapData = null;
+
+  /**
+   * Open the Standards Pulse overlay and render the Level 2 heatmap.
+   */
+  async function spOpenModal(students) {
+    const overlay = $('spOverlay');
+    if (!overlay) return;
+
+    overlay.classList.add('sp-open');
+    spCurrentView = 'heatmap';
+    const backBtn = $('spBackBtn');
+    if (backBtn) backBtn.classList.remove('sp-visible');
+
+    const titleEl = $('spTitle');
+    if (titleEl) titleEl.textContent = 'Standards Pulse — Class Heatmap';
+
+    const contentEl = $('spContent');
+    if (contentEl) contentEl.innerHTML = '<div class="sp-loading">Loading standards data…</div>';
+
+    // Trap focus in overlay
+    overlay.focus && overlay.focus();
+
+    try {
+      if (!spHeatmapData) {
+        spHeatmapData = await spBuildHeatmapData(students);
+      }
+      spRenderHeatmap(spHeatmapData, students);
+    } catch (err) {
+      console.error('[tc-overview] spOpenModal error:', err);
+      if (contentEl) contentEl.innerHTML = '<div class="sp-no-data">Unable to load standards data. Try refreshing.</div>';
+    }
+  }
+
+  /**
+   * Render the Level 2 heatmap (standards × class grid).
+   */
+  function spRenderHeatmap(data, students) {
+    const contentEl = $('spContent');
+    if (!contentEl) return;
+
+    if (!data) {
+      contentEl.innerHTML = '<div class="sp-no-data">No DESE standards data available yet. Data will appear once graded assignments with DESE-tagged questions have been submitted.</div>';
+      return;
+    }
+
+    const { standards, classes, cells } = data;
+
+    let html = '<div class="sp-heatmap-wrap"><table class="sp-heatmap-table" role="grid">';
+    // Header row
+    html += '<thead><tr>';
+    html += '<th class="sp-std-header">Standard</th>';
+    for (const cls of classes) {
+      html += `<th title="${cls}">${cls}</th>`;
+    }
+    html += '</tr></thead>';
+
+    // Data rows
+    html += '<tbody>';
+    for (const std of standards) {
+      html += '<tr>';
+      html += `<td class="sp-std-cell">${std}</td>`;
+      for (const cls of classes) {
+        const key = JSON.stringify([std, cls]);
+        const cell = cells.get(key);
+        if (!cell) {
+          html += '<td><span class="sp-cell-empty">—</span></td>';
+        } else {
+          const tier = cell.tier;
+          const tierInfo = SP_TIERS[tier];
+          const icon = SP_ICONS[tier];
+          html += `<td style="background:transparent;">
+            <span class="sp-cell ${tierInfo.cls} ${tierInfo.bgCls}"
+                  role="button"
+                  tabindex="0"
+                  title="${tierInfo.label}: ${cell.pct}% — ${std} in ${cls}"
+                  data-std="${std}"
+                  data-cls="${cls}"
+                  data-pct="${cell.pct}">
+              ${icon}${cell.pct}%
+            </span>
+          </td>`;
+        }
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+
+    contentEl.innerHTML = html;
+
+    // Wire up cell clicks
+    contentEl.querySelectorAll('.sp-cell[data-std]').forEach(el => {
+      const handleOpen = () => {
+        const std = el.dataset.std;
+        const cls = el.dataset.cls;
+        spOpenLevel3(std, cls, data, students);
+      };
+      el.addEventListener('click', handleOpen);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpen(); }
+      });
+    });
+  }
+
+  /**
+   * Render the Level 3 student breakdown for a specific (standard, class) cell.
+   */
+  function spOpenLevel3(std, cls, data, students) {
+    spCurrentView = 'breakdown';
+
+    const titleEl = $('spTitle');
+    if (titleEl) titleEl.textContent = `${std} — ${cls}`;
+
+    const backBtn = $('spBackBtn');
+    if (backBtn) backBtn.classList.add('sp-visible');
+
+    const contentEl = $('spContent');
+    if (!contentEl) return;
+
+    const studentMap = new Map(students.map(s => [s.code, s]));
+
+    // All rollup rows for this standard
+    const stdRows = (data.rows || []).filter(r => r.dese_code === std);
+
+    // Find students in this class
+    const classStudentCodes = new Set();
+    if (data._sClassMap) {
+      for (const [code, classSet] of data._sClassMap) {
+        if (classSet.has(cls)) classStudentCodes.add(code);
+      }
+    }
+
+    // Build per-student rows for this standard
+    const studentRows = stdRows
+      .filter(r => classStudentCodes.size === 0 || classStudentCodes.has(r.student_code))
+      .map(r => {
+        const student = studentMap.get(r.student_code) || { code: r.student_code, name: r.student_code };
+        const pct = Number(r.percent_correct);
+        const tier = spGetTier(pct);
+        return {
+          studentCode: r.student_code,
+          studentName: student.name || r.student_code,
+          pct,
+          tier,
+          itemCount: Number(r.item_count) || 0,
+        };
+      })
+      .sort((a, b) => a.pct - b.pct); // worst first
+
+    if (studentRows.length === 0) {
+      contentEl.innerHTML = '<div class="sp-no-data">No student data for this standard in this class.</div>';
+      return;
+    }
+
+    let html = `<table class="sp-breakdown-table" role="grid">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Score</th>
+          <th>Items</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    for (const row of studentRows) {
+      const tier = row.tier;
+      const tierInfo = SP_TIERS[tier];
+      const icon = SP_ICONS[tier];
+      html += `
+        <tr>
+          <td>
+            <div style="font-weight:600;font-size:13px;">${row.studentName}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.45);">${row.studentCode}</div>
+          </td>
+          <td class="${tierInfo.cls}" style="font-weight:700;font-size:15px;">${row.pct}%</td>
+          <td style="color:rgba(255,255,255,.6);">${row.itemCount}</td>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:5px;" class="${tierInfo.cls}">
+              ${icon} ${tierInfo.label}
+            </span>
+          </td>
+          <td>
+            <a href="/teacher/students/?student=${row.studentCode}&tab=skills"
+               style="color:rgba(56,255,166,.8);font-size:12px;text-decoration:none;"
+               title="View Skills Summary for ${row.studentName}">
+              View Skills →
+            </a>
+          </td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+
+    contentEl.innerHTML = html;
+  }
+
+  /**
+   * Wire up the Standards Pulse overlay close / back buttons.
+   * Called once during initialization.
+   */
+  function spInitOverlay(students) {
+    const overlay = $('spOverlay');
+    const closeBtn = $('spCloseBtn');
+    const backBtn = $('spBackBtn');
+    if (!overlay) return;
+
+    function closeOverlay() {
+      overlay.classList.remove('sp-open');
+      spCurrentView = 'heatmap';
+    }
+
+    closeBtn && closeBtn.addEventListener('click', closeOverlay);
+
+    backBtn && backBtn.addEventListener('click', () => {
+      spCurrentView = 'heatmap';
+      backBtn.classList.remove('sp-visible');
+      const titleEl = $('spTitle');
+      if (titleEl) titleEl.textContent = 'Standards Pulse — Class Heatmap';
+      spRenderHeatmap(spHeatmapData, students);
+    });
+
+    // Close on backdrop click (outside panel)
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeOverlay();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('sp-open')) closeOverlay();
+    });
+  }
+
   // ─── Initialize ────────────────────────────────────────────────────────────
 
   try {
@@ -1653,6 +2113,12 @@
         armChecklistMidnightWatch(data);
       });
     renderActivityFeed(data);
+
+    // Standards Pulse — async, non-blocking; wires up modal overlay too
+    spInitOverlay(data.students);
+    renderStandardsPulseKPI(data.students).catch(err => {
+      console.warn('[tc-overview] Standards Pulse KPI failed:', err);
+    });
 
     console.log("[tc-overview] All sections rendered");
   } catch (error) {
