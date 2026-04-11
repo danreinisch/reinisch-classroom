@@ -2,7 +2,7 @@
 // POST /.netlify/functions/teacher-ai-skills-summary
 // Auth: Requires teacher session cookie
 // Body: { student_code, iep_goals, dese_standards }
-// Returns: { ok: true, skills: [{ code, summary, tier, source }] }
+// Returns: { ok: true, skills: [{ code, description, summary, tier, source, goal_recommendation? }] }
 
 console.log('[teacher-ai-skills-summary] Module loaded successfully');
 
@@ -77,11 +77,16 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
 
   prompt += `Return a JSON object with a single "skills" array. Each element must have:\n`;
   prompt += `  "code": the goal or DESE code exactly as provided\n`;
+  prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured (e.g. "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence to support conclusions drawn from the text, including determining where the text leaves matters uncertain"). For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed. Write this so a SPED teacher could paste it directly into an IEP goal bank or present-levels narrative.\n`;
   prompt += `  "summary": a 2-3 sentence narrative about performance in this skill area\n`;
   prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
   prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
+  prompt += `  "goal_recommendation": only include this field when tier is "needs-support" or "critical". Write a 1-2 sentence draft IEP goal recommendation a SPED teacher could use as a starting point. Reference the specific skill deficit, suggest a measurable target, and use language consistent with Missouri IEP goal-writing conventions (e.g. "Given grade-level text, [student] will identify the main idea and two supporting details with 70% accuracy across 3 consecutive data points by the next annual review."). Omit this field entirely for "excellent" and "on-track" tiers.\n`;
   prompt += `Include every IEP goal and every DESE standard provided. Do not add or remove entries.\n`;
-  prompt += `Example: { "skills": [{ "code": "S023.10.1", "summary": "...", "tier": "on-track", "source": "iep" }] }`;
+  prompt += `Example: { "skills": [{ "code": "MLS.R.1.A",`;
+  prompt += ` "description": "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence when analyzing what the text says explicitly and what can be inferred",`;
+  prompt += ` "summary": "...", "tier": "needs-support", "source": "dese",`;
+  prompt += ` "goal_recommendation": "Given grade-level narrative text, the student will identify explicit details and make text-based inferences with 65% accuracy across 3 consecutive probes by the next annual IEP review." }] }`;
 
   return prompt;
 }
@@ -154,7 +159,7 @@ exports.handler = async (event) => {
 
   // Call OpenAI with timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   let openAiResult;
   try {
@@ -167,7 +172,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         temperature: 0.3,
-        max_tokens: 2000,
+        max_tokens: 4000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
@@ -216,9 +221,13 @@ exports.handler = async (event) => {
     .filter(s => s && typeof s.code === 'string' && s.code.trim() !== '')
     .map(s => ({
       code: s.code.trim(),
+      description: typeof s.description === 'string' ? s.description.trim() : '',
       summary: typeof s.summary === 'string' ? s.summary.trim() : '',
       tier: VALID_TIERS.has(s.tier) ? s.tier : 'needs-support',
       source: s.source === 'dese' ? 'dese' : 'iep',
+      ...(typeof s.goal_recommendation === 'string' && s.goal_recommendation.trim() !== ''
+        ? { goal_recommendation: s.goal_recommendation.trim() }
+        : {}),
     }));
 
   console.log(`[teacher-ai-skills-summary] [${requestId}] Summary ready: ${sanitizedSkills.length} skills for ${student_code}`);
