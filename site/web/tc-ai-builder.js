@@ -1494,7 +1494,7 @@
         continue;
       }
       for (const cls of classes) {
-        const key = JSON.stringify([std, cls]);
+        const key = std + '||' + cls;
         if (!stdClassMap.has(key)) stdClassMap.set(key, { sum: 0, count: 0, cls });
         const acc = stdClassMap.get(key);
         acc.sum += pct;
@@ -1504,8 +1504,10 @@
 
     // Build display groups: { className, items: [{std, pct, tier}] }
     const groups = new Map();
-    for (const [keyStr, acc] of stdClassMap) {
-      const [std, cls] = JSON.parse(keyStr);
+    for (const [key, acc] of stdClassMap) {
+      const sepIdx = key.indexOf('||');
+      const std = key.slice(0, sepIdx);
+      const cls = key.slice(sepIdx + 2);
       const avg = Math.round(acc.sum / acc.count);
       const tier = aibSpGetTier(avg);
       if (tier !== 'critical' && tier !== 'needs-support') continue;

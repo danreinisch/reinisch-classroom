@@ -376,7 +376,7 @@ function renderStandardsFocusCard() {
       // Build list of standards with their average pct and tier
       var standards = [];
       for (var code in stdAccum) {
-        if (!Object.hasOwn(stdAccum, code)) continue;
+        if (!Object.prototype.hasOwnProperty.call(stdAccum, code)) continue;
         var avg = Math.round(stdAccum[code].sum / stdAccum[code].count);
         var tier = hdGetTier(avg);
         if (tier === 'critical' || tier === 'needs-support') {
