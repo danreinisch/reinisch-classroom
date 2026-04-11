@@ -1662,11 +1662,11 @@
   let spRollupCache = null;
 
   /**
-   * Derive the current school year (July 1 is the boundary).
+   * Derive the current school year (August 1 is the boundary).
    */
   function spCurrentSchoolYear() {
     const now = new Date();
-    return (now.getMonth() + 1) >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+    return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
   }
 
   /**
@@ -1832,7 +1832,7 @@
       if (!classes || classes.size === 0) continue;
       for (const cls of classes) {
         classSet.add(cls);
-        const key = `${std}||${cls}`;
+        const key = JSON.stringify([std, cls]);
         if (!accumulator.has(key)) accumulator.set(key, { sum: 0, count: 0 });
         const acc = accumulator.get(key);
         acc.sum += pct;
@@ -1921,7 +1921,7 @@
       html += '<tr>';
       html += `<td class="sp-std-cell">${std}</td>`;
       for (const cls of classes) {
-        const key = `${std}||${cls}`;
+        const key = JSON.stringify([std, cls]);
         const cell = cells.get(key);
         if (!cell) {
           html += '<td><span class="sp-cell-empty">—</span></td>';
