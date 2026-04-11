@@ -159,7 +159,7 @@ exports.handler = async (event) => {
 
   // Call OpenAI with timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
 
   let openAiResult;
   try {
@@ -172,7 +172,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         temperature: 0.3,
-        max_tokens: 4000,
+        max_tokens: 6000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },

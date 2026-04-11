@@ -1755,6 +1755,13 @@
         margin-top: 3px;
         white-space: nowrap;
       }
+      .st-skills-btn-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
       .st-ai-generate-btn {
         display: inline-flex;
         align-items: center;
@@ -1768,7 +1775,6 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s;
-        margin-bottom: 20px;
       }
       .st-ai-generate-btn:hover:not(:disabled) {
         background: rgba(139, 92, 246, 0.2);
@@ -1777,6 +1783,25 @@
       .st-ai-generate-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+      }
+      .st-export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .st-export-btn:hover {
+        background: rgba(255, 255, 255, 0.10);
+        border-color: rgba(255, 255, 255, 0.30);
+        color: rgba(255, 255, 255, 0.95);
       }
       .st-skill-narrative-placeholder {
         color: rgba(255, 255, 255, 0.3);
@@ -2374,6 +2399,49 @@
       /* Observation heatmap section */
       .st-heatmap-section {
         margin: 0 20px 12px;
+      }
+
+      /* ── Print styles for Skills Summary ── */
+      @media print {
+        /* Hide everything except the Skills Summary tab content */
+        .tc-topbar,
+        .tc-sidebar,
+        .st-list-panel,
+        .st-tabs,
+        .st-skills-btn-row,
+        .st-skill-callout,
+        .st-skill-strengths-strip,
+        .st-skill-section-chevron {
+          display: none !important;
+        }
+        body, .tc-app, .tc-main, .st-detail-panel, .st-detail-content {
+          background: #fff !important;
+          color: #111 !important;
+          margin: 0;
+          padding: 0;
+          box-shadow: none;
+          border: none;
+        }
+        .st-skill-card {
+          border: 1px solid #ccc !important;
+          background: #fafafa !important;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .st-skill-card-header,
+        .st-skill-code,
+        .st-skill-area,
+        .st-skill-score,
+        .st-skill-confidence,
+        .st-skill-section-title,
+        .st-skill-narrative p {
+          color: #111 !important;
+        }
+        .st-skill-narrative-placeholder,
+        .st-skill-narrative-loading {
+          display: none !important;
+        }
+        a { color: #000; text-decoration: none; }
       }
     </style>
   </head>
