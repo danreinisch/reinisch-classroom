@@ -3461,9 +3461,10 @@
       injectSkillGapBadges(contentDiv, studentCode, studentGoals).catch(() => {});
     }
 
-    // Wire up the AI Commentary button for the skills tab
+    // Wire up the AI Commentary button and export buttons for the skills tab
     if (selectedDetailTab === 'skills') {
       initSkillsTabButton(contentDiv, student, expandController.signal);
+      initSkillsExportButtons(contentDiv, student, expandController.signal);
     }
   }
 
@@ -9141,10 +9142,19 @@
 
     const btnText = cached ? '✅ Commentary Generated' : '✨ Generate AI Commentary';
     const btnDisabled = cached ? 'disabled' : '';
+    const safeCode = escapeHtml(student.code);
     const aiButtonHtml = `
-      <button class="st-ai-generate-btn" id="ai-generate-btn-${escapeHtml(student.code)}" ${btnDisabled}>
-        ${btnText}
-      </button>
+      <div class="st-skills-btn-row">
+        <button class="st-ai-generate-btn" id="ai-generate-btn-${safeCode}" ${btnDisabled}>
+          ${btnText}
+        </button>
+        <button class="st-export-btn" id="skills-copy-btn-${safeCode}" type="button">
+          📋 Copy for Email
+        </button>
+        <button class="st-export-btn" id="skills-print-btn-${safeCode}" type="button">
+          🖨 Print
+        </button>
+      </div>
     `;
 
     // Build strengths & weaknesses strip
@@ -9300,13 +9310,13 @@
       if (!res.ok) {
         console.warn('[tc-students] AI skills summary returned', res.status, '— skipping narratives');
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
-        return;
+        return false;
       }
 
       const data = await res.json();
       if (!data.ok || !Array.isArray(data.skills)) {
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
-        return;
+        return false;
       }
 
       // Cache the result
@@ -9330,11 +9340,13 @@
 
       // Remove any remaining loading spinners
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+      return true;
 
     } catch (err) {
       console.warn('[tc-students] requestSkillsNarratives failed:', err);
       // Silently remove loading spinners — user still sees the data cards
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+      return false;
     }
   }
 
@@ -9477,8 +9489,14 @@
       // Guard against duplicate in-flight requests (e.g. rapid tab switching)
       if (skillsGenerationInFlight.get(student.code)) return;
 
+      // If already in final-failure state, treat as a retry
+      const isRetry = btn.dataset.aiState === 'failed';
+
       btn.disabled = true;
       btn.textContent = 'Generating…';
+      btn.dataset.aiState = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
 
       // Replace placeholders with loading spinners while generating
       contentDiv.querySelectorAll('.st-skill-narrative-placeholder').forEach(el => {
@@ -9495,16 +9513,29 @@
       }
 
       skillsGenerationInFlight.set(student.code, true);
-      await requestSkillsNarratives(student, cards.iepCards, cards.deseCards);
+      const succeeded = await requestSkillsNarratives(student, cards.iepCards, cards.deseCards);
       skillsGenerationInFlight.delete(student.code);
 
       if (skillsAiCache.has(student.code)) {
         btn.textContent = '✅ Commentary Generated';
         // Keep disabled — reload the tab to regenerate
+      } else if (isRetry) {
+        // Second failure — show final unavailable state
+        btn.disabled = true;
+        btn.textContent = 'AI summary unavailable';
+        btn.dataset.aiState = 'unavailable';
+        contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
+          if (!el.textContent.trim()) {
+            el.innerHTML = SKILL_NARRATIVE_PLACEHOLDER_HTML;
+          }
+        });
       } else {
-        // Generation failed — restore button and placeholders
+        // First failure — offer a retry
         btn.disabled = false;
-        btn.textContent = '✨ Generate AI Commentary';
+        btn.textContent = '⚠️ AI summary failed — Retry?';
+        btn.dataset.aiState = 'failed';
+        btn.style.borderColor = 'rgba(245,158,11,0.5)';
+        btn.style.color = 'rgba(245,158,11,0.9)';
         contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
           if (!el.textContent.trim()) {
             el.innerHTML = SKILL_NARRATIVE_PLACEHOLDER_HTML;
@@ -9512,6 +9543,199 @@
         });
       }
     }, listenerOpts);
+  }
+
+  /**
+   * Build a plain-text Skills Summary report suitable for pasting into an email.
+   * Reads from cached card data and AI narratives — no new API calls.
+   */
+  function buildSkillsSummaryText(student, iepCards, deseCards) {
+    const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const iepDate = student.iep_due ? formatDate(student.iep_due) : 'N/A';
+    const evalDate = student.eval_due ? formatDate(student.eval_due) : 'N/A';
+    const status = student.status ? (student.status.charAt(0).toUpperCase() + student.status.slice(1)) : 'N/A';
+    const studentName = student.name || student.code;
+
+    // Compute earliest and latest data dates from progress entries
+    const entries = getProgressForGoal
+      ? (iepCards || []).flatMap(c => {
+          try { return getProgressForGoal(student.code, c.code); } catch (_e) { return []; }
+        })
+      : [];
+    let earliestDate = null;
+    let latestDate = null;
+    for (const e of entries) {
+      if (!e.date) continue;
+      const d = new Date(e.date);
+      if (!earliestDate || d < earliestDate) earliestDate = d;
+      if (!latestDate || d > latestDate) latestDate = d;
+    }
+    const dataRange = (earliestDate && latestDate)
+      ? `${earliestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} – ${latestDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+      : 'N/A';
+
+    const divider = '━'.repeat(51);
+    const cached = skillsAiCache.get(student.code);
+    const hasAi = cached && Array.isArray(cached.skills) && cached.skills.length > 0;
+
+    const tierEmoji = (score) => {
+      if (score === null || score === undefined) return '🟡';
+      if (score >= SKILL_TIER_ON_TRACK) return '✅';   // covers both excellent and on-track
+      if (score >= SKILL_TIER_NEEDS_SUPPORT) return '🟡';
+      return '🔴';
+    };
+    const tierLabel = (score) => getSkillTier(score).label;
+
+    const getAiEntry = (code, source) => {
+      if (!hasAi) return null;
+      return cached.skills.find(s => {
+        if (s.code !== code) return false;
+        if (source && s.source && s.source !== source) return false;
+        return true;
+      }) || null;
+    };
+
+    let lines = [];
+
+    lines.push(`📊 Skills Summary Report — ${student.code} (${studentName})`);
+    lines.push(`IEP Date: ${iepDate} · Evaluation: ${evalDate} · Status: ${status}`);
+    lines.push(`Data collected: ${dataRange} · Generated: ${today}`);
+    lines.push('');
+    lines.push(divider);
+
+    // IEP Goals section
+    if (iepCards && iepCards.length > 0) {
+      lines.push('');
+      lines.push('🎯 IEP Goal Skills');
+      lines.push('');
+      for (const c of iepCards) {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const ai = getAiEntry(c.code, 'iep');
+        const description = ai ? ai.description || '' : '';
+        const summary = ai ? ai.summary || '' : '';
+        const goalRec = ai ? ai.goal_recommendation || '' : '';
+        const tier = tierLabel(c.displayScore);
+
+        lines.push(`${c.code} — ${c.area} · ${score} · ${tierEmoji(c.displayScore)} ${tier}`);
+        if (description) lines.push(`  ${description}`);
+
+        const baseline = c.baseline !== null ? `${c.baseline}%` : '?';
+        const current = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const target = c.target !== null ? `${c.target}%` : '?';
+        lines.push(`📈 ${c.dataPoints} data point${c.dataPoints !== 1 ? 's' : ''} · Baseline: ${baseline} → Current: ${current} (Target: ${target})`);
+
+        if (summary) lines.push(summary);
+        if (goalRec && (c.displayScore === null || c.displayScore < SKILL_TIER_ON_TRACK)) {
+          lines.push(`  Goal recommendation: ${goalRec}`);
+        }
+        lines.push('');
+      }
+      lines.push(divider);
+    }
+
+    // DESE Standards sections
+    const allCards = [...(iepCards || []), ...(deseCards || [])];
+    const strengthCards = allCards.filter(c => {
+      const t = getSkillTier(c.displayScore).tier;
+      return t === 'excellent' || t === 'on-track';
+    });
+    const concernCards = allCards.filter(c => {
+      const t = getSkillTier(c.displayScore).tier;
+      return t === 'needs-support' || t === 'critical';
+    });
+
+    lines.push('');
+    lines.push(`✅ Strengths (≥${SKILL_TIER_ON_TRACK}%)`);
+    if (strengthCards.length > 0) {
+      const parts = strengthCards.map(c => {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const count = c.type === 'dese' ? ` (${c.itemCount} items)` : ` (${c.dataPoints} pts)`;
+        return `${c.code} — ${score}${count}`;
+      });
+      lines.push(parts.join(' · '));
+    } else {
+      lines.push('None identified yet');
+    }
+    lines.push('');
+
+    lines.push(`⚠️ Needs Attention (<${SKILL_TIER_ON_TRACK}%)`);
+    if (concernCards.length > 0) {
+      for (const c of concernCards) {
+        const score = c.displayScore !== null ? `${c.displayScore}%` : '—';
+        const count = c.type === 'dese' ? `(${c.itemCount} items)` : `(${c.dataPoints} pts)`;
+        const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
+        const description = ai ? ai.description || '' : '';
+        const emoji = tierEmoji(c.displayScore);
+        const label = tierLabel(c.displayScore);
+        let line = `${emoji} ${c.code} — ${score} ${count} ${label}`;
+        if (description) line += ` — ${description}`;
+        lines.push(line);
+      }
+    } else {
+      lines.push('None identified');
+    }
+
+    // Goal recommendations from AI
+    const recommendations = [];
+    for (const c of [...(iepCards || []), ...(deseCards || [])]) {
+      const t = getSkillTier(c.displayScore).tier;
+      if (t !== 'needs-support' && t !== 'critical') continue;
+      const ai = getAiEntry(c.code, c.type === 'dese' ? 'dese' : 'iep');
+      if (ai && ai.goal_recommendation) {
+        recommendations.push({ code: c.code, rec: ai.goal_recommendation });
+      }
+    }
+
+    if (recommendations.length > 0) {
+      lines.push('');
+      lines.push(divider);
+      lines.push('');
+      lines.push('💡 Goal Recommendations (AI-generated)');
+      for (const r of recommendations) {
+        lines.push(`• ${r.code}: "${r.rec}"`);
+      }
+    }
+
+    if (!hasAi) {
+      lines.push('');
+      lines.push('(AI commentary not yet generated — click "Generate AI Commentary" on the Skills Summary tab.)');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Wire up the "Copy for Email" and "Print" buttons on the Skills Summary tab.
+   * Must be called after the tab HTML has been inserted into the DOM.
+   */
+  function initSkillsExportButtons(contentDiv, student, signal) {
+    const listenerOpts = signal ? { signal } : undefined;
+
+    const copyBtn = contentDiv.querySelector(`#skills-copy-btn-${student.code}`);
+    const printBtn = contentDiv.querySelector(`#skills-print-btn-${student.code}`);
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const cards = skillsCardsCache.get(student.code);
+        if (!cards) return;
+        const text = buildSkillsSummaryText(student, cards.iepCards, cards.deseCards);
+        try {
+          await navigator.clipboard.writeText(text);
+          const orig = copyBtn.textContent;
+          copyBtn.textContent = '✓ Copied!';
+          setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+        } catch (_e) {
+          copyBtn.textContent = '⚠️ Copy failed — check browser permissions';
+          setTimeout(() => { copyBtn.textContent = '📋 Copy for Email'; }, 2000);
+        }
+      }, listenerOpts);
+    }
+
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        window.print();
+      }, listenerOpts);
+    }
   }
 
   // ── End Skills Summary Tab ───────────────────────────────────────────────────

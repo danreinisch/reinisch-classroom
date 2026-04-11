@@ -7698,19 +7698,34 @@
       container.appendChild(renderAnalyticsSection(filtered, upcomingList, currentList, finalizedList));
 
       // Pre-compute weekly data once for both charts
-      const weekMap = new Map(); // weekLabel → { count, scores, date }
+      // Use an ISO Monday date string (YYYY-MM-DD) as the map key so weeks from
+      // different years never collide (e.g. "Week of Apr 7–11" in 2026 vs 2027).
+      const getWeekKey = (date) => {
+        const weekStart = new Date(date);
+        weekStart.setHours(0, 0, 0, 0);
+        const day = weekStart.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        weekStart.setDate(weekStart.getDate() + diffToMonday);
+        const year = weekStart.getFullYear();
+        const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+        const dayOfMonth = String(weekStart.getDate()).padStart(2, '0');
+        return `${year}-${month}-${dayOfMonth}`;
+      };
+      const weekMap = new Map(); // ISO-Monday-key → { label, count, scores, date }
       finalizedList.forEach(a => {
         const date = getFinalizationDate(a, instancesData, submissionsData);
+        const weekKey = getWeekKey(date);
         const label = getWeekLabel(date);
-        if (!weekMap.has(label)) weekMap.set(label, { count: 0, scores: [], date });
-        const entry = weekMap.get(label);
+        if (!weekMap.has(weekKey)) weekMap.set(weekKey, { label, count: 0, scores: [], date });
+        const entry = weekMap.get(weekKey);
         entry.count++;
         const stats = getAssignmentStats(a, instancesData, submissionsData);
         if (stats.avgScore != null) entry.scores.push(stats.avgScore);
       });
-      const weekEntries = [...weekMap.entries()]
-        .sort((a, b) => a[1].date - b[1].date)
-        .slice(-12);
+      const weekEntries = [...weekMap.values()]
+        .sort((a, b) => a.date - b.date)
+        .slice(-12)
+        .map(entry => [entry.label, entry]);
 
       // Charts row (2-column on desktop, 1-column on mobile)
       const chartsRow = document.createElement('div');
@@ -7958,8 +7973,9 @@
     svg.appendChild(refLine);
 
     const refLabel = document.createElementNS(NS, 'text');
-    refLabel.setAttribute('x', String(ML + chartW + 3));
-    refLabel.setAttribute('y', String(refY + 4));
+    refLabel.setAttribute('x', String(ML + chartW - 4));
+    refLabel.setAttribute('y', String(refY - 3));
+    refLabel.setAttribute('text-anchor', 'end');
     refLabel.setAttribute('font-size', '9');
     refLabel.setAttribute('fill', 'rgba(255,255,255,.30)');
     refLabel.textContent = '80%';
