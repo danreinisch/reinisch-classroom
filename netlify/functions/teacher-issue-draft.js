@@ -987,7 +987,7 @@ exports.handler = async (event) => {
           console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
         } else {
           console.log(`[teacher-issue-draft] [${requestId}] No structured content found in assignment file`);
-          contentWarning = 'No structured content was parsed from the assignment file. Students will see "No Content Available". Check that the file uses the correct format (DAY N or Chapter N headers).';
+          contentWarning = 'No structured content was parsed from the assignment file. Students will see "No Content Available". Check that the file uses the correct format (e.g., "DAY 1 QUESTIONS" or "--- Chapter 35: Title ---" section headers).';
         }
       }
     }

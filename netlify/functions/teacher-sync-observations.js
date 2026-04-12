@@ -1,7 +1,7 @@
 // Teacher sync observations endpoint
 // POST /.netlify/functions/teacher-sync-observations
 // Auth: Requires teacher session cookie
-// Body: { entries: [{ student_code, goal_code, date, percent, method, by_name, via, notes }] }
+// Body: { entries: [{ student_code, goal_id, date, percent, method, by_name, via, notes }] }
 // Inserts observation entries into progress_entries using the service role key (bypasses RLS).
 // Returns: { ok, synced, failed }
 

@@ -1929,8 +1929,6 @@
     if (!skipConfirmation && !hasFutureRelease) {
       let confirmed = false;
 
-
-
       if (draft.studentCode) {
         // Single-student draft (from "Split by Student"): confirmation with extra student input
         const dialogResult = await showIssueConfirmDialog(
