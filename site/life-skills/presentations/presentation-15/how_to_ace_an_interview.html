@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Ace an Interview</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Outfit', sans-serif;
+    background: #1a1207;
+  }
+
+  /* ===== TWO-LAYER CROSSFADE BACKGROUND ===== */
+  .bg-layer {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    will-change: opacity;
+    transform: translate3d(0,0,0);
+    transition: opacity 0.8s ease;
+    z-index: 0;
+  }
+  #bgA { opacity: 1; }
+  #bgB { opacity: 0; }
+
+  /* ===== SLIDE CONTAINER ===== */
+  .slide-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slide {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    will-change: opacity;
+    transform: translate3d(0,0,0);
+    transition: opacity 0.7s ease;
+    padding: 40px 60px 90px 60px;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ===== TITLE SLIDE ===== */
+  .title-slide {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  .title-slide .main-title {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 5.5rem;
+    color: #fff;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 60px rgba(212,160,60,0.3);
+    line-height: 1.1;
+  }
+  .title-slide .main-title span.highlight {
+    color: #f5c842;
+    font-size: 6.5rem;
+    display: block;
+  }
+  .title-slide .clipboard-icon {
+    font-size: 6rem;
+    animation: floatBounce 3s ease-in-out infinite;
+  }
+
+  /* ===== CONTENT SLIDES ===== */
+  .content-slide {
+    flex-direction: row;
+    gap: 40px;
+  }
+
+  .slide-card {
+    background: rgba(255,255,255,0.93);
+    border-radius: 24px;
+    padding: 50px 55px;
+    max-width: 700px;
+    width: 55%;
+    box-shadow: 0 12px 50px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  .slide-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #d4a03c, #f5c842, #d4a03c);
+  }
+
+  .step-number {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: #a07828;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+
+  .step-title {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 3rem;
+    color: #2c1810;
+    line-height: 1.15;
+    margin-bottom: 18px;
+  }
+
+  .step-body {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    color: #4a3520;
+    line-height: 1.6;
+  }
+
+  .slide-visual {
+    width: 40%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10rem;
+    filter: drop-shadow(0 8px 30px rgba(0,0,0,0.2));
+  }
+  .slide-visual .emoji-icon {
+    animation: floatBounce 3.5s ease-in-out infinite;
+    display: inline-block;
+  }
+
+  /* Alternate layout: visual left, card right */
+  .layout-left .slide-card { order: 2; }
+  .layout-left .slide-visual { order: 1; }
+
+  /* ===== THANK YOU SLIDE ===== */
+  .thankyou-slide {
+    flex-direction: column;
+    text-align: center;
+    gap: 24px;
+  }
+  .thankyou-slide .thankyou-text {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 5rem;
+    color: #fff;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 60px rgba(212,160,60,0.3);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+  }
+  .thankyou-slide .thankyou-emoji {
+    font-size: 5rem;
+    animation: floatBounce 3s ease-in-out infinite;
+  }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #d4a03c, #f5c842);
+    z-index: 100;
+    transition: width 0.5s ease;
+    border-radius: 0 3px 3px 0;
+    box-shadow: 0 0 12px rgba(245,200,66,0.5);
+  }
+
+  /* ===== SLIDE COUNTER ===== */
+  .slide-counter {
+    position: fixed;
+    top: 16px;
+    right: 24px;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.7);
+    z-index: 100;
+    background: rgba(0,0,0,0.35);
+    padding: 6px 16px;
+    border-radius: 20px;
+  }
+
+  /* ===== NAV BUTTONS ===== */
+  .nav-btn {
+    position: fixed;
+    bottom: 18px;
+    z-index: 100;
+    background: rgba(44,24,16,0.75);
+    color: #f5c842;
+    border: 2px solid rgba(245,200,66,0.4);
+    padding: 12px 32px;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+    user-select: none;
+    letter-spacing: 1px;
+  }
+  .nav-btn:hover {
+    background: rgba(44,24,16,0.9);
+    border-color: #f5c842;
+    transform: scale(1.05);
+  }
+  .nav-btn:active { transform: scale(0.97); }
+  .nav-btn.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  #prevBtn { left: 24px; }
+  #nextBtn { right: 24px; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* ===== FLOATING DECORATIVE ORBS ===== */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f5d060, #d4a03c);
+    opacity: 0.35;
+    pointer-events: none;
+    will-change: transform;
+    transform: translate3d(0,0,0);
+  }
+  .orb-1 { width: 180px; height: 180px; top: -40px; right: -30px; animation: orbFloat1 8s ease-in-out infinite; }
+  .orb-2 { width: 100px; height: 100px; bottom: 80px; left: 30px; animation: orbFloat2 10s ease-in-out infinite; }
+  .orb-3 { width: 60px; height: 60px; top: 50%; right: 15%; animation: orbFloat3 7s ease-in-out infinite; }
+  .orb-4 { width: 130px; height: 130px; bottom: -30px; right: 25%; animation: orbFloat1 9s ease-in-out infinite reverse; }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes floatBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+  @keyframes orbFloat1 {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    33% { transform: translate3d(-15px, -20px, 0); }
+    66% { transform: translate3d(10px, -8px, 0); }
+  }
+  @keyframes orbFloat2 {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(20px, -15px, 0); }
+  }
+  @keyframes orbFloat3 {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(-12px, 18px, 0); }
+  }
+
+  /* Entrance animation for active card */
+  .slide.active .slide-card {
+    animation: cardIn 0.6s ease forwards;
+  }
+  .slide.active .slide-visual {
+    animation: visualIn 0.7s ease 0.15s forwards;
+    opacity: 0;
+  }
+  @keyframes cardIn {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes visualIn {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  .slide.active .title-slide .main-title,
+  .slide.active .thankyou-slide .thankyou-text {
+    animation: titlePop 0.7s ease forwards;
+  }
+  @keyframes titlePop {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TWO-LAYER CROSSFADE BACKGROUNDS -->
+<img id="bgA" class="bg-layer" src="" alt="">
+<img id="bgB" class="bg-layer" src="" alt="">
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- SLIDE COUNTER -->
+<div class="slide-counter" id="slideCounter">1 / 12</div>
+
+<!-- FLOATING ORBS -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div class="orb orb-4"></div>
+
+<!-- ===== SLIDES ===== -->
+<div class="slide-container">
+
+  <!-- SLIDE 1: Title -->
+  <div class="slide active" id="slide-0">
+    <div class="title-slide">
+      <div style="font-size:5rem;" class="emoji-icon">&#128203;</div>
+      <div class="main-title">
+        How <span class="highlight">to Ace</span> an Interview
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: Dress Properly -->
+  <div class="slide" id="slide-1">
+    <div class="content-slide">
+      <div class="slide-card">
+        <div class="step-number">Number 1</div>
+        <div class="step-title">Dress Properly</div>
+        <div class="step-body">Dress in tidy, clean, and suitable attire to fit the position or environment. First impressions count!<br><br>(What would you wear to an interview for your dream job?)</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#128084;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: Arrive on Time -->
+  <div class="slide" id="slide-2">
+    <div class="content-slide layout-left">
+      <div class="slide-card">
+        <div class="step-number">Number 2</div>
+        <div class="step-title">Arrive on Time</div>
+        <div class="step-body">Being early demonstrates your responsibility and regard for others' time.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#9200;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Greet Politely -->
+  <div class="slide" id="slide-3">
+    <div class="content-slide">
+      <div class="slide-card">
+        <div class="step-number">Number 3</div>
+        <div class="step-title">Greet Politely</div>
+        <div class="step-body">Smile, shake hands, and say "Good morning/afternoon." This indicates positive behavior.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#129309;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: Get Familiar with the Company -->
+  <div class="slide" id="slide-4">
+    <div class="content-slide layout-left">
+      <div class="slide-card">
+        <div class="step-number">Number 4</div>
+        <div class="step-title">Get Familiar with the Company</div>
+        <div class="step-body">Find out some basic information on the place you are applying. It demonstrates effort and interest.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#128269;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Respond with clarity and confidence -->
+  <div class="slide" id="slide-5">
+    <div class="content-slide">
+      <div class="slide-card">
+        <div class="step-number">Number 5</div>
+        <div class="step-title">Respond with Clarity and Confidence</div>
+        <div class="step-body">Talk calmly and provide thorough explanations for your responses. Don't hurry or rush your answers.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#128172;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Use Positive Body Language -->
+  <div class="slide" id="slide-6">
+    <div class="content-slide layout-left">
+      <div class="slide-card">
+        <div class="step-number">Number 6</div>
+        <div class="step-title">Use Positive Body Language</div>
+        <div class="step-body">Make eye contact, sit up straight, and refrain from fidgeting. This demonstrates confidence.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#128170;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Prepare for Common Questions -->
+  <div class="slide" id="slide-7">
+    <div class="content-slide">
+      <div class="slide-card">
+        <div class="step-number">Number 7</div>
+        <div class="step-title">Prepare for Common Questions</div>
+        <div class="step-body">Practice responses to questions such as "Why should we hire you?" "Tell me about yourself."</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#128161;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: Ask Questions Too -->
+  <div class="slide" id="slide-8">
+    <div class="content-slide layout-left">
+      <div class="slide-card">
+        <div class="step-number">Number 8</div>
+        <div class="step-title">Ask Questions Too</div>
+        <div class="step-body">Simple questions to show interest in this position. (When are you looking to fill this position, what are the hours, what is the pay?, is there benefits?)</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#10067;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: Thank the Interviewer -->
+  <div class="slide" id="slide-9">
+    <div class="content-slide">
+      <div class="slide-card">
+        <div class="step-number">Number 9</div>
+        <div class="step-title">Thank the Interviewer</div>
+        <div class="step-body">Say "Thank you for your time" before you go and ask for a business card to follow up later. It's polite and makes a nice impression.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#127775;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: Follow Up -->
+  <div class="slide" id="slide-10">
+    <div class="content-slide layout-left">
+      <div class="slide-card">
+        <div class="step-number">Number 10</div>
+        <div class="step-title">Follow Up</div>
+        <div class="step-body">After the interview, try to send a brief note of gratitude to express your appreciation.</div>
+      </div>
+      <div class="slide-visual">
+        <span class="emoji-icon">&#9993;&#65039;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Thank You -->
+  <div class="slide" id="slide-11">
+    <div class="thankyou-slide">
+      <div class="thankyou-emoji">&#127942;</div>
+      <div class="thankyou-text">Thank You<br>For Listening</div>
+      <div style="color: rgba(255,255,255,0.6); font-size: 1.3rem; margin-top: 8px;">Now go ace that interview!</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NAV BUTTONS -->
+<button class="nav-btn disabled" id="prevBtn" onclick="changeSlide(-1)">&#9664;&ensp;Previous</button>
+<button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next&ensp;&#9654;</button>
+
+<!-- FOOTER -->
+<div class="footer">Room 406 &nbsp;|&nbsp; Winfield High School &nbsp;|&nbsp; reinischclassroom.com</div>
+
+<script>
+  /* ===== USE var FOR NEWLINE SMART TV COMPATIBILITY ===== */
+  var currentSlide = 0;
+  var totalSlides = 12;
+  var slides = document.querySelectorAll('.slide');
+  var bgA = document.getElementById('bgA');
+  var bgB = document.getElementById('bgB');
+  var progressBar = document.getElementById('progressBar');
+  var slideCounter = document.getElementById('slideCounter');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var activeBg = 'A';
+
+  /* Background image URLs - warm brick/wood aesthetic via SVG data URIs */
+  var bgColors = [
+    '#2c1810', '#3a2015', '#2c1810', '#3a2015',
+    '#2c1810', '#3a2015', '#2c1810', '#3a2015',
+    '#2c1810', '#3a2015', '#2c1810', '#2c1810'
+  ];
+
+  function generateBgSvg(slideIdx) {
+    /* Create warm textured backgrounds with brick/wood tones */
+    var hueShift = slideIdx * 8;
+    var baseHue = 25 + hueShift;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">';
+    svg += '<defs>';
+    svg += '<linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">';
+    svg += '<stop offset="0%" stop-color="hsl(' + baseHue + ',35%,12%)"/>';
+    svg += '<stop offset="50%" stop-color="hsl(' + (baseHue + 10) + ',30%,16%)"/>';
+    svg += '<stop offset="100%" stop-color="hsl(' + (baseHue + 5) + ',25%,10%)"/>';
+    svg += '</linearGradient>';
+    svg += '<filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>';
+    svg += '<feColorMatrix type="saturate" values="0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>';
+    svg += '</defs>';
+    svg += '<rect width="1920" height="1080" fill="url(#g1)"/>';
+    svg += '<rect width="1920" height="1080" filter="url(#noise)" opacity="0.08"/>';
+    /* Wooden floor strip at bottom */
+    svg += '<rect y="880" width="1920" height="200" fill="hsl(' + (baseHue + 5) + ',30%,18%)" opacity="0.6"/>';
+    svg += '<line x1="0" y1="880" x2="1920" y2="880" stroke="hsl(' + baseHue + ',20%,25%)" stroke-width="2" opacity="0.3"/>';
+    /* Subtle brick pattern hints */
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 10; c++) {
+        var x = c * 200 + (r % 2) * 100;
+        var y = r * 110;
+        var brickOpacity = 0.03 + Math.sin(r * c * 0.5) * 0.02;
+        svg += '<rect x="' + x + '" y="' + y + '" width="190" height="100" rx="3" fill="hsl(' + (baseHue + 8) + ',20%,22%)" opacity="' + brickOpacity.toFixed(3) + '"/>';
+      }
+    }
+    svg += '</svg>';
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+
+  function updateBackground(idx) {
+    var newSrc = generateBgSvg(idx);
+    if (activeBg === 'A') {
+      bgB.src = newSrc;
+      bgB.style.opacity = '1';
+      bgA.style.opacity = '0';
+      activeBg = 'B';
+    } else {
+      bgA.src = newSrc;
+      bgA.style.opacity = '1';
+      bgB.style.opacity = '0';
+      activeBg = 'A';
+    }
+  }
+
+  function updateUI() {
+    for (var i = 0; i < slides.length; i++) {
+      if (i === currentSlide) {
+        slides[i].classList.add('active');
+      } else {
+        slides[i].classList.remove('active');
+      }
+    }
+
+    progressBar.style.width = ((currentSlide + 1) / totalSlides * 100) + '%';
+    slideCounter.textContent = (currentSlide + 1) + ' / ' + totalSlides;
+
+    if (currentSlide === 0) {
+      prevBtn.classList.add('disabled');
+    } else {
+      prevBtn.classList.remove('disabled');
+    }
+    if (currentSlide === totalSlides - 1) {
+      nextBtn.classList.add('disabled');
+    } else {
+      nextBtn.classList.remove('disabled');
+    }
+  }
+
+  function changeSlide(dir) {
+    var newIdx = currentSlide + dir;
+    if (newIdx < 0 || newIdx >= totalSlides) return;
+    currentSlide = newIdx;
+    updateBackground(currentSlide);
+    updateUI();
+  }
+
+  /* Keyboard navigation */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      changeSlide(1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      changeSlide(-1);
+    }
+  });
+
+  /* Initialize */
+  bgA.src = generateBgSvg(0);
+  updateUI();
+</script>
+</body>
+</html>
