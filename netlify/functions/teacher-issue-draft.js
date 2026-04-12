@@ -78,7 +78,34 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   // Strategy 1: Find class name that appears between === separators
   // Check for both resolved name and short alias (e.g., "Language Arts 4 SC" and "LA 4 SC")
   const shortAlias = REVERSE_ALIASES[resolvedClassName] || '';
-  
+
+  // Strategy 0: Per-student format detection
+  // In this format, a multi-line header block appears between two === separators.
+  // One line in the block contains "Class: <className>" (e.g. "Student: S002 | Class: Language Arts 3 SC").
+  // The actual assignment content starts AFTER the closing === of that header block.
+  const separatorIndices = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().match(/^={3,}$/)) {
+      separatorIndices.push(i);
+    }
+  }
+  for (let si = 0; si < separatorIndices.length - 1; si++) {
+    const blockStart = separatorIndices[si] + 1;
+    const blockEnd = separatorIndices[si + 1];
+    const blockLines = lines.slice(blockStart, blockEnd);
+    const hasClassField = blockLines.some(l => {
+      const upper = l.trim().toUpperCase();
+      if (!upper.includes('CLASS:')) return false;
+      return upper.includes(resolvedClassName.toUpperCase()) ||
+             (shortAlias && upper.includes(shortAlias.toUpperCase()));
+    });
+    if (hasClassField) {
+      classStartIndex = separatorIndices[si + 1] + 1;
+      console.log('[parseTxtToMeta] Per-student format detected, content starts at line', classStartIndex, 'for class', resolvedClassName);
+      break;
+    }
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const lineUpper = line.toUpperCase();
@@ -221,6 +248,31 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         currentDay.hints = [];
       }
 
+      currentSection = 'header';
+      currentQuestion = null;
+      continue;
+    }
+
+    // Check for Chapter header: "Chapter N: Title" or "Chapter N — Title"
+    // (after stripping dashes: "--- Chapter 35: Harta-ak ---" → "Chapter 35: Harta-ak")
+    // Map Chapter N → day_number N with a questions-type day
+    const chapterMatch = strippedLine.match(/^Chapter\s+(\d+)\s*[:\-—]\s*(.*)$/i);
+    if (chapterMatch) {
+      if (currentQuestion && currentDay && currentDay.type === 'questions') {
+        currentDay.questions.push(currentQuestion);
+      }
+      if (currentDay) {
+        if (currentDay.type === 'questions' && currentDay.questions.length === 0) {
+          console.warn('[parseTxtToMeta] Day', currentDay.day_number, 'has 0 questions — possible parser issue');
+        }
+        meta.days.push(currentDay);
+      }
+      currentDay = {
+        label: strippedLine,
+        day_number: parseInt(chapterMatch[1], 10),
+        type: 'questions',
+        questions: []
+      };
       currentSection = 'header';
       currentQuestion = null;
       continue;
@@ -905,6 +957,7 @@ exports.handler = async (event) => {
 
     // Step 3: Parse assignment content if it's a file type
     let parsedMeta = null;
+    let contentWarning = null;
     if (draft.assignment && draft.assignment.kind === "file" && draft.assignment.text) {
       console.log(`[teacher-issue-draft] [${requestId}] Parsing assignment content`);
       const fileName = draft.assignment.name || 'assignment.txt';
@@ -934,6 +987,7 @@ exports.handler = async (event) => {
           console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
         } else {
           console.log(`[teacher-issue-draft] [${requestId}] No structured content found in assignment file`);
+          contentWarning = 'No structured content was parsed from the assignment file. Students will see "No Content Available". Check that the file uses the correct format (DAY N or Chapter N headers).';
         }
       }
     }
@@ -1258,6 +1312,36 @@ exports.handler = async (event) => {
           console.log(`[teacher-issue-draft] [${requestId}] Enrollment check passed — filtered to target student: ${code}`);
         }
 
+        // Handle additional student codes (students not on the class roster)
+        // These are teacher-specified codes for students who need the assignment but aren't enrolled
+        if (Array.isArray(draft.additionalStudentCodes) && draft.additionalStudentCodes.length > 0) {
+          const additionalCodes = draft.additionalStudentCodes.map(c => c.trim().toUpperCase()).filter(Boolean);
+          if (additionalCodes.length > 0) {
+            const additionalStudentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&code=in.(${additionalCodes.join(',')})`;
+            try {
+              const additionalStudentsResponse = await fetch(additionalStudentsUrl, {
+                method: 'GET',
+                headers: {
+                  'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              if (additionalStudentsResponse.ok) {
+                const additionalStudents = await additionalStudentsResponse.json();
+                if (Array.isArray(additionalStudents) && additionalStudents.length > 0) {
+                  const existingCodes = new Set(targetStudents.map(s => s.code));
+                  const newStudents = additionalStudents.filter(s => !existingCodes.has(s.code));
+                  targetStudents = [...targetStudents, ...newStudents];
+                  console.log(`[teacher-issue-draft] [${requestId}] Added ${newStudents.length} additional student(s) not on roster: ${newStudents.map(s => s.code).join(', ')}`);
+                }
+              }
+            } catch (err) {
+              console.warn(`[teacher-issue-draft] [${requestId}] Failed to look up additional students:`, err.message);
+            }
+          }
+        }
+
         // Step 8: Build instances to upsert
         const writingConfig = draft.writingConfig;
         let baseInstanceSettings = {};
@@ -1494,7 +1578,8 @@ exports.handler = async (event) => {
       { 
         ok: true, 
         assignment_id: assignmentId,
-        issued_count: issued_count
+        issued_count: issued_count,
+        ...(contentWarning ? { warning: contentWarning } : {})
       },
       { 'Cache-Control': 'no-store' },
       requestId
