@@ -1880,6 +1880,7 @@
   window.__rcRenderTable = () => renderTable(readDrafts());
   window.__rcReadScoringDefaults = readScoringDefaults;
   window.__rcReadTotalPossible = readTotalPossible;
+  window.__rcStripIssuedDraftContent = stripIssuedDraftContent;
 
   // ========================================
   // Issue Assignment from Draft
@@ -3191,7 +3192,9 @@ function normalizeTaggedAssignmentText(input) {
 
     // Free space: strip bulky text from already-issued drafts before adding new ones.
     // Issued drafts have their full content on the server; local copies are wasteful.
-    stripIssuedDraftContent(drafts);
+    if (typeof window.__rcStripIssuedDraftContent === 'function') {
+      window.__rcStripIssuedDraftContent(drafts);
+    }
 
     const fallbackMapping = JSON.stringify({ version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
 
@@ -3254,7 +3257,9 @@ function normalizeTaggedAssignmentText(input) {
 
         // First attempt: re-strip issued content (some may have been added since the initial strip above)
         // using the shared helper which applies the length > 100 guard consistently.
-        stripIssuedDraftContent(drafts);
+        if (typeof window.__rcStripIssuedDraftContent === 'function') {
+          window.__rcStripIssuedDraftContent(drafts);
+        }
         try {
           saveDrafts(drafts);
           if (typeof window.__rcShowToast === 'function') {
