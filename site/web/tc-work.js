@@ -1831,6 +1831,58 @@
   }
 
   /**
+   * Show an issue-assignment confirmation dialog with an optional "Add students not on roster" input.
+   * Returns { confirmed, additionalCodes } where additionalCodes is an array of extra student codes.
+   */
+  function showIssueConfirmDialog(title, message) {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'rc-modal-backdrop';
+      backdrop.innerHTML = `
+        <div class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="rc-issue-modal-title" style="max-width:480px;">
+          <div class="rc-modal-title" id="rc-issue-modal-title">${escapeHtml(title)}</div>
+          <div class="rc-modal-message" style="white-space:pre-wrap;">${escapeHtml(message)}</div>
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:6px;">
+              Add students not on class roster (optional):
+            </label>
+            <input id="rc-issue-extra-codes" type="text" placeholder="e.g. S046, S047"
+              style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.9);font-size:13px;font-family:inherit;" />
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">Comma-separated student codes — these students will receive the assignment even if not enrolled.</div>
+          </div>
+          <div class="rc-modal-actions">
+            <button class="rc-modal-btn" id="rc-issue-cancel-btn">Cancel</button>
+            <button class="rc-modal-btn rc-modal-btn-primary" id="rc-issue-confirm-btn">Issue</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+
+      const confirmBtn = backdrop.querySelector('#rc-issue-confirm-btn');
+      const cancelBtn = backdrop.querySelector('#rc-issue-cancel-btn');
+      const extraCodesInput = backdrop.querySelector('#rc-issue-extra-codes');
+      confirmBtn.focus();
+
+      const cleanup = (confirmed) => {
+        const raw = extraCodesInput ? extraCodesInput.value : '';
+        const additionalCodes = raw
+          ? raw.split(',').map(c => c.trim().toUpperCase()).filter(Boolean)
+          : [];
+        backdrop.remove();
+        resolve({ confirmed, additionalCodes });
+      };
+
+      confirmBtn.addEventListener('click', () => cleanup(true));
+      cancelBtn.addEventListener('click', () => cleanup(false));
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) cleanup(false); });
+      backdrop.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target !== extraCodesInput) { e.preventDefault(); cleanup(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); cleanup(false); }
+      });
+    });
+  }
+
+  /**
    * Handle issuing an assignment from a draft to all enrolled students in the draft's class
    * @param {string} draftId - The ID of the draft to issue
    * @param {object} [options]
@@ -1873,24 +1925,27 @@
     }
 
     // Show pre-issue confirmation (unless called from a batch that already confirmed)
+    let additionalStudentCodes = [];
     if (!skipConfirmation && !hasFutureRelease) {
       let confirmed = false;
 
       if (draft.studentCode) {
-        // Single-student draft (from "Split by Student"): simple confirmation
-        confirmed = await rcConfirm(
+        // Single-student draft (from "Split by Student"): confirmation with extra student input
+        const dialogResult = await showIssueConfirmDialog(
           "Issue Assignment",
-          `Issue "${draft.title}" to ${draft.studentCode} in ${draft.className}?`,
-          "Issue"
+          `Issue "${draft.title}" to ${draft.studentCode} in ${draft.className}?`
         );
+        confirmed = dialogResult.confirmed;
+        additionalStudentCodes = dialogResult.additionalCodes;
       } else if (Array.isArray(draft.studentCodes) && draft.studentCodes.length > 0) {
         // Targeted multi-student draft: show exactly which students will receive it
         const codesList = draft.studentCodes.join(", ");
-        confirmed = await rcConfirm(
+        const dialogResult = await showIssueConfirmDialog(
           "Issue Assignment",
-          `Issue "${draft.title}" to ${codesList} in ${draft.className}?\n\n(${draft.studentCodes.length} student${draft.studentCodes.length !== 1 ? 's' : ''} — targeted, not whole class)`,
-          "Issue"
+          `Issue "${draft.title}" to ${codesList} in ${draft.className}?\n\n(${draft.studentCodes.length} student${draft.studentCodes.length !== 1 ? 's' : ''} — targeted, not whole class)`
         );
+        confirmed = dialogResult.confirmed;
+        additionalStudentCodes = dialogResult.additionalCodes;
       } else {
         // Whole-class draft: fetch the roster first for a richer confirmation
         let rosterMsg = `Issue "${draft.title}" to all enrolled students in ${draft.className}?`;
@@ -1915,7 +1970,9 @@
           clearMsg();
           // Fall back to simple message already set in rosterMsg
         }
-        confirmed = await rcConfirm("Issue Assignment", rosterMsg, "Issue");
+        const dialogResult = await showIssueConfirmDialog("Issue Assignment", rosterMsg);
+        confirmed = dialogResult.confirmed;
+        additionalStudentCodes = dialogResult.additionalCodes;
       }
 
       if (!confirmed) return;
@@ -1937,9 +1994,14 @@
         ? draft.perStudentWritingConfig
         : {};
       const mergedPerStudent = Object.assign({}, iepOverrides, draftPerStudent);
-      const draftToSend = Object.keys(mergedPerStudent).length > 0
+      let draftToSend = Object.keys(mergedPerStudent).length > 0
         ? Object.assign({}, draft, { perStudentWritingConfig: mergedPerStudent })
         : draft;
+
+      // Include additional student codes (Bug 4: students not on class roster)
+      if (additionalStudentCodes && additionalStudentCodes.length > 0) {
+        draftToSend = Object.assign({}, draftToSend, { additionalStudentCodes });
+      }
 
       // Call server-side endpoint to handle all Supabase operations
       const response = await fetch('/.netlify/functions/teacher-issue-draft', {
@@ -1966,8 +2028,14 @@
           if (result.assignment_id) d.assignmentId = result.assignment_id;
           writeDrafts(updatedDrafts);
         }
-        setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}`);
-        setTimeout(clearMsg, 5000);
+        // Show warning if no structured content was parsed (Bug 5)
+        if (result.warning) {
+          setMsg("err", `⚠ Issued to ${issued} student(s) — but: ${result.warning}`);
+          setTimeout(clearMsg, 10000);
+        } else {
+          setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}`);
+          setTimeout(clearMsg, 5000);
+        }
         renderTable(readDrafts());
       } else {
         throw new Error(result.error || "Issue failed");
@@ -2028,15 +2096,21 @@
       if (refreshed && refreshed.issuedAt) {
         successCount++;
       } else {
-        failures.push(draft.title);
+        const studentLabel = draft.studentCode || (Array.isArray(draft.studentCodes) && draft.studentCodes.length > 0 ? draft.studentCodes.join(', ') : draft.className);
+        failures.push(`${draft.title} (${studentLabel})`);
       }
     }
 
     if (failures.length === 0) {
       showToast(`✓ Issued all ${successCount} draft${successCount !== 1 ? "s" : ""} in batch`);
     } else {
-      setMsg("err", `Issued ${successCount} of ${pending.length}. ${failures.length} failed — check console.`);
-      setTimeout(clearMsg, 6000);
+      const failureDetails = failures.map(f => `• ${f}`).join('\n');
+      setMsg("err", `Issued ${successCount} of ${pending.length}. ${failures.length} failed.`);
+      setTimeout(clearMsg, 8000);
+      await rcAlert(
+        `Batch Issue: ${failures.length} Failed`,
+        `Issued: ${successCount}\nFailed: ${failures.length}\n\nFailed drafts:\n${failureDetails}\n\nCheck the error messages above for details.`
+      );
     }
     if (scheduled.length > 0) {
       showToast(`⏰ Skipped ${scheduled.length} draft${scheduled.length !== 1 ? 's' : ''} with future release dates — they will auto-release on schedule.`, '#f59e0b', '#1a0f00');

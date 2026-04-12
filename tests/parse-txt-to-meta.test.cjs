@@ -39,7 +39,34 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   // Strategy 1: Find class name that appears between === separators
   // Check for both resolved name and short alias (e.g., "Language Arts 4 SC" and "LA 4 SC")
   const shortAlias = REVERSE_ALIASES[resolvedClassName] || '';
-  
+
+  // Strategy 0: Per-student format detection
+  // In this format, a multi-line header block appears between two === separators.
+  // One line in the block contains "Class: <className>" (e.g. "Student: S002 | Class: Language Arts 3 SC").
+  // The actual assignment content starts AFTER the closing === of that header block.
+  const separatorIndices = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().match(/^={3,}$/)) {
+      separatorIndices.push(i);
+    }
+  }
+  for (let si = 0; si < separatorIndices.length - 1; si++) {
+    const blockStart = separatorIndices[si] + 1;
+    const blockEnd = separatorIndices[si + 1];
+    const blockLines = lines.slice(blockStart, blockEnd);
+    const hasClassField = blockLines.some(l => {
+      const upper = l.trim().toUpperCase();
+      if (!upper.includes('CLASS:')) return false;
+      return upper.includes(resolvedClassName.toUpperCase()) ||
+             (shortAlias && upper.includes(shortAlias.toUpperCase()));
+    });
+    if (hasClassField) {
+      classStartIndex = separatorIndices[si + 1] + 1;
+      console.log('[parseTxtToMeta] Per-student format detected, content starts at line', classStartIndex, 'for class', resolvedClassName);
+      break;
+    }
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const lineUpper = line.toUpperCase();
@@ -178,6 +205,31 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         currentDay.hints = [];
       }
 
+      currentSection = 'header';
+      currentQuestion = null;
+      continue;
+    }
+
+    // Check for Chapter header: "Chapter N: Title" or "Chapter N — Title"
+    // (after stripping dashes: "--- Chapter 35: Harta-ak ---" → "Chapter 35: Harta-ak")
+    // Map Chapter N → day_number N with a questions-type day
+    const chapterMatch = strippedLine.match(/^Chapter\s+(\d+)\s*[:\-—]\s*(.*)$/i);
+    if (chapterMatch) {
+      if (currentQuestion && currentDay && currentDay.type === 'questions') {
+        currentDay.questions.push(currentQuestion);
+      }
+      if (currentDay) {
+        if (currentDay.type === 'questions' && currentDay.questions.length === 0) {
+          console.warn('[parseTxtToMeta] Day', currentDay.day_number, 'has 0 questions — possible parser issue');
+        }
+        meta.days.push(currentDay);
+      }
+      currentDay = {
+        label: strippedLine,
+        day_number: parseInt(chapterMatch[1], 10),
+        type: 'questions',
+        questions: []
+      };
       currentSection = 'header';
       currentQuestion = null;
       continue;
@@ -1245,4 +1297,118 @@ Correct Answer: A`;
   assert.strictEqual(warnings.length, 1, 'Should have 1 warning for empty-questions day');
   assert(warnings[0].includes('Day 1'), 'Warning should mention Day 1');
   assert(warnings[0].includes('0 questions'), 'Warning should mention 0 questions');
+});
+
+// Test: Chapter header format ("--- Chapter N: Title ---" → Chapter N as day)
+test('Parse Chapter header format into day_number', () => {
+  const txtContent = `--- Chapter 35: Harta-ak ---
+
+1. [IG: S002.11.2]
+   Based on Chapter 35, what can you figure out?
+   A. Choice A
+   B. Choice B
+   C. Choice C
+   Correct: B
+
+--- Chapter 36: Possible Answers ---
+
+2. [IG: S002.11.2]
+   In Chapter 36, what can you conclude?
+   A. Choice A
+   B. Choice B
+   C. Choice C
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse chapter header format');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 chapters as days');
+  assert.strictEqual(result.days[0].day_number, 35, 'First chapter should be day 35');
+  assert.strictEqual(result.days[0].label, 'Chapter 35: Harta-ak', 'First chapter label should match');
+  assert.strictEqual(result.days[0].type, 'questions', 'Chapter day should be questions type');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Chapter 35 should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Q1 correct answer should be B');
+  assert.strictEqual(result.days[1].day_number, 36, 'Second chapter should be day 36');
+  assert.strictEqual(result.days[1].questions.length, 1, 'Chapter 36 should have 1 question');
+  assert.strictEqual(result.days[1].questions[0].correct, 'A', 'Q2 correct answer should be A');
+});
+
+// Test: Per-student TXT format with multi-line header block containing "Class:" field
+test('Parse per-student TXT format with Class: field in === header block', () => {
+  const txtContent = `================================================================================
+WEEK 12 — Lost in Kragdon-ah (Chapters 35–37)
+ELA Theme: Making Inferences / Drawing Conclusions
+Student: S002 | Class: Language Arts 3 SC
+IEP Goal Codes: S002.11.1, S002.11.2
+================================================================================
+
+--- Chapter 35: Harta-ak ---
+
+1. [IG: S002.11.2]
+   Based on Chapter 35, what can you figure out?
+   A. Choice A
+   B. Choice B
+   C. Choice C
+   Correct: B
+
+--- Chapter 36: Possible Answers ---
+
+2. [IG: S002.11.2]
+   In Chapter 36, what can you conclude?
+   A. Choice A
+   B. Choice B
+   C. Choice C
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse per-student TXT format');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 chapters as days');
+  assert.strictEqual(result.days[0].day_number, 35, 'Chapter 35 should be day 35');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Chapter 35 should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Q1 correct answer should be B');
+  assert.strictEqual(result.days[1].day_number, 36, 'Chapter 36 should be day 36');
+  assert.strictEqual(result.days[1].questions.length, 1, 'Chapter 36 should have 1 question');
+});
+
+// Test: Per-student TXT format with short alias in Class: field
+test('Parse per-student TXT with short alias in Class: field', () => {
+  const txtContent = `================================================================================
+WEEK 12 — Test Assignment
+Student: S007 | Class: LA 3 SC
+IEP Goal Codes: S007.11.1
+================================================================================
+
+--- Chapter 35: Test Chapter ---
+
+1. [IG: S007.11.1]
+   What is the main idea?
+   A. Answer A
+   B. Answer B
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse per-student TXT with short alias in Class: field');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 chapter');
+  assert.strictEqual(result.days[0].day_number, 35, 'Should be chapter 35');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+});
+
+// Test: Chapter header with em-dash separator ("Chapter N — Title")
+test('Parse Chapter header with em-dash separator', () => {
+  const txtContent = `--- Chapter 37 — Before the Rescue ---
+
+1. [IG: S002.11.2]
+   In Chapter 37, what happens?
+   A. Choice A
+   B. Choice B
+   Correct: B`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse chapter with em-dash separator');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 chapter');
+  assert.strictEqual(result.days[0].day_number, 37, 'Should be chapter 37');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
 });

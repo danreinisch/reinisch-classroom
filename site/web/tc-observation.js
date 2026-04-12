@@ -245,24 +245,60 @@
     const unsynced = queue.filter(e => !e.synced);
     if (unsynced.length === 0) return;
 
+    // Build entries payload for the server-side function
+    const entries = [];
     for (const entry of unsynced) {
-      try {
-        const goal = allGoals.find(g => g.code === entry.goal_code);
-        if (!goal) continue;
-        await db.addProgress({
-          student_code: entry.student_code,
-          goal_id: goal.id,
-          date: entry.date,
-          percent: entry.value,
-          method: 'Observation',
-          by_name: 'Teacher',
-          via: 'observation_tray',
-          notes: entry.notes || ''
-        });
-        markSynced(entry.saved_at, entry.student_code, entry.goal_code);
-      } catch (err) {
-        console.warn('[tc-observation] Sync failed for', entry.goal_code, err.message);
+      const goal = allGoals.find(g => g.code === entry.goal_code);
+      if (!goal) continue;
+      entries.push({
+        student_code: entry.student_code,
+        goal_id: goal.id,
+        date: entry.date,
+        percent: entry.value,
+        method: 'Observation',
+        by_name: 'Teacher',
+        via: 'observation_tray',
+        notes: entry.notes || '',
+        // Keep saved_at and goal_code for tracking after response
+        _saved_at: entry.saved_at,
+        _goal_code: entry.goal_code
+      });
+    }
+
+    if (entries.length === 0) return;
+
+    try {
+      const response = await fetch('/.netlify/functions/teacher-sync-observations', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: entries.map(e => ({
+          student_code: e.student_code,
+          goal_id: e.goal_id,
+          date: e.date,
+          percent: e.percent,
+          method: e.method,
+          by_name: e.by_name,
+          via: e.via,
+          notes: e.notes
+        })) })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Mark synced for entries that succeeded (by position, server returns synced count)
+        // Since the server processes in order, mark all as synced when all succeed
+        if (result.ok) {
+          for (const entry of entries) {
+            markSynced(entry._saved_at, entry.student_code, entry._goal_code);
+          }
+          console.log('[tc-observation] Batch sync succeeded:', result.synced, 'synced,', result.failed?.length || 0, 'failed');
+        }
+      } else {
+        console.warn('[tc-observation] Batch sync request failed:', response.status);
       }
+    } catch (err) {
+      console.warn('[tc-observation] Batch sync network error:', err.message);
     }
     pruneQueue();
   }
@@ -319,7 +355,7 @@
       const s = Number(successful) || 0;
       const o = Number(opportunities) || 0;
       if (o === 0) return null;
-      return Math.round((s / o) * 10000) / 100;
+      return Math.round((s / o) * 100);
     }
 
     if (category === 'prompt_count') {
@@ -330,7 +366,7 @@
       if (!subBehaviors || subBehaviors.length === 0) return null;
       if (response === 'not_addressed') return null;
       const checked = (checkedBehaviors || []).filter(Boolean).length;
-      return Math.round((checked / subBehaviors.length) * 10000) / 100;
+      return Math.round((checked / subBehaviors.length) * 100);
     }
 
     return null;
@@ -366,23 +402,39 @@
     todayRecordedSet.add(`${goal.student_code}|${goal.code}|${date}`);
     if (onSave) onSave();
 
-    // Attempt Supabase save
+    // Attempt server-side save via Netlify function (uses service role key, bypasses RLS)
     try {
-      await db.addProgress({
-        student_code: goal.student_code,
-        goal_id: goal.id,
-        date,
-        percent: value,
-        method: 'Observation',
-        by_name: 'Teacher',
-        via: 'observation_tray',
-        notes
+      const syncResponse = await fetch('/.netlify/functions/teacher-sync-observations', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entries: [{
+            student_code: goal.student_code,
+            goal_id: goal.id,
+            date,
+            percent: value,
+            method: 'Observation',
+            by_name: 'Teacher',
+            via: 'observation_tray',
+            notes
+          }]
+        })
       });
-      markSynced(savedAt, goal.student_code, goal.code);
-      console.log('[tc-observation] Supabase save succeeded: goal=', goal.code);
-      if (saveIndicatorEl) {
-        saveIndicatorEl.textContent = 'Auto-saved ✓';
-        saveIndicatorEl.className = 'obs-save-indicator';
+      if (syncResponse.ok) {
+        const syncResult = await syncResponse.json();
+        if (syncResult.ok && syncResult.synced > 0) {
+          markSynced(savedAt, goal.student_code, goal.code);
+          console.log('[tc-observation] Server save succeeded: goal=', goal.code);
+          if (saveIndicatorEl) {
+            saveIndicatorEl.textContent = 'Auto-saved ✓';
+            saveIndicatorEl.className = 'obs-save-indicator';
+          }
+        } else {
+          console.warn('[tc-observation] Server save returned no synced entries for', goal.code);
+        }
+      } else {
+        console.warn('[tc-observation] Server save failed:', syncResponse.status, '— queued locally');
       }
 
       // Auto-record attendance — student was present if a session was observed
@@ -401,7 +453,7 @@
         }
       }
     } catch (err) {
-      console.warn('[tc-observation] Supabase save failed — queued locally:', err.message);
+      console.warn('[tc-observation] Server save failed — queued locally:', err.message);
       if (saveIndicatorEl) {
         saveIndicatorEl.textContent = 'Saved locally — will sync when connected';
         saveIndicatorEl.className = 'obs-save-indicator offline';
