@@ -117,12 +117,39 @@
     }
   }
 
+  /**
+   * Strip bulky assignment text and mapping from issued drafts to free localStorage space.
+   * The full content is already on the server for issued drafts, so local copies are wasteful.
+   * @param {Array} drafts - The drafts array to mutate in-place.
+   */
+  function stripIssuedDraftContent(drafts) {
+    for (const d of drafts) {
+      if (d.issuedAt) {
+        if (d.assignment && typeof d.assignment.text === 'string' && d.assignment.text.length > 100) {
+          d.assignment.text = '(issued)';
+        }
+        if (d.mapping && typeof d.mapping.text === 'string' && d.mapping.text.length > 100) {
+          d.mapping.text = '{}';
+        }
+      }
+    }
+  }
+
   function writeDrafts(drafts) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
     } catch (err) {
-      console.error('[tc-work] Failed to write drafts to localStorage:', err);
-      rcAlert('Storage Error', 'Could not save drafts — storage may be full or unavailable.');
+      console.error('[tc-work] writeDrafts failed:', err);
+      if (err.name === 'QuotaExceededError' || (err.message && err.message.toLowerCase().includes('quota'))) {
+        // Try stripping bulky text from issued drafts first
+        stripIssuedDraftContent(drafts);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+          console.log('[tc-work] writeDrafts succeeded after stripping issued content');
+          return;
+        } catch (_) { /* fall through to alert */ }
+      }
+      rcAlert('Storage Error', 'Could not save drafts — storage may be full. Try using "Purge Issued Content" to free up space.');
     }
   }
 
@@ -1048,6 +1075,39 @@
     
     setMsg("ok", "All drafts cleared.");
     setTimeout(clearMsg, 1200);
+  }
+
+  async function purgeIssuedContent() {
+    const drafts = readDrafts();
+    const issuedWithContent = drafts.filter(d =>
+      d.issuedAt && (
+        (d.assignment && typeof d.assignment.text === 'string' && d.assignment.text.length > 100) ||
+        (d.mapping && typeof d.mapping.text === 'string' && d.mapping.text.length > 100)
+      )
+    );
+
+    if (issuedWithContent.length === 0) {
+      await rcAlert('Nothing to Purge', 'No issued drafts have bulky content stored. Storage is already optimized.');
+      return;
+    }
+
+    const beforeSize = JSON.stringify(drafts).length;
+    const confirmed = await rcConfirm(
+      'Purge Issued Content',
+      `This will remove the assignment text and mapping from ${issuedWithContent.length} already-issued draft(s) to free up storage space.\n\nYour issued assignments are safe on the server — only the local copy of the text will be cleared.\n\nContinue?`,
+      'Purge Content'
+    );
+    if (!confirmed) return;
+
+    stripIssuedDraftContent(drafts);
+
+    writeDrafts(drafts);
+    renderTable(drafts);
+
+    const afterSize = JSON.stringify(drafts).length;
+    const freedKB = Math.round((beforeSize - afterSize) / 1024);
+    setMsg("ok", `Purged content from ${issuedWithContent.length} issued draft(s) — freed ~${freedKB} KB.`);
+    setTimeout(clearMsg, 3000);
   }
 
   function startEdit(id) {
@@ -2621,6 +2681,8 @@
     if (_ea) _ea.addEventListener("click", exportAll);
     const _ca = $("btnClearAll");
     if (_ca) _ca.addEventListener("click", clearAll);
+    const _pi = $("btnPurgeIssued");
+    if (_pi) _pi.addEventListener("click", purgeIssuedContent);
     const _ia = $("btnIssueAll");
     if (_ia) _ia.addEventListener("click", () => handleIssueAllDrafts().catch((err) => console.error(err)));
     const _fe = $("btnFillExample");
@@ -3127,6 +3189,10 @@ function normalizeTaggedAssignmentText(input) {
 
     const drafts = loadDrafts();
 
+    // Free space: strip bulky text from already-issued drafts before adding new ones.
+    // Issued drafts have their full content on the server; local copies are wasteful.
+    stripIssuedDraftContent(drafts);
+
     const fallbackMapping = JSON.stringify({ version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
 
     for (const sec of sections) {
@@ -3180,7 +3246,50 @@ function normalizeTaggedAssignmentText(input) {
       });
     }
 
-    saveDrafts(drafts);
+    try {
+      saveDrafts(drafts);
+    } catch (err) {
+      if (err.name === 'QuotaExceededError' || (err.message && err.message.toLowerCase().includes('quota'))) {
+        console.warn('[tc-work] Storage full, attempting cleanup...');
+
+        // First attempt: re-strip issued content (some may have been added since the initial strip above)
+        // using the shared helper which applies the length > 100 guard consistently.
+        stripIssuedDraftContent(drafts);
+        try {
+          saveDrafts(drafts);
+          if (typeof window.__rcShowToast === 'function') {
+            window.__rcShowToast('⚠️ Storage was full — removed issued draft content to make room', '#f59e0b', '#1a0f00');
+          }
+        } catch (_err2) {
+          // Second attempt: remove all issued drafts entirely
+          const pendingOnly = drafts.filter(d => !d.issuedAt);
+          try {
+            saveDrafts(pendingOnly);
+            // Mutate drafts in-place so the remainder of this function (remote save, toast, render)
+            // operates on the reduced set without needing a separate variable.
+            drafts.length = 0;
+            drafts.push(...pendingOnly);
+            if (typeof window.__rcShowToast === 'function') {
+              window.__rcShowToast('⚠️ Storage was full — removed all issued drafts to make room', '#f59e0b', '#1a0f00');
+            }
+          } catch (_err3) {
+            await rcAlert(
+              'Storage Full',
+              'Your browser\'s local storage is full and could not save the new drafts even after cleanup.\n\n' +
+              'To fix this:\n' +
+              '1. Click "Purge Issued Content" in the Drafts section to free space\n' +
+              '2. Or open DevTools (F12) → Console and run:\n' +
+              '   localStorage.removeItem("rc_tc_work_drafts_v1")\n' +
+              '3. Then try "Split by Student" again\n\n' +
+              'Your previously issued assignments are safe on the server.'
+            );
+            return;
+          }
+        }
+      } else {
+        throw err;
+      }
+    }
 
     if (typeof window.__rcRemoteSaveDraft === "function") {
       for (const d of drafts.slice(0, sections.length)) {
@@ -3205,7 +3314,12 @@ function normalizeTaggedAssignmentText(input) {
   }
 
   function saveDrafts(ds) {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+    } catch (err) {
+      console.error('[tc-work] saveDrafts failed:', err);
+      throw err; // Let caller handle it
+    }
   }
 
   function makeId() {
