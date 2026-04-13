@@ -3447,6 +3447,12 @@
       contentDiv.appendChild(tabContentEl);
     } else {
       contentDiv.innerHTML = tabContent;
+      // For the skills tab: immediately inject any cached AI narratives via DOM API.
+      // This avoids the CodeQL XSS taint path (AI text → innerHTML) and ensures
+      // cached commentary is always visible when the tab re-renders from cache.
+      if (selectedDetailTab === 'skills') {
+        injectCachedNarratives(contentDiv, student);
+      }
     }
     container.appendChild(contentDiv);
 
@@ -9220,7 +9226,7 @@
           <span class="st-skill-section-chevron">▼</span>
         </h3>
         <div class="st-skill-cards-container">
-          ${iepCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code, 'iep') : null, student.code)).join('')}
+          ${iepCards.map(c => renderSkillCard(c, null, student.code)).join('')}
         </div>
       </div>
     ` : '';
@@ -9233,7 +9239,7 @@
         </h3>
         <div class="st-skill-cards-container">
           ${hasDese
-            ? deseCards.map(c => renderSkillCard(c, cached ? getNarrativeHtml(cached, c.code, 'dese') : null, student.code)).join('')
+            ? deseCards.map(c => renderSkillCard(c, null, student.code)).join('')
             : `<p class="st-skill-no-data"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px;opacity:0.5;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>No DESE standard data yet. Standards data appears here once students complete graded assignments with DESE-tagged questions.</p>`
           }
         </div>
@@ -9253,30 +9259,42 @@
   }
 
   /**
-   * Extract the narrative HTML for a given code from a cached AI result.
-   * When `source` is provided ('iep' or 'dese'), only matches entries with that
-   * source value to prevent cross-contamination between IEP and DESE narratives.
-   * Entries that lack a source field always match (backward compat with older cache).
-   * Returns HTML for description, summary, and (when present) goal_recommendation.
+   * Inject cached AI narrative content into skill card narrative divs.
+   * Uses DOM API (textContent) exclusively so no AI-sourced text ever flows
+   * through innerHTML — avoids CodeQL XSS taint path.
+   * Safe to call on a detached contentDiv; querySelector works on detached trees.
    */
-  function getNarrativeHtml(cached, code, source) {
-    if (!cached || !Array.isArray(cached.skills)) return '';
-    const entry = cached.skills.find(s => {
-      if (s.code !== code) return false;
-      // If a source filter is given and the entry has a source, they must match.
-      if (source && s.source && s.source !== source) return false;
-      return true;
-    });
-    if (!entry || !entry.summary) return '';
-    let html = '';
-    if (entry.description) {
-      html += `<p class="st-skill-narrative-description">${escapeHtml(entry.description)}</p>`;
+  function injectCachedNarratives(contentDiv, student) {
+    const cached = skillsAiCache.get(student.code);
+    if (!cached || !Array.isArray(cached.skills)) return;
+    for (const skill of cached.skills) {
+      if (!skill.code || !skill.summary) continue;
+      // Skip only entries with an unexpected source value; entries without a source
+      // field are allowed to match for backward compatibility with older cache entries.
+      if (skill.source && skill.source !== 'iep' && skill.source !== 'dese') continue;
+      const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
+      const el = contentDiv.querySelector(`[id="${safeId}"]`);
+      if (!el) continue;
+      el.replaceChildren();
+      if (skill.description) {
+        const descP = document.createElement('p');
+        descP.className = 'st-skill-narrative-description';
+        descP.textContent = skill.description;
+        el.appendChild(descP);
+      }
+      const summaryP = document.createElement('p');
+      summaryP.textContent = skill.summary;
+      el.appendChild(summaryP);
+      if (skill.goal_recommendation) {
+        const goalP = document.createElement('p');
+        goalP.className = 'st-skill-narrative-goal-rec';
+        const label = document.createElement('strong');
+        label.textContent = '💡 Goal Recommendation: ';
+        goalP.appendChild(label);
+        goalP.appendChild(document.createTextNode(skill.goal_recommendation));
+        el.appendChild(goalP);
+      }
     }
-    html += `<p>${escapeHtml(entry.summary)}</p>`;
-    if (entry.goal_recommendation) {
-      html += `<p class="st-skill-narrative-goal-rec"><strong>💡 Goal Recommendation:</strong> ${escapeHtml(entry.goal_recommendation)}</p>`;
-    }
-    return html;
   }
 
   /**
