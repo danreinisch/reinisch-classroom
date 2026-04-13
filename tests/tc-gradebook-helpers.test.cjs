@@ -438,7 +438,13 @@ function formatShortDate(dateStr) {
 }
 
 function normalizeAssignmentTitle(rawTitle) {
-  return (rawTitle || '(untitled)').trim().replace(/\s*[—–-]\s*S\d+\s*$/, '');
+  return (rawTitle || '(untitled)')
+    .trim()
+    // Remove trailing " — S045", " – S001", " - S044" etc.
+    .replace(/\s*[—–-]\s*S\d+\s*$/, '')
+    // Remove "for SXXX" or "for SXXX #N" patterns (e.g. "Worksheets for S015", "Worksheets for S015 #1")
+    .replace(/\s+for\s+S\d+(\s+#\d+)?\s*$/i, '')
+    .trim();
 }
 
 function deduplicateAssignmentsForExport(drafts) {
@@ -562,6 +568,31 @@ console.log('\n--- normalizeAssignmentTitle ---');
   assert.strictEqual(groups[1].title, 'Week 10: Vocabulary', 'normalized title strips — S045 suffix');
   assert.deepStrictEqual(groups[1].draftIds, ['x1', 'x2'], 'both Week 10 draft IDs in one group');
   console.log('✓ collapses per-student suffixed drafts into one group per assignment');
+}
+
+// "for SXXX" mid-title deduplication
+{
+  const drafts = [
+    { id: 'ws1', title: 'Worksheets for S015', meta: { total_possible: 10 }, due_at: '2024-03-20' },
+    { id: 'ws2', title: 'Worksheets for S020', meta: { total_possible: 10 }, due_at: '2024-03-20' },
+    { id: 'ws3', title: 'Worksheets for S015 #1', meta: { total_possible: 10 }, due_at: '2024-03-20' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, 'all "Worksheets for SXXX" variants → one group');
+  assert.strictEqual(groups[0].title, 'Worksheets', 'normalized to base title');
+  assert.deepStrictEqual(groups[0].draftIds, ['ws1', 'ws2', 'ws3'], 'all three draft IDs in group');
+  console.log('✓ collapses "for SXXX" mid-title per-student drafts into one group');
+}
+
+// normalizeAssignmentTitle — "for SXXX" variants
+{
+  assert.strictEqual(normalizeAssignmentTitle('Worksheets for S015'), 'Worksheets', 'strips "for S015"');
+  assert.strictEqual(normalizeAssignmentTitle('Worksheets for S020'), 'Worksheets', 'strips "for S020"');
+  assert.strictEqual(normalizeAssignmentTitle('Worksheets for S015 #1'), 'Worksheets', 'strips "for S015 #1"');
+  assert.strictEqual(normalizeAssignmentTitle('Worksheets for S015 #2'), 'Worksheets', 'strips "for S015 #2"');
+  // Should NOT strip "for" when not followed by SXXX
+  assert.strictEqual(normalizeAssignmentTitle('Reading for Context'), 'Reading for Context', '"for" not followed by SXXX → unchanged');
+  console.log('✓ strips "for SXXX" and "for SXXX #N" mid-title patterns');
 }
 
 // Same normalized title but different dates → should NOT merge (compound key)
