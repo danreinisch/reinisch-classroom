@@ -65,16 +65,29 @@ function isGoalActive(goal: Record<string, unknown>): boolean {
   );
 }
 
+// ── CORS headers ─────────────────────────────────────────────────────────────
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 // ── Main handler ─────────────────────────────────────────────────────────────
 
-serve(async (_req: Request): Promise<Response> => {
+serve(async (req: Request): Promise<Response> => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   // ── Weekend guard ──────────────────────────────────────────────────────────
   const now = new Date();
   const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     return new Response(
       JSON.stringify({ skipped: true, reason: "weekend" }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -86,7 +99,7 @@ serve(async (_req: Request): Promise<Response> => {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !RESEND_API_KEY) {
     return new Response(
       JSON.stringify({ error: "Missing required environment variables" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -713,7 +726,7 @@ serve(async (_req: Request): Promise<Response> => {
         error: "Failed to send email via Resend",
         resend: resendBody,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -733,6 +746,6 @@ serve(async (_req: Request): Promise<Response> => {
       },
       resendId: (resendBody as { id?: string }).id,
     }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });
