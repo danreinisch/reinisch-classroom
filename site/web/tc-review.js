@@ -911,6 +911,8 @@
       statusBadge = `<span class="rv-status-badge reviewed">${CHECK_SVG} Reviewed</span>`;
     } else if (status === 'in_progress') {
       statusBadge = `<span class="rv-status-badge in-progress">${CLOCK_SVG} In Progress</span>`;
+    } else if (status === 'finalized') {
+      statusBadge = `<span class="rv-status-badge finalized">${CHECK_SVG} Finalized</span>`;
     } else {
       statusBadge = `<span class="rv-status-badge pending">${PAUSE_SVG} Pending</span>`;
     }
