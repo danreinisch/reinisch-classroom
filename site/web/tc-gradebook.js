@@ -3131,6 +3131,8 @@
     const rows = [headerRow];
 
     // ── Build student name map from enrollment data (has real names from DB join) ──
+    // Enrollment records where student_name equals student_code indicate a
+    // missing/placeholder name (fallback from the data-adapter), so we skip those.
     const studentNameMap = new Map();
     for (const enrollment of classEnrollmentsData) {
       if (enrollment.student_code && enrollment.student_name &&
@@ -3191,6 +3193,9 @@
         }
         // Lookup table: code + name (PII only in these two columns)
         row[lookupCodeCol] = student.code || "";
+        // Name: prefer enrollment record (real name from DB), then student.name, then
+        // leave blank so the teacher can fill it in — intentionally NOT falling back to
+        // student.code, since that was the original bug (names showing as codes).
         row[lookupNameCol] = studentNameMap.get(student.code) || student.name || "";
         rows.push(row);
       }
