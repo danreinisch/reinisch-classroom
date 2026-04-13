@@ -3249,19 +3249,17 @@ function normalizeTaggedAssignmentText(input) {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
     } catch (err) {
-      if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      if ((err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+          typeof window.__rcStripIssuedDraftContent === 'function') {
         // Try stripping issued draft content and retry once
-        if (typeof window.__rcStripIssuedDraftContent === 'function') {
-          window.__rcStripIssuedDraftContent(ds);
-          try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
-            console.warn('[tc-work] saveDrafts: freed issued content and retried successfully');
-            return;
-          } catch (_) {
-            // Fall through to throw below
-          }
+        window.__rcStripIssuedDraftContent(ds);
+        try {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+          console.warn('[tc-work] saveDrafts: freed issued content and retried successfully');
+          return;
+        } catch (_retryErr) {
+          // Retry also failed; fall through to re-throw original error
         }
-        throw err;
       }
       throw err;
     }
