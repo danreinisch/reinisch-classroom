@@ -1811,6 +1811,28 @@
     }
   }
 
+  /**
+   * Strip bulky text content from already-issued drafts to free localStorage space.
+   * Called proactively before adding new draft batches to avoid QuotaExceededError.
+   * @param {Array} drafts - Array of draft objects to modify in place
+   * @returns {number} Number of bytes freed (approximate)
+   */
+  function stripIssuedDraftContent(drafts) {
+    let freed = 0;
+    for (const d of drafts) {
+      if (!d.issuedAt) continue;
+      if (d.assignment && d.assignment.text && d.assignment.text.length > 50) {
+        freed += d.assignment.text.length;
+        d.assignment.text = '(issued)';
+      }
+      if (d.mapping && d.mapping.text && d.mapping.text.length > 50) {
+        freed += d.mapping.text.length;
+        d.mapping.text = '{}';
+      }
+    }
+    return freed;
+  }
+
   // Expose for use by mega-split and QoL modules
   window.__rcRemoteSaveDraft = remoteSaveDraft;
   window.__rcRemoteDeleteDraft = remoteDeleteDraft;
@@ -1820,6 +1842,7 @@
   window.__rcRenderTable = () => renderTable(readDrafts());
   window.__rcReadScoringDefaults = readScoringDefaults;
   window.__rcReadTotalPossible = readTotalPossible;
+  window.__rcStripIssuedDraftContent = stripIssuedDraftContent;
 
   // ========================================
   // Issue Assignment from Draft
@@ -2623,6 +2646,19 @@
     if (_ca) _ca.addEventListener("click", clearAll);
     const _ia = $("btnIssueAll");
     if (_ia) _ia.addEventListener("click", () => handleIssueAllDrafts().catch((err) => console.error(err)));
+    const _pi = $("btnPurgeIssued");
+    if (_pi) _pi.addEventListener("click", async () => {
+      const drafts = readDrafts();
+      const issuedCount = drafts.filter(d => d.issuedAt).length;
+      if (issuedCount === 0) {
+        await rcAlert('Nothing to Purge', 'No issued drafts found in local storage.');
+        return;
+      }
+      const freed = stripIssuedDraftContent(drafts);
+      writeDrafts(drafts);
+      renderTable(drafts);
+      await rcAlert('Content Purged', `Freed ~${Math.round(freed / 1024)} KB from ${issuedCount} issued draft${issuedCount !== 1 ? 's' : ''}. Storage is ready for new splits.`);
+    });
     const _fe = $("btnFillExample");
     if (_fe) _fe.addEventListener("click", fillExample);
     const _ce = $("btnCancelEdit");
@@ -3180,6 +3216,11 @@ function normalizeTaggedAssignmentText(input) {
       });
     }
 
+    // Strip content from already-issued drafts before saving to avoid QuotaExceededError
+    if (typeof window.__rcStripIssuedDraftContent === 'function') {
+      window.__rcStripIssuedDraftContent(drafts);
+    }
+
     saveDrafts(drafts);
 
     if (typeof window.__rcRemoteSaveDraft === "function") {
@@ -3205,7 +3246,25 @@ function normalizeTaggedAssignmentText(input) {
   }
 
   function saveDrafts(ds) {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+    } catch (err) {
+      if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        // Try stripping issued draft content and retry once
+        if (typeof window.__rcStripIssuedDraftContent === 'function') {
+          window.__rcStripIssuedDraftContent(ds);
+          try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+            console.warn('[tc-work] saveDrafts: freed issued content and retried successfully');
+            return;
+          } catch (_) {
+            // Fall through to throw below
+          }
+        }
+        throw err;
+      }
+      throw err;
+    }
   }
 
   function makeId() {
