@@ -9364,7 +9364,7 @@
         const el = searchRoot.querySelector(`[id="${safeId}"]`);
         if (el && document.body.contains(el)) {
           // Use DOM API to avoid innerHTML XSS — textContent handles all escaping automatically
-          el.textContent = '';
+          el.replaceChildren();
           if (skill.description) {
             const descP = document.createElement('p');
             descP.className = 'st-skill-narrative-description';
@@ -9574,6 +9574,7 @@
         btn.dataset.aiState = 'unavailable';
         contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
           if (!el.textContent.trim()) {
+            el.replaceChildren();
             const span = document.createElement('span');
             span.className = 'st-skill-narrative-placeholder';
             span.textContent = 'Click \'Generate AI Commentary\' above to see a detailed summary.';
@@ -9589,6 +9590,7 @@
         btn.style.color = 'rgba(245,158,11,0.9)';
         contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
           if (!el.textContent.trim()) {
+            el.replaceChildren();
             const span = document.createElement('span');
             span.className = 'st-skill-narrative-placeholder';
             span.textContent = 'Click \'Generate AI Commentary\' above to see a detailed summary.';
