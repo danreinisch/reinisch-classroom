@@ -2405,7 +2405,9 @@
         const m = (d.title || "").match(/WEEK\s*(\d+)/i);
         if (m) {
           const wn = Number(m[1]);
-          if (!weekSeen.has(wn)) { weekSeen.add(wn); availableWeeks.push(wn); }
+          const sizeBefore = weekSeen.size;
+          weekSeen.add(wn);
+          if (weekSeen.size > sizeBefore) availableWeeks.push(wn);
         }
       }
       availableWeeks.sort((a, b) => a - b);
@@ -2776,7 +2778,7 @@
         id: "vlookup",
         icon: "🔗",
         label: "CSV + VLOOKUP",
-        desc: "Includes pre-filled student name lookup table",
+        desc: "Includes lookup table pre-filled with student names from database",
         action: () => runExport("vlookup"),
       },
       {
