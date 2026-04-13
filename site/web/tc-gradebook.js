@@ -2249,14 +2249,14 @@
 
   /**
    * Return a case-insensitive, dash-normalized dedup key for an assignment title.
-   * Normalizes em dash, en dash, and hyphen to a single hyphen for comparison.
+   * Normalizes em dash (U+2014), en dash (U+2013), and hyphen to a single hyphen for comparison.
    *
    * @param {string} normalizedTitle - output of normalizeAssignmentTitle()
    * @returns {string}
    */
   function titleDedupKey(normalizedTitle) {
     return normalizedTitle
-      .replace(/[—–]/g, "-")
+      .replace(/[—–]/g, "-") // U+2014 em dash, U+2013 en dash → hyphen
       .toLowerCase();
   }
 
@@ -3116,8 +3116,6 @@
 
     const lookupCodeLetter = colIndexToLetter(lookupCodeCol);
     const lookupNameLetter = colIndexToLetter(lookupNameCol);
-    // Generous range that covers up to 500 data rows (class headers + students + averages)
-    const LOOKUP_RANGE = `$${lookupCodeLetter}$2:$${lookupNameLetter}$500`;
 
     function emptyRow(len) { return Array(len).fill(""); }
 
@@ -3135,6 +3133,17 @@
     // ── Group students by class in bell schedule order ────────────────────
     const classGroups = getClassGroupsForExport(students);
     const useClassHeaders = classGroups.length > 1 || (classGroups.length === 1 && classGroups[0].className);
+
+    // Pre-calculate total row count so the VLOOKUP range is exact:
+    // 1 header + per class: optional class header + N students + optional average row + optional blank
+    let totalDataRows = 1; // header
+    for (const { className, students: cs } of classGroups) {
+      if (useClassHeaders && className) totalDataRows++; // class header
+      totalDataRows += cs.length; // one row per student
+      if (useClassHeaders) totalDataRows += 2; // class average row + blank separator
+    }
+    if (!useClassHeaders) totalDataRows++; // overall summary row
+    const LOOKUP_RANGE = `$${lookupCodeLetter}$2:$${lookupNameLetter}$${totalDataRows}`;
 
     for (const { className, students: classStudents } of classGroups) {
       // Class header row
