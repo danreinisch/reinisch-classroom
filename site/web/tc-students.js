@@ -6547,7 +6547,7 @@
             selectedDetailTabMap.set(code, 'goals');
             renderStudentList().then(() => {
               // Auto-open Quick Entry for first active goal
-              const firstGoal = allGoals.find(g => g.student_code === code && g.status !== 'archived');
+              const firstGoal = Array.isArray(allGoals) ? allGoals.find(g => g.student_code === code && g.status !== 'archived') : null;
               if (firstGoal) {
                 const goalRow = document.querySelector(`.dt-goal-row[data-goal="${CSS.escape(firstGoal.code)}"][data-student="${CSS.escape(code)}"]`);
                 const enterBtn = goalRow?.querySelector('[data-action="enter-data"], .dt-enter-btn');
@@ -6593,7 +6593,7 @@
             // Set default tab for newly expanded student.
             // Students with no IEP goals default to Skills Summary so teachers
             // can immediately see assignment performance data and AI recommendations.
-            const studentHasGoals = allGoals.some(g => g.student_code === studentCode && g.status !== 'archived');
+            const studentHasGoals = Array.isArray(allGoals) && allGoals.some(g => g.student_code === studentCode && g.status !== 'archived');
             selectedDetailTabMap.set(studentCode, studentHasGoals ? 'goals' : 'skills');
             editingGoalId = null;
           }
