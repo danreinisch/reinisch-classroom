@@ -1737,7 +1737,23 @@
         min-height: 20px;
       }
       .st-skill-narrative p {
-        margin: 0;
+        margin: 0 0 6px 0;
+      }
+      .st-skill-narrative p:last-child {
+        margin-bottom: 0;
+      }
+      .st-skill-narrative-description {
+        font-size: 12px;
+        font-style: italic;
+        color: rgba(255, 255, 255, 0.45);
+      }
+      .st-skill-narrative-goal-rec {
+        margin-top: 6px;
+        padding: 6px 10px;
+        border-left: 3px solid rgba(245, 158, 11, 0.5);
+        background: rgba(245, 158, 11, 0.07);
+        border-radius: 0 4px 4px 0;
+        color: rgba(255, 255, 255, 0.75);
       }
       .st-skill-narrative-loading {
         color: rgba(255, 255, 255, 0.35);
@@ -2451,8 +2467,14 @@
         .st-skill-score,
         .st-skill-confidence,
         .st-skill-section-title,
-        .st-skill-narrative p {
+        .st-skill-narrative p,
+        .st-skill-narrative-description,
+        .st-skill-narrative-goal-rec {
           color: #111 !important;
+        }
+        .st-skill-narrative-goal-rec {
+          border-left-color: #b45309 !important;
+          background: #fef3c7 !important;
         }
         .st-skill-narrative-placeholder,
         .st-skill-narrative-loading {

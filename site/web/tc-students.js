@@ -9257,6 +9257,7 @@
    * When `source` is provided ('iep' or 'dese'), only matches entries with that
    * source value to prevent cross-contamination between IEP and DESE narratives.
    * Entries that lack a source field always match (backward compat with older cache).
+   * Returns HTML for description, summary, and (when present) goal_recommendation.
    */
   function getNarrativeHtml(cached, code, source) {
     if (!cached || !Array.isArray(cached.skills)) return '';
@@ -9267,7 +9268,15 @@
       return true;
     });
     if (!entry || !entry.summary) return '';
-    return `<p>${escapeHtml(entry.summary)}</p>`;
+    let html = '';
+    if (entry.description) {
+      html += `<p class="st-skill-narrative-description">${escapeHtml(entry.description)}</p>`;
+    }
+    html += `<p>${escapeHtml(entry.summary)}</p>`;
+    if (entry.goal_recommendation) {
+      html += `<p class="st-skill-narrative-goal-rec"><strong>💡 Goal Recommendation:</strong> ${escapeHtml(entry.goal_recommendation)}</p>`;
+    }
+    return html;
   }
 
   /**
@@ -9354,7 +9363,26 @@
         const searchRoot = sectionEl || skillsTab || document;
         const el = searchRoot.querySelector(`[id="${safeId}"]`);
         if (el && document.body.contains(el)) {
-          el.innerHTML = `<p>${escapeHtml(skill.summary)}</p>`;
+          // Use DOM API to avoid innerHTML XSS — textContent handles all escaping automatically
+          el.replaceChildren();
+          if (skill.description) {
+            const descP = document.createElement('p');
+            descP.className = 'st-skill-narrative-description';
+            descP.textContent = skill.description;
+            el.appendChild(descP);
+          }
+          const summaryP = document.createElement('p');
+          summaryP.textContent = skill.summary;
+          el.appendChild(summaryP);
+          if (skill.goal_recommendation) {
+            const goalP = document.createElement('p');
+            goalP.className = 'st-skill-narrative-goal-rec';
+            const label = document.createElement('strong');
+            label.textContent = '💡 Goal Recommendation: ';
+            goalP.appendChild(label);
+            goalP.appendChild(document.createTextNode(skill.goal_recommendation));
+            el.appendChild(goalP);
+          }
         }
       }
 
@@ -9546,7 +9574,11 @@
         btn.dataset.aiState = 'unavailable';
         contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
           if (!el.textContent.trim()) {
-            el.innerHTML = SKILL_NARRATIVE_PLACEHOLDER_HTML;
+            el.replaceChildren();
+            const span = document.createElement('span');
+            span.className = 'st-skill-narrative-placeholder';
+            span.textContent = 'Click \'Generate AI Commentary\' above to see a detailed summary.';
+            el.appendChild(span);
           }
         });
       } else {
@@ -9558,7 +9590,11 @@
         btn.style.color = 'rgba(245,158,11,0.9)';
         contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
           if (!el.textContent.trim()) {
-            el.innerHTML = SKILL_NARRATIVE_PLACEHOLDER_HTML;
+            el.replaceChildren();
+            const span = document.createElement('span');
+            span.className = 'st-skill-narrative-placeholder';
+            span.textContent = 'Click \'Generate AI Commentary\' above to see a detailed summary.';
+            el.appendChild(span);
           }
         });
       }
