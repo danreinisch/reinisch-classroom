@@ -9269,7 +9269,9 @@
     if (!cached || !Array.isArray(cached.skills)) return;
     for (const skill of cached.skills) {
       if (!skill.code || !skill.summary) continue;
-      if (skill.source !== 'iep' && skill.source !== 'dese') continue;
+      // Skip only entries with an unexpected source value; entries without a source
+      // field are allowed to match for backward compatibility with older cache entries.
+      if (skill.source && skill.source !== 'iep' && skill.source !== 'dese') continue;
       const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
       const el = contentDiv.querySelector(`[id="${safeId}"]`);
       if (!el) continue;
