@@ -2144,12 +2144,18 @@
   function getExportDrafts(opts) {
     let drafts = [...draftsData];
 
-    // Filter by quarter or custom date range
+    // Filter by quarter, week numbers, or custom date range
     if (opts.dateMode === "quarter" && opts.selectedQuarter) {
       drafts = drafts.filter((d) => {
         const dateStr = d.created_at || d.created || d.release;
         if (!dateStr) return false;
         return getQuarterForDate(dateStr) === opts.selectedQuarter;
+      });
+    } else if (opts.dateMode === "weeks" && opts.selectedWeeks && opts.selectedWeeks.length > 0) {
+      const weekSet = new Set(opts.selectedWeeks.map(Number));
+      drafts = drafts.filter((d) => {
+        const m = (d.title || "").match(/WEEK\s*(\d+)/i);
+        return m ? weekSet.has(Number(m[1])) : false;
       });
     } else if (opts.dateMode === "custom" && (opts.dateStart || opts.dateEnd)) {
       const start = opts.dateStart ? new Date(opts.dateStart) : null;
@@ -2208,7 +2214,13 @@
    * @returns {string}
    */
   function normalizeAssignmentTitle(rawTitle) {
-    return (rawTitle || "(untitled)").trim().replace(/\s*[—–-]\s*S\d+\s*$/, "");
+    return (rawTitle || "(untitled)")
+      .trim()
+      // Remove trailing " — S045", " – S001", " - S044" etc.
+      .replace(/\s*[—–-]\s*S\d+\s*$/, "")
+      // Remove "for SXXX" or "for SXXX #N" patterns (e.g. "Worksheets for S015", "Worksheets for S015 #1")
+      .replace(/\s+for\s+S\d+(\s+#\d+)?\s*$/i, "")
+      .trim();
   }
 
   /**
@@ -2295,6 +2307,7 @@
       selectedQuarter: defaultQuarter,
       dateStart: "",
       dateEnd: "",
+      selectedWeeks: [],      // week numbers (integers) when dateMode === "weeks"
       studentMode: defaultClass !== "All Classes" ? "class" : "all",
       selectedClass: defaultClass,
       selectedStudentCodes: [],  // used when studentMode === "individual"
@@ -2384,6 +2397,20 @@
     const dateStartInput = document.createElement("input");
     const dateEndInput = document.createElement("input");
 
+    // Detect available week numbers from all loaded assignments
+    const availableWeeks = [];
+    {
+      const weekSeen = new Set();
+      for (const d of draftsData) {
+        const m = (d.title || "").match(/WEEK\s*(\d+)/i);
+        if (m) {
+          const wn = Number(m[1]);
+          if (!weekSeen.has(wn)) { weekSeen.add(wn); availableWeeks.push(wn); }
+        }
+      }
+      availableWeeks.sort((a, b) => a - b);
+    }
+
     // Track which preset is active
     const presetBtns = [];
     for (const qo of quarterOptions) {
@@ -2401,10 +2428,34 @@
         state.dateEnd = "";
         presetBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
+        weekSubSection.style.display = "none";
         updatePreview();
       });
       presetBtns.push(btn);
       presetRow.appendChild(btn);
+    }
+
+    // "By Week" button (only shown when week numbers are available)
+    const weekModeBtn = document.createElement("button");
+    weekModeBtn.type = "button";
+    weekModeBtn.className = "gb-export-preset";
+    weekModeBtn.textContent = "By Week";
+    weekModeBtn.dataset.weekmode = "true";
+    weekModeBtn.addEventListener("click", () => {
+      state.dateMode = "weeks";
+      state.selectedQuarter = "";
+      dateStartInput.value = "";
+      dateEndInput.value = "";
+      state.dateStart = "";
+      state.dateEnd = "";
+      presetBtns.forEach((b) => b.classList.remove("active"));
+      weekModeBtn.classList.add("active");
+      weekSubSection.style.display = "";
+      updatePreview();
+    });
+    if (availableWeeks.length > 0) {
+      presetBtns.push(weekModeBtn);
+      presetRow.appendChild(weekModeBtn);
     }
 
     // Set initial active preset btn
@@ -2416,6 +2467,46 @@
     });
 
     dateBody.appendChild(presetRow);
+
+    // Week sub-section (shown when "By Week" is active)
+    const weekSubSection = document.createElement("div");
+    weekSubSection.style.display = "none";
+    weekSubSection.style.margin = "8px 0 4px";
+
+    if (availableWeeks.length > 0) {
+      const weekLabel = document.createElement("span");
+      weekLabel.className = "gb-export-label";
+      weekLabel.textContent = "Select Weeks";
+      weekSubSection.appendChild(weekLabel);
+
+      const weekCheckGroup = document.createElement("div");
+      weekCheckGroup.className = "gb-export-checkbox-group";
+      weekCheckGroup.style.flexWrap = "wrap";
+      weekCheckGroup.style.gap = "6px 16px";
+
+      for (const wn of availableWeeks) {
+        const item = document.createElement("label");
+        item.className = "gb-export-checkbox-item";
+        item.style.minWidth = "70px";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = String(wn);
+        cb.checked = state.selectedWeeks.includes(wn);
+        cb.addEventListener("change", () => {
+          if (cb.checked) {
+            if (!state.selectedWeeks.includes(wn)) state.selectedWeeks.push(wn);
+          } else {
+            state.selectedWeeks = state.selectedWeeks.filter((w) => w !== wn);
+          }
+          updatePreview();
+        });
+        item.appendChild(cb);
+        item.appendChild(document.createTextNode(` Week ${wn}`));
+        weekCheckGroup.appendChild(item);
+      }
+      weekSubSection.appendChild(weekCheckGroup);
+      dateBody.appendChild(weekSubSection);
+    }
 
     // Custom date range
     const customLabel = document.createElement("span");
@@ -2444,6 +2535,7 @@
           state.dateMode = "custom";
           state.selectedQuarter = "";
           presetBtns.forEach((b) => b.classList.remove("active"));
+          weekSubSection.style.display = "none";
         }
         updatePreview();
       });
@@ -2684,7 +2776,7 @@
         id: "vlookup",
         icon: "🔗",
         label: "CSV + VLOOKUP",
-        desc: "Includes lookup table for real names (paste your roster)",
+        desc: "Includes pre-filled student name lookup table",
         action: () => runExport("vlookup"),
       },
       {
@@ -2861,7 +2953,6 @@
 
   async function exportToCSVWithVLOOKUP(opts) {
     const { students, drafts, colScores, colAverage, colWeighted, colTrend } = opts;
-    const LOOKUP_ROWS = 200; // pre-allocated empty rows for teacher to paste roster (future-proof for S001–S200+)
 
     const scoreMap = buildScoreMapForStudents(students, drafts);
 
@@ -2870,10 +2961,10 @@
 
     // ── Build column layout ──────────────────────────────────────────────
     // Col 0: Student Code (A)
-    // Col 1: Real Name (VLOOKUP) (B)
+    // Col 1: Real Name (B) — filled directly from student.name
     // Col 2+: Grade columns
     // Blank separator column
-    // Then: Lookup Table (Code | Name)
+    // Then: Lookup Table (Code | Name) — pre-filled from student records
 
     const gradeHeaders = [];
     if (colScores) {
@@ -2887,25 +2978,20 @@
     if (colWeighted) gradeHeaders.push("Weighted");
     if (colTrend) gradeHeaders.push("Trend");
 
-    // Grade data starts at col 0 (A), lookup formula at col 1 (B), grade scores at col 2 (C)
+    // Grade data starts at col 0 (A), name at col 1 (B), grade scores at col 2 (C)
     // Blank separator at col 2 + gradeHeaders.length
     // Lookup table starts at col 2 + gradeHeaders.length + 1
     const lookupCodeCol = 2 + gradeHeaders.length + 1; // 0-based
     const lookupNameCol = lookupCodeCol + 1;
-    const lookupCodeLetter = colIndexToLetter(lookupCodeCol);
-    const lookupNameLetter = colIndexToLetter(lookupNameCol);
-
-    // VLOOKUP range: from row 2 to row LOOKUP_ROWS+1 (1-indexed, header at row 1)
-    const lookupRange = `$${lookupCodeLetter}$2:$${lookupNameLetter}$${LOOKUP_ROWS + 1}`;
 
     // ── Build rows ───────────────────────────────────────────────────────
     // Header row
-    const totalCols = 2 + gradeHeaders.length + 1 + 2; // code + vlookup + grades + blank + lookupCode + lookupName
+    const totalCols = 2 + gradeHeaders.length + 1 + 2; // code + name + grades + blank + lookupCode + lookupName
     function emptyRow(len) { return Array(len).fill(""); }
 
     const headerRow = emptyRow(totalCols);
     headerRow[0] = "Student Code";
-    headerRow[1] = "Real Name (VLOOKUP)";
+    headerRow[1] = "Real Name";
     let ci = 2;
     for (const h of gradeHeaders) { headerRow[ci++] = h; }
     // blank separator already ""
@@ -2915,12 +3001,11 @@
     const rows = [headerRow];
 
     // Data rows (students)
-    let excelRowNum = 2; // 1-indexed; row 1 is header
     for (const student of students) {
       const row = emptyRow(totalCols);
       row[0] = student.code || "";
-      // VLOOKUP formula referencing lookup table
-      row[1] = `=VLOOKUP(A${excelRowNum},${lookupRange},2,FALSE)`;
+      // Use student name directly from loaded student records
+      row[1] = student.name || student.code || "";
 
       let gi = 2;
       if (colScores) {
@@ -2941,12 +3026,13 @@
       if (colTrend) {
         row[gi++] = calculateTrend(student.code, scoreMap, drafts) || "";
       }
-      // Lookup table columns stay empty (teacher will paste roster)
+      // Pre-fill lookup table columns with student code and name
+      row[lookupCodeCol] = student.code || "";
+      row[lookupNameCol] = student.name || student.code || "";
       rows.push(row);
-      excelRowNum++;
     }
 
-    // Summary row
+    // Summary row (no lookup data on this row)
     const summaryRow = emptyRow(totalCols);
     summaryRow[0] = "Class Average";
     summaryRow[1] = "";
@@ -2969,19 +3055,6 @@
     }
     if (colTrend) summaryRow[si++] = "—";
     rows.push(summaryRow);
-
-    // Pad with empty rows to fill all LOOKUP_ROWS slots in the lookup columns
-    // Rows emitted so far after the header: students.length + 1 (summary)
-    const dataRowCount = students.length + 1;
-    const extraRows = LOOKUP_ROWS - dataRowCount;
-    for (let i = 0; i < extraRows; i++) {
-      rows.push(emptyRow(totalCols));
-    }
-
-    // Instruction row at very end of lookup table area
-    const noteRow = emptyRow(totalCols);
-    noteRow[lookupCodeCol] = "--- PASTE YOUR STUDENT ROSTER ABOVE (Code in col " + lookupCodeLetter + ", Name in col " + lookupNameLetter + ") ---";
-    rows.push(noteRow);
 
     const csvContent = rows.map((r) => r.map(csvCell).join(",")).join("\n");
     const safeLabel = (opts.selectedClass || "gradebook").replace(/[^a-zA-Z0-9]/g, "-");
