@@ -2153,9 +2153,31 @@
       });
     } else if (opts.dateMode === "weeks" && opts.selectedWeeks && opts.selectedWeeks.length > 0) {
       const weekSet = new Set(opts.selectedWeeks.map(Number));
+      // Find the date range covered by assignments that match the selected week titles
+      const weekMatchedDates = draftsData
+        .filter((d) => { const m = (d.title || "").match(/WEEK\s*(\d+)/i); return m && weekSet.has(Number(m[1])); })
+        .map((d) => d.created_at || d.created || d.release)
+        .filter(Boolean)
+        .map((s) => new Date(s))
+        .filter((dt) => !isNaN(dt.getTime()));
+      const minDate = weekMatchedDates.length > 0 ? new Date(Math.min(...weekMatchedDates)) : null;
+      const maxDate = weekMatchedDates.length > 0 ? new Date(Math.max(...weekMatchedDates)) : null;
+      if (minDate) {
+        minDate.setHours(0, 0, 0, 0);
+        maxDate.setHours(23, 59, 59, 999);
+      }
       drafts = drafts.filter((d) => {
-        const m = (d.title || "").match(/WEEK\s*(\d+)/i);
-        return m ? weekSet.has(Number(m[1])) : false;
+        const titleMatch = (d.title || "").match(/WEEK\s*(\d+)/i);
+        if (titleMatch && weekSet.has(Number(titleMatch[1]))) return true;
+        // Also include assignments whose created_at falls in the date range of matched assignments
+        if (minDate) {
+          const dateStr = d.created_at || d.created || d.release;
+          if (dateStr) {
+            const dt = new Date(dateStr);
+            if (!isNaN(dt.getTime()) && dt >= minDate && dt <= maxDate) return true;
+          }
+        }
+        return false;
       });
     } else if (opts.dateMode === "custom" && (opts.dateStart || opts.dateEnd)) {
       const start = opts.dateStart ? new Date(opts.dateStart) : null;
@@ -2208,7 +2230,7 @@
 
   /**
    * Normalize an assignment title by removing trailing per-student code suffixes
-   * like " — S045", " – S001", " - S044" etc., then trimming whitespace.
+   * like " — S045", " – S001", " - S044" etc., then collapsing multiple whitespace.
    *
    * @param {string|null|undefined} rawTitle
    * @returns {string}
@@ -2220,7 +2242,22 @@
       .replace(/\s*[—–-]\s*S\d+\s*$/, "")
       // Remove "for SXXX" or "for SXXX #N" patterns (e.g. "Worksheets for S015", "Worksheets for S015 #1")
       .replace(/\s+for\s+S\d+(\s+#\d+)?\s*$/i, "")
+      // Collapse multiple whitespace to single space
+      .replace(/\s{2,}/g, " ")
       .trim();
+  }
+
+  /**
+   * Return a case-insensitive, dash-normalized dedup key for an assignment title.
+   * Normalizes em dash, en dash, and hyphen to a single hyphen for comparison.
+   *
+   * @param {string} normalizedTitle - output of normalizeAssignmentTitle()
+   * @returns {string}
+   */
+  function titleDedupKey(normalizedTitle) {
+    return normalizedTitle
+      .replace(/[—–]/g, "-")
+      .toLowerCase();
   }
 
   /**
@@ -2232,11 +2269,11 @@
    */
   function deduplicateAssignmentsForExport(drafts) {
     const groups = [];
-    const keyMap = new Map(); // compound key (title + "|" + dateStr) → group index
+    const keyMap = new Map(); // compound key (dedupKey + "|" + dateStr) → group index
     for (const draft of drafts) {
       const title = normalizeAssignmentTitle(draft.title);
       const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      const key = title + "|" + dateStr;
+      const key = titleDedupKey(title) + "|" + dateStr;
       if (keyMap.has(key)) {
         const g = groups[keyMap.get(key)];
         g.draftIds.push(draft.id);
@@ -2878,6 +2915,58 @@
     closeBtn.focus();
   }
 
+  // ─── Export: Bell schedule order and class grouping ─────────────────────────
+
+  // Bell schedule order for class-grouped exports.
+  // Classes not in this list appear alphabetically after these.
+  const BELL_SCHEDULE_ORDER = [
+    "Language Arts 2 SC",
+    "Language Arts 4 SC",
+    "Life Skills Language Arts SC",
+    "Language Arts 1 SC",
+    "Life Skills",
+  ];
+
+  /**
+   * Group a list of students by their enrolled class, sorted in bell schedule order.
+   * Falls back to a single group (no class header) if enrollment data is unavailable.
+   *
+   * @param {Array} students
+   * @returns {Array} Array of { className: string|null, students: Array }
+   */
+  function getClassGroupsForExport(students) {
+    const studentCodes = new Set(students.map((s) => s.code));
+    const classStudentMap = new Map();
+    for (const enrollment of classEnrollmentsData) {
+      if (enrollment.active === false) continue;
+      if (!studentCodes.has(enrollment.student_code)) continue;
+      if (!classStudentMap.has(enrollment.class_name)) {
+        classStudentMap.set(enrollment.class_name, new Set());
+      }
+      classStudentMap.get(enrollment.class_name).add(enrollment.student_code);
+    }
+
+    if (classStudentMap.size === 0) {
+      // No enrollment data — return all students as a single ungrouped section
+      return [{ className: null, students: [...students].sort((a, b) => (a.code || "").localeCompare(b.code || "")) }];
+    }
+
+    const allClassNames = [...classStudentMap.keys()];
+    const orderedClassNames = [
+      ...BELL_SCHEDULE_ORDER.filter((c) => allClassNames.includes(c)),
+      ...allClassNames.filter((c) => !BELL_SCHEDULE_ORDER.includes(c)).sort(),
+    ];
+
+    return orderedClassNames
+      .map((cls) => ({
+        className: cls,
+        students: students
+          .filter((s) => classStudentMap.get(cls)?.has(s.code))
+          .sort((a, b) => (a.code || "").localeCompare(b.code || "")),
+      }))
+      .filter((g) => g.students.length > 0);
+  }
+
   // ─── Export: Standard CSV with options ──────────────────────────────────────
 
   async function exportToCSVWithOptions(opts) {
@@ -2894,7 +2983,7 @@
     if (colScores) {
       for (const group of groups) {
         let headerLabel = group.title;
-        if (group.totalPossible) headerLabel += ` (${group.totalPossible} pts)`;
+        if (group.totalPossible) headerLabel += ` (/${group.totalPossible})`;
         headers.push(headerLabel);
       }
     }
@@ -2903,48 +2992,87 @@
     if (colTrend) headers.push("Trend");
     rows.push(headers);
 
-    for (const student of students) {
-      const row = [formatStudentLabel(student, nameFormat)];
+    // Group students by class in bell schedule order
+    const classGroups = getClassGroupsForExport(students);
+    const useClassHeaders = classGroups.length > 1 || (classGroups.length === 1 && classGroups[0].className);
+
+    for (const { className, students: classStudents } of classGroups) {
+      if (useClassHeaders && className) {
+        // Class header row
+        const classHeaderRow = [className];
+        for (let i = 1; i < headers.length; i++) classHeaderRow.push("");
+        rows.push(classHeaderRow);
+      }
+
+      for (const student of classStudents) {
+        const row = [formatStudentLabel(student, nameFormat)];
+        if (colScores) {
+          for (const group of groups) {
+            const score = getStudentScoreForGroup(student.code, group, scoreMap);
+            row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "—");
+          }
+        }
+        if (colAverage) {
+          const avg = calculateRowAverage(student.code, scoreMap, drafts);
+          row.push(avg !== null ? `${avg}%` : "");
+        }
+        if (colWeighted) {
+          const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+          row.push(w !== null ? `${w}%` : "");
+        }
+        if (colTrend) {
+          row.push(calculateTrend(student.code, scoreMap, drafts) || "");
+        }
+        rows.push(row);
+      }
+
+      // Class average row
+      if (useClassHeaders) {
+        const summaryRow = ["Class Average"];
+        if (colScores) {
+          for (const group of groups) {
+            const scores = classStudents
+              .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+              .filter((v) => v !== null);
+            summaryRow.push(scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "");
+          }
+        }
+        if (colAverage) {
+          const avgs = classStudents.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+          summaryRow.push(avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "");
+        }
+        if (colWeighted) {
+          const ws = classStudents.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+          summaryRow.push(ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "");
+        }
+        if (colTrend) summaryRow.push("—");
+        rows.push(summaryRow);
+        rows.push([]); // blank separator between class sections
+      }
+    }
+
+    // If not using class headers, add a single overall summary row
+    if (!useClassHeaders) {
+      const summaryRow = ["Class Average"];
       if (colScores) {
         for (const group of groups) {
-          const score = getStudentScoreForGroup(student.code, group, scoreMap);
-          row.push(score !== null ? formatScoreCell(score, group.totalPossible) : "—");
+          const scores = students
+            .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+            .filter((v) => v !== null);
+          summaryRow.push(scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "");
         }
       }
       if (colAverage) {
-        const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row.push(avg !== null ? `${avg}%` : "");
+        const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+        summaryRow.push(avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "");
       }
       if (colWeighted) {
-        const w = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row.push(w !== null ? `${w}%` : "");
+        const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+        summaryRow.push(ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "");
       }
-      if (colTrend) {
-        row.push(calculateTrend(student.code, scoreMap, drafts) || "");
-      }
-      rows.push(row);
+      if (colTrend) summaryRow.push("—");
+      rows.push(summaryRow);
     }
-
-    // Summary row
-    const summaryRow = ["Class Average"];
-    if (colScores) {
-      for (const group of groups) {
-        const scores = students
-          .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
-          .filter((v) => v !== null);
-        summaryRow.push(scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "");
-      }
-    }
-    if (colAverage) {
-      const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
-      summaryRow.push(avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "");
-    }
-    if (colWeighted) {
-      const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
-      summaryRow.push(ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "");
-    }
-    if (colTrend) summaryRow.push("—");
-    rows.push(summaryRow);
 
     const csvContent = rows.map((r) => r.map(csvCell).join(",")).join("\n");
     const safeLabel = (opts.selectedClass || "gradebook").replace(/[^a-zA-Z0-9]/g, "-");
@@ -2961,18 +3089,19 @@
     // Deduplicate assignments: collapse per-student instances of the same assignment
     const groups = deduplicateAssignmentsForExport(drafts);
 
-    // ── Build column layout ──────────────────────────────────────────────
-    // Col 0: Student Code (A)
-    // Col 1: Real Name (B) — filled directly from student.name
-    // Col 2+: Grade columns
-    // Blank separator column
-    // Then: Lookup Table (Code | Name) — pre-filled from student records
+    // ── Column layout ────────────────────────────────────────────────────
+    // Col 0 (A): Student Code
+    // Col 1 (B): Name — VLOOKUP formula referencing lookup columns in this sheet
+    // Col 2..N: Grade columns
+    // Col N+1: blank separator
+    // Col N+2: Lookup Code (student code)
+    // Col N+3: Lookup Name (student real name — the ONLY place names appear)
 
     const gradeHeaders = [];
     if (colScores) {
       for (const group of groups) {
         let h = group.title;
-        if (group.totalPossible) h += ` (${group.totalPossible} pts)`;
+        if (group.totalPossible) h += ` (/${group.totalPossible})`;
         gradeHeaders.push(h);
       }
     }
@@ -2980,83 +3109,125 @@
     if (colWeighted) gradeHeaders.push("Weighted");
     if (colTrend) gradeHeaders.push("Trend");
 
-    // Grade data starts at col 0 (A), name at col 1 (B), grade scores at col 2 (C)
-    // Blank separator at col 2 + gradeHeaders.length
-    // Lookup table starts at col 2 + gradeHeaders.length + 1
-    const lookupCodeCol = 2 + gradeHeaders.length + 1; // 0-based
+    const gradeCount = gradeHeaders.length;
+    const lookupCodeCol = 2 + gradeCount + 1; // one blank separator column
     const lookupNameCol = lookupCodeCol + 1;
+    const totalCols = lookupNameCol + 1;
 
-    // ── Build rows ───────────────────────────────────────────────────────
-    // Header row
-    const totalCols = 2 + gradeHeaders.length + 1 + 2; // code + name + grades + blank + lookupCode + lookupName
+    const lookupCodeLetter = colIndexToLetter(lookupCodeCol);
+    const lookupNameLetter = colIndexToLetter(lookupNameCol);
+    // Generous range that covers up to 500 data rows (class headers + students + averages)
+    const LOOKUP_RANGE = `$${lookupCodeLetter}$2:$${lookupNameLetter}$500`;
+
     function emptyRow(len) { return Array(len).fill(""); }
 
+    // ── Header row ───────────────────────────────────────────────────────
     const headerRow = emptyRow(totalCols);
     headerRow[0] = "Student Code";
-    headerRow[1] = "Real Name";
+    headerRow[1] = "Name";
     let ci = 2;
     for (const h of gradeHeaders) { headerRow[ci++] = h; }
-    // blank separator already ""
-    headerRow[lookupCodeCol] = "Student Code";
-    headerRow[lookupNameCol] = "Student Name";
+    headerRow[lookupCodeCol] = "Lookup Code";
+    headerRow[lookupNameCol] = "Lookup Name";
 
     const rows = [headerRow];
 
-    // Data rows (students)
-    for (const student of students) {
-      const row = emptyRow(totalCols);
-      row[0] = student.code || "";
-      // Use student name directly from loaded student records
-      row[1] = student.name || student.code || "";
+    // ── Group students by class in bell schedule order ────────────────────
+    const classGroups = getClassGroupsForExport(students);
+    const useClassHeaders = classGroups.length > 1 || (classGroups.length === 1 && classGroups[0].className);
 
-      let gi = 2;
+    for (const { className, students: classStudents } of classGroups) {
+      // Class header row
+      if (useClassHeaders && className) {
+        const classRow = emptyRow(totalCols);
+        classRow[0] = `=== ${className} ===`;
+        rows.push(classRow);
+      }
+
+      // Student rows
+      for (const student of classStudents) {
+        const currentRow = rows.length + 1; // 1-based spreadsheet row number
+        const row = emptyRow(totalCols);
+        row[0] = student.code || "";
+        // VLOOKUP formula: looks up student code in lookup columns of this sheet
+        row[1] = `=VLOOKUP(A${currentRow},${LOOKUP_RANGE},2,FALSE)`;
+
+        let gi = 2;
+        if (colScores) {
+          for (const group of groups) {
+            const score = getStudentScoreForGroup(student.code, group, scoreMap);
+            row[gi] = score !== null ? formatScoreCell(score, group.totalPossible) : "—";
+            gi++;
+          }
+        }
+        if (colAverage) {
+          const avg = calculateRowAverage(student.code, scoreMap, drafts);
+          row[gi++] = avg !== null ? `${avg}%` : "";
+        }
+        if (colWeighted) {
+          const w = calculateWeightedAverage(student.code, scoreMap, drafts);
+          row[gi++] = w !== null ? `${w}%` : "";
+        }
+        if (colTrend) {
+          row[gi++] = calculateTrend(student.code, scoreMap, drafts) || "";
+        }
+        // Lookup table: code + name (PII only in these two columns)
+        row[lookupCodeCol] = student.code || "";
+        row[lookupNameCol] = student.name || student.code || "";
+        rows.push(row);
+      }
+
+      // Class average row
+      if (useClassHeaders) {
+        const avgRow = emptyRow(totalCols);
+        avgRow[0] = "Class Average";
+        let si = 2;
+        if (colScores) {
+          for (const group of groups) {
+            const scores = classStudents
+              .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+              .filter((v) => v !== null);
+            avgRow[si++] = scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "";
+          }
+        }
+        if (colAverage) {
+          const avgs = classStudents.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+          avgRow[si++] = avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "";
+        }
+        if (colWeighted) {
+          const ws = classStudents.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+          avgRow[si++] = ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "";
+        }
+        if (colTrend) avgRow[si++] = "—";
+        rows.push(avgRow);
+        rows.push(emptyRow(totalCols)); // blank separator between class sections
+      }
+    }
+
+    // If not using class headers, add a single overall summary row
+    if (!useClassHeaders) {
+      const summaryRow = emptyRow(totalCols);
+      summaryRow[0] = "Class Average";
+      let si = 2;
       if (colScores) {
         for (const group of groups) {
-          const score = getStudentScoreForGroup(student.code, group, scoreMap);
-          row[gi] = score !== null ? formatScoreCell(score, group.totalPossible) : "—";
-          gi++;
+          const scores = students
+            .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
+            .filter((v) => v !== null);
+          summaryRow[si++] = scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "";
         }
       }
       if (colAverage) {
-        const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        row[gi++] = avg !== null ? `${avg}%` : "";
+        const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+        summaryRow[si++] = avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "";
       }
       if (colWeighted) {
-        const w = calculateWeightedAverage(student.code, scoreMap, drafts);
-        row[gi++] = w !== null ? `${w}%` : "";
+        const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
+        summaryRow[si++] = ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "";
       }
-      if (colTrend) {
-        row[gi++] = calculateTrend(student.code, scoreMap, drafts) || "";
-      }
-      // Pre-fill lookup table columns with student code and name
-      row[lookupCodeCol] = student.code || "";
-      row[lookupNameCol] = student.name || student.code || "";
-      rows.push(row);
+      if (colTrend) summaryRow[si++] = "—";
+      rows.push(summaryRow);
     }
-
-    // Summary row (no lookup data on this row)
-    const summaryRow = emptyRow(totalCols);
-    summaryRow[0] = "Class Average";
-    summaryRow[1] = "";
-    let si = 2;
-    if (colScores) {
-      for (const group of groups) {
-        const scores = students
-          .map((s) => getStudentScoreForGroup(s.code, group, scoreMap))
-          .filter((v) => v !== null);
-        summaryRow[si++] = scores.length > 0 ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "";
-      }
-    }
-    if (colAverage) {
-      const avgs = students.map((s) => calculateRowAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
-      summaryRow[si++] = avgs.length > 0 ? `${Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length)}%` : "";
-    }
-    if (colWeighted) {
-      const ws = students.map((s) => calculateWeightedAverage(s.code, scoreMap, drafts)).filter((v) => v !== null);
-      summaryRow[si++] = ws.length > 0 ? `${Math.round(ws.reduce((a, b) => a + b, 0) / ws.length)}%` : "";
-    }
-    if (colTrend) summaryRow[si++] = "—";
-    rows.push(summaryRow);
 
     const csvContent = rows.map((r) => r.map(csvCell).join(",")).join("\n");
     const safeLabel = (opts.selectedClass || "gradebook").replace(/[^a-zA-Z0-9]/g, "-");

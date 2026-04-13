@@ -444,16 +444,24 @@ function normalizeAssignmentTitle(rawTitle) {
     .replace(/\s*[—–-]\s*S\d+\s*$/, '')
     // Remove "for SXXX" or "for SXXX #N" patterns (e.g. "Worksheets for S015", "Worksheets for S015 #1")
     .replace(/\s+for\s+S\d+(\s+#\d+)?\s*$/i, '')
+    // Collapse multiple whitespace to single space
+    .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+function titleDedupKey(normalizedTitle) {
+  return normalizedTitle
+    .replace(/[—–]/g, '-')
+    .toLowerCase();
 }
 
 function deduplicateAssignmentsForExport(drafts) {
   const groups = [];
-  const keyMap = new Map(); // compound key (title + "|" + dateStr) → group index
+  const keyMap = new Map(); // compound key (dedupKey + "|" + dateStr) → group index
   for (const draft of drafts) {
     const title = normalizeAssignmentTitle(draft.title);
     const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-    const key = title + '|' + dateStr;
+    const key = titleDedupKey(title) + '|' + dateStr;
     if (keyMap.has(key)) {
       const g = groups[keyMap.get(key)];
       g.draftIds.push(draft.id);
@@ -548,6 +556,8 @@ console.log('\n--- normalizeAssignmentTitle ---');
   assert.strictEqual(normalizeAssignmentTitle(null), '(untitled)', 'null → (untitled)');
   // Hyphenated word at end (not S###) should NOT be stripped
   assert.strictEqual(normalizeAssignmentTitle('Reading — Context-Clues'), 'Reading — Context-Clues', 'hyphenated word (not S###) → unchanged');
+  // Multiple internal whitespace should be collapsed
+  assert.strictEqual(normalizeAssignmentTitle('WEEK  9   Chapter'), 'WEEK 9 Chapter', 'multiple internal whitespace collapsed to single space');
   console.log('✓ leaves titles without suffixes unchanged and handles edge cases');
 }
 
@@ -647,4 +657,43 @@ console.log('\n--- formatScoreCell ---');
 }
 
 console.log('\n✓ All deduplication export helper tests passed!');
+
+// ── titleDedupKey ──────────────────────────────────────────────────────────────
+
+console.log('\n--- titleDedupKey ---');
+
+{
+  assert.strictEqual(titleDedupKey('WEEK 9 — Chapter 18-20'), 'week 9 - chapter 18-20', 'em dash → hyphen, lowercase');
+  assert.strictEqual(titleDedupKey('WEEK 9 – Chapter'), 'week 9 - chapter', 'en dash → hyphen, lowercase');
+  assert.strictEqual(titleDedupKey('Week 9: Context Clues'), 'week 9: context clues', 'lowercase only');
+  console.log('✓ titleDedupKey normalizes dashes and lowercases');
+}
+
+// ── case-insensitive deduplication ───────────────────────────────────────────
+
+console.log('\n--- case-insensitive deduplication ---');
+
+{
+  const drafts = [
+    { id: 'd1', title: 'WEEK 10 — Chapter 29', meta: { total_possible: 20 }, due_at: '2024-03-25' },
+    { id: 'd2', title: 'Week 10 — Chapter 29 — S045', meta: { total_possible: 20 }, due_at: '2024-03-25' },
+    { id: 'd3', title: 'week 10 – Chapter 29', meta: { total_possible: 20 }, due_at: '2024-03-25' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, 'case/dash variants of same title on same date → one group');
+  assert.deepStrictEqual(groups[0].draftIds, ['d1', 'd2', 'd3']);
+  console.log('✓ case and dash variants collapse to one group');
+}
+
+{
+  // Multiple internal whitespace variants
+  const drafts = [
+    { id: 'ws1', title: 'WEEK  9   Sentence  Structure', meta: null, due_at: '2024-03-20' },
+    { id: 'ws2', title: 'WEEK 9 Sentence Structure — S045', meta: { total_possible: 10 }, due_at: '2024-03-20' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, 'extra whitespace variants collapse to one group');
+  assert.strictEqual(groups[0].totalPossible, 10, 'picks up totalPossible from second draft');
+  console.log('✓ extra whitespace variants collapse to one group');
+}
 
