@@ -457,11 +457,11 @@ function titleDedupKey(normalizedTitle) {
 
 function deduplicateAssignmentsForExport(drafts) {
   const groups = [];
-  const keyMap = new Map(); // compound key (dedupKey + "|" + dateStr) → group index
+  const keyMap = new Map(); // title-only dedup key → group index
   for (const draft of drafts) {
     const title = normalizeAssignmentTitle(draft.title);
     const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-    const key = titleDedupKey(title) + '|' + dateStr;
+    const key = titleDedupKey(title);
     if (keyMap.has(key)) {
       const g = groups[keyMap.get(key)];
       g.draftIds.push(draft.id);
@@ -605,7 +605,7 @@ console.log('\n--- normalizeAssignmentTitle ---');
   console.log('✓ strips "for SXXX" and "for SXXX #N" mid-title patterns');
 }
 
-// Same normalized title but different dates → should NOT merge (compound key)
+// Same normalized title on different dates → should merge into ONE group (title-only key)
 {
   const drafts = [
     { id: 'q1a', title: 'Vocabulary Quiz — S045', meta: { total_possible: 10 }, due_at: '2024-03-01' },
@@ -614,13 +614,11 @@ console.log('\n--- normalizeAssignmentTitle ---');
     { id: 'q3b', title: 'Vocabulary Quiz — S001', meta: { total_possible: 10 }, due_at: '2024-09-15' },
   ];
   const groups = deduplicateAssignmentsForExport(drafts);
-  assert.strictEqual(groups.length, 2, 'same title but different dates → two separate groups');
+  assert.strictEqual(groups.length, 1, 'same title on different dates → one merged group (title-only key)');
   assert.strictEqual(groups[0].title, 'Vocabulary Quiz');
-  assert.deepStrictEqual(groups[0].draftIds, ['q1a', 'q1b']);
-  assert.strictEqual(groups[1].title, 'Vocabulary Quiz');
-  assert.deepStrictEqual(groups[1].draftIds, ['q3a', 'q3b']);
-  assert.notStrictEqual(groups[0].dateStr, groups[1].dateStr, 'dateStr must differ between groups');
-  console.log('✓ same title on different dates stays as two separate groups (no over-merge)');
+  assert.deepStrictEqual(groups[0].draftIds, ['q1a', 'q1b', 'q3a', 'q3b']);
+  assert.strictEqual(groups[0].totalPossible, 10);
+  console.log('✓ same title on different dates merges into one group (title-only key)');
 }
 
 console.log('\n--- getStudentScoreForGroup ---');

@@ -2269,11 +2269,11 @@
    */
   function deduplicateAssignmentsForExport(drafts) {
     const groups = [];
-    const keyMap = new Map(); // compound key (dedupKey + "|" + dateStr) → group index
+    const keyMap = new Map(); // title-only dedup key → group index
     for (const draft of drafts) {
       const title = normalizeAssignmentTitle(draft.title);
       const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      const key = titleDedupKey(title) + "|" + dateStr;
+      const key = titleDedupKey(title);
       if (keyMap.has(key)) {
         const g = groups[keyMap.get(key)];
         g.draftIds.push(draft.id);
@@ -3130,6 +3130,15 @@
 
     const rows = [headerRow];
 
+    // ── Build student name map from enrollment data (has real names from DB join) ──
+    const studentNameMap = new Map();
+    for (const enrollment of classEnrollmentsData) {
+      if (enrollment.student_code && enrollment.student_name &&
+          enrollment.student_name !== enrollment.student_code) {
+        studentNameMap.set(enrollment.student_code, enrollment.student_name);
+      }
+    }
+
     // ── Group students by class in bell schedule order ────────────────────
     const classGroups = getClassGroupsForExport(students);
     const useClassHeaders = classGroups.length > 1 || (classGroups.length === 1 && classGroups[0].className);
@@ -3149,7 +3158,7 @@
       // Class header row
       if (useClassHeaders && className) {
         const classRow = emptyRow(totalCols);
-        classRow[0] = `=== ${className} ===`;
+        classRow[0] = className;
         rows.push(classRow);
       }
 
@@ -3182,7 +3191,7 @@
         }
         // Lookup table: code + name (PII only in these two columns)
         row[lookupCodeCol] = student.code || "";
-        row[lookupNameCol] = student.name || student.code || "";
+        row[lookupNameCol] = studentNameMap.get(student.code) || student.name || "";
         rows.push(row);
       }
 
