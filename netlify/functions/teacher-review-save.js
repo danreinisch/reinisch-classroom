@@ -171,10 +171,11 @@ async function handleSaveGrade(body, requestId) {
     return { statusCode: 500, error: 'Failed to save grade', detail: subRes.data };
   }
 
-  // Optionally update instance status
-  if (instanceId && typeof instanceId === 'string') {
+  // Update instance status — use caller-provided instanceId or look it up from the DB
+  const iid = (instanceId && typeof instanceId === 'string') ? instanceId : await lookupInstanceId(submissionId, requestId);
+  if (iid) {
     const instRes = await supaFetch(
-      `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(instanceId)}`,
+      `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(iid)}`,
       { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'Graded' }) }
     );
     if (!instRes.ok) {
@@ -253,7 +254,7 @@ async function handleSetInProgress(body, requestId) {
 // Action: reopen
 // PATCH submissions review_status back to 'pending', PATCH assignment_instances to 'In Progress'
 async function handleReopen(body, requestId) {
-  const { submissionId } = body;
+  const { submissionId, instanceId } = body;
 
   if (!submissionId || typeof submissionId !== 'string') {
     return { statusCode: 400, error: 'submissionId is required' };
@@ -273,7 +274,7 @@ async function handleReopen(body, requestId) {
     return { statusCode: 500, error: 'Failed to reopen submission', detail: subRes.data };
   }
 
-  const iid = await lookupInstanceId(submissionId, requestId);
+  const iid = (instanceId && typeof instanceId === 'string') ? instanceId : await lookupInstanceId(submissionId, requestId);
   if (iid) {
     const instRes = await supaFetch(
       `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(iid)}`,
