@@ -2860,6 +2860,18 @@
           }
         }
       }
+
+      // Handle ?student= URL parameter: auto-expand the named student on first load.
+      // This supports deep-links from the Overview page (e.g. /teacher/students/?student=S046).
+      if (!_initialLoadDone) {
+        const urlStudentCode = new URLSearchParams(window.location.search).get('student');
+        if (urlStudentCode && allStudents.some(s => s.code === urlStudentCode)) {
+          expandedStudents.add(urlStudentCode);
+          const hasGoals = allGoals.some(g => g.student_code === urlStudentCode && g.status !== 'archived');
+          selectedDetailTabMap.set(urlStudentCode, hasGoals ? 'goals' : 'skills');
+        }
+      }
+
       _initialLoadDone = true;
 
       renderStudentList();
@@ -3494,7 +3506,10 @@
     // Detect mastered goals across all active goals (not just filtered view)
     const masteredGoals = studentGoals.filter(g => g.status !== 'archived' && computeGoalAlertStatus(g).isMastered);
 
-    return renderStudentGoals(inContextGoals, outsideGoals, student.code, masteredGoals);
+    // Pass whether the student has any goals at all (vs. goals hidden by a filter)
+    const studentHasAnyGoals = studentGoals.length > 0;
+
+    return renderStudentGoals(inContextGoals, outsideGoals, student.code, masteredGoals, studentHasAnyGoals);
   }
 
   function renderStudentClassesTab(student, enrollments) {
@@ -5222,7 +5237,7 @@
     `;
   }
 
-  function renderStudentGoals(inContextGoals, outsideGoals, studentCode = null, masteredGoals = []) {
+  function renderStudentGoals(inContextGoals, outsideGoals, studentCode = null, masteredGoals = [], studentHasAnyGoals = true) {
     const inContextHtml = inContextGoals.map(goal => renderGoalCard(goal)).join('');
     
     let outsideHtml = '';
@@ -5261,7 +5276,15 @@
           </div>
         </div>
         <div class="st-goal-cards">
-          ${inContextHtml || '<div class="st-empty">No goals in this category</div>'}
+          ${inContextHtml || (!studentHasAnyGoals
+            ? `<div class="st-empty">
+                <p style="margin:0 0 12px 0;">No IEP goals yet for this student.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add IEP Goal</button>
+                  <button class="st-btn st-btn-secondary st-tab" data-tab="skills" aria-label="View Skills Summary and AI Recommendations">✨ View Skills Summary &amp; AI Recommendations</button>
+                </div>
+              </div>`
+            : '<div class="st-empty">No goals in this category</div>')}
         </div>
         ${outsideHtml}
       </div>
@@ -6057,7 +6080,8 @@
         selectedDetailTabMap.clear();
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
-          selectedDetailTabMap.set(student.code, 'goals');
+          const hasGoals = allGoals.some(g => g.student_code === student.code && g.status !== 'archived');
+          selectedDetailTabMap.set(student.code, hasGoals ? 'goals' : 'skills');
         });
         renderStudentList();
         updateExpandModeButtons();
@@ -6073,7 +6097,8 @@
         selectedDetailTabMap.clear();
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
-          selectedDetailTabMap.set(student.code, 'goals');
+          const hasGoals = allGoals.some(g => g.student_code === student.code && g.status !== 'archived');
+          selectedDetailTabMap.set(student.code, hasGoals ? 'goals' : 'skills');
         });
         renderStudentList();
         updateExpandModeButtons();
@@ -6527,9 +6552,11 @@
           const _doExpandAndQuickEntry = () => {
             // Expand the student
             expandedStudents.add(code);
-            selectedDetailTabMap.set(code, 'goals');
+            const hasGoals = allGoals.some(g => g.student_code === code && g.status !== 'archived');
+            // For students with no goals, open Skills Summary; otherwise open Goals tab
+            selectedDetailTabMap.set(code, hasGoals ? 'goals' : 'skills');
             renderStudentList().then(() => {
-              // Auto-open Quick Entry for first active goal
+              // Auto-open Quick Entry for first active goal (only when goals exist)
               const firstGoal = allGoals.find(g => g.student_code === code && g.status !== 'archived');
               if (firstGoal) {
                 const goalRow = document.querySelector(`.dt-goal-row[data-goal="${CSS.escape(firstGoal.code)}"][data-student="${CSS.escape(code)}"]`);
@@ -6573,8 +6600,10 @@
             if (ctrl) { ctrl.abort(); expandedContentControllers.delete(studentCode); }
           } else {
             expandedStudents.add(studentCode);
-            // Set default tab for newly expanded student
-            selectedDetailTabMap.set(studentCode, 'goals');
+            // Default to Skills Summary tab for students with no IEP goals so they
+            // immediately see useful assignment/DESE performance data instead of an empty goal list.
+            const hasGoals = allGoals.some(g => g.student_code === studentCode && g.status !== 'archived');
+            selectedDetailTabMap.set(studentCode, hasGoals ? 'goals' : 'skills');
             editingGoalId = null;
           }
           // Reset expandMode when manually toggling individual students
