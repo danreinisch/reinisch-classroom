@@ -161,6 +161,7 @@
   let submissionsData = [];
   let classEnrollmentsData = [];
   let assignmentInstancesData = [];
+  let earnedMap = new Map(); // studentCode -> Map<draftId, {earned, possible}> — populated from score_auto/score_total
   let usingSupabase = false;
   let syncStatus = "local"; // "synced", "local", "error"
   let realtimeChannel = null;
@@ -514,6 +515,8 @@
     // first submission we encounter for a given student/assignment is the most
     // recent one and its score should take priority over older submissions.
     const scoreMap = new Map();
+    earnedMap = new Map(); // reset and rebuild from current submissionsData
+    let scoredCount = 0;
 
     for (const submission of submissionsData) {
       // Find the assignment instance for this submission
@@ -570,7 +573,23 @@
       }
 
       scoreMap.get(studentCode).set(draftId, score);
+
+      // Also populate earnedMap: infer total_possible from score_auto (earned pts) and score_total (pct)
+      // so that "X/Y (Z%)" display works even when draft.meta.total_possible is null.
+      const scoreAuto = submission.score_auto != null ? Number(submission.score_auto) : null;
+      if (score != null && score > 0 && scoreAuto != null && !isNaN(scoreAuto)) {
+        const possible = Math.round(scoreAuto / (score / 100));
+        if (possible > 0) {
+          if (!earnedMap.has(studentCode)) earnedMap.set(studentCode, new Map());
+          if (!earnedMap.get(studentCode).has(draftId)) {
+            earnedMap.get(studentCode).set(draftId, { earned: scoreAuto, possible });
+            scoredCount++;
+          }
+        }
+      }
     }
+
+    console.log(`[gradebook] buildGradebookData: ${submissionsData.length} submissions loaded; ${scoredCount} student/assignment earned-points entries mapped`);
 
     return {
       students,
@@ -1041,14 +1060,21 @@
   // Calculate the raw earned and possible point totals for a student across a group
   function calculateGroupRawPoints(studentCode, scoreMap, groupDrafts) {
     const studentScores = scoreMap.get(studentCode);
+    const studentEarned = earnedMap.get(studentCode);
     let rawEarnedSum = 0, possibleSum = 0;
     for (const draft of groupDrafts) {
       const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-      if (studentScores && studentScores.has(draft.id) && tp) {
+      if (studentScores && studentScores.has(draft.id)) {
         const s = studentScores.get(draft.id);
         if (typeof s === "number") {
-          rawEarnedSum += (s * tp / 100);
-          possibleSum += tp;
+          if (tp) {
+            rawEarnedSum += (s * tp / 100);
+            possibleSum += tp;
+          } else if (studentEarned && studentEarned.has(draft.id)) {
+            const ep = studentEarned.get(draft.id);
+            rawEarnedSum += ep.earned;
+            possibleSum += ep.possible;
+          }
         }
       }
     }
@@ -1111,16 +1137,25 @@
       if (typeof score === "number") {
         currentScore = score;
         const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        // Fallback: check earnedMap when draft.meta.total_possible is null
+        const earnedInfo = !totalPossible && earnedMap.has(studentCode)
+          ? earnedMap.get(studentCode).get(draft.id) || null
+          : null;
 
         const pctLine = document.createElement("div");
         pctLine.className = "gb-score-pct";
         pctLine.textContent = `${score}%`;
         td.appendChild(pctLine);
 
-        if (totalPossible) {
+        const displayPossible = totalPossible || (earnedInfo ? earnedInfo.possible : null);
+        const displayEarned = totalPossible
+          ? calculateEarnedPoints(score, totalPossible)
+          : (earnedInfo ? earnedInfo.earned : null);
+
+        if (displayPossible && displayEarned !== null) {
           const ptsLine = document.createElement("div");
           ptsLine.className = "gb-score-pts-line";
-          ptsLine.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
+          ptsLine.textContent = `${displayEarned}/${displayPossible}`;
           td.appendChild(ptsLine);
         }
 
@@ -1231,10 +1266,19 @@
       pctLine.textContent = `${currentScore}%`;
       td.appendChild(pctLine);
 
-      if (group.totalPossible) {
+      // Check earnedMap for earned/possible when group.totalPossible is null
+      const earnedInfo = !group.totalPossible && scoreDraftId && earnedMap.has(studentCode)
+        ? earnedMap.get(studentCode).get(scoreDraftId) || null
+        : null;
+      const displayPossible = group.totalPossible || (earnedInfo ? earnedInfo.possible : null);
+      const displayEarned = group.totalPossible
+        ? calculateEarnedPoints(currentScore, group.totalPossible)
+        : (earnedInfo ? earnedInfo.earned : null);
+
+      if (displayPossible && displayEarned !== null) {
         const ptsLine = document.createElement("div");
         ptsLine.className = "gb-score-pts-line";
-        ptsLine.textContent = `${calculateEarnedPoints(currentScore, group.totalPossible)}/${group.totalPossible}`;
+        ptsLine.textContent = `${displayEarned}/${displayPossible}`;
         td.appendChild(ptsLine);
       }
 
@@ -1499,14 +1543,21 @@
             tdGroupSummary.setAttribute("aria-label", `${group.displayName} average for ${studentDisplayName}: ${groupAvg}%`);
 
             const studentScores = scoreMap.get(student.code);
+            const studentEarned = earnedMap.get(student.code);
             let rawEarnedSum = 0, possibleSum = 0;
             for (const draft of group.drafts) {
               const tp = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-              if (studentScores && studentScores.has(draft.id) && tp) {
+              if (studentScores && studentScores.has(draft.id)) {
                 const s = studentScores.get(draft.id);
                 if (typeof s === "number") {
-                  rawEarnedSum += (s * tp / 100);
-                  possibleSum += tp;
+                  if (tp) {
+                    rawEarnedSum += (s * tp / 100);
+                    possibleSum += tp;
+                  } else if (studentEarned && studentEarned.has(draft.id)) {
+                    const ep = studentEarned.get(draft.id);
+                    rawEarnedSum += ep.earned;
+                    possibleSum += ep.possible;
+                  }
                 }
               }
             }
@@ -3174,9 +3225,24 @@
 
         let gi = 2;
         if (colScores) {
+          const studentEarned = earnedMap.get(student.code);
           for (const group of groups) {
             const score = getStudentScoreForGroup(student.code, group, scoreMap);
-            row[gi] = score !== null ? formatScoreCell(score, group.totalPossible) : "—";
+            if (score !== null) {
+              let tp = group.totalPossible;
+              let earnedPts = null;
+              if (!tp && studentEarned) {
+                for (const draftId of group.draftIds) {
+                  const ep = studentEarned.get(draftId);
+                  if (ep) { tp = ep.possible; earnedPts = ep.earned; break; }
+                }
+              }
+              row[gi] = tp
+                ? `${earnedPts !== null ? earnedPts : calculateEarnedPoints(score, tp)}/${tp} (${score}%)`
+                : `${score}%`;
+            } else {
+              row[gi] = "—";
+            }
             gi++;
           }
         }
@@ -3436,10 +3502,25 @@
       tr.appendChild(nameTd);
 
       if (colScores) {
+        const studentEarned = earnedMap.get(student.code);
         for (const group of groups) {
           const td = doc.createElement("td");
           const score = getStudentScoreForGroup(student.code, group, scoreMap);
-          td.textContent = score !== null ? formatScoreCell(score, group.totalPossible) : "—";
+          if (score !== null) {
+            let tp = group.totalPossible;
+            let earnedPts = null;
+            if (!tp && studentEarned) {
+              for (const draftId of group.draftIds) {
+                const ep = studentEarned.get(draftId);
+                if (ep) { tp = ep.possible; earnedPts = ep.earned; break; }
+              }
+            }
+            td.textContent = tp
+              ? `${earnedPts !== null ? earnedPts : calculateEarnedPoints(score, tp)}/${tp} (${score}%)`
+              : `${score}%`;
+          } else {
+            td.textContent = "—";
+          }
           tr.appendChild(td);
         }
       }
@@ -3567,13 +3648,17 @@
 
         // Ungrouped individual columns
         const studentScores = scoreMap.get(student.code);
+        const studentEarned = earnedMap.get(student.code);
         for (const draft of ungrouped) {
           if (studentScores && studentScores.has(draft.id)) {
             const score = studentScores.get(draft.id);
             if (typeof score === "number") {
               const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              const earnedInfo = !totalPossible && studentEarned ? studentEarned.get(draft.id) || null : null;
               if (totalPossible) {
                 row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+              } else if (earnedInfo) {
+                row.push(`${earnedInfo.earned}/${earnedInfo.possible} (${score}%)`);
               } else {
                 row.push(score);
               }
@@ -3785,13 +3870,17 @@
 
           // Ungrouped individual columns
           const studentScores = scoreMap.get(student.code);
+          const studentEarned = earnedMap.get(student.code);
           for (const draft of ungrouped) {
             if (studentScores && studentScores.has(draft.id)) {
               const score = studentScores.get(draft.id);
               if (typeof score === "number") {
                 const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+                const earnedInfo = !totalPossible && studentEarned ? studentEarned.get(draft.id) || null : null;
                 if (totalPossible) {
                   row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+                } else if (earnedInfo) {
+                  row.push(`${earnedInfo.earned}/${earnedInfo.possible} (${score}%)`);
                 } else {
                   row.push(`${score}%`);
                 }
@@ -3862,14 +3951,18 @@
         for (const student of students) {
           const row = [student.name || student.code];
           const studentScores = scoreMap.get(student.code);
+          const studentEarned = earnedMap.get(student.code);
           
           for (const draft of drafts) {
             if (studentScores && studentScores.has(draft.id)) {
               const score = studentScores.get(draft.id);
               if (typeof score === "number") {
                 const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+                const earnedInfo = !totalPossible && studentEarned ? studentEarned.get(draft.id) || null : null;
                 if (totalPossible) {
                   row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+                } else if (earnedInfo) {
+                  row.push(`${earnedInfo.earned}/${earnedInfo.possible} (${score}%)`);
                 } else {
                   row.push(`${score}%`);
                 }

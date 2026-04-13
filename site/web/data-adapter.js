@@ -2,6 +2,12 @@
 import { getSupabase } from './supabase-client.js';
 import { withRetry } from './supabase-util.js';
 
+// Maximum number of submissions to fetch in a single query.
+// Supabase PostgREST imposes a default row limit (often 1000) that can silently
+// drop rows; using an explicit high limit ensures all school-year submissions
+// are retrieved for the gradebook and review page.
+const MAX_SUBMISSIONS_QUERY_LIMIT = 5000;
+
 const NS = 'rc_unified_';
 const store = {
   get: (k, def) => { try { return JSON.parse(localStorage.getItem(NS + k)) ?? def; } catch { return def; } },
@@ -1687,6 +1693,7 @@ const remote = {
       .from('submissions')
       .select('*, assignment_instances!inner(id, assignment_id, student_id, students!inner(code))')
       .or(`school_year.eq.${schoolYear},school_year.is.null`)
+      .limit(MAX_SUBMISSIONS_QUERY_LIMIT)
       .order('submitted_at', { ascending: false });
     
     if (filters.excludeFinalized) {
