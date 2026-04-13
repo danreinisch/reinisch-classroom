@@ -5250,6 +5250,23 @@
       </button>
     ` : '';
 
+    // Determine if the student truly has no goals (not just none visible in current filter)
+    const hasNoGoalsAtAll = inContextGoals.length === 0 && outsideGoals.length === 0;
+
+    // Helpful empty state for students with no IEP goals at all
+    const noGoalsEmptyHtml = `
+      <div class="st-empty" style="padding: 32px 20px;">
+        <p style="margin: 0 0 12px 0; font-size: 15px; font-weight: 500;">No IEP goals have been set up yet.</p>
+        <p style="margin: 0; font-size: 13px; opacity: 0.85; line-height: 1.6;">
+          Use <strong>+ Add Goal</strong> above to add IEP goals, or view the
+          <button class="st-tab st-inline-tab-link" data-tab="skills">Skills Summary</button>
+          tab for assignment performance data and AI-generated goal recommendations.
+        </p>
+      </div>
+    `;
+
+    const goalsAreaHtml = inContextHtml || (hasNoGoalsAtAll ? noGoalsEmptyHtml : '<div class="st-empty">No goals in this category</div>');
+
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
@@ -5261,7 +5278,7 @@
           </div>
         </div>
         <div class="st-goal-cards">
-          ${inContextHtml || '<div class="st-empty">No goals in this category</div>'}
+          ${goalsAreaHtml}
         </div>
         ${outsideHtml}
       </div>
@@ -6573,8 +6590,11 @@
             if (ctrl) { ctrl.abort(); expandedContentControllers.delete(studentCode); }
           } else {
             expandedStudents.add(studentCode);
-            // Set default tab for newly expanded student
-            selectedDetailTabMap.set(studentCode, 'goals');
+            // Set default tab for newly expanded student.
+            // Students with no IEP goals default to Skills Summary so teachers
+            // can immediately see assignment performance data and AI recommendations.
+            const studentHasGoals = allGoals.some(g => g.student_code === studentCode && g.status !== 'archived');
+            selectedDetailTabMap.set(studentCode, studentHasGoals ? 'goals' : 'skills');
             editingGoalId = null;
           }
           // Reset expandMode when manually toggling individual students
