@@ -2320,11 +2320,11 @@
    */
   function deduplicateAssignmentsForExport(drafts) {
     const groups = [];
-    const keyMap = new Map(); // title-only dedup key → group index
+    const keyMap = new Map(); // title+date dedup key → group index
     for (const draft of drafts) {
       const title = normalizeAssignmentTitle(draft.title);
       const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      const key = titleDedupKey(title);
+      const key = titleDedupKey(title) + "|" + dateStr;
       if (keyMap.has(key)) {
         const g = groups[keyMap.get(key)];
         g.draftIds.push(draft.id);
@@ -2971,11 +2971,16 @@
   // Bell schedule order for class-grouped exports.
   // Classes not in this list appear alphabetically after these.
   const BELL_SCHEDULE_ORDER = [
+    "Language Arts 1 SC",
     "Language Arts 2 SC",
+    "Language Arts 3 SC",
     "Language Arts 4 SC",
     "Life Skills Language Arts SC",
-    "Language Arts 1 SC",
     "Life Skills",
+    "Consumer Math",
+    "Geometry SC",
+    "Speech/Language",
+    "Warrior Academy",
   ];
 
   /**
@@ -3191,27 +3196,28 @@
         studentNameMap.set(enrollment.student_code, enrollment.student_name);
       }
     }
+    // Fallback: use studentsData for any codes not resolved from enrollments
+    for (const student of students) {
+      if (student.code && student.name && !studentNameMap.has(student.code)) {
+        studentNameMap.set(student.code, student.name);
+      }
+    }
 
     // ── Group students by class in bell schedule order ────────────────────
     const classGroups = getClassGroupsForExport(students);
     const useClassHeaders = classGroups.length > 1 || (classGroups.length === 1 && classGroups[0].className);
 
-    // Pre-calculate total row count so the VLOOKUP range is exact:
-    // 1 header + per class: optional class header + N students + optional average row + optional blank
-    let totalDataRows = 1; // header
-    for (const { className, students: cs } of classGroups) {
-      if (useClassHeaders && className) totalDataRows++; // class header
-      totalDataRows += cs.length; // one row per student
-      if (useClassHeaders) totalDataRows += 2; // class average row + blank separator
-    }
-    if (!useClassHeaders) totalDataRows++; // overall summary row
-    const LOOKUP_RANGE = `$${lookupCodeLetter}$2:$${lookupNameLetter}$${totalDataRows}`;
+    // Use a generous upper bound for LOOKUP_RANGE so that any off-by-one in row
+    // counting (blank separators, summary rows, etc.) doesn't exclude students
+    // at the bottom. VLOOKUP with FALSE (exact match) tolerates extra empty rows.
+    const LOOKUP_RANGE = `$${lookupCodeLetter}$2:$${lookupNameLetter}$1000`;
 
     for (const { className, students: classStudents } of classGroups) {
       // Class header row
       if (useClassHeaders && className) {
         const classRow = emptyRow(totalCols);
         classRow[0] = className;
+        classRow[1] = className;  // Prevent VLOOKUP #ERROR! by filling Name column
         rows.push(classRow);
       }
 
@@ -3587,6 +3593,19 @@
       }
       if (score != null) {
         scoreMap.get(studentCode).set(draftId, score);
+      }
+
+      // Also populate earnedMap: infer total_possible from score_auto (earned pts) and score_total (pct)
+      // so that "X/Y (Z%)" display works even when draft.meta.total_possible is null.
+      const scoreAuto = submission.score_auto != null ? Number(submission.score_auto) : null;
+      if (score != null && score > 0 && scoreAuto != null && !isNaN(scoreAuto)) {
+        const possible = Math.round(scoreAuto / (score / 100));
+        if (possible > 0) {
+          if (!earnedMap.has(studentCode)) earnedMap.set(studentCode, new Map());
+          if (!earnedMap.get(studentCode).has(draftId)) {
+            earnedMap.get(studentCode).set(draftId, { earned: scoreAuto, possible });
+          }
+        }
       }
     }
     return scoreMap;
