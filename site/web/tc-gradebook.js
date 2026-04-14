@@ -578,15 +578,18 @@
 
       scoreMap.get(studentCode).set(draftId, score);
 
-      // Also populate earnedMap: infer total_possible from score_auto (earned pts) and score_total (pct)
+      // Also populate earnedMap: infer total_possible from earned pts and score_total (pct)
       // so that "X/Y (Z%)" display works even when draft.meta.total_possible is null.
+      // earned = score_auto + score_manual (manual grader adjustments count toward the total)
       const scoreAuto = submission.score_auto != null ? Number(submission.score_auto) : null;
+      const scoreManual = submission.score_manual != null ? Number(submission.score_manual) : 0;
       if (score != null && score > 0 && scoreAuto != null && !isNaN(scoreAuto)) {
-        const possible = Math.round(scoreAuto / (score / 100));
+        const earned = scoreAuto + (isNaN(scoreManual) ? 0 : scoreManual);
+        const possible = Math.round(earned / (score / 100));
         if (possible > 0) {
           if (!earnedMap.has(studentCode)) earnedMap.set(studentCode, new Map());
           if (!earnedMap.get(studentCode).has(draftId)) {
-            earnedMap.get(studentCode).set(draftId, { earned: scoreAuto, possible });
+            earnedMap.get(studentCode).set(draftId, { earned, possible });
             scoredCount++;
           }
         }
@@ -1198,7 +1201,7 @@
 
     const titleEl = document.createElement("div");
     titleEl.className = "gb-col-title";
-    const displayTitle = group.title.length > 10 ? group.title.substring(0, 10) + "…" : group.title;
+    const displayTitle = group.title.length > 24 ? group.title.substring(0, 24) + "…" : group.title;
     titleEl.textContent = displayTitle + columnSortIndicator(groupSortKey);
     titleEl.title = group.title;
     th.appendChild(titleEl);
@@ -1338,6 +1341,7 @@
       : buildGroupsFromDrafts(drafts);
     const allDraftsFlat = [...groups.flatMap(g => g.drafts), ...ungrouped];
     const allAssignmentGroups = deduplicateAssignmentsForExport(allDraftsFlat);
+    backfillGroupTotalPossible(allAssignmentGroups);
 
     // Warn about assignments missing total_possible metadata
     const missingTotalPossible = allDraftsFlat.filter(d => !d.meta || !d.meta.total_possible);
@@ -1427,6 +1431,7 @@
       } else {
         // Expanded: add collapse indicator to first assignment column only (no separate label TH)
         const expandedDeduped = deduplicateAssignmentsForExport(group.drafts);
+        backfillGroupTotalPossible(expandedDeduped);
         for (let i = 0; i < expandedDeduped.length; i++) {
           const th = buildAssignmentGroupTh(expandedDeduped[i]);
           if (i === 0) {
@@ -1595,6 +1600,7 @@
         } else {
           // Expanded: individual score cells — deduplicated
           const expandedDeduped = deduplicateAssignmentsForExport(group.drafts);
+          backfillGroupTotalPossible(expandedDeduped);
           for (const dedupGroup of expandedDeduped) {
             tr.appendChild(buildGroupScoreTd(dedupGroup, student.code, scoreMap, student.name || student.code, studentInstanceDraftIds));
           }
@@ -1696,6 +1702,7 @@
       } else {
         // Expanded: individual column averages — deduplicated
         const expandedDeduped = deduplicateAssignmentsForExport(group.drafts);
+        backfillGroupTotalPossible(expandedDeduped);
         for (const dedupGroup of expandedDeduped) {
           const td = document.createElement("td");
           td.setAttribute("role", "gridcell");
@@ -1880,6 +1887,7 @@
 
     // Deduplicate assignments: collapse per-student instances (e.g. "— S045") into one column
     const assignmentGroups = deduplicateAssignmentsForExport(drafts);
+    backfillGroupTotalPossible(assignmentGroups);
 
     const headerRow = document.createElement("tr");
     headerRow.setAttribute("role", "row");
@@ -2330,29 +2338,82 @@
    * Group drafts by title so that per-student assignment instances collapse into
    * one column per unique assignment title in the export.
    *
+   * Two normalized titles are considered the same group when:
+   *  1. Their titleDedupKey() values are identical, OR
+   *  2. One key is a word-boundary prefix of the other (e.g. the Week 10 variant
+   *     "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31) Sentence Structure & Transitions"
+   *     collapses with "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)").
+   *
+   * The shorter (more canonical) title is kept as the group's display title.
+   *
    * @param {Array} drafts - Array of draft/assignment objects
    * @returns {Array} Array of group objects: { title, draftIds, totalPossible, dateStr }
    */
   function deduplicateAssignmentsForExport(drafts) {
+    // Linear scan for a matching group: O(groups) per draft.
+    // In practice groups ≤ a few dozen (one per unique assignment), so this is fast enough.
+    function findMatchingGroupIdx(groups, dedupKey, dateStr) {
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        if (g.dateStr !== dateStr) continue;
+        const gKey = titleDedupKey(g.title);
+        if (gKey === dedupKey) return i;
+        // Prefix match: one title is a word-boundary prefix of the other.
+        // This collapses assignment variants like:
+        //   "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)"
+        //   "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31) Sentence Structure & Transitions"
+        if (dedupKey.startsWith(gKey + " ") || gKey.startsWith(dedupKey + " ")) return i;
+      }
+      return -1;
+    }
+
     const groups = [];
-    const keyMap = new Map(); // title+date dedup key → group index
     for (const draft of drafts) {
       const title = normalizeAssignmentTitle(draft.title);
       const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-      const key = titleDedupKey(title) + "|" + dateStr;
-      if (keyMap.has(key)) {
-        const g = groups[keyMap.get(key)];
+      const dedupKey = titleDedupKey(title);
+      const matchedIdx = findMatchingGroupIdx(groups, dedupKey, dateStr);
+
+      if (matchedIdx >= 0) {
+        const g = groups[matchedIdx];
         g.draftIds.push(draft.id);
+        // Prefer the shorter, more canonical title as the display title
+        if (title.length < g.title.length) g.title = title;
         if (g.totalPossible == null && draft.meta && draft.meta.total_possible) {
           g.totalPossible = draft.meta.total_possible;
         }
       } else {
         const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-        keyMap.set(key, groups.length);
         groups.push({ title, draftIds: [draft.id], totalPossible, dateStr });
       }
     }
     return groups;
+  }
+
+  /**
+   * Back-fill missing `totalPossible` on deduplicated groups by scanning the
+   * module-level `earnedMap` (populated by buildGradebookData / buildScoreMapForStudents).
+   * When `meta.total_possible` is null for all assignments in a group, this derives
+   * the value from `score_auto` and `score_total` already stored in earnedMap.
+   *
+   * @param {Array} groups - output of deduplicateAssignmentsForExport()
+   */
+  function backfillGroupTotalPossible(groups) {
+    function findPossibleInEarnedMap(draftIds) {
+      for (const [, studentEntries] of earnedMap) {
+        for (const draftId of draftIds) {
+          const info = studentEntries.get(draftId);
+          if (info && info.possible > 0) return info.possible;
+        }
+      }
+      return null;
+    }
+
+    for (const group of groups) {
+      if (group.totalPossible != null) continue;
+      const possible = findPossibleInEarnedMap(group.draftIds);
+      if (possible !== null) group.totalPossible = possible;
+    }
   }
 
   /**
@@ -3048,6 +3109,7 @@
 
     // Deduplicate assignments: collapse per-student instances of the same assignment
     const groups = deduplicateAssignmentsForExport(drafts);
+    backfillGroupTotalPossible(groups);
 
     const rows = [];
     const headers = ["Student Code"];
@@ -3159,6 +3221,7 @@
 
     // Deduplicate assignments: collapse per-student instances of the same assignment
     const groups = deduplicateAssignmentsForExport(drafts);
+    backfillGroupTotalPossible(groups);
 
     // ── Column layout ────────────────────────────────────────────────────
     // Col 0 (A): Student Code
@@ -3360,6 +3423,7 @@
 
     // Deduplicate assignments: collapse per-student instances of the same assignment
     const groups = deduplicateAssignmentsForExport(drafts);
+    backfillGroupTotalPossible(groups);
 
     try {
       const { jsPDF } = await import("../vendor/jspdf.mjs");
@@ -3446,6 +3510,7 @@
 
     // Deduplicate assignments: collapse per-student instances of the same assignment
     const groups = deduplicateAssignmentsForExport(drafts);
+    backfillGroupTotalPossible(groups);
 
     // Build a minimal print window
     const printWin = window.open("", "_blank");
@@ -3634,15 +3699,18 @@
         nullScore++;
       }
 
-      // Also populate earnedMap: infer total_possible from score_auto (earned pts) and score_total (pct)
+      // Also populate earnedMap: infer total_possible from earned pts and score_total (pct)
       // so that "X/Y (Z%)" display works even when draft.meta.total_possible is null.
+      // earned = score_auto + score_manual (manual grader adjustments count toward the total)
       const scoreAuto = submission.score_auto != null ? Number(submission.score_auto) : null;
+      const scoreManual = submission.score_manual != null ? Number(submission.score_manual) : 0;
       if (score != null && score > 0 && scoreAuto != null && !isNaN(scoreAuto)) {
-        const possible = Math.round(scoreAuto / (score / 100));
+        const earned = scoreAuto + (isNaN(scoreManual) ? 0 : scoreManual);
+        const possible = Math.round(earned / (score / 100));
         if (possible > 0) {
           if (!earnedMap.has(studentCode)) earnedMap.set(studentCode, new Map());
           if (!earnedMap.get(studentCode).has(draftId)) {
-            earnedMap.get(studentCode).set(draftId, { earned: scoreAuto, possible });
+            earnedMap.get(studentCode).set(draftId, { earned, possible });
           }
         }
       }
@@ -3778,6 +3846,7 @@
       // ── Individual (flat) CSV export — deduplicated by title ────────────────
       // Build CSV header
       const dedupGroups = deduplicateAssignmentsForExport(drafts);
+      backfillGroupTotalPossible(dedupGroups);
       const headers = ["Student"];
       for (const group of dedupGroups) {
         let headerLabel = group.title;
