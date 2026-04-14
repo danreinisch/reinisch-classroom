@@ -432,8 +432,10 @@ function formatShortDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  // Use UTC values so that ISO date strings always resolve to the intended
+  // calendar date regardless of the client's local timezone.
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${mm}/${dd}`;
 }
 
@@ -451,7 +453,13 @@ function normalizeAssignmentTitle(rawTitle) {
 
 function titleDedupKey(normalizedTitle) {
   return normalizedTitle
-    .replace(/[—–]/g, '-')
+    // Decode common HTML entities so that "&amp;" and "&" produce the same key
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/[—–]/g, '-') // U+2014 em dash, U+2013 en dash → hyphen
     .toLowerCase();
 }
 
@@ -698,3 +706,51 @@ console.log('\n--- case-insensitive deduplication ---');
   console.log('✓ extra whitespace variants collapse to one group');
 }
 
+// ── HTML entity normalization in titleDedupKey ────────────────────────────────
+
+console.log('\n--- HTML entity normalization ---');
+
+{
+  // Titles that differ only in HTML entity encoding should deduplicate to the same group
+  assert.strictEqual(titleDedupKey('Sentence Structure &amp; Transitions'), titleDedupKey('Sentence Structure & Transitions'), '&amp; and & produce the same key');
+  assert.strictEqual(titleDedupKey('&lt;em&gt;Title&lt;/em&gt;'), '<em>title</em>', 'HTML entity decoding works');
+  console.log('✓ titleDedupKey normalizes HTML entities');
+}
+
+{
+  // Per-student assignment copies with &amp; in one and & in another should collapse
+  const drafts = [
+    { id: 'e1', title: 'WEEK 10 — Sentence Structure &amp; Transitions — S031', meta: { total_possible: 29 }, created_at: '2025-03-29T10:00:00Z' },
+    { id: 'e2', title: 'WEEK 10 — Sentence Structure & Transitions — S032', meta: { total_possible: 29 }, created_at: '2025-03-29T11:00:00Z' },
+    { id: 'e3', title: 'WEEK 10 — Sentence Structure &amp; Transitions — S033', meta: { total_possible: 29 }, created_at: '2025-03-29T09:00:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, '&amp; and & variants collapse to one group');
+  assert.deepStrictEqual(groups[0].draftIds, ['e1', 'e2', 'e3'], 'all three draft IDs in one group');
+  console.log('✓ &amp; and & variants of same title collapse to one group');
+}
+
+// ── UTC date parsing in formatShortDate ──────────────────────────────────────
+
+console.log('\n--- UTC date parsing ---');
+
+{
+  // A UTC midnight timestamp should always resolve to that calendar date,
+  // not the previous day (which local-time parsing might give in negative-offset zones).
+  assert.strictEqual(formatShortDate('2025-03-29T00:00:00Z'), '03/29', 'UTC midnight → 03/29 (not 03/28)');
+  assert.strictEqual(formatShortDate('2025-03-31T00:00:00Z'), '03/31', 'UTC midnight → 03/31');
+  assert.strictEqual(formatShortDate('2025-04-06T00:00:00Z'), '04/06', 'UTC midnight April 6 → 04/06');
+  console.log('✓ formatShortDate uses UTC dates (no off-by-one-day for midnight timestamps)');
+}
+
+{
+  // Two assignments created at different UTC times on the same calendar date should
+  // deduplicate into the same group (same date key).
+  const drafts = [
+    { id: 'u1', title: 'Week 10 — Chapter 29', meta: { total_possible: 29 }, created_at: '2025-03-29T00:00:00Z' },
+    { id: 'u2', title: 'Week 10 — Chapter 29 — S032', meta: { total_possible: 29 }, created_at: '2025-03-29T23:59:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, 'same UTC calendar date → one group');
+  console.log('✓ same UTC calendar date assignments deduplicate correctly');
+}

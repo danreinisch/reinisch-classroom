@@ -2,11 +2,13 @@
 import { getSupabase } from './supabase-client.js';
 import { withRetry } from './supabase-util.js';
 
-// Maximum number of submissions to fetch in a single query.
+// Maximum number of rows to fetch in a single query.
 // Supabase PostgREST imposes a default row limit (often 1000) that can silently
-// drop rows; using an explicit high limit ensures all school-year submissions
-// are retrieved for the gradebook and review page.
+// drop rows; using an explicit high limit ensures all school-year data is
+// retrieved for the gradebook and review page.
 const MAX_SUBMISSIONS_QUERY_LIMIT = 5000;
+const MAX_ASSIGNMENTS_QUERY_LIMIT = 5000;
+const MAX_INSTANCES_QUERY_LIMIT = 5000;
 
 const NS = 'rc_unified_';
 const store = {
@@ -1549,6 +1551,7 @@ const remote = {
       .from('assignments')
       .select('id, title, type, series, active, page, hero, meta, created_at, school_year, unit_id, section_id, tags')
       .or(`school_year.eq.${schoolYear},school_year.is.null`)
+      .limit(MAX_ASSIGNMENTS_QUERY_LIMIT)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -1572,7 +1575,8 @@ const remote = {
         school_year,
         students!inner(code, name)
       `)
-      .or(`school_year.eq.${schoolYear},school_year.is.null`);
+      .or(`school_year.eq.${schoolYear},school_year.is.null`)
+      .limit(MAX_INSTANCES_QUERY_LIMIT);
     if (error) throw error;
     
     // Flatten to include student_code and student_name at top level
