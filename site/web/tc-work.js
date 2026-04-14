@@ -473,6 +473,12 @@
       btnExportAll.addEventListener("click", (e) => { e.stopPropagation(); bDrafts.forEach(d => exportOne(d.id)); });
       tdBatchActions.appendChild(btnExportAll);
 
+      const btnDeleteAll = document.createElement("button");
+      btnDeleteAll.type = "button"; btnDeleteAll.className = "work-btn danger"; btnDeleteAll.style.marginLeft = "8px"; btnDeleteAll.title = "Delete all drafts in batch";
+      btnDeleteAll.innerHTML = SVG_DEL + " Delete All"; // SAFETY: static SVG + static text
+      btnDeleteAll.addEventListener("click", (e) => { e.stopPropagation(); deleteAllInBatch(batchId); });
+      tdBatchActions.appendChild(btnDeleteAll);
+
       trBatch.appendChild(tdBatchActions);
       tbody.appendChild(trBatch);
 
