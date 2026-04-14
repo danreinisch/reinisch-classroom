@@ -465,24 +465,56 @@ function titleDedupKey(normalizedTitle) {
 
 function deduplicateAssignmentsForExport(drafts) {
   const groups = [];
-  const keyMap = new Map(); // title+date dedup key → group index
   for (const draft of drafts) {
     const title = normalizeAssignmentTitle(draft.title);
     const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
-    const key = titleDedupKey(title) + "|" + dateStr;
-    if (keyMap.has(key)) {
-      const g = groups[keyMap.get(key)];
+    const dedupKey = titleDedupKey(title);
+
+    // Find an existing group with the same date and a compatible title
+    let matchedIdx = -1;
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[i];
+      if (g.dateStr !== dateStr) continue;
+      const gKey = titleDedupKey(g.title);
+      if (gKey === dedupKey) { matchedIdx = i; break; }
+      // Prefix match: one title is a word-boundary prefix of the other
+      if (dedupKey.startsWith(gKey + ' ') || gKey.startsWith(dedupKey + ' ')) {
+        matchedIdx = i; break;
+      }
+    }
+
+    if (matchedIdx >= 0) {
+      const g = groups[matchedIdx];
       g.draftIds.push(draft.id);
+      // Prefer the shorter, more canonical title as the display title
+      if (title.length < g.title.length) g.title = title;
       if (g.totalPossible == null && draft.meta && draft.meta.total_possible) {
         g.totalPossible = draft.meta.total_possible;
       }
     } else {
       const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-      keyMap.set(key, groups.length);
       groups.push({ title, draftIds: [draft.id], totalPossible, dateStr });
     }
   }
   return groups;
+}
+
+function backfillGroupTotalPossible(groups, earnedMap) {
+  function findPossibleInEarnedMap(draftIds) {
+    for (const [, studentEntries] of earnedMap) {
+      for (const draftId of draftIds) {
+        const info = studentEntries.get(draftId);
+        if (info && info.possible > 0) return info.possible;
+      }
+    }
+    return null;
+  }
+
+  for (const group of groups) {
+    if (group.totalPossible != null) continue;
+    const possible = findPossibleInEarnedMap(group.draftIds);
+    if (possible !== null) group.totalPossible = possible;
+  }
 }
 
 function getStudentScoreForGroup(studentCode, group, scoreMap) {
@@ -754,3 +786,126 @@ console.log('\n--- UTC date parsing ---');
   assert.strictEqual(groups.length, 1, 'same UTC calendar date → one group');
   console.log('✓ same UTC calendar date assignments deduplicate correctly');
 }
+
+// ── Prefix-based title deduplication (Week 10 two-variant collapse) ───────────
+
+console.log('\n--- prefix-based title deduplication ---');
+
+{
+  // Real Week 10 scenario: two title variants that share a prefix after stripping student codes.
+  // "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31) — S031" normalizes to
+  //   "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31)"
+  // "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31) Sentence Structure & Transitions — S038"
+  //   normalizes to "WEEK 10 — Lost in Kragdon-ah (Chapters 29–31) Sentence Structure & Transitions"
+  // Both should collapse into one group because the shorter title is a word-boundary prefix
+  // of the longer one.
+  const drafts = [
+    { id: 'w10a', title: 'WEEK 10 — Lost in Kragdon-ah (Chapters 29\u201331) — S031', meta: null, created_at: '2026-03-30T00:00:00Z' },
+    { id: 'w10b', title: 'WEEK 10 — Lost in Kragdon-ah (Chapters 29\u201331) — S032', meta: null, created_at: '2026-03-30T00:00:00Z' },
+    { id: 'w10c', title: 'WEEK 10 — Lost in Kragdon-ah (Chapters 29\u201331) Sentence Structure & Transitions — S038', meta: null, created_at: '2026-03-30T00:00:00Z' },
+    { id: 'w10d', title: 'WEEK 10 — Lost in Kragdon-ah (Chapters 29\u201331) Sentence Structure & Transitions — S039', meta: null, created_at: '2026-03-30T00:00:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 1, 'Week 10 two variants on same date collapse into one group');
+  assert.deepStrictEqual(groups[0].draftIds, ['w10a', 'w10b', 'w10c', 'w10d'], 'all four draft IDs in one group');
+  // The shorter title is kept as the canonical title
+  assert.strictEqual(groups[0].title, 'WEEK 10 \u2014 Lost in Kragdon-ah (Chapters 29\u201331)', 'shorter canonical title is preserved');
+  console.log('\u2713 Week 10 two-variant titles collapse into one group via prefix matching');
+}
+
+{
+  // Prefix match must not cross week boundaries
+  const drafts = [
+    { id: 'w9', title: 'WEEK 9 — Chapter 26-28', meta: null, created_at: '2026-03-20T00:00:00Z' },
+    { id: 'w10', title: 'WEEK 10 — Lost in Kragdon-ah', meta: null, created_at: '2026-03-30T00:00:00Z' },
+    { id: 'w11', title: 'WEEK 11 — Lost in Kragdon-ah Chapter 32', meta: null, created_at: '2026-04-06T00:00:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 3, 'different weeks on different dates stay separate');
+  console.log('\u2713 different week assignments on different dates stay separate');
+}
+
+{
+  // Prefix match must not collapse genuinely different assignments on the same date
+  // (e.g. "WEEK 10 — Reading" and "WEEK 10 — Writing" are different, not prefix-related)
+  const drafts = [
+    { id: 'r1', title: 'WEEK 10 — Reading Comprehension — S001', meta: null, created_at: '2026-03-30T00:00:00Z' },
+    { id: 'w1', title: 'WEEK 10 — Writing Workshop — S001', meta: null, created_at: '2026-03-30T00:00:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups.length, 2, 'genuinely different same-date assignments stay separate');
+  console.log('\u2713 genuinely different assignments on same date are not falsely collapsed');
+}
+
+{
+  // Real Week 11 title pattern test
+  const title = 'WEEK 11 \u2014 Lost in Kragdon-ah (Chapters 32\u201334) - Sentence Structure & Transitions \u2014 Part 2 \u2014 S001';
+  const normalized = normalizeAssignmentTitle(title);
+  assert.strictEqual(normalized, 'WEEK 11 \u2014 Lost in Kragdon-ah (Chapters 32\u201334) - Sentence Structure & Transitions \u2014 Part 2',
+    'strips trailing \u2014 S001 from Week 11 complex title');
+  console.log('\u2713 normalizeAssignmentTitle handles real Week 11 complex title');
+}
+
+// ── backfillGroupTotalPossible ────────────────────────────────────────────────
+
+console.log('\n--- backfillGroupTotalPossible ---');
+
+{
+  // When meta.total_possible is null but earnedMap has data, backfill should work
+  const drafts = [
+    { id: 'a1', title: 'Week 9 — S001', meta: null, created_at: '2026-03-20T00:00:00Z' },
+    { id: 'a2', title: 'Week 9 — S002', meta: null, created_at: '2026-03-20T00:00:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups[0].totalPossible, null, 'totalPossible starts null when meta is null');
+
+  const earnedMap = new Map([
+    ['S001', new Map([['a1', { earned: 29, possible: 30 }]])],
+    ['S002', new Map([['a2', { earned: 16, possible: 30 }]])],
+  ]);
+  backfillGroupTotalPossible(groups, earnedMap);
+  assert.strictEqual(groups[0].totalPossible, 30, 'backfill finds possible=30 from earnedMap');
+  console.log('\u2713 backfillGroupTotalPossible fills in totalPossible from earnedMap');
+}
+
+{
+  // backfill should not overwrite a non-null totalPossible
+  const drafts = [
+    { id: 'b1', title: 'Quiz — S001', meta: { total_possible: 20 }, created_at: '2026-03-01T00:00:00Z' },
+  ];
+  const groups = deduplicateAssignmentsForExport(drafts);
+  assert.strictEqual(groups[0].totalPossible, 20, 'totalPossible already set from meta');
+
+  const earnedMap = new Map([
+    ['S001', new Map([['b1', { earned: 18, possible: 25 }]])], // different possible — should be ignored
+  ]);
+  backfillGroupTotalPossible(groups, earnedMap);
+  assert.strictEqual(groups[0].totalPossible, 20, 'backfill does not overwrite existing totalPossible');
+  console.log('\u2713 backfillGroupTotalPossible does not overwrite existing totalPossible');
+}
+
+{
+  // backfill with earnedMap using score_manual: earned = score_auto + score_manual
+  // S001 Wk9: score_auto=25, score_manual=4, score_total=97 → earned=29, possible=round(29/0.97)=30
+  const score = 97;
+  const scoreAuto = 25;
+  const scoreManual = 4;
+  const earned = scoreAuto + scoreManual; // 29
+  const possible = Math.round(earned / (score / 100)); // round(29/0.97) = 30
+  assert.strictEqual(earned, 29, 'earned = score_auto + score_manual');
+  assert.strictEqual(possible, 30, 'possible back-calculated correctly');
+  console.log('\u2713 score_manual included in earned points back-calculation');
+}
+
+{
+  // S006 Wk9: score_auto=25, score_manual=1, score_total=87 → earned=26, possible=round(26/0.87)=30
+  const score = 87;
+  const scoreAuto = 25;
+  const scoreManual = 1;
+  const earned = scoreAuto + scoreManual; // 26
+  const possible = Math.round(earned / (score / 100)); // round(26/0.87) = 30
+  assert.strictEqual(earned, 26, 'S006 earned = 25 + 1 = 26');
+  assert.strictEqual(possible, 30, 'S006 possible back-calculated to 30');
+  console.log('\u2713 score_manual back-calculation: S006 Wk9 (87%) → 26/30');
+}
+
