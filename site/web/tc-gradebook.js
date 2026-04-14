@@ -27,8 +27,10 @@
     if (!dateStr) return "";
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return "";
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
+    // Use UTC values so that ISO date strings (e.g. "2025-03-29T00:00:00Z") always
+    // resolve to the intended calendar date regardless of the client's local timezone.
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
     return `${mm}/${dd}`;
   }
 
@@ -517,6 +519,8 @@
     const scoreMap = new Map();
     earnedMap = new Map(); // reset and rebuild from current submissionsData
     let scoredCount = 0;
+    let droppedNoInstanceGBD = 0;
+    let droppedNoStudentOrDraftGBD = 0;
 
     for (const submission of submissionsData) {
       // Find the assignment instance for this submission
@@ -535,13 +539,13 @@
           ? submission.assignment_instances[0]
           : submission.assignment_instances;
         if (!nestedInstance) {
-          console.warn('[gradebook] No instance found for submission', submission.id, 'instance_id:', submission.instance_id);
+          droppedNoInstanceGBD++;
           continue;
         }
         studentCode = nestedInstance.students?.code || nestedInstance.student_code;
         draftId = nestedInstance.assignment_id || submission.assignment_id;
         if (!studentCode || !draftId) {
-          console.warn('[gradebook] Missing student_code or assignment_id for submission', submission.id);
+          droppedNoStudentOrDraftGBD++;
           continue;
         }
       }
@@ -589,7 +593,12 @@
       }
     }
 
-    console.log(`[gradebook] buildGradebookData: ${submissionsData.length} submissions loaded; ${scoredCount} student/assignment earned-points entries mapped`);
+    console.log(
+      `[gradebook] buildGradebookData: ${submissionsData.length} submissions loaded; ` +
+      `${scoredCount} earned-points entries mapped; ` +
+      `${droppedNoInstanceGBD} dropped (no instance); ` +
+      `${droppedNoStudentOrDraftGBD} dropped (no student/draft)`
+    );
 
     return {
       students,
@@ -2307,6 +2316,12 @@
    */
   function titleDedupKey(normalizedTitle) {
     return normalizedTitle
+      // Decode common HTML entities so that "&amp;" and "&" produce the same key
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
       .replace(/[—–]/g, "-") // U+2014 em dash, U+2013 en dash → hyphen
       .toLowerCase();
   }
@@ -3561,7 +3576,16 @@
     const draftIds = new Set(drafts.map((d) => d.id));
     const scoreMap = new Map();
 
+    let totalProcessed = 0;
+    let droppedNoInstance = 0;
+    let droppedNoStudentOrDraft = 0;
+    let droppedNotInScope = 0;
+    let droppedDuplicate = 0;
+    let scored = 0;
+    let nullScore = 0;
+
     for (const submission of submissionsData) {
+      totalProcessed++;
       const instance = assignmentInstancesData.find((inst) => inst.id === submission.instance_id);
       let studentCode, draftId;
       if (instance) {
@@ -3571,14 +3595,26 @@
         const nestedInstance = Array.isArray(submission.assignment_instances)
           ? submission.assignment_instances[0]
           : submission.assignment_instances;
-        if (!nestedInstance) continue;
+        if (!nestedInstance) {
+          droppedNoInstance++;
+          continue;
+        }
         studentCode = nestedInstance.students?.code || nestedInstance.student_code;
         draftId = nestedInstance.assignment_id || submission.assignment_id;
       }
-      if (!studentCode || !draftId) continue;
-      if (!studentCodes.has(studentCode) || !draftIds.has(draftId)) continue;
+      if (!studentCode || !draftId) {
+        droppedNoStudentOrDraft++;
+        continue;
+      }
+      if (!studentCodes.has(studentCode) || !draftIds.has(draftId)) {
+        droppedNotInScope++;
+        continue;
+      }
       if (!scoreMap.has(studentCode)) scoreMap.set(studentCode, new Map());
-      if (scoreMap.get(studentCode).has(draftId)) continue; // keep first (most recent)
+      if (scoreMap.get(studentCode).has(draftId)) {
+        droppedDuplicate++;
+        continue; // keep first (most recent)
+      }
       let score = submission.score_total ?? submission.score;
       if (score != null) score = Number(score);
       if (isNaN(score)) score = null;
@@ -3593,6 +3629,9 @@
       }
       if (score != null) {
         scoreMap.get(studentCode).set(draftId, score);
+        scored++;
+      } else {
+        nullScore++;
       }
 
       // Also populate earnedMap: infer total_possible from score_auto (earned pts) and score_total (pct)
@@ -3608,6 +3647,12 @@
         }
       }
     }
+    console.log(
+      `[gradebook] buildScoreMapForStudents: ${totalProcessed} submissions — ` +
+      `${scored} scored, ${nullScore} null-score, ` +
+      `${droppedNoInstance} no-instance, ${droppedNoStudentOrDraft} no-student/draft, ` +
+      `${droppedNotInScope} out-of-scope, ${droppedDuplicate} duplicate`
+    );
     return scoreMap;
   }
 
