@@ -55,7 +55,9 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
       // Include per-question weaknesses (< 60% accuracy) when available
       if (Array.isArray(g.question_weaknesses) && g.question_weaknesses.length > 0) {
         prompt += `  Specific skill struggles for ${code}:\n`;
-        for (const q of g.question_weaknesses) {
+        // Limit to top 5 worst-performing questions to keep prompt size manageable
+        const limitedWeaknesses = g.question_weaknesses.slice(0, 5);
+        for (const q of limitedWeaknesses) {
           const qText = sanitizeForPrompt(q.text, 100);
           const qAcc = sanitizeNumber(q.accuracy);
           const qAttempts = sanitizeNumber(q.attempts);
@@ -159,7 +161,7 @@ exports.handler = async (event) => {
 
   // Call OpenAI with timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 35000);
+  const timeoutId = setTimeout(() => controller.abort(), 24000);
 
   let openAiResult;
   try {
@@ -172,7 +174,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         temperature: 0.3,
-        max_tokens: 6000,
+        max_tokens: 4000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
