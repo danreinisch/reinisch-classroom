@@ -919,6 +919,42 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     if (el) el.textContent = String(filled);
   }
 
+  // ── localStorage persistence ─────────────────────────────────────
+  var LS_KEY = 'rc_counting_money_answers';
+
+  function saveToLocalStorage() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(getAnswers()));
+    } catch (e) { /* ignore – quota exceeded or private mode */ }
+  }
+
+  function loadFromLocalStorage() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') return;
+      document.querySelectorAll('.q-input').forEach(function (inp) {
+        if (saved[inp.name] !== undefined) inp.value = saved[inp.name];
+      });
+    } catch (e) { /* ignore corrupt data */ }
+  }
+
+  // Debounced postMessage autosave to parent portal (3 s)
+  var _autosaveTimer = null;
+  function scheduleAutosavePostMessage() {
+    if (window.parent === window) return; // not in an iframe
+    if (_autosaveTimer) clearTimeout(_autosaveTimer);
+    _autosaveTimer = setTimeout(function () {
+      _autosaveTimer = null;
+      var answers = getAnswers();
+      if (Object.keys(answers).length > 0) {
+        window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+      }
+    }, 3000);
+  }
+  // ─────────────────────────────────────────────────────────────────
+
   function postMsg(type) {
     var answers = getAnswers();
     if (Object.keys(answers).length === 0) {
@@ -928,19 +964,28 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     window.parent.postMessage({ type: type, answers: answers }, '*');
   }
 
-  function autosave() { postMsg('rc-assignment-autosave'); }
+  function autosave() {
+    saveToLocalStorage();
+    postMsg('rc-assignment-autosave');
+  }
   function submitAll() {
     if (!confirm('Are you sure you want to submit your assignment? You cannot change your answers after submitting.')) return;
+    saveToLocalStorage();
     postMsg('rc-assignment-submit');
   }
   window.autosave = autosave;
   window.submitAll = submitAll;
 
   document.addEventListener('input', function (e) {
-    if (e.target && e.target.classList.contains('q-input')) updateCount();
+    if (e.target && e.target.classList.contains('q-input')) {
+      updateCount();
+      saveToLocalStorage();
+      scheduleAutosavePostMessage();
+    }
   });
 
   renderMoney();
+  loadFromLocalStorage();
   updateCount();
 }());
 </script>
