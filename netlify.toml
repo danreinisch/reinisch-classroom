@@ -8,6 +8,8 @@
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["@supabase/supabase-js"]
+  timeout = 26
 
 # Global security headers for all routes
 [[headers]]

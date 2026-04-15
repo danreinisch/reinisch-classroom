@@ -276,14 +276,14 @@ test('returns 502 when OpenAI returns error status', async function() {
   assert.strictEqual(parsed.ok, false);
 });
 
-test('returns 502 when OpenAI request times out', async function() {
+test('returns 504 when OpenAI request times out', async function() {
   global.fetch = function(_url, _opts) {
     var err = new Error('The operation was aborted');
     err.name = 'AbortError';
     return Promise.reject(err);
   };
   var res = await handler(authedEvent(validBody));
-  assert.strictEqual(res.statusCode, 502);
+  assert.strictEqual(res.statusCode, 504);
   var parsed = JSON.parse(res.body);
   assert.strictEqual(parsed.ok, false);
 });
