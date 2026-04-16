@@ -56,7 +56,10 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
       if (Array.isArray(g.question_weaknesses) && g.question_weaknesses.length > 0) {
         prompt += `  Specific skill struggles for ${code}:\n`;
         // Limit to top 5 worst-performing questions to keep prompt size manageable
-        const limitedWeaknesses = g.question_weaknesses.slice(0, 5);
+        const limitedWeaknesses = g.question_weaknesses
+          .slice()
+          .sort((a, b) => (a.accuracy ?? 100) - (b.accuracy ?? 100))
+          .slice(0, 5);
         for (const q of limitedWeaknesses) {
           const qText = sanitizeForPrompt(q.text, 100);
           const qAcc = sanitizeNumber(q.accuracy);

@@ -173,9 +173,9 @@ exports.handler = async function(event) {
 
   console.log('[teacher-ai-report-summary] [' + requestId + '] Calling Anthropic API for ' + studentCode + ' (' + goals.length + ' goals, audience: ' + audience + ')');
 
-  // Call Anthropic API with 120s timeout
+  // Call Anthropic API with timeout
   var controller = new AbortController();
-  var timeoutId = setTimeout(function() { controller.abort(); }, 120000);
+  var timeoutId = setTimeout(function() { controller.abort(); }, 24000);
 
   var anthropicResult;
   try {

@@ -8891,6 +8891,9 @@
   /** Guard against duplicate in-flight AI generation requests (e.g. rapid tab switching) */
   const skillsGenerationInFlight = new Map(); // student.code → true
 
+  /** Last HTTP status code from the AI skills summary request (for error messaging) */
+  const skillsLastStatus = new Map(); // student.code → status code
+
   /** Placeholder shown in skill card narrative area before AI commentary is generated */
   const SKILL_NARRATIVE_PLACEHOLDER_HTML = '<span class="st-skill-narrative-placeholder">Click \'Generate AI Commentary\' above to see a detailed summary.</span>';
 
@@ -9356,6 +9359,7 @@
 
       if (!res.ok) {
         console.warn('[tc-students] AI skills summary returned', res.status, '— skipping narratives');
+        skillsLastStatus.set(student.code, res.status);
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
         return false;
       }
@@ -9602,7 +9606,7 @@
       } else {
         // First failure — offer a retry
         btn.disabled = false;
-        btn.textContent = '⚠️ AI summary failed — Retry?';
+        btn.textContent = skillsLastStatus.get(student.code) === 504 ? '⚠️ AI summary timed out — Retry?' : '⚠️ AI summary failed — Retry?';
         btn.dataset.aiState = 'failed';
         btn.style.borderColor = 'rgba(245,158,11,0.5)';
         btn.style.color = 'rgba(245,158,11,0.9)';
