@@ -44,6 +44,11 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;}
 .score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
 .score-display span{color:#14b8a6;font-weight:700;}
+.save-indicator{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#8b949e;min-width:140px;text-align:center;}
+.save-indicator.saved{color:#22c55e;}
+.save-indicator.saving{color:#f59e0b;}
+.save-indicator.error{color:#ef4444;}
+.storage-warning{background:#2d1f00;border:1px solid #78350f;border-radius:8px;color:#fbbf24;font-size:0.85rem;padding:10px 16px;margin:12px 24px 0;display:none;}
 .btn-row{display:flex;gap:10px;}
 .btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
 .btn-save{background:#30363d;color:#e6edf3;}
@@ -58,6 +63,10 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 <div class="header">
   <h1>Return to Counting Money</h1>
   <p>6-Day Assignment &nbsp;·&nbsp; Fill in the dollar amount for each group of coins and bills</p>
+</div>
+
+<div class="storage-warning" id="storageWarning">
+  ⚠ Your browser is blocking saved progress. Your answers may not be saved if you leave this page. Please use a regular (non-private) browser window.
 </div>
 
 <div class="day-tabs">
@@ -827,6 +836,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 <!-- ═══════════════════════ BOTTOM BAR ═══════════════════════ -->
 <div class="bottom-bar">
   <div class="score-display">Answered: <span id="answeredCount">0</span> / <span id="totalCount">62</span></div>
+  <div class="save-indicator" id="saveIndicator"></div>
   <div class="btn-row">
     <button class="btn btn-save" onclick="autosave()">Save Progress</button>
     <button class="btn btn-submit" onclick="submitAll()">Submit Assignment</button>
@@ -919,18 +929,56 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     if (el) el.textContent = String(filled);
   }
 
-  // ── localStorage persistence ─────────────────────────────────────
+  // ── Storage abstraction (localStorage → sessionStorage fallback) ─
+  var _storageAvailable = false;
+  var _storage = null;
+  try {
+    localStorage.setItem('__rc_test', '1');
+    localStorage.removeItem('__rc_test');
+    _storage = localStorage;
+    _storageAvailable = true;
+  } catch (e) {
+    try {
+      sessionStorage.setItem('__rc_test', '1');
+      sessionStorage.removeItem('__rc_test');
+      _storage = sessionStorage;
+      _storageAvailable = true;
+    } catch (e2) {
+      _storageAvailable = false;
+    }
+  }
+
   var LS_KEY = 'rc_counting_money_answers';
 
+  // ── Visual save indicator ────────────────────────────────────────
+  var _saveIndicatorTimer = null;
+  function showSaveStatus(state) {
+    var el = document.getElementById('saveIndicator');
+    if (!el) return;
+    el.className = 'save-indicator ' + state;
+    if (state === 'saved') {
+      el.textContent = '✓ Saved';
+      if (_saveIndicatorTimer) clearTimeout(_saveIndicatorTimer);
+      _saveIndicatorTimer = setTimeout(function () { el.textContent = ''; el.className = 'save-indicator'; }, 4000);
+    } else if (state === 'saving') {
+      el.textContent = 'Saving…';
+    } else if (state === 'error') {
+      el.textContent = '⚠ Storage unavailable';
+    }
+  }
+
   function saveToLocalStorage() {
+    if (!_storageAvailable) return;
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify(getAnswers()));
-    } catch (e) { /* ignore – quota exceeded or private mode */ }
+      _storage.setItem(LS_KEY, JSON.stringify(getAnswers()));
+      showSaveStatus('saved');
+    } catch (e) { /* ignore – quota exceeded */ }
   }
 
   function loadFromLocalStorage() {
+    if (!_storageAvailable) return;
     try {
-      var raw = localStorage.getItem(LS_KEY);
+      var raw = _storage.getItem(LS_KEY);
       if (!raw) return;
       var saved = JSON.parse(raw);
       if (!saved || typeof saved !== 'object') return;
@@ -943,6 +991,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   // Debounced postMessage autosave to parent portal (3 s)
   var _autosaveTimer = null;
   function scheduleAutosavePostMessage() {
+    showSaveStatus('saving');
     if (window.parent === window) return; // not in an iframe
     if (_autosaveTimer) clearTimeout(_autosaveTimer);
     _autosaveTimer = setTimeout(function () {
@@ -953,6 +1002,35 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       }
     }, 3000);
   }
+
+  // ── Flush pending debounced save immediately ─────────────────────
+  function flushPendingSave() {
+    if (_autosaveTimer) {
+      clearTimeout(_autosaveTimer);
+      _autosaveTimer = null;
+      saveToLocalStorage();
+      var answers = getAnswers();
+      if (Object.keys(answers).length > 0 && window.parent !== window) {
+        window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+      }
+    }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') flushPendingSave();
+  });
+  window.addEventListener('beforeunload', flushPendingSave);
+  window.addEventListener('pagehide', flushPendingSave);
+
+  // ── Periodic background save (60 s safety net) ───────────────────
+  var _backgroundSaveInterval = setInterval(function () {
+    if (_storageAvailable) {
+      saveToLocalStorage();
+      scheduleAutosavePostMessage();
+    }
+  }, 60000);
+  // Clear interval on page unload so it doesn't accumulate in test environments
+  window.addEventListener('pagehide', function () { clearInterval(_backgroundSaveInterval); });
   // ─────────────────────────────────────────────────────────────────
 
   function postMsg(type) {
@@ -986,6 +1064,13 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 
   renderMoney();
   loadFromLocalStorage();
+
+  // Show storage warning banner if storage is completely unavailable
+  if (!_storageAvailable) {
+    var warnEl = document.getElementById('storageWarning');
+    if (warnEl) warnEl.style.display = 'block';
+    showSaveStatus('error');
+  }
 
   // ── ONE-TIME DATA RECOVERY (2026-04-15) ─────────────────────────
   // Students lost their Day 1, Day 2, and Day 3 answers due to
