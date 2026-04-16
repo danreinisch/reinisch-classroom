@@ -9301,9 +9301,63 @@
   }
 
   /**
-   * Fetch AI narratives from the Netlify function and inject them into the rendered cards.
+   * Inject AI skill narratives into the already-rendered cards for a student.
+   * @param {string} studentCode
+   * @param {Array} skills - Array of skill objects from the AI response
    */
-  async function requestSkillsNarratives(student, iepCards, deseCards) {
+  function injectSkillNarratives(studentCode, skills) {
+    const skillsTab = document.getElementById(`skills-tab-${studentCode}`);
+    for (const skill of skills) {
+      if (!skill.code || !skill.summary) continue;
+      // Only handle known source values; skip any unexpected values.
+      if (skill.source !== 'iep' && skill.source !== 'dese') continue;
+      const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
+      const sectionEl = skillsTab ? skillsTab.querySelector(`[data-section="${skill.source}"]`) : null;
+      const searchRoot = sectionEl || skillsTab || document;
+      const el = searchRoot.querySelector(`[id="${safeId}"]`);
+      if (el && document.body.contains(el)) {
+        // Use DOM API to avoid innerHTML XSS — textContent handles all escaping automatically
+        el.replaceChildren();
+        if (skill.description) {
+          const descP = document.createElement('p');
+          descP.className = 'st-skill-narrative-description';
+          descP.textContent = skill.description;
+          el.appendChild(descP);
+        }
+        const summaryP = document.createElement('p');
+        summaryP.textContent = skill.summary;
+        el.appendChild(summaryP);
+        if (skill.goal_recommendation) {
+          const goalP = document.createElement('p');
+          goalP.className = 'st-skill-narrative-goal-rec';
+          const label = document.createElement('strong');
+          label.textContent = '💡 Goal Recommendation: ';
+          goalP.appendChild(label);
+          goalP.appendChild(document.createTextNode(skill.goal_recommendation));
+          el.appendChild(goalP);
+        }
+      }
+    }
+    document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+  }
+
+  /**
+   * Fetch AI narratives using a background function + polling pattern.
+   * Posts the payload to the background function (gets 202 immediately),
+   * then polls the status endpoint every 2.5 seconds until complete or error.
+   *
+   * @param {Object} student
+   * @param {Array} iepCards
+   * @param {Array} deseCards
+   * @param {Function} [onStatusUpdate] - Optional callback(message) for button label updates
+   * @returns {Promise<boolean>} true on success, false on failure
+   */
+  async function requestSkillsNarratives(student, iepCards, deseCards, onStatusUpdate) {
+    const POLL_INTERVAL_MS = 2500;
+    // Maximum polls before giving up — each poll waits POLL_INTERVAL_MS plus network latency,
+    // so actual wall-clock time may exceed MAX_POLLS * POLL_INTERVAL_MS / 1000 seconds.
+    const MAX_POLLS = 120; // ~5 minute ceiling (120 × 2.5s intervals)
+
     try {
       // Build per-question weakness data for IEP goals (questions < 60% accuracy)
       let iepQuestionWeaknesses = {};
@@ -9346,71 +9400,81 @@
         item_count: c.itemCount,
       }));
 
-      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary', {
+      // Generate job ID client-side so we can poll before the background function responds.
+      // crypto.randomUUID() is available in all modern browsers (Chrome 92+, Firefox 95+, Safari 15.4+).
+      // Fallback uses Math.random() for older environments.
+      const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          });
+
+      // POST to background function — Netlify returns 202 immediately
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
+          job_id: jobId,
           student_code: student.code,
           iep_goals: iepPayload,
           dese_standards: desePayload,
         }),
       });
 
-      if (!res.ok) {
-        console.warn('[tc-students] AI skills summary returned', res.status, '— skipping narratives');
+      // Background functions always return 202; any other non-ok status is an error
+      if (!res.ok && res.status !== 202) {
+        console.warn('[tc-students] AI background job request failed', res.status, '— skipping narratives');
         skillsLastStatus.set(student.code, res.status);
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
         return false;
       }
 
-      const data = await res.json();
-      if (!data.ok || !Array.isArray(data.skills)) {
-        document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
-        return false;
-      }
+      // Poll the status endpoint until complete or error
+      const pollStartTime = Date.now();
+      for (let poll = 0; poll < MAX_POLLS; poll++) {
+        await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
 
-      // Cache the result
-      skillsAiCache.set(student.code, data);
+        if (onStatusUpdate) onStatusUpdate(`Generating… (${Math.round((Date.now() - pollStartTime) / 1000)}s)`);
 
-      // Inject narratives into the already-rendered cards, scoped to the correct student
-      // and section to prevent cross-contamination between IEP/DESE narratives.
-      const skillsTab = document.getElementById(`skills-tab-${student.code}`);
-      for (const skill of data.skills) {
-        if (!skill.code || !skill.summary) continue;
-        // Only handle known source values; skip any unexpected values.
-        if (skill.source !== 'iep' && skill.source !== 'dese') continue;
-        const safeId = `narrative-${skill.code.replace(/[^a-z0-9]/gi, '_')}`;
-        const sectionEl = skillsTab ? skillsTab.querySelector(`[data-section="${skill.source}"]`) : null;
-        const searchRoot = sectionEl || skillsTab || document;
-        const el = searchRoot.querySelector(`[id="${safeId}"]`);
-        if (el && document.body.contains(el)) {
-          // Use DOM API to avoid innerHTML XSS — textContent handles all escaping automatically
-          el.replaceChildren();
-          if (skill.description) {
-            const descP = document.createElement('p');
-            descP.className = 'st-skill-narrative-description';
-            descP.textContent = skill.description;
-            el.appendChild(descP);
+        let statusData;
+        try {
+          const statusRes = await fetch(
+            `/.netlify/functions/teacher-ai-skills-summary-status?job_id=${encodeURIComponent(jobId)}`,
+            { credentials: 'same-origin' }
+          );
+          if (!statusRes.ok) {
+            console.warn('[tc-students] AI status check failed', statusRes.status);
+            continue;
           }
-          const summaryP = document.createElement('p');
-          summaryP.textContent = skill.summary;
-          el.appendChild(summaryP);
-          if (skill.goal_recommendation) {
-            const goalP = document.createElement('p');
-            goalP.className = 'st-skill-narrative-goal-rec';
-            const label = document.createElement('strong');
-            label.textContent = '💡 Goal Recommendation: ';
-            goalP.appendChild(label);
-            goalP.appendChild(document.createTextNode(skill.goal_recommendation));
-            el.appendChild(goalP);
-          }
+          statusData = await statusRes.json();
+        } catch (_e) {
+          continue;
         }
+
+        if (statusData.status === 'complete' && Array.isArray(statusData.skills)) {
+          const data = { ok: true, skills: statusData.skills };
+          skillsAiCache.set(student.code, data);
+          injectSkillNarratives(student.code, statusData.skills);
+          return true;
+        }
+
+        if (statusData.status === 'error') {
+          console.warn('[tc-students] AI job failed:', statusData.error);
+          skillsLastStatus.set(student.code, 502);
+          document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+          return false;
+        }
+
+        // status === 'pending' — keep polling
       }
 
-      // Remove any remaining loading spinners
+      // Polling timed out
+      console.warn('[tc-students] AI job timed out after polling');
+      skillsLastStatus.set(student.code, 504);
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
-      return true;
+      return false;
 
     } catch (err) {
       console.warn('[tc-students] requestSkillsNarratives failed:', err);
@@ -9583,7 +9647,9 @@
       }
 
       skillsGenerationInFlight.set(student.code, true);
-      const succeeded = await requestSkillsNarratives(student, cards.iepCards, cards.deseCards);
+      const succeeded = await requestSkillsNarratives(student, cards.iepCards, cards.deseCards, (msg) => {
+        btn.textContent = msg;
+      });
       skillsGenerationInFlight.delete(student.code);
 
       if (skillsAiCache.has(student.code)) {
