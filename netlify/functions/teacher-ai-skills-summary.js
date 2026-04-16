@@ -203,9 +203,9 @@ exports.handler = async (event) => {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
       console.error(`[teacher-ai-skills-summary] [${requestId}] OpenAI request timed out`);
-    } else {
-      console.error(`[teacher-ai-skills-summary] [${requestId}] OpenAI request failed: ${err.message}`);
+      return jsonResponse(event, 504, { ok: false, error: 'AI skills summary timed out' }, {}, requestId);
     }
+    console.error(`[teacher-ai-skills-summary] [${requestId}] OpenAI request failed: ${err.message}`);
     return jsonResponse(event, 502, { ok: false, error: 'AI skills summary failed' }, {}, requestId);
   }
 
