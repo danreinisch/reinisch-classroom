@@ -988,18 +988,22 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   loadFromLocalStorage();
 
   // ── ONE-TIME DATA RECOVERY (2026-04-15) ─────────────────────────
-  // Students lost their Day 1 and Day 2 answers due to missing
-  // localStorage persistence and auto-save (fixed in PR #1245).
-  // Pre-fill the correct answers for any student who has no saved
-  // Day 1 or Day 2 answers so they are not penalized for the bug.
+  // Students lost their Day 1, Day 2, and Day 3 answers due to
+  // missing localStorage persistence and auto-save (fixed in
+  // PR #1245). Pre-fill the correct answers for any student who
+  // has no saved answers for a given day so they are not penalized
+  // for the bug. Each day is checked independently — answers already
+  // entered by the student are never overwritten.
   // This block can be removed after all students have loaded the
   // assignment at least once.
   // ────────────────────────────────────────────────────────────────
   (function () {
     var day1Fields = ['D1Q1','D1Q2','D1Q3','D1Q4','D1Q5','D1Q6','D1Q7','D1Q8','D1Q9','D1Q10'];
     var day2Fields = ['D2Q1','D2Q2','D2Q3','D2Q4','D2Q5','D2Q6','D2Q7','D2Q8','D2Q9','D2Q10'];
+    var day3Fields = ['D3Q1','D3Q2','D3Q3','D3Q4','D3Q5','D3Q6','D3Q7','D3Q8','D3Q9','D3Q10'];
     var day1Answers = ['1.00','0.40','0.65','0.28','0.24','0.95','0.28','0.52','0.55','0.73'];
     var day2Answers = ['0.85','0.80','1.20','0.65','1.15','0.34','0.27','0.24','0.42','0.30'];
+    var day3Answers = ['0.62','0.74','1.03','0.76','1.20','1.50','1.35','5.45','1.41','5.77'];
 
     function hasAnyValue(fields) {
       for (var i = 0; i < fields.length; i++) {
@@ -1023,6 +1027,10 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     }
     if (!hasAnyValue(day2Fields)) {
       prefill(day2Fields, day2Answers);
+      needsSave = true;
+    }
+    if (!hasAnyValue(day3Fields)) {
+      prefill(day3Fields, day3Answers);
       needsSave = true;
     }
     if (needsSave) {
