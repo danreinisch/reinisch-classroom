@@ -9423,10 +9423,11 @@
       }
 
       // Poll the status endpoint until complete or error
+      const pollStartTime = Date.now();
       for (let poll = 0; poll < MAX_POLLS; poll++) {
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
 
-        if (onStatusUpdate) onStatusUpdate(`Generating… (${Math.round((poll + 1) * POLL_INTERVAL_MS / 1000)}s)`);
+        if (onStatusUpdate) onStatusUpdate(`Generating… (${Math.round((Date.now() - pollStartTime) / 1000)}s)`);
 
         let statusData;
         try {

@@ -27,6 +27,9 @@ const crypto = require('crypto');
 
 const { SESSION_SECRET } = process.env;
 
+/** UUID v4 regex for validating client-supplied job_id values */
+const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 // ── Prompt helpers (kept in sync with teacher-ai-skills-summary.js) ─────────
 
 function sanitizeForPrompt(value, maxLen = 200) {
@@ -157,6 +160,9 @@ async function updateJob(url, key, id, patch) {
 
 // ── OpenAI call with retries ─────────────────────────────────────────────────
 
+/** Per-attempt timeout for OpenAI API calls (background functions allow longer timeouts) */
+const OPENAI_TIMEOUT_MS = 90000;
+
 const VALID_TIERS = new Set(['excellent', 'on-track', 'needs-support', 'critical']);
 
 function sanitizeSkills(skills) {
@@ -193,7 +199,7 @@ async function callOpenAiWithRetries(prompt, apiKey, requestId, maxAttempts = 3)
           response_format: { type: 'json_object' },
           messages: [{ role: 'system', content: prompt }],
         }),
-        signal: AbortSignal.timeout(90000),
+        signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
       });
 
       if (!res.ok) {
@@ -277,7 +283,7 @@ exports.handler = async (event) => {
   const { job_id, student_code, iep_goals, dese_standards } = parseResult.data;
 
   // Validate job_id (must be a UUID v4 from the client)
-  if (!job_id || typeof job_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(job_id)) {
+  if (!job_id || typeof job_id !== 'string' || !UUID_V4_RE.test(job_id)) {
     return { statusCode: 400, body: 'job_id must be a valid UUID v4' };
   }
 

@@ -120,7 +120,7 @@ function makeSuccessfulFetch(openAiSkills) {
           return Promise.resolve([]);
         }
         // OpenAI
-        if (url.includes('openai.com')) {
+        if (url.startsWith('https://api.openai.com/')) {
           return Promise.resolve({
             choices: [{ message: { content: JSON.stringify({ skills: openAiSkills }) } }],
           });
@@ -233,7 +233,7 @@ test('returns 202 and writes complete job on success', async function() {
       return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
     }
     // OpenAI
-    if (url.includes('openai.com')) {
+    if (url.startsWith('https://api.openai.com/')) {
       return Promise.resolve(makeOpenAiSuccess(aiSkills));
     }
     // PATCH job
@@ -271,7 +271,7 @@ test('uses cached result when payload_hash matches recent complete job', async f
         text: function() { return Promise.resolve(''); },
       });
     }
-    if (url.includes('openai.com')) {
+    if (url.startsWith('https://api.openai.com/')) {
       openAiCalled = true;
       return Promise.resolve(makeOpenAiSuccess([]));
     }
@@ -298,7 +298,7 @@ test('writes error job when OpenAI fails all retries', async function() {
     if (url.includes('payload_hash=')) {
       return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
     }
-    if (url.includes('openai.com')) {
+    if (url.startsWith('https://api.openai.com/')) {
       return Promise.resolve({ ok: false, status: 500, text: function() { return Promise.resolve('Server Error'); }, json: function() { return Promise.resolve({}); } });
     }
     if (url.includes('/rest/v1/ai_jobs?id=') && opts && opts.method === 'PATCH') {

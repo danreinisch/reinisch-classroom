@@ -161,6 +161,7 @@ test('returns pending when job status is pending', async function() {
   assert.strictEqual(parsed.ok, true);
   assert.strictEqual(parsed.status, 'pending');
   assert.strictEqual(parsed.skills, undefined, 'skills should not be present for pending');
+  assert.strictEqual(parsed.error, undefined, 'error should not be present for pending');
 });
 
 test('returns complete with skills when job is done', async function() {
