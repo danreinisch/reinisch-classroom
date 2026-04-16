@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS ai_jobs (
 );
 
 -- Index for polling by job id (primary key covers this)
--- Index for cache lookup by payload hash + recency
+-- Index for cache lookup by payload hash + recency.
+-- Partial index on status = 'complete' only: only completed jobs are eligible
+-- for cache reuse, so indexing pending/error rows is unnecessary overhead.
 CREATE INDEX IF NOT EXISTS ai_jobs_payload_hash_idx
   ON ai_jobs (payload_hash, created_at DESC)
   WHERE status = 'complete';

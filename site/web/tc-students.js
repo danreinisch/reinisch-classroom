@@ -9354,7 +9354,9 @@
    */
   async function requestSkillsNarratives(student, iepCards, deseCards, onStatusUpdate) {
     const POLL_INTERVAL_MS = 2500;
-    const MAX_POLLS = 120; // up to 5 minutes
+    // Maximum polls before giving up — each poll waits POLL_INTERVAL_MS plus network latency,
+    // so actual wall-clock time may exceed MAX_POLLS * POLL_INTERVAL_MS / 1000 seconds.
+    const MAX_POLLS = 120; // ~5 minute ceiling (120 × 2.5s intervals)
 
     try {
       // Build per-question weakness data for IEP goals (questions < 60% accuracy)
@@ -9398,8 +9400,15 @@
         item_count: c.itemCount,
       }));
 
-      // Generate job ID client-side so we can poll before the background function responds
-      const jobId = crypto.randomUUID();
+      // Generate job ID client-side so we can poll before the background function responds.
+      // crypto.randomUUID() is available in all modern browsers (Chrome 92+, Firefox 95+, Safari 15.4+).
+      // Fallback uses Math.random() for older environments.
+      const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          });
 
       // POST to background function — Netlify returns 202 immediately
       const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {

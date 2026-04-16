@@ -160,7 +160,10 @@ async function updateJob(url, key, id, patch) {
 
 // ── OpenAI call with retries ─────────────────────────────────────────────────
 
-/** Per-attempt timeout for OpenAI API calls (background functions allow longer timeouts) */
+/** Per-attempt timeout for OpenAI API calls.
+ * Background functions have a 15-minute ceiling, so we allow 90 seconds per attempt
+ * and up to 3 attempts (worst case: ~96s total including 2s + 4s backoff delays).
+ */
 const OPENAI_TIMEOUT_MS = 90000;
 
 const VALID_TIERS = new Set(['excellent', 'on-track', 'needs-support', 'critical']);
@@ -231,7 +234,7 @@ async function callOpenAiWithRetries(prompt, apiKey, requestId, maxAttempts = 3)
     }
 
     if (attempt < maxAttempts) {
-      const backoffMs = Math.pow(2, attempt) * 1000;
+      const backoffMs = Math.min(Math.pow(2, attempt) * 1000, 30000);
       console.log(`[teacher-ai-skills-summary-background] [${requestId}] Retrying in ${backoffMs}ms…`);
       await new Promise(r => setTimeout(r, backoffMs));
     }
