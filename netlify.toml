@@ -8,6 +8,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  timeout = 26
 
 # Global security headers for all routes
 [[headers]]
