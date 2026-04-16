@@ -77,8 +77,10 @@ export function initHtmlAssignmentBridge(instanceId, studentCode) {
   }
 
   let autosaveTimer = null;
+  let lastKnownAnswers = null;
 
-  async function sendToServer(payload) {
+  async function sendToServer(payload, attempt = 1) {
+    const MAX_RETRIES = 3;
     try {
       const response = await fetch('/.netlify/functions/student-submit-answer', {
         method: 'POST',
@@ -89,6 +91,12 @@ export function initHtmlAssignmentBridge(instanceId, studentCode) {
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         console.error(LOG_PREFIX, 'Submission failed:', response.status, err.error || '');
+        if (response.status >= 500 && attempt < MAX_RETRIES) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+          console.log(LOG_PREFIX, `Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise(r => setTimeout(r, delay));
+          return sendToServer(payload, attempt + 1);
+        }
         return;
       }
 
@@ -96,6 +104,12 @@ export function initHtmlAssignmentBridge(instanceId, studentCode) {
       console.log(LOG_PREFIX, `${label} recorded for instance`, instanceId);
     } catch (err) {
       console.error(LOG_PREFIX, 'Network error during submission:', err);
+      if (attempt < MAX_RETRIES) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+        console.log(LOG_PREFIX, `Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise(r => setTimeout(r, delay));
+        return sendToServer(payload, attempt + 1);
+      }
     }
   }
 
@@ -122,6 +136,9 @@ export function initHtmlAssignmentBridge(instanceId, studentCode) {
       submit: !isAutosave,
     };
 
+    // Track the most recent answers for flush-on-cleanup
+    lastKnownAnswers = data.answers;
+
     if (isAutosave) {
       // Debounce autosave calls to avoid flooding the server
       if (autosaveTimer) clearTimeout(autosaveTimer);
@@ -146,6 +163,15 @@ export function initHtmlAssignmentBridge(instanceId, studentCode) {
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
       autosaveTimer = null;
+      // Flush the pending save before removing the listener
+      if (lastKnownAnswers && Object.keys(lastKnownAnswers).length > 0) {
+        sendToServer({
+          instance_id: instanceId,
+          student_code: studentCode,
+          answers: lastKnownAnswers,
+          submit: false,
+        });
+      }
     }
     window.removeEventListener('message', handleMessage);
     console.log(LOG_PREFIX, 'Bridge removed for instance', instanceId);
