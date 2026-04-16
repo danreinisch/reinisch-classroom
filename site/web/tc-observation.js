@@ -294,6 +294,14 @@
           }
           console.log('[tc-observation] Batch sync succeeded:', result.synced, 'synced,', result.failed?.length || 0, 'failed');
         }
+      } else if (response.status === 400) {
+        // Client-side data issue — log details and stop retrying these entries
+        const errBody = await response.json().catch(() => ({}));
+        console.error('[tc-observation] Batch sync rejected (400):', errBody);
+        // Mark as synced to prevent infinite retry loop on bad data
+        for (const entry of entries) {
+          markSynced(entry._saved_at, entry.student_code, entry._goal_code);
+        }
       } else {
         console.warn('[tc-observation] Batch sync request failed:', response.status);
       }
