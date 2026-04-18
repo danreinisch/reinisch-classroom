@@ -2150,13 +2150,37 @@
   async function deleteAllInBatch(batchId) {
     const allDrafts = readDrafts();
     const batchDrafts = allDrafts.filter(d => d.batchId === batchId);
+    const issuedInBatch = batchDrafts.filter(d => !!d.issuedAt && !!d.assignmentId);
+
+    const issuedNote = issuedInBatch.length > 0
+      ? ` ${issuedInBatch.length} issued assignment${issuedInBatch.length !== 1 ? "s" : ""} will be recalled from all students first.`
+      : "";
 
     const confirmed = await rcConfirm(
       "Delete Batch",
-      `Delete all ${batchDrafts.length} draft${batchDrafts.length !== 1 ? "s" : ""} in this batch? This cannot be undone.`,
+      `Delete all ${batchDrafts.length} draft${batchDrafts.length !== 1 ? "s" : ""} in this batch? This cannot be undone.${issuedNote}`,
       "Delete All"
     );
     if (!confirmed) return;
+
+    // Recall any issued assignments first so student-visible records are cleaned up
+    if (issuedInBatch.length > 0) {
+      let recallCount = 0;
+      const recallFailures = [];
+      for (let i = 0; i < issuedInBatch.length; i++) {
+        const draft = issuedInBatch[i];
+        setMsg("ok", `Recalling ${i + 1} of ${issuedInBatch.length}: "${draft.title}"…`);
+        const ok = await _doRecallDraft(draft.id, draft);
+        if (ok) {
+          recallCount++;
+        } else {
+          recallFailures.push(draft.title);
+        }
+      }
+      if (recallFailures.length > 0) {
+        console.warn("[tc-work] Some recalls failed during batch delete:", recallFailures);
+      }
+    }
 
     const remaining = allDrafts.filter(d => d.batchId !== batchId);
     writeDrafts(remaining);
@@ -2655,9 +2679,80 @@
     const _pi = $("btnPurgeIssued");
     if (_pi) _pi.addEventListener("click", async () => {
       const drafts = readDrafts();
-      const issuedCount = drafts.filter(d => d.issuedAt).length;
+      const issuedDrafts = drafts.filter(d => d.issuedAt);
+      const issuedCount = issuedDrafts.length;
       if (issuedCount === 0) {
-        await rcAlert('Nothing to Purge', 'No issued drafts found in local storage.');
+        // No issued drafts in local storage — offer orphaned-record recall by assignment ID
+        const assignmentId = await new Promise((resolve) => {
+          const backdrop = document.createElement('div');
+          backdrop.className = 'rc-modal-backdrop';
+          const inputId = 'purgeOrphanInput_' + Date.now();
+          backdrop.innerHTML = `
+            <div class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="purge-orphan-title">
+              <div class="rc-modal-title" id="purge-orphan-title">No Local Issued Drafts Found</div>
+              <div class="rc-modal-message">
+                No issued drafts were found in local storage (they may have been deleted without recalling first).
+                To recall an orphaned assignment from all students, enter its assignment ID below.
+                You can find the assignment ID in your Supabase dashboard or from the student portal URL.
+              </div>
+              <div style="margin:12px 0 4px;">
+                <label for="${inputId}" style="display:block;font-size:12px;margin-bottom:6px;color:rgba(255,255,255,.6);">Assignment ID (integer)</label>
+                <input id="${inputId}" type="number" min="1" placeholder="e.g. 42" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#fff;font-size:13px;padding:7px 10px;outline:none;">
+              </div>
+              <div class="rc-modal-actions">
+                <button class="rc-modal-btn" id="purgeOrphanCancelBtn">Cancel</button>
+                <button class="rc-modal-btn rc-modal-btn-danger" id="purgeOrphanRecallBtn">Recall Assignment</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(backdrop);
+          const input = backdrop.querySelector(`#${inputId}`);
+          input.addEventListener('focus', () => { input.style.borderColor = 'rgba(96,165,250,.6)'; input.style.boxShadow = '0 0 0 2px rgba(96,165,250,.2)'; });
+          input.addEventListener('blur', () => { input.style.borderColor = 'rgba(255,255,255,.18)'; input.style.boxShadow = 'none'; });
+          input.focus();
+          const cleanup = (confirmed) => {
+            const val = (input.value || '').trim();
+            backdrop.remove();
+            resolve(confirmed && val ? val : null);
+          };
+          backdrop.querySelector('#purgeOrphanRecallBtn').addEventListener('click', () => cleanup(true));
+          backdrop.querySelector('#purgeOrphanCancelBtn').addEventListener('click', () => cleanup(false));
+          backdrop.addEventListener('click', (e) => { if (e.target === backdrop) cleanup(false); });
+          backdrop.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); cleanup(true); }
+            else if (e.key === 'Escape') { e.preventDefault(); cleanup(false); }
+          });
+        });
+        if (!assignmentId) return;
+        if (!/^\d+$/.test(assignmentId) || Number(assignmentId) < 1) {
+          await rcAlert('Invalid ID', 'Assignment ID must be a positive integer.');
+          return;
+        }
+        setMsg("ok", `Recalling assignment ${assignmentId}…`);
+        try {
+          const resp = await fetch('/.netlify/functions/teacher-recall-assignment', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignment_id: Number(assignmentId) })
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+            throw new Error(errData.error || `Recall failed: ${resp.status}`);
+          }
+          const result = await resp.json();
+          if (result.ok) {
+            const n = result.recalled_instances || 0;
+            clearMsg();
+            showToast(`✓ Recalled assignment ${assignmentId} — removed from ${n} student${n !== 1 ? "s" : ""}`);
+          } else {
+            throw new Error(result.error || 'Recall failed');
+          }
+        } catch (err) {
+          console.error('[tc-work] Orphaned assignment recall error:', err);
+          setMsg("err", `Failed to recall: ${err.message}`);
+          setTimeout(clearMsg, 5000);
+        }
         return;
       }
       const freed = stripIssuedDraftContent(drafts);

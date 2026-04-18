@@ -1737,6 +1737,7 @@
       renderHtmlSrcdocPanel(panel, instance);
     } else if (!meta.days || meta.days.length === 0) {
       // No structured content - show fallback
+      console.error(LOG_PREFIX, 'Assignment has no structured content (meta.days missing or empty). This may indicate a content parsing failure during issuance or an orphaned record. Instance ID:', instance.id, 'Assignment ID:', instance.assignment_id);
       renderNoContentPanel(panel, instance);
     } else {
       // Render structured assignment with days
