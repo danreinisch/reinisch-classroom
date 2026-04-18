@@ -1,0 +1,21 @@
+{
+  "description": "regressing: latest score < previous across multiple data points",
+  "student_code": "S003",
+  "iep_goals": [
+    {
+      "code": "G-WRITE-01",
+      "area": "Written Expression",
+      "current_avg": 48,
+      "previous_avg": 61,
+      "trend": "down",
+      "data_points": 9,
+      "target": 75,
+      "baseline": 40,
+      "question_weaknesses": [
+        { "text": "Use transition words in a paragraph", "accuracy": 30, "attempts": 6 },
+        { "text": "Write a topic sentence", "accuracy": 42, "attempts": 6 }
+      ]
+    }
+  ],
+  "dese_standards": []
+}

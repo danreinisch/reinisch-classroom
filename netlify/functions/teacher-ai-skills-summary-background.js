@@ -32,6 +32,38 @@ const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9
 
 // ── Prompt helpers (kept in sync with teacher-ai-skills-summary.js) ─────────
 
+// Banned phrases (must match web/ai-prompts/banned-phrases.json)
+const BANNED_PHRASES = [
+  'targeted intervention',
+  'targeted interventions',
+  'continued monitoring',
+  'continued support',
+  'additional support',
+  'ensure progress',
+  'achieve and maintain',
+  'appears to',
+  'suggests that',
+  'indicating that',
+  'indicates a need',
+  'demonstrate proficiency',
+  'demonstrate mastery',
+  'skill area',
+  'this level of performance',
+  'is recommended',
+  'to develop effectively',
+];
+// Pre-compute lowercase versions for efficient matching
+const BANNED_PHRASES_LOWER = BANNED_PHRASES.map(p => p.toLowerCase());
+
+function findBannedPhrase(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (let i = 0; i < BANNED_PHRASES_LOWER.length; i++) {
+    if (lower.includes(BANNED_PHRASES_LOWER[i])) return BANNED_PHRASES[i];
+  }
+  return null;
+}
+
 function sanitizeForPrompt(value, maxLen = 200) {
   if (value === null || value === undefined) return '';
   return String(value).replace(/[\r\n\t]/g, ' ').slice(0, maxLen);
@@ -42,19 +74,49 @@ function sanitizeNumber(value) {
   return isNaN(n) ? 'N/A' : String(n);
 }
 
-function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_mode }) {
+function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_mode, audience, retry_hint }) {
   const safeCode = sanitizeForPrompt(student_code, 20);
-  const isParentFriendly = language_mode === 'parent-friendly';
+  // Support both legacy language_mode and new audience parameter
+  const isExternal = audience === 'external' || language_mode === 'parent-friendly';
 
   let prompt = `You are an educational data analyst for a special education teacher.\n`;
-  prompt += `Analyze the following performance data for student ${safeCode} and write a 2-3 sentence summary for each skill area.\n`;
+  prompt += `Analyze the following performance data for student ${safeCode} and write a structured summary for each skill.\n\n`;
 
-  if (isParentFriendly) {
-    prompt += `Write in plain, accessible language suitable for parents — avoid IEP/SPED jargon. Instead of "baseline" say "starting point"; instead of "target" say "goal"; instead of "data points" say "observations". Use warm, encouraging language.\n`;
-    prompt += `If performance is below 40%, say the student needs extra help or practice in this area.\n\n`;
+  // Banned phrase enforcement
+  prompt += `## BANNED PHRASES — NEVER USE ANY OF THESE:\n`;
+  for (const phrase of BANNED_PHRASES) {
+    prompt += `- "${phrase}"\n`;
+  }
+  if (retry_hint) {
+    prompt += `\nIMPORTANT: Your previous draft contained the banned phrase "${retry_hint}". `;
+    prompt += `Rewrite every sentence that contained it without using that phrase.\n`;
+  }
+  prompt += `\n`;
+
+  // Required structure
+  prompt += `## REQUIRED SUMMARY STRUCTURE (follow exactly, ~80 words per skill):\n\n`;
+  prompt += `**WHAT HAPPENED** (1-2 sentences — MUST include at least one number AND one date or skill/chapter/assignment name)\n`;
+  prompt += `**WHY IT MATTERS** (1 sentence — ties score to baseline/target/IEP context)\n`;
+  prompt += `**DO THIS NEXT** (1-2 bullet points — concrete actions tied to a specific day or assignment)\n`;
+  if (isExternal) {
+    prompt += `  Each "DO THIS NEXT" bullet MUST be prefixed with: "Suggested — review before sending."\n`;
+  }
+  prompt += `\nThen add: **In plain words:** {one sentence a parent or student could read, < 200 characters}\n\n`;
+
+  // Tone rules
+  prompt += `## THREE RULES:\n`;
+  prompt += `1. Specific, not generic: every sentence contains at least one number, date, chapter, or assignment name.\n`;
+  prompt += `2. Active voice, named actor: "The student scored..." or "We will..." — never passive constructions.\n`;
+  if (isExternal) {
+    prompt += `3. Plain words (~6th-grade level): use do, get, miss, score, practice, try. Avoid all IEP/SPED jargon.\n\n`;
   } else {
-    prompt += `Use IEP/SPED terminology appropriate for IEP meetings and admin reports. Be specific about the numbers.\n`;
-    prompt += `If performance is below 40%, flag it as needing immediate attention.\n\n`;
+    prompt += `3. Plain words (~8th-grade level): use do, get, miss, score, practice, reteach, try. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n\n`;
+  }
+
+  if (isExternal) {
+    prompt += `## AUDIENCE: External (parents, guardians, official documents). Use warm, jargon-free language. "Do this next" must be prefixed with "Suggested — review before sending."\n\n`;
+  } else {
+    prompt += `## AUDIENCE: Internal (teacher-facing). "Do this next" should include 1-2 specific actions the teacher can take this week.\n\n`;
   }
 
   if (Array.isArray(iep_goals) && iep_goals.length > 0) {
@@ -93,35 +155,29 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
 
   prompt += `Return a JSON object with a single "skills" array. Each element must have:\n`;
   prompt += `  "code": the goal or DESE code exactly as provided\n`;
-  if (isParentFriendly) {
-    prompt += `  "description": a plain-English description of this skill area that a parent can understand — avoid acronyms and jargon. For example: "Reading — understanding the main idea of a passage and finding details that support it."\n`;
-    prompt += `  "summary": a 2-3 sentence update for parents. Use plain language: e.g. "Your child started at 60% and is now at 78%, which is close to the 80% goal. They are making good progress in reading comprehension." Mention the starting point, current level, and goal.\n`;
-    prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%) — used internally, not shown to parents\n`;
-    prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
-    prompt += `  Do NOT include a "goal_recommendation" field — that field is for teachers only.\n`;
+  if (isExternal) {
+    prompt += `  "description": a plain-English description of this skill (no acronyms/jargon; parent-friendly)\n`;
   } else {
-    prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured (e.g. "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence to support conclusions drawn from the text, including determining where the text leaves matters uncertain"). For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed. Write this so a SPED teacher could paste it directly into an IEP goal bank or present-levels narrative.\n`;
-    prompt += `  "summary": a 2-3 sentence narrative about performance in this skill area\n`;
-    prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
-    prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
-    prompt += `  "goal_recommendation": only include this field when tier is "needs-support" or "critical". Write a 1-2 sentence draft IEP goal recommendation a SPED teacher could use as a starting point. Reference the specific skill deficit, suggest a measurable target, and use language consistent with Missouri IEP goal-writing conventions (e.g. "Given grade-level text, [student] will identify the main idea and two supporting details with 70% accuracy across 3 consecutive data points by the next annual review."). Omit this field entirely for "excellent" and "on-track" tiers.\n`;
+    prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured. For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed.\n`;
+  }
+  prompt += `  "summary": the full three-section summary (WHAT HAPPENED / WHY IT MATTERS / DO THIS NEXT + "In plain words:" line)\n`;
+  prompt += `  "plain_language": the "In plain words:" one-liner extracted separately (< 200 characters)\n`;
+  prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
+  prompt += `  "source": "iep" if from IEP Goals, or "dese" if from DESE Standards\n`;
+  if (!isExternal) {
+    prompt += `  "goal_recommendation": only for needs-support or critical tiers — 1-2 sentence IEP goal draft. Omit entirely for excellent/on-track.\n`;
+  } else {
+    prompt += `  Do NOT include "goal_recommendation" — external summaries omit this field.\n`;
   }
   prompt += `Include every IEP goal and every DESE standard provided. Do not add or remove entries.\n`;
-  prompt += `Example: { "skills": [{ "code": "MLS.R.1.A",`;
-  prompt += ` "description": "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence when analyzing what the text says explicitly and what can be inferred",`;
-  prompt += ` "summary": "...", "tier": "needs-support", "source": "dese"`;
-  if (!isParentFriendly) {
-    prompt += `, "goal_recommendation": "Given grade-level narrative text, the student will identify explicit details and make text-based inferences with 65% accuracy across 3 consecutive probes by the next annual IEP review."`;
-  }
-  prompt += ` }] }`;
 
   return prompt;
 }
 
 // ── Payload hash (for caching) ───────────────────────────────────────────────
 
-function computePayloadHash(student_code, iep_goals, dese_standards, language_mode) {
-  const canonical = JSON.stringify({ student_code, iep_goals, dese_standards, language_mode: language_mode || 'professional' });
+function computePayloadHash(student_code, iep_goals, dese_standards, audience) {
+  const canonical = JSON.stringify({ student_code, iep_goals, dese_standards, audience: audience || 'internal' });
   return crypto.createHash('sha256').update(canonical).digest('hex');
 }
 
@@ -187,7 +243,7 @@ const OPENAI_TIMEOUT_MS = 90000;
 
 const VALID_TIERS = new Set(['excellent', 'on-track', 'needs-support', 'critical']);
 
-function sanitizeSkills(skills) {
+function sanitizeSkills(skills, isExternal) {
   if (!Array.isArray(skills)) return null;
   return skills
     .filter(s => s && typeof s.code === 'string' && s.code.trim() !== '')
@@ -195,15 +251,18 @@ function sanitizeSkills(skills) {
       code: s.code.trim(),
       description: typeof s.description === 'string' ? s.description.trim() : '',
       summary: typeof s.summary === 'string' ? s.summary.trim() : '',
+      ...(typeof s.plain_language === 'string' && s.plain_language.trim() !== ''
+        ? { plain_language: s.plain_language.trim().slice(0, 300) }
+        : {}),
       tier: VALID_TIERS.has(s.tier) ? s.tier : 'needs-support',
       source: s.source === 'dese' ? 'dese' : 'iep',
-      ...(typeof s.goal_recommendation === 'string' && s.goal_recommendation.trim() !== ''
+      ...(!isExternal && typeof s.goal_recommendation === 'string' && s.goal_recommendation.trim() !== ''
         ? { goal_recommendation: s.goal_recommendation.trim() }
         : {}),
     }));
 }
 
-async function callOpenAiWithRetries(prompt, apiKey, requestId, maxAttempts = 3) {
+async function callOpenAiWithRetries(prompt, apiKey, requestId, maxAttempts = 3, isExternal = false) {
   let lastError = 'Unknown error';
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -238,7 +297,7 @@ async function callOpenAiWithRetries(prompt, apiKey, requestId, maxAttempts = 3)
           console.error(`[teacher-ai-skills-summary-background] [${requestId}] ${lastError}`);
         } else {
           const parsed = JSON.parse(content);
-          const sanitized = sanitizeSkills(parsed?.skills);
+          const sanitized = sanitizeSkills(parsed?.skills, isExternal);
           if (!sanitized) {
             lastError = 'OpenAI response missing skills array';
             console.error(`[teacher-ai-skills-summary-background] [${requestId}] ${lastError}`);
@@ -302,11 +361,12 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  const { job_id, student_code, iep_goals, dese_standards, language_mode } = parseResult.data;
+  const { job_id, student_code, iep_goals, dese_standards, language_mode, audience } = parseResult.data;
 
-  // Validate language_mode (optional field, defaults to 'professional')
-  const validLanguageModes = new Set(['professional', 'parent-friendly']);
-  const safeLanguageMode = validLanguageModes.has(language_mode) ? language_mode : 'professional';
+  // Support both legacy language_mode and new audience parameter
+  // audience takes precedence; language_mode kept for backward compatibility
+  const resolvedAudience = audience === 'external' || language_mode === 'parent-friendly' ? 'external' : 'internal';
+  const isExternal = resolvedAudience === 'external';
 
   // Validate job_id (must be a UUID v4 from the client)
   if (!job_id || typeof job_id !== 'string' || !UUID_V4_RE.test(job_id)) {
@@ -324,7 +384,7 @@ exports.handler = async (event) => {
   }
 
   const createdBy = auth.user.username;
-  const payloadHash = computePayloadHash(student_code, iep_goals || [], dese_standards || [], safeLanguageMode);
+  const payloadHash = computePayloadHash(student_code, iep_goals || [], dese_standards || [], resolvedAudience);
 
   // Insert the pending job record
   const inserted = await insertJob(SUPABASE_URL, SUPABASE_KEY, {
@@ -363,16 +423,54 @@ exports.handler = async (event) => {
     student_code,
     iep_goals: iep_goals || [],
     dese_standards: dese_standards || [],
-    language_mode: safeLanguageMode,
+    audience: resolvedAudience,
   });
 
-  const aiResult = await callOpenAiWithRetries(systemPrompt, OPENAI_API_KEY, requestId);
+  const aiResult = await callOpenAiWithRetries(systemPrompt, OPENAI_API_KEY, requestId, 3, isExternal);
 
   if (aiResult.ok) {
-    console.log(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} complete — ${aiResult.skills.length} skills`);
+    // Banned-phrase check
+    let skills = aiResult.skills;
+    let aiEdited = false;
+
+    const checkForBanned = (skillsArr) => {
+      for (const s of skillsArr) {
+        const textToCheck = [s.summary, s.description, s.plain_language, s.goal_recommendation]
+          .filter(Boolean)
+          .join(' ');
+        const found = findBannedPhrase(textToCheck);
+        if (found) return found;
+      }
+      return null;
+    };
+
+    const foundBanned = checkForBanned(skills);
+    if (foundBanned) {
+      console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Banned phrase found: "${foundBanned}" — retrying once`);
+      const retryPrompt = buildSkillsPrompt({
+        student_code,
+        iep_goals: iep_goals || [],
+        dese_standards: dese_standards || [],
+        audience: resolvedAudience,
+        retry_hint: foundBanned,
+      });
+      const retryResult = await callOpenAiWithRetries(retryPrompt, OPENAI_API_KEY, requestId, 1, isExternal);
+      if (retryResult.ok && !checkForBanned(retryResult.skills)) {
+        skills = retryResult.skills;
+      } else {
+        console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Banned phrase still present after retry — flagging ai_edited`);
+        aiEdited = true;
+      }
+    }
+
+    const finalSkills = aiEdited
+      ? skills.map(s => ({ ...s, ai_edited: true }))
+      : skills;
+
+    console.log(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} complete — ${finalSkills.length} skills`);
     await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
       status: 'complete',
-      result: { skills: aiResult.skills },
+      result: { skills: finalSkills },
     });
   } else {
     console.error(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} failed: ${aiResult.error}`);

@@ -1,0 +1,21 @@
+{
+  "description": "missing-metadata: questions without choices/correct-answer captured",
+  "student_code": "S008",
+  "iep_goals": [
+    {
+      "code": "G-READ-04",
+      "area": "Reading Comprehension",
+      "current_avg": 58,
+      "previous_avg": 55,
+      "trend": "up",
+      "data_points": 4,
+      "target": 75,
+      "baseline": 40,
+      "question_weaknesses": [
+        { "text": "", "accuracy": 45, "attempts": 4 },
+        { "text": null, "accuracy": 38, "attempts": 3 }
+      ]
+    }
+  ],
+  "dese_standards": []
+}

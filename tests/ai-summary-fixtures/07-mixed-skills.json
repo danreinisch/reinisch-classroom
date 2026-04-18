@@ -1,0 +1,34 @@
+{
+  "description": "mixed-skills: multiple chapters/skills with varying performance",
+  "student_code": "S007",
+  "iep_goals": [
+    {
+      "code": "G-READ-03",
+      "area": "Reading Fluency",
+      "current_avg": 78,
+      "previous_avg": 72,
+      "trend": "up",
+      "data_points": 7,
+      "target": 80,
+      "baseline": 50,
+      "question_weaknesses": []
+    },
+    {
+      "code": "G-WRITE-02",
+      "area": "Spelling",
+      "current_avg": 35,
+      "previous_avg": 40,
+      "trend": "down",
+      "data_points": 5,
+      "target": 65,
+      "baseline": 25,
+      "question_weaknesses": [
+        { "text": "Words with silent letters (Chapter 3)", "accuracy": 20, "attempts": 5 }
+      ]
+    }
+  ],
+  "dese_standards": [
+    { "code": "MLS.R.1.A", "percent_correct": 82, "item_count": 14 },
+    { "code": "MLS.W.2.B", "percent_correct": 41, "item_count": 8 }
+  ]
+}

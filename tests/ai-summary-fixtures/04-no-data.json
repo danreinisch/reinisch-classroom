@@ -1,0 +1,18 @@
+{
+  "description": "no-data: zero data points this quarter",
+  "student_code": "S004",
+  "iep_goals": [
+    {
+      "code": "G-SPEECH-01",
+      "area": "Speech Articulation",
+      "current_avg": null,
+      "previous_avg": null,
+      "trend": "stable",
+      "data_points": 0,
+      "target": 70,
+      "baseline": 30,
+      "question_weaknesses": []
+    }
+  ],
+  "dese_standards": []
+}

@@ -1,0 +1,20 @@
+{
+  "description": "near-target: within 10% of target",
+  "student_code": "S002",
+  "iep_goals": [
+    {
+      "code": "G-MATH-01",
+      "area": "Number Sense",
+      "current_avg": 73,
+      "previous_avg": 70,
+      "trend": "up",
+      "data_points": 6,
+      "target": 80,
+      "baseline": 50,
+      "question_weaknesses": [
+        { "text": "Identify place value to thousands", "accuracy": 55, "attempts": 4 }
+      ]
+    }
+  ],
+  "dese_standards": []
+}
