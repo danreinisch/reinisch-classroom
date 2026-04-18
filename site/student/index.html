@@ -799,17 +799,17 @@
       .st-chart-line {
         fill: none;
         stroke: var(--accent, #60a5fa);
-        stroke-width: 2;
+        stroke-width: 2.5;
         stroke-linejoin: round;
         stroke-linecap: round;
       }
       .st-chart-dot {
         fill: var(--accent, #60a5fa);
         stroke: var(--bg, #1e293b);
-        stroke-width: 1.5;
+        stroke-width: 2;
       }
       .st-chart-ref {
-        stroke-width: 1;
+        stroke-width: 1.5;
         stroke-dasharray: 4 3;
       }
       .st-chart-baseline {
@@ -817,6 +817,18 @@
       }
       .st-chart-target {
         stroke: var(--green, #4ade80);
+      }
+      .st-chart-ref-label,
+      .st-chart-baseline-label {
+        fill: var(--muted, rgba(255,255,255,0.55));
+        font-size: 9px;
+      }
+      .st-chart-target-label {
+        fill: var(--green, #4ade80);
+        font-size: 9px;
+      }
+      .st-chart-mastery-zone {
+        fill: rgba(74, 222, 128, 0.07);
       }
       .st-chart-axis-label {
         fill: var(--muted, rgba(255,255,255,0.4));
@@ -829,6 +841,137 @@
         font-size: 13px;
         color: var(--muted, rgba(255,255,255,0.5));
         padding: 8px 0 12px;
+      }
+
+      /* SPED-friendly status banner */
+      .st-goal-status-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .st-goal-status-banner--on-track {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      .st-goal-status-banner--on-track .st-goal-status-banner__label {
+        color: #4ade80;
+      }
+      .st-goal-status-banner--almost-there {
+        background: rgba(234, 179, 8, 0.15);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+      }
+      .st-goal-status-banner--almost-there .st-goal-status-banner__label {
+        color: #facc15;
+      }
+      .st-goal-status-banner--keep-practicing {
+        background: rgba(249, 115, 22, 0.15);
+        border: 1px solid rgba(249, 115, 22, 0.3);
+      }
+      .st-goal-status-banner--keep-practicing .st-goal-status-banner__label {
+        color: #fb923c;
+      }
+      .st-goal-status-banner--needs-support {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .st-goal-status-banner--needs-support .st-goal-status-banner__label {
+        color: #f87171;
+      }
+      .st-goal-status-banner--in-progress {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .st-goal-status-banner--in-progress .st-goal-status-banner__label {
+        color: var(--ink, #f1f5f9);
+      }
+      .st-goal-status-banner__icon {
+        font-size: 18px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .st-goal-status-banner__text {
+        flex: 1;
+      }
+      .st-goal-status-banner__label {
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+      .st-goal-status-banner__sentence {
+        font-size: 13px;
+        color: var(--ink, #f1f5f9);
+        opacity: 0.9;
+      }
+
+      /* Goal progress stats row */
+      .st-goal-stats-row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+        font-size: 13px;
+      }
+      .st-goal-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .st-goal-stat__label {
+        opacity: 0.65;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .st-goal-stat__value {
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--ink, #f1f5f9);
+      }
+      .st-goal-trend-up { color: #4ade80; }
+      .st-goal-trend-down { color: #f87171; }
+      .st-goal-trend-flat { color: rgba(255, 255, 255, 0.55); }
+
+      /* Screen-reader / keyboard-accessible data table */
+      .st-chart-sr-table {
+        margin-top: 8px;
+      }
+      .st-chart-sr-table summary {
+        font-size: 12px;
+        opacity: 0.6;
+        cursor: pointer;
+        padding: 4px 0;
+        user-select: none;
+      }
+      .st-chart-sr-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        color: var(--ink, #f1f5f9);
+        margin-top: 4px;
+      }
+      .st-chart-sr-table th,
+      .st-chart-sr-table td {
+        text-align: left;
+        padding: 3px 6px;
+        border-bottom: 1px solid var(--rc-glass-border, rgba(255, 255, 255, 0.1));
+      }
+      .st-chart-sr-table th {
+        opacity: 0.6;
+        font-weight: 600;
+      }
+
+      /* Respect prefers-reduced-motion for chart animations */
+      @media (prefers-reduced-motion: reduce) {
+        .st-chart-line,
+        .st-chart-dot,
+        .st-chart-mastery-zone {
+          animation: none;
+          transition: none;
+        }
       }
 
       /* Recent data table */
@@ -4683,7 +4826,7 @@
         color: var(--rc-ink-dim, #cbd5e1);
       }
 
-      /* Performance Trend Chart */
+      /* Performance Trend Chart — uses shared chart tokens (st-chart-*) */
       .st-perf-chart-section .st-goal-chart-container {
         margin-bottom: 4px;
       }
@@ -4693,12 +4836,13 @@
       }
       .st-perf-chart-reference {
         fill: none;
-        stroke: rgba(251,146,60,0.55);
+        stroke: var(--green, #4ade80);
+        stroke-opacity: 0.7;
         stroke-width: 1.5;
         stroke-dasharray: 5 4;
       }
       .st-perf-chart-reference-label {
-        fill: rgba(251,146,60,0.8);
+        fill: var(--green, #4ade80);
         font-size: 9px;
       }
       .st-perf-chart-legend {
