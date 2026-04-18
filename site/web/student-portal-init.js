@@ -252,6 +252,10 @@
   const ACC_PAGE_SIZE = 5;        // assignments shown per page in accordion
   const ACC_Q_TEXT_CARD_MAX = 55; // max chars of question text shown on the inline card
   const ACC_Q_TEXT_ARIA_MAX = 40; // max chars of question text used in aria-label
+
+  // Registry: maps catalog idBase → sorted assignment groups array.
+  // Populated by buildDotGridChart; read by setupDotGridPopup's lazy-render logic.
+  const QCAT_GROUPS_REGISTRY = new Map();
   
   /**
    * Map a goal area to a color category for the left border
@@ -763,10 +767,433 @@
 ;
   }
 
+  // ── Question Catalog helpers ─────────────────────────────────────────────────
+
   /**
-   * Build a collapsible accordion chart for per-question goal data points.
-   * Groups data points by assignment_instance_id (one row per assignment/date).
-   * Each accordion row is one assignment; clicking it expands per-question cards.
+   * Compute a percentage score for a single data point.
+   * Returns a 0-100 number, or null if the point has no scoreable information.
+   */
+  function dpScore(pt) {
+    if (pt.score != null) return Number(pt.score);
+    if (pt.is_correct === true)  return 100;
+    if (pt.is_correct === false) return 0;
+    return null;
+  }
+
+  /** Return a fill color for a 0–100 score. */
+  const SCORE_TO_COLOR = (score) => {
+    if (score >= 100) return '#22c55e';
+    if (score >= 80)  return '#3b82f6';
+    if (score >= 60)  return '#eab308';
+    return '#ef4444';
+  };
+
+  /** Return the border-left color for a question card. */
+  function cardBorderColor(pt) {
+    const s = dpScore(pt);
+    return s != null ? SCORE_TO_COLOR(s) : '#94a3b8';
+  }
+
+  /** Return the dot background color for a question card. */
+  function dotColor(pt) {
+    const s = dpScore(pt);
+    return s != null ? SCORE_TO_COLOR(s) : '#94a3b8';
+  }
+
+  /**
+   * Compute average score for an array of data points.
+   * Returns null if no scoreable data.
+   */
+  function avgScore(points) {
+    const scores = points.map(dpScore).filter(s => s != null);
+    if (!scores.length) return null;
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  }
+
+  /**
+   * Build a mini stacked distribution bar HTML for an array of data points.
+   * Segments: 100% / 80–99% / 60–79% / 0–59%
+   */
+  function buildDistBar(points) {
+    const total = points.length;
+    if (!total) return '';
+    const n100 = points.filter(p => dpScore(p) === 100).length;
+    const n80  = points.filter(p => { const s = dpScore(p); return s != null && s >= 80 && s < 100; }).length;
+    const n60  = points.filter(p => { const s = dpScore(p); return s != null && s >= 60 && s < 80; }).length;
+    const n0   = points.filter(p => { const s = dpScore(p); return s != null && s < 60; }).length;
+    const pct = (n) => ((n / total) * 100).toFixed(1);
+    const seg = (cls, n) => n > 0 ? `<div class="st-qcat-distbar__seg ${cls}" style="width:${pct(n)}%;" aria-hidden="true"></div>` : '';
+    return `<div class="st-qcat-distbar" aria-hidden="true" title="100%: ${n100} · 80-99%: ${n80} · 60-79%: ${n60} · 0-59%: ${n0}">` +
+      seg('st-qcat-distbar__seg--100', n100) +
+      seg('st-qcat-distbar__seg--80', n80) +
+      seg('st-qcat-distbar__seg--60', n60) +
+      seg('st-qcat-distbar__seg--0', n0) +
+      `</div>`;
+  }
+
+  /**
+   * Build the inline detail HTML for an expanded question card.
+   * Handles MC choices, fill-in-blank, and missing metadata gracefully.
+   */
+  function buildCardDetail(pt) {
+    const questionText = pt.question_text || null;
+    const choices = Array.isArray(pt.choices) ? pt.choices : null;
+    const studentAnswer = pt.student_answer || null;
+    const correctAnswer = pt.correct_answer || null;
+    const isCorrect = pt.is_correct;
+    const score = dpScore(pt);
+    const dateLabel = pt.date ? formatDate(pt.date) : null;
+
+    let html = '';
+
+    // Full question text
+    if (questionText) {
+      html += `<div class="st-qcat-card__question">${escapeHtml(questionText)}</div>`;
+    }
+
+    // Verdict line
+    let verdictHtml = '';
+    if (score === 100 || isCorrect === true) {
+      verdictHtml = `<div class="st-qcat-card__verdict st-qcat-card__verdict--correct">✅ You got this one right!</div>`;
+    } else if (score != null && score >= 60) {
+      verdictHtml = `<div class="st-qcat-card__verdict st-qcat-card__verdict--partial">⚠️ Partial credit: ${score}%</div>`;
+    } else if (score != null) {
+      verdictHtml = `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong">❌ Missed (${score}%)</div>`;
+    } else if (isCorrect === false) {
+      verdictHtml = `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong">❌ You missed this one.</div>`;
+    }
+    html += verdictHtml;
+
+    if (choices && choices.length > 0) {
+      // Multiple-choice: render all options with highlighting
+      const studentAnswerUpper = studentAnswer ? String(studentAnswer).trim().toUpperCase() : null;
+      const correctAnswerUpper = correctAnswer ? String(correctAnswer).trim().toUpperCase() : null;
+
+      const choiceItems = choices.map((choice, idx) => {
+        let choiceKey;
+        let choiceText;
+        if (typeof choice === 'object' && choice !== null) {
+          choiceKey = choice.key ? String(choice.key).toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
+          const displayKey = choice.key || (idx < 26 ? String.fromCharCode(65 + idx) : '');
+          choiceText = `${displayKey ? displayKey + ') ' : ''}${choice.text || choice.label || choice.value || ''}`;
+        } else {
+          const str = String(choice);
+          const letterMatch = str.match(/^([A-Za-z])[).\s]/);
+          choiceKey = letterMatch ? letterMatch[1].toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
+          choiceText = str;
+        }
+
+        // Also try full-text matching for correct_answer / student_answer stored as text
+        const choiceTextUpper = typeof choice === 'object' && choice !== null
+          ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
+          : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
+
+        const isCorrectChoice = (choiceKey && choiceKey === correctAnswerUpper) ||
+          (choiceTextUpper && correctAnswerUpper && choiceTextUpper === correctAnswerUpper);
+        const isStudentWrong = !isCorrectChoice &&
+          ((choiceKey && choiceKey === studentAnswerUpper) ||
+          (choiceTextUpper && studentAnswerUpper && choiceTextUpper === studentAnswerUpper)) &&
+          isCorrect !== true;
+
+        let cls = 'st-qcat-choice';
+        let badges = '';
+        if (isCorrectChoice) {
+          cls += ' st-qcat-choice--correct';
+          badges += '<span class="st-qcat-choice__badge" aria-label="Correct answer">✅ Correct</span>';
+        }
+        if (isStudentWrong) {
+          cls += ' st-qcat-choice--student-wrong';
+          badges += '<span class="st-qcat-choice__badge" aria-label="Your answer">👤 You picked this</span>';
+        }
+
+        return `<li class="${cls}">` +
+          `<span class="st-qcat-choice__label" aria-hidden="true"></span>` +
+          `<span class="st-qcat-choice__text">${escapeHtml(choiceText)}</span>` +
+          badges +
+          `</li>`;
+      }).join('');
+
+      html += `<ul class="st-qcat-card__choices" aria-label="Answer choices">${choiceItems}</ul>`;
+
+      if (studentAnswer && correctAnswer && !isCorrect) {
+        html += `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong" style="margin-top:4px;">You picked ${escapeHtml(studentAnswer)}. The answer was ${escapeHtml(correctAnswer)}.</div>`;
+      }
+    } else if (studentAnswer !== null && studentAnswer !== undefined) {
+      // Fill-in-blank / written answer
+      html += `<div class="st-qcat-card__fib">${escapeHtml(String(studentAnswer))}</div>`;
+      if (correctAnswer && !isCorrect) {
+        html += `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong">You wrote: "${escapeHtml(String(studentAnswer))}". Correct: "${escapeHtml(String(correctAnswer))}".</div>`;
+      }
+    } else if (!questionText) {
+      html += `<div class="st-qcat-card__no-detail">Details not captured for this question.</div>`;
+    }
+
+    if (dateLabel) {
+      html += `<div class="st-qcat-card__meta">Date: ${escapeHtml(dateLabel)}</div>`;
+    }
+
+    return html;
+  }
+
+  /**
+   * Build a single question card HTML (collapsed summary + hidden inline detail).
+   * The detail panel is pre-rendered but hidden via `hidden` attribute for performance.
+   * JS reveals it on click without needing to re-render.
+   */
+  function buildQuestionCard(pt, qNum, cardId) {
+    const rawText = pt.question_text || null;
+    const cardText = rawText
+      ? (rawText.length > ACC_Q_TEXT_CARD_MAX ? rawText.substring(0, ACC_Q_TEXT_CARD_MAX) + '…' : rawText)
+      : null;
+    const ariaText = rawText
+      ? (rawText.length > ACC_Q_TEXT_ARIA_MAX ? rawText.substring(0, ACC_Q_TEXT_ARIA_MAX) + '…' : rawText)
+      : `Question ${qNum}`;
+
+    const borderColor = cardBorderColor(pt);
+    const dot = `<span class="st-qcat-card__dot" style="background:${dotColor(pt)};" aria-hidden="true"></span>`;
+
+    const score = dpScore(pt);
+    let scoreDisplay;
+    if (pt.score != null) {
+      scoreDisplay = `<span class="st-qcat-card__score" style="color:${SCORE_TO_COLOR(score)};">${score}%</span>`;
+    } else if (pt.is_correct === true) {
+      scoreDisplay = `<span class="st-qcat-card__score" style="color:#22c55e;">✅</span>`;
+    } else if (pt.is_correct === false) {
+      scoreDisplay = `<span class="st-qcat-card__score" style="color:#f87171;">❌</span>`;
+    } else {
+      scoreDisplay = '';
+    }
+
+    const chevronSvg = '<svg class="st-qcat-card__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+    const detailId = `${cardId}-detail`;
+    const summaryLabel = `Q${qNum}: ${ariaText}`;
+
+    return `<div class="st-qcat-card" style="border-left-color:${borderColor};" data-qcat-card>` +
+      `<button class="st-qcat-card__summary" aria-expanded="false" aria-controls="${detailId}" aria-label="${escapeHtml(summaryLabel)}">` +
+        `<span class="st-qcat-card__num" aria-hidden="true">Q${qNum}</span>` +
+        dot +
+        `<span class="st-qcat-card__text">${cardText ? escapeHtml(cardText) : '<em style="opacity:.55">No question text</em>'}</span>` +
+        scoreDisplay +
+        chevronSvg +
+      `</button>` +
+      `<div class="st-qcat-card__detail" id="${detailId}" hidden>` +
+        buildCardDetail(pt) +
+      `</div>` +
+      `</div>`;
+  }
+
+  /**
+   * Compute which data points pass the active filter.
+   * filter: 'all' | 'correct' | 'missed' | 'partial'
+   */
+  function filterDataPoints(points, filter) {
+    if (!filter || filter === 'all') return points;
+    return points.filter(pt => {
+      const s = dpScore(pt);
+      if (filter === 'correct') return s === 100 || pt.is_correct === true;
+      if (filter === 'missed')  return (s != null && s < 60) || pt.is_correct === false;
+      if (filter === 'partial') return s != null && s >= 60 && s < 100 && pt.is_correct !== true;
+      return true;
+    });
+  }
+
+  /**
+   * Choose the default filter based on the goal status derived from progress entries.
+   * Returns 'missed' if the goal is not on track, otherwise 'all'.
+   */
+  function defaultFilter(dataPoints) {
+    if (!dataPoints || !dataPoints.length) return 'all';
+    const s = avgScore(dataPoints);
+    if (s == null) return 'all';
+    // 'missed' default when overall score is below 80 (not on track)
+    return s < 80 ? 'missed' : 'all';
+  }
+
+  /**
+   * Compute quarter summary statistics for a set of data points.
+   * Returns { total, correct, pct, missedByChapter, bestByChapter, streak, assignmentCount }
+   */
+  function computeQuarterSummary(dataPoints, groups) {
+    const total = dataPoints.length;
+    const correct = dataPoints.filter(p => dpScore(p) === 100 || p.is_correct === true).length;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const assignmentCount = groups.length;
+
+    // Streak: consecutive fully-correct assignments (newest-first groups already sorted)
+    let streak = 0;
+    for (const g of groups) {
+      const allCorrect = g.points.every(p => dpScore(p) === 100 || p.is_correct === true);
+      if (allCorrect) { streak++; } else { break; }
+    }
+
+    return { total, correct, pct, streak, assignmentCount };
+  }
+
+  /**
+   * Build the Quarter Catalog Summary section HTML.
+   */
+  function buildQuarterSummaryHtml(summary) {
+    const { total, correct, pct, streak, assignmentCount } = summary;
+    const scoreColor = SCORE_TO_COLOR(pct);
+    const missed = total - correct;
+
+    const celebrateHtml = missed === 0 && total > 0
+      ? `<div class="st-qcat-celebrate" role="status">🎉 You got every question right this quarter!</div>`
+      : '';
+
+    return `<div class="st-qcat-summary" aria-label="Quarter summary">
+      <div class="st-qcat-kpi">
+        <div class="st-qcat-kpi__value">${total}</div>
+        <div class="st-qcat-kpi__label">Questions</div>
+      </div>
+      <div class="st-qcat-kpi">
+        <div class="st-qcat-kpi__value" style="color:${scoreColor};">${pct}%</div>
+        <div class="st-qcat-kpi__label">Correct</div>
+      </div>
+      <div class="st-qcat-kpi">
+        <div class="st-qcat-kpi__value" style="color:#f87171;">${missed}</div>
+        <div class="st-qcat-kpi__label">Missed</div>
+      </div>
+      <div class="st-qcat-kpi">
+        <div class="st-qcat-kpi__value">${streak > 0 ? streak + ' 🔥' : '—'}</div>
+        <div class="st-qcat-kpi__label">Streak</div>
+      </div>
+      <div class="st-qcat-kpi">
+        <div class="st-qcat-kpi__value">${assignmentCount}</div>
+        <div class="st-qcat-kpi__label">Assignments</div>
+      </div>
+    </div>${celebrateHtml}`;
+  }
+
+  /**
+   * Build question cards HTML for a filtered list of data points in a group.
+   * Cards are numbered sequentially by their position in the group (qNumOffset = 1-based start).
+   */
+  function buildCardsHtml(points, idBase, filter, qNumOffset) {
+    const filtered = filterDataPoints(points, filter);
+    if (!filtered.length) {
+      const msg = filter === 'missed'    ? 'No missed questions — great work! 🎉'
+                : filter === 'correct'   ? 'No correct questions in this group.'
+                : filter === 'partial'   ? 'No partial-credit questions here.'
+                : 'No questions in this group.';
+      return `<div class="st-qcat-group-empty">${msg}</div>`;
+    }
+    return `<div class="st-qcat-cards">` +
+      filtered.map((pt, i) => {
+        const origIdx = points.indexOf(pt);
+        const qNum = (origIdx >= 0 ? origIdx : i) + qNumOffset;
+        const cardId = `${idBase}-q${qNum}`;
+        return buildQuestionCard(pt, qNum, cardId);
+      }).join('') +
+      `</div>`;
+  }
+
+  /**
+   * Build a single assignment-group header + body HTML.
+   */
+  function buildGroupHtml(group, groupIdx, idBase, filter, isExpanded) {
+    if (!group.points.length) return '';
+    const dateLabel = escapeHtml(formatDate(group.date));
+    const qCount = group.points.length;
+    const avg = avgScore(group.points);
+    const groupPct = avg != null ? Math.round(avg) : null;
+    const scoreColor = groupPct != null ? SCORE_TO_COLOR(groupPct) : '#94a3b8';
+    const groupCorrect = group.points.filter(p => dpScore(p) === 100 || p.is_correct === true).length;
+    const groupMissed = qCount - groupCorrect;
+    const distBar = buildDistBar(group.points);
+
+    const headerId = `${idBase}-gh${groupIdx}`;
+    const bodyId   = `${idBase}-gb${groupIdx}`;
+    const chevronSvg = '<svg class="st-qcat-group-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
+    const cardsHtml = isExpanded
+      ? buildCardsHtml(group.points, `${idBase}-g${groupIdx}`, filter, 1)
+      : '';
+
+    return `<div class="st-qcat-group" data-qcat-group>` +
+      `<button class="st-qcat-group-header" id="${headerId}" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${bodyId}">` +
+        `<span class="st-qcat-group-title">${dateLabel}</span>` +
+        `<span class="st-qcat-group-meta">${qCount} question${qCount !== 1 ? 's' : ''}</span>` +
+        distBar +
+        `<span class="st-qcat-group-score" style="color:${scoreColor};">${groupPct != null ? groupPct + '%' : '—'}</span>` +
+        `<span class="st-qcat-group-counts">` +
+          `<span class="st-qcat-group-correct" aria-label="${groupCorrect} correct">✅ ${groupCorrect}</span>` +
+          `<span class="st-qcat-group-missed" aria-label="${groupMissed} missed">❌ ${groupMissed}</span>` +
+        `</span>` +
+        chevronSvg +
+      `</button>` +
+      `<div class="st-qcat-group-body" id="${bodyId}" ${isExpanded ? '' : 'hidden'} data-qcat-group-body data-loaded="${isExpanded ? 'true' : 'false'}">` +
+        cardsHtml +
+      `</div>` +
+      `</div>`;
+  }
+
+  /**
+   * Build the filter chips HTML.
+   */
+  function buildFilterChipsHtml(activeFilter, idBase) {
+    const chips = [
+      { key: 'all',     label: 'All' },
+      { key: 'correct', label: '✅ Correct' },
+      { key: 'missed',  label: '❌ Missed' },
+      { key: 'partial', label: '⚠️ Partial' },
+    ];
+    return `<div class="st-qcat-filters" role="group" aria-label="Filter questions" data-qcat-filters data-catalog="${idBase}">` +
+      chips.map(c =>
+        `<button class="st-qcat-chip" data-filter="${c.key}" aria-pressed="${activeFilter === c.key ? 'true' : 'false'}" aria-label="Show ${c.label} questions">${c.label}</button>`
+      ).join('') +
+      `</div>`;
+  }
+
+  /**
+   * Build the group-by toolbar HTML.
+   */
+  function buildGroupByToolbarHtml(activeGroupBy, idBase) {
+    const opts = [
+      { key: 'assignment',  label: 'Assignment' },
+      { key: 'none',        label: 'None' },
+    ];
+    return `<div class="st-qcat-toolbar" role="group" aria-label="Group questions by" data-qcat-groupby data-catalog="${idBase}">` +
+      `<span class="st-qcat-groupby-label">Group by:</span>` +
+      opts.map(o =>
+        `<button class="st-qcat-groupby-btn" data-groupby="${o.key}" aria-pressed="${activeGroupBy === o.key ? 'true' : 'false'}">${o.label}</button>`
+      ).join('') +
+      `</div>`;
+  }
+
+  /**
+   * Build the full question catalog HTML (groups list).
+   */
+  function buildGroupsHtml(groups, idBase, filter, groupBy) {
+    if (groupBy === 'assignment') {
+      return groups
+        .map((g, i) => buildGroupHtml(g, i, idBase, filter, false))
+        .join('');
+    }
+    // Flat (no grouping) — render all filtered points as a single card list
+    const allPoints = groups.flatMap(g => g.points);
+    const filtered = filterDataPoints(allPoints, filter);
+    if (!filtered.length) {
+      const msg = filter === 'missed'    ? '🎉 No missed questions — great work!'
+                : filter === 'correct'   ? 'No correct questions found.'
+                : filter === 'partial'   ? 'No partial-credit questions found.'
+                : 'No questions found.';
+      return `<div class="st-qcat-no-results"><span class="st-qcat-no-results__emoji">🔍</span>${msg}</div>`;
+    }
+    return `<div class="st-qcat-cards">` +
+      filtered.map((pt, i) => {
+        const cardId = `${idBase}-qf${i + 1}`;
+        return buildQuestionCard(pt, i + 1, cardId);
+      }).join('') +
+      `</div>`;
+  }
+
+  /**
+   * Build a collapsible question catalog for per-question goal data points.
+   * Replaces the old hover-tooltip accordion with a three-level:
+   *   Level 1 — Quarter Catalog Summary (always visible)
+   *   Level 2 — Assignment rows (collapsed by default, expand on click)
+   *   Level 3 — Question cards with inline expand (no hover required)
    *
    * @param {Array}  dataPoints  - rows from goal_data_points table for this goal
    * @param {string} goalId      - goal UUID (used as id prefix for aria/interaction)
@@ -779,189 +1206,49 @@
     }
 
     // Group by instance (assignment_instance_id or date as fallback)
-    const groups = new Map();
+    const groupsMap = new Map();
     for (const pt of dataPoints) {
       const key = pt.assignment_instance_id || pt.date;
-      if (!groups.has(key)) {
-        groups.set(key, { key, date: pt.date, points: [] });
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, { key, date: pt.date, points: [] });
       }
-      groups.get(key).points.push(pt);
+      groupsMap.get(key).points.push(pt);
     }
 
     // Sort groups newest-first
-    const sortedGroups = [...groups.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedGroups = [...groupsMap.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Compute summary stats
-    const total = dataPoints.length;
-    const correct = dataPoints.filter(p => p.is_correct === true).length;
-    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const assignmentCount = sortedGroups.length;
-    // Determine if any data point uses percentage scoring (score column populated)
-    const hasScoreDots = dataPoints.some(p => p.score != null);
-    const summaryText = hasScoreDots
-      ? `${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`
-      : `${correct}/${total} correct (${pct}%) across ${assignmentCount} assignment${assignmentCount !== 1 ? 's' : ''}`;
+    const idBase = `qcat-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}${suffix || ''}`;
 
-    const idBase = `dg-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}${suffix || ''}`;
+    // Retrieve persisted groupBy preference (localStorage) or choose sensible default
+    let savedGroupBy = 'assignment';
+    try { savedGroupBy = localStorage.getItem(`rc_goal_groupby_${goalId}`) || 'assignment'; } catch (_) { /* ignore */ }
+    if (savedGroupBy !== 'none') savedGroupBy = 'assignment';
 
-    /** Return a fill color for a 0–100 percentage score. */
-    const scoreToColor = (score) => {
-      if (score >= 100) return '#22c55e';
-      if (score >= 80)  return '#3b82f6';
-      if (score >= 60)  return '#eab308';
-      return '#ef4444';
-    };
+    // Choose default filter: 'missed' if goal is struggling, else 'all'
+    const activeFilter = defaultFilter(dataPoints);
 
-    /** Return the border color for a question card. */
-    const cardBorderColor = (pt) => {
-      if (pt.score != null) return scoreToColor(Number(pt.score));
-      return pt.is_correct === true ? '#22c55e' : '#ef4444';
-    };
+    const summary = computeQuarterSummary(dataPoints, sortedGroups);
+    const summaryHtml  = buildQuarterSummaryHtml(summary);
+    const filterHtml   = buildFilterChipsHtml(activeFilter, idBase);
+    const groupByHtml  = buildGroupByToolbarHtml(savedGroupBy, idBase);
+    const groupsHtml   = buildGroupsHtml(sortedGroups, idBase, activeFilter, savedGroupBy);
 
-    // Trend indicator: compare last 3 vs prior 3 assignments (requires 6+)
-    let trendHtml = '';
-    if (sortedGroups.length >= 6) {
-      const groupAvgScore = (grps) => {
-        const pts = grps.flatMap(g => g.points);
-        if (!pts.length) return 0;
-        if (hasScoreDots) {
-          const scored = pts.filter(p => p.score != null);
-          return scored.length ? scored.reduce((s, p) => s + Number(p.score), 0) / scored.length : 0;
-        }
-        return (pts.filter(p => p.is_correct === true).length / pts.length) * 100;
-      };
-      const recentAvg = groupAvgScore(sortedGroups.slice(0, 3));
-      const priorAvg  = groupAvgScore(sortedGroups.slice(3, 6));
-      const diff = recentAvg - priorAvg;
-      let trendClass, trendLabel;
-      if (diff >= 5) {
-        trendClass = 'st-acc-trend--up';
-        trendLabel = '↗ improving';
-      } else if (diff <= -5) {
-        trendClass = 'st-acc-trend--down';
-        trendLabel = '↘ declining';
-      } else {
-        trendClass = 'st-acc-trend--flat';
-        trendLabel = '→ steady';
-      }
-      trendHtml = `<div class="st-acc-trend-bar"><span class="st-acc-trend ${trendClass}">${trendLabel}</span></div>`;
-    }
-
-    // Build accordion rows
-    const chevronSvg = '<svg class="st-acc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-
-    let accRows = '';
-    sortedGroups.forEach((group, rowIdx) => {
-      const hidden = rowIdx >= ACC_PAGE_SIZE;
-      const dateLabel = escapeHtml(formatDate(group.date));
-      const qCount = group.points.length;
-      const qCountLabel = `${qCount} question${qCount !== 1 ? 's' : ''}`;
-
-      // Score badge for the row
-      let rowScoreHtml = '';
-      if (hasScoreDots) {
-        const scoredPts = group.points.filter(p => p.score != null);
-        if (scoredPts.length) {
-          const avg = scoredPts.reduce((s, p) => s + Number(p.score), 0) / scoredPts.length;
-          rowScoreHtml = `<span class="st-acc-row-score" style="color:${scoreToColor(avg)};">${Math.round(avg)}%</span>`;
-        }
-      } else {
-        const rowCorrect = group.points.filter(p => p.is_correct === true).length;
-        const rowPct = group.points.length ? Math.round((rowCorrect / group.points.length) * 100) : 0;
-        const scoreColor = scoreToColor(rowPct);
-        rowScoreHtml = `<span class="st-acc-row-score" style="color:${scoreColor};">${rowCorrect}/${group.points.length}</span>`;
-      }
-
-      // Per-question cards
-      let cardsHtml = '';
-      group.points.forEach((pt, qIdx) => {
-        const qNum = qIdx + 1;
-        const rawText = pt.question_text || null;
-        const cardText = rawText
-          ? (rawText.length > ACC_Q_TEXT_CARD_MAX ? rawText.substring(0, ACC_Q_TEXT_CARD_MAX) + '…' : rawText)
-          : `Question ${qNum}`;
-        const ariaText = rawText
-          ? (rawText.length > ACC_Q_TEXT_ARIA_MAX ? rawText.substring(0, ACC_Q_TEXT_ARIA_MAX) + '…' : rawText)
-          : `Question ${qNum}`;
-
-        let scoreDisplay;
-        if (pt.score != null) {
-          const score = Number(pt.score);
-          const color = scoreToColor(score);
-          scoreDisplay = `<span class="st-acc-q-score" style="color:${color};">${score}%</span>`;
-        } else {
-          const isCorrect = pt.is_correct === true;
-          const iconColor = isCorrect ? '#22c55e' : '#f87171';
-          const iconPaths = isCorrect ? DOT_CHECK_PATHS : DOT_X_PATHS;
-          scoreDisplay = `<svg class="st-acc-q-score" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths}</svg>`;
-        }
-
-        const borderColor = cardBorderColor(pt);
-        const dpVal = encodeURIComponent(JSON.stringify({
-          qNum,
-          question_text: pt.question_text || null,
-          choices: pt.choices || null,
-          student_answer: pt.student_answer || null,
-          correct_answer: pt.correct_answer || null,
-          is_correct: pt.is_correct,
-          score: pt.score ?? null,
-          date: pt.date,
-        }));
-        const ariaLabel = escapeHtml(`Q${qNum}: ${ariaText} — ${formatDate(group.date)}`);
-        cardsHtml += `<button class="st-acc-q-card" data-dp="${dpVal}" style="border-left-color:${borderColor};" aria-label="${ariaLabel}">` +
-          `<span class="st-acc-q-num">Q${qNum}</span>` +
-          `<span class="st-acc-q-text">${escapeHtml(cardText)}</span>` +
-          scoreDisplay +
-          `</button>`;
-      });
-
-      const rowHiddenClass = hidden ? ' st-acc-row--hidden' : '';
-      accRows += `<div class="st-acc-row${rowHiddenClass}">` +
-        `<button class="st-acc-row-toggle" aria-expanded="false">` +
-        `<span class="st-acc-row-date">${dateLabel}</span>` +
-        `<span class="st-acc-row-meta">${escapeHtml(qCountLabel)}</span>` +
-        rowScoreHtml +
-        chevronSvg +
-        `</button>` +
-        `<div class="st-acc-row-body" hidden><div class="st-acc-q-cards">${cardsHtml}</div></div>` +
-        `</div>`;
-    });
-
-    // "Show older" button when there are hidden rows
-    const hiddenCount = Math.max(0, sortedGroups.length - ACC_PAGE_SIZE);
-    const showOlderBtn = hiddenCount > 0
-      ? `<button class="st-acc-show-older" data-acc-list="${idBase}-acc" data-total="${sortedGroups.length}" data-loaded="${ACC_PAGE_SIZE}">Show older assignments (${hiddenCount} more)</button>`
-      : '';
-
-    // Legend
-    let legendHtml;
-    if (hasScoreDots) {
-      legendHtml = `
-        <span class="st-dot-legend-item"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#22c55e"/></svg> 100%</span>
-        <span class="st-dot-legend-item"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#3b82f6"/></svg> 80–99%</span>
-        <span class="st-dot-legend-item"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#eab308"/></svg> 60–79%</span>
-        <span class="st-dot-legend-item"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="6" fill="#ef4444"/></svg> 0–59%</span>`;
-    } else {
-      const legendCheckSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_CHECK_PATHS}</svg>`;
-      const legendXSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DOT_X_PATHS}</svg>`;
-      legendHtml = `
-        <span class="st-dot-legend-item st-dot-legend-correct">${legendCheckSvg} Correct</span>
-        <span class="st-dot-legend-item st-dot-legend-incorrect">${legendXSvg} Incorrect</span>`;
-    }
+    // Store groups in registry so the lazy-render handler can access them later
+    QCAT_GROUPS_REGISTRY.set(idBase, sortedGroups);
 
     const html = `
-      <div class="st-dot-grid-wrap">
-        <div class="st-dot-grid-header">Per-Question Results</div>
-        <div class="st-dot-grid-summary">${escapeHtml(summaryText)}</div>
-        ${trendHtml}
-        <div class="st-acc-list" id="${idBase}-acc">
-          ${accRows}
+      <div class="st-dot-grid-wrap" id="${idBase}" data-qcat-catalog data-goal-id="${escapeHtml(goalId || '')}" data-filter="${activeFilter}" data-groupby="${savedGroupBy}" data-idbase="${escapeHtml(idBase)}">
+        <div class="st-dot-grid-header">Question Catalog</div>
+        ${summaryHtml}
+        ${filterHtml}
+        ${groupByHtml}
+        <div class="st-qcat-group-list" data-qcat-list>
+          ${groupsHtml}
         </div>
-        ${showOlderBtn}
-        <div class="st-dot-grid-legend" aria-hidden="true">${legendHtml}</div>
       </div>`;
 
-    return { html, hasData: true };
+    return { html, hasData: true, groups: sortedGroups };
   }
 
   /**
@@ -1102,7 +1389,7 @@
 
       // Dot grid chart (per-question data points)
       const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
-      const { html: dotGridHtml, hasData: hasDotGrid } = buildDotGridChart(goalDataPoints, goal.id, containerSuffix);
+      const { html: dotGridHtml, hasData: hasDotGrid, groups: dotGridGroups } = buildDotGridChart(goalDataPoints, goal.id, containerSuffix);
       // When per-question dot-grid data exists, show it instead of the legacy line chart
       const chartSectionHtml = hasDotGrid
         ? dotGridHtml
@@ -1235,265 +1522,160 @@
   }
 
   /**
-   * Set up the glass popup for dot-grid chart dots.
-   * Creates a singleton popup element and attaches delegated listeners to the
-   * document so that it works across goal cards and after re-renders.
-   * Called once on DOMContentLoaded. Uses data-dp attribute on each dot circle.
+   * Set up delegated event handlers for the Question Catalog.
+   * Handles:
+   *  - Filter chip clicks (All / Correct / Missed / Partial)
+   *  - Group-by button clicks (Assignment / None)
+   *  - Assignment group header expand/collapse
+   *  - Question card inline expand/collapse
+   *  - Keyboard navigation (Enter/Space to toggle, Escape to collapse)
+   * Called once on DOMContentLoaded. Works via delegation so it handles
+   * dynamically-rendered catalogs without re-attaching.
    */
   function setupDotGridPopup() {
-    // Create singleton popup element
-    const popup = document.createElement('div');
-    popup.className = 'st-dot-popup';
-    popup.setAttribute('role', 'tooltip');
-    popup.setAttribute('aria-live', 'polite');
-    document.body.appendChild(popup);
-
-    let hideTimer = null;
-
-    function showPopup(dot, dpData) {
-      clearTimeout(hideTimer);
-
-      const qNum = dpData.qNum || '?';
-      const questionText = dpData.question_text || null;
-      const choices = Array.isArray(dpData.choices) ? dpData.choices : null;
-      const studentAnswer = dpData.student_answer || null;
-      const correctAnswer = dpData.correct_answer || null;
-      const isCorrect = dpData.is_correct;
-      const score = dpData.score != null ? Number(dpData.score) : null;
-      const dateLabel = dpData.date ? formatDate(dpData.date) : '';
-
-      let innerHtml = `<div class="st-dot-popup-title">Question ${escapeHtml(String(qNum))}</div>`;
-
-      if (questionText) {
-        innerHtml += `<div class="st-dot-popup-question">${escapeHtml(questionText)}</div>`;
-      }
-
-      if (choices && choices.length > 0) {
-        const studentAnswerUpper = studentAnswer ? String(studentAnswer).trim().toUpperCase() : null;
-        const correctAnswerUpper = correctAnswer ? String(correctAnswer).trim().toUpperCase() : null;
-
-        const choiceItems = choices.map((choice, idx) => {
-          // Handle object choices from JSONB (e.g. {key: 'A', text: '...'}) or plain strings
-          let choiceKey;
-          let choiceText;
-          if (typeof choice === 'object' && choice !== null) {
-            choiceKey = choice.key ? String(choice.key).toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
-            const displayKey = choice.key || (idx < 26 ? String.fromCharCode(65 + idx) : '');
-            choiceText = `${displayKey ? displayKey + ') ' : ''}${choice.text || choice.label || choice.value || ''}`;
-          } else {
-            const str = String(choice);
-            const letterMatch = str.match(/^([A-Za-z])[).\s]/);
-            // Plain-text choices without letter prefix: derive key from array index (0→A, 1→B, …)
-            choiceKey = letterMatch ? letterMatch[1].toUpperCase() : (idx < 26 ? String.fromCharCode(65 + idx) : null);
-            choiceText = str;
-          }
-
-          let cls = '';
-          if (choiceKey && choiceKey === correctAnswerUpper) {
-            cls = 'choice-correct';
-          } else if (choiceKey && choiceKey === studentAnswerUpper && !isCorrect) {
-            cls = 'choice-wrong';
-          }
-          // Full-text fallback: correct_answer/student_answer may be stored as full text
-          // (e.g. "Guile", "Resent") rather than letter keys ("A", "B").
-          if (!cls) {
-            const choiceTextUpper = typeof choice === 'object' && choice !== null
-              ? String(choice.text || choice.label || choice.value || '').trim().toUpperCase()
-              : String(choice).replace(/^[A-Za-z][).\s]+/, '').trim().toUpperCase();
-            if (choiceTextUpper && choiceTextUpper === correctAnswerUpper) {
-              cls = 'choice-correct';
-            } else if (choiceTextUpper && choiceTextUpper === studentAnswerUpper && !isCorrect) {
-              cls = 'choice-wrong';
-            }
-          }
-          return `<li class="${cls}">${escapeHtml(choiceText)}</li>`;
-        }).join('');
-
-        innerHtml += `<ul class="st-dot-popup-choices">${choiceItems}</ul>`;
-      } else if (studentAnswer !== null && studentAnswer !== undefined) {
-        // Written/fill-in-blank: show the student's answer with score or correct/incorrect indicator
-        innerHtml += `<div class="st-dot-popup-fib-answer">${escapeHtml(String(studentAnswer))}</div>`;
-        if (score !== null) {
-          innerHtml += `<div class="st-dot-popup-no-detail" style="font-weight:600;">${escapeHtml(String(score))}%</div>`;
-        } else {
-          const statusIcon = isCorrect
-            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_CHECK_PATHS}</svg>`
-            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_X_PATHS}</svg>`;
-          innerHtml += `<div class="st-dot-popup-no-detail">${statusIcon}${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
-        }
-      } else if (!questionText) {
-        if (score !== null) {
-          innerHtml += `<div class="st-dot-popup-no-detail" style="font-weight:600;">${escapeHtml(String(score))}%</div>`;
-        } else {
-          const statusIcon = isCorrect
-            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_CHECK_PATHS}</svg>`
-            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px;">${DOT_X_PATHS}</svg>`;
-          innerHtml += `<div class="st-dot-popup-no-detail">${statusIcon}${isCorrect ? 'Answered correctly' : 'Answered incorrectly'}</div>`;
-        }
-      }
-
-      if (dateLabel) {
-        innerHtml += `<div class="st-dot-popup-meta">${escapeHtml(dateLabel)}</div>`;
-      }
-
-      popup.innerHTML = innerHtml;
-      popup.classList.add('visible');
-
-      // Position near the dot
-      let dotRect = dot.getBoundingClientRect();
-      // Fallback: SVG <g> elements may return a zero-size rect in some browsers;
-      // use the <rect> child's bounding rect instead.
-      if (dotRect.width === 0 && dotRect.height === 0) {
-        const rectChild = dot.querySelector('rect');
-        if (rectChild) dotRect = rectChild.getBoundingClientRect();
-      }
-      // If still zero-size, we have no reliable position — abort positioning.
-      if (dotRect.width === 0 && dotRect.height === 0) return;
-      const popupW = 280;
-      const leftRaw = dotRect.left + dotRect.width / 2 - popupW / 2;
-      const left = Math.max(8, Math.min(leftRaw, window.innerWidth - popupW - 8));
-      const topAbove = dotRect.top - 8;
-      const popupEstH = popup.offsetHeight || 160;
-      const top = topAbove - popupEstH < 4 ? dotRect.bottom + 8 : topAbove - popupEstH;
-
-      popup.style.left = `${left}px`;
-      popup.style.top = `${Math.max(4, top)}px`;
-    }
-
-    function hidePopup(immediate) {
-      clearTimeout(hideTimer);
-      if (immediate) {
-        popup.classList.remove('visible');
-      } else {
-        hideTimer = setTimeout(() => popup.classList.remove('visible'), 200);
-      }
-    }
-
-    // Helper: find the nearest [data-dp] ancestor/self.
-    // Uses a manual parentNode loop rather than .closest() because SVG elements
-    // (e.g. <rect>, <path>, nested <svg>) may not support .closest() on older
-    // browsers or in some SVG rendering contexts.
-    function findDotTarget(el) {
+    // ── Helper: find closest ancestor matching selector ───────────────────
+    // (same as .closest() but uses manual loop for robustness across all elements)
+    function findClosest(el, selector) {
       let node = el;
       while (node && node !== document.body) {
-        if (node.getAttribute && node.getAttribute('data-dp')) return node;
+        if (node.matches && node.matches(selector)) return node;
         node = node.parentNode;
       }
       return null;
     }
 
-    // Delegated mouseover/focus on dot icon groups
-    document.addEventListener('mouseover', e => {
-      const dot = findDotTarget(e.target);
-      if (!dot) return;
-      const raw = dot.getAttribute('data-dp');
-      if (!raw) return;
-      try {
-        const dpData = JSON.parse(decodeURIComponent(raw));
-        showPopup(dot, dpData);
-      } catch (_) { /* ignore */ }
-    });
+    // ── Helper: get the catalog root for a given element ─────────────────
+    function getCatalog(el) {
+      return findClosest(el, '[data-qcat-catalog]');
+    }
 
-    document.addEventListener('mouseout', e => {
-      const dot = findDotTarget(e.target);
-      if (!dot) return;
-      // If moving between child elements of the same dot (e.g. <g> → <rect>), don't hide
-      if (e.relatedTarget && dot.contains(e.relatedTarget)) return;
-      // Only hide if not moving into popup
-      if (e.relatedTarget && (e.relatedTarget === popup || popup.contains(e.relatedTarget))) return;
-      hidePopup(false);
-    });
+    // ── Re-render the group list inside a catalog ─────────────────────────
+    // Reads current filter & groupBy from the catalog element, then rebuilds
+    // just the group list area in-place (avoids full card re-render).
+    function rerenderCatalogGroups(catalog) {
+      if (!catalog) return;
+      const idBase    = catalog.getAttribute('data-idbase') || '';
+      const filter    = catalog.getAttribute('data-filter') || 'all';
+      const groupBy   = catalog.getAttribute('data-groupby') || 'assignment';
+      const listEl    = catalog.querySelector('[data-qcat-list]');
+      if (!listEl) return;
 
-    document.addEventListener('focusin', e => {
-      const dot = findDotTarget(e.target);
-      if (!dot) return;
-      const raw = dot.getAttribute('data-dp');
-      if (!raw) return;
-      try {
-        const dpData = JSON.parse(decodeURIComponent(raw));
-        showPopup(dot, dpData);
-      } catch (_) { /* ignore */ }
-    });
+      // Look up the original groups from the in-memory registry
+      const rawGroups = QCAT_GROUPS_REGISTRY.get(idBase);
+      if (!rawGroups) return;
 
-    document.addEventListener('focusout', e => {
-      const dot = findDotTarget(e.target);
-      if (!dot) return;
-      hidePopup(false);
-    });
+      listEl.innerHTML = buildGroupsHtml(rawGroups, idBase, filter, groupBy);
+    }
 
-    // Click on dot: toggle popup (mobile tap support)
+    // ── Filter chip click ─────────────────────────────────────────────────
     document.addEventListener('click', e => {
-      // Accordion row toggle
-      if (e.target.closest('.st-acc-row-toggle')) {
-        const toggleBtn = e.target.closest('.st-acc-row-toggle');
-        const row = toggleBtn.closest('.st-acc-row');
-        if (row) {
-          const body = row.querySelector('.st-acc-row-body');
-          const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-          toggleBtn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-          if (body) body.hidden = expanded;
+      const chip = findClosest(e.target, '[data-qcat-filters] [data-filter]');
+      if (chip) {
+        const catalog = getCatalog(chip);
+        if (!catalog) return;
+        const filter = chip.getAttribute('data-filter') || 'all';
+        catalog.setAttribute('data-filter', filter);
+        // Update aria-pressed on all chips in this catalog
+        catalog.querySelectorAll('[data-qcat-filters] [data-filter]').forEach(c => {
+          c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
+        });
+        rerenderCatalogGroups(catalog);
+        return;
+      }
+
+      // ── Group-by button click ───────────────────────────────────────────
+      const gbBtn = findClosest(e.target, '[data-qcat-groupby] [data-groupby]');
+      if (gbBtn) {
+        const catalog = getCatalog(gbBtn);
+        if (!catalog) return;
+        const groupBy = gbBtn.getAttribute('data-groupby') || 'assignment';
+        catalog.setAttribute('data-groupby', groupBy);
+        // Persist to localStorage
+        try {
+          const gid = catalog.getAttribute('data-goal-id');
+          if (gid) localStorage.setItem(`rc_goal_groupby_${gid}`, groupBy);
+        } catch (_) { /* ignore */ }
+        // Update aria-pressed
+        catalog.querySelectorAll('[data-qcat-groupby] [data-groupby]').forEach(b => {
+          b.setAttribute('aria-pressed', b === gbBtn ? 'true' : 'false');
+        });
+        rerenderCatalogGroups(catalog);
+        return;
+      }
+
+      // ── Assignment group header toggle ──────────────────────────────────
+      const groupHeader = findClosest(e.target, '.st-qcat-group-header');
+      if (groupHeader) {
+        const groupEl  = findClosest(groupHeader, '[data-qcat-group]');
+        const bodyEl   = groupEl ? groupEl.querySelector('[data-qcat-group-body]') : null;
+        if (!bodyEl) return;
+
+        const expanded = groupHeader.getAttribute('aria-expanded') === 'true';
+        const nowOpen  = !expanded;
+        groupHeader.setAttribute('aria-expanded', String(nowOpen));
+        bodyEl.hidden = !nowOpen;
+
+        // Lazy-render question cards on first open
+        if (nowOpen && bodyEl.getAttribute('data-loaded') !== 'true') {
+          const catalog  = getCatalog(groupHeader);
+          const filter   = catalog ? catalog.getAttribute('data-filter') || 'all' : 'all';
+          const idBase   = catalog ? catalog.getAttribute('data-idbase') || '' : '';
+
+          // Get group index from header id (e.g. qcat-xxx-gh0 → 0)
+          const headerId = groupHeader.id || '';
+          const idxMatch = headerId.match(/-gh(\d+)$/);
+          const groupIdx = idxMatch ? Number(idxMatch[1]) : -1;
+          const rawGroups = QCAT_GROUPS_REGISTRY.get(idBase);
+          const group     = rawGroups && groupIdx >= 0 ? rawGroups[groupIdx] : null;
+
+          if (group) {
+            bodyEl.innerHTML = buildCardsHtml(group.points, `${idBase}-g${groupIdx}`, filter, 1);
+            bodyEl.setAttribute('data-loaded', 'true');
+          }
         }
         return;
       }
 
-      // "Show older" accordion pagination
-      if (e.target.closest('.st-acc-show-older')) {
-        const btn = e.target.closest('.st-acc-show-older');
-        const listId = btn.getAttribute('data-acc-list');
-        const list = listId ? document.getElementById(listId) : null;
-        if (list) {
-          const hiddenRows = list.querySelectorAll('.st-acc-row--hidden');
-          let shown = 0;
-          for (const row of hiddenRows) {
-            if (shown >= ACC_PAGE_SIZE) break;
-            row.classList.remove('st-acc-row--hidden');
-            shown++;
-          }
-          const total = Number(btn.getAttribute('data-total')) || 0;
-          const newLoaded = (Number(btn.getAttribute('data-loaded')) || 0) + shown;
-          btn.setAttribute('data-loaded', newLoaded);
-          const remaining = total - newLoaded;
-          if (remaining <= 0) {
-            btn.remove();
-          } else {
-            btn.textContent = `Show older assignments (${remaining} more)`;
-          }
-        }
+      // ── Question card summary toggle ────────────────────────────────────
+      const cardSummary = findClosest(e.target, '.st-qcat-card__summary');
+      if (cardSummary) {
+        const detailId = cardSummary.getAttribute('aria-controls');
+        const detailEl = detailId ? document.getElementById(detailId) : null;
+        const expanded = cardSummary.getAttribute('aria-expanded') === 'true';
+        const nowOpen  = !expanded;
+        cardSummary.setAttribute('aria-expanded', String(nowOpen));
+        if (detailEl) detailEl.hidden = !nowOpen;
         return;
-      }
-
-      const dot = findDotTarget(e.target);
-      if (dot) {
-        if (popup.classList.contains('visible')) {
-          hidePopup(true);
-        } else {
-          const raw = dot.getAttribute('data-dp');
-          if (raw) {
-            try {
-              const dpData = JSON.parse(decodeURIComponent(raw));
-              showPopup(dot, dpData);
-            } catch (_) { /* ignore */ }
-          }
-        }
-        e.stopPropagation();
-        return;
-      }
-      // Click outside popup dismisses it — but only when the popup is actually
-      // visible. Skipping this when the popup is hidden ensures that clicks on
-      // interactive elements like the progress toggle buttons are not consumed
-      // by this handler, allowing them to propagate to their delegated handlers.
-      if (popup.classList.contains('visible') && !popup.contains(e.target)) {
-        hidePopup(true);
       }
     });
 
-    // Dismiss on Escape key
+    // ── Keyboard: Enter/Space activates focused buttons; Esc collapses ────
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') hidePopup(true);
+      if (e.key === 'Escape') {
+        // Collapse the nearest open card detail
+        const active = document.activeElement;
+        if (!active) return;
+        const cardSummary = findClosest(active, '.st-qcat-card__summary');
+        if (cardSummary && cardSummary.getAttribute('aria-expanded') === 'true') {
+          cardSummary.setAttribute('aria-expanded', 'false');
+          const detailId = cardSummary.getAttribute('aria-controls');
+          const detailEl = detailId ? document.getElementById(detailId) : null;
+          if (detailEl) detailEl.hidden = true;
+          cardSummary.focus();
+          e.preventDefault();
+          return;
+        }
+        const groupHeader = findClosest(active, '.st-qcat-group-header');
+        if (groupHeader && groupHeader.getAttribute('aria-expanded') === 'true') {
+          groupHeader.setAttribute('aria-expanded', 'false');
+          const bodyId = groupHeader.getAttribute('aria-controls');
+          const bodyEl = bodyId ? document.getElementById(bodyId) : null;
+          if (bodyEl) bodyEl.hidden = true;
+          groupHeader.focus();
+          e.preventDefault();
+        }
+      }
     });
-
-    popup.addEventListener('mouseleave', () => hidePopup(false));
-    popup.addEventListener('mouseenter', () => clearTimeout(hideTimer));
   }
 
   // ============================================================================
