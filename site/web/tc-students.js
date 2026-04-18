@@ -12504,7 +12504,14 @@
     const termTarget = isParentFriendly ? 'Goal' : 'Target';
     const termDataPts = isParentFriendly ? 'Observations' : 'Data Points';
 
-    function csvEscape(val) {
+    const PARENT_FRIENDLY_TIER_LABELS = {
+      excellent: 'Doing Great',
+      'on-track': 'Making Progress',
+      'needs-support': 'Needs More Practice',
+      critical: 'Needs Help Right Away',
+    };
+
+    function escapeCsvField(val) {
       if (val === null || val === undefined) return '';
       const s = String(val);
       if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -12522,7 +12529,7 @@
     headers.push('AI Summary', 'Tier');
     if (!isParentFriendly) headers.push('Goal Recommendation');
 
-    const rows = [headers.map(csvEscape).join(',')];
+    const rows = [headers.map(escapeCsvField).join(',')];
 
     const sortedClasses = [...classGroups.keys()].sort();
     for (const className of sortedClasses) {
@@ -12539,7 +12546,7 @@
           const ai = skills.find(s => s.code === card.code && (s.source === 'iep' || !s.source));
           const tierInfo = getSkillTier(card.displayScore);
           const tierLabel = isParentFriendly
-            ? ({ excellent: 'Doing Great', 'on-track': 'Making Progress', 'needs-support': 'Needs More Practice', critical: 'Needs Help Right Away' })[tierInfo.tier] || tierInfo.label
+            ? (PARENT_FRIENDLY_TIER_LABELS[tierInfo.tier] || tierInfo.label)
             : tierInfo.label;
           const row = [
             periodKey, className, student.code, studentName, iepDate,
@@ -12557,7 +12564,7 @@
           row.push(ai && ai.summary ? ai.summary : '');
           row.push(tierLabel);
           if (!isParentFriendly) row.push(ai && ai.goal_recommendation && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical') ? ai.goal_recommendation : '');
-          rows.push(row.map(csvEscape).join(','));
+          rows.push(row.map(escapeCsvField).join(','));
         }
 
         if (includeDese) {
@@ -12565,7 +12572,7 @@
             const ai = skills.find(s => s.code === card.code && s.source === 'dese');
             const tierInfo = getSkillTier(card.displayScore);
             const tierLabel = isParentFriendly
-              ? ({ excellent: 'Doing Great', 'on-track': 'Making Progress', 'needs-support': 'Needs More Practice', critical: 'Needs Help Right Away' })[tierInfo.tier] || tierInfo.label
+              ? (PARENT_FRIENDLY_TIER_LABELS[tierInfo.tier] || tierInfo.label)
               : tierInfo.label;
             const row = [
               periodKey, className, student.code, studentName, iepDate,
@@ -12577,7 +12584,7 @@
             row.push(ai && ai.summary ? ai.summary : '');
             row.push(tierLabel);
             if (!isParentFriendly) row.push('');
-            rows.push(row.map(csvEscape).join(','));
+            rows.push(row.map(escapeCsvField).join(','));
           }
         }
       }
