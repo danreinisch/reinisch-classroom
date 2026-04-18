@@ -210,10 +210,21 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       continue;
     }
 
-    // Check for Chapter header: "Chapter N: Title" or "Chapter N — Title"
-    // (after stripping dashes: "--- Chapter 35: Harta-ak ---" → "Chapter 35: Harta-ak")
-    // Map Chapter N → day_number N with a questions-type day
-    const chapterMatch = strippedLine.match(/^Chapter\s+(\d+)\s*[:\-—]\s*(.*)$/i);
+    // Check for Chapter header. Supported formats (all case-insensitive, after dash-stripping):
+    //   "Chapter 38: Title"                (colon separator)
+    //   "Chapter 38 — Title"               (em-dash separator)
+    //   "Chapter 38 - Title"               (hyphen separator)
+    //   "Chapters 38–40: Cause and Effect" (plural + en-dash range + separator)
+    //   "Chapter 38 Cause and Effect"      (no separator — Week 13 Cause and Effect shape)
+    //   "Chapter 38"                       (standalone chapter number)
+    // Strategy: try with an explicit separator first; fall back to bare "Chapter N [rest]".
+    // NOTE: This regex pair must be kept in sync with the copy in teacher-issue-draft.js.
+    let chapterMatch = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[–\-]\d+)?\s*[:\-–—]\s*(.*)$/i);
+    if (!chapterMatch) {
+      // No separator present — treat any trailing text as the chapter subtitle.
+      const m = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[–\-]\d+)?(?:\s+(.+))?$/i);
+      if (m) chapterMatch = m;
+    }
     if (chapterMatch) {
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
         currentDay.questions.push(currentQuestion);
@@ -1452,7 +1463,125 @@ test('Parse Chapter header with em-dash separator', () => {
   assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
 });
 
-// ── Week 13 regression tests (Chapters 38–40, Cause and Effect) ──────────────
+// ── Chapter header format regression tests (Week 13 parser fix) ───────────────
+// These tests cover content shapes that were NOT previously handled and caused
+// parseTxtToMeta to return null, which in turn caused the issuance function to
+// silently write meta = {} — the root cause of the Week 13 orphaned-row bug.
+
+test('Parse Chapter header with NO separator (Cause and Effect shape)', () => {
+  // "Chapter 38 Cause and Effect" — no colon, dash, or em-dash between the
+  // chapter number and the subtitle.  This is the Week 13 content shape that
+  // previously made the parser return null.
+  const txtContent = `Chapter 38 Cause and Effect
+
+1. [IG: S011.13.1-1] [MLS.DESE] What event at the end of Chapter 38 caused the village to flee?
+A) A wildfire broke out
+B) The river flooded the valley
+C) An earthquake destroyed the bridge
+Correct: B`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse "Chapter N Title" (no separator) as a chapter header');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].day_number, 38, 'Chapter 38 should become day 38');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Correct answer should be B');
+});
+
+test('Parse plural "Chapters N–M" with en-dash range and separator', () => {
+  // "Chapters 38–40: Cause and Effect" — en-dash range in chapter number, plural.
+  const txtContent = `Chapters 38–40: Cause and Effect
+
+1. [IG: S011.13.1-1] [MLS.DESE] What caused the village to flee?
+A) A wildfire
+B) A flood
+C) An earthquake
+Correct: B
+
+2. [IG: S011.13.1-2] [MLS.DESE] [T/F] The villagers were prepared for the flood.
+Correct: FALSE`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse "Chapters N–M: Title" header');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].day_number, 38, 'First chapter in range (38) should be used as day number');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Q1 correct answer should be B');
+  assert.strictEqual(result.days[0].questions[1].type, 'boolean', 'Q2 should be boolean type');
+  assert.strictEqual(result.days[0].questions[1].correct, 'B', 'Q2 correct: FALSE → B');
+});
+
+test('Parse standalone "Chapter N" with no title', () => {
+  // "Chapter 38" with no title at all — bare chapter number header.
+  const txtContent = `Chapter 38
+
+1. What happened in chapter 38?
+A) Nothing
+B) Something important
+Correct: B`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse bare "Chapter N" header');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].day_number, 38, 'Chapter 38 should become day 38');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+});
+
+test('Parse multi-chapter Cause-and-Effect file (Week 13 realistic shape)', () => {
+  // Simulates the actual Week 13 "LOST IN KRAGDON-AH (CHAPTERS 38–40) Cause and Effect"
+  // file that reproducibly produced empty meta.  Each chapter uses the no-separator format
+  // that caused the original parser failure.
+  const txtContent = `Chapter 38 Cause and Effect
+
+1. [IG: S011.13.1-1] [MLS.DESE] What event at the end of Chapter 38 caused the village to flee?
+A) A wildfire
+B) The river flooded the valley
+C) An earthquake
+Correct: B
+
+2. [IG: S011.13.1-2] [MLS.DESE] [T/F] The villagers were prepared for the flood in Chapter 38.
+Correct: FALSE
+
+Chapter 39 Cause and Effect
+
+1. [IG: S011.13.2-1] [MLS.DESE] In Chapter 39, what caused Kragdon-ah to turn back?
+A) He heard a cry for help
+B) He saw the storm
+C) He was too tired
+Correct: A
+
+Chapter 40 Cause and Effect
+
+1. [IG: S011.13.3-1] [MLS.DESE] What was the long-term effect of Kragdon-ah returning in Chapter 40?
+A) The village was rebuilt stronger
+B) He lost his chance to reach the coast
+C) The hunters rewarded him
+Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_13_CAUSE_EFFECT.txt');
+
+  assert(result !== null, 'Should parse Week 13 Cause-and-Effect file with no-separator chapter headers');
+  assert.strictEqual(result.days.length, 3, 'Should have 3 days (one per chapter)');
+
+  assert.strictEqual(result.days[0].day_number, 38, 'Chapter 38 → day 38');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Chapter 38 should have 2 questions');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Ch38 Q1 correct should be B');
+  assert.strictEqual(result.days[0].questions[1].type, 'boolean', 'Ch38 Q2 should be boolean');
+  assert.strictEqual(result.days[0].questions[1].correct, 'B', 'Ch38 Q2 correct: FALSE → B');
+
+  assert.strictEqual(result.days[1].day_number, 39, 'Chapter 39 → day 39');
+  assert.strictEqual(result.days[1].questions.length, 1, 'Chapter 39 should have 1 question');
+  assert.strictEqual(result.days[1].questions[0].correct, 'A', 'Ch39 Q1 correct should be A');
+
+  assert.strictEqual(result.days[2].day_number, 40, 'Chapter 40 → day 40');
+  assert.strictEqual(result.days[2].questions.length, 1, 'Chapter 40 should have 1 question');
+  assert.strictEqual(result.days[2].questions[0].correct, 'A', 'Ch40 Q1 correct should be A');
+});
+
+
 
 test('Week 13: [T/F] bracket tag sets type to boolean and strips tag from text', () => {
   const txtContent = `DAY 1 QUESTIONS
