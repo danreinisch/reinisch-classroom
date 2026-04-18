@@ -12301,9 +12301,13 @@
       classGroups.get(primaryClass).push(student);
     }
 
-    // Sort students alphabetically within each class
+    // Sort students alphabetically within each class (by name if available, else code)
     for (const [, students] of classGroups) {
-      students.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+      students.sort((a, b) => {
+        const nameA = a.name || a.code || '';
+        const nameB = b.name || b.code || '';
+        return nameA.localeCompare(nameB);
+      });
     }
 
     // Build per-student skill card data
@@ -12546,7 +12550,11 @@
 
         html += `<div class="cse-student-block">`;
         html += `<div class="cse-student-header">`;
-        html += `<span class="cse-student-code">${escapeHtml(student.code)}</span>`;
+        const studentDisplayName = student.name ? student.name : student.code;
+        html += `<span class="cse-student-code">${escapeHtml(studentDisplayName)}</span>`;
+        if (student.name) {
+          html += `<span class="cse-student-meta" style="opacity:0.4;">(${escapeHtml(student.code)})</span>`;
+        }
         html += `<span class="cse-student-meta">`;
         html += escapeHtml(classNames);
         if (iepDate) html += ` · IEP Due: ${escapeHtml(iepDate)}`;
