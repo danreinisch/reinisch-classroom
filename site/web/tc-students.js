@@ -6026,14 +6026,6 @@
       });
     }
 
-    // Caseload Skills Summary Export button
-    const caseloadSkillsBtn = document.getElementById('stCaseloadSkillsExportBtn');
-    if (caseloadSkillsBtn) {
-      caseloadSkillsBtn.addEventListener('click', () => {
-        showCaseloadExportModal();
-      });
-    }
-
     // Quarter date bar buttons
     const editQuartersBtn = document.getElementById('stEditQuarters');
     if (editQuartersBtn) {
@@ -12082,8 +12074,10 @@
       });
       return btn;
     }
-    modeRow.appendChild(makeModeBtn('professional', '🎓', 'Professional', 'IEP/SPED terminology for admin reports'));
-    modeRow.appendChild(makeModeBtn('parent-friendly', '👨‍👩‍👧', 'Parent-Friendly', 'Plain English for family communication'));
+    const SVG_BRIEFCASE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
+    const SVG_USERS = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+    modeRow.appendChild(makeModeBtn('professional', SVG_BRIEFCASE, 'Professional', 'IEP/SPED terminology for admin reports'));
+    modeRow.appendChild(makeModeBtn('parent-friendly', SVG_USERS, 'Parent-Friendly', 'Plain English for family communication'));
     modeSection.appendChild(modeRow);
     modal.appendChild(modeSection);
 
@@ -12110,8 +12104,12 @@
       });
       return btn;
     }
-    formatRow.appendChild(makeFormatBtn('pdf', '📄', 'PDF'));
-    formatRow.appendChild(makeFormatBtn('email', '📋', 'Copy for Email'));
+    const SVG_PRINT = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`;
+    const SVG_DOWNLOAD = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+    const SVG_MAIL = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`;
+    formatRow.appendChild(makeFormatBtn('pdf', SVG_PRINT, 'PDF'));
+    formatRow.appendChild(makeFormatBtn('csv', SVG_DOWNLOAD, 'CSV'));
+    formatRow.appendChild(makeFormatBtn('email', SVG_MAIL, 'Copy for Email'));
     formatSection.appendChild(formatRow);
     modal.appendChild(formatSection);
 
@@ -12142,7 +12140,7 @@
     const generateBtn = document.createElement('button');
     generateBtn.type = 'button';
     generateBtn.className = 'cse-generate-btn';
-    generateBtn.textContent = '✨ Generate';
+    generateBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Generate`; // SAFETY: static SVG + static text
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
@@ -12165,7 +12163,7 @@
       if (cseGenerating) return;
       cseGenerating = true;
       generateBtn.disabled = true;
-      generateBtn.textContent = 'Generating…';
+      generateBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Generating…`; // SAFETY: static SVG + static text
 
       cseAbortController = new AbortController();
       const signal = cseAbortController.signal;
@@ -12191,59 +12189,68 @@
 
         // Show export action buttons once done
         progressSection.classList.remove('visible');
-        reportEl.classList.add('visible');
-        generateBtn.textContent = '✅ Generated';
+        generateBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Generated`; // SAFETY: static SVG + static text
         cancelBtn.textContent = 'Close';
 
-        // Add export action buttons at top of report
-        const actionsBtnRow = document.createElement('div');
-        actionsBtnRow.className = 'cse-report-actions';
-
-        if (cseFormat === 'pdf') {
-          const printBtn = document.createElement('button');
-          printBtn.className = 'cse-report-action-btn';
-          printBtn.innerHTML = '📄 Print / Save PDF';
-          printBtn.type = 'button';
-          printBtn.addEventListener('click', () => window.print());
-          actionsBtnRow.appendChild(printBtn);
+        if (cseFormat === 'csv') {
+          // CSV was already downloaded by generateCaseloadSkillsSummary; show confirmation
+          reportEl.classList.add('visible');
         } else {
-          const copyBtn = document.createElement('button');
-          copyBtn.className = 'cse-report-action-btn';
-          copyBtn.innerHTML = '📋 Copy to Clipboard';
-          copyBtn.type = 'button';
-          copyBtn.addEventListener('click', async () => {
-            const htmlContent = reportEl.innerHTML;
-            const textContent = reportEl.innerText || reportEl.textContent;
-            try {
-              const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
-              const textBlob = new Blob([textContent], { type: 'text/plain' });
-              await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
-              copyBtn.innerHTML = '✓ Copied!';
-              setTimeout(() => { copyBtn.innerHTML = '📋 Copy to Clipboard'; }, 2000);
-            } catch (_e) {
-              try {
-                await navigator.clipboard.writeText(textContent);
-                copyBtn.innerHTML = '✓ Copied!';
-                setTimeout(() => { copyBtn.innerHTML = '📋 Copy to Clipboard'; }, 2000);
-              } catch (_e2) {
-                copyBtn.innerHTML = '⚠️ Copy failed';
-                setTimeout(() => { copyBtn.innerHTML = '📋 Copy to Clipboard'; }, 2000);
-              }
-            }
-          });
-          actionsBtnRow.appendChild(copyBtn);
-        }
+          reportEl.classList.add('visible');
 
-        reportEl.insertBefore(actionsBtnRow, reportEl.firstChild);
+          // Add export action buttons at top of report
+          const actionsBtnRow = document.createElement('div');
+          actionsBtnRow.className = 'cse-report-actions';
+
+          if (cseFormat === 'pdf') {
+            const printBtn = document.createElement('button');
+            printBtn.className = 'cse-report-action-btn';
+            printBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / Save PDF`; // SAFETY: static SVG + static text
+            printBtn.type = 'button';
+            printBtn.addEventListener('click', () => window.print());
+            actionsBtnRow.appendChild(printBtn);
+          } else {
+            const SVG_CLIPBOARD = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`;
+            const SVG_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+            const SVG_WARN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'cse-report-action-btn';
+            copyBtn.innerHTML = `${SVG_CLIPBOARD} Copy to Clipboard`; // SAFETY: static SVG + static text
+            copyBtn.type = 'button';
+            copyBtn.addEventListener('click', async () => {
+              const htmlContent = reportEl.innerHTML;
+              const textContent = reportEl.innerText || reportEl.textContent;
+              try {
+                const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                const textBlob = new Blob([textContent], { type: 'text/plain' });
+                await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
+                copyBtn.innerHTML = `${SVG_CHECK} Copied!`; // SAFETY: static SVG + static text
+                setTimeout(() => { copyBtn.innerHTML = `${SVG_CLIPBOARD} Copy to Clipboard`; }, 2000); // SAFETY: static
+              } catch (_e) {
+                try {
+                  await navigator.clipboard.writeText(textContent);
+                  copyBtn.innerHTML = `${SVG_CHECK} Copied!`; // SAFETY: static SVG + static text
+                  setTimeout(() => { copyBtn.innerHTML = `${SVG_CLIPBOARD} Copy to Clipboard`; }, 2000); // SAFETY: static
+                } catch (_e2) {
+                  copyBtn.innerHTML = `${SVG_WARN} Copy failed`; // SAFETY: static SVG + static text
+                  setTimeout(() => { copyBtn.innerHTML = `${SVG_CLIPBOARD} Copy to Clipboard`; }, 2000); // SAFETY: static
+                }
+              }
+            });
+            actionsBtnRow.appendChild(copyBtn);
+          }
+
+          reportEl.insertBefore(actionsBtnRow, reportEl.firstChild);
+        }
 
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error('[caseload-export] Generation failed:', err);
-          progressText.textContent = '⚠️ Generation failed — ' + err.message;
+          progressText.textContent = 'Generation failed — ' + err.message;
         }
         cseGenerating = false;
         generateBtn.disabled = false;
-        generateBtn.textContent = '↺ Retry';
+        generateBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Retry`; // SAFETY: static SVG + static text
         progressSection.classList.remove('visible');
       }
     });
@@ -12379,20 +12386,34 @@
     progressText.textContent = 'Rendering export…';
     progressBar.style.width = '100%';
 
-    const html = buildCaseloadExportHtml({
-      studentData,
-      classGroups,
-      aiResultMap,
-      dateRange,
-      prevDateRange,
-      periodKey,
-      includeDese,
-      comparePrev,
-      languageMode,
-      format,
-    });
-
-    reportEl.innerHTML = html;
+    if (format === 'csv') {
+      // Build CSV and trigger download
+      const csv = buildCaseloadExportCsv({ studentData, classGroups, aiResultMap, includeDese, comparePrev, languageMode, periodKey });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `caseload-skills-summary-${periodKey.replace(/[^a-z0-9]/gi, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      reportEl.innerHTML = `<div style="padding:16px;opacity:0.75;font-size:14px;">CSV downloaded successfully.</div>`;
+    } else {
+      const html = buildCaseloadExportHtml({
+        studentData,
+        classGroups,
+        aiResultMap,
+        dateRange,
+        prevDateRange,
+        periodKey,
+        includeDese,
+        comparePrev,
+        languageMode,
+        format,
+      });
+      reportEl.innerHTML = html;
+    }
   }
 
   /**
@@ -12471,6 +12492,105 @@
       }
     }
     return null;
+  }
+
+  /**
+   * Build CSV content for the caseload skills summary export.
+   * Outputs one row per goal, grouped by class then student.
+   */
+  function buildCaseloadExportCsv({ studentData, classGroups, aiResultMap, includeDese, comparePrev, languageMode, periodKey }) {
+    const isParentFriendly = languageMode === 'parent-friendly';
+    const termBaseline = isParentFriendly ? 'Starting Point' : 'Baseline';
+    const termTarget = isParentFriendly ? 'Goal' : 'Target';
+    const termDataPts = isParentFriendly ? 'Observations' : 'Data Points';
+
+    const PARENT_FRIENDLY_TIER_LABELS = {
+      excellent: 'Doing Great',
+      'on-track': 'Making Progress',
+      'needs-support': 'Needs More Practice',
+      critical: 'Needs Help Right Away',
+    };
+
+    function escapeCsvField(val) {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    const headers = [
+      'Period', 'Class', 'Student Code', 'Student Name', 'IEP Due',
+      'Type', 'Code', 'Area / Description',
+      'Current %', termBaseline + ' %', termTarget + ' %', termDataPts, 'Trend',
+    ];
+    if (comparePrev) headers.push('Previous %', 'Change %');
+    headers.push('AI Summary', 'Tier');
+    if (!isParentFriendly) headers.push('Goal Recommendation');
+
+    const rows = [headers.map(escapeCsvField).join(',')];
+
+    const sortedClasses = [...classGroups.keys()].sort();
+    for (const className of sortedClasses) {
+      const students = classGroups.get(className);
+      for (const student of students) {
+        const d = studentData.find(x => x.student.code === student.code);
+        if (!d) continue;
+        const { iepCards, deseCards } = d;
+        const skills = aiResultMap.get(student.code) || [];
+        const iepDate = student.iep_due ? formatDate(student.iep_due) : '';
+        const studentName = student.name || '';
+
+        for (const card of iepCards) {
+          const ai = skills.find(s => s.code === card.code && (s.source === 'iep' || !s.source));
+          const tierInfo = getSkillTier(card.displayScore);
+          const tierLabel = isParentFriendly
+            ? (PARENT_FRIENDLY_TIER_LABELS[tierInfo.tier] || tierInfo.label)
+            : tierInfo.label;
+          const row = [
+            periodKey, className, student.code, studentName, iepDate,
+            'IEP Goal', card.code, ai && ai.description ? ai.description : card.area,
+            card.displayScore !== null ? card.displayScore : '',
+            card.baseline !== null ? card.baseline : '',
+            card.target !== null ? card.target : '',
+            card.dataPoints, card.trend || '',
+          ];
+          if (comparePrev) {
+            row.push(card.previousAvg !== null ? card.previousAvg : '');
+            const diff = (card.currentAvg !== null && card.previousAvg !== null) ? (card.currentAvg - card.previousAvg).toFixed(1) : '';
+            row.push(diff);
+          }
+          row.push(ai && ai.summary ? ai.summary : '');
+          row.push(tierLabel);
+          if (!isParentFriendly) row.push(ai && ai.goal_recommendation && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical') ? ai.goal_recommendation : '');
+          rows.push(row.map(escapeCsvField).join(','));
+        }
+
+        if (includeDese) {
+          for (const card of deseCards) {
+            const ai = skills.find(s => s.code === card.code && s.source === 'dese');
+            const tierInfo = getSkillTier(card.displayScore);
+            const tierLabel = isParentFriendly
+              ? (PARENT_FRIENDLY_TIER_LABELS[tierInfo.tier] || tierInfo.label)
+              : tierInfo.label;
+            const row = [
+              periodKey, className, student.code, studentName, iepDate,
+              'DESE Standard', card.code, ai && ai.description ? ai.description : card.code,
+              card.displayScore !== null ? card.displayScore : '',
+              '', '', card.itemCount || '', '',
+            ];
+            if (comparePrev) { row.push('', ''); }
+            row.push(ai && ai.summary ? ai.summary : '');
+            row.push(tierLabel);
+            if (!isParentFriendly) row.push('');
+            rows.push(row.map(escapeCsvField).join(','));
+          }
+        }
+      }
+    }
+
+    return rows.join('\r\n');
   }
 
   /**
@@ -12682,7 +12802,7 @@
     dropdown.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
     dropdown.style.left = rect.left + 'px';
 
-    function makeOption(label, handler) {
+    function makeOption(svgIcon, label, handler) {
       const btn = document.createElement('button');
       btn.style.cssText = [
         'display: block',
@@ -12695,8 +12815,11 @@
         'text-align: left',
         'cursor: pointer',
         'transition: background 0.1s',
+        'display: flex',
+        'align-items: center',
+        'gap: 8px',
       ].join(';');
-      btn.textContent = label;
+      btn.innerHTML = `${svgIcon}<span>${label}</span>`; // SAFETY: svgIcon is a static SVG string, label is a static string
       btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.07)'; });
       btn.addEventListener('mouseleave', () => { btn.style.background = 'none'; });
       btn.addEventListener('click', () => {
@@ -12706,8 +12829,19 @@
       return btn;
     }
 
-    dropdown.appendChild(makeOption('📋 Caseload Summary CSV', exportCaseload));
-    dropdown.appendChild(makeOption('📊 SpedTrack Progress CSV', exportSpedTrackProgressCsv));
+    const SVG_DOC = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+    const SVG_CHART = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>`;
+    const SVG_LAYERS = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`;
+
+    dropdown.appendChild(makeOption(SVG_DOC, 'Caseload Summary CSV', exportCaseload));
+    dropdown.appendChild(makeOption(SVG_CHART, 'SpedTrack Progress CSV', exportSpedTrackProgressCsv));
+
+    // Separator
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;';
+    dropdown.appendChild(sep);
+
+    dropdown.appendChild(makeOption(SVG_LAYERS, 'Caseload Skills Summary', showCaseloadExportModal));
 
     document.body.appendChild(dropdown);
 
