@@ -534,7 +534,8 @@
       return { arrow: '—', label: 'Not enough data', cssClass: 'st-goal-trend-flat' };
     }
     const last = nums[nums.length - 1];
-    const prev = nums[Math.max(0, nums.length - 3)];
+    // Compare last value with the one 3 positions earlier (or first if fewer points exist)
+    const prev = nums[Math.max(0, nums.length - 4)];
     const diff = last - prev;
     if (diff > 2) return { arrow: '↑', label: 'Improving', cssClass: 'st-goal-trend-up' };
     if (diff < -2) return { arrow: '↓', label: 'Declining', cssClass: 'st-goal-trend-down' };
@@ -716,7 +717,7 @@
     const dots = points.map(p => {
       const val = formatProgressValue(parseFloat(p.e.value), mt);
       const dt = formatDate(p.e.date);
-      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" role="img" aria-label="${escapeHtml(dt)}: ${escapeHtml(val)}"><title>${escapeHtml(dt)}: ${escapeHtml(val)}</title></circle>`;
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5"><title>${escapeHtml(dt)}: ${escapeHtml(val)}</title></circle>`;
     }).join('');
 
     const latestPt = points[points.length - 1];
@@ -7763,7 +7764,7 @@
     const dots = points.map(p => {
       const scoreText = Math.round(p.s.score_total) + '%';
       const dateDisplay = formatDate(p.s.submitted_at);
-      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" aria-label="${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}</title></circle>`;
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}</title></circle>`;
     }).join('');
 
     // Latest value label

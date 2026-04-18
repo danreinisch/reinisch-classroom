@@ -33,7 +33,8 @@ function computeTrendArrow(sortedEntries) {
     return { arrow: '—', label: 'Not enough data', cssClass: 'st-goal-trend-flat' };
   }
   const last = nums[nums.length - 1];
-  const prev = nums[Math.max(0, nums.length - 3)];
+  // Compare last value with the one 3 positions earlier (or first if fewer points exist)
+  const prev = nums[Math.max(0, nums.length - 4)];
   const diff = last - prev;
   if (diff > 2) return { arrow: '↑', label: 'Improving', cssClass: 'st-goal-trend-up' };
   if (diff < -2) return { arrow: '↓', label: 'Declining', cssClass: 'st-goal-trend-down' };
