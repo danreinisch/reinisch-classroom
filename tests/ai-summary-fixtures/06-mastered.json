@@ -1,0 +1,18 @@
+{
+  "description": "mastered: latest score >= mastery for 3+ consecutive data points",
+  "student_code": "S006",
+  "iep_goals": [
+    {
+      "code": "G-MATH-02",
+      "area": "Basic Operations",
+      "current_avg": 92,
+      "previous_avg": 90,
+      "trend": "up",
+      "data_points": 12,
+      "target": 85,
+      "baseline": 45,
+      "question_weaknesses": []
+    }
+  ],
+  "dese_standards": []
+}

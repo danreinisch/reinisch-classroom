@@ -1,0 +1,18 @@
+{
+  "description": "brand-new-goal: only 1 data point",
+  "student_code": "S005",
+  "iep_goals": [
+    {
+      "code": "G-READ-02",
+      "area": "Phonemic Awareness",
+      "current_avg": 62,
+      "previous_avg": null,
+      "trend": "stable",
+      "data_points": 1,
+      "target": 80,
+      "baseline": 60,
+      "question_weaknesses": []
+    }
+  ],
+  "dese_standards": []
+}

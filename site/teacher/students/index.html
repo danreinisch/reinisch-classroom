@@ -1901,6 +1901,49 @@
         background: rgba(255, 255, 255, 0.08);
       }
 
+      /* Per-goal AI regenerate button */
+      .st-regen-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 6px;
+      }
+      .st-regen-btn {
+        padding: 3px 9px;
+        border-radius: 5px;
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        background: rgba(139, 92, 246, 0.08);
+        color: rgba(167, 139, 250, 0.9);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 500;
+        transition: background 0.15s, opacity 0.15s;
+      }
+      .st-regen-btn:hover:not(:disabled) {
+        background: rgba(139, 92, 246, 0.18);
+      }
+      .st-regen-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      /* "AI draft needed editing" badge */
+      .st-ai-edited-badge {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 10px;
+        background: rgba(245, 158, 11, 0.15);
+        color: rgba(252, 211, 77, 1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+      }
+      /* Plain-language one-liner */
+      .st-skill-narrative-plain {
+        font-style: italic;
+        opacity: 0.75;
+        margin-top: 4px;
+        font-size: 12px;
+      }
+
       /* Section toggle for IEP/DESE headers */
       .st-skill-section-toggle {
         cursor: pointer;
@@ -2834,20 +2877,21 @@
         padding-left: 14px;
       }
 
-      /* ── Caseload Export Print styles ── */
+      /* ── Caseload Export Print styles (body.print-mode-cse-report) ── */
       @media print {
-        .cse-overlay, .cse-modal > *:not(#cseReport) {
+        body.print-mode-cse-report .cse-overlay,
+        body.print-mode-cse-report .cse-modal > *:not(#cseReport) {
           display: none !important;
         }
-        #cseReport {
+        body.print-mode-cse-report #cseReport {
           display: block !important;
           margin: 0;
           padding: 0;
         }
-        .cse-report-actions {
+        body.print-mode-cse-report .cse-report-actions {
           display: none !important;
         }
-        .cse-student-block {
+        body.print-mode-cse-report .cse-student-block {
           page-break-inside: avoid;
           break-inside: avoid;
           border: 1px solid #ccc !important;
@@ -2855,44 +2899,77 @@
           color: #111 !important;
           margin-bottom: 20px;
         }
-        .cse-class-section {
+        body.print-mode-cse-report .cse-class-section {
           page-break-before: auto;
         }
-        .cse-caseload-summary {
+        body.print-mode-cse-report .cse-caseload-summary {
           border: 1px solid #ccc !important;
           background: #f9f9f9 !important;
           color: #111 !important;
         }
-        .cse-kpi { background: #f0f0f0 !important; }
-        .cse-kpi-val, .cse-kpi-lbl, .cse-goal-title, .cse-goal-desc,
-        .cse-goal-stats, .cse-goal-narrative, .cse-goal-rec, .cse-student-code,
-        .cse-student-meta, .cse-class-header { color: #111 !important; }
-        .cse-tier-badge.excellent { background: #dcfce7 !important; color: #166534 !important; }
-        .cse-tier-badge.on-track { background: #dbeafe !important; color: #1e40af !important; }
-        .cse-tier-badge.needs-support { background: #fef3c7 !important; color: #92400e !important; }
-        .cse-tier-badge.critical { background: #fee2e2 !important; color: #991b1b !important; }
-        .cse-goal-block.tier-excellent { border-left-color: #166534 !important; }
-        .cse-goal-block.tier-on-track { border-left-color: #1e40af !important; }
-        .cse-goal-block.tier-needs-support { border-left-color: #92400e !important; }
-        .cse-goal-block.tier-critical { border-left-color: #991b1b !important; }
-        .cse-goal-rec { background: #fef3c7 !important; border-left-color: #92400e !important; color: #111 !important; }
+        body.print-mode-cse-report .cse-kpi { background: #f0f0f0 !important; }
+        body.print-mode-cse-report .cse-kpi-val,
+        body.print-mode-cse-report .cse-kpi-lbl,
+        body.print-mode-cse-report .cse-goal-title,
+        body.print-mode-cse-report .cse-goal-desc,
+        body.print-mode-cse-report .cse-goal-stats,
+        body.print-mode-cse-report .cse-goal-narrative,
+        body.print-mode-cse-report .cse-goal-rec,
+        body.print-mode-cse-report .cse-student-code,
+        body.print-mode-cse-report .cse-student-meta,
+        body.print-mode-cse-report .cse-class-header { color: #111 !important; }
+        body.print-mode-cse-report .cse-tier-badge.excellent { background: #dcfce7 !important; color: #166534 !important; }
+        body.print-mode-cse-report .cse-tier-badge.on-track { background: #dbeafe !important; color: #1e40af !important; }
+        body.print-mode-cse-report .cse-tier-badge.needs-support { background: #fef3c7 !important; color: #92400e !important; }
+        body.print-mode-cse-report .cse-tier-badge.critical { background: #fee2e2 !important; color: #991b1b !important; }
+        body.print-mode-cse-report .cse-goal-block.tier-excellent { border-left-color: #166534 !important; }
+        body.print-mode-cse-report .cse-goal-block.tier-on-track { border-left-color: #1e40af !important; }
+        body.print-mode-cse-report .cse-goal-block.tier-needs-support { border-left-color: #92400e !important; }
+        body.print-mode-cse-report .cse-goal-block.tier-critical { border-left-color: #991b1b !important; }
+        body.print-mode-cse-report .cse-goal-rec { background: #fef3c7 !important; border-left-color: #92400e !important; color: #111 !important; }
+        /* Hide everything else in cse-report mode */
+        body.print-mode-cse-report .tc-topbar,
+        body.print-mode-cse-report .tc-sidebar,
+        body.print-mode-cse-report .tc-main > *:not(.cse-overlay) {
+          display: none !important;
+        }
       }
 
+      /* ── Single-student Skills Summary print (body.print-mode-student-summary) ── */
       @media print {
         /* Ensure SVG icons print properly */
         svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-        /* Hide everything except the Skills Summary tab content */
-        .tc-topbar,
-        .tc-sidebar,
-        .st-list-panel,
-        .st-tabs,
-        .st-skills-btn-row,
-        .st-skill-callout,
-        .st-skill-strengths-strip,
-        .st-skill-section-chevron {
+
+        body.print-mode-student-summary .tc-topbar,
+        body.print-mode-student-summary .tc-sidebar,
+        body.print-mode-student-summary .st-quarter-bar,
+        body.print-mode-student-summary .st-toolbar-row,
+        body.print-mode-student-summary .st-quick-entry-panel,
+        body.print-mode-student-summary .st-quality-banner,
+        body.print-mode-student-summary .st-summary-section,
+        body.print-mode-student-summary #stObsHeatmap,
+        body.print-mode-student-summary #stAttendanceReport,
+        body.print-mode-student-summary #stDigestSummary,
+        body.print-mode-student-summary #stGlobalQuickEntryBar,
+        body.print-mode-student-summary .st-table-container,
+        body.print-mode-student-summary .st-tabs,
+        body.print-mode-student-summary .st-skills-btn-row,
+        body.print-mode-student-summary .st-skill-callout,
+        body.print-mode-student-summary .st-skill-strengths-strip,
+        body.print-mode-student-summary .st-skill-section-chevron,
+        body.print-mode-student-summary .tc-toast,
+        body.print-mode-student-summary .st-toast,
+        body.print-mode-student-summary .st-gqe-bar,
+        body.print-mode-student-summary .st-collect-nudge,
+        body.print-mode-student-summary .st-regen-row,
+        body.print-mode-student-summary .st-ai-edited-badge {
           display: none !important;
         }
-        body, .tc-app, .tc-main, .st-detail-panel, .st-detail-content {
+        body.print-mode-student-summary,
+        body.print-mode-student-summary .tc-app,
+        body.print-mode-student-summary .tc-main,
+        body.print-mode-student-summary .st-detail-panel,
+        body.print-mode-student-summary .st-detail-content {
           background: #fff !important;
           color: #111 !important;
           margin: 0;
@@ -2900,33 +2977,128 @@
           box-shadow: none;
           border: none;
         }
-        .st-skill-card {
+        body.print-mode-student-summary .st-skill-card {
           border: 1px solid #ccc !important;
           background: #fafafa !important;
           break-inside: avoid;
           page-break-inside: avoid;
         }
-        .st-skill-card-header,
-        .st-skill-code,
-        .st-skill-area,
-        .st-skill-score,
-        .st-skill-confidence,
-        .st-skill-section-title,
-        .st-skill-narrative p,
-        .st-skill-narrative-description,
-        .st-skill-narrative-goal-rec {
+        body.print-mode-student-summary .st-skill-card-header,
+        body.print-mode-student-summary .st-skill-code,
+        body.print-mode-student-summary .st-skill-area,
+        body.print-mode-student-summary .st-skill-score,
+        body.print-mode-student-summary .st-skill-confidence,
+        body.print-mode-student-summary .st-skill-section-title,
+        body.print-mode-student-summary .st-skill-narrative p,
+        body.print-mode-student-summary .st-skill-narrative-description,
+        body.print-mode-student-summary .st-skill-narrative-goal-rec {
           color: #111 !important;
         }
-        .st-skill-narrative-goal-rec {
+        body.print-mode-student-summary .st-skill-narrative-goal-rec {
           border-left-color: #b45309 !important;
           background: #fef3c7 !important;
         }
-        .st-skill-narrative-placeholder,
-        .st-skill-narrative-loading {
+        body.print-mode-student-summary .st-skill-narrative-placeholder,
+        body.print-mode-student-summary .st-skill-narrative-loading {
           display: none !important;
         }
-        a { color: #000; text-decoration: none; }
+        body.print-mode-student-summary a { color: #000; text-decoration: none; }
       }
+
+      /* ── Caseload landing view print (body.print-mode-caseload) ── */
+      @media print {
+        body.print-mode-caseload .tc-topbar,
+        body.print-mode-caseload .tc-sidebar,
+        body.print-mode-caseload .st-tabs,
+        body.print-mode-caseload .st-toolbar-row,
+        body.print-mode-caseload .st-quick-entry-panel,
+        body.print-mode-caseload #stGlobalQuickEntryBar,
+        body.print-mode-caseload .st-gqe-bar,
+        body.print-mode-caseload .tc-toast,
+        body.print-mode-caseload .st-toast,
+        body.print-mode-caseload .st-collect-nudge,
+        body.print-mode-caseload .st-quarter-bar,
+        body.print-mode-caseload .st-quality-banner,
+        body.print-mode-caseload .st-skills-btn-row,
+        body.print-mode-caseload .st-pinned-divider td::after,
+        body.print-mode-caseload .st-detail-panel {
+          display: none !important;
+        }
+        body.print-mode-caseload,
+        body.print-mode-caseload .tc-app,
+        body.print-mode-caseload .tc-shell,
+        body.print-mode-caseload .tc-main {
+          background: #fff !important;
+          color: #111 !important;
+          margin: 0;
+          padding: 0;
+          box-shadow: none;
+          border: none;
+          display: block !important;
+          width: 100% !important;
+        }
+        body.print-mode-caseload .st-table-container {
+          display: block !important;
+          overflow: visible !important;
+        }
+        body.print-mode-caseload .st-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 11px;
+        }
+        body.print-mode-caseload .st-table th,
+        body.print-mode-caseload .st-table td {
+          border: 1px solid #ccc !important;
+          color: #111 !important;
+          background: #fff !important;
+          padding: 4px 6px;
+        }
+        body.print-mode-caseload .st-table th {
+          background: #f0f0f0 !important;
+          font-weight: 700;
+        }
+        body.print-mode-caseload .st-table tr {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        body.print-mode-caseload .st-kpi-card {
+          border: 1px solid #ccc !important;
+          background: #f9f9f9 !important;
+          color: #111 !important;
+        }
+        body.print-mode-caseload .st-kpi-value,
+        body.print-mode-caseload .st-kpi-label {
+          color: #111 !important;
+        }
+        body.print-mode-caseload .st-summary-section {
+          display: block !important;
+        }
+        body.print-mode-caseload .st-summary-body {
+          display: flex !important;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        body.print-mode-caseload #stObsHeatmap,
+        body.print-mode-caseload #stAttendanceReport,
+        body.print-mode-caseload #stDigestSummary {
+          display: block !important;
+          background: #fff !important;
+          color: #111 !important;
+        }
+        body.print-mode-caseload .print-header {
+          display: block !important;
+          font-size: 14px;
+          font-weight: 700;
+          margin-bottom: 12px;
+          color: #111;
+          border-bottom: 2px solid #111;
+          padding-bottom: 6px;
+        }
+        body.print-mode-caseload a { color: #000; text-decoration: none; }
+      }
+
+      /* ── Hide .print-header when not printing ── */
+      .print-header { display: none; }
     </style>
   </head>
   <body>
@@ -3063,6 +3235,9 @@
         </aside>
 
         <main class="tc-main">
+          <!-- Print-only caseload header (populated by JS beforeprint handler) -->
+          <div class="print-header" id="stPrintHeader" aria-hidden="true"></div>
+
           <!-- Quarter Date Bar -->
           <div class="st-quarter-bar">
             <div id="stQuarterDisplay" class="st-quarter-display">
@@ -3210,9 +3385,57 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260418-catalog"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260409b"></script>
+    <script type="module" src="/web/tc-students.js?v=20260418-print"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
+    <script>
+      // ── Print routing: beforeprint / afterprint ───────────────────────────────
+      // Priority: 1) CSE Report modal open  2) Student selected  3) Caseload
+      (function () {
+        var PRINT_MODES = ['print-mode-cse-report', 'print-mode-student-summary', 'print-mode-caseload'];
+
+        function clearPrintModes() {
+          PRINT_MODES.forEach(function (m) { document.body.classList.remove(m); });
+        }
+
+        window.addEventListener('beforeprint', function () {
+          clearPrintModes();
+
+          if (document.getElementById('cseReport')) {
+            // CSE export modal is open
+            document.body.classList.add('print-mode-cse-report');
+          } else if (document.body.classList.contains('st-student-selected')) {
+            // A student's detail panel is populated
+            document.body.classList.add('print-mode-student-summary');
+          } else {
+            // Caseload landing view — inject header text then print
+            document.body.classList.add('print-mode-caseload');
+            try {
+              var headerEl = document.getElementById('stPrintHeader');
+              if (headerEl) {
+                var quarterLabel = '';
+                var activeChip = document.querySelector('.st-q-btn.active');
+                if (activeChip) {
+                  quarterLabel = activeChip.textContent.trim();
+                } else {
+                  var allChip = document.querySelector('[data-quarter="all"]');
+                  quarterLabel = allChip ? allChip.textContent.trim() : 'All Quarters';
+                }
+                var date = new Date().toLocaleDateString();
+                // SAFETY: textContent only — no innerHTML
+                headerEl.textContent = 'Caseload — ' + quarterLabel + ' — ' + date;
+              }
+            } catch (_e) { /* non-fatal */ }
+          }
+        });
+
+        window.addEventListener('afterprint', function () {
+          clearPrintModes();
+          var headerEl = document.getElementById('stPrintHeader');
+          if (headerEl) headerEl.textContent = '';
+        });
+      }());
+    </script>
     <style>
       @keyframes st-spin { to { transform: rotate(360deg); } }
       .st-spin { animation: st-spin 1s linear infinite; display:inline-block; }

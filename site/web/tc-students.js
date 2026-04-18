@@ -3215,6 +3215,13 @@
       })
     );
     await Promise.allSettled(renderPromises);
+
+    // Sync body class used by print routing
+    if (expandedStudents.size > 0) {
+      document.body.classList.add('st-student-selected');
+    } else {
+      document.body.classList.remove('st-student-selected');
+    }
   }
 
   /**
@@ -6256,6 +6263,145 @@
           e.stopPropagation();
           return;
         }
+
+        // Per-goal regenerate AI summary button
+        const regenBtn = e.target.closest('[data-action="regen-narrative"]');
+        if (regenBtn) {
+          const studentCode = regenBtn.dataset.studentCode;
+          const skillCode = regenBtn.dataset.skillCode;
+          const skillType = regenBtn.dataset.skillType; // 'iep' or 'dese'
+          if (!studentCode || !skillCode || regenInFlight.get(skillCode)) {
+            e.stopPropagation();
+            return;
+          }
+
+          // Client-side throttle: max REGEN_MAX_PER_MIN per minute
+          const now = Date.now();
+          while (_regenTimestamps.length > 0 && now - _regenTimestamps[0] > 60000) {
+            _regenTimestamps.shift();
+          }
+          if (_regenTimestamps.length >= REGEN_MAX_PER_MIN) {
+            const waitSec = Math.ceil((60000 - (now - _regenTimestamps[0])) / 1000);
+            showToast(`Slow down — wait ${waitSec}s before regenerating again.`);
+            e.stopPropagation();
+            return;
+          }
+          _regenTimestamps.push(now);
+
+          regenInFlight.set(skillCode, true);
+          const origLabel = regenBtn.textContent;
+          regenBtn.disabled = true;
+          regenBtn.textContent = '⏳ Regenerating…';
+
+          const narrativeId = `narrative-${skillCode.replace(/[^a-z0-9]/gi, '_')}`;
+          const narrativeEl = document.getElementById(narrativeId);
+
+          try {
+            const cached = skillsCardsCache.get(studentCode);
+            if (!cached) throw new Error('No card cache for student');
+
+            const iepCards = skillType === 'iep' ? cached.iepCards.filter(c => c.code === skillCode) : [];
+            const deseCards = skillType === 'dese' ? cached.deseCards.filter(c => c.code === skillCode) : [];
+
+            const iepPayload = iepCards.map(c => ({
+              code: c.code,
+              area: c.area,
+              current_avg: c.currentAvg !== null ? c.currentAvg : c.displayScore,
+              previous_avg: c.previousAvg,
+              trend: c.trend,
+              data_points: c.dataPoints,
+              target: c.target,
+              baseline: c.baseline,
+            }));
+            const desePayload = deseCards.map(c => ({
+              code: c.code,
+              percent_correct: c.displayScore,
+              item_count: c.itemCount,
+            }));
+
+            if (iepPayload.length === 0 && desePayload.length === 0) throw new Error('No data for this goal');
+
+            const res = await fetch('/.netlify/functions/teacher-ai-skills-summary', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                student_code: studentCode,
+                iep_goals: iepPayload,
+                dese_standards: desePayload,
+                audience: 'internal',
+              }),
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (!data.ok || !Array.isArray(data.skills)) throw new Error('Bad response');
+
+            // Patch the cache
+            const existing = skillsAiCache.get(studentCode) || { skills: [] };
+            for (const s of data.skills) {
+              const idx = existing.skills.findIndex(x => x.code === s.code);
+              if (idx >= 0) existing.skills[idx] = s;
+              else existing.skills.push(s);
+            }
+            skillsAiCache.set(studentCode, existing);
+
+            // Inject the new narrative in place (DOM API only — no innerHTML)
+            if (narrativeEl) {
+              const skill = data.skills.find(s => s.code === skillCode);
+              if (skill) {
+                narrativeEl.replaceChildren();
+                if (skill.description) {
+                  const descP = document.createElement('p');
+                  descP.className = 'st-skill-narrative-description';
+                  descP.textContent = skill.description;
+                  narrativeEl.appendChild(descP);
+                }
+                const sumP = document.createElement('p');
+                sumP.textContent = skill.summary || '';
+                narrativeEl.appendChild(sumP);
+                if (skill.plain_language) {
+                  const plainP = document.createElement('p');
+                  plainP.className = 'st-skill-narrative-plain';
+                  plainP.textContent = skill.plain_language;
+                  narrativeEl.appendChild(plainP);
+                }
+                if (skill.ai_edited) {
+                  const badge = document.createElement('span');
+                  badge.className = 'st-ai-edited-badge';
+                  badge.textContent = 'AI draft needed editing';
+                  narrativeEl.appendChild(badge);
+                }
+                if (skill.goal_recommendation) {
+                  const goalP = document.createElement('p');
+                  goalP.className = 'st-skill-narrative-goal-rec';
+                  const label = document.createElement('strong');
+                  label.textContent = '💡 Goal Recommendation: ';
+                  goalP.appendChild(label);
+                  goalP.appendChild(document.createTextNode(skill.goal_recommendation));
+                  narrativeEl.appendChild(goalP);
+                }
+              }
+            }
+
+            regenBtn.textContent = '✓ Updated';
+            setTimeout(() => {
+              regenBtn.textContent = origLabel;
+              regenBtn.disabled = false;
+            }, 2000);
+          } catch (err) {
+            console.warn('[tc-students] Per-goal regen failed:', err);
+            regenBtn.textContent = '⚠ Failed';
+            setTimeout(() => {
+              regenBtn.textContent = origLabel;
+              regenBtn.disabled = false;
+            }, 2500);
+          } finally {
+            regenInFlight.delete(skillCode);
+          }
+          e.stopPropagation();
+          return;
+        }
         
         // Enter Data button
         const enterDataBtn = e.target.closest('.enter-data-btn');
@@ -8894,6 +9040,13 @@
   /** Last HTTP status code from the AI skills summary request (for error messaging) */
   const skillsLastStatus = new Map(); // student.code → status code
 
+  /** Per-goal regenerate throttle: Map from teacher-session → [timestamps] (client-side 5/min guard) */
+  const _regenTimestamps = [];
+  const REGEN_MAX_PER_MIN = 5;
+
+  /** Track in-flight per-goal regenerate requests: goalCode → true */
+  const regenInFlight = new Map();
+
   /** Placeholder shown in skill card narrative area before AI commentary is generated */
   const SKILL_NARRATIVE_PLACEHOLDER_HTML = '<span class="st-skill-narrative-placeholder">Click \'Generate AI Commentary\' above to see a detailed summary.</span>';
 
@@ -9103,6 +9256,7 @@
         </div>
         ${metaHtml}
         <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || SKILL_NARRATIVE_PLACEHOLDER_HTML}</div>
+        ${studentCode && narrativeHtml ? `<div class="st-regen-row"><button class="st-regen-btn" data-action="regen-narrative" data-student-code="${escapeHtml(studentCode)}" data-skill-code="${escapeHtml(card.code)}" data-skill-type="${escapeHtml(card.type)}" aria-label="Regenerate AI summary for ${escapeHtml(card.area)}">♻ Regenerate AI summary</button></div>` : ''}
         ${calloutHtml}
       </div>
     `;
@@ -9288,6 +9442,18 @@
       const summaryP = document.createElement('p');
       summaryP.textContent = skill.summary;
       el.appendChild(summaryP);
+      if (skill.plain_language) {
+        const plainP = document.createElement('p');
+        plainP.className = 'st-skill-narrative-plain';
+        plainP.textContent = skill.plain_language;
+        el.appendChild(plainP);
+      }
+      if (skill.ai_edited) {
+        const badge = document.createElement('span');
+        badge.className = 'st-ai-edited-badge';
+        badge.textContent = 'AI draft needed editing';
+        el.appendChild(badge);
+      }
       if (skill.goal_recommendation) {
         const goalP = document.createElement('p');
         goalP.className = 'st-skill-narrative-goal-rec';
@@ -9327,6 +9493,18 @@
         const summaryP = document.createElement('p');
         summaryP.textContent = skill.summary;
         el.appendChild(summaryP);
+        if (skill.plain_language) {
+          const plainP = document.createElement('p');
+          plainP.className = 'st-skill-narrative-plain';
+          plainP.textContent = skill.plain_language;
+          el.appendChild(plainP);
+        }
+        if (skill.ai_edited) {
+          const badge = document.createElement('span');
+          badge.className = 'st-ai-edited-badge';
+          badge.textContent = 'AI draft needed editing';
+          el.appendChild(badge);
+        }
         if (skill.goal_recommendation) {
           const goalP = document.createElement('p');
           goalP.className = 'st-skill-narrative-goal-rec';
@@ -9335,6 +9513,25 @@
           goalP.appendChild(label);
           goalP.appendChild(document.createTextNode(skill.goal_recommendation));
           el.appendChild(goalP);
+        }
+
+        // Add regenerate button if not already present
+        const card = el.closest('.st-skill-card');
+        if (card && !card.querySelector('.st-regen-row')) {
+          const studentCode = card.closest('[id^="skills-tab-"]')?.id?.replace('skills-tab-', '') || studentCode;
+          const skillType = skill.source || 'iep';
+          const regenRow = document.createElement('div');
+          regenRow.className = 'st-regen-row';
+          const regenBtn = document.createElement('button');
+          regenBtn.className = 'st-regen-btn';
+          regenBtn.dataset.action = 'regen-narrative';
+          regenBtn.dataset.studentCode = studentCode;
+          regenBtn.dataset.skillCode = skill.code;
+          regenBtn.dataset.skillType = skillType;
+          regenBtn.setAttribute('aria-label', `Regenerate AI summary for ${skill.code}`);
+          regenBtn.textContent = '♻ Regenerate AI summary';
+          regenRow.appendChild(regenBtn);
+          card.insertBefore(regenRow, card.querySelector('.st-skill-callout') || null);
         }
       }
     }
@@ -12207,7 +12404,10 @@
             printBtn.className = 'cse-report-action-btn';
             printBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / Save PDF`; // SAFETY: static SVG + static text
             printBtn.type = 'button';
-            printBtn.addEventListener('click', () => window.print());
+            printBtn.addEventListener('click', () => {
+              // Ensure beforeprint routing sees #cseReport in the DOM
+              window.print();
+            });
             actionsBtnRow.appendChild(printBtn);
           } else {
             const SVG_CLIPBOARD = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`;

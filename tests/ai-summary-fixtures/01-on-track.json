@@ -1,0 +1,18 @@
+{
+  "description": "on-track: latest score >= target",
+  "student_code": "S001",
+  "iep_goals": [
+    {
+      "code": "G-READ-01",
+      "area": "Reading Comprehension",
+      "current_avg": 85,
+      "previous_avg": 78,
+      "trend": "up",
+      "data_points": 8,
+      "target": 80,
+      "baseline": 55,
+      "question_weaknesses": []
+    }
+  ],
+  "dese_standards": []
+}
