@@ -23,7 +23,7 @@
 
   // Constants
   const LOG_PREFIX = '[student-portal]';
-  const STUDENT_PORTAL_PATH = '/student/';
+  const _STUDENT_PORTAL_PATH = '/student/';
   
   // Feature constants
   const MIN_WRITING_ANSWER_LENGTH = 10;
@@ -245,11 +245,11 @@
   const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
 
   // Dot-grid chart icon paths (24×24 viewBox) — check-circle and x-circle
-  const DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
-  const DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
+  const _DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
+  const _DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
 
   // Accordion pagination / display constants
-  const ACC_PAGE_SIZE = 5;        // assignments shown per page in accordion
+  const _ACC_PAGE_SIZE = 5;        // assignments shown per page in accordion
   const ACC_Q_TEXT_CARD_MAX = 55; // max chars of question text shown on the inline card
   const ACC_Q_TEXT_ARIA_MAX = 40; // max chars of question text used in aria-label
 
@@ -1218,7 +1218,7 @@
 
     // Sanitise goalId for use in localStorage keys — only allow alphanumerics and hyphens
     // (UUIDs are always in this format; this guards against unexpected input).
-    const safeGoalId = String(goalId || '').replace(/[^a-z0-9\-]/gi, '_');
+    const safeGoalId = String(goalId || '').replace(/[^a-z0-9-]/gi, '_');
 
     // Retrieve persisted groupBy preference (localStorage) or choose sensible default
     let savedGroupBy = 'assignment';
@@ -1390,7 +1390,7 @@
 
       // Dot grid chart (per-question data points)
       const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
-      const { html: dotGridHtml, hasData: hasDotGrid, groups: dotGridGroups } = buildDotGridChart(goalDataPoints, goal.id, containerSuffix);
+      const { html: dotGridHtml, hasData: hasDotGrid, groups: _dotGridGroups } = buildDotGridChart(goalDataPoints, goal.id, containerSuffix);
       // When per-question dot-grid data exists, show it instead of the legacy line chart
       const chartSectionHtml = hasDotGrid
         ? dotGridHtml
@@ -1613,7 +1613,7 @@
         catalog.setAttribute('data-groupby', groupBy);
         // Persist to localStorage (sanitize goal ID before use as key)
         try {
-          const gid = String(catalog.getAttribute('data-goal-id') || '').replace(/[^a-z0-9\-]/gi, '_');
+          const gid = String(catalog.getAttribute('data-goal-id') || '').replace(/[^a-z0-9-]/gi, '_');
           if (gid) localStorage.setItem(`rc_goal_groupby_${gid}`, groupBy);
         } catch (_) { /* ignore */ }
         // Update aria-pressed
