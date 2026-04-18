@@ -23,7 +23,6 @@
 
   // Constants
   const LOG_PREFIX = '[student-portal]';
-  const _STUDENT_PORTAL_PATH = '/student/';
   
   // Feature constants
   const MIN_WRITING_ANSWER_LENGTH = 10;
@@ -244,12 +243,7 @@
   const MAX_DESC_LENGTH = 120; // Max characters before truncating description
   const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
 
-  // Dot-grid chart icon paths (24×24 viewBox) — check-circle and x-circle
-  const _DOT_CHECK_PATHS = '<circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>';
-  const _DOT_X_PATHS     = '<circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>';
-
   // Accordion pagination / display constants
-  const _ACC_PAGE_SIZE = 5;        // assignments shown per page in accordion
   const ACC_Q_TEXT_CARD_MAX = 55; // max chars of question text shown on the inline card
   const ACC_Q_TEXT_ARIA_MAX = 40; // max chars of question text used in aria-label
 
