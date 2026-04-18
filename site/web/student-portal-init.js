@@ -1216,9 +1216,13 @@
 
     const idBase = `qcat-${(goalId || 'g').replace(/[^a-z0-9]/gi, '_')}${suffix || ''}`;
 
+    // Sanitise goalId for use in localStorage keys — only allow alphanumerics and hyphens
+    // (UUIDs are always in this format; this guards against unexpected input).
+    const safeGoalId = String(goalId || '').replace(/[^a-z0-9\-]/gi, '_');
+
     // Retrieve persisted groupBy preference (localStorage) or choose sensible default
     let savedGroupBy = 'assignment';
-    try { savedGroupBy = localStorage.getItem(`rc_goal_groupby_${goalId}`) || 'assignment'; } catch (_) { /* ignore */ }
+    try { savedGroupBy = localStorage.getItem(`rc_goal_groupby_${safeGoalId}`) || 'assignment'; } catch (_) { /* ignore */ }
     // Validate to only allow known values; reject any tampered/unknown value
     if (savedGroupBy !== 'none' && savedGroupBy !== 'assignment') savedGroupBy = 'assignment';
 
@@ -1607,9 +1611,9 @@
         if (!catalog) return;
         const groupBy = sanitizeGroupBy(gbBtn.getAttribute('data-groupby') || '');
         catalog.setAttribute('data-groupby', groupBy);
-        // Persist to localStorage
+        // Persist to localStorage (sanitize goal ID before use as key)
         try {
-          const gid = catalog.getAttribute('data-goal-id');
+          const gid = String(catalog.getAttribute('data-goal-id') || '').replace(/[^a-z0-9\-]/gi, '_');
           if (gid) localStorage.setItem(`rc_goal_groupby_${gid}`, groupBy);
         } catch (_) { /* ignore */ }
         // Update aria-pressed
