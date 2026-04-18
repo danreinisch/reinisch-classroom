@@ -914,15 +914,11 @@
       }).join('');
 
       html += `<ul class="st-qcat-card__choices" aria-label="Answer choices">${choiceItems}</ul>`;
-
-      if (studentAnswer && correctAnswer && !isCorrect) {
-        html += `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong" style="margin-top:4px;">You picked ${escapeHtml(studentAnswer)}. The answer was ${escapeHtml(correctAnswer)}.</div>`;
-      }
     } else if (studentAnswer !== null && studentAnswer !== undefined) {
-      // Fill-in-blank / written answer
+      // Fill-in-blank / written answer — show what the student wrote inline
       html += `<div class="st-qcat-card__fib">${escapeHtml(String(studentAnswer))}</div>`;
       if (correctAnswer && !isCorrect) {
-        html += `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong">You wrote: "${escapeHtml(String(studentAnswer))}". Correct: "${escapeHtml(String(correctAnswer))}".</div>`;
+        html += `<div class="st-qcat-card__verdict st-qcat-card__verdict--wrong">Correct answer: "${escapeHtml(String(correctAnswer))}".</div>`;
       }
     } else if (!questionText) {
       html += `<div class="st-qcat-card__no-detail">Details not captured for this question.</div>`;
@@ -1223,7 +1219,8 @@
     // Retrieve persisted groupBy preference (localStorage) or choose sensible default
     let savedGroupBy = 'assignment';
     try { savedGroupBy = localStorage.getItem(`rc_goal_groupby_${goalId}`) || 'assignment'; } catch (_) { /* ignore */ }
-    if (savedGroupBy !== 'none') savedGroupBy = 'assignment';
+    // Validate to only allow known values; reject any tampered/unknown value
+    if (savedGroupBy !== 'none' && savedGroupBy !== 'assignment') savedGroupBy = 'assignment';
 
     // Choose default filter: 'missed' if goal is struggling, else 'all'
     const activeFilter = defaultFilter(dataPoints);
@@ -1552,13 +1549,33 @@
     // ── Re-render the group list inside a catalog ─────────────────────────
     // Reads current filter & groupBy from the catalog element, then rebuilds
     // just the group list area in-place (avoids full card re-render).
+    // Allowed values for filter and groupBy (allowlist for XSS prevention)
+    const ALLOWED_FILTERS  = new Set(['all', 'correct', 'missed', 'partial']);
+    const ALLOWED_GROUPBYS = new Set(['assignment', 'none']);
+
+    function sanitizeFilter(v) {
+      return ALLOWED_FILTERS.has(v) ? v : 'all';
+    }
+    function sanitizeGroupBy(v) {
+      return ALLOWED_GROUPBYS.has(v) ? v : 'assignment';
+    }
+    // idBase is always `qcat-` + alphanumeric only (from the registry key lookup).
+    // We use the registry key directly rather than the DOM attribute to avoid any
+    // potential DOM-injection attack.
+    function safeIdBaseFromCatalog(catalog) {
+      const idAttr = catalog ? (catalog.getAttribute('data-idbase') || '') : '';
+      // The registry is keyed by idBase values we generated ourselves — only return
+      // idAttr if the registry actually contains it (prevents spoofing).
+      return QCAT_GROUPS_REGISTRY.has(idAttr) ? idAttr : '';
+    }
+
     function rerenderCatalogGroups(catalog) {
       if (!catalog) return;
-      const idBase    = catalog.getAttribute('data-idbase') || '';
-      const filter    = catalog.getAttribute('data-filter') || 'all';
-      const groupBy   = catalog.getAttribute('data-groupby') || 'assignment';
-      const listEl    = catalog.querySelector('[data-qcat-list]');
-      if (!listEl) return;
+      const idBase  = safeIdBaseFromCatalog(catalog);
+      const filter  = sanitizeFilter(catalog.getAttribute('data-filter') || '');
+      const groupBy = sanitizeGroupBy(catalog.getAttribute('data-groupby') || '');
+      const listEl  = catalog.querySelector('[data-qcat-list]');
+      if (!listEl || !idBase) return;
 
       // Look up the original groups from the in-memory registry
       const rawGroups = QCAT_GROUPS_REGISTRY.get(idBase);
@@ -1573,7 +1590,7 @@
       if (chip) {
         const catalog = getCatalog(chip);
         if (!catalog) return;
-        const filter = chip.getAttribute('data-filter') || 'all';
+        const filter = sanitizeFilter(chip.getAttribute('data-filter') || '');
         catalog.setAttribute('data-filter', filter);
         // Update aria-pressed on all chips in this catalog
         catalog.querySelectorAll('[data-qcat-filters] [data-filter]').forEach(c => {
@@ -1588,7 +1605,7 @@
       if (gbBtn) {
         const catalog = getCatalog(gbBtn);
         if (!catalog) return;
-        const groupBy = gbBtn.getAttribute('data-groupby') || 'assignment';
+        const groupBy = sanitizeGroupBy(gbBtn.getAttribute('data-groupby') || '');
         catalog.setAttribute('data-groupby', groupBy);
         // Persist to localStorage
         try {
@@ -1618,17 +1635,17 @@
         // Lazy-render question cards on first open
         if (nowOpen && bodyEl.getAttribute('data-loaded') !== 'true') {
           const catalog  = getCatalog(groupHeader);
-          const filter   = catalog ? catalog.getAttribute('data-filter') || 'all' : 'all';
-          const idBase   = catalog ? catalog.getAttribute('data-idbase') || '' : '';
+          const filter   = sanitizeFilter(catalog ? catalog.getAttribute('data-filter') || '' : '');
+          const idBase   = safeIdBaseFromCatalog(catalog);
 
           // Get group index from header id (e.g. qcat-xxx-gh0 → 0)
           const headerId = groupHeader.id || '';
           const idxMatch = headerId.match(/-gh(\d+)$/);
           const groupIdx = idxMatch ? Number(idxMatch[1]) : -1;
-          const rawGroups = QCAT_GROUPS_REGISTRY.get(idBase);
+          const rawGroups = idBase ? QCAT_GROUPS_REGISTRY.get(idBase) : null;
           const group     = rawGroups && groupIdx >= 0 ? rawGroups[groupIdx] : null;
 
-          if (group) {
+          if (group && idBase) {
             bodyEl.innerHTML = buildCardsHtml(group.points, `${idBase}-g${groupIdx}`, filter, 1);
             bodyEl.setAttribute('data-loaded', 'true');
           }

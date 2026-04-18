@@ -406,11 +406,13 @@ test('counts totals, correct, pct, and assignmentCount', () => {
 });
 
 test('streak counts consecutive all-correct groups from newest', () => {
+  // Groups are passed in newest-first order (index 0 = most recent).
+  // computeQuarterSummary walks from index 0 until it finds a non-fully-correct group.
   const groups = [
-    { points: [{ is_correct: true }] },         // newest — correct
-    { points: [{ is_correct: true }] },         // correct
-    { points: [{ is_correct: false }] },        // wrong — breaks streak
-    { points: [{ is_correct: true }] },         // irrelevant
+    { points: [{ is_correct: true }] },   // index 0 — newest — all correct
+    { points: [{ is_correct: true }] },   // index 1 — all correct
+    { points: [{ is_correct: false }] },  // index 2 — has wrong answer, breaks streak
+    { points: [{ is_correct: true }] },   // index 3 — irrelevant (past the break)
   ];
   const allPts = groups.flatMap(g => g.points);
   const summary = computeQuarterSummary(allPts, groups);
