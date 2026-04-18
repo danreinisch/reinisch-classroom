@@ -408,9 +408,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         // the single-letter check below because TRUE/FALSE start with letters T/F).
         // Convert to A/B letter choices matching the Week 10 True/False radio-button format
         // so the student portal renders radio buttons and scoring works the same way.
-        const correctBoolMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*(TRUE|FALSE)\b/i);
+        const correctBoolMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*(true|false)\b/i);
         if (correctBoolMatch) {
-          const isTrue = correctBoolMatch[1].toUpperCase() === 'TRUE';
+          const isTrue = correctBoolMatch[1].toLowerCase() === 'true';
           currentQuestion.type = 'boolean';
           // Add True/False choices if not already present
           if (currentQuestion.choices.length === 0) {

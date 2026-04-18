@@ -45,12 +45,16 @@ function buildItemsFromMeta(assignmentId, meta) {
           // For fill_in_blank: prefer 'accepted' (Week 13 pipe-separated alternatives)
           // over 'keywords' (older semicolon-separated format). When 'accepted' is present,
           // treat each alternative as a keyword with min_keywords=1 (any match is correct).
-          const fibKeywords = isFillInBlank
-            ? (Array.isArray(q.accepted) && q.accepted.length > 0 ? q.accepted : (q.keywords || []))
-            : [];
-          const fibMinKeywords = isFillInBlank
-            ? (Array.isArray(q.accepted) && q.accepted.length > 0 ? 1 : (q.min_keywords || 2))
-            : 2;
+          let fibKeywords;
+          let fibMinKeywords;
+          if (isFillInBlank) {
+            const hasAccepted = Array.isArray(q.accepted) && q.accepted.length > 0;
+            fibKeywords = hasAccepted ? q.accepted : (q.keywords || []);
+            fibMinKeywords = hasAccepted ? 1 : (q.min_keywords || 2);
+          } else {
+            fibKeywords = [];
+            fibMinKeywords = 2;
+          }
           items.push({
             assignment_id: assignmentId,
             item_ref: `${day.day_number}_${q.number}`,
