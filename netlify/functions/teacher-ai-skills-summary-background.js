@@ -42,12 +42,20 @@ function sanitizeNumber(value) {
   return isNaN(n) ? 'N/A' : String(n);
 }
 
-function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
+function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_mode }) {
   const safeCode = sanitizeForPrompt(student_code, 20);
+  const isParentFriendly = language_mode === 'parent-friendly';
+
   let prompt = `You are an educational data analyst for a special education teacher.\n`;
   prompt += `Analyze the following performance data for student ${safeCode} and write a 2-3 sentence summary for each skill area.\n`;
-  prompt += `Use encouraging but honest language. Be specific about the numbers.\n`;
-  prompt += `If performance is below 40%, flag it as needing immediate attention.\n\n`;
+
+  if (isParentFriendly) {
+    prompt += `Write in plain, accessible language suitable for parents — avoid IEP/SPED jargon. Instead of "baseline" say "starting point"; instead of "target" say "goal"; instead of "data points" say "observations". Use warm, encouraging language.\n`;
+    prompt += `If performance is below 40%, say the student needs extra help or practice in this area.\n\n`;
+  } else {
+    prompt += `Use IEP/SPED terminology appropriate for IEP meetings and admin reports. Be specific about the numbers.\n`;
+    prompt += `If performance is below 40%, flag it as needing immediate attention.\n\n`;
+  }
 
   if (Array.isArray(iep_goals) && iep_goals.length > 0) {
     prompt += `IEP Goals:\n`;
@@ -85,24 +93,35 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards }) {
 
   prompt += `Return a JSON object with a single "skills" array. Each element must have:\n`;
   prompt += `  "code": the goal or DESE code exactly as provided\n`;
-  prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured (e.g. "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence to support conclusions drawn from the text, including determining where the text leaves matters uncertain"). For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed. Write this so a SPED teacher could paste it directly into an IEP goal bank or present-levels narrative.\n`;
-  prompt += `  "summary": a 2-3 sentence narrative about performance in this skill area\n`;
-  prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
-  prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
-  prompt += `  "goal_recommendation": only include this field when tier is "needs-support" or "critical". Write a 1-2 sentence draft IEP goal recommendation a SPED teacher could use as a starting point. Reference the specific skill deficit, suggest a measurable target, and use language consistent with Missouri IEP goal-writing conventions (e.g. "Given grade-level text, [student] will identify the main idea and two supporting details with 70% accuracy across 3 consecutive data points by the next annual review."). Omit this field entirely for "excellent" and "on-track" tiers.\n`;
+  if (isParentFriendly) {
+    prompt += `  "description": a plain-English description of this skill area that a parent can understand — avoid acronyms and jargon. For example: "Reading — understanding the main idea of a passage and finding details that support it."\n`;
+    prompt += `  "summary": a 2-3 sentence update for parents. Use plain language: e.g. "Your child started at 60% and is now at 78%, which is close to the 80% goal. They are making good progress in reading comprehension." Mention the starting point, current level, and goal.\n`;
+    prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%) — used internally, not shown to parents\n`;
+    prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
+    prompt += `  Do NOT include a "goal_recommendation" field — that field is for teachers only.\n`;
+  } else {
+    prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured (e.g. "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence to support conclusions drawn from the text, including determining where the text leaves matters uncertain"). For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed. Write this so a SPED teacher could paste it directly into an IEP goal bank or present-levels narrative.\n`;
+    prompt += `  "summary": a 2-3 sentence narrative about performance in this skill area\n`;
+    prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
+    prompt += `  "source": "iep" if the code came from the IEP Goals section, or "dese" if it came from the DESE Standards section\n`;
+    prompt += `  "goal_recommendation": only include this field when tier is "needs-support" or "critical". Write a 1-2 sentence draft IEP goal recommendation a SPED teacher could use as a starting point. Reference the specific skill deficit, suggest a measurable target, and use language consistent with Missouri IEP goal-writing conventions (e.g. "Given grade-level text, [student] will identify the main idea and two supporting details with 70% accuracy across 3 consecutive data points by the next annual review."). Omit this field entirely for "excellent" and "on-track" tiers.\n`;
+  }
   prompt += `Include every IEP goal and every DESE standard provided. Do not add or remove entries.\n`;
   prompt += `Example: { "skills": [{ "code": "MLS.R.1.A",`;
   prompt += ` "description": "Reading — Key Ideas & Details: Draw inferences from the text; cite specific textual evidence when analyzing what the text says explicitly and what can be inferred",`;
-  prompt += ` "summary": "...", "tier": "needs-support", "source": "dese",`;
-  prompt += ` "goal_recommendation": "Given grade-level narrative text, the student will identify explicit details and make text-based inferences with 65% accuracy across 3 consecutive probes by the next annual IEP review." }] }`;
+  prompt += ` "summary": "...", "tier": "needs-support", "source": "dese"`;
+  if (!isParentFriendly) {
+    prompt += `, "goal_recommendation": "Given grade-level narrative text, the student will identify explicit details and make text-based inferences with 65% accuracy across 3 consecutive probes by the next annual IEP review."`;
+  }
+  prompt += ` }] }`;
 
   return prompt;
 }
 
 // ── Payload hash (for caching) ───────────────────────────────────────────────
 
-function computePayloadHash(student_code, iep_goals, dese_standards) {
-  const canonical = JSON.stringify({ student_code, iep_goals, dese_standards });
+function computePayloadHash(student_code, iep_goals, dese_standards, language_mode) {
+  const canonical = JSON.stringify({ student_code, iep_goals, dese_standards, language_mode: language_mode || 'professional' });
   return crypto.createHash('sha256').update(canonical).digest('hex');
 }
 
@@ -283,7 +302,11 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  const { job_id, student_code, iep_goals, dese_standards } = parseResult.data;
+  const { job_id, student_code, iep_goals, dese_standards, language_mode } = parseResult.data;
+
+  // Validate language_mode (optional field, defaults to 'professional')
+  const validLanguageModes = new Set(['professional', 'parent-friendly']);
+  const safeLanguageMode = validLanguageModes.has(language_mode) ? language_mode : 'professional';
 
   // Validate job_id (must be a UUID v4 from the client)
   if (!job_id || typeof job_id !== 'string' || !UUID_V4_RE.test(job_id)) {
@@ -301,7 +324,7 @@ exports.handler = async (event) => {
   }
 
   const createdBy = auth.user.username;
-  const payloadHash = computePayloadHash(student_code, iep_goals || [], dese_standards || []);
+  const payloadHash = computePayloadHash(student_code, iep_goals || [], dese_standards || [], safeLanguageMode);
 
   // Insert the pending job record
   const inserted = await insertJob(SUPABASE_URL, SUPABASE_KEY, {
@@ -340,6 +363,7 @@ exports.handler = async (event) => {
     student_code,
     iep_goals: iep_goals || [],
     dese_standards: dese_standards || [],
+    language_mode: safeLanguageMode,
   });
 
   const aiResult = await callOpenAiWithRetries(systemPrompt, OPENAI_API_KEY, requestId);

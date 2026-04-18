@@ -6026,6 +6026,14 @@
       });
     }
 
+    // Caseload Skills Summary Export button
+    const caseloadSkillsBtn = document.getElementById('stCaseloadSkillsExportBtn');
+    if (caseloadSkillsBtn) {
+      caseloadSkillsBtn.addEventListener('click', () => {
+        showCaseloadExportModal();
+      });
+    }
+
     // Quarter date bar buttons
     const editQuartersBtn = document.getElementById('stEditQuarters');
     if (editQuartersBtn) {
@@ -11804,6 +11812,847 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  // ── Caseload Skills Summary Export ──────────────────────────────────────────
+
+  /**
+   * Compute a merged date range from multiple quarter keys.
+   * e.g. ['Q1', 'Q2'] → { start: Date(Q1.start), end: Date(Q2.end) }
+   * Returns null if no valid range found.
+   */
+  function getMergedQuarterRange(quarterKeys) {
+    if (!quarterKeys || quarterKeys.length === 0) return null;
+    let earliest = null;
+    let latest = null;
+    for (const q of quarterKeys) {
+      const r = getQuarterDateRange(q);
+      if (!r) continue;
+      if (!earliest || r.start < earliest) earliest = r.start;
+      if (!latest || r.end > latest) latest = r.end;
+    }
+    if (!earliest || !latest) return null;
+    return { start: earliest, end: latest };
+  }
+
+  /**
+   * Get the "previous" quarter(s) for a given selection, used for delta comparison.
+   * e.g. 'Q3' → ['Q2'], 'Q1-Q2' → ['Q1'], 'Q1' → [] (no previous)
+   */
+  function getPreviousQuarterKeys(quarterKeys) {
+    if (!quarterKeys || quarterKeys.length === 0) return [];
+    const allQ = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const minIdx = Math.min(...quarterKeys.map(q => allQ.indexOf(q)).filter(i => i >= 0));
+    if (minIdx <= 0) return [];
+    return [allQ[minIdx - 1]];
+  }
+
+  /**
+   * Compute IEP skill cards for a student filtered to a specific date range.
+   * Returns an array of card objects like computeIepSkillCards but scoped to dateRange.
+   */
+  function computeIepSkillCardsForRange(student, studentGoals, dateRange, prevDateRange) {
+    const cards = [];
+    for (const goal of studentGoals) {
+      if (goal.status === 'archived') continue;
+      if (goal.measurement_type === 'Observation') continue;
+
+      const entries = getProgressForGoal(student.code, goal.code);
+      const numericEntries = entries.filter(e => e.value !== null && e.value !== undefined && !isNaN(parseFloat(e.value)));
+
+      // Range avg
+      let currentAvg = null;
+      if (dateRange) {
+        const rangeEntries = numericEntries.filter(e => {
+          const d = new Date(e.date);
+          return d >= dateRange.start && d <= dateRange.end;
+        });
+        if (rangeEntries.length > 0) {
+          currentAvg = Math.round(rangeEntries.reduce((s, e) => s + parseFloat(e.value), 0) / rangeEntries.length * 10) / 10;
+        }
+      }
+      // Fallback: all-time avg
+      const displayScore = currentAvg !== null ? currentAvg
+        : (numericEntries.length > 0 ? Math.round(numericEntries.reduce((s, e) => s + parseFloat(e.value), 0) / numericEntries.length * 10) / 10 : null);
+
+      // Previous range avg
+      let prevAvg = null;
+      if (prevDateRange) {
+        const prevEntries = numericEntries.filter(e => {
+          const d = new Date(e.date);
+          return d >= prevDateRange.start && d <= prevDateRange.end;
+        });
+        if (prevEntries.length > 0) {
+          prevAvg = Math.round(prevEntries.reduce((s, e) => s + parseFloat(e.value), 0) / prevEntries.length * 10) / 10;
+        }
+      }
+
+      // Data point count in range
+      const rangeEntries = dateRange
+        ? numericEntries.filter(e => { const d = new Date(e.date); return d >= dateRange.start && d <= dateRange.end; })
+        : numericEntries;
+      const dataPoints = rangeEntries.length;
+
+      // Trend
+      let trend = 'flat';
+      if (currentAvg !== null && prevAvg !== null) {
+        const diff = currentAvg - prevAvg;
+        if (diff >= SKILL_TREND_THRESHOLD) trend = 'up';
+        else if (diff <= -SKILL_TREND_THRESHOLD) trend = 'down';
+      }
+
+      cards.push({
+        type: 'iep',
+        code: goal.code,
+        area: goal.goal_area || goal.desc || goal.code,
+        displayScore,
+        currentAvg,
+        previousAvg: prevAvg,
+        trend,
+        dataPoints,
+        target: goal.mastery !== undefined && goal.mastery !== null ? parseFloat(goal.mastery) : null,
+        baseline: goal.baseline !== undefined && goal.baseline !== null ? parseFloat(goal.baseline) : null,
+      });
+    }
+    cards.sort((a, b) => {
+      if (a.displayScore === null && b.displayScore === null) return 0;
+      if (a.displayScore === null) return 1;
+      if (b.displayScore === null) return -1;
+      return b.displayScore - a.displayScore;
+    });
+    return cards;
+  }
+
+  /**
+   * Open the Caseload Skills Summary Export modal.
+   */
+  function showCaseloadExportModal() {
+    // Remove existing modal if any
+    const existing = document.getElementById('cseModalOverlay');
+    if (existing) { existing.remove(); return; }
+
+    const dates = getQuarterDates();
+    const quarterKeys = Object.keys(dates);
+
+    // State
+    let cseSelectedPeriod = 'Q3'; // default
+    let cseIncludeDese = false;
+    let cseComparePrev = false;
+    let cseLanguageMode = 'professional';
+    let cseFormat = 'pdf';
+    let cseGenerating = false;
+    let cseAbortController = null;
+
+    // Build the period options: single quarters, cumulative ranges, full year
+    const singlePeriods = quarterKeys.map(q => ({ key: q, label: q }));
+    const cumulativePeriods = [];
+    for (let i = 0; i < quarterKeys.length - 1; i++) {
+      for (let j = i + 1; j < quarterKeys.length; j++) {
+        const rangeKey = `${quarterKeys[i]}-${quarterKeys[j]}`;
+        cumulativePeriods.push({ key: rangeKey, label: rangeKey, quarters: quarterKeys.slice(i, j + 1) });
+      }
+    }
+    cumulativePeriods.push({ key: 'full-year', label: 'Full Year', quarters: quarterKeys });
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'cseModalOverlay';
+    overlay.className = 'cse-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Export Caseload Skills Summary');
+
+    // Close on overlay click (outside modal)
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay && !cseGenerating) overlay.remove();
+    });
+
+    const modal = document.createElement('div');
+    modal.className = 'cse-modal';
+    modal.setAttribute('role', 'document');
+
+    // Title
+    const title = document.createElement('h2');
+    title.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Export Caseload Skills Summary`;
+    modal.appendChild(title);
+
+    // ── Period Picker ────────────────────────────────────────────────────────
+    const periodSection = document.createElement('div');
+    periodSection.className = 'cse-section';
+    const periodLabel = document.createElement('div');
+    periodLabel.className = 'cse-section-label';
+    periodLabel.textContent = 'Date Range';
+    periodSection.appendChild(periodLabel);
+
+    const periodGrid = document.createElement('div');
+    periodGrid.className = 'cse-quarter-grid';
+
+    function renderPeriodButtons() {
+      periodGrid.innerHTML = '';
+      const allPeriods = [...singlePeriods, ...cumulativePeriods];
+      for (const period of allPeriods) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cse-q-btn' + (cseSelectedPeriod === period.key ? ' active' : '');
+        btn.textContent = period.label;
+        btn.dataset.periodKey = period.key;
+        btn.addEventListener('click', () => {
+          cseSelectedPeriod = period.key;
+          renderPeriodButtons();
+        });
+        periodGrid.appendChild(btn);
+      }
+    }
+    renderPeriodButtons();
+    periodSection.appendChild(periodGrid);
+    modal.appendChild(periodSection);
+
+    // ── Toggles ──────────────────────────────────────────────────────────────
+    const toggleSection = document.createElement('div');
+    toggleSection.className = 'cse-section';
+    const toggleLabel = document.createElement('div');
+    toggleLabel.className = 'cse-section-label';
+    toggleLabel.textContent = 'Options';
+    toggleSection.appendChild(toggleLabel);
+
+    // Include DESE Standards toggle
+    const deseRow = document.createElement('div');
+    deseRow.className = 'cse-toggle-row';
+    const deseChk = document.createElement('input');
+    deseChk.type = 'checkbox';
+    deseChk.id = 'cseDeseTgl';
+    deseChk.checked = cseIncludeDese;
+    deseChk.addEventListener('change', () => { cseIncludeDese = deseChk.checked; });
+    const deseLbl = document.createElement('label');
+    deseLbl.className = 'cse-toggle-label';
+    deseLbl.htmlFor = 'cseDeseTgl';
+    deseLbl.textContent = 'Include DESE Standards';
+    deseRow.appendChild(deseChk);
+    deseRow.appendChild(deseLbl);
+    toggleSection.appendChild(deseRow);
+
+    const deseHint = document.createElement('div');
+    deseHint.className = 'cse-toggle-hint';
+    deseHint.textContent = 'Shows DESE/MLS standard scores alongside IEP goals (default: off)';
+    toggleSection.appendChild(deseHint);
+
+    // Compare to previous quarter toggle
+    const compareRow = document.createElement('div');
+    compareRow.className = 'cse-toggle-row';
+    const compareChk = document.createElement('input');
+    compareChk.type = 'checkbox';
+    compareChk.id = 'cseCompareTgl';
+    compareChk.checked = cseComparePrev;
+    compareChk.addEventListener('change', () => { cseComparePrev = compareChk.checked; });
+    const compareLbl = document.createElement('label');
+    compareLbl.className = 'cse-toggle-label';
+    compareLbl.htmlFor = 'cseCompareTgl';
+    compareLbl.textContent = 'Compare to previous period';
+    compareRow.appendChild(compareChk);
+    compareRow.appendChild(compareLbl);
+    toggleSection.appendChild(compareRow);
+
+    const compareHint = document.createElement('div');
+    compareHint.className = 'cse-toggle-hint';
+    compareHint.textContent = 'Shows delta vs. the preceding period (e.g. Q2→Q3 change)';
+    toggleSection.appendChild(compareHint);
+
+    modal.appendChild(toggleSection);
+
+    // ── Language Mode ────────────────────────────────────────────────────────
+    const modeSection = document.createElement('div');
+    modeSection.className = 'cse-section';
+    const modeSectionLabel = document.createElement('div');
+    modeSectionLabel.className = 'cse-section-label';
+    modeSectionLabel.textContent = 'Language Mode';
+    modeSection.appendChild(modeSectionLabel);
+
+    const modeRow = document.createElement('div');
+    modeRow.className = 'cse-mode-row';
+
+    function makeModeBtn(mode, icon, label, hint) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cse-mode-btn' + (cseLanguageMode === mode ? ' active' : '');
+      btn.dataset.mode = mode;
+      btn.innerHTML = `${icon} ${label}<small>${hint}</small>`;
+      btn.addEventListener('click', () => {
+        cseLanguageMode = mode;
+        modeRow.querySelectorAll('.cse-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      });
+      return btn;
+    }
+    modeRow.appendChild(makeModeBtn('professional', '🎓', 'Professional', 'IEP/SPED terminology for admin reports'));
+    modeRow.appendChild(makeModeBtn('parent-friendly', '👨‍👩‍👧', 'Parent-Friendly', 'Plain English for family communication'));
+    modeSection.appendChild(modeRow);
+    modal.appendChild(modeSection);
+
+    // ── Export Format ────────────────────────────────────────────────────────
+    const formatSection = document.createElement('div');
+    formatSection.className = 'cse-section';
+    const formatSectionLabel = document.createElement('div');
+    formatSectionLabel.className = 'cse-section-label';
+    formatSectionLabel.textContent = 'Export Format';
+    formatSection.appendChild(formatSectionLabel);
+
+    const formatRow = document.createElement('div');
+    formatRow.className = 'cse-format-row';
+
+    function makeFormatBtn(fmt, icon, label) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cse-format-btn' + (cseFormat === fmt ? ' active' : '');
+      btn.dataset.format = fmt;
+      btn.innerHTML = `${icon} ${label}`;
+      btn.addEventListener('click', () => {
+        cseFormat = fmt;
+        formatRow.querySelectorAll('.cse-format-btn').forEach(b => b.classList.toggle('active', b.dataset.format === fmt));
+      });
+      return btn;
+    }
+    formatRow.appendChild(makeFormatBtn('pdf', '📄', 'PDF'));
+    formatRow.appendChild(makeFormatBtn('email', '📋', 'Copy for Email'));
+    formatSection.appendChild(formatRow);
+    modal.appendChild(formatSection);
+
+    // ── Progress section ─────────────────────────────────────────────────────
+    const progressSection = document.createElement('div');
+    progressSection.className = 'cse-progress-section';
+    const progressText = document.createElement('div');
+    progressText.className = 'cse-progress-text';
+    progressText.textContent = 'Preparing…';
+    const progressBarWrap = document.createElement('div');
+    progressBarWrap.className = 'cse-progress-bar-wrap';
+    const progressBar = document.createElement('div');
+    progressBar.className = 'cse-progress-bar';
+    progressBarWrap.appendChild(progressBar);
+    progressSection.appendChild(progressText);
+    progressSection.appendChild(progressBarWrap);
+    modal.appendChild(progressSection);
+
+    // ── Report placeholder ───────────────────────────────────────────────────
+    const reportEl = document.createElement('div');
+    reportEl.id = 'cseReport';
+    modal.appendChild(reportEl);
+
+    // ── Action buttons ───────────────────────────────────────────────────────
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'cse-actions';
+
+    const generateBtn = document.createElement('button');
+    generateBtn.type = 'button';
+    generateBtn.className = 'cse-generate-btn';
+    generateBtn.textContent = '✨ Generate';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'cse-cancel-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+      if (cseAbortController) cseAbortController.abort();
+      overlay.remove();
+    });
+
+    actionsEl.appendChild(generateBtn);
+    actionsEl.appendChild(cancelBtn);
+    modal.appendChild(actionsEl);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // ── Generate handler ─────────────────────────────────────────────────────
+    generateBtn.addEventListener('click', async () => {
+      if (cseGenerating) return;
+      cseGenerating = true;
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Generating…';
+
+      cseAbortController = new AbortController();
+      const signal = cseAbortController.signal;
+
+      progressSection.classList.add('visible');
+      reportEl.classList.remove('visible');
+      reportEl.innerHTML = '';
+
+      try {
+        await generateCaseloadSkillsSummary({
+          periodKey: cseSelectedPeriod,
+          includeDese: cseIncludeDese,
+          comparePrev: cseComparePrev,
+          languageMode: cseLanguageMode,
+          format: cseFormat,
+          progressText,
+          progressBar,
+          reportEl,
+          signal,
+          quarterKeys,
+          cumulativePeriods,
+        });
+
+        // Show export action buttons once done
+        progressSection.classList.remove('visible');
+        reportEl.classList.add('visible');
+        generateBtn.textContent = '✅ Generated';
+        cancelBtn.textContent = 'Close';
+
+        // Add export action buttons at top of report
+        const actionsBtnRow = document.createElement('div');
+        actionsBtnRow.className = 'cse-report-actions';
+
+        if (cseFormat === 'pdf') {
+          const printBtn = document.createElement('button');
+          printBtn.className = 'cse-report-action-btn';
+          printBtn.innerHTML = '📄 Print / Save PDF';
+          printBtn.type = 'button';
+          printBtn.addEventListener('click', () => window.print());
+          actionsBtnRow.appendChild(printBtn);
+        } else {
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'cse-report-action-btn';
+          copyBtn.innerHTML = '📋 Copy to Clipboard';
+          copyBtn.type = 'button';
+          copyBtn.addEventListener('click', async () => {
+            const htmlContent = reportEl.innerHTML;
+            const textContent = reportEl.innerText || reportEl.textContent;
+            try {
+              const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+              const textBlob = new Blob([textContent], { type: 'text/plain' });
+              await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
+              copyBtn.innerHTML = '✓ Copied!';
+              setTimeout(() => { copyBtn.innerHTML = '📋 Copy to Clipboard'; }, 2000);
+            } catch (_e) {
+              try {
+                await navigator.clipboard.writeText(textContent);
+                copyBtn.innerHTML = '✓ Copied!';
+                setTimeout(() => { copyBtn.innerHTML = '📋 Copy to Clipboard'; }, 2000);
+              } catch (_e2) {
+                copyBtn.innerHTML = '⚠️ Copy failed';
+                setTimeout(() => { copyBtn.innerHTML = '📋 Copy to Clipboard'; }, 2000);
+              }
+            }
+          });
+          actionsBtnRow.appendChild(copyBtn);
+        }
+
+        reportEl.insertBefore(actionsBtnRow, reportEl.firstChild);
+
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('[caseload-export] Generation failed:', err);
+          progressText.textContent = '⚠️ Generation failed — ' + err.message;
+        }
+        cseGenerating = false;
+        generateBtn.disabled = false;
+        generateBtn.textContent = '↺ Retry';
+        progressSection.classList.remove('visible');
+      }
+    });
+  }
+
+  /**
+   * Run the full caseload skills summary generation:
+   * 1. Resolve date ranges
+   * 2. Build cards for each active student
+   * 3. Batch AI generation (3 at a time) via background function + polling
+   * 4. Render the export HTML into reportEl
+   */
+  async function generateCaseloadSkillsSummary({
+    periodKey,
+    includeDese,
+    comparePrev,
+    languageMode,
+    format,
+    progressText,
+    progressBar,
+    reportEl,
+    signal,
+    quarterKeys,
+    cumulativePeriods,
+  }) {
+    // Resolve quarter keys for this period
+    let periodQuarterKeys = [];
+    if (quarterKeys.includes(periodKey)) {
+      periodQuarterKeys = [periodKey];
+    } else if (periodKey === 'full-year') {
+      periodQuarterKeys = quarterKeys;
+    } else {
+      const found = cumulativePeriods.find(p => p.key === periodKey);
+      if (found) periodQuarterKeys = found.quarters;
+    }
+
+    const dateRange = getMergedQuarterRange(periodQuarterKeys);
+
+    // Previous period for delta comparison
+    let prevDateRange = null;
+    if (comparePrev && periodQuarterKeys.length > 0) {
+      const prevKeys = getPreviousQuarterKeys(periodQuarterKeys);
+      prevDateRange = prevKeys.length > 0 ? getMergedQuarterRange(prevKeys) : null;
+    }
+
+    // Build student list — active only, grouped by class
+    const activeStudents = allStudents.filter(s => s.status !== 'archived' && s.active !== false);
+
+    // Group students by their first enrolled class (or "No Class")
+    const classGroups = new Map(); // className → student[]
+    for (const student of activeStudents) {
+      const enrollments = allEnrollments.filter(e => e.student_code === student.code);
+      const primaryClass = enrollments.length > 0 ? (enrollments[0].class_name || 'No Class') : 'No Class';
+      if (!classGroups.has(primaryClass)) classGroups.set(primaryClass, []);
+      classGroups.get(primaryClass).push(student);
+    }
+
+    // Sort students alphabetically within each class (by name if available, else code)
+    for (const [, students] of classGroups) {
+      students.sort((a, b) => {
+        const nameA = a.name || a.code || '';
+        const nameB = b.name || b.code || '';
+        return nameA.localeCompare(nameB);
+      });
+    }
+
+    // Build per-student skill card data
+    const studentData = []; // { student, classes, iepCards, deseCards }
+    for (const student of activeStudents) {
+      const studentGoals = allGoals.filter(g => g.student_code === student.code && g.status !== 'archived');
+      const iepCards = computeIepSkillCardsForRange(student, studentGoals, dateRange, prevDateRange);
+
+      let deseCards = [];
+      if (includeDese) {
+        try {
+          const rollups = await fetchDeseRollups(student);
+          const iepPrefixes = getIepDeseDomainPrefixes(studentGoals);
+          deseCards = rollups
+            .filter(d => d.percent_correct !== undefined && d.item_count >= 2)
+            .map(d => ({
+              type: 'dese',
+              code: d.dese_code,
+              area: d.dese_code,
+              displayScore: parseFloat(d.percent_correct),
+              itemCount: d.item_count,
+              iepAligned: iepPrefixes.size > 0 && [...iepPrefixes].some(p => d.dese_code.includes(p)),
+            }))
+            .sort((a, b) => b.displayScore - a.displayScore);
+        } catch (_e) {
+          deseCards = [];
+        }
+      }
+
+      const enrollments = allEnrollments.filter(e => e.student_code === student.code);
+      const classes = enrollments.map(e => e.class_name).filter(Boolean);
+
+      studentData.push({ student, classes, iepCards, deseCards });
+    }
+
+    // ── AI Generation ────────────────────────────────────────────────────────
+    const aiResultMap = new Map(); // studentCode → skills[]
+    const BATCH_SIZE = 3;
+    const studentsNeedingAI = studentData.filter(d => d.iepCards.length > 0 || d.deseCards.length > 0);
+
+    const totalStudents = studentsNeedingAI.length;
+
+    const updateProgress = (done) => {
+      progressText.textContent = `Generating AI summaries… ${done}/${totalStudents} students`;
+      progressBar.style.width = totalStudents > 0 ? `${Math.round(done / totalStudents * 100)}%` : '0%';
+    };
+    updateProgress(0);
+
+    let completedCount = 0;
+
+    for (let i = 0; i < studentsNeedingAI.length; i += BATCH_SIZE) {
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+      const batch = studentsNeedingAI.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (d) => {
+        if (signal.aborted) return;
+        try {
+          const skills = await requestCaseloadStudentNarratives(d.student, d.iepCards, d.deseCards, languageMode, signal);
+          if (skills) aiResultMap.set(d.student.code, skills);
+        } catch (_e) {
+          // Non-fatal — student will be rendered without AI narrative
+        }
+        completedCount++;
+        updateProgress(completedCount);
+      }));
+    }
+
+    // ── Render Export ────────────────────────────────────────────────────────
+    progressText.textContent = 'Rendering export…';
+    progressBar.style.width = '100%';
+
+    const html = buildCaseloadExportHtml({
+      studentData,
+      classGroups,
+      aiResultMap,
+      dateRange,
+      prevDateRange,
+      periodKey,
+      includeDese,
+      comparePrev,
+      languageMode,
+      format,
+    });
+
+    reportEl.innerHTML = html;
+  }
+
+  /**
+   * Fetch AI narratives for one student in the caseload export flow.
+   * Re-uses the existing background function + polling, but with language_mode.
+   * Returns skills array or null on failure.
+   */
+  async function requestCaseloadStudentNarratives(student, iepCards, deseCards, languageMode, signal) {
+    const POLL_INTERVAL_MS = 2500;
+    const MAX_POLLS = 120;
+
+    const iepPayload = iepCards.map(c => ({
+      code: c.code,
+      area: c.area,
+      current_avg: c.currentAvg !== null ? c.currentAvg : c.displayScore,
+      previous_avg: c.previousAvg,
+      trend: c.trend,
+      data_points: c.dataPoints,
+      target: c.target,
+      baseline: c.baseline,
+      question_weaknesses: [],
+    }));
+    const desePayload = deseCards.map(c => ({
+      code: c.code,
+      percent_correct: c.displayScore,
+      item_count: c.itemCount || 0,
+    }));
+
+    if (iepPayload.length === 0 && desePayload.length === 0) return null;
+
+    const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+
+    try {
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          job_id: jobId,
+          student_code: student.code,
+          iep_goals: iepPayload,
+          dese_standards: desePayload,
+          language_mode: languageMode,
+        }),
+        signal,
+      });
+      if (!res.ok && res.status !== 202) return null;
+    } catch (_e) {
+      return null;
+    }
+
+    for (let poll = 0; poll < MAX_POLLS; poll++) {
+      if (signal.aborted) return null;
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+      if (signal.aborted) return null;
+
+      try {
+        const statusRes = await fetch(
+          `/.netlify/functions/teacher-ai-skills-summary-status?job_id=${encodeURIComponent(jobId)}`,
+          { credentials: 'same-origin', signal }
+        );
+        if (!statusRes.ok) continue;
+        const statusData = await statusRes.json();
+        if (statusData.status === 'complete' && Array.isArray(statusData.skills)) {
+          return statusData.skills;
+        }
+        if (statusData.status === 'error') return null;
+      } catch (_e) {
+        if (_e.name === 'AbortError') return null;
+        continue;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Build the HTML string for the full caseload export report.
+   * Safe: all user data goes through escapeHtml or DOM textContent.
+   */
+  function buildCaseloadExportHtml({
+    studentData,
+    classGroups,
+    aiResultMap,
+    dateRange,
+    prevDateRange,
+    periodKey,
+    includeDese,
+    comparePrev,
+    languageMode,
+    format,
+  }) {
+    const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const isParentFriendly = languageMode === 'parent-friendly';
+
+    const termBaseline = isParentFriendly ? 'starting point' : 'baseline';
+    const termTarget = isParentFriendly ? 'goal' : 'target';
+    const termDataPts = isParentFriendly ? 'observations' : 'data points';
+    const termIEPGoal = isParentFriendly ? 'learning goal' : 'IEP goal';
+
+    // ── Caseload-level stats ─────────────────────────────────────────────────
+    const allIepCards = studentData.flatMap(d => d.iepCards);
+    const scoredCards = allIepCards.filter(c => c.displayScore !== null);
+    const avgProgress = scoredCards.length > 0
+      ? Math.round(scoredCards.reduce((s, c) => s + c.displayScore, 0) / scoredCards.length)
+      : null;
+
+    const tierCounts = { excellent: 0, 'on-track': 0, 'needs-support': 0, critical: 0 };
+    for (const c of scoredCards) {
+      const t = getSkillTier(c.displayScore).tier;
+      if (tierCounts[t] !== undefined) tierCounts[t]++;
+    }
+
+    const criticalStudents = studentData.filter(d =>
+      d.iepCards.some(c => c.displayScore !== null && getSkillTier(c.displayScore).tier === 'critical')
+    ).map(d => d.student.code);
+
+    // ── Caseload Summary HTML ────────────────────────────────────────────────
+    let html = `<div class="cse-caseload-summary">`;
+    html += `<h3>📊 Caseload Overview — ${escapeHtml(periodKey)} | Generated ${escapeHtml(today)}</h3>`;
+    html += `<div class="cse-kpi-row">`;
+    html += `<div class="cse-kpi"><div class="cse-kpi-val">${studentData.length}</div><div class="cse-kpi-lbl">Active Students</div></div>`;
+    if (avgProgress !== null) {
+      html += `<div class="cse-kpi"><div class="cse-kpi-val">${avgProgress}%</div><div class="cse-kpi-lbl">Avg Progress</div></div>`;
+    }
+    html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(134,239,172,0.9)">${tierCounts.excellent}</div><div class="cse-kpi-lbl">Excellent</div></div>`;
+    html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(147,197,253,0.9)">${tierCounts['on-track']}</div><div class="cse-kpi-lbl">On Track</div></div>`;
+    html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(252,211,77,0.9)">${tierCounts['needs-support']}</div><div class="cse-kpi-lbl">Needs Support</div></div>`;
+    html += `<div class="cse-kpi"><div class="cse-kpi-val" style="color:rgba(252,165,165,0.9)">${tierCounts.critical}</div><div class="cse-kpi-lbl">Critical</div></div>`;
+    html += `</div>`;
+
+    if (criticalStudents.length > 0) {
+      html += `<div class="cse-flagged-list">🚨 <strong>Flagged for immediate attention:</strong> ${criticalStudents.map(c => escapeHtml(c)).join(', ')}</div>`;
+    }
+    html += `</div>`;
+
+    // ── Students grouped by class ────────────────────────────────────────────
+    const sortedClasses = [...classGroups.keys()].sort();
+    for (const className of sortedClasses) {
+      const students = classGroups.get(className);
+      html += `<div class="cse-class-section">`;
+      html += `<div class="cse-class-header">🏫 ${escapeHtml(className)}<span style="opacity:0.5;font-weight:400;font-size:13px;">&nbsp;(${students.length} student${students.length !== 1 ? 's' : ''})</span></div>`;
+
+      for (const student of students) {
+        const d = studentData.find(x => x.student.code === student.code);
+        if (!d) continue;
+        const { iepCards, deseCards } = d;
+        const skills = aiResultMap.get(student.code) || [];
+        const iepDate = student.iep_due ? formatDate(student.iep_due) : null;
+        const classNames = d.classes.join(', ') || className;
+
+        html += `<div class="cse-student-block">`;
+        html += `<div class="cse-student-header">`;
+        const studentDisplayName = student.name ? student.name : student.code;
+        html += `<span class="cse-student-code">${escapeHtml(studentDisplayName)}</span>`;
+        if (student.name) {
+          html += `<span class="cse-student-meta" style="opacity:0.4;">(${escapeHtml(student.code)})</span>`;
+        }
+        html += `<span class="cse-student-meta">`;
+        html += escapeHtml(classNames);
+        if (iepDate) html += ` · IEP Due: ${escapeHtml(iepDate)}`;
+        html += `</span></div>`;
+
+        // IEP Goals
+        if (iepCards.length > 0) {
+          if (!isParentFriendly) {
+            html += `<div style="font-size:12px;font-weight:600;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">🎯 ${escapeHtml(termIEPGoal)}s</div>`;
+          }
+          for (const card of iepCards) {
+            const ai = skills.find(s => s.code === card.code && (s.source === 'iep' || !s.source));
+            const tierInfo = getSkillTier(card.displayScore);
+            const tierLabel = isParentFriendly
+              ? ({ excellent: 'Doing Great', 'on-track': 'Making Progress', 'needs-support': 'Needs More Practice', critical: 'Needs Help Right Away' })[tierInfo.tier] || tierInfo.label
+              : tierInfo.label;
+
+            html += `<div class="cse-goal-block tier-${escapeHtml(tierInfo.tier)}">`;
+            html += `<div class="cse-goal-title">${escapeHtml(card.code)} — ${escapeHtml(card.area)}<span class="cse-tier-badge ${escapeHtml(tierInfo.tier)}">${escapeHtml(tierLabel)}</span></div>`;
+
+            // Full description from AI
+            if (ai && ai.description) {
+              html += `<div class="cse-goal-desc">${escapeHtml(ai.description)}</div>`;
+            }
+
+            // Stats row
+            const score = card.displayScore !== null ? `${card.displayScore}%` : '—';
+            const baseline = card.baseline !== null ? `${card.baseline}%` : '?';
+            const target = card.target !== null ? `${card.target}%` : '?';
+            html += `<div class="cse-goal-stats">`;
+            html += `<span>Current: <strong>${escapeHtml(score)}</strong></span>`;
+            html += `<span>${escapeHtml(termBaseline)}: ${escapeHtml(baseline)}</span>`;
+            html += `<span>${escapeHtml(termTarget)}: ${escapeHtml(target)}</span>`;
+            html += `<span>${escapeHtml(card.dataPoints.toString())} ${escapeHtml(termDataPts)}</span>`;
+            html += `</div>`;
+
+            // Delta (compare to previous period)
+            if (comparePrev && card.previousAvg !== null && card.currentAvg !== null && prevDateRange) {
+              const diff = card.currentAvg - card.previousAvg;
+              const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+              const deltaClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+              html += `<div class="cse-delta ${escapeHtml(deltaClass)}">${escapeHtml(arrow)} ${Math.abs(diff).toFixed(1)}% change (${escapeHtml(card.previousAvg.toString())}% → ${escapeHtml(card.currentAvg.toString())}%)</div>`;
+            }
+
+            // AI narrative
+            if (ai && ai.summary) {
+              html += `<div class="cse-goal-narrative">🤖 ${escapeHtml(ai.summary)}</div>`;
+            }
+
+            // Goal recommendation (professional mode only, needs-support/critical tiers)
+            if (!isParentFriendly && ai && ai.goal_recommendation && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical')) {
+              html += `<div class="cse-goal-rec">💡 <strong>Goal Recommendation:</strong> ${escapeHtml(ai.goal_recommendation)}</div>`;
+            }
+
+            html += `</div>`; // .cse-goal-block
+          }
+        } else {
+          html += `<div class="cse-no-goals">No active ${termIEPGoal}s with numeric data</div>`;
+        }
+
+        // DESE Standards (optional)
+        if (includeDese && deseCards.length > 0) {
+          html += `<div style="font-size:12px;font-weight:600;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;margin:14px 0 10px;">📚 DESE Standards</div>`;
+          for (const card of deseCards) {
+            const ai = skills.find(s => s.code === card.code && s.source === 'dese');
+            const tierInfo = getSkillTier(card.displayScore);
+            const tierLabel = isParentFriendly
+              ? ({ excellent: 'Doing Great', 'on-track': 'Making Progress', 'needs-support': 'Needs More Practice', critical: 'Needs Help Right Away' })[tierInfo.tier] || tierInfo.label
+              : tierInfo.label;
+
+            html += `<div class="cse-goal-block tier-${escapeHtml(tierInfo.tier)}">`;
+            html += `<div class="cse-goal-title">${escapeHtml(card.code)}<span class="cse-tier-badge ${escapeHtml(tierInfo.tier)}">${escapeHtml(tierLabel)}</span></div>`;
+
+            if (ai && ai.description) {
+              html += `<div class="cse-goal-desc">${escapeHtml(ai.description)}</div>`;
+            }
+
+            const score = card.displayScore !== null ? `${card.displayScore}%` : '—';
+            html += `<div class="cse-goal-stats">`;
+            html += `<span>Score: <strong>${escapeHtml(score)}</strong></span>`;
+            html += `<span>${escapeHtml(String(card.itemCount))} items</span>`;
+            html += `</div>`;
+
+            if (ai && ai.summary) {
+              html += `<div class="cse-goal-narrative">🤖 ${escapeHtml(ai.summary)}</div>`;
+            }
+
+            html += `</div>`;
+          }
+        }
+
+        html += `</div>`; // .cse-student-block
+      }
+
+      html += `</div>`; // .cse-class-section
+    }
+
+    return html;
   }
 
   /**

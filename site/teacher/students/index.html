@@ -2432,7 +2432,452 @@
         margin: 0 20px 12px;
       }
 
-      /* ── Print styles for Skills Summary ── */
+      /* ── Caseload Skills Export Modal ── */
+      .cse-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .cse-modal {
+        background: #1a1a2e;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        padding: 28px 32px;
+        width: 100%;
+        max-width: 620px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        color: rgba(255, 255, 255, 0.9);
+      }
+      .cse-modal h2 {
+        margin: 0 0 20px 0;
+        font-size: 20px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .cse-section {
+        margin-bottom: 22px;
+      }
+      .cse-section-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.55;
+        margin-bottom: 10px;
+      }
+      .cse-quarter-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .cse-q-btn {
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .cse-q-btn:hover {
+        background: rgba(255, 255, 255, 0.10);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .cse-q-btn.active {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.5);
+        color: rgba(147, 197, 253, 1);
+        font-weight: 600;
+      }
+      .cse-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      .cse-toggle-row input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: rgba(59, 130, 246, 0.8);
+      }
+      .cse-toggle-label {
+        cursor: pointer;
+        user-select: none;
+      }
+      .cse-toggle-hint {
+        font-size: 11px;
+        opacity: 0.5;
+        margin-left: 28px;
+        margin-top: -6px;
+        margin-bottom: 6px;
+      }
+      .cse-mode-row {
+        display: flex;
+        gap: 10px;
+      }
+      .cse-mode-btn {
+        flex: 1;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.15s;
+      }
+      .cse-mode-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .cse-mode-btn.active {
+        background: rgba(139, 92, 246, 0.18);
+        border-color: rgba(139, 92, 246, 0.4);
+        color: rgba(196, 181, 253, 1);
+        font-weight: 600;
+      }
+      .cse-mode-btn small {
+        display: block;
+        opacity: 0.6;
+        font-size: 11px;
+        font-weight: 400;
+        margin-top: 2px;
+      }
+      .cse-format-row {
+        display: flex;
+        gap: 10px;
+      }
+      .cse-format-btn {
+        flex: 1;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.15s;
+      }
+      .cse-format-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .cse-format-btn.active {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.35);
+        color: rgba(134, 239, 172, 1);
+        font-weight: 600;
+      }
+      .cse-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 24px;
+      }
+      .cse-generate-btn {
+        flex: 1;
+        padding: 12px 20px;
+        border-radius: 10px;
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        background: rgba(139, 92, 246, 0.15);
+        color: rgba(196, 181, 253, 1);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .cse-generate-btn:hover:not(:disabled) {
+        background: rgba(139, 92, 246, 0.25);
+        border-color: rgba(139, 92, 246, 0.6);
+      }
+      .cse-generate-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .cse-cancel-btn {
+        padding: 12px 20px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .cse-cancel-btn:hover {
+        background: rgba(255, 255, 255, 0.10);
+      }
+      .cse-progress-section {
+        margin-top: 20px;
+        display: none;
+      }
+      .cse-progress-section.visible {
+        display: block;
+      }
+      .cse-progress-bar-wrap {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+      }
+      .cse-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, rgba(139,92,246,0.8), rgba(59,130,246,0.8));
+        border-radius: 4px;
+        transition: width 0.4s ease;
+        width: 0%;
+      }
+      .cse-progress-text {
+        font-size: 13px;
+        opacity: 0.75;
+        margin-bottom: 4px;
+      }
+      /* ── Caseload Export Report ── */
+      #cseReport {
+        margin-top: 24px;
+        display: none;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      #cseReport.visible {
+        display: block;
+      }
+      .cse-report-actions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .cse-report-action-btn {
+        padding: 10px 18px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.07);
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cse-report-action-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .cse-caseload-summary {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+      }
+      .cse-caseload-summary h3 {
+        margin: 0 0 14px 0;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .cse-kpi-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .cse-kpi {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 10px 14px;
+        text-align: center;
+        min-width: 80px;
+      }
+      .cse-kpi-val {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .cse-kpi-lbl {
+        font-size: 11px;
+        opacity: 0.55;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 4px;
+      }
+      .cse-flagged-list {
+        font-size: 13px;
+        opacity: 0.8;
+        margin-top: 10px;
+      }
+      .cse-class-section {
+        margin-bottom: 32px;
+      }
+      .cse-class-header {
+        font-size: 15px;
+        font-weight: 700;
+        padding: 10px 0;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .cse-student-block {
+        margin-bottom: 24px;
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .cse-student-header {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+      }
+      .cse-student-code {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .cse-student-meta {
+        font-size: 12px;
+        opacity: 0.55;
+      }
+      .cse-goal-block {
+        margin-bottom: 14px;
+        padding-left: 14px;
+        border-left: 3px solid rgba(255, 255, 255, 0.10);
+      }
+      .cse-goal-block.tier-excellent { border-left-color: rgba(34, 197, 94, 0.5); }
+      .cse-goal-block.tier-on-track { border-left-color: rgba(59, 130, 246, 0.5); }
+      .cse-goal-block.tier-needs-support { border-left-color: rgba(245, 158, 11, 0.5); }
+      .cse-goal-block.tier-critical { border-left-color: rgba(239, 68, 68, 0.5); }
+      .cse-goal-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 3px;
+      }
+      .cse-goal-desc {
+        font-size: 12px;
+        opacity: 0.65;
+        margin-bottom: 6px;
+        line-height: 1.5;
+      }
+      .cse-goal-stats {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 6px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .cse-goal-narrative {
+        font-size: 13px;
+        opacity: 0.85;
+        line-height: 1.55;
+        margin-top: 6px;
+      }
+      .cse-goal-rec {
+        font-size: 12px;
+        background: rgba(245, 158, 11, 0.08);
+        border-left: 3px solid rgba(245, 158, 11, 0.4);
+        padding: 6px 10px;
+        border-radius: 0 6px 6px 0;
+        margin-top: 6px;
+        line-height: 1.5;
+      }
+      .cse-tier-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 2px 7px;
+        border-radius: 4px;
+        margin-left: 6px;
+        vertical-align: middle;
+      }
+      .cse-tier-badge.excellent { background: rgba(34,197,94,0.15); color: rgba(134,239,172,1); }
+      .cse-tier-badge.on-track { background: rgba(59,130,246,0.15); color: rgba(147,197,253,1); }
+      .cse-tier-badge.needs-support { background: rgba(245,158,11,0.15); color: rgba(252,211,77,1); }
+      .cse-tier-badge.critical { background: rgba(239,68,68,0.15); color: rgba(252,165,165,1); }
+      .cse-delta {
+        font-size: 12px;
+        margin-top: 4px;
+        font-style: italic;
+        opacity: 0.7;
+      }
+      .cse-delta.up { color: rgba(134, 239, 172, 0.9); }
+      .cse-delta.down { color: rgba(252, 165, 165, 0.9); }
+      .cse-delta.flat { opacity: 0.5; }
+      .cse-no-goals {
+        font-size: 13px;
+        opacity: 0.45;
+        padding-left: 14px;
+      }
+
+      /* ── Caseload Export Print styles ── */
+      @media print {
+        .cse-overlay, .cse-modal > *:not(#cseReport) {
+          display: none !important;
+        }
+        #cseReport {
+          display: block !important;
+          margin: 0;
+          padding: 0;
+        }
+        .cse-report-actions {
+          display: none !important;
+        }
+        .cse-student-block {
+          page-break-inside: avoid;
+          break-inside: avoid;
+          border: 1px solid #ccc !important;
+          background: #fff !important;
+          color: #111 !important;
+          margin-bottom: 20px;
+        }
+        .cse-class-section {
+          page-break-before: auto;
+        }
+        .cse-caseload-summary {
+          border: 1px solid #ccc !important;
+          background: #f9f9f9 !important;
+          color: #111 !important;
+        }
+        .cse-kpi { background: #f0f0f0 !important; }
+        .cse-kpi-val, .cse-kpi-lbl, .cse-goal-title, .cse-goal-desc,
+        .cse-goal-stats, .cse-goal-narrative, .cse-goal-rec, .cse-student-code,
+        .cse-student-meta, .cse-class-header { color: #111 !important; }
+        .cse-tier-badge.excellent { background: #dcfce7 !important; color: #166534 !important; }
+        .cse-tier-badge.on-track { background: #dbeafe !important; color: #1e40af !important; }
+        .cse-tier-badge.needs-support { background: #fef3c7 !important; color: #92400e !important; }
+        .cse-tier-badge.critical { background: #fee2e2 !important; color: #991b1b !important; }
+        .cse-goal-block.tier-excellent { border-left-color: #166534 !important; }
+        .cse-goal-block.tier-on-track { border-left-color: #1e40af !important; }
+        .cse-goal-block.tier-needs-support { border-left-color: #92400e !important; }
+        .cse-goal-block.tier-critical { border-left-color: #991b1b !important; }
+        .cse-goal-rec { background: #fef3c7 !important; border-left-color: #92400e !important; color: #111 !important; }
+      }
+
       @media print {
         /* Ensure SVG icons print properly */
         svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -2662,6 +3107,7 @@
             <button id="stExpandStudentsBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg> Expand Students</button>
             <button id="stExpandAllFullBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/><polyline points="6 14 12 20 18 14"/></svg> Expand All</button>
             <button id="stExportBtn" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Export</button>
+            <button id="stCaseloadSkillsExportBtn" class="st-btn st-btn-small" type="button" title="Export AI-powered skills summary for all students"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Caseload Skills</button>
             <button id="stImportCSV" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import</button>
             <button id="stMasterSpreadsheet" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> Spreadsheet</button>
             <button id="stQuickEntry" class="st-btn st-btn-small st-btn-quick-entry" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Entry</button>
