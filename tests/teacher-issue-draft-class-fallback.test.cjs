@@ -263,6 +263,85 @@ await test('auto-creates class when neither teacher-scoped nor fallback query fi
     assert(autoCreateCalled, 'Auto-create branch should be reached when class not found anywhere');
 });
 
+// ── Week 13 regression: empty-meta guard ─────────────────────────────────────
+// These tests verify that the issuance handler FAILS LOUDLY (HTTP 422) instead
+// of silently inserting an assignment_instance row with meta = {}.
+// Root cause of the bug: parseTxtToMeta returned null for unparseable content,
+// and the old code continued to create the assignment with meta = {} rather than
+// returning an error.
+
+await test('returns 422 when file-type draft content has no DAY/Chapter headers', async () => {
+  // Simulate a teacher uploading a TXT file for a Cause-and-Effect assignment
+  // whose body has no recognised section headers (the actual Week 13 failure mode).
+  const DRAFT_UNPARSEABLE = {
+    title: 'WEEK 13 — LOST IN KRAGDON-AH (CHAPTERS 38–40) Cause and Effect',
+    className: 'Language Arts 3 SC',
+    assignment: {
+      kind: 'file',
+      name: 'WEEK_13_CAUSE_EFFECT.txt',
+      // Deliberately has no "DAY N" or "Chapter N:" headers so parseTxtToMeta returns null
+      text: 'This assignment file has no structured section headers.\nJust plain text about cause and effect.',
+      link: null,
+    },
+  };
+
+  _fetchQueue = [
+    // 1. Teacher-scoped class lookup → class found directly (no fallback)
+    () => okJson([{ id: 'class-uuid-w13', name: 'Language Arts 3 SC', teacher_id: TEACHER_UUID }]),
+    // 2. class_enrollments → empty (simplify: zero students enrolled)
+    () => okJson([]),
+    // 3. Enrollments fallback → also empty
+    () => okJson([]),
+    // The 422 should be returned BEFORE the duplicate-check/assignment-create fetches.
+    // Any unexpected fetch beyond this point will throw (queue is empty).
+    ...REMAINING_CALL_STUBS,
+  ];
+
+  const event = makeEvent({ draft: DRAFT_UNPARSEABLE });
+  const response = await handler(event);
+  const body = JSON.parse(response.body);
+
+  assert.strictEqual(response.statusCode, 422, 'Should return 422 for unparseable content (not 200 with meta = {})');
+  assert.strictEqual(body.ok, false, 'ok should be false');
+  assert.ok(body.error && body.error.length > 0, 'Error message should be non-empty');
+  assert.ok(body.error.includes('DAY') || body.error.includes('Chapter'), 'Error message should mention required header formats');
+});
+
+await test('returns 422 when re-issuing a draft with no text whose existing assignment has empty meta', async () => {
+  // Simulates the second broken issuance: the draft was stripped of its content
+  // (assignment.text is falsy), and the existing assignment already has meta = {}.
+  const DRAFT_STRIPPED = {
+    title: 'WEEK 13 — LOST IN KRAGDON-AH (CHAPTERS 38–40) Cause and Effect',
+    className: 'Language Arts 3 SC',
+    // assignment has no text (stripped after first issue)
+    assignment: {
+      kind: 'file',
+      name: 'WEEK_13_CAUSE_EFFECT.txt',
+      text: '',   // stripped
+      link: null,
+    },
+  };
+
+  _fetchQueue = [
+    // 1. Teacher-scoped class lookup → class found
+    () => okJson([{ id: 'class-uuid-w13-2', name: 'Language Arts 3 SC', teacher_id: TEACHER_UUID }]),
+    // 2. class_enrollments → one student
+    () => okJson([{ student_id: 'student-uuid-s011' }]),
+    // 3. Duplicate check → existing assignment found WITH empty meta
+    () => okJson([{ id: 'assignment-uuid-w13', meta: {} }]),
+    // 422 returned here — no more fetches expected.
+    ...REMAINING_CALL_STUBS,
+  ];
+
+  const event = makeEvent({ draft: DRAFT_STRIPPED });
+  const response = await handler(event);
+  const body = JSON.parse(response.body);
+
+  assert.strictEqual(response.statusCode, 422, 'Should return 422 when existing assignment has empty meta and no new content is provided');
+  assert.strictEqual(body.ok, false, 'ok should be false');
+  assert.ok(body.error && body.error.length > 0, 'Error message should be non-empty');
+});
+
 console.log('\n✓ All teacher-issue-draft class-fallback tests complete\n');
 
 })();

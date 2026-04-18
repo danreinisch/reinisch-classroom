@@ -36,6 +36,24 @@ const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig(
 const { SESSION_SECRET } = process.env;
 
 /**
+ * Returns true if an assignment meta object contains parseable content.
+ * Valid meta must have either:
+ *   - a non-empty `days` array (TXT-parsed assignments), OR
+ *   - a non-empty `html_src` string (HTML assignments).
+ * An empty object `{}` or missing/null value is always invalid and must never
+ * be persisted as the `meta` of an issued assignment.
+ *
+ * @param {*} meta - The meta value to validate
+ * @returns {boolean}
+ */
+function hasValidAssignmentMeta(meta) {
+  if (!meta || typeof meta !== 'object') return false;
+  if (Array.isArray(meta.days) && meta.days.length > 0) return true;
+  if (typeof meta.html_src === 'string' && meta.html_src.length > 0) return true;
+  return false;
+}
+
+/**
  * Returns the starting calendar year of the current school year.
  * Aug–Dec → current year; Jan–Jul → current year - 1.
  * @returns {number}
@@ -253,10 +271,20 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       continue;
     }
 
-    // Check for Chapter header: "Chapter N: Title" or "Chapter N — Title"
-    // (after stripping dashes: "--- Chapter 35: Harta-ak ---" → "Chapter 35: Harta-ak")
-    // Map Chapter N → day_number N with a questions-type day
-    const chapterMatch = strippedLine.match(/^Chapter\s+(\d+)\s*[:\-—]\s*(.*)$/i);
+    // Check for Chapter header. Supported formats (all case-insensitive, after dash-stripping):
+    //   "Chapter 38: Title"                (colon separator)
+    //   "Chapter 38 — Title"               (em-dash separator)
+    //   "Chapter 38 - Title"               (hyphen separator)
+    //   "Chapters 38–40: Cause and Effect" (plural + en-dash range + separator)
+    //   "Chapter 38 Cause and Effect"      (no separator — Week 13 Cause and Effect shape)
+    //   "Chapter 38"                       (standalone chapter number)
+    // Strategy: try with an explicit separator first; fall back to bare "Chapter N [rest]".
+    let chapterMatch = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?\s*[:–—-]\s*(.*)$/i);
+    if (!chapterMatch) {
+      // No separator present — treat any trailing text as the chapter subtitle.
+      const m = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?(?:\s+(.+))?$/i);
+      if (m) chapterMatch = m;
+    }
     if (chapterMatch) {
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
         currentDay.questions.push(currentQuestion);
@@ -1025,8 +1053,23 @@ exports.handler = async (event) => {
         if (parsedMeta) {
           console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
         } else {
-          console.log(`[teacher-issue-draft] [${requestId}] No structured content found in assignment file`);
-          contentWarning = 'No structured content was parsed from the assignment file. Students will see "No Content Available". Check that the file uses the correct format (e.g., "DAY 1 QUESTIONS" or "--- Chapter 35: Title ---" section headers).';
+          // Fail loudly: never silently insert an assignment with meta = {}.
+          // The parser returned null which means no DAY/Chapter section headers were
+          // found.  Returning a 422 here prevents orphaned assignment_instance rows
+          // whose associated assignment has empty meta (the root cause of the Week 13
+          // "No Content Available" bug).
+          const parseErrorMsg =
+            `Cannot issue: no structured content was found in "${fileName}". ` +
+            `The file must contain "DAY N" or "Chapter N:" section headers ` +
+            `(e.g. "DAY 1 QUESTIONS", "Chapter 38: Title"). ` +
+            `Check that the file is correctly formatted for class "${resolvedClassName}".`;
+          console.error(`[teacher-issue-draft] [${requestId}] ${parseErrorMsg}`);
+          return jsonResponse(
+            event, 422,
+            { ok: false, error: parseErrorMsg },
+            { 'Cache-Control': 'no-store' },
+            requestId
+          );
         }
       }
     }
@@ -1055,6 +1098,25 @@ exports.handler = async (event) => {
         assignmentId = existingAssignments[0].id;
         isDuplicate = true;
         console.log(`[teacher-issue-draft] [${requestId}] Found duplicate assignment with ID: ${assignmentId}, reusing it`);
+
+        // Guard: if the draft carries no new parseable content AND the existing
+        // assignment already has empty meta, re-issuing would create more orphaned
+        // instances that the Student Portal cannot render.  Fail loudly instead of
+        // silently repeating the same broken issuance.
+        if (!parsedMeta && !hasValidAssignmentMeta(existingAssignments[0].meta)) {
+          const reissueErrMsg =
+            `Cannot re-issue: the existing assignment (ID ${assignmentId}) has empty meta ` +
+            `and no new assignment file was provided. ` +
+            `Re-upload the assignment TXT file with "DAY N" or "Chapter N:" section headers ` +
+            `so that meta.days can be populated.`;
+          console.error(`[teacher-issue-draft] [${requestId}] ${reissueErrMsg}`);
+          return jsonResponse(
+            event, 422,
+            { ok: false, error: reissueErrMsg },
+            { 'Cache-Control': 'no-store' },
+            requestId
+          );
+        }
       }
     }
 
