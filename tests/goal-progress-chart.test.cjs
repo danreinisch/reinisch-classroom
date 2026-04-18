@@ -270,6 +270,176 @@ test('single entry per day is unchanged', () => {
   assert.ok(Math.abs(result[1].value - 65) < 0.01);
 });
 
+// ── Question Catalog helpers ───────────────────────────────────────────────
+
+// Replicate the pure helpers for isolated testing (mirrors student-portal-init.js)
+
+function dpScore(pt) {
+  if (pt.score != null) return Number(pt.score);
+  if (pt.is_correct === true)  return 100;
+  if (pt.is_correct === false) return 0;
+  return null;
+}
+
+function avgScore(points) {
+  const scores = points.map(dpScore).filter(s => s != null);
+  if (!scores.length) return null;
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+function filterDataPoints(points, filter) {
+  if (!filter || filter === 'all') return points;
+  return points.filter(pt => {
+    const s = dpScore(pt);
+    if (filter === 'correct') return s === 100 || pt.is_correct === true;
+    if (filter === 'missed')  return (s != null && s < 60) || pt.is_correct === false;
+    if (filter === 'partial') return s != null && s >= 60 && s < 100 && pt.is_correct !== true;
+    return true;
+  });
+}
+
+function defaultFilter(dataPoints) {
+  if (!dataPoints || !dataPoints.length) return 'all';
+  const s = avgScore(dataPoints);
+  if (s == null) return 'all';
+  return s < 80 ? 'missed' : 'all';
+}
+
+function computeQuarterSummary(dataPoints, groups) {
+  const total = dataPoints.length;
+  const correct = dataPoints.filter(p => dpScore(p) === 100 || p.is_correct === true).length;
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const assignmentCount = groups.length;
+  let streak = 0;
+  for (const g of groups) {
+    const allCorrect = g.points.every(p => dpScore(p) === 100 || p.is_correct === true);
+    if (allCorrect) { streak++; } else { break; }
+  }
+  return { total, correct, pct, streak, assignmentCount };
+}
+
+console.log('\ndpScore helper');
+
+test('returns score field when present', () => {
+  assert.strictEqual(dpScore({ score: 80, is_correct: false }), 80);
+});
+
+test('returns 100 when is_correct is true and no score', () => {
+  assert.strictEqual(dpScore({ is_correct: true }), 100);
+});
+
+test('returns 0 when is_correct is false and no score', () => {
+  assert.strictEqual(dpScore({ is_correct: false }), 0);
+});
+
+test('returns null when no scoring info', () => {
+  assert.strictEqual(dpScore({}), null);
+});
+
+console.log('\nfilterDataPoints');
+
+const samplePoints = [
+  { is_correct: true },
+  { is_correct: false },
+  { score: 75, is_correct: null },
+  { score: 40, is_correct: null },
+  { score: 100, is_correct: null },
+];
+
+test('filter=all returns all points', () => {
+  assert.strictEqual(filterDataPoints(samplePoints, 'all').length, samplePoints.length);
+});
+
+test('filter=correct returns 100% or is_correct=true', () => {
+  const result = filterDataPoints(samplePoints, 'correct');
+  // is_correct true (dpScore=100) + score=100
+  assert.strictEqual(result.length, 2);
+});
+
+test('filter=missed returns <60% or is_correct=false', () => {
+  const result = filterDataPoints(samplePoints, 'missed');
+  // is_correct false (dpScore=0) + score=40
+  assert.strictEqual(result.length, 2);
+});
+
+test('filter=partial returns 60-99% and not is_correct=true', () => {
+  const result = filterDataPoints(samplePoints, 'partial');
+  // score=75 only
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(dpScore(result[0]), 75);
+});
+
+test('filter=missed returns empty for all-correct points', () => {
+  const allCorrect = [{ is_correct: true }, { score: 100 }];
+  assert.strictEqual(filterDataPoints(allCorrect, 'missed').length, 0);
+});
+
+console.log('\ndefaultFilter');
+
+test('returns missed when avg < 80', () => {
+  const pts = [{ is_correct: true }, { is_correct: false }, { is_correct: false }];
+  assert.strictEqual(defaultFilter(pts), 'missed');
+});
+
+test('returns all when avg >= 80', () => {
+  const pts = [{ is_correct: true }, { is_correct: true }, { is_correct: true }, { score: 80 }];
+  assert.strictEqual(defaultFilter(pts), 'all');
+});
+
+test('returns all for empty array', () => {
+  assert.strictEqual(defaultFilter([]), 'all');
+});
+
+console.log('\ncomputeQuarterSummary');
+
+test('counts totals, correct, pct, and assignmentCount', () => {
+  const groups = [
+    { points: [{ is_correct: true }, { is_correct: false }] },
+    { points: [{ is_correct: true }, { is_correct: true }] },
+  ];
+  const allPts = groups.flatMap(g => g.points);
+  const summary = computeQuarterSummary(allPts, groups);
+  assert.strictEqual(summary.total, 4);
+  assert.strictEqual(summary.correct, 3);
+  assert.strictEqual(summary.pct, 75);
+  assert.strictEqual(summary.assignmentCount, 2);
+});
+
+test('streak counts consecutive all-correct groups from newest', () => {
+  // Groups are passed in newest-first order (index 0 = most recent).
+  // computeQuarterSummary walks from index 0 until it finds a non-fully-correct group.
+  const groups = [
+    { points: [{ is_correct: true }] },   // index 0 — newest — all correct
+    { points: [{ is_correct: true }] },   // index 1 — all correct
+    { points: [{ is_correct: false }] },  // index 2 — has wrong answer, breaks streak
+    { points: [{ is_correct: true }] },   // index 3 — irrelevant (past the break)
+  ];
+  const allPts = groups.flatMap(g => g.points);
+  const summary = computeQuarterSummary(allPts, groups);
+  assert.strictEqual(summary.streak, 2);
+});
+
+test('streak is 0 when newest group has a wrong answer', () => {
+  const groups = [
+    { points: [{ is_correct: false }] },
+    { points: [{ is_correct: true }] },
+  ];
+  const allPts = groups.flatMap(g => g.points);
+  const summary = computeQuarterSummary(allPts, groups);
+  assert.strictEqual(summary.streak, 0);
+});
+
+test('streak uses score field (100 = correct)', () => {
+  const groups = [
+    { points: [{ score: 100 }, { score: 100 }] },
+    { points: [{ score: 80 }] },  // 80 not fully correct by our dpScore logic (not 100)
+  ];
+  const allPts = groups.flatMap(g => g.points);
+  const summary = computeQuarterSummary(allPts, groups);
+  // only first group fully correct
+  assert.strictEqual(summary.streak, 1);
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────
 
 console.log('');

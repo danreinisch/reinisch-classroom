@@ -1245,6 +1245,396 @@
         color: var(--muted, rgba(255,255,255,0.55));
       }
 
+      /* ====================================================================
+         Question Catalog — Quarter Summary, Filter Chips, Group-by, Inline Detail
+         ==================================================================== */
+
+      /* Quarter Summary */
+      .st-qcat-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .st-qcat-kpi {
+        flex: 1;
+        min-width: 90px;
+        padding: 10px 12px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 10px;
+        text-align: center;
+      }
+      .st-qcat-kpi__value {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 4px;
+        color: var(--ink, #f1f5f9);
+      }
+      .st-qcat-kpi__label {
+        font-size: 11px;
+        color: var(--muted, rgba(255,255,255,0.55));
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .st-qcat-celebrate {
+        font-size: 13px;
+        padding: 8px 14px;
+        background: rgba(34,197,94,0.12);
+        border: 1px solid rgba(34,197,94,0.25);
+        border-radius: 8px;
+        color: #4ade80;
+        margin-bottom: 10px;
+      }
+
+      /* Filter chips */
+      .st-qcat-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .st-qcat-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 12px;
+        min-height: 32px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink, #f1f5f9);
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+        user-select: none;
+      }
+      .st-qcat-chip:hover,
+      .st-qcat-chip:focus-visible {
+        background: rgba(255,255,255,0.12);
+        outline: none;
+      }
+      .st-qcat-chip[aria-pressed="true"] {
+        background: rgba(59,130,246,0.20);
+        border-color: rgba(59,130,246,0.45);
+        color: #93c5fd;
+        font-weight: 700;
+      }
+
+      /* Group-by toolbar */
+      .st-qcat-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+      .st-qcat-groupby-label {
+        font-size: 12px;
+        color: var(--muted, rgba(255,255,255,0.55));
+        white-space: nowrap;
+      }
+      .st-qcat-groupby-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 10px;
+        min-height: 32px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--ink, #f1f5f9);
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .st-qcat-groupby-btn:hover,
+      .st-qcat-groupby-btn:focus-visible {
+        background: rgba(255,255,255,0.12);
+        outline: none;
+      }
+      .st-qcat-groupby-btn[aria-pressed="true"] {
+        background: rgba(59,130,246,0.18);
+        border-color: rgba(59,130,246,0.40);
+        color: #93c5fd;
+        font-weight: 600;
+      }
+
+      /* Group header (assignment / chapter grouping) */
+      .st-qcat-group {
+        margin-bottom: 8px;
+      }
+      .st-qcat-group-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 48px;
+        padding: 8px 12px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--ink, #f1f5f9);
+        font-size: 13px;
+        text-align: left;
+        transition: background 0.15s;
+        border-left: 3px solid rgba(59,130,246,0.5);
+      }
+      .st-qcat-group-header:hover,
+      .st-qcat-group-header:focus-visible {
+        background: rgba(255,255,255,0.10);
+        outline: none;
+      }
+      .st-qcat-group-header[aria-expanded="true"] {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom-color: transparent;
+      }
+      .st-qcat-group-title {
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+      }
+      .st-qcat-group-meta {
+        font-size: 12px;
+        color: var(--muted, rgba(255,255,255,0.55));
+        white-space: nowrap;
+      }
+      .st-qcat-group-score {
+        font-weight: 700;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .st-qcat-group-counts {
+        font-size: 12px;
+        display: flex;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .st-qcat-group-correct { color: #4ade80; }
+      .st-qcat-group-missed  { color: #f87171; }
+      .st-qcat-group-chevron {
+        flex-shrink: 0;
+        transition: transform 0.2s;
+        color: var(--muted, rgba(255,255,255,0.45));
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .st-qcat-group-chevron { transition: none; }
+      }
+      .st-qcat-group-header[aria-expanded="true"] .st-qcat-group-chevron {
+        transform: rotate(180deg);
+      }
+
+      /* Mini stacked distribution bar */
+      .st-qcat-distbar {
+        display: flex;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        width: 80px;
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.08);
+      }
+      .st-qcat-distbar__seg { height: 100%; }
+      .st-qcat-distbar__seg--100 { background: #22c55e; }
+      .st-qcat-distbar__seg--80  { background: #3b82f6; }
+      .st-qcat-distbar__seg--60  { background: #eab308; }
+      .st-qcat-distbar__seg--0   { background: #ef4444; }
+
+      /* Group body (holds question cards) */
+      .st-qcat-group-body {
+        background: rgba(0,0,0,0.20);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-top: none;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        padding: 8px 8px 10px;
+      }
+      .st-qcat-group-empty {
+        padding: 12px 8px;
+        font-size: 12px;
+        color: var(--muted, rgba(255,255,255,0.45));
+        text-align: center;
+      }
+
+      /* Question cards (collapsed summary) */
+      .st-qcat-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .st-qcat-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-left: 3px solid;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .st-qcat-card__summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 44px;
+        padding: 6px 10px;
+        background: none;
+        border: none;
+        color: var(--ink, #f1f5f9);
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .st-qcat-card__summary:hover,
+      .st-qcat-card__summary:focus-visible {
+        background: rgba(255,255,255,0.06);
+        outline: none;
+      }
+      .st-qcat-card__num {
+        font-weight: 700;
+        font-size: 11px;
+        color: var(--muted, rgba(255,255,255,0.55));
+        white-space: nowrap;
+        flex-shrink: 0;
+        min-width: 28px;
+      }
+      .st-qcat-card__dot {
+        flex-shrink: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .st-qcat-card__text {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .st-qcat-card__score {
+        flex-shrink: 0;
+        font-weight: 700;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .st-qcat-card__chevron {
+        flex-shrink: 0;
+        transition: transform 0.2s;
+        font-size: 10px;
+        color: var(--muted, rgba(255,255,255,0.35));
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .st-qcat-card__chevron { transition: none; }
+      }
+      .st-qcat-card__summary[aria-expanded="true"] .st-qcat-card__chevron {
+        transform: rotate(180deg);
+      }
+
+      /* Question card inline detail panel */
+      .st-qcat-card__detail {
+        padding: 10px 12px 12px;
+        border-top: 1px solid rgba(255,255,255,0.07);
+        font-size: 13px;
+        background: rgba(0,0,0,0.15);
+      }
+      .st-qcat-card__question {
+        font-weight: 600;
+        line-height: 1.45;
+        margin-bottom: 10px;
+        color: var(--ink, #f1f5f9);
+      }
+      .st-qcat-card__choices {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .st-qcat-choice {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--ink, #f1f5f9);
+        background: rgba(255,255,255,0.04);
+        border: 1px solid transparent;
+      }
+      .st-qcat-choice--correct {
+        background: rgba(34,197,94,0.12);
+        border-color: rgba(34,197,94,0.25);
+        color: #86efac;
+        font-weight: 600;
+      }
+      .st-qcat-choice--student-wrong {
+        background: rgba(239,68,68,0.12);
+        border-color: rgba(239,68,68,0.25);
+        color: #fca5a5;
+        font-weight: 600;
+      }
+      .st-qcat-choice__label {
+        font-size: 11px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .st-qcat-choice__badge {
+        font-size: 11px;
+        flex-shrink: 0;
+        margin-left: auto;
+        white-space: nowrap;
+      }
+      .st-qcat-card__fib {
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 6px;
+        font-style: italic;
+        font-size: 12px;
+        margin-bottom: 8px;
+        word-break: break-word;
+      }
+      .st-qcat-card__verdict {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .st-qcat-card__verdict--correct { color: #4ade80; }
+      .st-qcat-card__verdict--wrong   { color: #f87171; }
+      .st-qcat-card__verdict--partial { color: #facc15; }
+      .st-qcat-card__no-detail {
+        font-size: 12px;
+        color: var(--muted, rgba(255,255,255,0.50));
+        font-style: italic;
+      }
+      .st-qcat-card__meta {
+        font-size: 11px;
+        color: var(--muted, rgba(255,255,255,0.40));
+        margin-top: 6px;
+        border-top: 1px solid rgba(255,255,255,0.07);
+        padding-top: 6px;
+      }
+
+      /* No results message */
+      .st-qcat-no-results {
+        padding: 20px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted, rgba(255,255,255,0.50));
+        background: rgba(255,255,255,0.02);
+        border: 1px dashed rgba(255,255,255,0.12);
+        border-radius: 8px;
+      }
+      .st-qcat-no-results__emoji {
+        font-size: 28px;
+        display: block;
+        margin-bottom: 8px;
+      }
+
       /* Glass popup */
       .st-dot-popup {
         position: fixed;
@@ -5932,8 +6322,8 @@
     <div class="st-toast-container" id="toastContainer"></div>
 
     <!-- CACHE-BUST: Update the ?v= parameter below whenever JS files change. Use format: YYYYMMDD or PR number. -->
-    <script defer src="/web/student-shell.js?v=20260331"></script>
-    <script src="/web/rc-modal.js?v=20260331"></script>
-    <script defer src="/web/student-portal-init.js?v=20260331a"></script>
+    <script defer src="/web/student-shell.js?v=20260418-catalog"></script>
+    <script src="/web/rc-modal.js?v=20260418-catalog"></script>
+    <script defer src="/web/student-portal-init.js?v=20260418-catalog"></script>
   </body>
 </html>

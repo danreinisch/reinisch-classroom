@@ -123,3 +123,23 @@ jobs:
         env:
           BUILD_DIR: '.'
           LEAK_CHECK_STRICT: '0'
+
+  cache-bust-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Full history required so origin/main is available for the diff
+          fetch-depth: 0
+      
+      - name: Fetch main branch for diff base
+        run: git fetch origin main:refs/remotes/origin/main
+      
+      - name: Check cache-bust strings are bumped
+        run: bash scripts/check-cache-bust.sh
+        env:
+          BASE_REF: origin/main

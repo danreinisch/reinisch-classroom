@@ -604,7 +604,7 @@ default-src 'self';
 script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; 
 style-src 'self' 'unsafe-inline'; 
 img-src 'self' data: https:; 
-font-src 'self' data:; 
+font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; 
 connect-src 'self' https://*.supabase.co https://*.supabase.io https://*.netlify.app; 
 media-src 'self'; 
 object-src 'none'; 
