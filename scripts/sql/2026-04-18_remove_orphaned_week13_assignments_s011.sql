@@ -1,23 +1,31 @@
 -- =============================================================================
 -- Date:        2026-04-18
--- Purpose:     Remove orphaned Week 13 assignment instance for student S011.
---              The parent assignment (ID 362) was already deleted from the
---              Teacher Center Work page, leaving a stale student-side record
---              that the Student Portal cannot load.
+-- Purpose:     Remove TWO orphaned Week 13 assignment instances for student
+--              S011.  The original issuance produced an empty-meta row
+--              (instance d2362c85, assignment 362).  A subsequent re-issuance
+--              from the Teacher Center created a second empty-meta row
+--              (instance 56aaf3a4, assignment 401) instead of repairing the
+--              first.  Both orphaned records must be removed so the Student
+--              Portal no longer shows a broken Week 13 assignment for S011.
 --
--- Instance ID: d2362c85-40b5-4fd9-b36e-8898b95f1346
--- Assignment ID: 362
+-- Instance 1 (original issuance):
+--   Instance ID:   d2362c85-40b5-4fd9-b36e-8898b95f1346
+--   Assignment ID: 362
+--
+-- Instance 2 (re-issuance):
+--   Instance ID:   56aaf3a4-7a42-4408-9a0b-2e03af6bf140
+--   Assignment ID: 401
+--
 -- Student tab:  S011
--- Due date shown in portal: Apr 24, 2026
 -- Assignment title: WEEK 13 — LOST IN KRAGDON-AH (CHAPTERS 38–40)
 --                   Cause and Effect — S011
 --
--- Original console error:
+-- Console errors (identical message, different IDs):
 --   [student-portal] Assignment has no structured content (meta.days missing
 --   or empty). This may indicate a content parsing failure during issuance or
 --   an orphaned record.
---   Instance ID: d2362c85-40b5-4fd9-b36e-8898b95f1346
---   Assignment ID: 362
+--   Instance ID: d2362c85-40b5-4fd9-b36e-8898b95f1346  /  Assignment ID: 362
+--   Instance ID: 56aaf3a4-7a42-4408-9a0b-2e03af6bf140  /  Assignment ID: 401
 --
 -- Instructions:
 --   1. Open the Supabase SQL editor for the project.
@@ -42,19 +50,19 @@ BEGIN;
 
 -- ── Constants ─────────────────────────────────────────────────────────────────
 -- The CTE below centralises the target IDs for the SELECT preview.
--- PostgreSQL CTEs are statement-scoped and cannot be referenced across
--- separate statements, so the DELETE statements (step 2 & 3) repeat the same
--- UUID literal — this is intentional and is the standard pattern for psql
--- maintenance scripts.
+-- Both orphaned instance IDs are listed here once; the IN (...) lists in the
+-- DELETE statements below repeat the same literals (PostgreSQL CTEs are
+-- statement-scoped and cannot span multiple statements — intentional by design).
 WITH target (instance_id, assignment_id) AS (
-  VALUES (
-    'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid,
-    362::bigint
-  )
+  VALUES
+    ('d2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid, 362::bigint),
+    ('56aaf3a4-7a42-4408-9a0b-2e03af6bf140'::uuid, 401::bigint)
 )
 
 -- ── 1. Preview: inspect the rows that will be affected ────────────────────────
 -- Review this output before issuing COMMIT.
+-- You should see up to 2 rows in assignment_instances (one per orphan) plus any
+-- dependent rows in submissions, goal_progress, and goal_data_points.
 SELECT
   'assignment_instances'        AS source_table,
   ai.id::text                   AS row_id,
@@ -106,25 +114,38 @@ FROM public.goal_data_points gdp
 JOIN target t ON gdp.assignment_instance_id = t.instance_id;
 
 -- ── 2. Delete dependent rows ──────────────────────────────────────────────────
--- The UUID below matches the CTE constant above (PostgreSQL CTEs cannot span
--- multiple statements, so the literal is repeated — intentional by design).
+-- The UUIDs below match the CTE constants above (PostgreSQL CTEs cannot span
+-- multiple statements, so the literals are repeated — intentional by design).
+
 -- 2a. goal_data_points (ON DELETE SET NULL — remove explicitly)
 DELETE FROM public.goal_data_points
-WHERE assignment_instance_id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+WHERE assignment_instance_id IN (
+  'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid,
+  '56aaf3a4-7a42-4408-9a0b-2e03af6bf140'::uuid
+);
 
 -- 2b. goal_progress (ON DELETE SET NULL — remove explicitly)
 DELETE FROM public.goal_progress
-WHERE assignment_instance_id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+WHERE assignment_instance_id IN (
+  'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid,
+  '56aaf3a4-7a42-4408-9a0b-2e03af6bf140'::uuid
+);
 
 -- 2c. submissions (ON DELETE CASCADE — removed explicitly for clarity)
 DELETE FROM public.submissions
-WHERE instance_id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+WHERE instance_id IN (
+  'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid,
+  '56aaf3a4-7a42-4408-9a0b-2e03af6bf140'::uuid
+);
 
--- ── 3. Delete the orphaned assignment instance ────────────────────────────────
--- This is idempotent: if the row no longer exists, DELETE affects 0 rows and
+-- ── 3. Delete the orphaned assignment instances ───────────────────────────────
+-- This is idempotent: if a row no longer exists, DELETE affects 0 rows and
 -- does not raise an error.
 DELETE FROM public.assignment_instances
-WHERE id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+WHERE id IN (
+  'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid,
+  '56aaf3a4-7a42-4408-9a0b-2e03af6bf140'::uuid
+);
 
 -- ── 4. Commit (or roll back) ──────────────────────────────────────────────────
 -- Default is ROLLBACK so the first run is always a dry-run.

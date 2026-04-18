@@ -7,10 +7,14 @@ Supabase migrations and are **not** executed automatically.
 ## Naming convention
 
 ```
-YYYY-MM-DD_short_description[_<uuid-prefix>].sql
+YYYY-MM-DD_short_description[_<student-id>].sql
 ```
 
-Example: `2026-04-18_remove_orphaned_week13_assignment_d2362c85.sql`
+Example: `2026-04-18_remove_orphaned_week13_assignments_s011.sql`
+
+When a script targets multiple rows of the same type (e.g. several orphaned
+instances for the same student), use a student-id or other stable qualifier as
+the suffix rather than a single UUID prefix.
 
 ## How to run a script
 
