@@ -2724,7 +2724,7 @@
           });
         });
         if (!assignmentId) return;
-        if (!/^\d+$/.test(assignmentId)) {
+        if (!/^\d+$/.test(assignmentId) || Number(assignmentId) < 1) {
           await rcAlert('Invalid ID', 'Assignment ID must be a positive integer.');
           return;
         }
