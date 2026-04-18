@@ -42,6 +42,15 @@ function buildItemsFromMeta(assignmentId, meta) {
         for (const q of day.questions) {
           const { goalCodes, deseCodes } = extractCodesFromHint(q.hint);
           const isFillInBlank = q.type === 'fill_in_blank';
+          // For fill_in_blank: prefer 'accepted' (Week 13 pipe-separated alternatives)
+          // over 'keywords' (older semicolon-separated format). When 'accepted' is present,
+          // treat each alternative as a keyword with min_keywords=1 (any match is correct).
+          const fibKeywords = isFillInBlank
+            ? (Array.isArray(q.accepted) && q.accepted.length > 0 ? q.accepted : (q.keywords || []))
+            : [];
+          const fibMinKeywords = isFillInBlank
+            ? (Array.isArray(q.accepted) && q.accepted.length > 0 ? 1 : (q.min_keywords || 2))
+            : 2;
           items.push({
             assignment_id: assignmentId,
             item_ref: `${day.day_number}_${q.number}`,
@@ -51,9 +60,10 @@ function buildItemsFromMeta(assignmentId, meta) {
             dese_codes: q.dese_codes || deseCodes,
             ...(isFillInBlank ? {
               scoring: {
-                keywords: q.keywords || [],
-                min_keywords: q.min_keywords || 2,
+                keywords: fibKeywords,
+                min_keywords: fibMinKeywords,
                 ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
+                ...(Array.isArray(q.accepted) && q.accepted.length > 0 ? { accepted: q.accepted } : {}),
               },
             } : {}),
             meta: {
@@ -65,9 +75,10 @@ function buildItemsFromMeta(assignmentId, meta) {
               hint: q.hint,
               ...(isFillInBlank ? {
                 scoring: {
-                  keywords: q.keywords || [],
-                  min_keywords: q.min_keywords || 2,
+                  keywords: fibKeywords,
+                  min_keywords: fibMinKeywords,
                   ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
+                  ...(Array.isArray(q.accepted) && q.accepted.length > 0 ? { accepted: q.accepted } : {}),
                 },
               } : {}),
             },

@@ -314,17 +314,26 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
         }
 
+        // Detect inline type-hint bracket tags: [T/F] → boolean, [Fill in the Blank] → fill_in_blank
+        const hasTFBracket = /\[T\/F\]/i.test(restOfLine);
+        const hasFIBBracket = /\[Fill\s+in\s+the\s+Blank\]/i.test(restOfLine);
+        let inlineType = 'mcq';
+        if (hasTFBracket) inlineType = 'boolean';
+        else if (hasFIBBracket) inlineType = 'fill_in_blank';
+
         // Remove all bracket tags and parenthetical type hints to get any remaining text
         const remainingText = restOfLine
           .replace(/\[IG:\s*[^\]]+\]/g, '')
           .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\[T\/F\]/gi, '')
+          .replace(/\[Fill\s+in\s+the\s+Blank\]/gi, '')
           .replace(/\([^)]*\)/g, '')
           .trim();
 
         currentQuestion = {
           number: qNumber,
           text: remainingText,
-          type: 'mcq',
+          type: inlineType,
           choices: [],
           correct: '',
           hint: ''
@@ -351,10 +360,40 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer:, ANSWER:, Answer:, or Correct:
-        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])/i);
+        // Check for Correct: TRUE/FALSE (Week 13 boolean format — must be tested before
+        // the single-letter check below because TRUE/FALSE start with letters T/F).
+        // Convert to A/B letter choices matching the Week 10 True/False radio-button format
+        // so the student portal renders radio buttons and scoring works the same way.
+        const correctBoolMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*(TRUE|FALSE)\b/i);
+        if (correctBoolMatch) {
+          const isTrue = correctBoolMatch[1].toUpperCase() === 'TRUE';
+          currentQuestion.type = 'boolean';
+          // Add True/False choices if not already present
+          if (currentQuestion.choices.length === 0) {
+            currentQuestion.choices = [
+              { letter: 'A', text: 'True' },
+              { letter: 'B', text: 'False' }
+            ];
+          }
+          currentQuestion.correct = isTrue ? 'A' : 'B';
+          continue;
+        }
+
+        // Check for Correct Answer:, ANSWER:, Answer:, or Correct: (single-letter MCQ)
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])\b/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
+          continue;
+        }
+
+        // Check for Accepted: a | b | c (Week 13 fill-in-the-blank with pipe-separated alternatives)
+        const acceptedMatch = trimmed.match(/^Accepted:\s*(.+)$/i);
+        if (acceptedMatch) {
+          const alternatives = acceptedMatch[1].split('|').map(a => a.trim()).filter(Boolean);
+          currentQuestion.type = 'fill_in_blank';
+          currentQuestion.choices = [];
+          currentQuestion.correct = '';
+          currentQuestion.accepted = alternatives;
           continue;
         }
 
@@ -396,7 +435,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         }
 
         // Append to question text
-        if (currentSection === 'question' && !choiceMatch && !correctMatch && !hintMatch) {
+        if (currentSection === 'question' && !choiceMatch && !correctBoolMatch && !correctMatch && !acceptedMatch && !hintMatch) {
           if (currentQuestion.text) {
             currentQuestion.text += ' ' + trimmed;
           } else {
@@ -1411,4 +1450,244 @@ test('Parse Chapter header with em-dash separator', () => {
   assert.strictEqual(result.days.length, 1, 'Should have 1 chapter');
   assert.strictEqual(result.days[0].day_number, 37, 'Should be chapter 37');
   assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+});
+
+// ── Week 13 regression tests (Chapters 38–40, Cause and Effect) ──────────────
+
+test('Week 13: [T/F] bracket tag sets type to boolean and strips tag from text', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+1. [IG: S011.13.1-2] [MLS.DESE] [T/F] In Chapter 38, the hunters found Kragdon-ah sleeping.
+Correct: TRUE
+Hint: Re-read the first paragraph of Chapter 38.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse [T/F] question');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  const q = result.days[0].questions[0];
+  assert.strictEqual(q.number, 1, 'Question number should be 1');
+  assert.strictEqual(q.type, 'boolean', 'Question type should be boolean');
+  assert(!q.text.includes('[T/F]'), 'Question text should not contain [T/F] tag');
+  assert.strictEqual(q.choices.length, 2, 'Should have True/False choices');
+  assert.strictEqual(q.choices[0].text, 'True', 'First choice should be True');
+  assert.strictEqual(q.choices[1].text, 'False', 'Second choice should be False');
+  assert.strictEqual(q.correct, 'A', 'Correct: TRUE maps to choice A (True)');
+  assert.strictEqual(q.hint, 'Re-read the first paragraph of Chapter 38.', 'Hint should be parsed');
+  assert.deepStrictEqual(q.goal_codes, ['S011.13.1-2'], 'IEP goal codes should be extracted');
+  assert.deepStrictEqual(q.dese_codes, ['MLS.DESE'], 'DESE codes should be extracted');
+});
+
+test('Week 13: Correct: FALSE parsed correctly for [T/F] question', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+1. [IG: S011.13.1-3] [MLS.DESE] [T/F] The main character chose to leave Kragdon-ah behind.
+Correct: FALSE
+Hint: Think about what the character valued most.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse [T/F] FALSE question');
+  const q = result.days[0].questions[0];
+  assert.strictEqual(q.type, 'boolean', 'Should be boolean type');
+  assert.strictEqual(q.choices.length, 2, 'Should have True/False choices');
+  assert.strictEqual(q.correct, 'B', 'Correct: FALSE maps to choice B (False)');
+});
+
+test('Week 13: [Fill in the Blank] bracket tag sets type and Accepted: parses pipe-separated alternatives', () => {
+  const txtContent = `DAY 2 QUESTIONS
+
+3. [IG: S011.13.2-1] [MLS.DESE] [Fill in the Blank] The relationship between the storm and the flood is an example of ___ and effect.
+Accepted: cause | causes | cause-and-effect
+Hint: Think about the ELA theme of this assignment.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse [Fill in the Blank] question');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  const q = result.days[0].questions[0];
+  assert.strictEqual(q.number, 3, 'Question number should be 3');
+  assert.strictEqual(q.type, 'fill_in_blank', 'Question type should be fill_in_blank');
+  assert(!q.text.includes('[Fill in the Blank]'), 'Question text should not contain [Fill in the Blank] tag');
+  assert.deepStrictEqual(q.accepted, ['cause', 'causes', 'cause-and-effect'], 'Accepted alternatives should be pipe-split');
+  assert.strictEqual(q.hint, 'Think about the ELA theme of this assignment.', 'Hint should be parsed');
+});
+
+test('Week 13: Mixed MCQ, T/F, and FIB questions across 3 days', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+1. [IG: S011.13.1-1] [MLS.DESE] What event at the end of Chapter 38 caused the village to flee?
+A) A wildfire broke out
+B) The river flooded the valley
+C) An earthquake destroyed the bridge
+Correct: B
+Hint: Look for the cause-and-effect chain near the end of the chapter.
+
+2. [IG: S011.13.1-2] [MLS.DESE] [T/F] The villagers were prepared for the flood described in Chapter 38.
+Correct: FALSE
+Hint: Re-read the opening scene.
+
+3. [IG: S011.13.1-3] [MLS.DESE] [Fill in the Blank] Because the bridge was destroyed, the village was ___ from supplies.
+Accepted: cut off | isolated | separated
+Hint: Think about what the bridge provided.
+
+DAY 2 QUESTIONS
+
+1. [IG: S011.13.2-1] [MLS.DESE] In Chapter 39, what caused Kragdon-ah to turn back?
+A) He heard a cry for help
+B) He saw the storm approaching
+C) He was too tired to continue
+Correct: A
+Hint: Pay attention to sounds described at the start of the chapter.
+
+2. [IG: S011.13.2-2] [MLS.DESE] [T/F] Kragdon-ah's decision to turn back had no effect on the story's outcome.
+Correct: FALSE
+Hint: Consider the chain of events that followed.
+
+3. [IG: S011.13.2-3] [MLS.DESE] [Fill in the Blank] Kragdon-ah turned back because he heard a ___ from the valley below.
+Accepted: cry | scream | shout | call for help
+Hint: Listen carefully to what Kragdon-ah noticed.
+
+DAY 3 QUESTIONS
+
+1. [IG: S011.13.3-1] [MLS.DESE] What was the long-term effect of Kragdon-ah returning to the village in Chapter 40?
+A) The village was rebuilt stronger than before
+B) He lost his chance to reach the coast
+C) The hunters rewarded him with land
+Correct: A
+Hint: Think about what Kragdon-ah helped the villagers accomplish.
+
+2. [IG: S011.13.3-2] [MLS.DESE] [T/F] Chapter 40 ends with Kragdon-ah leaving the village permanently.
+Correct: FALSE
+Hint: Re-read the final paragraph.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_13_MASTER_ALL_STUDENTS (2).txt');
+
+  assert(result !== null, 'Should parse Week 13 3-day mixed format');
+  assert.strictEqual(result.days.length, 3, 'Should have 3 days');
+
+  // Day 1 checks
+  const day1 = result.days[0];
+  assert.strictEqual(day1.day_number, 1, 'Day 1 number');
+  assert.strictEqual(day1.questions.length, 3, 'Day 1 should have 3 questions');
+
+  const d1q1 = day1.questions[0];
+  assert.strictEqual(d1q1.type, 'mcq', 'Day 1 Q1 should be MCQ');
+  assert.strictEqual(d1q1.correct, 'B', 'Day 1 Q1 correct should be B');
+  assert.strictEqual(d1q1.choices.length, 3, 'Day 1 Q1 should have 3 choices');
+
+  const d1q2 = day1.questions[1];
+  assert.strictEqual(d1q2.type, 'boolean', 'Day 1 Q2 should be boolean');
+  assert.strictEqual(d1q2.choices.length, 2, 'Day 1 Q2 should have True/False choices');
+  assert.strictEqual(d1q2.correct, 'B', 'Day 1 Q2 correct: FALSE → B');
+  assert(!d1q2.text.includes('[T/F]'), 'Day 1 Q2 text should not contain [T/F]');
+
+  const d1q3 = day1.questions[2];
+  assert.strictEqual(d1q3.type, 'fill_in_blank', 'Day 1 Q3 should be fill_in_blank');
+  assert.deepStrictEqual(d1q3.accepted, ['cut off', 'isolated', 'separated'], 'Day 1 Q3 accepted alternatives');
+  assert(!d1q3.text.includes('[Fill in the Blank]'), 'Day 1 Q3 text should not contain [Fill in the Blank]');
+
+  // Day 2 checks
+  const day2 = result.days[1];
+  assert.strictEqual(day2.day_number, 2, 'Day 2 number');
+  assert.strictEqual(day2.questions.length, 3, 'Day 2 should have 3 questions');
+  assert.strictEqual(day2.questions[1].type, 'boolean', 'Day 2 Q2 should be boolean');
+  assert.strictEqual(day2.questions[1].correct, 'B', 'Day 2 Q2 correct: FALSE → B');
+  assert.deepStrictEqual(day2.questions[2].accepted, ['cry', 'scream', 'shout', 'call for help'], 'Day 2 Q3 accepted alternatives');
+
+  // Day 3 checks
+  const day3 = result.days[2];
+  assert.strictEqual(day3.day_number, 3, 'Day 3 number');
+  assert.strictEqual(day3.questions.length, 2, 'Day 3 should have 2 questions');
+  assert.strictEqual(day3.questions[0].type, 'mcq', 'Day 3 Q1 should be MCQ');
+  assert.strictEqual(day3.questions[1].type, 'boolean', 'Day 3 Q2 should be boolean');
+});
+
+test('Week 13: DESE-only student (no [IG:] prefix) with [T/F] and Accepted:', () => {
+  // Students S038, S039, S043, S046 have IEP Goal Codes: DESE Only (No ELA IEP Goals).
+  // Their questions have only [MLS.DESE] tags with no [IG: ...] prefix.
+  const txtContent = `DAY 1 QUESTIONS
+
+1. [MLS.DESE] [T/F] The event in Chapter 38 had a negative effect on the village.
+Correct: TRUE
+Hint: Think about what happened to the village.
+
+2. [MLS.DESE] [Fill in the Blank] Because the flood came suddenly, the villagers had no time to ___.
+Accepted: prepare | escape | evacuate
+Hint: Consider what the lack of warning meant for the villagers.
+
+3. [MLS.DESE] What was the primary cause of the flood in Chapter 38?
+A) Heavy rainfall upstream
+B) A dam breaking
+C) The river changing course
+Correct: A
+Hint: Re-read the description of the storm.`;
+
+  const result = parseTxtToMeta(txtContent, 'Life Skills Language Arts SC', 'WEEK_13_MASTER_ALL_STUDENTS (2).txt');
+
+  assert(result !== null, 'Should parse DESE-only student (no [IG:] codes)');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].questions.length, 3, 'Should have 3 questions');
+
+  const q1 = result.days[0].questions[0];
+  assert.strictEqual(q1.type, 'boolean', 'Q1 should be boolean');
+  assert.strictEqual(q1.choices.length, 2, 'Q1 should have True/False choices');
+  assert.strictEqual(q1.correct, 'A', 'Q1 correct: TRUE → A');
+  assert(!q1.goal_codes || q1.goal_codes.length === 0, 'Q1 should have no IEP goal codes');
+  assert.deepStrictEqual(q1.dese_codes, ['MLS.DESE'], 'Q1 should have DESE code');
+
+  const q2 = result.days[0].questions[1];
+  assert.strictEqual(q2.type, 'fill_in_blank', 'Q2 should be fill_in_blank');
+  assert.deepStrictEqual(q2.accepted, ['prepare', 'escape', 'evacuate'], 'Q2 accepted alternatives');
+
+  const q3 = result.days[0].questions[2];
+  assert.strictEqual(q3.type, 'mcq', 'Q3 should be MCQ');
+  assert.strictEqual(q3.correct, 'A', 'Q3 correct should be A');
+});
+
+test('Week 13: round-trip — body extracted by parseStudentSections parses correctly for S011', () => {
+  // Simulate the body that parseStudentSections would extract for student S011
+  // from the WEEK_13_MASTER_ALL_STUDENTS file (Week 10-style header, body only).
+  const s011Body = `DAY 1 QUESTIONS
+
+1. [IG: S011.13.1-1] [MLS.DESE] What event at the end of Chapter 38 caused the villagers to flee?
+A) A wildfire
+B) A flood
+C) An earthquake
+Correct: B
+Hint: Look for the cause-and-effect chain.
+
+2. [IG: S011.13.1-2] [MLS.DESE] [T/F] The villagers were warned about the flood in advance.
+Correct: FALSE
+Hint: Re-read the opening scene.
+
+3. [IG: S011.13.1-3] [MLS.DESE] [Fill in the Blank] Because the bridge was destroyed, the village was ___ from supplies.
+Accepted: cut off | isolated
+Hint: Think about what the bridge provided.
+
+DAY 2 QUESTIONS
+
+1. [IG: S011.13.2-1] [MLS.DESE] In Chapter 39, what caused Kragdon-ah to turn back?
+A) He heard a cry for help
+B) He saw the storm
+C) He was tired
+Correct: A
+Hint: Pay attention to sounds.`;
+
+  const result = parseTxtToMeta(s011Body, 'Language Arts 3 SC', 'WEEK_13_MASTER_ALL_STUDENTS (2).txt');
+
+  assert(result !== null, 'Should parse S011 section body extracted by parseStudentSections');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 days');
+  assert.strictEqual(result.days[0].questions.length, 3, 'Day 1 should have 3 questions');
+  assert.strictEqual(result.days[1].questions.length, 1, 'Day 2 should have 1 question');
+
+  assert.strictEqual(result.days[0].questions[0].type, 'mcq', 'Day 1 Q1 should be MCQ');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Day 1 Q1 correct is B');
+
+  assert.strictEqual(result.days[0].questions[1].type, 'boolean', 'Day 1 Q2 should be boolean');
+  assert.strictEqual(result.days[0].questions[1].choices.length, 2, 'Day 1 Q2 should have True/False choices');
+  assert.strictEqual(result.days[0].questions[1].correct, 'B', 'Day 1 Q2 correct: FALSE → B');
+
+  assert.strictEqual(result.days[0].questions[2].type, 'fill_in_blank', 'Day 1 Q3 should be fill_in_blank');
+  assert.deepStrictEqual(result.days[0].questions[2].accepted, ['cut off', 'isolated'], 'Day 1 Q3 accepted alternatives');
 });
