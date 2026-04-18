@@ -219,10 +219,10 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     //   "Chapter 38"                       (standalone chapter number)
     // Strategy: try with an explicit separator first; fall back to bare "Chapter N [rest]".
     // NOTE: This regex pair must be kept in sync with the copy in teacher-issue-draft.js.
-    let chapterMatch = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[–\-]\d+)?\s*[:\-–—]\s*(.*)$/i);
+    let chapterMatch = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?\s*[:–—-]\s*(.*)$/i);
     if (!chapterMatch) {
       // No separator present — treat any trailing text as the chapter subtitle.
-      const m = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[–\-]\d+)?(?:\s+(.+))?$/i);
+      const m = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?(?:\s+(.+))?$/i);
       if (m) chapterMatch = m;
     }
     if (chapterMatch) {
