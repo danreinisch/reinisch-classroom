@@ -358,17 +358,26 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
         }
 
+        // Detect inline type-hint bracket tags: [T/F] → boolean, [Fill in the Blank] → fill_in_blank
+        const hasTFBracket = /\[T\/F\]/i.test(restOfLine);
+        const hasFIBBracket = /\[Fill\s+in\s+the\s+Blank\]/i.test(restOfLine);
+        let inlineType = 'mcq';
+        if (hasTFBracket) inlineType = 'boolean';
+        else if (hasFIBBracket) inlineType = 'fill_in_blank';
+
         // Remove all bracket tags and parenthetical type hints to get any remaining text
         const remainingText = restOfLine
           .replace(/\[IG:\s*[^\]]+\]/g, '')
           .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\[T\/F\]/gi, '')
+          .replace(/\[Fill\s+in\s+the\s+Blank\]/gi, '')
           .replace(/\([^)]*\)/g, '')
           .trim();
 
         currentQuestion = {
           number: qNumber,
           text: remainingText,
-          type: 'mcq',
+          type: inlineType,
           choices: [],
           correct: '',
           hint: ''
@@ -395,10 +404,40 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer:, ANSWER:, Answer:, or Correct:
-        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])/i);
+        // Check for Correct: TRUE/FALSE (Week 13 boolean format — must be tested before
+        // the single-letter check below because TRUE/FALSE start with letters T/F).
+        // Convert to A/B letter choices matching the Week 10 True/False radio-button format
+        // so the student portal renders radio buttons and scoring works the same way.
+        const correctBoolMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*(true|false)\b/i);
+        if (correctBoolMatch) {
+          const isTrue = correctBoolMatch[1].toLowerCase() === 'true';
+          currentQuestion.type = 'boolean';
+          // Add True/False choices if not already present
+          if (currentQuestion.choices.length === 0) {
+            currentQuestion.choices = [
+              { letter: 'A', text: 'True' },
+              { letter: 'B', text: 'False' }
+            ];
+          }
+          currentQuestion.correct = isTrue ? 'A' : 'B';
+          continue;
+        }
+
+        // Check for Correct Answer:, ANSWER:, Answer:, or Correct: (single-letter MCQ)
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])\b/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
+          continue;
+        }
+
+        // Check for Accepted: a | b | c (Week 13 fill-in-the-blank with pipe-separated alternatives)
+        const acceptedMatch = trimmed.match(/^Accepted:\s*(.+)$/i);
+        if (acceptedMatch) {
+          const alternatives = acceptedMatch[1].split('|').map(a => a.trim()).filter(Boolean);
+          currentQuestion.type = 'fill_in_blank';
+          currentQuestion.choices = [];
+          currentQuestion.correct = '';
+          currentQuestion.accepted = alternatives;
           continue;
         }
 
@@ -440,7 +479,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         }
 
         // If we're in question section and it's not a special line, append to question text
-        if (currentSection === 'question' && !choiceMatch && !correctMatch && !hintMatch) {
+        if (currentSection === 'question' && !choiceMatch && !correctBoolMatch && !correctMatch && !acceptedMatch && !hintMatch) {
           if (currentQuestion.text) {
             currentQuestion.text += ' ' + trimmed;
           } else {
