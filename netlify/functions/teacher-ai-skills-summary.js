@@ -37,6 +37,8 @@ const BANNED_PHRASES = [
   'is recommended',
   'to develop effectively',
 ];
+// Pre-compute lowercase versions for efficient matching
+const BANNED_PHRASES_LOWER = BANNED_PHRASES.map(p => p.toLowerCase());
 
 /**
  * Returns the first banned phrase found in `text`, or null if none.
@@ -44,8 +46,8 @@ const BANNED_PHRASES = [
 function findBannedPhrase(text) {
   if (!text) return null;
   const lower = text.toLowerCase();
-  for (const phrase of BANNED_PHRASES) {
-    if (lower.includes(phrase.toLowerCase())) return phrase;
+  for (let i = 0; i < BANNED_PHRASES_LOWER.length; i++) {
+    if (lower.includes(BANNED_PHRASES_LOWER[i])) return BANNED_PHRASES[i];
   }
   return null;
 }

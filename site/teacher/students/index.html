@@ -3421,7 +3421,7 @@
                   var allChip = document.querySelector('[data-quarter="all"]');
                   quarterLabel = allChip ? allChip.textContent.trim() : 'All Quarters';
                 }
-                var date = new Date().toLocaleDateString();
+                var date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
                 // SAFETY: textContent only — no innerHTML
                 headerEl.textContent = 'Caseload — ' + quarterLabel + ' — ' + date;
               }

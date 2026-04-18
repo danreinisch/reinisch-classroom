@@ -9518,14 +9518,14 @@
         // Add regenerate button if not already present
         const card = el.closest('.st-skill-card');
         if (card && !card.querySelector('.st-regen-row')) {
-          const studentCode = card.closest('[id^="skills-tab-"]')?.id?.replace('skills-tab-', '') || studentCode;
+          const resolvedStudentCode = card.closest('[id^="skills-tab-"]')?.id?.replace('skills-tab-', '') || studentCode;
           const skillType = skill.source || 'iep';
           const regenRow = document.createElement('div');
           regenRow.className = 'st-regen-row';
           const regenBtn = document.createElement('button');
           regenBtn.className = 'st-regen-btn';
           regenBtn.dataset.action = 'regen-narrative';
-          regenBtn.dataset.studentCode = studentCode;
+          regenBtn.dataset.studentCode = resolvedStudentCode;
           regenBtn.dataset.skillCode = skill.code;
           regenBtn.dataset.skillType = skillType;
           regenBtn.setAttribute('aria-label', `Regenerate AI summary for ${skill.code}`);
