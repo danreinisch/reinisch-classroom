@@ -500,7 +500,130 @@
   }
 
   /**
-   * Build an inline SVG line chart for goal progress entries
+   * Compute a SPED-friendly status from the latest numeric value vs target/baseline.
+   * Returns a status descriptor object with key, emoji, label, and CSS modifier.
+   * @param {number} latest - Latest recorded numeric value
+   * @param {number|null} target - Goal target value (null if unset)
+   * @param {number|null} baseline - Goal baseline value (null if unset)
+   * @returns {{ key: string, emoji: string, label: string, modifier: string }}
+   */
+  function computeGoalStatus(latest, target, baseline) {
+    if (target == null || isNaN(target)) {
+      return { key: 'in-progress', emoji: '📊', label: 'In Progress', modifier: 'in-progress' };
+    }
+    if (latest >= target) {
+      return { key: 'on-track', emoji: '🟢', label: 'On Track!', modifier: 'on-track' };
+    }
+    if (latest >= target - 10) {
+      return { key: 'almost-there', emoji: '🟡', label: 'Almost There', modifier: 'almost-there' };
+    }
+    if (baseline == null || isNaN(baseline) || latest > baseline) {
+      return { key: 'keep-practicing', emoji: '🟠', label: 'Keep Practicing', modifier: 'keep-practicing' };
+    }
+    return { key: 'needs-support', emoji: '🔴', label: 'Needs Support', modifier: 'needs-support' };
+  }
+
+  /**
+   * Compute trend direction from the last 2–3 chronologically sorted progress entries.
+   * @param {Array} sortedEntries - Entries sorted ascending by date, with .value fields
+   * @returns {{ arrow: string, label: string, cssClass: string }}
+   */
+  function computeTrendArrow(sortedEntries) {
+    const nums = sortedEntries.map(e => parseFloat(e.value)).filter(v => !isNaN(v));
+    if (nums.length < 2) {
+      return { arrow: '—', label: 'Not enough data', cssClass: 'st-goal-trend-flat' };
+    }
+    const last = nums[nums.length - 1];
+    const prev = nums[Math.max(0, nums.length - 3)];
+    const diff = last - prev;
+    if (diff > 2) return { arrow: '↑', label: 'Improving', cssClass: 'st-goal-trend-up' };
+    if (diff < -2) return { arrow: '↓', label: 'Declining', cssClass: 'st-goal-trend-down' };
+    return { arrow: '→', label: 'Steady', cssClass: 'st-goal-trend-flat' };
+  }
+
+  /**
+   * Build the SPED-friendly plain-language status banner HTML.
+   * Displays icon + color-coded label + short sentence about current standing.
+   * @param {number} latestNumeric - Latest numeric progress value
+   * @param {number|null} targetNumeric - Numeric target (or null)
+   * @param {number|null} baselineNumeric - Numeric baseline (or null)
+   * @param {string} [measurementType] - Measurement type for formatting
+   * @returns {string} HTML string for the banner, or '' if latest is unavailable
+   */
+  function buildStatusBannerHtml(latestNumeric, targetNumeric, baselineNumeric, measurementType) {
+    if (latestNumeric == null || isNaN(latestNumeric)) return '';
+    const status = computeGoalStatus(latestNumeric, targetNumeric, baselineNumeric);
+    const latestFmt = escapeHtml(formatProgressValue(latestNumeric, measurementType));
+    const targetFmt = (targetNumeric != null && !isNaN(targetNumeric))
+      ? escapeHtml(formatProgressValue(targetNumeric, measurementType))
+      : null;
+
+    let sentence;
+    if (status.key === 'on-track') {
+      sentence = `You scored ${latestFmt} — great work, you met your goal!`;
+    } else if (status.key === 'almost-there') {
+      sentence = targetFmt
+        ? `You scored ${latestFmt}, just a bit away from your goal of ${targetFmt}. Keep going!`
+        : `You scored ${latestFmt}. Keep going!`;
+    } else if (status.key === 'keep-practicing') {
+      sentence = targetFmt
+        ? `You scored ${latestFmt}. Your goal is ${targetFmt} — let's keep practicing!`
+        : `You scored ${latestFmt} — let's keep practicing!`;
+    } else if (status.key === 'needs-support') {
+      sentence = `You scored ${latestFmt}. Let's work together to build these skills.`;
+    } else {
+      sentence = `Latest score: ${latestFmt}.`;
+    }
+
+    return `<div class="st-goal-status-banner st-goal-status-banner--${escapeHtml(status.modifier)}" role="status" aria-live="polite">
+      <span class="st-goal-status-banner__icon" aria-hidden="true">${status.emoji}</span>
+      <div class="st-goal-status-banner__text">
+        <div class="st-goal-status-banner__label">${escapeHtml(status.label)}</div>
+        <div class="st-goal-status-banner__sentence">${sentence}</div>
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Build the summary stats row HTML (Latest / Quarter Avg / Target / Trend).
+   * @param {number|null} latestVal - Latest numeric value
+   * @param {number|null} qAvgVal - This-quarter average (or null)
+   * @param {number|null} targetVal - Target numeric value (or null)
+   * @param {{ arrow: string, label: string, cssClass: string }|null} trend - Trend descriptor
+   * @param {string} [measurementType] - For formatting
+   * @returns {string} HTML string for the stats row
+   */
+  function buildStatsRowHtml(latestVal, qAvgVal, targetVal, trend, measurementType) {
+    const stats = [];
+    if (latestVal != null && !isNaN(latestVal)) {
+      stats.push({ label: 'Latest', value: escapeHtml(formatProgressValue(latestVal, measurementType)) });
+    }
+    if (qAvgVal != null && !isNaN(qAvgVal)) {
+      stats.push({ label: 'Avg This Quarter', value: escapeHtml(formatProgressValue(qAvgVal, measurementType)) });
+    }
+    if (targetVal != null && !isNaN(targetVal)) {
+      stats.push({ label: 'Target', value: escapeHtml(formatProgressValue(targetVal, measurementType)) });
+    }
+    if (trend) {
+      stats.push({ label: 'Trend', value: `<span class="${escapeHtml(trend.cssClass)}" aria-label="${escapeHtml(trend.label)}">${trend.arrow}</span>` });
+    }
+    if (stats.length === 0) return '';
+    return `<div class="st-goal-stats-row" aria-label="Goal progress summary">
+      ${stats.map(s => `<div class="st-goal-stat">
+        <span class="st-goal-stat__label">${s.label}</span>
+        <span class="st-goal-stat__value">${s.value}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  /**
+   * Build an inline SVG line chart for goal progress entries.
+   * Sorts data chronologically, deduplicates same-day entries by averaging,
+   * places all reference-line labels inside the chart area to prevent clipping,
+   * and returns SVG + an accessible collapsible data table.
+   * @param {Array} entries - Progress entries with .date and .value fields
+   * @param {Object} goal - Goal object with .baseline, .target, .measurement_type, .code
+   * @returns {string} HTML containing the SVG chart and a screen-reader data table
    */
   function buildProgressSVG(entries, goal) {
     const sorted = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -514,12 +637,23 @@
       return `<div class="st-goal-chart-empty" role="status">Only one data point recorded (${dateStr}: ${val}). Add more to see a chart.</div>`;
     }
 
-    const W = 340, H = 120;
-    const PAD = { top: 14, right: 16, bottom: 28, left: 38 };
-    const chartW = W - PAD.left - PAD.right;
-    const chartH = H - PAD.top - PAD.bottom;
+    // Deduplicate same-day entries by averaging their values
+    const dedupMap = new Map();
+    for (const e of sorted) {
+      const dateKey = String(e.date).substring(0, 10);
+      if (!dedupMap.has(dateKey)) {
+        dedupMap.set(dateKey, { ...e, _vals: [parseFloat(e.value)] });
+      } else {
+        dedupMap.get(dateKey)._vals.push(parseFloat(e.value));
+      }
+    }
+    const deduped = Array.from(dedupMap.values()).map(entry => ({
+      ...entry,
+      value: entry._vals.filter(v => !isNaN(v)).reduce((s, v) => s + v, 0) /
+             Math.max(1, entry._vals.filter(v => !isNaN(v)).length),
+    }));
 
-    const values = sorted.map(e => parseFloat(e.value)).filter(v => !isNaN(v));
+    const values = deduped.map(e => parseFloat(e.value)).filter(v => !isNaN(v));
     if (values.length < 2) {
       return `<div class="st-goal-chart-empty" role="status">Progress values are not numeric; chart unavailable.</div>`;
     }
@@ -528,14 +662,19 @@
     const target = goal.target != null ? parseFloat(goal.target) : null;
 
     const allNums = [...values];
-    if (!isNaN(baseline)) allNums.push(baseline);
-    if (!isNaN(target)) allNums.push(target);
+    if (baseline != null && !isNaN(baseline)) allNums.push(baseline);
+    if (target != null && !isNaN(target)) allNums.push(target);
 
     const minV = Math.min(...allNums);
     const maxV = Math.max(...allNums);
     const rangeV = maxV - minV || 1;
 
-    const dates = sorted.map(e => new Date(e.date).getTime());
+    const W = 340, H = 120;
+    const PAD = { top: 14, right: 16, bottom: 28, left: 38 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
+
+    const dates = deduped.map(e => new Date(e.date).getTime());
     const minD = Math.min(...dates);
     const maxD = Math.max(...dates);
     const rangeD = maxD - minD || 1;
@@ -543,63 +682,84 @@
     const toX = d => PAD.left + ((new Date(d).getTime() - minD) / rangeD) * chartW;
     const toY = v => PAD.top + chartH - ((v - minV) / rangeV) * chartH;
 
-    const numericEntries = sorted.filter(e => !isNaN(parseFloat(e.value)));
+    const numericEntries = deduped.filter(e => !isNaN(parseFloat(e.value)));
     const points = numericEntries.map(e => ({ x: toX(e.date), y: toY(parseFloat(e.value)), e }));
 
     const polyline = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
+    const mt = goal.measurement_type;
+
     // X-axis labels (first and last date)
-    const firstLabel = formatDate(sorted[0].date);
-    const lastLabel = formatDate(sorted[sorted.length - 1].date);
+    const firstLabel = formatDate(deduped[0].date);
+    const lastLabel = formatDate(deduped[deduped.length - 1].date);
 
     // Y-axis labels (min and max)
-    const mt = goal.measurement_type;
     const yMinLabel = formatProgressValue(minV, mt);
     const yMaxLabel = formatProgressValue(maxV, mt);
 
+    // Mastery zone: shaded area above the target line
+    let masteryZone = '';
     let refLines = '';
-    if (!isNaN(baseline) && baseline >= minV && baseline <= maxV) {
-      const by = toY(baseline).toFixed(1);
-      refLines += `<line class="st-chart-ref st-chart-baseline" x1="${PAD.left}" y1="${by}" x2="${W - PAD.right}" y2="${by}" />`;
-      refLines += `<text class="st-chart-ref-label" x="${W - PAD.right + 2}" y="${by}" dy="4" font-size="9" fill="var(--muted)">base</text>`;
+    if (target != null && !isNaN(target) && target >= minV && target <= maxV) {
+      const ty = toY(target);
+      masteryZone = `<rect class="st-chart-mastery-zone" x="${PAD.left}" y="${PAD.top}" width="${chartW}" height="${(ty - PAD.top).toFixed(1)}" aria-hidden="true"/>`;
+      // Reference line label placed INSIDE the chart area (text-anchor="end") to avoid clipping
+      refLines += `<line class="st-chart-ref st-chart-target" x1="${PAD.left}" y1="${ty.toFixed(1)}" x2="${W - PAD.right}" y2="${ty.toFixed(1)}" />`;
+      refLines += `<text class="st-chart-ref-label st-chart-target-label" x="${W - PAD.right - 3}" y="${ty.toFixed(1)}" dy="-3" font-size="9" text-anchor="end">target</text>`;
     }
-    if (!isNaN(target) && target >= minV && target <= maxV) {
-      const ty = toY(target).toFixed(1);
-      refLines += `<line class="st-chart-ref st-chart-target" x1="${PAD.left}" y1="${ty}" x2="${W - PAD.right}" y2="${ty}" />`;
-      refLines += `<text class="st-chart-ref-label" x="${W - PAD.right + 2}" y="${ty}" dy="4" font-size="9" fill="var(--accent)">target</text>`;
+    if (baseline != null && !isNaN(baseline) && baseline >= minV && baseline <= maxV) {
+      const by = toY(baseline);
+      refLines += `<line class="st-chart-ref st-chart-baseline" x1="${PAD.left}" y1="${by.toFixed(1)}" x2="${W - PAD.right}" y2="${by.toFixed(1)}" />`;
+      refLines += `<text class="st-chart-ref-label st-chart-baseline-label" x="${W - PAD.right - 3}" y="${by.toFixed(1)}" dy="-3" font-size="9" text-anchor="end">baseline</text>`;
     }
 
     const dots = points.map(p => {
       const val = formatProgressValue(parseFloat(p.e.value), mt);
       const dt = formatDate(p.e.date);
-      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" role="img" aria-label="${dt}: ${val}"><title>${dt}: ${val}</title></circle>`;
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" role="img" aria-label="${escapeHtml(dt)}: ${escapeHtml(val)}"><title>${escapeHtml(dt)}: ${escapeHtml(val)}</title></circle>`;
     }).join('');
 
     const latestPt = points[points.length - 1];
     const latestLabel = formatProgressValue(parseFloat(latestPt.e.value), mt);
     const latestLabelX = Math.min(latestPt.x + 6, W - PAD.right - 4);
 
+    // Accessible data table (screen-reader/keyboard toggle)
+    const tableRows = deduped.map(e => {
+      const val = escapeHtml(formatProgressValue(parseFloat(e.value), mt));
+      const dt = escapeHtml(formatDate(e.date));
+      return `<tr><td>${dt}</td><td>${val}</td></tr>`;
+    }).join('');
+    const srTable = `<details class="st-chart-sr-table">
+      <summary>Show data table (${deduped.length} data ${deduped.length === 1 ? 'point' : 'points'})</summary>
+      <table aria-label="Progress data for goal ${escapeHtml(goal.code || '')}">
+        <thead><tr><th>Date</th><th>Score</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </details>`;
+
     return `
-      <svg class="st-goal-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Progress chart for goal ${escapeHtml(goal.code || '')}">
+      <svg class="st-goal-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Progress chart for goal ${escapeHtml(goal.code || '')}: ${deduped.length} data points from ${escapeHtml(firstLabel)} to ${escapeHtml(lastLabel)}">
         <rect width="${W}" height="${H}" fill="none"/>
+        ${masteryZone}
         <!-- Axes -->
         <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + chartH}" />
         <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top + chartH}" x2="${W - PAD.right}" y2="${PAD.top + chartH}" />
-        <!-- Reference lines -->
+        <!-- Reference lines (target/baseline) -->
         ${refLines}
         <!-- Progress line -->
         <polyline class="st-chart-line" points="${polyline}" />
         <!-- Data dots -->
         ${dots}
         <!-- Latest value label -->
-        <text class="st-chart-latest-label" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestLabel)}</text>
+        <text class="st-chart-latest-label" x="${latestLabelX.toFixed(1)}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestLabel)}</text>
         <!-- X-axis labels -->
         <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="start">${escapeHtml(firstLabel)}</text>
         <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
         <!-- Y-axis labels -->
         <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${(PAD.top + chartH).toFixed(1)}" font-size="9" text-anchor="end" dy="4">${escapeHtml(yMinLabel)}</text>
         <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${PAD.top}" font-size="9" text-anchor="end" dy="4">${escapeHtml(yMaxLabel)}</text>
-      </svg>`;
+      </svg>${srTable}`
+;
   }
 
   /**
@@ -922,13 +1082,7 @@
     if (progressEntries.length > 0) {
       const sortedForDisplay = [...progressEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
       const latestEntry = sortedForDisplay[0];
-      const latestVal = formatProgressValue(latestEntry.value, goal.measurement_type);
-
-      const allRows = sortedForDisplay.map(e => {
-        const val = formatProgressValue(e.value, goal.measurement_type);
-        const dt = formatDate(e.date);
-        return `<tr><td class="st-progress-td-date">${escapeHtml(dt)}</td><td class="st-progress-td-value">${escapeHtml(val)}</td></tr>`;
-      }).join('');
+      const latestNumeric = parseFloat(latestEntry.value);
 
       const chartHtml = buildProgressSVG(progressEntries, goal);
 
@@ -936,13 +1090,14 @@
       const qAvgVal = thisQuarterEntries.length > 0
         ? thisQuarterEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / thisQuarterEntries.length
         : null;
-      const qAvgHtml = qAvgVal !== null
-        ? `<div class="st-goal-latest-value" style="margin-top:8px;">
-            <span class="st-goal-latest-label">This Quarter Avg:</span>
-            <span class="st-goal-latest-num" style="font-size:16px;">${escapeHtml(formatProgressValue(qAvgVal, goal.measurement_type))}</span>
-            <span style="font-size:12px;opacity:0.6;">(${thisQuarterEntries.length} ${thisQuarterEntries.length === 1 ? 'entry' : 'entries'})</span>
-          </div>`
-        : '';
+
+      // SPED-friendly status banner and summary stats
+      const targetNumeric = goal.target != null ? parseFloat(goal.target) : null;
+      const baselineNumeric = goal.baseline != null ? parseFloat(goal.baseline) : null;
+      const sortedAsc = [...progressEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+      const trend = computeTrendArrow(sortedAsc);
+      const statusBannerHtml = buildStatusBannerHtml(latestNumeric, targetNumeric, baselineNumeric, goal.measurement_type);
+      const statsRowHtml = buildStatsRowHtml(latestNumeric, qAvgVal, targetNumeric, trend, goal.measurement_type);
 
       // Dot grid chart (per-question data points)
       const goalDataPoints = dataPointsMap ? (dataPointsMap.get(goal.id) || []) : [];
@@ -950,22 +1105,13 @@
       // When per-question dot-grid data exists, show it instead of the legacy line chart
       const chartSectionHtml = hasDotGrid
         ? dotGridHtml
-        : `<div class="st-goal-chart-container" aria-hidden="true">${chartHtml}</div>`;
+        : `<div class="st-goal-chart-container">${chartHtml}</div>`;
 
-      // Progress detail panel — expanded by default (Item 2)
-      const progressTableHtml = hasDotGrid ? '' : `
-          <table class="st-progress-table" aria-label="All progress data (${sortedForDisplay.length} ${sortedForDisplay.length === 1 ? 'entry' : 'entries'})">
-            <tbody>${allRows}</tbody>
-          </table>`;
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}">
-          <div class="st-goal-latest-value" aria-label="Latest progress value: ${escapeHtml(latestVal)}">
-            <span class="st-goal-latest-label">Latest:</span>
-            <span class="st-goal-latest-num">${escapeHtml(latestVal)}</span>
-          </div>
-          ${qAvgHtml}
+          ${statusBannerHtml}
+          ${statsRowHtml}
           ${chartSectionHtml}
-          ${progressTableHtml}
         </div>`;
     }
 
@@ -7562,9 +7708,10 @@
    * Build a performance trend SVG line chart for the student's recent graded submissions.
    * Plots score_total (%) over time using submitted_at as the x-axis.
    * Shows up to 15 most recent graded submissions, with a 70% passing reference line.
-   * Follows the same PAD/toX/toY/chartW/chartH pattern as buildProgressSVG.
+   * Uses the same shared visual tokens and layout as buildProgressSVG.
+   * Includes a SPED-friendly status banner and accessible data table.
    * @param {Array} graded - Graded submissions (score_total != null, submitted_at set)
-   * @returns {string} HTML string containing SVG chart and legend, or empty message string
+   * @returns {string} HTML string containing banner, SVG chart and legend, or empty message
    */
   function buildScoreTrendSVG(graded) {
     const PASSING_THRESHOLD = 70;
@@ -7603,34 +7750,63 @@
     const firstLabel = formatDate(sorted[0].submitted_at);
     const lastLabel = formatDate(sorted[sorted.length - 1].submitted_at);
 
-    // 70% passing reference line
+    // 70% passing reference line — label placed INSIDE chart area to prevent clipping
     const refY = toY(PASSING_THRESHOLD).toFixed(1);
     const refLine = `<line class="st-perf-chart-reference" x1="${PAD.left}" y1="${refY}" x2="${W - PAD.right}" y2="${refY}" />`;
-    const refLabel = `<text class="st-perf-chart-reference-label" aria-hidden="true" x="${W - PAD.right + 2}" y="${refY}" dy="4" font-size="9">${PASSING_THRESHOLD}%</text>`;
+    const refLabel = `<text class="st-perf-chart-reference-label" aria-hidden="true" x="${W - PAD.right - 3}" y="${refY}" dy="-3" font-size="9" text-anchor="end">${PASSING_THRESHOLD}%</text>`;
 
-    // Data dots with tooltips
+    // Mastery zone shading above passing threshold
+    const masteryZoneY = toY(PASSING_THRESHOLD);
+    const masteryZone = `<rect class="st-chart-mastery-zone" x="${PAD.left}" y="${PAD.top}" width="${chartW}" height="${(masteryZoneY - PAD.top).toFixed(1)}" aria-hidden="true"/>`;
+
+    // Data dots with tooltips (larger radius for readability)
     const dots = points.map(p => {
       const scoreText = Math.round(p.s.score_total) + '%';
       const dateDisplay = formatDate(p.s.submitted_at);
-      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}</title></circle>`;
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" aria-label="${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}"><title>${escapeHtml(dateDisplay)}: ${escapeHtml(scoreText)}</title></circle>`;
     }).join('');
 
     // Latest value label
     const latestPt = points[points.length - 1];
-    const latestScore = Math.round(latestPt.s.score_total) + '%';
+    const latestScore = Math.round(latestPt.s.score_total);
     const latestLabelX = Math.min(latestPt.x + 6, W - PAD.right - 4);
 
+    // SPED-friendly status banner based on latest score vs passing threshold
+    const statusBannerHtml = buildStatusBannerHtml(latestScore, PASSING_THRESHOLD, null, 'Percent');
+
+    // Trend arrow from last few submissions (treat as progress entries with .value)
+    const gradedAsEntries = sorted.map(s => ({ value: s.score_total }));
+    const trend = computeTrendArrow(gradedAsEntries);
+    const statsRowHtml = buildStatsRowHtml(latestScore, null, PASSING_THRESHOLD, trend, 'Percent');
+
+    // Accessible data table
+    const tableRows = sorted.map(s => {
+      const dt = escapeHtml(formatDate(s.submitted_at));
+      const sc = escapeHtml(Math.round(s.score_total) + '%');
+      return `<tr><td>${dt}</td><td>${sc}</td></tr>`;
+    }).join('');
+    const srTable = `<details class="st-chart-sr-table">
+      <summary>Show data table (${sorted.length} assignments)</summary>
+      <table aria-label="Performance data for recent graded assignments">
+        <thead><tr><th>Date</th><th>Score</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </details>`;
+
     return `
+      ${statusBannerHtml}
+      ${statsRowHtml}
       <div class="st-goal-chart-container">
-        <svg class="st-perf-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Performance trend chart showing your last ${sorted.length} graded assignments">
+        <svg class="st-perf-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Performance trend chart showing your last ${sorted.length} graded assignments, from ${escapeHtml(firstLabel)} to ${escapeHtml(lastLabel)}">
           <rect width="${W}" height="${H}" fill="none"/>
+          ${masteryZone}
           <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + chartH}" />
           <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top + chartH}" x2="${W - PAD.right}" y2="${PAD.top + chartH}" />
           ${refLine}
           ${refLabel}
           <polyline class="st-chart-line" points="${polyline}" />
           ${dots}
-          <text class="st-chart-latest-label" aria-hidden="true" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestScore)}</text>
+          <text class="st-chart-latest-label" aria-hidden="true" x="${latestLabelX.toFixed(1)}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestScore + '%')}</text>
           <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="start">${escapeHtml(firstLabel)}</text>
           <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="end">${escapeHtml(lastLabel)}</text>
           <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${(PAD.top + chartH).toFixed(1)}" font-size="9" text-anchor="end" dy="4">0%</text>
@@ -7639,14 +7815,15 @@
       </div>
       <div class="st-perf-chart-legend">
         <span class="st-perf-chart-legend-item">
-          <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--accent,#60a5fa)" stroke-width="2"/></svg>
+          <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--accent,#60a5fa)" stroke-width="2.5"/></svg>
           Score over time
         </span>
         <span class="st-perf-chart-legend-item">
-          <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="rgba(251,146,60,0.7)" stroke-width="1.5" stroke-dasharray="4 3"/></svg>
-          Passing (${PASSING_THRESHOLD}%)
+          <svg width="20" height="3" aria-hidden="true"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="var(--green,#4ade80)" stroke-width="1.5" stroke-dasharray="4 3" stroke-opacity="0.8"/></svg>
+          Passing goal (${PASSING_THRESHOLD}%)
         </span>
-      </div>`;
+      </div>
+      ${srTable}`;
   }
 
   /**
