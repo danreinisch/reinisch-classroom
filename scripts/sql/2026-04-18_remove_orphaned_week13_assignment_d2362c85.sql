@@ -1,0 +1,133 @@
+-- =============================================================================
+-- Date:        2026-04-18
+-- Purpose:     Remove orphaned Week 13 assignment instance for student S011.
+--              The parent assignment (ID 362) was already deleted from the
+--              Teacher Center Work page, leaving a stale student-side record
+--              that the Student Portal cannot load.
+--
+-- Instance ID: d2362c85-40b5-4fd9-b36e-8898b95f1346
+-- Assignment ID: 362
+-- Student tab:  S011
+-- Due date shown in portal: Apr 24, 2026
+-- Assignment title: WEEK 13 — LOST IN KRAGDON-AH (CHAPTERS 38–40)
+--                   Cause and Effect — S011
+--
+-- Original console error:
+--   [student-portal] Assignment has no structured content (meta.days missing
+--   or empty). This may indicate a content parsing failure during issuance or
+--   an orphaned record.
+--   Instance ID: d2362c85-40b5-4fd9-b36e-8898b95f1346
+--   Assignment ID: 362
+--
+-- Instructions:
+--   1. Open the Supabase SQL editor for the project.
+--   2. Paste this entire file.
+--   3. Run it as-is — the final statement is ROLLBACK, so the transaction is
+--      always discarded on the first run. Inspect the SELECT preview output
+--      in the results pane to confirm the correct rows are targeted.
+--   4. When the SELECT results look correct, swap the last two lines:
+--        comment out  -->  -- ROLLBACK;
+--        uncomment    -->  COMMIT;
+--      Then run again to permanently delete the rows.
+--
+-- Note: submissions.instance_id has ON DELETE CASCADE, so submissions would
+--       be removed automatically when the instance is deleted. This script
+--       deletes them explicitly so the SELECT preview shows them up-front.
+--       goal_progress.assignment_instance_id and
+--       goal_data_points.assignment_instance_id both use ON DELETE SET NULL,
+--       so those rows are deleted explicitly here rather than left orphaned.
+-- =============================================================================
+
+BEGIN;
+
+-- ── Constants ─────────────────────────────────────────────────────────────────
+-- The CTE below centralises the target IDs for the SELECT preview.
+-- PostgreSQL CTEs are statement-scoped and cannot be referenced across
+-- separate statements, so the DELETE statements (step 2 & 3) repeat the same
+-- UUID literal — this is intentional and is the standard pattern for psql
+-- maintenance scripts.
+WITH target (instance_id, assignment_id) AS (
+  VALUES (
+    'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid,
+    362::bigint
+  )
+)
+
+-- ── 1. Preview: inspect the rows that will be affected ────────────────────────
+-- Review this output before issuing COMMIT.
+SELECT
+  'assignment_instances'        AS source_table,
+  ai.id::text                   AS row_id,
+  ai.assignment_id::text        AS assignment_id,
+  ai.student_id::text           AS student_id,
+  ai.status                     AS status,
+  ai.due_at::text               AS due_at,
+  ai.assigned_at::text          AS assigned_at
+FROM public.assignment_instances ai
+JOIN target t ON ai.id = t.instance_id
+
+UNION ALL
+
+SELECT
+  'submissions'                 AS source_table,
+  s.id::text                    AS row_id,
+  s.instance_id::text           AS assignment_id,
+  NULL                          AS student_id,
+  s.review_status               AS status,
+  NULL                          AS due_at,
+  s.submitted_at::text          AS assigned_at
+FROM public.submissions s
+JOIN target t ON s.instance_id = t.instance_id
+
+UNION ALL
+
+SELECT
+  'goal_progress'               AS source_table,
+  gp.id::text                   AS row_id,
+  gp.assignment_instance_id::text AS assignment_id,
+  gp.student_id::text           AS student_id,
+  NULL                          AS status,
+  NULL                          AS due_at,
+  gp.created_at::text           AS assigned_at
+FROM public.goal_progress gp
+JOIN target t ON gp.assignment_instance_id = t.instance_id
+
+UNION ALL
+
+SELECT
+  'goal_data_points'            AS source_table,
+  gdp.id::text                  AS row_id,
+  gdp.assignment_instance_id::text AS assignment_id,
+  gdp.student_id::text          AS student_id,
+  NULL                          AS status,
+  NULL                          AS due_at,
+  gdp.created_at::text          AS assigned_at
+FROM public.goal_data_points gdp
+JOIN target t ON gdp.assignment_instance_id = t.instance_id;
+
+-- ── 2. Delete dependent rows ──────────────────────────────────────────────────
+-- The UUID below matches the CTE constant above (PostgreSQL CTEs cannot span
+-- multiple statements, so the literal is repeated — intentional by design).
+-- 2a. goal_data_points (ON DELETE SET NULL — remove explicitly)
+DELETE FROM public.goal_data_points
+WHERE assignment_instance_id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+
+-- 2b. goal_progress (ON DELETE SET NULL — remove explicitly)
+DELETE FROM public.goal_progress
+WHERE assignment_instance_id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+
+-- 2c. submissions (ON DELETE CASCADE — removed explicitly for clarity)
+DELETE FROM public.submissions
+WHERE instance_id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+
+-- ── 3. Delete the orphaned assignment instance ────────────────────────────────
+-- This is idempotent: if the row no longer exists, DELETE affects 0 rows and
+-- does not raise an error.
+DELETE FROM public.assignment_instances
+WHERE id = 'd2362c85-40b5-4fd9-b36e-8898b95f1346'::uuid;
+
+-- ── 4. Commit (or roll back) ──────────────────────────────────────────────────
+-- Default is ROLLBACK so the first run is always a dry-run.
+-- Verify the SELECT results above, then swap the comments and re-run to commit.
+-- COMMIT;   -- uncomment this line and comment out ROLLBACK to apply permanently
+ROLLBACK;    -- comment out this line when ready to apply
