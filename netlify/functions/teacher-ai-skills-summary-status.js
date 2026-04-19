@@ -55,7 +55,8 @@ exports.handler = async (event) => {
   // Probabilistic cleanup — runs ~1% of requests to delete jobs older than 7 days.
   // This prevents unbounded table growth without requiring a scheduled cron job.
   if (Math.random() < 0.01) {
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const CLEANUP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    const cutoff = new Date(Date.now() - CLEANUP_RETENTION_MS).toISOString();
     fetch(`${SUPABASE_URL}/rest/v1/ai_jobs?created_at=lt.${encodeURIComponent(cutoff)}`, {
       method: 'DELETE',
       headers: {
