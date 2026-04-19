@@ -1980,12 +1980,17 @@
         let rosterMsg = `Issue "${draft.title}" to all enrolled students in ${draft.className}?`;
         try {
           setMsg("ok", `Fetching roster for ${draft.className}…`);
-          const rosterResp = await fetch('/.netlify/functions/teacher-validate-enrollments', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pairs: [], classNames: [draft.className] }),
-          });
+          const { response: rosterResp, sessionExpired: rosterExpired } =
+            await window.tcAuth.handleAuthenticatedFetch(
+              '/.netlify/functions/teacher-validate-enrollments',
+              {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pairs: [], classNames: [draft.className] }),
+              }
+            );
+          if (rosterExpired) return;
           clearMsg();
           if (rosterResp.ok) {
             const rosterData = await rosterResp.json();
@@ -2033,12 +2038,17 @@
       }
 
       // Call server-side endpoint to handle all Supabase operations
-      const response = await fetch('/.netlify/functions/teacher-issue-draft', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft: draftToSend })
-      });
+      const { response, sessionExpired: issueExpired } =
+        await window.tcAuth.handleAuthenticatedFetch(
+          '/.netlify/functions/teacher-issue-draft',
+          {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ draft: draftToSend }),
+          }
+        );
+      if (issueExpired) return;
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
@@ -2786,6 +2796,11 @@
     // Auto-issue assignments whose release date has passed (non-blocking)
     autoIssueDueReleases();
   }
+
+  // Surface the session-expired UX dispatched by auth-helpers.js
+  window.addEventListener("tc:session-expired", function () {
+    setMsg("err", "⚠ Session expired — please sign in again.");
+  });
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
