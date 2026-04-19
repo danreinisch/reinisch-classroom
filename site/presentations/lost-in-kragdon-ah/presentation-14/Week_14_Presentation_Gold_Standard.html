@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 14: Lost in Kragdon-ah - Chapters 41-44</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); background-attachment: fixed; color: #ffffff; overflow-x: hidden; }
+        .bg-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+        .bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; background-repeat: no-repeat; will-change: opacity; transform: translate3d(0,0,0); -webkit-transform: translate3d(0,0,0); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .bg-layer-a { opacity: 0.55; } .bg-layer-b { opacity: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 20px; background: rgba(0,0,0,0.55); border-radius: 20px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.2); }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); }
+        header h2 { font-size: 1.5em; color: #ffd700; margin-bottom: 10px; }
+        header p { font-size: 1.2em; color: #a0d2eb; }
+        .theme-banner { background: linear-gradient(90deg, rgba(155,89,182,0.5), rgba(52,152,219,0.5)); padding: 15px 30px; border-radius: 10px; margin-top: 20px; display: inline-block; border: 1px solid rgba(255,255,255,0.2); }
+        .theme-banner h3 { font-size: 1.3em; color: #ffffff; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 20px; }
+        .progress-bar .progress { height: 100%; background: linear-gradient(90deg, #9b59b6, #3498db); border-radius: 3px; transition: width 0.5s ease; }
+        .slide { display: none; background: rgba(0,0,0,0.55); border-radius: 20px; padding: 40px; border: 1px solid rgba(255,255,255,0.15); min-height: 400px; margin-bottom: 20px; }
+        .slide.active { display: block; }
+        .slide h2 { font-size: 2em; color: #ffd700; margin-bottom: 10px; }
+        .slide h3 { font-size: 1.3em; color: #a0d2eb; margin-bottom: 20px; }
+        .slide h4 { font-size: 1.1em; color: #ffd700; margin-bottom: 10px; }
+        .slide p { font-size: 1.1em; line-height: 1.8; margin-bottom: 15px; }
+        .slide ul { margin-left: 20px; margin-bottom: 15px; }
+        .slide ul li { margin-bottom: 8px; line-height: 1.6; font-size: 1.05em; }
+        .nav-menu { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center; }
+        .nav-btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 1em; cursor: pointer; color: white; font-weight: bold; transition: opacity 0.3s ease; }
+        .nav-btn:hover { opacity: 0.85; }
+        .nav-btn.day1 { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .nav-btn.day2 { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .nav-btn.day3 { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .nav-btn.day4 { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .nav-btn.ref { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .highlight { background: rgba(255,215,0,0.12); border-left: 4px solid #ffd700; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .rule-box { background: rgba(52,152,219,0.15); border-left: 4px solid #3498db; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .example-box { background: rgba(46,204,113,0.12); border-left: 4px solid #2ecc71; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .warning-box { background: rgba(231,76,60,0.12); border-left: 4px solid #e74c3c; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .grammar-box { background: rgba(155,89,182,0.15); border-left: 4px solid #9b59b6; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .writing-structure { background: rgba(241,196,15,0.12); border-left: 4px solid #f1c40f; padding: 20px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .skill-card { background: rgba(243,156,18,0.12); border-left: 4px solid #f39c12; padding: 15px; border-radius: 0 10px 10px 0; margin: 15px 0; }
+        .skill-card h4 { color: #f39c12; }
+        .similar-word { color: #2ecc71; font-weight: bold; }
+        .different-word { color: #e74c3c; font-weight: bold; }
+        .compare-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .compare-table th, .compare-table td { padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.2); }
+        .compare-table th { background: rgba(255,215,0,0.2); color: #ffd700; }
+        .compare-table td { background: rgba(255,255,255,0.05); }
+        .slide-nav { display: flex; justify-content: center; gap: 20px; margin: 20px 0; }
+        .slide-nav button { padding: 12px 30px; border: none; border-radius: 10px; font-size: 1.1em; cursor: pointer; color: white; font-weight: bold; transition: opacity 0.3s ease; background: linear-gradient(135deg, #667eea, #764ba2); }
+        .slide-nav button:hover { opacity: 0.85; }
+        .slide-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+        footer { text-align: center; padding: 30px; margin-top: 30px; color: rgba(255,255,255,0.6); }
+        footer p { margin-bottom: 5px; }
+        footer a { color: #ffd700; }
+    </style>
+</head>
+<body>
+    <div class="bg-container"><div class="bg-layer bg-layer-a"></div><div class="bg-layer bg-layer-b"></div></div>
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 14: Chapters 41-44</h2>
+            <p>by Shawn Inmon</p>
+            <div class="theme-banner"><h3>ELA Theme: Compare and Contrast</h3></div>
+        </header>
+        <div class="progress-bar"><div class="progress" id="progress"></div></div>
+
+        <!-- ═══ SLIDE 0: OVERVIEW ═══ -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 14 Overview</h2>
+            <h3>Compare and Contrast</h3>
+            <div class="nav-menu">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 41</button>
+                <button class="nav-btn day2" onclick="goToSlide(9)">Day 2: Chapters 42-43</button>
+                <button class="nav-btn day3" onclick="goToSlide(18)">Day 3: Chapter 44</button>
+                <button class="nav-btn day4" onclick="goToSlide(25)">Day 4: Writing</button>
+                <button class="nav-btn ref" onclick="goToSlide(29)">Reference</button>
+            </div>
+            <div class="highlight" style="margin-top:30px">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 41 — The Escape (secret passage, Versa-eh's horses, fleeing the burning city)</li>
+                    <li><strong>Day 2:</strong> Chapters 42-43 — Werda-ak / The World Still Spins (the arrow, grief, Senta-eh leads)</li>
+                    <li><strong>Day 3:</strong> Chapter 44 — Numb (healing, the greedy villagers, Alex's rage)</li>
+                    <li><strong>Day 4:</strong> Written Response — Comparing Characters</li>
+                </ul>
+            </div>
+            <div class="rule-box">
+                <h4>Skills We Are Building</h4>
+                <p><span class="similar-word">COMPARE</span> = How things are <strong>alike</strong> (similar). <span class="different-word">CONTRAST</span> = How things are <strong>different</strong>.</p>
+                <p>This week, characters change, roles reverse, and allies surprise us. We will track who people WERE versus who they BECOME.</p>
+            </div>
+            <div class="warning-box">
+                <h4>A Note About This Week</h4>
+                <p>These chapters contain the most emotional events in the book. We will discuss them respectfully and use them to understand how characters respond to loss.</p>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDE 1-2: SKILL INTRO ═══ -->
+        <div class="slide" id="slide-1">
+            <h2>Compare and Contrast: The Skill</h2>
+            <div class="highlight">
+                <h4>Signal Words</h4>
+                <table class="compare-table">
+                    <tr><th><span class="similar-word">Compare (Alike)</span></th><th><span class="different-word">Contrast (Different)</span></th></tr>
+                    <tr><td>similarly, likewise, both, also, in the same way, just as</td><td>however, but, while, on the other hand, in contrast, unlike, whereas</td></tr>
+                </table>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Compare and Contrast Is Everywhere</h4>
+                <p>You compare and contrast every day — deciding what to eat, which game to play, who to sit with. In reading, we use this skill to understand characters, events, and themes more deeply.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>This Week's Big Comparisons</h2>
+            <div class="rule-box">
+                <ul>
+                    <li><span class="different-word">Lanta-eh:</span> chained for a year vs. the strong leader she still is</li>
+                    <li><span class="different-word">Alex:</span> decisive leader BEFORE loss vs. emotionally shut down AFTER</li>
+                    <li><span class="different-word">Senta-eh:</span> afraid of horses THEN vs. warrior on horseback NOW</li>
+                    <li><span class="different-word">Versa-eh's help</span> vs. the ship negotiator's tricks</li>
+                    <li><span class="different-word">Trained soldiers</span> vs. farming villagers as fighters</li>
+                    <li><span class="different-word">The healer</span> (fair exchange) vs. the villagers (robbery)</li>
+                    <li><span class="different-word">Alex vs. Senta-eh:</span> how each handles grief</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 3-8: DAY 1 — CH41 ═══ -->
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Chapter 41 — The Escape</h2>
+            <h3>Key Events</h3>
+            <div class="highlight">
+                <ul>
+                    <li>Lanta-eh speaks for the first time in over a year — <strong>calm and commanding</strong></li>
+                    <li>She reveals the <strong>secret escape passage</strong> only the villain knew about</li>
+                    <li>She takes charge: <strong>"Stop. You are injured. We are not."</strong></li>
+                    <li>They escape through the passage to the <strong>western wall</strong></li>
+                    <li><strong>Versa-eh and Harta-ak</strong> are waiting outside with three horses</li>
+                    <li>Alex lifts <strong>Monda-ak</strong> onto his horse — refuses to leave him behind</li>
+                    <li>A guard fires an arrow as they ride away...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Comparing Lanta-eh</h2>
+            <h3>What You'd EXPECT vs. What You SEE</h3>
+            <div class="example-box">
+                <h4>What You Might EXPECT After a Year in Chains</h4>
+                <p>Weak, confused, unable to think clearly. Scared, crying, needing help with everything. Angry at rescuers for taking so long.</p>
+            </div>
+            <div class="highlight">
+                <h4>What We ACTUALLY See</h4>
+                <p>She smiles at the "ludicrousness" of Alex asking if SHE is okay. She knows about the secret passage. She gives orders with authority. She says "This was always going to be part of my life's journey."</p>
+            </div>
+            <div class="warning-box">
+                <p><span class="different-word">CONTRAST:</span> <strong>While</strong> most people would be broken after a year in chains, Lanta-eh emerges stronger, calmer, and more commanding than ever.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Contrast What You EXPECT with What HAPPENS</h4>
+                <p>When a character defies your expectations, that is a powerful contrast. The bigger the gap between expectation and reality, the more it reveals about who they truly are.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Comparing Senta-eh's Growth</h2>
+            <div class="rule-box">
+                <table class="compare-table">
+                    <tr><th>Senta-eh THEN (Early in Book)</th><th>Senta-eh NOW (Chapter 41)</th></tr>
+                    <tr><td>Scared to ride the most gentle, calm horse</td><td>Leaps onto a horse carrying another person during a battle escape</td></tr>
+                    <tr><td>Followed Alex's lead on every decision</td><td>Volunteers to go first down the dark staircase with candle and sword</td></tr>
+                    <tr><td>Had never left her village before</td><td>Has survived pirates, shipwrecks, island survival, and a city assault</td></tr>
+                </table>
+            </div>
+            <div class="highlight">
+                <p>Alex notices this himself: <em>"Pretty damned good for a woman who was scared to ride the most sedate horse alive a few months ago."</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Comparing Allies</h2>
+            <h3>Versa-eh vs. The Ship Negotiator</h3>
+            <div class="example-box">
+                <h4>The Negotiator (Chapter 30)</h4>
+                <p>Tricked Alex, took his horses AND saddlebags, gave nothing extra. <span class="different-word">Helped himself.</span></p>
+            </div>
+            <div class="example-box">
+                <h4>Versa-eh and Harta-ak (Chapter 41)</h4>
+                <p>Risked their own safety. Bought three horses. Waited at the gate not knowing if the group would even come that way. <span class="similar-word">Helped selflessly.</span></p>
+            </div>
+            <div class="highlight">
+                <p>When Alex asks "Why?" — Versa-eh says: <strong>"Because I want to."</strong> No deal, no payment, no obligation. Just choice.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Contrasting Two Characters Reveals Values</h4>
+                <p>When you put two characters side by side who face a similar choice, their DIFFERENT actions reveal what they truly value. The negotiator valued profit. Versa-eh valued people.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Vocabulary</h2>
+            <table class="compare-table">
+                <tr><th>Word</th><th>Context Clue</th><th>Meaning</th></tr>
+                <tr><td><strong>ludicrousness</strong></td><td>Alex asks "Are you okay?" while bleeding badly</td><td>The quality of being ridiculous or absurd</td></tr>
+                <tr><td><strong>flabbergasted</strong></td><td>Alex did NOT expect Versa-eh there</td><td>Completely shocked and amazed</td></tr>
+                <tr><td><strong>sedate</strong></td><td>The calmest, safest possible horse</td><td>Slow, calm, and very gentle</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: Discussion</h2>
+            <div class="rule-box">
+                <ul>
+                    <li><span class="different-word">CONTRAST:</span> How is Lanta-eh DIFFERENT from what you expected after a year in chains?</li>
+                    <li><span class="similar-word">COMPARE:</span> How is Versa-eh's help SIMILAR to Harta-ak's earlier generosity with the refugees?</li>
+                    <li><span class="different-word">CONTRAST:</span> How has Senta-eh changed from the beginning of the book to now?</li>
+                    <li>Why does Alex refuse to leave Monda-ak behind? What does this tell you?</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 9-17: DAY 2 — CH42-43 ═══ -->
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Chapters 42-43</h2>
+            <h3>Werda-ak / The World Still Spins</h3>
+            <div class="warning-box">
+                <h4>Key Events</h4>
+                <ul>
+                    <li>A guard's arrow strikes <strong>Werda-ak</strong> — the only uninjured member</li>
+                    <li>His final words: <strong>"Thank you for bringing me"</strong></li>
+                    <li>His last observation: <strong>"The ground is not cold. It will be easy to dig my grave."</strong></li>
+                    <li>Alex <strong>shuts down emotionally</strong> — "I don't care"</li>
+                    <li><strong>Senta-eh takes over as leader</strong> — every decision falls to her</li>
+                    <li>They ride into the night, camp hidden off the trail, tend wounds</li>
+                    <li>They <strong>bury Werda-ak</strong> under an oak tree with Spanish moss</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: The Cruelest Irony</h2>
+            <h3>Comparing the End of Chapter 40 to Chapter 42</h3>
+            <div class="rule-box">
+                <table class="compare-table">
+                    <tr><th>End of Chapter 40</th><th>Chapter 42</th></tr>
+                    <tr><td>Werda-ak is the ONLY person "unscathed"</td><td>Werda-ak is the ONLY person who dies</td></tr>
+                    <tr><td>He stands grinning as if they won the war</td><td>He closes his eyes for the final time</td></tr>
+                    <tr><td>Everyone else is injured — Alex, Senta-eh, Monda-ak</td><td>The healthiest person is taken by a random arrow</td></tr>
+                </table>
+            </div>
+            <div class="highlight">
+                <p><span class="different-word">CONTRAST:</span> The author shows us that in real conflict, survival depends on luck as much as skill. The strongest, least injured person can still be lost to one random moment.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Contrasting Expectations with Outcomes Creates Irony</h4>
+                <p>When the person you LEAST expect to die is the one who does, that contrast creates emotional impact. The bigger the gap between expectation and reality, the harder it hits the reader.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Werda-ak's Final Words</h2>
+            <div class="example-box">
+                <h4>"Thank you for bringing me."</h4>
+                <p><span class="similar-word">COMPARE</span> what MOST people might say while dying:</p>
+                <ul>
+                    <li>"Why did you bring me here?"</li>
+                    <li>"This is your fault."</li>
+                    <li>"I wish I had stayed home."</li>
+                </ul>
+                <p><span class="different-word">CONTRAST</span> with what Werda-ak ACTUALLY says:</p>
+                <ul>
+                    <li>Gratitude, not blame</li>
+                    <li>Acceptance, not regret</li>
+                    <li>Peace, not anger</li>
+                </ul>
+            </div>
+            <div class="highlight">
+                <p>His words reveal a character who valued the JOURNEY — the adventure, the friendship, the purpose — more than his own survival.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Comparing Leaders</h2>
+            <h3>Alex BEFORE vs. AFTER</h3>
+            <div class="rule-box">
+                <table class="compare-table">
+                    <tr><th>Alex BEFORE</th><th>Alex AFTER</th></tr>
+                    <tr><td>Makes plans, gives orders, thinks strategically</td><td>Says "I don't care" when asked about traveling</td></tr>
+                    <tr><td>Leads from the front in every battle</td><td>Cannot function — lies on blanket with eyes closed</td></tr>
+                    <tr><td>Inspires others with speeches about commitment</td><td>Has no words at the burial — "he was empty"</td></tr>
+                    <tr><td>Always thinking two steps ahead</td><td>Does not even reach for a weapon when he hears footsteps</td></tr>
+                </table>
+            </div>
+            <div class="warning-box">
+                <p><span class="different-word">CONTRAST:</span> The decisive leader who planned the bird attack, fought through guards, and killed a tyrant is now unable to decide whether to ride or stop. Grief can break even the strongest person.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: Senta-eh Steps Up</h2>
+            <h3>How Alex and Senta-eh Handle Grief DIFFERENTLY</h3>
+            <div class="example-box">
+                <h4>Alex's Response</h4>
+                <p>Shuts down. Stops making decisions. Says "I don't care." Lies on blanket. Does not look for a weapon when he hears footsteps.</p>
+            </div>
+            <div class="example-box">
+                <h4>Senta-eh's Response</h4>
+                <p>Pushes pain aside. Makes travel decisions. Leads them off the trail. Cleans wounds. Finds food and water. Takes over every leadership role.</p>
+            </div>
+            <div class="highlight">
+                <p><span class="different-word">CONTRAST:</span> <strong>While</strong> Alex processes grief by shutting down, Senta-eh processes grief by taking action. Neither way is wrong — they are simply different ways people survive devastating loss.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Contrasting Reactions Reveals Character</h4>
+                <p>When two characters face the SAME event but react DIFFERENTLY, those different reactions reveal who they fundamentally are. Same grief, different coping — and both are valid.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Vocabulary</h2>
+            <table class="compare-table">
+                <tr><th>Word/Phrase</th><th>Context Clue</th><th>Meaning</th></tr>
+                <tr><td><strong>ministrations</strong></td><td>Senta-eh gently cleans Alex's wounds</td><td>Careful acts of caring for someone</td></tr>
+                <tr><td><strong>"cut him and left a scar"</strong></td><td>Describes emotional pain from deaths (figurative)</td><td>Lasting invisible wound from grief</td></tr>
+                <tr><td><strong>"I don't care"</strong></td><td>Alex's response about travel plans</td><td>Emotional shutdown — grief blocking function</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Author's Craft — Short Chapters</h2>
+            <div class="grammar-box">
+                <h4>The Power of Brevity</h4>
+                <p>Chapter 42 is the SHORTEST chapter in the book — just a few hundred words covering Werda-ak's death.</p>
+                <p><span class="similar-word">COMPARE</span> this to the long battle chapters (39-40) with pages of detailed action.</p>
+                <p><strong>Why?</strong> The author matches length to emotional weight. The battle needed detail. The death needed silence. Sometimes the most powerful writing is the writing that stops.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: You Can Compare the WRITING Itself</h4>
+                <p>Compare and contrast is not just for characters — you can compare chapter lengths, sentence styles, and tone to understand the author's choices.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: "Unscathed" to "Gone"</h2>
+            <div class="rule-box">
+                <p><span class="different-word">CONTRAST:</span> At the end of Chapter 40, the author specifically tells us Werda-ak is "unscathed" — the only healthy person in the group. Then in Chapter 42, he is the only one who dies.</p>
+                <p><strong>Why the author does this:</strong> By establishing Werda-ak as the safest person, the author makes his death MORE shocking. The contrast between "completely fine" and "dead" is the widest possible gap — and that is what makes it devastating.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-17">
+            <h2>Day 2: Discussion</h2>
+            <div class="rule-box">
+                <ul>
+                    <li><span class="different-word">CONTRAST:</span> How is Werda-ak's reaction to dying DIFFERENT from what most people would say?</li>
+                    <li><span class="different-word">CONTRAST:</span> How does Alex handle grief DIFFERENTLY from Senta-eh?</li>
+                    <li><span class="different-word">CONTRAST:</span> How is the irony of "unscathed" connected to his death?</li>
+                    <li>Why do you think the author made Chapter 42 so short?</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 18-24: DAY 3 — CH44 ═══ -->
+        <div class="slide" id="slide-18">
+            <h2>Day 3: Chapter 44 — Numb</h2>
+            <h3>Key Events</h3>
+            <div class="highlight">
+                <ul>
+                    <li>Four days hidden — recovering from <strong>physical and emotional</strong> wounds</li>
+                    <li>Monda-ak recovers enough to <strong>hunt on his own</strong></li>
+                    <li>Travel at <strong>night for the first week</strong>, then switch to daytime</li>
+                    <li>Find a village — old <strong>healer treats Alex's arm</strong> (almost lost it)</li>
+                    <li>Senta-eh accidentally reveals their <strong>valuable tiles (duntas)</strong></li>
+                    <li><strong>Villagers attack</strong> to rob them — farmers with improvised weapons</li>
+                    <li>Alex fights with <strong>devastating fury</strong> — tears of rage and grief</li>
+                    <li>"Let's keep going" — as if <strong>waking from a nightmare</strong></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: The Healer vs. The Villagers</h2>
+            <h3>Two Sides of Human Nature</h3>
+            <div class="example-box">
+                <h4>The Old Healer</h4>
+                <p>Demands payment (fair). Provides excellent treatment. "He won't lose the arm." <span class="similar-word">Professional exchange — fair value for money.</span></p>
+            </div>
+            <div class="warning-box">
+                <h4>The Villagers</h4>
+                <p>The healer tells them about the tiles. They grab farming tools. They charge at the group to rob and likely kill them. <span class="different-word">Greed turned into violence.</span></p>
+            </div>
+            <div class="highlight">
+                <p><span class="different-word">CONTRAST:</span> The healer earned her payment through skill. The villagers tried to take theirs through force. Same village, same people, completely different choices.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Same Setting, Different Choices = Strong Contrast</h4>
+                <p>When two groups in the SAME place make opposite decisions, it reveals that character is about CHOICE, not circumstance. The healer and villagers had the same opportunity — they chose differently.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: Warriors vs. Farmers</h2>
+            <div class="rule-box">
+                <table class="compare-table">
+                    <tr><th>City Soldiers (Chapters 39-40)</th><th>Village Farmers (Chapter 44)</th></tr>
+                    <tr><td>Professional weapons: swords, spears, armor</td><td>Improvised: hooks, scythes, wood-chopping axes</td></tr>
+                    <tr><td>Trained fighters who held their ground</td><td>Untrained — most lost nerve and turned back</td></tr>
+                    <tr><td>Fought to protect their leader and city</td><td>Attacked strangers to steal their money</td></tr>
+                    <tr><td>Died standing their post with honor</td><td>Dropped weapons and begged when faced with real combat</td></tr>
+                </table>
+            </div>
+            <div class="highlight">
+                <p>The soldiers were dangerous because of training and commitment. The villagers were dangerous only because of numbers — once they met resistance, they broke.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Alex's Two Fighting Styles</h2>
+            <div class="example-box">
+                <h4>Alex vs. Draka-ak (Chapter 40)</h4>
+                <p>Strategic. Patient. Faked a stumble to create an opening. Thought several moves ahead. <span class="similar-word">Used intelligence.</span></p>
+            </div>
+            <div class="warning-box">
+                <h4>Alex vs. The Villagers (Chapter 44)</h4>
+                <p>Pure rage. Charges alone at an entire mob. Tears on his face. Kills without strategy. Looks around afterward "as if just coming awake." <span class="different-word">Used grief.</span></p>
+            </div>
+            <div class="highlight">
+                <p><span class="different-word">CONTRAST:</span> <strong>While</strong> Alex fought Draka-ak with his MIND, he fights the villagers with his GRIEF. The violence is not about the villagers — it is about everything he has lost.</p>
+            </div>
+            <div class="skill-card">
+                <h4>Skill Reminder: Comparing the SAME Character at Different Times</h4>
+                <p>One of the most powerful comparisons is the same person in two different moments. The gap between "strategic Alex" and "grieving Alex" tells us more about the cost of loss than any description could.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Vocabulary</h2>
+            <table class="compare-table">
+                <tr><th>Word/Phrase</th><th>Context Clue</th><th>Meaning</th></tr>
+                <tr><td><strong>plowshares-pounded-into-swords</strong></td><td>Farmers carrying hooks, scythes, axes</td><td>Farming tools turned into weapons</td></tr>
+                <tr><td><strong>glittered with greed</strong></td><td>Healer's eyes when she saw tiles</td><td>Eyes lit up with desire for valuables</td></tr>
+                <tr><td><strong>recuperate</strong></td><td>Group resting to recover from injuries</td><td>To recover health after being hurt</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: Author's Craft — Tears During Battle</h2>
+            <div class="grammar-box">
+                <p>The author describes Alex fighting with "tears of anger, frustration and mourning" on his face, then saying "Let's keep going" as if waking up.</p>
+                <p><strong>Why include this detail?</strong> It shows readers that his violence comes from grief, not cruelty. He is a broken man lashing out, not a cold killer. The tears are what make the scene human instead of horrifying.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Discussion</h2>
+            <div class="rule-box">
+                <ul>
+                    <li><span class="different-word">CONTRAST:</span> How is the healer DIFFERENT from the villagers who attack?</li>
+                    <li><span class="different-word">CONTRAST:</span> How is Alex's fighting in Chapter 44 DIFFERENT from Chapter 40?</li>
+                    <li><span class="similar-word">COMPARE:</span> How is Senta-eh's leadership SIMILAR to how Alex led earlier?</li>
+                    <li>Why does the author describe Alex's tears during the fight?</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 25-28: DAY 4 — WRITING ═══ -->
+        <div class="slide" id="slide-25">
+            <h2>Day 4: Writing — Compare and Contrast</h2>
+            <div class="highlight">
+                <h4>Prompt</h4>
+                <p>Write about TWO characters from Chapters 41-44. Explain how they are <span class="similar-word">SIMILAR</span> or <span class="different-word">DIFFERENT</span> using at least two specific details from the story. Use comparison words like "while," "however," "similarly," "on the other hand," or "in contrast."</p>
+            </div>
+            <div class="writing-structure">
+                <h4>Paragraph Structure</h4>
+                <ul>
+                    <li><strong>Sentence 1:</strong> Name both characters and state your main comparison point.</li>
+                    <li><strong>Sentence 2:</strong> Describe ONE character with a specific detail from the text.</li>
+                    <li><strong>Sentence 3:</strong> Use a comparison word to describe the OTHER character.</li>
+                    <li><strong>Sentence 4:</strong> Wrap up — what does this comparison reveal?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Sentence Starters</h2>
+            <div class="grammar-box">
+                <h4>Use These to Get Started</h4>
+                <p>"<span class="different-word">While</span> [character 1] _____, [character 2] _____."</p>
+                <p>"[Character 1] is <span class="similar-word">similar</span> to [character 2] because both _____."</p>
+                <p>"<span class="different-word">In contrast</span> to [character 1], [character 2] _____."</p>
+                <p>"<span class="different-word">On the other hand</span>, [character 2] _____."</p>
+                <p>"<span class="different-word">Unlike</span> [character 1], [character 2] _____."</p>
+                <p>"Both [character 1] and [character 2] _____, but they differ in _____."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Model Response</h2>
+            <div class="example-box">
+                <p style="line-height:2.0">Alex and Senta-eh handle grief in very <span class="different-word">different</span> ways after losing Werda-ak. <span class="different-word">While</span> Alex shuts down emotionally and says "I don't care" when asked about what to do next, Senta-eh pushes her pain aside and takes over every leadership role — choosing where to camp, cleaning wounds, and keeping the group moving. <span class="different-word">In contrast</span> to Alex, who cannot even reach for a weapon when he hears footsteps, Senta-eh stays alert and protective, showing that people process the same loss in completely different ways.</p>
+            </div>
+            <div class="highlight">
+                <h4>What Makes This Strong</h4>
+                <ul>
+                    <li>Names BOTH characters being compared</li>
+                    <li>Uses THREE comparison words (different, while, in contrast)</li>
+                    <li>Gives SPECIFIC details for each person (not vague)</li>
+                    <li>Wraps up with what the comparison reveals</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Checklist</h2>
+            <div class="highlight">
+                <h4>Compare/Contrast Writing Checklist</h4>
+                <ul>
+                    <li>Did you name the TWO things you are comparing?</li>
+                    <li>Did you explain how they are SIMILAR or DIFFERENT?</li>
+                    <li>Did you include at least TWO specific details from the story?</li>
+                    <li>Did you use at least ONE comparison word (while, however, but, in contrast)?</li>
+                </ul>
+            </div>
+            <div class="rule-box">
+                <h4>Grammar Checklist</h4>
+                <ul>
+                    <li>Capital letter at the start of every sentence?</li>
+                    <li>Punctuation at the end of every sentence?</li>
+                    <li>Every sentence is COMPLETE? (Subject + Verb + Complete Thought)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ═══ SLIDES 29-34: REFERENCE SECTION ═══ -->
+        <div class="slide" id="slide-29">
+            <h2>Reference: Vocabulary Glossary</h2>
+            <h3>All Words from Week 14</h3>
+            <table class="compare-table">
+                <tr><th>Word</th><th>Meaning</th><th>Chapter</th></tr>
+                <tr><td>ludicrousness</td><td>The quality of being ridiculous</td><td>41</td></tr>
+                <tr><td>flabbergasted</td><td>Completely shocked and amazed</td><td>41</td></tr>
+                <tr><td>sedate</td><td>Slow, calm, very gentle</td><td>41</td></tr>
+                <tr><td>ministrations</td><td>Careful acts of caring for someone</td><td>43</td></tr>
+                <tr><td>"cut him and left a scar"</td><td>Figurative — lasting emotional pain</td><td>42</td></tr>
+                <tr><td>plowshares-pounded-into-swords</td><td>Farming tools turned into weapons</td><td>44</td></tr>
+                <tr><td>glittered with greed</td><td>Eyes lit up with desire for valuables</td><td>44</td></tr>
+                <tr><td>recuperate</td><td>To recover health after injury</td><td>44</td></tr>
+            </table>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Reference: Skill Definitions</h2>
+            <div class="rule-box">
+                <h4>Compare</h4>
+                <p><strong>What it means:</strong> Showing how two or more things are ALIKE or SIMILAR.</p>
+                <p><strong>Signal words:</strong> similarly, likewise, both, also, in the same way, just as</p>
+                <p><strong>Example:</strong> "Both Alex and Senta-eh grieve deeply for Werda-ak."</p>
+            </div>
+            <div class="rule-box">
+                <h4>Contrast</h4>
+                <p><strong>What it means:</strong> Showing how two or more things are DIFFERENT.</p>
+                <p><strong>Signal words:</strong> however, but, while, on the other hand, in contrast, unlike, whereas</p>
+                <p><strong>Example:</strong> "While Alex shuts down, Senta-eh takes action."</p>
+            </div>
+            <div class="rule-box">
+                <h4>Character Change Over Time</h4>
+                <p><strong>What it means:</strong> Comparing who a character WAS at one point to who they ARE at another point — tracking growth, decline, or transformation.</p>
+                <p><strong>Example:</strong> Senta-eh went from being afraid of gentle horses to leading an army.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-31">
+            <h2>Reference: Sentence Starters</h2>
+            <h3>Use These When You Are Stuck</h3>
+            <div class="writing-structure">
+                <h4>For Stating Similarities</h4>
+                <p>"Both [A] and [B] _____."</p>
+                <p>"[A] is similar to [B] because _____."</p>
+                <p>"Just as [A] _____, [B] also _____."</p>
+            </div>
+            <div class="writing-structure">
+                <h4>For Stating Differences</h4>
+                <p>"While [A] _____, [B] _____."</p>
+                <p>"In contrast to [A], [B] _____."</p>
+                <p>"Unlike [A], [B] _____."</p>
+                <p>"However, [B] _____."</p>
+                <p>"On the other hand, [B] _____."</p>
+            </div>
+            <div class="writing-structure">
+                <h4>For Wrapping Up</h4>
+                <p>"This comparison shows that _____."</p>
+                <p>"These differences reveal that _____."</p>
+                <p>"Overall, [A] and [B] are alike/different because _____."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-32">
+            <h2>Reference: Step-by-Step Strategies</h2>
+            <div class="skill-card">
+                <h4>How to Compare Two Characters</h4>
+                <p>1) Pick two characters. 2) Ask: What do they have in COMMON? 3) Ask: How are they DIFFERENT? 4) Find specific text details for each. 5) Use a comparison signal word to connect them. 6) Explain what the comparison REVEALS.</p>
+            </div>
+            <div class="skill-card">
+                <h4>How to Track Character Change</h4>
+                <p>1) Pick a character. 2) Describe who they were EARLY in the story. 3) Describe who they are NOW. 4) Identify the specific event that changed them. 5) Use "before" and "after" or "then" and "now" to frame the contrast.</p>
+            </div>
+            <div class="skill-card">
+                <h4>How to Use a Comparison Table</h4>
+                <p>1) Create two columns — one for each thing you are comparing. 2) List traits, actions, or events in rows. 3) Look for patterns: Where are they alike? Where do they differ? 4) Use the strongest contrasts as your writing evidence.</p>
+            </div>
+            <div class="skill-card">
+                <h4>How to Write a Compare/Contrast Paragraph</h4>
+                <p>1) Topic sentence — name both subjects and state your comparison. 2) Detail about Subject A. 3) Transition word + detail about Subject B. 4) Explain what the comparison reveals. 5) Wrap up without adding new information.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-33">
+            <h2>Week 14 Complete Review</h2>
+            <div class="rule-box">
+                <table class="compare-table">
+                    <tr><th>Skill</th><th>What It Means</th><th>Example</th></tr>
+                    <tr><td>Compare</td><td>Show how things are alike</td><td>Both Alex and Senta-eh grieve deeply</td></tr>
+                    <tr><td>Contrast</td><td>Show how things are different</td><td>Alex shuts down; Senta-eh takes action</td></tr>
+                    <tr><td>Signal Words</td><td>Words that flag comparison</td><td>while, however, in contrast, similarly</td></tr>
+                    <tr><td>Character Change</td><td>How a character evolves</td><td>Senta-eh: scared → warrior leader</td></tr>
+                    <tr><td>Irony through Contrast</td><td>Expectations vs. outcomes</td><td>"Unscathed" → only person who dies</td></tr>
+                </table>
+            </div>
+            <div class="highlight">
+                <h4>Key Story Facts from Week 14</h4>
+                <ul>
+                    <li>Lanta-eh emerges from captivity calm, commanding, and unbroken</li>
+                    <li>Secret escape passage — built by a tyrant who killed the craftsmen</li>
+                    <li>Versa-eh and Harta-ak wait with horses — selfless help</li>
+                    <li>Werda-ak killed by a random arrow — "Thank you for bringing me"</li>
+                    <li>Alex shuts down; Senta-eh takes over every leadership role</li>
+                    <li>Healer treats Alex's arm (fair); villagers attack for money (greed)</li>
+                    <li>Alex fights with rage and grief — tears on his face — then keeps going</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Mr. Reinisch &middot; Room 406 &middot; Winfield High School</p>
+            <p>Week 14: Lost in Kragdon-ah &mdash; Compare and Contrast</p>
+            <p><a href="https://reinischclassroom.com">reinischclassroom.com</a></p>
+        </footer>
+    </div>
+
+    <script>
+        var currentSlide = 0;
+        var totalSlides = 34;
+        var currentBg = 0;
+        var bgImageUrls = [
+            'image1.jpg','image2.jpg','image3.jpg','image4.jpg',
+            'image5.jpg','image6.jpg','image7.jpg','image8.jpg',
+            'image9.jpg','image10.jpg','image11.jpg','image12.jpg'
+        ];
+        var totalBgImages = bgImageUrls.length;
+        var layerA = document.querySelector('.bg-layer-a');
+        var layerB = document.querySelector('.bg-layer-b');
+        var activeLayer = layerA;
+        var hiddenLayer = layerB;
+        bgImageUrls.forEach(function(url) { var img = new Image(); img.src = url; });
+        layerA.style.backgroundImage = "url('" + bgImageUrls[0] + "')";
+        layerA.style.opacity = '0.55';
+
+        function rotateBg() {
+            currentBg = (currentBg + 1) % totalBgImages;
+            var nextUrl = bgImageUrls[currentBg];
+            hiddenLayer.style.transition = 'none';
+            hiddenLayer.style.opacity = '0';
+            hiddenLayer.style.backgroundImage = "url('" + nextUrl + "')";
+            void hiddenLayer.offsetWidth;
+            requestAnimationFrame(function() {
+                hiddenLayer.style.transition = 'opacity 2.5s ease-in-out';
+                activeLayer.style.transition = 'opacity 2.5s ease-in-out';
+                hiddenLayer.style.opacity = '0.55';
+                activeLayer.style.opacity = '0';
+                var temp = activeLayer;
+                activeLayer = hiddenLayer;
+                hiddenLayer = temp;
+            });
+        }
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            var slides = document.querySelectorAll('.slide');
+            for (var i = 0; i < slides.length; i++) {
+                slides[i].classList.remove('active');
+                if (i === currentSlide) { slides[i].classList.add('active'); }
+            }
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            document.getElementById('progress').style.width = ((currentSlide + 1) / totalSlides * 100) + '%';
+        }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; updateSlide(); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; updateSlide(); } }
+        function goToSlide(n) { currentSlide = n; updateSlide(); }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'BUTTON') return;
+            var x = e.clientX;
+            if (x > window.innerWidth / 2) { nextSlide(); } else { prevSlide(); }
+        });
+        updateSlide();
+    </script>
+</body>
+</html>
