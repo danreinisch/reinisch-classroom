@@ -149,8 +149,11 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Skip empty lines
     if (!trimmed) continue;
 
-    // Strip decorative dashes wrapping day headers: "--- DAY 1 QUESTIONS ---" → "DAY 1 QUESTIONS"
-    const strippedLine = trimmed.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+    // Strip decorative dashes/box-drawing chars wrapping day headers:
+    // "--- DAY 1 QUESTIONS ---"                → "DAY 1 QUESTIONS"
+    // "─── Day 1: Chapter 38 — Lasta-ah ───"  → "Day 1: Chapter 38 — Lasta-ah"
+    // Matches 2+ of: ASCII hyphen, ─ (U+2500), ━ (U+2501), ═ (U+2550), optionally mixed.
+    const strippedLine = trimmed.replace(/^[-─━═]{2,}\s*/, '').replace(/\s*[-─━═]{2,}$/, '');
 
     // Check for DAY header (trailing content is optional)
     const dayMatch = strippedLine.match(/^DAY\s+(\d+)\b(.*)$/i);
@@ -182,7 +185,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       if (nextLineIndex < classLines.length) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
-        const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+        const nextStripped = nextLine.replace(/^[-─━═]{2,}\s*/, '').replace(/\s*[-─━═]{2,}$/, '');
         const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|\d+\.\s|DESE\s+Standard|IEP\s+Goal|[A-Z][).]|[A-Z]:|Correct\s+Answer:|ANSWER:|Answer:|Correct:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
           || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
@@ -221,9 +224,12 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // NOTE: This regex pair must be kept in sync with the copy in teacher-issue-draft.js.
     let chapterMatch = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?\s*[:–—-]\s*(.*)$/i);
     if (!chapterMatch) {
-      // No separator present — treat any trailing text as the chapter subtitle.
+      // No separator present — treat trailing text as the chapter subtitle only when
+      // it starts with a capital letter (title-case behaviour).  This prevents prose
+      // sentences such as "Chapter 38 reminded her of home." from creating a new day.
+      // NOTE: This regex pair must be kept in sync with the copy in teacher-issue-draft.js.
       const m = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?(?:\s+(.+))?$/i);
-      if (m) chapterMatch = m;
+      if (m && (!m[2] || /^[A-Z]/.test(m[2]))) chapterMatch = m;
     }
     if (chapterMatch) {
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
@@ -1819,4 +1825,278 @@ Hint: Pay attention to sounds.`;
 
   assert.strictEqual(result.days[0].questions[2].type, 'fill_in_blank', 'Day 1 Q3 should be fill_in_blank');
   assert.deepStrictEqual(result.days[0].questions[2].accepted, ['cut off', 'isolated'], 'Day 1 Q3 accepted alternatives');
+});
+
+// ── Week 13 box-drawing header regression tests (PR fix) ──────────────────────
+
+test('Box-drawing day header "─── Day 1: Chapter 38 — Lasta-ah ───" parses as day_number:1', () => {
+  // The real WEEK_13_MASTER_ALL_STUDENTS (4).txt uses ─── (U+2500) decorators
+  // around the day header.  Before the fix, these lines were never stripped and
+  // the DAY regex never matched, causing parseTxtToMeta to return null.
+  const txtContent = `─── Day 1: Chapter 38 — Lasta-ah ───
+
+1. [IG: S001.11.1] [MLS.DESE]
+   In Chapter 38, what effect did Alex's decision have on the rescue mission?
+   A) It gave the group time to scout the city carefully
+   B) It forced the group to give up the mission entirely
+   C) It caused Senta-eh to leave the group
+   Correct: A
+   Hint: Think about what Alex needed before acting.`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_13_MASTER_ALL_STUDENTS (4).txt');
+
+  assert(result !== null, 'Should parse box-drawing day header (not return null)');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].day_number, 1, 'Day number should be 1');
+  assert.strictEqual(result.days[0].type, 'questions', 'Day type should be questions');
+  assert(result.days[0].label.includes('Day 1'), 'Label should contain "Day 1"');
+  assert(!result.days[0].label.startsWith('─'), 'Label should not start with box-drawing character');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].correct, 'A', 'Q1 correct answer should be A');
+});
+
+test('Full Week 13 per-student per-class format with box-drawing headers parses end-to-end', () => {
+  // Replicates the structure of WEEK_13_MASTER_ALL_STUDENTS (4).txt for one student.
+  // The ╔╗╚╝ banner lines must be ignored; Strategy 0 (per-student detection) must
+  // find the === separator block containing "Class: Language Arts 3 SC" and parse
+  // the three ─── Day N ─── sections that follow.
+  const txtContent = `╔══════════════════════════════════════════════════════════════════════════════╗
+║ WEEK 13 — LOST IN KRAGDON-AH (CHAPTERS 38–40)                               ║
+║ ELA Theme: Cause and Effect                                                  ║
+║ 24 questions per student: 8 per day, mix of MC / TF / FIB                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+================================================================================
+WEEK 13 — Lost in Kragdon-ah (Chapters 38–40)
+ELA Theme: Cause and Effect
+Student: S011 | Class: Language Arts 3 SC
+IEP Goal Codes: S011.13.1-1, S011.13.1-2, S011.13.1-3
+Format: 24 questions across 3 days (8 per day) — MC / TF / FIB
+================================================================================
+
+
+─── Day 1: Chapter 38 — Lasta-ah ───
+
+1. [IG: S011.13.1-1] [MLS.DESE]
+   In Chapter 38, Alex decides NOT to charge directly into Lasta-ah. What effect does this decision have on the rescue mission?
+   A) It gives the group time to scout the city carefully and come up with a workable plan
+   B) It forces the group to give up the mission and travel all the way back to Winten-ah
+   C) It causes Senta-eh to leave the group and go home because she does not like waiting
+   Correct: A
+   Hint: Look for the cause-and-effect chain near the decision.
+
+2. [IG: S011.13.1-1] [MLS.DESE]
+   What effect does the darkness of night have on Alex's plan in Chapter 38?
+   A) It makes it impossible for the group to find Lasta-ah at all
+   B) It provides cover so the group can move through the city without being seen
+   C) It causes Alex to lose his map and forget which direction to travel
+   Correct: B
+   Hint: Think about why someone would prefer to move at night.
+
+3. [IG: S011.13.1-2] [MLS.DESE]
+   In Chapter 38, the traka-ta birds play a key role in Alex's final plan. What effect do the birds have?
+   A) They fly to Winten-ah to bring back reinforcements for the rescue
+   B) They carry Alex's message to Garute-ah hidden inside the city walls
+   C) They start fires across the city, causing a distraction that helps the rescue succeed
+   Correct: C
+   Hint: What does Alex attach to the birds before releasing them?
+
+4. [IG: S011.13.1-2] [MLS.DESE] [T/F] Alex chose NOT to light a fire at their daytime camp because smoke could draw the attention of a Lasta-ah guard.
+   Correct: TRUE
+   Hint: Re-read the passage describing their camp setup.
+
+5. [IG: S011.13.1-3] [MLS.DESE] [T/F] The rescue mission in Chapter 38 was a complete failure because Alex's plan did not work.
+   Correct: FALSE
+   Hint: Think about how the chapter ends.
+
+6. [IG: S011.13.1-1] [MLS.DESE]
+   Based on Chapter 38, what can you infer about Alex's leadership style?
+   A) He rushes into action without thinking and often puts the group in danger
+   B) He plans carefully, considers risks, and uses the environment to his advantage
+   C) He relies entirely on Senta-eh to make decisions for the group
+   Correct: B
+   Hint: Look at the sequence of decisions Alex makes throughout the chapter.
+
+7. [MLS.DESE]
+   [Fill in the Blank] In Chapter 38, Alex ties burning strips of _______ to the legs of the traka-ta so they will start fires when they fly home.
+   Accepted: cloth | blanket cloth | blankets | fabric
+   Hint: Re-read the paragraph where Alex prepares the birds.
+
+8. [IG: S011.13.1-3] [MLS.DESE]
+   What is the most likely long-term effect of Alex successfully rescuing Garute-ah from Lasta-ah?
+   A) The rescued prisoners will never trust Alex again after the dangerous mission
+   B) Garute-ah will be able to return home and Alex's reputation as a leader will grow
+   C) The mission will make Lasta-ah stronger because they will prepare better defenses
+   Correct: B
+   Hint: Think about what Garute-ah's safe return means for Alex and Winten-ah.
+
+
+─── Day 2: Chapter 39 — The Battle of Lasta-ah ───
+
+1. [IG: S011.13.1-1] [MLS.DESE]
+   In Chapter 39, what causes the alarm to sound in Lasta-ah before Alex is ready?
+   A) One of the traka-ta birds returns too early and starts a fire near the gate
+   B) A guard spots Alex's group hiding near the city wall
+   C) Senta-eh accidentally knocks over a torch while moving into position
+   Correct: A
+   Hint: Trace back the first moment things go wrong in Chapter 39.
+
+2. [IG: S011.13.1-2] [MLS.DESE]
+   What effect does the early alarm have on Alex's rescue plan in Chapter 39?
+   A) It gives Alex more time to find Garute-ah inside the city
+   B) It forces Alex to act faster than planned and change the route to escape
+   C) It causes the guards to open the gates, making it easier for Alex to enter
+   Correct: B
+   Hint: How does Alex adapt once the plan starts to fall apart?
+
+3. [IG: S011.13.1-2] [MLS.DESE] [T/F] The battle in Chapter 39 results in Alex capturing the entire city of Lasta-ah.
+   Correct: FALSE
+   Hint: What is Alex's actual goal in Chapter 39 — taking the city or escaping with Garute-ah?
+
+4. [IG: S011.13.1-3] [MLS.DESE] [T/F] Senta-eh plays an important role in helping the group escape from Lasta-ah in Chapter 39.
+   Correct: TRUE
+   Hint: Re-read the escape scene near the end of Chapter 39.
+
+5. [IG: S011.13.1-1] [MLS.DESE]
+   Based on Chapter 39, what can you infer about how Alex handles unexpected setbacks?
+   A) He panics and gives up when things do not go as planned
+   B) He adjusts his plan quickly and keeps the group moving forward
+   C) He blames his team members when the mission runs into trouble
+   Correct: B
+   Hint: Look at Alex's decisions after the alarm sounds.
+
+6. [MLS.DESE]
+   [Fill in the Blank] In Chapter 39, Alex escapes through the _______ gate rather than the main entrance because the guards are focused there.
+   Accepted: eastern | east | back | rear | side
+   Hint: Think about which direction would be less guarded.
+
+7. [IG: S011.13.1-2] [MLS.DESE]
+   What effect does Garute-ah's rescue have on the group's morale as they flee Lasta-ah?
+   A) It makes the group argue about which direction to travel
+   B) It slows down the group because Garute-ah is too injured to run
+   C) It energizes the group and gives Alex the motivation to keep pushing forward
+   Correct: C
+   Hint: How does a successful rescue affect the people who carried it out?
+
+8. [IG: S011.13.1-3] [MLS.DESE]
+   In Chapter 39, what is the most important cause of the group's successful escape from Lasta-ah?
+   A) The Lasta-ah guards decide not to chase after Alex's group
+   B) Alex's quick thinking and Senta-eh's help allow the group to find an unguarded exit
+   C) A second group of fighters from Winten-ah arrives to hold off the Lasta-ah guards
+   Correct: B
+   Hint: Consider all the factors that made the escape possible.
+
+
+─── Day 3: Chapter 40 — After the Battle ───
+
+1. [IG: S011.13.1-1] [MLS.DESE]
+   In Chapter 40, what effect does Garute-ah's rescue have on the people of Winten-ah?
+   A) They are angry that Alex risked so many lives for one person
+   B) They celebrate and their trust in Alex as a leader grows stronger
+   C) They are afraid that Lasta-ah will now attack Winten-ah in revenge
+   Correct: B
+   Hint: Think about how a successful rescue mission would affect the community.
+
+2. [IG: S011.13.1-2] [MLS.DESE]
+   What long-term effect does Alex's leadership during Chapters 38–40 have on his role in Winten-ah?
+   A) He is asked to leave Winten-ah because the mission was too dangerous
+   B) He is given a permanent leadership role because he proved his skill and loyalty
+   C) He becomes so famous that he leaves Winten-ah to travel to other cities
+   Correct: B
+   Hint: How do communities reward people who protect and serve them well?
+
+3. [IG: S011.13.1-3] [MLS.DESE] [T/F] By the end of Chapter 40, the conflict between Winten-ah and Lasta-ah is completely resolved.
+   Correct: FALSE
+   Hint: Think about whether one rescue mission would end a long-standing conflict.
+
+4. [MLS.DESE]
+   [Fill in the Blank] At the end of Chapter 40, Alex reflects on the rescue and realizes that working as a _______ was the key to their success.
+   Accepted: team | group | unit | together
+   Hint: What does Alex credit for the mission's success?
+
+5. [IG: S011.13.1-1] [MLS.DESE]
+   Based on Chapters 38–40, what is the most important lesson Alex learns about cause and effect?
+   A) Every action has consequences, and a good leader must think ahead before acting
+   B) Sometimes it is better to do nothing and wait for problems to solve themselves
+   C) The best plans are the ones that never need to be changed once they start
+   Correct: A
+   Hint: Look at how Alex's decisions throughout the three chapters led to the final outcome.
+
+6. [IG: S011.13.1-2] [MLS.DESE] [T/F] Alex's plan to use the traka-ta birds was originally Senta-eh's idea, not Alex's.
+   Correct: FALSE
+   Hint: Re-read Chapter 38 to see who comes up with the bird plan.
+
+7. [IG: S011.13.1-3] [MLS.DESE]
+   What effect does rescuing Garute-ah have on the relationship between Alex and the elders of Winten-ah?
+   A) The elders become jealous of Alex's success and try to limit his power
+   B) The elders gain more respect for Alex and begin to trust his judgment
+   C) The elders ask Alex to leave on another mission immediately after the rescue
+   Correct: B
+   Hint: Consider how leaders build trust through action.
+
+8. [MLS.DESE]
+   [Fill in the Blank] In Chapter 40, the author describes the rescue as a turning point, meaning it _______ the direction of the story.
+   Accepted: changed | shifted | altered | redirected
+   Hint: What does a turning point do to a story?`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_13_MASTER_ALL_STUDENTS (4).txt');
+
+  assert(result !== null, 'Should parse full Week 13 per-student file with box-drawing headers (not return null)');
+  assert.strictEqual(result.days.length, 3, 'Should have 3 days');
+
+  // Day 1 — 8 questions, mix of MC / T/F / FIB
+  const day1 = result.days[0];
+  assert.strictEqual(day1.day_number, 1, 'Day 1 number should be 1');
+  assert.strictEqual(day1.type, 'questions', 'Day 1 type should be questions');
+  assert.strictEqual(day1.questions.length, 8, 'Day 1 should have 8 questions');
+  assert.strictEqual(day1.questions[0].type, 'mcq', 'Day 1 Q1 should be MCQ');
+  assert.strictEqual(day1.questions[0].correct, 'A', 'Day 1 Q1 correct should be A');
+  assert.strictEqual(day1.questions[3].type, 'boolean', 'Day 1 Q4 ([T/F] TRUE) should be boolean');
+  assert.strictEqual(day1.questions[3].correct, 'A', 'Day 1 Q4 correct: TRUE → A');
+  assert.strictEqual(day1.questions[4].type, 'boolean', 'Day 1 Q5 ([T/F] FALSE) should be boolean');
+  assert.strictEqual(day1.questions[4].correct, 'B', 'Day 1 Q5 correct: FALSE → B');
+  assert.strictEqual(day1.questions[6].type, 'fill_in_blank', 'Day 1 Q7 ([Fill in the Blank]) should be fill_in_blank');
+  assert.deepStrictEqual(day1.questions[6].accepted, ['cloth', 'blanket cloth', 'blankets', 'fabric'], 'Day 1 Q7 accepted alternatives');
+
+  // Day 2 — 8 questions
+  const day2 = result.days[1];
+  assert.strictEqual(day2.day_number, 2, 'Day 2 number should be 2');
+  assert.strictEqual(day2.type, 'questions', 'Day 2 type should be questions');
+  assert.strictEqual(day2.questions.length, 8, 'Day 2 should have 8 questions');
+  assert.strictEqual(day2.questions[2].type, 'boolean', 'Day 2 Q3 ([T/F] FALSE) should be boolean');
+  assert.strictEqual(day2.questions[2].correct, 'B', 'Day 2 Q3 correct: FALSE → B');
+  assert.strictEqual(day2.questions[5].type, 'fill_in_blank', 'Day 2 Q6 ([Fill in the Blank]) should be fill_in_blank');
+
+  // Day 3 — 8 questions
+  const day3 = result.days[2];
+  assert.strictEqual(day3.day_number, 3, 'Day 3 number should be 3');
+  assert.strictEqual(day3.type, 'questions', 'Day 3 type should be questions');
+  assert.strictEqual(day3.questions.length, 8, 'Day 3 should have 8 questions');
+  assert.strictEqual(day3.questions[2].type, 'boolean', 'Day 3 Q3 ([T/F] FALSE) should be boolean');
+  assert.strictEqual(day3.questions[3].type, 'fill_in_blank', 'Day 3 Q4 ([Fill in the Blank]) should be fill_in_blank');
+});
+
+test('Chapter prose line does NOT create a new day (tightened Chapter fallback regex)', () => {
+  // "Chapter 38 reminded her of home." starts with lowercase after "Chapter 38 ".
+  // The tightened fallback regex requires the trailing text to begin with a capital
+  // letter, so this sentence must NOT match as a chapter header.
+  const txtContent = `DAY 1 QUESTIONS
+
+1. What happened in the story?
+   A) Something good
+   B) Something bad
+   Correct: A
+
+This paragraph references Chapter 38 reminded her of home. It should not create a new day.
+
+2. What else happened?
+   A) More good things
+   B) More bad things
+   Correct: B`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse successfully');
+  assert.strictEqual(result.days.length, 1, 'Should have exactly 1 day (prose Chapter line must NOT create a new day)');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Day 1 should have 2 questions');
 });

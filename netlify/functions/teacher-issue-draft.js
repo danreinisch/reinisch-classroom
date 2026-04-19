@@ -207,8 +207,11 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Skip empty lines
     if (!trimmed) continue;
 
-    // Strip decorative dashes wrapping day headers: "--- DAY 1 QUESTIONS ---" → "DAY 1 QUESTIONS"
-    const strippedLine = trimmed.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+    // Strip decorative dashes/box-drawing chars wrapping day headers:
+    // "--- DAY 1 QUESTIONS ---"                → "DAY 1 QUESTIONS"
+    // "─── Day 1: Chapter 38 — Lasta-ah ───"  → "Day 1: Chapter 38 — Lasta-ah"
+    // Matches 2+ of: ASCII hyphen, ─ (U+2500), ━ (U+2501), ═ (U+2550), optionally mixed.
+    const strippedLine = trimmed.replace(/^[-─━═]{2,}\s*/, '').replace(/\s*[-─━═]{2,}$/, '');
 
     // Check for DAY header (trailing content is optional)
     const dayMatch = strippedLine.match(/^DAY\s+(\d+)\b(.*)$/i);
@@ -241,7 +244,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
         // NOTE: This regex pattern is also used in tests/parse-txt-to-meta.test.cjs - keep in sync
-        const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+        const nextStripped = nextLine.replace(/^[-─━═]{2,}\s*/, '').replace(/\s*[-─━═]{2,}$/, '');
         const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|\d+\.\s|DESE\s+Standard|IEP\s+Goal|[A-Z][).]|[A-Z]:|Correct\s+Answer:|ANSWER:|Answer:|Correct:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
           || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
@@ -281,9 +284,11 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Strategy: try with an explicit separator first; fall back to bare "Chapter N [rest]".
     let chapterMatch = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?\s*[:–—-]\s*(.*)$/i);
     if (!chapterMatch) {
-      // No separator present — treat any trailing text as the chapter subtitle.
+      // No separator present — treat trailing text as the chapter subtitle only when
+      // it starts with a capital letter (title-case behaviour).  This prevents prose
+      // sentences such as "Chapter 38 reminded her of home." from creating a new day.
       const m = strippedLine.match(/^Chapter(?:s)?\s+(\d+)(?:[-–]\d+)?(?:\s+(.+))?$/i);
-      if (m) chapterMatch = m;
+      if (m && (!m[2] || /^[A-Z]/.test(m[2]))) chapterMatch = m;
     }
     if (chapterMatch) {
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
@@ -1024,7 +1029,6 @@ exports.handler = async (event) => {
 
     // Step 3: Parse assignment content if it's a file type
     let parsedMeta = null;
-    let contentWarning = null;
     if (draft.assignment && draft.assignment.kind === "file" && draft.assignment.text) {
       console.log(`[teacher-issue-draft] [${requestId}] Parsing assignment content`);
       const fileName = draft.assignment.name || 'assignment.txt';
@@ -1121,6 +1125,22 @@ exports.handler = async (event) => {
     }
 
     // Step 5: Create or update assignment in Supabase
+    // Guard: brand-new file draft with no text → there is no meta to store → fail loudly
+    // so we never create an assignment row with meta = {}.
+    if (!isDuplicate && draft.assignment && draft.assignment.kind === 'file' && !draft.assignment.text) {
+      const fileName = draft.assignment.name || 'assignment.txt';
+      const emptyFileMsg =
+        `Cannot issue: the uploaded file "${fileName}" has no text content. ` +
+        `Please re-upload the file and ensure the upload completed successfully before issuing.`;
+      console.error(`[teacher-issue-draft] [${requestId}] ${emptyFileMsg}`);
+      return jsonResponse(
+        event, 422,
+        { ok: false, error: emptyFileMsg },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
+    }
+
     if (!assignmentId) {
       // Determine assignment type based on draft's assignment kind
       let assignmentType = "html"; // default
@@ -1680,7 +1700,6 @@ exports.handler = async (event) => {
         ok: true, 
         assignment_id: assignmentId,
         issued_count: issued_count,
-        ...(contentWarning ? { warning: contentWarning } : {})
       },
       { 'Cache-Control': 'no-store' },
       requestId
