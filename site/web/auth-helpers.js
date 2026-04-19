@@ -85,6 +85,5 @@
     handleAuthenticatedFetch: handleAuthenticatedFetch,
     scheduleJwtRefresh: scheduleJwtRefresh,
     refreshNow: refreshNow,
-    _onSessionExpired: _onSessionExpired,
   };
 })();
