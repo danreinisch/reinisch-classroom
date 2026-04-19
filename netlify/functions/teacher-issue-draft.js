@@ -668,7 +668,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       }
 
       // Check for hints markers:
-      //   "Hints: / "Hints for your response:" / "Hints for your writing:" / "Writing Hints:"
+      //   "Hints:" / "Hints for your response:" / "Hints for your writing:" / "Writing Hints:"
       // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
       if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i) ||
           trimmed.match(/^WRITING\s+HINTS?:/i)) {
