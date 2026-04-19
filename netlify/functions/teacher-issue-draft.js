@@ -1131,7 +1131,7 @@ exports.handler = async (event) => {
       const fileName = draft.assignment.name || 'assignment.txt';
       const emptyFileMsg =
         `Cannot issue: the uploaded file "${fileName}" has no text content. ` +
-        `Please re-upload the file.`;
+        `Please re-upload the file and ensure the upload completed successfully before issuing.`;
       console.error(`[teacher-issue-draft] [${requestId}] ${emptyFileMsg}`);
       return jsonResponse(
         event, 422,
