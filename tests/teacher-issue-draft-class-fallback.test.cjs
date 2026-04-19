@@ -342,6 +342,48 @@ await test('returns 422 when re-issuing a draft with no text whose existing assi
   assert.ok(body.error && body.error.length > 0, 'Error message should be non-empty');
 });
 
+await test('returns 422 when first-time file draft has empty text and no duplicate exists', async () => {
+  // Simulates a teacher clicking Issue for a brand-new file draft whose
+  // assignment.text is empty (e.g. upload failed or content was stripped).
+  // There is no existing assignment to reuse, so meta = {} would be created
+  // silently — this guard must prevent that.
+  const DRAFT_FIRST_TIME_EMPTY = {
+    title: 'WEEK 13 — Brand New (Empty File)',
+    className: 'Language Arts 3 SC',
+    assignment: {
+      kind: 'file',
+      name: 'WEEK_13_MASTER_ALL_STUDENTS (4).txt',
+      text: '',   // empty — no content uploaded
+      link: null,
+    },
+  };
+
+  _fetchQueue = [
+    // 1. Teacher-scoped class lookup → class found directly
+    () => okJson([{ id: 'class-uuid-w13-ft', name: 'Language Arts 3 SC', teacher_id: TEACHER_UUID }]),
+    // 2. class_enrollments → one student enrolled
+    () => okJson([{ student_id: 'student-uuid-s001' }]),
+    // 3. Enrollments fallback → empty (class_enrollments succeeded)
+    () => okJson([]),
+    // 4. Duplicate check → no existing assignment (brand new)
+    () => okJson([]),
+    // 422 should be returned BEFORE assignment creation.
+    ...REMAINING_CALL_STUBS,
+  ];
+
+  const event = makeEvent({ draft: DRAFT_FIRST_TIME_EMPTY });
+  const response = await handler(event);
+  const body = JSON.parse(response.body);
+
+  assert.strictEqual(response.statusCode, 422, 'Should return 422 for first-time file draft with empty text');
+  assert.strictEqual(body.ok, false, 'ok should be false');
+  assert.ok(body.error && body.error.length > 0, 'Error message should be non-empty');
+  assert.ok(
+    body.error.toLowerCase().includes('re-upload') || body.error.toLowerCase().includes('file'),
+    'Error message should mention re-uploading the file'
+  );
+});
+
 console.log('\n✓ All teacher-issue-draft class-fallback tests complete\n');
 
 })();
