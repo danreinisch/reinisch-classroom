@@ -319,15 +319,25 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     }
 
     // Parse IEP Goal lines and attach codes to the current question (or day for writing prompts)
+    // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
     if (/^IEP\s+Goal\b/i.test(trimmed)) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
         const codesStr = trimmed.substring(colonIdx + 1).trim();
         if (codesStr) {
+          // Skip the DESE-only sentinel — it is not an IEP goal code
+          if (/^\(DESE\s+only\s*[—–\-]+\s*no\s+IEP\s+goal\s+targeted\)/i.test(codesStr)) {
+            continue;
+          }
           const codes = codesStr.split(',').map(c => c.trim()).filter(Boolean);
           if (codes.length > 0) {
             if (currentQuestion) {
-              currentQuestion.goal_codes = (currentQuestion.goal_codes || []).concat(codes);
+              // Deduplicate: skip codes already present (e.g. from inline [IG:] tags)
+              const existing = currentQuestion.goal_codes || [];
+              const newCodes = codes.filter(c => !existing.includes(c));
+              if (newCodes.length > 0) {
+                currentQuestion.goal_codes = existing.concat(newCodes);
+              }
             } else if (currentDay) {
               currentDay.goal_codes = (currentDay.goal_codes || []).concat(codes);
             }
@@ -339,6 +349,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
     if (currentDay.type === 'questions') {
       // Check for Question N: or QN: format
+      // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
       const questionMatch = trimmed.match(/^(?:Question\s+|Q)(\d+):/i);
       if (questionMatch) {
         // Save previous question if exists
@@ -346,21 +357,59 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           currentDay.questions.push(currentQuestion);
         }
 
+        const restOfLine = trimmed.substring(questionMatch[0].length).trim();
+
+        // Extract inline [IG: code] tags → goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        // Detect inline type-hint bracket tags
+        const hasTFBracket = /\[T\/F\]/i.test(restOfLine);
+        const hasFIBBracket = /\[Fill\s+in\s+the\s+Blank\]/i.test(restOfLine);
+        const hasWRBracket = /\[WRITTEN\s+RESPONSE\]/i.test(restOfLine);
+
+        let inlineType = 'mcq';
+        if (hasTFBracket) inlineType = 'boolean';
+        else if (hasFIBBracket) inlineType = 'fill_in_blank';
+        else if (hasWRBracket) inlineType = 'written_response';
+
+        // Strip all bracket tags and parenthetical hints from header text
+        const remainingText = restOfLine
+          .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\[T\/F\]/gi, '')
+          .replace(/\[Fill\s+in\s+the\s+Blank\]/gi, '')
+          .replace(/\[WRITTEN\s+RESPONSE\]/gi, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+
         currentQuestion = {
           number: parseInt(questionMatch[1], 10),
-          text: '',
-          type: 'mcq',
+          text: remainingText,
+          type: inlineType,
           choices: [],
           correct: '',
           hint: ''
         };
-        currentSection = 'question';
-        
-        // Get question text (rest of the line after "Question N:")
-        const questionText = trimmed.substring(questionMatch[0].length).trim();
-        if (questionText) {
-          currentQuestion.text = questionText;
+        if (igCodes.length > 0) {
+          currentQuestion.goal_codes = igCodes;
         }
+        if (mlsCodes.length > 0) {
+          currentQuestion.dese_codes = mlsCodes;
+        }
+        currentSection = 'question';
         continue;
       }
 
@@ -521,8 +570,43 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         }
       }
     } else if (currentDay.type === 'writing_prompt') {
-      // Check for Writing Prompt:
-      if (trimmed.match(/^Writing\s+Prompt:/i)) {
+      // Check for "Question N: ... [WRITTEN RESPONSE]" header (Week 15 Day 2 format)
+      // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
+      const wpQuestionMatch = trimmed.match(/^(?:Question\s+|Q)(\d+):/i);
+      if (wpQuestionMatch) {
+        const restOfLine = trimmed.substring(wpQuestionMatch[0].length).trim();
+
+        // Extract inline [IG: code] tags → day-level goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → day-level dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        if (igCodes.length > 0) {
+          currentDay.goal_codes = (currentDay.goal_codes || []).concat(igCodes);
+        }
+        if (mlsCodes.length > 0) {
+          currentDay.dese_codes = (currentDay.dese_codes || []).concat(mlsCodes);
+        }
+        // Do NOT create a currentQuestion — let subsequent lines feed the writing_prompt sections
+        currentQuestion = null;
+        currentSection = 'prompt';
+        continue;
+      }
+
+      // Check for Writing Prompt: / Creative Writing Prompt: / bare Prompt:
+      // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
+      if (trimmed.match(/^(?:(?:Creative\s+)?Writing\s+Prompt|Prompt):/i)) {
         currentSection = 'prompt';
         const promptText = trimmed.substring(trimmed.indexOf(':') + 1).trim();
         if (promptText) {
@@ -573,26 +657,35 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
-      // Check for Writing Structure: or REMEMBER YOUR WRITING STRUCTURE: or REMEMBER YOUR STRUCTURE:
-      if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i)) {
+      // Check for structure markers:
+      //   "Writing Structure:" / "REMEMBER YOUR WRITING STRUCTURE:" / "REMEMBER YOUR STRUCTURE:"
+      //   "WHAT TO INCLUDE IN YOUR RESPONSE:" / "WHAT TO INCLUDE:"
+      // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
+      if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i) ||
+          trimmed.match(/^WHAT\s+TO\s+INCLUDE(?:\s+IN\s+YOUR\s+RESPONSE)?:/i)) {
         currentSection = 'structure';
         continue;
       }
 
-      // Check for Hints: or HINTS FOR YOUR RESPONSE: or HINTS FOR YOUR WRITING:
-      if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i)) {
+      // Check for hints markers:
+      //   "Hints:" / "Hints for your response:" / "Hints for your writing:" / "Writing Hints:"
+      // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
+      if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i) ||
+          trimmed.match(/^WRITING\s+HINTS?:/i)) {
         currentSection = 'hints';
         continue;
       }
 
       // Append content based on current section
+      // Accept both '-' and '•' (U+2022) as bullet markers
+      // NOTE: Keep in sync with tests/parse-txt-to-meta.test.cjs
       if (currentSection === 'prompt' && currentDay.prompt) {
         currentDay.prompt += ' ' + trimmed;
       } else if (currentSection === 'prompt') {
         currentDay.prompt = trimmed;
-      } else if (currentSection === 'structure' && trimmed.startsWith('-')) {
+      } else if (currentSection === 'structure' && (trimmed.startsWith('-') || trimmed.startsWith('•'))) {
         currentDay.structure.push(trimmed.substring(1).trim());
-      } else if (currentSection === 'hints' && trimmed.startsWith('-')) {
+      } else if (currentSection === 'hints' && (trimmed.startsWith('-') || trimmed.startsWith('•'))) {
         currentDay.hints.push(trimmed.substring(1).trim());
       }
     }

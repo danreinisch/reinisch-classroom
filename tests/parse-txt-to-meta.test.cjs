@@ -260,15 +260,25 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     }
 
     // Parse IEP Goal lines and attach codes to the current question (or day for writing prompts)
+    // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
     if (/^IEP\s+Goal\b/i.test(trimmed)) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
         const codesStr = trimmed.substring(colonIdx + 1).trim();
         if (codesStr) {
+          // Skip the DESE-only sentinel — it is not an IEP goal code
+          if (/^\(DESE\s+only\s*[—–\-]+\s*no\s+IEP\s+goal\s+targeted\)/i.test(codesStr)) {
+            continue;
+          }
           const codes = codesStr.split(',').map(c => c.trim()).filter(Boolean);
           if (codes.length > 0) {
             if (currentQuestion) {
-              currentQuestion.goal_codes = (currentQuestion.goal_codes || []).concat(codes);
+              // Deduplicate: skip codes already present (e.g. from inline [IG:] tags)
+              const existing = currentQuestion.goal_codes || [];
+              const newCodes = codes.filter(c => !existing.includes(c));
+              if (newCodes.length > 0) {
+                currentQuestion.goal_codes = existing.concat(newCodes);
+              }
             } else if (currentDay) {
               currentDay.goal_codes = (currentDay.goal_codes || []).concat(codes);
             }
@@ -280,6 +290,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
     if (currentDay.type === 'questions') {
       // Check for Question N: or QN: format
+      // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
       const questionMatch = trimmed.match(/^(?:Question\s+|Q)(\d+):/i);
       if (questionMatch) {
         // Save previous question if exists
@@ -287,20 +298,59 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           currentDay.questions.push(currentQuestion);
         }
 
+        const restOfLine = trimmed.substring(questionMatch[0].length).trim();
+
+        // Extract inline [IG: code] tags → goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        // Detect inline type-hint bracket tags
+        const hasTFBracket = /\[T\/F\]/i.test(restOfLine);
+        const hasFIBBracket = /\[Fill\s+in\s+the\s+Blank\]/i.test(restOfLine);
+        const hasWRBracket = /\[WRITTEN\s+RESPONSE\]/i.test(restOfLine);
+
+        let inlineType = 'mcq';
+        if (hasTFBracket) inlineType = 'boolean';
+        else if (hasFIBBracket) inlineType = 'fill_in_blank';
+        else if (hasWRBracket) inlineType = 'written_response';
+
+        // Strip all bracket tags and parenthetical hints from header text
+        const remainingText = restOfLine
+          .replace(/\[IG:\s*[^\]]+\]/g, '')
+          .replace(/\[MLS[^\]]*\]/g, '')
+          .replace(/\[T\/F\]/gi, '')
+          .replace(/\[Fill\s+in\s+the\s+Blank\]/gi, '')
+          .replace(/\[WRITTEN\s+RESPONSE\]/gi, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+
         currentQuestion = {
           number: parseInt(questionMatch[1], 10),
-          text: '',
-          type: 'mcq',
+          text: remainingText,
+          type: inlineType,
           choices: [],
           correct: '',
           hint: ''
         };
-        currentSection = 'question';
-        
-        const questionText = trimmed.substring(questionMatch[0].length).trim();
-        if (questionText) {
-          currentQuestion.text = questionText;
+        if (igCodes.length > 0) {
+          currentQuestion.goal_codes = igCodes;
         }
+        if (mlsCodes.length > 0) {
+          currentQuestion.dese_codes = mlsCodes;
+        }
+        currentSection = 'question';
         continue;
       }
 
@@ -461,8 +511,43 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         }
       }
     } else if (currentDay.type === 'writing_prompt') {
-      // Check for Writing Prompt:
-      if (trimmed.match(/^Writing\s+Prompt:/i)) {
+      // Check for "Question N: ... [WRITTEN RESPONSE]" header (Week 15 Day 2 format)
+      // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
+      const wpQuestionMatch = trimmed.match(/^(?:Question\s+|Q)(\d+):/i);
+      if (wpQuestionMatch) {
+        const restOfLine = trimmed.substring(wpQuestionMatch[0].length).trim();
+
+        // Extract inline [IG: code] tags → day-level goal_codes
+        const igCodes = [];
+        const igPattern = /\[IG:\s*([^\]]+)\]/g;
+        let igMatch;
+        while ((igMatch = igPattern.exec(restOfLine)) !== null) {
+          igCodes.push(igMatch[1].trim());
+        }
+
+        // Extract inline [MLS.*] tags → day-level dese_codes
+        const mlsCodes = [];
+        const mlsPattern = /\[MLS[^\]]*\]/g;
+        let mlsMatch;
+        while ((mlsMatch = mlsPattern.exec(restOfLine)) !== null) {
+          mlsCodes.push(mlsMatch[0].slice(1, -1).trim());
+        }
+
+        if (igCodes.length > 0) {
+          currentDay.goal_codes = (currentDay.goal_codes || []).concat(igCodes);
+        }
+        if (mlsCodes.length > 0) {
+          currentDay.dese_codes = (currentDay.dese_codes || []).concat(mlsCodes);
+        }
+        // Do NOT create a currentQuestion — let subsequent lines feed the writing_prompt sections
+        currentQuestion = null;
+        currentSection = 'prompt';
+        continue;
+      }
+
+      // Check for Writing Prompt: / Creative Writing Prompt: / bare Prompt:
+      // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
+      if (trimmed.match(/^(?:(?:Creative\s+)?Writing\s+Prompt|Prompt):/i)) {
         currentSection = 'prompt';
         const promptText = trimmed.substring(trimmed.indexOf(':') + 1).trim();
         if (promptText) {
@@ -513,26 +598,35 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
-      // Check for Writing Structure: or REMEMBER YOUR WRITING STRUCTURE: or REMEMBER YOUR STRUCTURE:
-      if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i)) {
+      // Check for structure markers:
+      //   "Writing Structure:" / "REMEMBER YOUR WRITING STRUCTURE:" / "REMEMBER YOUR STRUCTURE:"
+      //   "WHAT TO INCLUDE IN YOUR RESPONSE:" / "WHAT TO INCLUDE:"
+      // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
+      if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i) ||
+          trimmed.match(/^WHAT\s+TO\s+INCLUDE(?:\s+IN\s+YOUR\s+RESPONSE)?:/i)) {
         currentSection = 'structure';
         continue;
       }
 
-      // Check for Hints: or HINTS FOR YOUR RESPONSE: or HINTS FOR YOUR WRITING:
-      if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i)) {
+      // Check for hints markers:
+      //   "Hints:" / "Hints for your response:" / "Hints for your writing:" / "Writing Hints:"
+      // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
+      if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i) ||
+          trimmed.match(/^WRITING\s+HINTS?:/i)) {
         currentSection = 'hints';
         continue;
       }
 
       // Append content based on current section
+      // Accept both '-' and '•' (U+2022) as bullet markers
+      // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
       if (currentSection === 'prompt' && currentDay.prompt) {
         currentDay.prompt += ' ' + trimmed;
       } else if (currentSection === 'prompt') {
         currentDay.prompt = trimmed;
-      } else if (currentSection === 'structure' && trimmed.startsWith('-')) {
+      } else if (currentSection === 'structure' && (trimmed.startsWith('-') || trimmed.startsWith('•'))) {
         currentDay.structure.push(trimmed.substring(1).trim());
-      } else if (currentSection === 'hints' && trimmed.startsWith('-')) {
+      } else if (currentSection === 'hints' && (trimmed.startsWith('-') || trimmed.startsWith('•'))) {
         currentDay.hints.push(trimmed.substring(1).trim());
       }
     }
@@ -2099,4 +2193,183 @@ This paragraph references Chapter 38 reminded her of home. It should not create 
   assert(result !== null, 'Should parse successfully');
   assert.strictEqual(result.days.length, 1, 'Should have exactly 1 day (prose Chapter line must NOT create a new day)');
   assert.strictEqual(result.days[0].questions.length, 2, 'Day 1 should have 2 questions');
+});
+
+// ── Week 14 / Week 15 parser fix regression tests ─────────────────────────────
+// PR fix: Question N: tag extraction, IEP sentinel, writing-response markers, • bullets
+
+test('Week 14: Question N: header strips [MLS.*] and [IG:] tags from question text', () => {
+  // Week 14 uses "Question N: [MLS.R.3.A.9-12.a] [IG: S001.11.1]" header lines.
+  // Before the fix, the bracket tags leaked into question.text visible to students.
+  const txtContent = `─── Day 1: Chapter 41 — The Escape ───
+
+Question 1: [MLS.R.3.A.9-12.a] [IG: S001.11.1]
+   At the start of Chapter 41, COMPARE how Alex considers escaping versus how Lanta-eh knows they should escape. What is the key difference?
+   A) It gives the group time to scout the city carefully and come up with a workable plan
+   B) It forces the group to give up the mission entirely
+   C) It causes Senta-eh to leave the group
+   Correct: A
+   Hint: Re-read the paragraphs right after Alex looks at the window and the pitched roof.
+   DESE Standard(s): MLS.R.3.A.9-12.a — Key ideas in literary text
+   IEP Goal Code(s): S001.11.1`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_14_MASTER.txt');
+
+  assert(result !== null, 'Should parse Week 14 Question N: format');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+
+  const q = result.days[0].questions[0];
+  assert(!q.text.includes('[MLS'), 'question.text must NOT contain [MLS tag');
+  assert(!q.text.includes('[IG:'), 'question.text must NOT contain [IG: tag');
+  assert(q.text.includes('COMPARE'), 'question.text should contain the actual question text');
+  assert.deepStrictEqual(q.dese_codes, ['MLS.R.3.A.9-12.a'], 'dese_codes should be extracted from header line');
+  // IEP code appears both in inline tag and trailing IEP line — must be deduplicated
+  assert.deepStrictEqual(q.goal_codes, ['S001.11.1'], 'goal_codes should be deduplicated to single entry');
+});
+
+test('Week 14: Question N: [T/F] on header line sets type to boolean', () => {
+  const txtContent = `─── Day 1: Chapter 41 — The Escape ───
+
+Question 6: [MLS.R.3.C.9-12.a] [T/F]
+   After his fight with Draka-ak, Alex is completely unharmed and leaves the city without a single wound.
+   Correct: FALSE
+   Hint: Re-read the aftermath of the fight.
+   DESE Standard(s): MLS.R.3.C.9-12.a — Character analysis
+   IEP Goal Code(s): (DESE only — no IEP goal targeted)`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_14_MASTER.txt');
+
+  assert(result !== null, 'Should parse');
+  const q = result.days[0].questions[0];
+  assert.strictEqual(q.type, 'boolean', 'Question type should be boolean for [T/F] header tag');
+  assert(!q.text.includes('[T/F]'), 'question.text must NOT contain [T/F] tag');
+  assert.strictEqual(q.correct, 'B', 'Correct: FALSE → B');
+});
+
+test('Week 14: IEP Goal Code(s) sentinel "(DESE only — no IEP goal targeted)" is not stored', () => {
+  // Before the fix, the sentinel string was pushed into goal_codes and rendered to students.
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: [MLS.R.3.C.9-12.a]
+   Was Alex injured after the fight?
+   A) Yes
+   B) No
+   Correct: A
+   IEP Goal Code(s): (DESE only — no IEP goal targeted)`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse');
+  const q = result.days[0].questions[0];
+  // goal_codes must be absent or empty — never contain the sentinel string
+  const goalCodes = q.goal_codes || [];
+  assert(
+    !goalCodes.some(c => c.toLowerCase().includes('dese only')),
+    'goal_codes must NOT contain the DESE-only sentinel string'
+  );
+  assert(goalCodes.length === 0, 'goal_codes should be empty for DESE-only questions');
+});
+
+test('Week 15 Day 2: Creative Writing Prompt / WHAT TO INCLUDE / WRITING HINTS / • bullets all parse', () => {
+  // Full end-to-end test for the Week 15 Day 2 written-response day shape.
+  // Before the fix, prompt/structure/hints were all empty because none of the
+  // Week 15 markers or • bullets were recognized.
+  const txtContent = `─── Day 2: Written Response (Creative Continuation) ───
+
+Question 13: [MLS.W.1.A.9-12.a] [MLS.L.1.A.9-12.a] [IG: S001.11.3-1] [IG: S001.11.3-2] [IG: S001.11.3-3]  [WRITTEN RESPONSE]
+
+   CREATIVE WRITING PROMPT:
+   Alex just turned the corner at the beach — and the DOOR IS GONE! The portal back to his own world has vanished.
+
+   You get to write what happens NEXT! Be creative — this is YOUR story now.
+
+   Some ideas to get you started (but don't feel stuck to these):
+     • Does Alex find ANOTHER way home? Maybe a different door somewhere else in Kragdon-ah?
+     • Does he go back to Winten-ah and stay with Senta-eh for good?
+     • Does something magical happen — maybe Lanta-eh can help him?
+
+   WHAT TO INCLUDE IN YOUR RESPONSE:
+   • Write TWO paragraphs.
+   • PARAGRAPH 1: Tell what Alex does RIGHT AFTER he sees the door is gone.
+       - Start with a topic sentence that introduces the paragraph.
+       - Include at least 3 supporting details that describe what happens.
+   • PARAGRAPH 2: Tell what happens in the END of your story.
+       - Start with a topic sentence.
+       - End with a concluding sentence that wraps up the whole story.
+
+   WRITING HINTS:
+   • A topic sentence tells the reader what the paragraph will be about.
+   • Supporting details are the events, actions, or descriptions that show what happens.
+   • Good transition words: first, next, then, after that, suddenly, finally.
+   • Check your complete sentences: each one should have a subject and a verb.
+
+   DESE Standard(s): MLS.W.1.A.9-12.a, MLS.L.1.A.9-12.a — Writing; Language
+   IEP Goal Code(s): S001.11.3-1, S001.11.3-2, S001.11.3-3`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'WEEK_15_MASTER.txt');
+
+  assert(result !== null, 'Should parse Week 15 Day 2 written response shape');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+
+  const day = result.days[0];
+  assert.strictEqual(day.type, 'writing_prompt', 'Day type should be writing_prompt');
+
+  // Prompt populated from CREATIVE WRITING PROMPT: section
+  assert(day.prompt && day.prompt.length > 0, 'prompt should not be empty');
+  assert(day.prompt.includes('DOOR IS GONE'), 'prompt should contain text from CREATIVE WRITING PROMPT: block');
+
+  // Structure populated from WHAT TO INCLUDE IN YOUR RESPONSE: section with • bullets
+  assert(Array.isArray(day.structure) && day.structure.length >= 2, 'structure should have at least 2 entries');
+  assert(
+    day.structure.some(s => s.toLowerCase().includes('topic sentence')),
+    'at least one structure entry should contain "topic sentence"'
+  );
+
+  // Hints populated from WRITING HINTS: section with • bullets
+  assert(Array.isArray(day.hints) && day.hints.length >= 2, 'hints should have at least 2 entries');
+  assert(
+    day.hints.some(h => h.toLowerCase().includes('transition words')),
+    'at least one hint should contain "transition words"'
+  );
+
+  // Day-level goal_codes from Question 13 header tags (not on a question object)
+  assert(Array.isArray(day.goal_codes), 'day.goal_codes should be an array');
+  assert(day.goal_codes.includes('S001.11.3-1'), 'goal_codes should include S001.11.3-1');
+  assert(day.goal_codes.includes('S001.11.3-2'), 'goal_codes should include S001.11.3-2');
+  assert(day.goal_codes.includes('S001.11.3-3'), 'goal_codes should include S001.11.3-3');
+
+  // Day-level dese_codes from Question 13 header tags
+  assert(Array.isArray(day.dese_codes), 'day.dese_codes should be an array');
+  assert(day.dese_codes.includes('MLS.W.1.A.9-12.a'), 'dese_codes should include MLS.W.1.A.9-12.a');
+  assert(day.dese_codes.includes('MLS.L.1.A.9-12.a'), 'dese_codes should include MLS.L.1.A.9-12.a');
+});
+
+test('Backward compat: Writing Prompt: + - bullets + REMEMBER YOUR WRITING STRUCTURE: still parse', () => {
+  // Existing Week 10 / earlier writing-prompt shape must still work after the marker broadening.
+  // This verifies no regressions from the writing-prompt changes.
+  // (An equivalent test exists as "Parse WRITING WORKSHOP day type…" above — this is a
+  //  supplementary check using the Writing Prompt: / Hints for your response: / - bullet shape.)
+  const txtContent = `--- DAY 4 WRITING PROMPT ---
+
+Writing Prompt: What challenges did Alex and his team face on the journey?
+
+REMEMBER YOUR WRITING STRUCTURE:
+- Topic Sentence: State the main idea of your response
+- Supporting Detail 1: Describe one specific challenge
+- Supporting Detail 2: Describe a second challenge
+- Conclusion: Restate your main idea in a new way
+
+Hints for your response:
+- Re-read the scenes where the team faces difficulty
+- Use at least one direct quote or close paraphrase`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse backward-compat writing prompt shape');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  const day = result.days[0];
+  assert.strictEqual(day.type, 'writing_prompt', 'Day type should be writing_prompt');
+  assert(day.prompt && day.prompt.includes('challenges'), 'prompt should be populated from Writing Prompt: line');
+  assert(day.structure.length >= 2, 'structure should have at least 2 entries from - bullets');
+  assert(day.hints.length >= 1, 'hints should have at least 1 entry from - bullets');
 });
