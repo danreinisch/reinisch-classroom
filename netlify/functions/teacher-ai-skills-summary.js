@@ -1,8 +1,14 @@
-// AI-powered skills summary endpoint
+// AI-powered skills summary endpoint (legacy synchronous fallback)
 // POST /.netlify/functions/teacher-ai-skills-summary
 // Auth: Requires teacher session cookie
 // Body: { student_code, iep_goals, dese_standards, audience? }
 // Returns: { ok: true, skills: [{ code, description, summary, plain_language?, tier, source, goal_recommendation?, ai_edited? }] }
+//
+// NOTE: This is a legacy synchronous fallback. The preferred flow is:
+//   teacher-ai-skills-summary-submit → teacher-ai-skills-summary-background + polling
+// That flow supports longer AI generation times and returns errors to the client immediately.
+// This endpoint is limited to Netlify's 10s gateway timeout; the internal OpenAI call uses
+// an 8s AbortSignal so it fails gracefully before the gateway kills it.
 
 console.log('[teacher-ai-skills-summary] Module loaded successfully');
 
@@ -102,7 +108,7 @@ exports.handler = async (event) => {
           { role: 'system', content: systemPrompt },
         ],
       }),
-      signal: AbortSignal.timeout(24000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!openAiRes.ok) {

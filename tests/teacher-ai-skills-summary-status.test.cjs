@@ -69,7 +69,16 @@ function authedEvent(jobId) {
 }
 
 function makeSupabaseResponse(rows) {
-  return function(_url, _opts) {
+  return function(url, _opts) {
+    // Ignore cleanup DELETE requests (probabilistic cleanup)
+    if (_opts && _opts.method === 'DELETE') {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: function() { return Promise.resolve([]); },
+        text: function() { return Promise.resolve(''); },
+      });
+    }
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -204,6 +213,26 @@ test('returns 502 when Supabase fetch throws', async function() {
   assert.strictEqual(res.statusCode, 502);
   var parsed = JSON.parse(res.body);
   assert.strictEqual(parsed.ok, false);
+});
+
+test('includes created_by filter in Supabase query', async function() {
+  var queriedUrl = null;
+  global.fetch = function(url, opts) {
+    // Ignore DELETE (cleanup)
+    if (opts && opts.method === 'DELETE') {
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
+    }
+    queriedUrl = url;
+    return Promise.resolve({
+      ok: true, status: 200,
+      json: function() { return Promise.resolve([{ status: 'pending', result: null, error: null }]); },
+      text: function() { return Promise.resolve(''); },
+    });
+  };
+  await handler(authedEvent());
+  assert.ok(queriedUrl, 'Supabase should have been queried');
+  assert.ok(queriedUrl.includes('created_by=eq.'), 'Query should include created_by filter');
+  assert.ok(queriedUrl.includes(encodeURIComponent('testteacher')), 'Query should scope to the requesting teacher');
 });
 
 runAll();
