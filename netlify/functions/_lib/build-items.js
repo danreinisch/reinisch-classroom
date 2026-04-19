@@ -62,14 +62,12 @@ function buildItemsFromMeta(assignmentId, meta) {
             points: q.points || 1,
             goal_codes: q.goal_codes || goalCodes,
             dese_codes: q.dese_codes || deseCodes,
-            ...(isFillInBlank ? {
-              scoring: {
-                keywords: fibKeywords,
-                min_keywords: fibMinKeywords,
-                ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
-                ...(Array.isArray(q.accepted) && q.accepted.length > 0 ? { accepted: q.accepted } : {}),
-              },
-            } : {}),
+            scoring: isFillInBlank ? {
+              keywords: fibKeywords,
+              min_keywords: fibMinKeywords,
+              ...(q.case_sensitive != null ? { case_sensitive: q.case_sensitive } : {}),
+              ...(Array.isArray(q.accepted) && q.accepted.length > 0 ? { accepted: q.accepted } : {}),
+            } : null,
             meta: {
               day: day.day_number,
               question_number: q.number,
@@ -102,6 +100,7 @@ function buildItemsFromMeta(assignmentId, meta) {
           points: day.points || 5,
           goal_codes: day.goal_codes || wpCodes.goalCodes,
           dese_codes: day.dese_codes || wpCodes.deseCodes,
+          scoring: null,
           meta: {
             day: day.day_number,
             type: 'writing_prompt',
@@ -126,6 +125,7 @@ function buildItemsFromMeta(assignmentId, meta) {
         points: (typeof q.points === 'number') ? q.points : 1,
         goal_codes: Array.isArray(q.default_goal_codes) ? q.default_goal_codes : [],
         dese_codes: Array.isArray(q.default_dese_codes) ? q.default_dese_codes : [],
+        scoring: null,
         meta: {
           question_number: qRef,
           text: q.label || '',
