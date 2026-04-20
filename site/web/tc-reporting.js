@@ -813,9 +813,7 @@
             ${(() => {
               if (!cachedSkills || !Array.isArray(cachedSkills)) return '';
               const skill = cachedSkills.find(s =>
-                s.plain_language &&
-                s.source !== 'internal' &&
-                (s.code === goal.code || (s.source !== 'dese' && s.code === goal.code))
+                s.plain_language && s.code === goal.code
               );
               if (!skill || !skill.plain_language) return '';
               return `<div class="rp-ai-plain-note">💡 ${escapeHtml(skill.plain_language)}</div>`;
@@ -1654,13 +1652,10 @@ ${narrative}`;
     let reportContent = '';
     switch (tab1State.template) {
       case 'parent-summary': {
-        // Fetch cached AI skills for plain_language notes (external audience only)
+        // Fetch cached AI skills for plain_language notes.
+        // plain_language is always parent-friendly; audience filtering happens at generation time.
         const cachedSkills = await fetchCachedSkillsForStudent(tab1State.studentCode);
-        // Filter to only use external-audience skills for the parent-facing report
-        const externalSkills = Array.isArray(cachedSkills)
-          ? cachedSkills.filter(s => !s.audience || s.audience === 'external')
-          : null;
-        reportContent = renderParentSummaryTemplate(student, studentGoals, quarterRange, externalSkills || cachedSkills);
+        reportContent = renderParentSummaryTemplate(student, studentGoals, quarterRange, cachedSkills);
         break;
       }
       case 'admin-summary':

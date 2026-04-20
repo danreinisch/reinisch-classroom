@@ -12182,6 +12182,7 @@
 
         const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
           ? crypto.randomUUID()
+          // Fallback UUID v4 generator: 0x3 masks to variant bits (10xx), 0x8 sets version to 4
           : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
               const r = Math.random() * 16 | 0;
               return (ch === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
