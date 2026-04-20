@@ -6033,6 +6033,12 @@
       });
     }
 
+    // Generate All Skills button
+    const generateAllBtn = document.getElementById('stGenerateAllSkills');
+    if (generateAllBtn) {
+      generateAllBtn.addEventListener('click', handleGenerateAllSkills);
+    }
+
     // Quarter date bar buttons
     const editQuartersBtn = document.getElementById('stEditQuarters');
     if (editQuartersBtn) {
@@ -9327,15 +9333,15 @@
     const btnDisabled = cached ? 'disabled' : '';
     const safeCode = escapeHtml(student.code);
     const aiButtonHtml = `
-      <div class="st-skills-btn-row">
+      <div class="st-skills-btn-row st-skill-actions">
         <button class="st-ai-generate-btn" id="ai-generate-btn-${safeCode}" ${btnDisabled}>
           ${btnText}
         </button>
         <button class="st-export-btn" id="skills-copy-btn-${safeCode}" type="button">
-          📋 Copy for Email
+          📋 Copy Summary
         </button>
         <button class="st-export-btn" id="skills-print-btn-${safeCode}" type="button">
-          🖨 Print
+          📄 Print Skills
         </button>
       </div>
     `;
@@ -10290,7 +10296,7 @@
             setTimeout(() => { copyBtn.textContent = orig; }, 2000);
           } catch (_e2) {
             copyBtn.textContent = '⚠️ Copy failed — check browser permissions';
-            setTimeout(() => { copyBtn.textContent = '📋 Copy for Email'; }, 2000);
+            setTimeout(() => { copyBtn.textContent = '📋 Copy Summary'; }, 2000);
           }
         }
       }, listenerOpts);
@@ -12113,6 +12119,146 @@
   }
 
   /**
+   * Bulk "Generate All Skills" — submits AI skills requests for all active students
+   * that don't already have a cached result. Runs sequentially with a 2-second delay
+   * between submissions to respect the per-teacher rate limit (3 pending max).
+   * Handles HTTP 429 by pausing 5 seconds before retrying.
+   */
+  async function handleGenerateAllSkills() {
+    const btn = document.getElementById('stGenerateAllSkills');
+    if (!btn || btn.disabled) return;
+
+    const activeStudents = allStudents.filter(s => s.status !== 'archived' && s.active !== false);
+    if (activeStudents.length === 0) {
+      showToast('No active students found.');
+      return;
+    }
+
+    const studentsToGenerate = activeStudents.filter(s => !skillsAiCache.has(s.code));
+    const alreadyCached = activeStudents.length - studentsToGenerate.length;
+
+    if (studentsToGenerate.length === 0) {
+      showToast(`Skills already cached for all ${activeStudents.length} students.`);
+      return;
+    }
+
+    btn.disabled = true;
+    const origText = btn.textContent;
+    let generated = 0;
+
+    try {
+      const currentQuarter = getCurrentQuarter();
+      const dates = getQuarterDates();
+      const dateRange = dates[currentQuarter]
+        ? { start: dates[currentQuarter].start, end: dates[currentQuarter].end }
+        : null;
+
+      for (let i = 0; i < studentsToGenerate.length; i++) {
+        const student = studentsToGenerate[i];
+        btn.textContent = `Generating ${i + 1} of ${studentsToGenerate.length}…`;
+
+        // Compute IEP cards for this student
+        const studentGoals = allGoals.filter(g => g.student_code === student.code && g.status !== 'archived');
+        const iepCards = dateRange
+          ? computeIepSkillCardsForRange(student, studentGoals, dateRange, null)
+          : computeIepSkillCards(student, studentGoals);
+
+        if (iepCards.length === 0) {
+          // No skill data — skip (no API call needed)
+          continue;
+        }
+
+        const iepPayload = iepCards.map(c => ({
+          code: c.code,
+          area: c.area,
+          current_avg: c.currentAvg !== null ? c.currentAvg : c.displayScore,
+          previous_avg: c.previousAvg !== undefined ? c.previousAvg : null,
+          trend: c.trend || null,
+          data_points: c.dataPoints || 0,
+          target: c.target,
+          baseline: c.baseline,
+          question_weaknesses: [],
+        }));
+
+        const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
+              const r = Math.random() * 16 | 0;
+              return (ch === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+
+        // Submit with retry on 429
+        let submitRes;
+        let retryCount = 0;
+        while (retryCount < 3) {
+          submitRes = await fetch('/.netlify/functions/teacher-ai-skills-summary-submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              job_id: jobId,
+              student_code: student.code,
+              iep_goals: iepPayload,
+              dese_standards: [],
+            }),
+          });
+
+          if (submitRes.status === 429) {
+            // Rate limited — wait 5 seconds and retry
+            btn.textContent = `Rate limited… waiting (${i + 1}/${studentsToGenerate.length})`;
+            await new Promise(r => setTimeout(r, 5000));
+            retryCount++;
+          } else {
+            break;
+          }
+        }
+
+        if (!submitRes || !submitRes.ok) {
+          console.warn('[tc-students] generateAll: submit failed for', student.code, submitRes?.status);
+          // Non-fatal — continue with next student
+        } else {
+          // Poll for result (up to 5 minutes)
+          const POLL_INTERVAL_MS = 2500;
+          const MAX_POLLS = 120;
+          for (let poll = 0; poll < MAX_POLLS; poll++) {
+            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+            try {
+              const statusRes = await fetch(
+                `/.netlify/functions/teacher-ai-skills-summary-status?job_id=${encodeURIComponent(jobId)}`,
+                { credentials: 'same-origin' }
+              );
+              if (!statusRes.ok) continue;
+              const statusData = await statusRes.json();
+              if (statusData.status === 'complete' && Array.isArray(statusData.skills)) {
+                skillsAiCache.set(student.code, { ok: true, skills: statusData.skills });
+                generated++;
+                break;
+              }
+              if (statusData.status === 'error') break;
+            } catch (_e) { /* non-fatal — keep polling */ }
+          }
+        }
+
+        // 2-second delay between students to respect rate limits
+        if (i < studentsToGenerate.length - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+
+      const msg = alreadyCached > 0
+        ? `Skills generated for ${generated} student${generated !== 1 ? 's' : ''} (${alreadyCached} already cached)`
+        : `Skills generated for ${generated} student${generated !== 1 ? 's' : ''}`;
+      showToast(msg);
+    } catch (err) {
+      console.error('[tc-students] generateAll failed:', err);
+      showErrorToast('Skills generation failed — ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  }
+
+  /**
    * Open the Caseload Skills Summary Export modal.
    */
   function showCaseloadExportModal() {
@@ -12924,9 +13070,14 @@
               html += `<div class="cse-goal-narrative">🤖 ${escapeHtml(ai.summary)}</div>`;
             }
 
+            // AI plain-language one-liner (parent-friendly, shown in both modes)
+            if (ai && ai.plain_language) {
+              html += `<div class="cse-skill-plain">${escapeHtml(ai.plain_language)}</div>`;
+            }
+
             // Goal recommendation (professional mode only, needs-support/critical tiers)
             if (!isParentFriendly && ai && ai.goal_recommendation && (tierInfo.tier === 'needs-support' || tierInfo.tier === 'critical')) {
-              html += `<div class="cse-goal-rec">💡 <strong>Goal Recommendation:</strong> ${escapeHtml(ai.goal_recommendation)}</div>`;
+              html += `<div class="cse-skill-goal-rec cse-goal-rec">💡 <strong>Goal Recommendation:</strong> ${escapeHtml(ai.goal_recommendation)}</div>`;
             }
 
             html += `</div>`; // .cse-goal-block
@@ -12960,6 +13111,11 @@
 
             if (ai && ai.summary) {
               html += `<div class="cse-goal-narrative">🤖 ${escapeHtml(ai.summary)}</div>`;
+            }
+
+            // AI plain-language one-liner for DESE standards
+            if (ai && ai.plain_language) {
+              html += `<div class="cse-skill-plain">${escapeHtml(ai.plain_language)}</div>`;
             }
 
             html += `</div>`;

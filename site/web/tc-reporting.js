@@ -95,6 +95,33 @@
   }
 
   /**
+   * Fetch cached AI skills summary for a student from the ai_jobs table.
+   * Returns an array of skill objects (may be empty) or null on error.
+   * Only returns results cached within the last 24 hours.
+   */
+  async function fetchCachedSkillsForStudent(studentCode) {
+    if (!studentCode) return null;
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return null;
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('ai_jobs')
+        .select('result')
+        .eq('student_code', studentCode)
+        .eq('status', 'complete')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error || !data || data.length === 0) return null;
+      return data[0].result?.skills || null;
+    } catch (err) {
+      console.warn('[tc-reporting] fetchCachedSkillsForStudent failed:', err);
+      return null;
+    }
+  }
+
+  /**
    * Build a rich per-question answer detail HTML block for the evidence report.
    * Shows question text, choices, student answer, correct answer, DESE codes, and IEP goal descriptions.
    * @param {Object} submission - submission row (has .answers JSONB)
@@ -696,7 +723,7 @@
   /**
    * Render Parent-Facing Summary template (simplified)
    */
-  function renderParentSummaryTemplate(student, studentGoals, quarterRange) {
+  function renderParentSummaryTemplate(student, studentGoals, quarterRange, cachedSkills) {
     let html = `
       <div class="rp-report-card" id="parentReportCard">
         <div class="rp-report-header">
@@ -783,6 +810,16 @@
                 (Add comments here)
               </div>
             </div>
+            ${(() => {
+              if (!cachedSkills || !Array.isArray(cachedSkills)) return '';
+              const skill = cachedSkills.find(s =>
+                s.plain_language &&
+                s.source !== 'internal' &&
+                (s.code === goal.code || (s.source !== 'dese' && s.code === goal.code))
+              );
+              if (!skill || !skill.plain_language) return '';
+              return `<div class="rp-ai-plain-note">💡 ${escapeHtml(skill.plain_language)}</div>`;
+            })()}
           </div>
         `;
       }
@@ -1514,7 +1551,7 @@ ${narrative}`;
   /**
    * TAB 1: IEP Quarterly Progress Report
    */
-  function renderTab1() {
+  async function renderTab1() {
     const container = $("tab1Content");
     if (!container) return;
     try {
@@ -1616,9 +1653,16 @@ ${narrative}`;
     // Render based on template selection
     let reportContent = '';
     switch (tab1State.template) {
-      case 'parent-summary':
-        reportContent = renderParentSummaryTemplate(student, studentGoals, quarterRange);
+      case 'parent-summary': {
+        // Fetch cached AI skills for plain_language notes (external audience only)
+        const cachedSkills = await fetchCachedSkillsForStudent(tab1State.studentCode);
+        // Filter to only use external-audience skills for the parent-facing report
+        const externalSkills = Array.isArray(cachedSkills)
+          ? cachedSkills.filter(s => !s.audience || s.audience === 'external')
+          : null;
+        reportContent = renderParentSummaryTemplate(student, studentGoals, quarterRange, externalSkills || cachedSkills);
         break;
+      }
       case 'admin-summary':
         reportContent = renderAdminSummaryTemplate(student, studentGoals, quarterRange);
         break;
@@ -2591,6 +2635,9 @@ ${narrative}`;
     // Data collection summary
     summaryHtml += renderDataCollectionSummary(tab2State.studentCode);
 
+    // AI Skills Summary placeholder — populated asynchronously after render
+    summaryHtml += `<div id="rpAiSkillsPlaceholder"><h3 class="rp-section-heading">🤖 AI Skills Summary</h3><div class="rp-empty" style="font-style:italic;opacity:0.6;">Loading cached skills summary…</div></div>`;
+
     summaryHtml += "</div>";
 
     container.innerHTML = summaryHtml;
@@ -2613,6 +2660,42 @@ ${narrative}`;
     } catch (err) {
       renderTabErrorCard(container, renderTab2, err);
     }
+
+    // Load and inject AI skills summary asynchronously (read-only, no new AI calls)
+    // Runs outside the try/catch because it handles its own errors and updates the DOM directly.
+    loadAISkillsForTab2(tab2State.studentCode);
+  }
+
+  /**
+   * Fetch cached AI skills and populate the #rpAiSkillsPlaceholder element in Tab 2.
+   */
+  async function loadAISkillsForTab2(studentCode) {
+    const placeholder = document.getElementById("rpAiSkillsPlaceholder");
+    if (!placeholder) return;
+    const skills = await fetchCachedSkillsForStudent(studentCode);
+    if (!skills || skills.length === 0) {
+      placeholder.innerHTML = `<h3 class="rp-section-heading">🤖 AI Skills Summary</h3><div class="rp-empty rp-ai-skills-note">No AI skills summary available — generate one from the Students page.</div>`;
+      return;
+    }
+    const TIER_LABELS = { excellent: 'Excellent', 'on-track': 'On Track', 'needs-support': 'Needs Support', critical: 'Critical' };
+    let html = `<h3 class="rp-section-heading">🤖 AI Skills Summary</h3><div class="rp-ai-skills-list">`;
+    for (const skill of skills) {
+      const tierLabel = TIER_LABELS[skill.tier] || skill.tier || '';
+      html += `<div class="rp-ai-skill-item">
+        <div class="rp-ai-skill-header">
+          <span class="rp-ai-skill-code">${escapeHtml(skill.code)}</span>
+          <span class="rp-skill-tier-badge rp-skill-tier-${escapeHtml(skill.tier || '')}">${escapeHtml(tierLabel)}</span>
+        </div>`;
+      if (skill.plain_language) {
+        html += `<div class="rp-ai-skill-plain">${escapeHtml(skill.plain_language)}</div>`;
+      }
+      if (skill.goal_recommendation && (skill.tier === 'needs-support' || skill.tier === 'critical')) {
+        html += `<div class="rp-ai-skill-rec">💡 ${escapeHtml(skill.goal_recommendation)}</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+    placeholder.innerHTML = html;
   }
 
   /**
