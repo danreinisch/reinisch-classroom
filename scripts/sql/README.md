@@ -39,6 +39,13 @@ Every script must be safe to run more than once. Use constructs like:
 - `UPDATE … WHERE id = '<uuid>'` (no-op if row is gone or already patched)
 - `INSERT … ON CONFLICT DO NOTHING`
 
+## Script index
+
+| File | Purpose |
+|------|---------|
+| `2026-04-18_remove_orphaned_week13_assignment_d2362c85.sql` | Remove stale Week 13 instance for S011 whose parent assignment was already deleted. |
+| `2026-04-20_week13_day1_preseed.sql` | Pre-seed Day 1 (Q1–Q8) correct answers for 39 students on the freshly-issued Week 13 Kragdon assignment; sets Group A (37) to In Progress and Group B (S007, S024) to Submitted with auto-graded submissions at 75%. |
+
 ## Authorship and review
 
 Before running a script in production:
