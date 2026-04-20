@@ -40,9 +40,12 @@ var mockSupaLib = {
 require.cache[require.resolve('../netlify/functions/_lib/http')] = { exports: mockHttpLib };
 require.cache[require.resolve('../netlify/functions/_lib/supa')] = { exports: mockSupaLib };
 
+var INTERNAL_SECRET = 'test-internal-secret-value';
+
 process.env.OPENAI_API_KEY = OPENAI_API_KEY;
 process.env.SUPABASE_URL = SUPABASE_URL;
 process.env.SUPABASE_SERVICE_ROLE_KEY = SUPABASE_KEY;
+process.env.INTERNAL_FUNCTION_SECRET = INTERNAL_SECRET;
 
 var handler = require('../netlify/functions/teacher-ai-skills-summary-background').handler;
 
@@ -51,7 +54,7 @@ var handler = require('../netlify/functions/teacher-ai-skills-summary-background
 function mockEvent(body) {
   return {
     httpMethod: 'POST',
-    headers: {},
+    headers: { 'x-internal-secret': INTERNAL_SECRET },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   };
 }
@@ -116,6 +119,16 @@ async function runAll() {
 test('returns 405 for GET request', async function() {
   var res = await handler({ httpMethod: 'GET', headers: {}, body: null });
   assert.strictEqual(res.statusCode, 405);
+});
+
+test('returns 403 when X-Internal-Secret header is missing', async function() {
+  var res = await handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(validBody()) });
+  assert.strictEqual(res.statusCode, 403);
+});
+
+test('returns 403 when X-Internal-Secret header is wrong', async function() {
+  var res = await handler({ httpMethod: 'POST', headers: { 'x-internal-secret': 'wrong-secret' }, body: JSON.stringify(validBody()) });
+  assert.strictEqual(res.statusCode, 403);
 });
 
 test('returns 503 when OPENAI_API_KEY is not configured', async function() {
