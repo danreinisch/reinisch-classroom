@@ -52,11 +52,20 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'job_id must be a valid UUID v4' }, {}, requestId);
   }
 
-  // Query Supabase
+  // Probabilistic cleanup: on ~1% of requests, fire-and-forget a DELETE of jobs older than 7 days
+  if (Math.random() < 0.01) {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    fetch(`${SUPABASE_URL}/rest/v1/ai_jobs?created_at=lt.${encodeURIComponent(cutoff)}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=minimal' },
+    }).catch(() => {});
+  }
+
+  // Query Supabase — scoped to created_by so teachers can only see their own jobs
   let row;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&select=status,result,error&limit=1`,
+      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error&limit=1`,
       {
         method: 'GET',
         headers: {
