@@ -29,13 +29,9 @@ const { getSupabaseConfig } = require('./_lib/supa');
 
 const { SESSION_SECRET } = process.env;
 
-/** UUID v4 */
+/** Generate a UUID v4 for the job (Node 14.17+ has crypto.randomUUID built-in). */
 function generateJobId() {
-  return crypto.randomUUID
-    ? crypto.randomUUID()
-    : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-        (c ^ (crypto.randomBytes(1)[0] & (15 >> (c / 4)))).toString(16)
-      );
+  return crypto.randomUUID();
 }
 
 function supabaseHeaders(key) {
@@ -146,6 +142,10 @@ exports.handler = async (event) => {
   console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Job ${job_id} created for student ${student_code}`);
 
   // ── Fire-and-forget the background worker ────────────────────────────────
+  // Netlify background functions always return 202 immediately; we do not await.
+  // If this fetch fails (e.g. network error on first connect), the job row will
+  // remain 'pending' and the client will time out polling. This is acceptable
+  // because Netlify's own invoke infrastructure is reliable in production.
   const siteUrl = process.env.URL || 'http://localhost:8888';
   const backgroundUrl = `${siteUrl}/.netlify/functions/teacher-ai-skills-summary-background`;
 
