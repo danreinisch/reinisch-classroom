@@ -1,3 +1,4 @@
+// Legacy sync fallback — prefer the background function flow
 // AI-powered skills summary endpoint
 // POST /.netlify/functions/teacher-ai-skills-summary
 // Auth: Requires teacher session cookie
@@ -102,7 +103,7 @@ exports.handler = async (event) => {
           { role: 'system', content: systemPrompt },
         ],
       }),
-      signal: AbortSignal.timeout(24000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!openAiRes.ok) {

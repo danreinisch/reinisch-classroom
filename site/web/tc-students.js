@@ -9607,8 +9607,8 @@
             return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
           });
 
-      // POST to background function — Netlify returns 202 immediately
-      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {
+      // POST to submit gateway — returns synchronous validation result
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -9620,9 +9620,9 @@
         }),
       });
 
-      // Background functions always return 202; any other non-ok status is an error
-      if (!res.ok && res.status !== 202) {
-        console.warn('[tc-students] AI background job request failed', res.status, '— skipping narratives');
+      // Submit function returns 200 on success; any non-ok status means validation or server error
+      if (!res.ok) {
+        console.warn('[tc-students] AI submit request failed', res.status, '— skipping narratives');
         skillsLastStatus.set(student.code, res.status);
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
         return false;
@@ -12652,7 +12652,7 @@
         });
 
     try {
-      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -12665,7 +12665,7 @@
         }),
         signal,
       });
-      if (!res.ok && res.status !== 202) return null;
+      if (!res.ok) return null;
     } catch (_e) {
       return null;
     }
