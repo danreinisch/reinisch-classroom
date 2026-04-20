@@ -9565,6 +9565,7 @@
     let jobId = null;
     let iepPayload = [];
     let desePayload = [];
+    const startTime = Date.now();
 
     try {
       // Build per-question weakness data for IEP goals (questions < 60% accuracy)
@@ -9697,8 +9698,7 @@
       return false;
 
     } catch (err) {
-      const elapsedMs = jobId ? (Date.now() - (Date.now())) : 0; // best-effort
-      console.error('[tc-students] requestSkillsNarratives failed', { job_id: jobId, student_code: student.code, error: err && err.message });
+      console.error('[tc-students] requestSkillsNarratives failed', { job_id: jobId, student_code: student.code, elapsedMs: Date.now() - startTime, error: err && err.message });
       // Silently remove loading spinners — user still sees the data cards
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
       return false;
