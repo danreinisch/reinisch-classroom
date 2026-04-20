@@ -2,6 +2,7 @@
 // GET /.netlify/functions/teacher-ai-skills-summary-status?job_id=<uuid>
 // Auth: Requires teacher session cookie
 // Returns: { ok: true, status: 'pending' | 'complete' | 'error', skills?: [...], error?: '...' }
+// Note: results are scoped to the authenticated teacher (created_by filter).
 
 console.log('[teacher-ai-skills-summary-status] Module loaded');
 
@@ -18,6 +19,32 @@ const { SESSION_SECRET } = process.env;
 // ── UUID validation ──────────────────────────────────────────────────────────
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// ── Job cleanup ───────────────────────────────────────────────────────────────
+
+/** Probabilistically (~1% of requests) delete jobs older than 7 days. */
+async function maybeCleanupOldJobs(url, key, requestId) {
+  if (Math.random() >= 0.01) return;
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/ai_jobs?created_at=lt.${encodeURIComponent(cutoff)}`,
+      {
+        method: 'DELETE',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    if (res.ok) {
+      console.log(`[teacher-ai-skills-summary-status] [${requestId}] Cleaned up jobs older than 7 days`);
+    }
+  } catch (err) {
+    console.warn(`[teacher-ai-skills-summary-status] [${requestId}] Cleanup failed (non-fatal): ${err.message}`);
+  }
+}
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
@@ -52,11 +79,14 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'job_id must be a valid UUID v4' }, {}, requestId);
   }
 
-  // Query Supabase
+  // Probabilistic cleanup of old jobs (fire-and-forget, non-blocking)
+  maybeCleanupOldJobs(SUPABASE_URL, SUPABASE_KEY, requestId);
+
+  // Query Supabase — scoped to the authenticated teacher to prevent cross-user job access
   let row;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&select=status,result,error&limit=1`,
+      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error&limit=1`,
       {
         method: 'GET',
         headers: {

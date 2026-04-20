@@ -171,47 +171,32 @@ test('returns 405 for GET request', async function() {
   assert.strictEqual(res.statusCode, 405);
 });
 
-test('returns 401 when no auth token', async function() {
-  var res = await handler({
-    httpMethod: 'POST',
-    headers: { cookie: '' },
-    body: JSON.stringify(validBody()),
-  });
-  assert.strictEqual(res.statusCode, 401);
-});
+// Auth is no longer checked by the background function — the gateway validates it.
+// The background function only checks for required fields.
 
 test('returns 503 when OPENAI_API_KEY is not configured', async function() {
   delete process.env.OPENAI_API_KEY;
-  var res = await handler(authedEvent(validBody()));
+  var res = await handler({
+    httpMethod: 'POST',
+    headers: {},
+    body: JSON.stringify(validBody()),
+  });
   assert.strictEqual(res.statusCode, 503);
 });
 
-test('returns 400 for invalid job_id (not a UUID)', async function() {
+test('returns 400 when job_id is missing', async function() {
   process.env.OPENAI_API_KEY = OPENAI_API_KEY;
-  var body = Object.assign({}, validBody(), { job_id: 'not-a-uuid' });
+  var body = Object.assign({}, validBody(), { job_id: undefined });
+  delete body.job_id;
   global.fetch = function() { return Promise.resolve({ ok: true, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } }); };
-  var res = await handler(authedEvent(body));
-  assert.strictEqual(res.statusCode, 400);
-});
-
-test('returns 400 for UUID v1 (not v4)', async function() {
-  var body = Object.assign({}, validBody(), { job_id: '12345678-1234-1234-abcd-1234567890ab' }); // version 1
-  global.fetch = function() { return Promise.resolve({ ok: true, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } }); };
-  var res = await handler(authedEvent(body));
+  var res = await handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(body) });
   assert.strictEqual(res.statusCode, 400);
 });
 
 test('returns 400 when student_code is missing', async function() {
   var body = Object.assign({}, validBody(), { student_code: '' });
   global.fetch = function() { return Promise.resolve({ ok: true, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } }); };
-  var res = await handler(authedEvent(body));
-  assert.strictEqual(res.statusCode, 400);
-});
-
-test('returns 400 when neither iep_goals nor dese_standards provided', async function() {
-  var body = { job_id: validJobId, student_code: 'S001' };
-  global.fetch = function() { return Promise.resolve({ ok: true, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } }); };
-  var res = await handler(authedEvent(body));
+  var res = await handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(body) });
   assert.strictEqual(res.statusCode, 400);
 });
 
@@ -224,10 +209,6 @@ test('returns 202 and writes complete job on success', async function() {
 
   var patchedBody = null;
   global.fetch = function(url, opts) {
-    // Insert → ok
-    if (url.includes('/rest/v1/ai_jobs') && opts && opts.method === 'POST') {
-      return Promise.resolve({ ok: true, status: 201, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
-    }
     // Cache lookup → no hit
     if (url.includes('payload_hash=')) {
       return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
@@ -244,7 +225,7 @@ test('returns 202 and writes complete job on success', async function() {
     return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
   };
 
-  var res = await handler(authedEvent(validBody()));
+  var res = await handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(validBody()) });
   assert.strictEqual(res.statusCode, 202);
   assert.ok(patchedBody, 'PATCH should have been called');
   assert.strictEqual(patchedBody.status, 'complete');
@@ -261,9 +242,6 @@ test('uses cached result when payload_hash matches recent complete job', async f
   var patchedBody = null;
 
   global.fetch = function(url, opts) {
-    if (url.includes('/rest/v1/ai_jobs') && opts && opts.method === 'POST') {
-      return Promise.resolve({ ok: true, status: 201, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
-    }
     if (url.includes('payload_hash=')) {
       return Promise.resolve({
         ok: true, status: 200,
@@ -282,7 +260,7 @@ test('uses cached result when payload_hash matches recent complete job', async f
     return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
   };
 
-  var res = await handler(authedEvent(validBody()));
+  var res = await handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(validBody()) });
   assert.strictEqual(res.statusCode, 202);
   assert.strictEqual(openAiCalled, false, 'OpenAI should NOT be called when cache hits');
   assert.ok(patchedBody, 'PATCH should have been called');
@@ -292,9 +270,6 @@ test('uses cached result when payload_hash matches recent complete job', async f
 test('writes error job when OpenAI fails all retries', async function() {
   var patchedBody = null;
   global.fetch = function(url, opts) {
-    if (url.includes('/rest/v1/ai_jobs') && opts && opts.method === 'POST') {
-      return Promise.resolve({ ok: true, status: 201, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
-    }
     if (url.includes('payload_hash=')) {
       return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
     }
@@ -308,23 +283,11 @@ test('writes error job when OpenAI fails all retries', async function() {
     return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
   };
 
-  var res = await handler(authedEvent(validBody()));
+  var res = await handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(validBody()) });
   assert.strictEqual(res.statusCode, 202);
   assert.ok(patchedBody, 'PATCH should have been called');
   assert.strictEqual(patchedBody.status, 'error');
   assert.ok(typeof patchedBody.error === 'string', 'error message should be set');
-});
-
-test('returns 500 when Supabase insert fails', async function() {
-  global.fetch = function(url, opts) {
-    if (url.includes('/rest/v1/ai_jobs') && opts && opts.method === 'POST') {
-      return Promise.resolve({ ok: false, status: 500, json: function() { return Promise.resolve({}); }, text: function() { return Promise.resolve(''); } });
-    }
-    return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
-  };
-
-  var res = await handler(authedEvent(validBody()));
-  assert.strictEqual(res.statusCode, 500);
 });
 
 runAll();

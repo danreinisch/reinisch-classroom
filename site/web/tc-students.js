@@ -9597,36 +9597,33 @@
         item_count: c.itemCount,
       }));
 
-      // Generate job ID client-side so we can poll before the background function responds.
-      // crypto.randomUUID() is available in all modern browsers (Chrome 92+, Firefox 95+, Safari 15.4+).
-      // Fallback uses Math.random() for older environments.
-      const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
-        ? crypto.randomUUID()
-        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-          });
-
-      // POST to background function — Netlify returns 202 immediately
-      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {
+      // POST to the synchronous gateway — returns { ok: true, job_id } or error
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
-          job_id: jobId,
           student_code: student.code,
           iep_goals: iepPayload,
           dese_standards: desePayload,
         }),
       });
 
-      // Background functions always return 202; any other non-ok status is an error
-      if (!res.ok && res.status !== 202) {
-        console.warn('[tc-students] AI background job request failed', res.status, '— skipping narratives');
+      if (!res.ok) {
+        console.warn('[tc-students] AI submit request failed', res.status, '— skipping narratives');
         skillsLastStatus.set(student.code, res.status);
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
         return false;
       }
+
+      const submitData = await res.json();
+      if (!submitData.ok || !submitData.job_id) {
+        console.warn('[tc-students] AI submit returned unexpected response — skipping narratives');
+        document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+        return false;
+      }
+
+      const jobId = submitData.job_id;
 
       // Poll the status endpoint until complete or error
       const pollStartTime = Date.now();
@@ -12644,20 +12641,13 @@
 
     if (iepPayload.length === 0 && desePayload.length === 0) return null;
 
-    const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
-
+    let jobId;
     try {
-      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-background', {
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
-          job_id: jobId,
           student_code: student.code,
           iep_goals: iepPayload,
           dese_standards: desePayload,
@@ -12665,7 +12655,10 @@
         }),
         signal,
       });
-      if (!res.ok && res.status !== 202) return null;
+      if (!res.ok) return null;
+      const submitData = await res.json();
+      if (!submitData.ok || !submitData.job_id) return null;
+      jobId = submitData.job_id;
     } catch (_e) {
       return null;
     }

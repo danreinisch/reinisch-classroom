@@ -3,6 +3,11 @@
 // Auth: Requires teacher session cookie
 // Body: { student_code, iep_goals, dese_standards, audience? }
 // Returns: { ok: true, skills: [{ code, description, summary, plain_language?, tier, source, goal_recommendation?, ai_edited? }] }
+//
+// @deprecated — For new integrations use the background-function flow:
+//   POST /.netlify/functions/teacher-ai-skills-summary-submit  →  returns { ok: true, job_id }
+//   GET  /.netlify/functions/teacher-ai-skills-summary-status?job_id=<id>
+// This synchronous endpoint is kept as a fallback with an 8-second timeout.
 
 console.log('[teacher-ai-skills-summary] Module loaded successfully');
 
@@ -102,7 +107,7 @@ exports.handler = async (event) => {
           { role: 'system', content: systemPrompt },
         ],
       }),
-      signal: AbortSignal.timeout(24000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!openAiRes.ok) {
