@@ -62,10 +62,11 @@ exports.handler = async (event) => {
   }
 
   // Query Supabase — scoped to created_by so teachers can only see their own jobs
+  // Include created_at so we can detect and self-heal stuck-pending jobs.
   let row;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error&limit=1`,
+      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error,created_at&limit=1`,
       {
         method: 'GET',
         headers: {
@@ -106,6 +107,29 @@ exports.handler = async (event) => {
     return jsonResponse(event, 200, { ok: true, status: 'error', error: row.error || 'AI generation failed' }, {}, requestId);
   }
 
-  // status === 'pending'
+  // status === 'pending' — check if job is stuck (older than 5 minutes)
+  const STUCK_PENDING_THRESHOLD_MS = 5 * 60 * 1000;
+  if (row.created_at) {
+    const ageMs = Date.now() - new Date(row.created_at).getTime();
+    if (ageMs > STUCK_PENDING_THRESHOLD_MS) {
+      const ageSeconds = Math.round(ageMs / 1000);
+      const stuckError = `AI job timed out after ${ageSeconds}s — background function did not complete. Please retry.`;
+      console.warn(`[teacher-ai-skills-summary-status] [${requestId}] Job ${job_id} stuck pending for ${ageSeconds}s — marking error and returning to client`);
+      // Update the row to error so future polls return immediately
+      fetch(`${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({ status: 'error', error: stuckError, updated_at: new Date().toISOString() }),
+      }).catch(patchErr => {
+        console.error(`[teacher-ai-skills-summary-status] [${requestId}] Failed to mark stuck job ${job_id} as error: ${patchErr.message}`);
+      });
+      return jsonResponse(event, 200, { ok: true, status: 'error', error: stuckError }, {}, requestId);
+    }
+  }
   return jsonResponse(event, 200, { ok: true, status: 'pending' }, {}, requestId);
 };

@@ -206,4 +206,44 @@ test('returns 502 when Supabase fetch throws', async function() {
   assert.strictEqual(parsed.ok, false);
 });
 
+// ── Stuck-job detection tests ─────────────────────────────────────────────────
+
+test('returns error for stuck pending job older than 5 minutes', async function() {
+  var oldCreatedAt = new Date(Date.now() - 6 * 60 * 1000).toISOString(); // 6 minutes ago
+  var patchCalled = false;
+  global.fetch = function(url, opts) {
+    // Accept the PATCH that marks the stuck job as error
+    if (opts && opts.method === 'PATCH') {
+      patchCalled = true;
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
+    }
+    return makeSupabaseResponse([{ status: 'pending', result: null, error: null, created_at: oldCreatedAt }])(url, opts);
+  };
+  var res = await handler(authedEvent());
+  assert.strictEqual(res.statusCode, 200);
+  var parsed = JSON.parse(res.body);
+  assert.strictEqual(parsed.ok, true);
+  assert.strictEqual(parsed.status, 'error', 'stuck job should return error status');
+  assert.ok(typeof parsed.error === 'string' && parsed.error.length > 0, 'error message should describe the timeout');
+});
+
+test('returns pending for recent pending job (under 5 minutes old)', async function() {
+  var recentCreatedAt = new Date(Date.now() - 60 * 1000).toISOString(); // 1 minute ago
+  global.fetch = makeSupabaseResponse([{ status: 'pending', result: null, error: null, created_at: recentCreatedAt }]);
+  var res = await handler(authedEvent());
+  assert.strictEqual(res.statusCode, 200);
+  var parsed = JSON.parse(res.body);
+  assert.strictEqual(parsed.ok, true);
+  assert.strictEqual(parsed.status, 'pending', 'recent job should still return pending');
+});
+
+test('returns pending when job has no created_at (backward compat)', async function() {
+  global.fetch = makeSupabaseResponse([{ status: 'pending', result: null, error: null }]);
+  var res = await handler(authedEvent());
+  assert.strictEqual(res.statusCode, 200);
+  var parsed = JSON.parse(res.body);
+  assert.strictEqual(parsed.ok, true);
+  assert.strictEqual(parsed.status, 'pending', 'job without created_at should still return pending');
+});
+
 runAll();

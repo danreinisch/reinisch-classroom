@@ -91,8 +91,10 @@ async function findPendingJobByHash(url, key, payload_hash) {
 }
 
 async function countPendingJobsByTeacher(url, key, created_by) {
+  // Only count recent pending jobs (< 5 min old) so stale ghost rows can't permanently block a teacher.
+  const recentCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const res = await fetch(
-    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&select=id`,
+    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&created_at=gte.${encodeURIComponent(recentCutoff)}&select=id`,
     {
       method: 'GET',
       headers: { ...supabaseHeaders(key), Prefer: 'count=exact' },
@@ -192,11 +194,11 @@ exports.handler = async (event) => {
   const createdBy = auth.user.username;
   const payloadHash = computePayloadHash(student_code, iep_goals || [], dese_standards || [], resolvedAudience);
 
-  // Check cache first
+  // Check cache first — validate result shape before returning to avoid serving empty/corrupt data
   try {
     const cached = await findCachedJob(SUPABASE_URL, SUPABASE_KEY, payloadHash);
-    if (cached) {
-      console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Cache hit for ${student_code} — returning cached result`);
+    if (cached && Array.isArray(cached.skills) && cached.skills.length > 0) {
+      console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Cache hit for ${student_code} — returning cached result (${cached.skills.length} skills)`);
       await upsertJobComplete(SUPABASE_URL, SUPABASE_KEY, {
         id: job_id,
         student_code,
@@ -205,6 +207,8 @@ exports.handler = async (event) => {
         result: cached,
       });
       return jsonResponse(event, 200, { ok: true, job_id, cached: true }, {}, requestId);
+    } else if (cached) {
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Cache hit for ${student_code} but result is invalid (empty/missing skills) — proceeding with fresh run`);
     }
   } catch (cacheErr) {
     console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Cache check failed: ${cacheErr.message} — proceeding`);
@@ -247,30 +251,50 @@ exports.handler = async (event) => {
 
   console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Job ${job_id} created for student ${student_code}`);
 
-  // Fire background function asynchronously — do not await
+  // Invoke background function and await the response.
+  // Background functions (-background suffix) return 202 immediately so this adds minimal latency,
+  // but guarantees the HTTP request is fully sent before this handler returns.
+  // WARNING: Do NOT leave this as fire-and-forget — on Netlify, unawaited fetches may be dropped
+  // when the synchronous handler returns before the OS flushes the TCP write buffer.
   const backgroundUrl = process.env.URL
     ? `${process.env.URL}/.netlify/functions/teacher-ai-skills-summary-background`
     : `http://localhost:8888/.netlify/functions/teacher-ai-skills-summary-background`;
 
   const internalSecret = process.env.INTERNAL_FUNCTION_SECRET || process.env.SESSION_SECRET;
 
-  fetch(backgroundUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(internalSecret ? { 'X-Internal-Secret': internalSecret } : {}),
-    },
-    body: JSON.stringify({
-      job_id,
-      student_code,
-      iep_goals: iep_goals || [],
-      dese_standards: dese_standards || [],
-      language_mode,
-      audience: resolvedAudience,
-    }),
-  }).catch(err => {
-    console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Background fire-and-forget failed: ${err.message}`);
-  });
+  try {
+    const bgRes = await fetch(backgroundUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(internalSecret ? { 'X-Internal-Secret': internalSecret } : {}),
+      },
+      body: JSON.stringify({
+        job_id,
+        student_code,
+        iep_goals: iep_goals || [],
+        dese_standards: dese_standards || [],
+        language_mode,
+        audience: resolvedAudience,
+      }),
+    });
+    if (!bgRes.ok && bgRes.status !== 202) {
+      // Log but don't fail — the job row exists and will be polled; status endpoint will detect stuck jobs
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Background function returned unexpected status ${bgRes.status} for job ${job_id}`);
+    } else {
+      console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Background function invoked for job ${job_id} — status ${bgRes.status}`);
+    }
+  } catch (bgErr) {
+    // Background function invocation failed — mark job as error so the client doesn't poll forever
+    console.error(`[teacher-ai-skills-summary-submit] [${requestId}] Failed to invoke background function for job ${job_id}: ${bgErr.message}`);
+    await fetch(`${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}`, {
+      method: 'PATCH',
+      headers: { ...supabaseHeaders(SUPABASE_KEY), Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'error', error: `Failed to invoke background function: ${bgErr.message}`, updated_at: new Date().toISOString() }),
+    }).catch(patchErr => {
+      console.error(`[teacher-ai-skills-summary-submit] [${requestId}] Also failed to mark job error: ${patchErr.message}`);
+    });
+  }
 
   // Probabilistic cleanup: on ~1% of requests, fire-and-forget a DELETE of jobs older than 7 days
   if (Math.random() < 0.01) {

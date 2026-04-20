@@ -9553,13 +9553,18 @@
    * @param {Array} iepCards
    * @param {Array} deseCards
    * @param {Function} [onStatusUpdate] - Optional callback(message) for button label updates
+   * @param {boolean} [useLegacyFallback] - If true, attempt the legacy sync endpoint on timeout/error
    * @returns {Promise<boolean>} true on success, false on failure
    */
-  async function requestSkillsNarratives(student, iepCards, deseCards, onStatusUpdate) {
+  async function requestSkillsNarratives(student, iepCards, deseCards, onStatusUpdate, useLegacyFallback) {
     const POLL_INTERVAL_MS = 2500;
-    // Maximum polls before giving up — each poll waits POLL_INTERVAL_MS plus network latency,
-    // so actual wall-clock time may exceed MAX_POLLS * POLL_INTERVAL_MS / 1000 seconds.
-    const MAX_POLLS = 120; // ~5 minute ceiling (120 × 2.5s intervals)
+    // ~180s hard timeout (72 × 2.5s). The backend stuck-job detector fires at 5 min,
+    // so we surface an error to the user well before that.
+    const MAX_POLLS = 72;
+
+    let jobId = null;
+    let iepPayload = [];
+    let desePayload = [];
 
     try {
       // Build per-question weakness data for IEP goals (questions < 60% accuracy)
@@ -9585,7 +9590,7 @@
         // per-question data is optional — continue without it
       }
 
-      const iepPayload = iepCards.map(c => ({
+      iepPayload = iepCards.map(c => ({
         code: c.code,
         area: c.area,
         current_avg: c.currentAvg !== null ? c.currentAvg : c.displayScore,
@@ -9597,7 +9602,7 @@
         question_weaknesses: iepQuestionWeaknesses[c.code] || [],
       }));
 
-      const desePayload = deseCards.map(c => ({
+      desePayload = deseCards.map(c => ({
         code: c.code,
         percent_correct: c.displayScore,
         item_count: c.itemCount,
@@ -9606,7 +9611,7 @@
       // Generate job ID client-side so we can poll before the background function responds.
       // crypto.randomUUID() is available in all modern browsers (Chrome 92+, Firefox 95+, Safari 15.4+).
       // Fallback uses Math.random() for older environments.
-      const jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      jobId = (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()
         : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
             const r = Math.random() * 16 | 0;
@@ -9628,7 +9633,7 @@
 
       // Submit function returns 200 on success; any non-ok status means validation or server error
       if (!res.ok) {
-        console.warn('[tc-students] AI submit request failed', res.status, '— skipping narratives');
+        console.error('[tc-students] AI submit request failed', { job_id: jobId, student_code: student.code, status: res.status });
         skillsLastStatus.set(student.code, res.status);
         document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
         return false;
@@ -9636,6 +9641,7 @@
 
       // Poll the status endpoint until complete or error
       const pollStartTime = Date.now();
+      let lastStatus = 'pending';
       for (let poll = 0; poll < MAX_POLLS; poll++) {
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
 
@@ -9652,6 +9658,7 @@
             continue;
           }
           statusData = await statusRes.json();
+          lastStatus = statusData.status || lastStatus;
         } catch (_e) {
           continue;
         }
@@ -9664,9 +9671,14 @@
         }
 
         if (statusData.status === 'error') {
-          console.warn('[tc-students] AI job failed:', statusData.error);
+          const elapsedMs = Date.now() - pollStartTime;
+          console.error('[tc-students] AI job failed', { job_id: jobId, student_code: student.code, elapsedMs, lastStatus: statusData.status, error: statusData.error });
           skillsLastStatus.set(student.code, 502);
           document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+          if (useLegacyFallback) {
+            if (onStatusUpdate) onStatusUpdate('Trying legacy mode…');
+            return await requestSkillsNarrativesLegacy(student, iepPayload, desePayload);
+          }
           return false;
         }
 
@@ -9674,14 +9686,61 @@
       }
 
       // Polling timed out
-      console.warn('[tc-students] AI job timed out after polling');
+      const elapsedMs = Date.now() - pollStartTime;
+      console.error('[tc-students] AI job timed out', { job_id: jobId, student_code: student.code, elapsedMs, lastStatus });
       skillsLastStatus.set(student.code, 504);
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+      if (useLegacyFallback) {
+        if (onStatusUpdate) onStatusUpdate('Trying legacy mode…');
+        return await requestSkillsNarrativesLegacy(student, iepPayload, desePayload);
+      }
       return false;
 
     } catch (err) {
-      console.warn('[tc-students] requestSkillsNarratives failed:', err);
+      const elapsedMs = jobId ? (Date.now() - (Date.now())) : 0; // best-effort
+      console.error('[tc-students] requestSkillsNarratives failed', { job_id: jobId, student_code: student.code, error: err && err.message });
       // Silently remove loading spinners — user still sees the data cards
+      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+      return false;
+    }
+  }
+
+  /**
+   * Legacy synchronous fallback: calls /.netlify/functions/teacher-ai-skills-summary directly.
+   * Used when the background-job flow fails; this is the old endpoint that runs OpenAI inline.
+   *
+   * @param {Object} student
+   * @param {Array} iepPayload - Pre-built IEP goals array
+   * @param {Array} desePayload - Pre-built DESE standards array
+   * @returns {Promise<boolean>} true on success
+   */
+  async function requestSkillsNarrativesLegacy(student, iepPayload, desePayload) {
+    try {
+      console.warn('[tc-students] Falling back to legacy sync AI endpoint for', student.code);
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          student_code: student.code,
+          iep_goals: iepPayload,
+          dese_standards: desePayload,
+        }),
+      });
+      if (!res.ok) {
+        console.error('[tc-students] Legacy AI endpoint failed', { student_code: student.code, status: res.status });
+        return false;
+      }
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.skills) || data.skills.length === 0) {
+        console.error('[tc-students] Legacy AI endpoint returned invalid data', { student_code: student.code });
+        return false;
+      }
+      skillsAiCache.set(student.code, data);
+      injectSkillNarratives(student.code, data.skills);
+      return true;
+    } catch (legacyErr) {
+      console.error('[tc-students] Legacy AI fallback failed:', { student_code: student.code, error: legacyErr && legacyErr.message });
       document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
       return false;
     }
@@ -9852,7 +9911,7 @@
       skillsGenerationInFlight.set(student.code, true);
       const succeeded = await requestSkillsNarratives(student, cards.iepCards, cards.deseCards, (msg) => {
         btn.textContent = msg;
-      });
+      }, isRetry); // pass isRetry as useLegacyFallback — on second attempt, try legacy sync endpoint
       skillsGenerationInFlight.delete(student.code);
 
       if (skillsAiCache.has(student.code)) {

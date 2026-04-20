@@ -194,4 +194,25 @@ test('writes error job when OpenAI fails all retries', async function() {
   assert.ok(typeof patchedBody.error === 'string', 'error message should be set');
 });
 
+test('writes error job when an unexpected exception is thrown inside handler', async function() {
+  // Simulate an unexpected error by having fetch throw synchronously on the OpenAI call
+  var patchedBody = null;
+  global.fetch = function(url, opts) {
+    if (url.startsWith('https://api.openai.com/')) {
+      throw new Error('Simulated unexpected crash');
+    }
+    if (url.includes('/rest/v1/ai_jobs?id=') && opts && opts.method === 'PATCH') {
+      patchedBody = JSON.parse(opts.body);
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
+  };
+
+  var res = await handler(mockEvent(validBody()));
+  assert.strictEqual(res.statusCode, 202, 'handler should always return 202 even on unexpected error');
+  assert.ok(patchedBody, 'PATCH should have been called to mark job as error');
+  assert.strictEqual(patchedBody.status, 'error', 'unexpected error should write status=error');
+  assert.ok(typeof patchedBody.error === 'string' && patchedBody.error.length > 0, 'error message should describe the failure');
+});
+
 runAll();
