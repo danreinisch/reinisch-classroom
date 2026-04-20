@@ -1261,6 +1261,73 @@
         padding-bottom: 8px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
+
+      /* AI plain-language note in parent-facing reports */
+      .rp-ai-plain-note {
+        margin-top: 10px;
+        padding: 10px 14px;
+        background: rgba(99, 102, 241, 0.06);
+        border-left: 3px solid rgba(99, 102, 241, 0.4);
+        border-radius: 4px;
+        font-size: 13px;
+        font-style: italic;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      /* AI Skills Summary section (Tab 2) */
+      .rp-ai-skills-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .rp-ai-skill-item {
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 8px;
+      }
+      .rp-ai-skill-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .rp-ai-skill-code {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .rp-skill-tier-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .rp-skill-tier-excellent { background: rgba(134, 239, 172, 0.15); color: #86efac; }
+      .rp-skill-tier-on-track { background: rgba(147, 197, 253, 0.15); color: #93c5fd; }
+      .rp-skill-tier-needs-support { background: rgba(252, 211, 77, 0.15); color: #fcd34d; }
+      .rp-skill-tier-critical { background: rgba(252, 165, 165, 0.15); color: #fca5a5; }
+      .rp-ai-skill-plain {
+        font-size: 13px;
+        font-style: italic;
+        opacity: 0.8;
+        line-height: 1.5;
+      }
+      .rp-ai-skill-rec {
+        margin-top: 6px;
+        font-size: 13px;
+        padding: 6px 10px;
+        background: rgba(254, 243, 199, 0.08);
+        border-left: 3px solid rgba(180, 83, 9, 0.5);
+        border-radius: 4px;
+      }
+      .rp-ai-skills-note {
+        font-style: italic;
+        opacity: 0.6;
+      }
     </style>
   </head>
   <body>

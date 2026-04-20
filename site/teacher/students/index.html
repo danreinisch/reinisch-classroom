@@ -2876,6 +2876,21 @@
         opacity: 0.45;
         padding-left: 14px;
       }
+      .cse-skill-plain {
+        font-size: 13px;
+        font-style: italic;
+        opacity: 0.8;
+        margin-top: 6px;
+        line-height: 1.5;
+      }
+      .cse-skill-goal-rec {
+        font-size: 13px;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: rgba(254, 243, 199, 0.12);
+        border-left: 3px solid rgba(180, 83, 9, 0.6);
+        border-radius: 4px;
+      }
 
       /* ── Caseload Export Print styles (body.print-mode-cse-report) ── */
       @media print {
@@ -2927,6 +2942,13 @@
         body.print-mode-cse-report .cse-goal-block.tier-needs-support { border-left-color: #92400e !important; }
         body.print-mode-cse-report .cse-goal-block.tier-critical { border-left-color: #991b1b !important; }
         body.print-mode-cse-report .cse-goal-rec { background: #fef3c7 !important; border-left-color: #92400e !important; color: #111 !important; }
+        body.print-mode-cse-report .cse-skill-plain {
+          font-size: 12px;
+          color: #374151 !important;
+          font-style: italic;
+          margin-top: 4px;
+        }
+        body.print-mode-cse-report .cse-skill-goal-rec { background: #fef3c7 !important; border-left-color: #92400e !important; color: #111 !important; }
         /* Hide everything else in cse-report mode */
         body.print-mode-cse-report .tc-topbar,
         body.print-mode-cse-report .tc-sidebar,
@@ -2983,6 +3005,10 @@
           break-inside: avoid;
           page-break-inside: avoid;
         }
+        body.print-mode-student-summary .st-skill-dot {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
         body.print-mode-student-summary .st-skill-card-header,
         body.print-mode-student-summary .st-skill-code,
         body.print-mode-student-summary .st-skill-area,
@@ -2991,6 +3017,7 @@
         body.print-mode-student-summary .st-skill-section-title,
         body.print-mode-student-summary .st-skill-narrative p,
         body.print-mode-student-summary .st-skill-narrative-description,
+        body.print-mode-student-summary .st-skill-narrative-plain,
         body.print-mode-student-summary .st-skill-narrative-goal-rec {
           color: #111 !important;
         }
@@ -3282,6 +3309,7 @@
             <button id="stExpandStudentsBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg> Expand Students</button>
             <button id="stExpandAllFullBtn" class="st-btn st-btn-small"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/><polyline points="6 14 12 20 18 14"/></svg> Expand All</button>
             <button id="stExportBtn" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Export</button>
+            <button id="stGenerateAllSkills" class="st-btn st-btn-small" type="button" title="Generate AI skills summaries for all active students">✨ Generate All Skills</button>
             <button id="stImportCSV" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Import</button>
             <button id="stMasterSpreadsheet" class="st-btn st-btn-small"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> Spreadsheet</button>
             <button id="stQuickEntry" class="st-btn st-btn-small st-btn-quick-entry" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Entry</button>
@@ -3385,7 +3413,7 @@
     <script defer src="/web/teacher-shell.js?v=20260331"></script>
     <script src="/web/rc-modal.js?v=20260418-catalog"></script>
     <script type="module" src="/web/staleness-utils.js?v=20260408"></script>
-    <script type="module" src="/web/tc-students.js?v=20260420"></script>
+    <script type="module" src="/web/tc-students.js?v=20260421"></script>
     <script type="module" src="/web/tc-observation.js?v=20260331"></script>
     <script defer src="/assets/js/class-clock.js" type="module"></script>
     <script>
