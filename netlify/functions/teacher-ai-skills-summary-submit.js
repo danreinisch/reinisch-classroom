@@ -48,9 +48,6 @@ function supabaseHeaders(key) {
   };
 }
 
-// Cache key includes `audience` so professional vs parent-friendly results are cached separately.
-// Switching audience for the same student triggers a new OpenAI call — this is intentional
-// since summaries differ in tone, terminology, and structure.
 async function findCachedJob(url, key, payload_hash) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const res = await fetch(
