@@ -77,6 +77,38 @@ async function insertJob(url, key, { id, student_code, payload_hash, created_by 
   return res.ok;
 }
 
+async function findPendingJobByHash(url, key, payload_hash) {
+  const res = await fetch(
+    `${url}/rest/v1/ai_jobs?payload_hash=eq.${encodeURIComponent(payload_hash)}&status=eq.pending&order=created_at.desc&limit=1&select=id`,
+    {
+      method: 'GET',
+      headers: supabaseHeaders(key),
+    }
+  );
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length > 0 ? rows[0].id : null;
+}
+
+async function countPendingJobsByTeacher(url, key, created_by) {
+  const res = await fetch(
+    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&select=id`,
+    {
+      method: 'GET',
+      headers: { ...supabaseHeaders(key), Prefer: 'count=exact' },
+    }
+  );
+  if (!res.ok) return 0;
+  const countHeader = res.headers.get('content-range');
+  if (countHeader) {
+    const match = countHeader.match(/\/(\d+)$/);
+    if (match) return parseInt(match[1], 10);
+  }
+  // Fallback: count rows in body
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
 async function upsertJobComplete(url, key, { id, student_code, payload_hash, created_by, result }) {
   const res = await fetch(`${url}/rest/v1/ai_jobs`, {
     method: 'POST',
@@ -178,6 +210,28 @@ exports.handler = async (event) => {
     console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Cache check failed: ${cacheErr.message} — proceeding`);
   }
 
+  // Deduplication: return existing pending job if one already exists for this payload
+  try {
+    const existingJobId = await findPendingJobByHash(SUPABASE_URL, SUPABASE_KEY, payloadHash);
+    if (existingJobId) {
+      console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Duplicate pending job found for ${student_code} — returning existing job ${existingJobId}`);
+      return jsonResponse(event, 200, { ok: true, job_id: existingJobId }, {}, requestId);
+    }
+  } catch (dedupErr) {
+    console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Dedup check failed: ${dedupErr.message} — proceeding`);
+  }
+
+  // Rate limiting: reject if teacher already has >= 3 pending jobs
+  try {
+    const pendingCount = await countPendingJobsByTeacher(SUPABASE_URL, SUPABASE_KEY, createdBy);
+    if (pendingCount >= 3) {
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Rate limit: ${createdBy} has ${pendingCount} pending jobs`);
+      return jsonResponse(event, 429, { ok: false, error: 'Too many pending AI jobs — please wait for current jobs to finish' }, {}, requestId);
+    }
+  } catch (rateErr) {
+    console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Rate limit check failed: ${rateErr.message} — proceeding`);
+  }
+
   // Insert pending job row
   const inserted = await insertJob(SUPABASE_URL, SUPABASE_KEY, {
     id: job_id,
@@ -198,9 +252,14 @@ exports.handler = async (event) => {
     ? `${process.env.URL}/.netlify/functions/teacher-ai-skills-summary-background`
     : `http://localhost:8888/.netlify/functions/teacher-ai-skills-summary-background`;
 
+  const internalSecret = process.env.INTERNAL_FUNCTION_SECRET || process.env.SESSION_SECRET;
+
   fetch(backgroundUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(internalSecret ? { 'X-Internal-Secret': internalSecret } : {}),
+    },
     body: JSON.stringify({
       job_id,
       student_code,
@@ -212,6 +271,15 @@ exports.handler = async (event) => {
   }).catch(err => {
     console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Background fire-and-forget failed: ${err.message}`);
   });
+
+  // Probabilistic cleanup: on ~1% of requests, fire-and-forget a DELETE of jobs older than 7 days
+  if (Math.random() < 0.01) {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    fetch(`${SUPABASE_URL}/rest/v1/ai_jobs?created_at=lt.${encodeURIComponent(cutoff)}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=minimal' },
+    }).catch(() => {});
+  }
 
   return jsonResponse(event, 200, { ok: true, job_id }, {}, requestId);
 };

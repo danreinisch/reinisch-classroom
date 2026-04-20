@@ -144,6 +144,14 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  // Verify shared internal secret to prevent unauthorized invocations
+  const expectedSecret = process.env.INTERNAL_FUNCTION_SECRET || process.env.SESSION_SECRET;
+  const providedSecret = event.headers && (event.headers['x-internal-secret'] || event.headers['X-Internal-Secret']);
+  if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
+    console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Forbidden — missing or invalid X-Internal-Secret`);
+    return { statusCode: 403, body: 'Forbidden' };
+  }
+
   // Auth and input validation are handled by teacher-ai-skills-summary-submit.
   // Parse the body and proceed directly to OpenAI processing.
   const parseResult = safeJsonParse(event.body);
