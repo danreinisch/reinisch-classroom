@@ -129,13 +129,17 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   prompt += `6. No vague qualitative judgments — state numbers only.\n`;
   if (isExternal) {
     prompt += `7. Vocabulary at approximately 6th-grade reading level. Use plain everyday words. Avoid all IEP/SPED jargon.\n`;
-    prompt += `   Use "starting score" instead of "baseline" and "quiz scores" instead of "data points."\n\n`;
+    prompt += `   Use "starting score" instead of "baseline" and "quiz scores" instead of "data points."\n`;
   } else {
-    prompt += `7. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n\n`;
+    prompt += `7. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n`;
   }
+  prompt += `8. DATA_POINTS_PATTERN RULE — ABSOLUTE:\n`;
+  prompt += `   - If a goal's DATA_POINTS_PATTERN is SINGLE: you MUST write "scoring [X]% on 1 ${isExternal ? 'quiz score' : 'assessment'}" — NEVER use "averaging" or "across" with a single data point.\n`;
+  prompt += `   - If a goal's DATA_POINTS_PATTERN is MULTIPLE: you MAY write "averaging [X]% across [N] ${isExternal ? 'quiz scores' : 'assessments'}".\n\n`;
 
   // Narrative patterns
   prompt += `## NARRATIVE PATTERNS TO FOLLOW:\n`;
+  prompt += `IMPORTANT: The DATA_POINTS_PATTERN label on each goal overrides everything — SINGLE always uses "on 1 ${isExternal ? 'quiz score' : 'assessment'}", MULTIPLE uses "across N ${isExternal ? 'quiz scores' : 'assessments'}".\n`;
   prompt += `Each IEP goal below is pre-labeled STATUS: AT_OR_ABOVE_TARGET or BELOW_TARGET. Use that label to pick the correct pattern.\n`;
   if (isExternal) {
     prompt += `- AT_OR_ABOVE_TARGET (data_points = 1): "${safeCode} has increased their [area] skills, scoring [X]% on 1 quiz score — above their [target]% goal and up from a [starting score]% starting score."\n`;
@@ -175,7 +179,9 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
       const status = (!isNaN(currentAvg) && !isNaN(target) && currentAvg >= target)
         ? 'AT_OR_ABOVE_TARGET'
         : 'BELOW_TARGET';
-      let goalLine = `- Code: ${code}, Area: ${area}, STATUS: ${status}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%`;
+      const dp = parseFloat(g.data_points);
+      const dpPattern = (!isNaN(dp) && dp === 1) ? 'SINGLE' : 'MULTIPLE';
+      let goalLine = `- Code: ${code}, Area: ${area}, STATUS: ${status}, DATA_POINTS_PATTERN: ${dpPattern}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%`;
       if (areaCounts[area] > 1) {
         goalLine += `, NOTE: multiple goals share this area name — you MUST reference the goal code "${code}" in the summary to differentiate`;
       }
