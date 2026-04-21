@@ -189,16 +189,23 @@ async function _runHandler(event, requestId, { job_id, student_code, iep_goals, 
   const resolvedAudience = audience === 'external' || language_mode === 'parent-friendly' ? 'external' : 'internal';
   const isExternal = resolvedAudience === 'external';
 
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  if (!OPENAI_API_KEY) {
-    console.warn(`[teacher-ai-skills-summary-background] [${requestId}] OPENAI_API_KEY not configured`);
-    return { statusCode: 503, body: 'AI not configured' };
-  }
-
+  // Get Supabase config first so we can use it to mark errors
   const { url: SUPABASE_URL, key: SUPABASE_KEY } = getSupabaseConfig();
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Supabase not configured`);
     return { statusCode: 503, body: 'Persistence layer not configured' };
+  }
+
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  if (!OPENAI_API_KEY) {
+    console.warn(`[teacher-ai-skills-summary-background] [${requestId}] OPENAI_API_KEY not configured`);
+    await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
+      status: 'error',
+      error: 'AI not configured — OPENAI_API_KEY is missing from environment',
+    }).catch(updateErr => {
+      console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Failed to mark job ${job_id} as error: ${updateErr.message}`);
+    });
+    return { statusCode: 503, body: 'AI not configured' };
   }
 
   console.log(`[teacher-ai-skills-summary-background] [${requestId}] Processing job ${job_id} for student ${student_code}`);

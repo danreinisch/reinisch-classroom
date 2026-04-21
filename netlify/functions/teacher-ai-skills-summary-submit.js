@@ -78,8 +78,10 @@ async function insertJob(url, key, { id, student_code, payload_hash, created_by 
 }
 
 async function findPendingJobByHash(url, key, payload_hash) {
+  // Only reuse pending jobs created in the last 5 minutes — older ones are likely stuck
+  const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const res = await fetch(
-    `${url}/rest/v1/ai_jobs?payload_hash=eq.${encodeURIComponent(payload_hash)}&status=eq.pending&order=created_at.desc&limit=1&select=id`,
+    `${url}/rest/v1/ai_jobs?payload_hash=eq.${encodeURIComponent(payload_hash)}&status=eq.pending&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=1&select=id`,
     {
       method: 'GET',
       headers: supabaseHeaders(key),
@@ -221,6 +223,21 @@ exports.handler = async (event) => {
   } catch (dedupErr) {
     console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Dedup check failed: ${dedupErr.message} — proceeding`);
   }
+
+  // Mark any stale pending jobs (> 5 min old) for this payload as error — they are stuck
+  try {
+    const staleCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/ai_jobs?payload_hash=eq.${encodeURIComponent(payloadHash)}&status=eq.pending&created_at=lt.${encodeURIComponent(staleCutoff)}`,
+      {
+        method: 'PATCH',
+        headers: { ...supabaseHeaders(SUPABASE_KEY), Prefer: 'return=minimal' },
+        body: JSON.stringify({ status: 'error', error: 'Stale pending job — background function was never invoked', updated_at: new Date().toISOString() }),
+      }
+    ).catch(staleErr => {
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Failed to mark stale jobs as error: ${staleErr.message}`);
+    });
+  } catch (_) { /* best-effort */ }
 
   // Rate limiting: reject if teacher already has >= 3 pending jobs
   try {
