@@ -9557,9 +9557,9 @@
    */
   async function requestSkillsNarratives(student, iepCards, deseCards, onStatusUpdate) {
     const POLL_INTERVAL_MS = 2500;
-    // Maximum polls before giving up — each poll waits POLL_INTERVAL_MS plus network latency,
-    // so actual wall-clock time may exceed MAX_POLLS * POLL_INTERVAL_MS / 1000 seconds.
-    const MAX_POLLS = 120; // ~5 minute ceiling (120 × 2.5s intervals)
+    // Hard timeout: 72 polls × 2.5s = ~180s. Prevents infinite spinner if the
+    // background worker crashes or the fire-and-forget fetch is dropped.
+    const MAX_POLLS = 72; // ~180s hard ceiling
 
     try {
       // Build per-question weakness data for IEP goals (questions < 60% accuracy)
@@ -9666,29 +9666,94 @@
         if (statusData.status === 'error') {
           console.warn('[tc-students] AI job failed:', statusData.error);
           skillsLastStatus.set(student.code, 502);
-          document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+          document.querySelectorAll('.st-skill-narrative-loading').forEach(el => {
+            el.className = 'st-skill-narrative-error';
+            el.textContent = 'AI summary failed to generate — click Retry above.';
+            el.removeAttribute('role');
+          });
           return false;
         }
 
         // status === 'pending' — keep polling
       }
 
-      // Polling timed out
-      console.warn('[tc-students] AI job timed out after polling');
+      // Polling hard timeout (~180s)
+      const elapsedMs = Date.now() - pollStartTime;
+      console.error('[tc-students] AI job hard timeout', { job_id: jobId, student_code: student.code, elapsedMs, lastStatus: skillsLastStatus.get(student.code) });
       skillsLastStatus.set(student.code, 504);
-      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => {
+        el.className = 'st-skill-narrative-error';
+        el.textContent = 'AI summary failed to generate — click Retry above.';
+        el.removeAttribute('role');
+      });
       return false;
 
     } catch (err) {
       console.warn('[tc-students] requestSkillsNarratives failed:', err);
-      // Silently remove loading spinners — user still sees the data cards
-      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => el.remove());
+      // Replace loading spinners with inline error — user still sees the data cards
+      document.querySelectorAll('.st-skill-narrative-loading').forEach(el => {
+        el.className = 'st-skill-narrative-error';
+        el.textContent = 'AI summary failed to generate — click Retry above.';
+        el.removeAttribute('role');
+      });
       return false;
     }
   }
 
   /**
-   * Fetch DESE standard rollups for a student from the `student_dese_rollups` RPC.
+   * Fallback: call the synchronous (non-background) AI skills summary endpoint.
+   * Used when the background job flow fails twice in a row for the same student.
+   * On success, populates skillsAiCache and injects narratives into the DOM.
+   * Returns true on success, false on any failure.
+   */
+  async function tryLegacySyncFallback(student, iepCards, deseCards) {
+    try {
+      const iepPayload = iepCards.map(c => ({
+        code: c.code,
+        area: c.area,
+        current_avg: c.currentAvg !== null ? c.currentAvg : c.displayScore,
+        previous_avg: c.previousAvg,
+        trend: c.trend,
+        data_points: c.dataPoints,
+        target: c.target,
+        baseline: c.baseline,
+      }));
+      const desePayload = deseCards.map(c => ({
+        code: c.code,
+        percent_correct: c.displayScore,
+        item_count: c.itemCount,
+      }));
+      if (iepPayload.length === 0 && desePayload.length === 0) return false;
+      const res = await fetch('/.netlify/functions/teacher-ai-skills-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          student_code: student.code,
+          iep_goals: iepPayload,
+          dese_standards: desePayload,
+          audience: 'internal',
+        }),
+      });
+      if (!res.ok) {
+        console.warn('[tc-students] tryLegacySyncFallback: HTTP', res.status);
+        return false;
+      }
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.skills) || data.skills.length === 0) {
+        console.warn('[tc-students] tryLegacySyncFallback: bad response', data);
+        return false;
+      }
+      skillsAiCache.set(student.code, { ok: true, skills: data.skills });
+      injectSkillNarratives(student.code, data.skills);
+      return true;
+    } catch (err) {
+      console.warn('[tc-students] tryLegacySyncFallback failed:', err);
+      return false;
+    }
+  }
+
+
    * Results are cached in `deseRollupCache` to avoid redundant round-trips when the
    * teacher switches tabs and back within the same data-load cycle.
    *
@@ -9835,8 +9900,8 @@
       btn.style.borderColor = '';
       btn.style.color = '';
 
-      // Replace placeholders with loading spinners while generating
-      contentDiv.querySelectorAll('.st-skill-narrative-placeholder').forEach(el => {
+      // Replace placeholders (and any prior error messages) with loading spinners
+      contentDiv.querySelectorAll('.st-skill-narrative-placeholder, .st-skill-narrative-error').forEach(el => {
         el.className = 'st-skill-narrative-loading';
         el.setAttribute('role', 'status');
         el.textContent = 'Generating summary…';
@@ -9859,19 +9924,27 @@
         btn.textContent = '✅ Commentary Generated';
         // Keep disabled — reload the tab to regenerate
       } else if (isRetry) {
-        // Second failure — show final unavailable state
+        // Second failure — try legacy sync endpoint once before giving up
+        btn.textContent = 'Trying fallback…';
         btn.disabled = true;
-        btn.textContent = 'AI summary unavailable';
-        btn.dataset.aiState = 'unavailable';
-        contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
-          if (!el.textContent.trim()) {
-            el.replaceChildren();
-            const span = document.createElement('span');
-            span.className = 'st-skill-narrative-placeholder';
-            span.textContent = 'Click \'Generate AI Commentary\' above to see a detailed summary.';
-            el.appendChild(span);
-          }
-        });
+        const fallbackSucceeded = await tryLegacySyncFallback(student, cards.iepCards, cards.deseCards);
+        if (fallbackSucceeded) {
+          btn.textContent = '✅ Commentary Generated';
+          // Keep disabled — reload the tab to regenerate
+        } else {
+          btn.disabled = true;
+          btn.textContent = 'AI summary unavailable';
+          btn.dataset.aiState = 'unavailable';
+          contentDiv.querySelectorAll('.st-skill-narrative').forEach(el => {
+            if (!el.textContent.trim()) {
+              el.replaceChildren();
+              const span = document.createElement('span');
+              span.className = 'st-skill-narrative-placeholder';
+              span.textContent = 'Click \'Generate AI Commentary\' above to see a detailed summary.';
+              el.appendChild(span);
+            }
+          });
+        }
       } else {
         // First failure — offer a retry
         btn.disabled = false;

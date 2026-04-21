@@ -194,4 +194,25 @@ test('writes error job when OpenAI fails all retries', async function() {
   assert.ok(typeof patchedBody.error === 'string', 'error message should be set');
 });
 
+test('marks job as error on unhandled throw inside handler', async function() {
+  var patchedBody = null;
+  global.fetch = function(url, opts) {
+    if (url.startsWith('https://api.openai.com/')) {
+      // Simulate a catastrophic unexpected error (e.g. malformed response that throws in JSON.parse)
+      throw new Error('Simulated unhandled error in OpenAI fetch');
+    }
+    if (url.includes('/rest/v1/ai_jobs?id=') && opts && opts.method === 'PATCH') {
+      patchedBody = JSON.parse(opts.body);
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve([]); }, text: function() { return Promise.resolve(''); } });
+  };
+
+  var res = await handler(mockEvent(validBody()));
+  assert.strictEqual(res.statusCode, 202, 'handler should return 202 even after unhandled error');
+  assert.ok(patchedBody, 'PATCH should have been called to mark job as error');
+  assert.strictEqual(patchedBody.status, 'error', 'job status should be error');
+  assert.ok(typeof patchedBody.error === 'string' && patchedBody.error.length > 0, 'error message should be set');
+});
+
 runAll();

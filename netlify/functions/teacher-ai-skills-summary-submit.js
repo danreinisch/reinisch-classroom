@@ -91,8 +91,11 @@ async function findPendingJobByHash(url, key, payload_hash) {
 }
 
 async function countPendingJobsByTeacher(url, key, created_by) {
+  // Exclude rows older than 5 minutes — treat them as dead (stuck) so they don't
+  // lock out the teacher from submitting new jobs.
+  const activeSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const res = await fetch(
-    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&select=id`,
+    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&created_at=gte.${encodeURIComponent(activeSince)}&select=id`,
     {
       method: 'GET',
       headers: { ...supabaseHeaders(key), Prefer: 'count=exact' },
@@ -195,7 +198,7 @@ exports.handler = async (event) => {
   // Check cache first
   try {
     const cached = await findCachedJob(SUPABASE_URL, SUPABASE_KEY, payloadHash);
-    if (cached) {
+    if (cached && Array.isArray(cached.skills) && cached.skills.length > 0) {
       console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Cache hit for ${student_code} — returning cached result`);
       await upsertJobComplete(SUPABASE_URL, SUPABASE_KEY, {
         id: job_id,
@@ -205,6 +208,8 @@ exports.handler = async (event) => {
         result: cached,
       });
       return jsonResponse(event, 200, { ok: true, job_id, cached: true }, {}, requestId);
+    } else if (cached) {
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Cache row for ${student_code} has empty/invalid skills — falling through to fresh run`);
     }
   } catch (cacheErr) {
     console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Cache check failed: ${cacheErr.message} — proceeding`);

@@ -153,8 +153,9 @@ test('returns pending when job is not yet found in Supabase', async function() {
   assert.strictEqual(parsed.status, 'pending');
 });
 
-test('returns pending when job status is pending', async function() {
-  global.fetch = makeSupabaseResponse([{ status: 'pending', result: null, error: null }]);
+test('returns pending when job status is pending (recent job)', async function() {
+  var recentTime = new Date(Date.now() - 60 * 1000).toISOString(); // 1 minute ago — not stuck
+  global.fetch = makeSupabaseResponse([{ status: 'pending', result: null, error: null, created_at: recentTime }]);
   var res = await handler(authedEvent());
   assert.strictEqual(res.statusCode, 200);
   var parsed = JSON.parse(res.body);
@@ -162,6 +163,32 @@ test('returns pending when job status is pending', async function() {
   assert.strictEqual(parsed.status, 'pending');
   assert.strictEqual(parsed.skills, undefined, 'skills should not be present for pending');
   assert.strictEqual(parsed.error, undefined, 'error should not be present for pending');
+});
+
+test('returns error for stuck pending job older than 5 minutes', async function() {
+  var stuckTime = new Date(Date.now() - 6 * 60 * 1000).toISOString(); // 6 minutes ago — stuck
+  var patchCalled = false;
+  global.fetch = function(url, opts) {
+    if (opts && opts.method === 'PATCH') {
+      patchCalled = true;
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve({}); }, text: function() { return Promise.resolve(''); } });
+    }
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: function() { return Promise.resolve([{ status: 'pending', result: null, error: null, created_at: stuckTime }]); },
+      text: function() { return Promise.resolve(''); },
+    });
+  };
+  var res = await handler(authedEvent());
+  assert.strictEqual(res.statusCode, 200);
+  var parsed = JSON.parse(res.body);
+  assert.strictEqual(parsed.ok, true);
+  assert.strictEqual(parsed.status, 'error', 'stuck job should be returned as error');
+  assert.ok(typeof parsed.error === 'string' && parsed.error.length > 0, 'error message should be present');
+  // Allow a tick for the fire-and-forget PATCH to fire
+  await new Promise(function(r) { setTimeout(r, 10); });
+  assert.ok(patchCalled, 'PATCH should have been called to mark the stuck job as error');
 });
 
 test('returns complete with skills when job is done', async function() {

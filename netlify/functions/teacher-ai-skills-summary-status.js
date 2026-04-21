@@ -65,7 +65,7 @@ exports.handler = async (event) => {
   let row;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error&limit=1`,
+      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error,created_at&limit=1`,
       {
         method: 'GET',
         headers: {
@@ -106,6 +106,30 @@ exports.handler = async (event) => {
     return jsonResponse(event, 200, { ok: true, status: 'error', error: row.error || 'AI generation failed' }, {}, requestId);
   }
 
-  // status === 'pending'
+  // status === 'pending' — check if the job is stuck (older than 5 minutes)
+  const STUCK_JOB_MS = 5 * 60 * 1000;
+  const createdAt = row.created_at ? new Date(row.created_at).getTime() : null;
+  if (createdAt !== null && Date.now() - createdAt > STUCK_JOB_MS) {
+    const timeoutMsg = 'Job timed out — background worker never completed';
+    console.warn(`[teacher-ai-skills-summary-status] [${requestId}] Job ${job_id} stuck pending since ${row.created_at} — marking as error`);
+    // PATCH the row to error so future polls and the rate-limit check see it as resolved
+    fetch(
+      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({ status: 'error', error: timeoutMsg, updated_at: new Date().toISOString() }),
+      }
+    ).catch(patchErr => {
+      console.warn(`[teacher-ai-skills-summary-status] [${requestId}] Failed to patch stuck job: ${patchErr.message}`);
+    });
+    return jsonResponse(event, 200, { ok: true, status: 'error', error: timeoutMsg }, {}, requestId);
+  }
+
   return jsonResponse(event, 200, { ok: true, status: 'pending' }, {}, requestId);
 };

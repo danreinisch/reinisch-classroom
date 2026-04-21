@@ -184,72 +184,87 @@ exports.handler = async (event) => {
 
   console.log(`[teacher-ai-skills-summary-background] [${requestId}] Processing job ${job_id} for student ${student_code}`);
 
-  // Call OpenAI
-  const systemPrompt = buildSkillsPrompt({
-    student_code,
-    iep_goals: iep_goals || [],
-    dese_standards: dese_standards || [],
-    audience: resolvedAudience,
-  });
+  // Top-level try/catch ensures the ai_jobs row is always updated — never left pending
+  try {
+    // Call OpenAI
+    const systemPrompt = buildSkillsPrompt({
+      student_code,
+      iep_goals: iep_goals || [],
+      dese_standards: dese_standards || [],
+      audience: resolvedAudience,
+    });
 
-  const aiResult = await callOpenAiWithRetries(systemPrompt, OPENAI_API_KEY, requestId, 3, isExternal);
+    const aiResult = await callOpenAiWithRetries(systemPrompt, OPENAI_API_KEY, requestId, 3, isExternal);
 
-  if (aiResult.ok) {
-    // Banned-phrase check
-    let skills = aiResult.skills;
+    if (aiResult.ok) {
+      // Banned-phrase check
+      let skills = aiResult.skills;
 
-    const checkForBanned = (skillsArr) => {
-      for (const s of skillsArr) {
-        const textToCheck = [s.summary, s.description, s.plain_language, s.goal_recommendation]
-          .filter(Boolean)
-          .join(' ');
-        const found = findBannedPhrase(textToCheck);
-        if (found) return found;
-      }
-      return null;
-    };
+      const checkForBanned = (skillsArr) => {
+        for (const s of skillsArr) {
+          const textToCheck = [s.summary, s.description, s.plain_language, s.goal_recommendation]
+            .filter(Boolean)
+            .join(' ');
+          const found = findBannedPhrase(textToCheck);
+          if (found) return found;
+        }
+        return null;
+      };
 
-    const foundBanned = checkForBanned(skills);
-    if (foundBanned) {
-      console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Banned phrase found: "${foundBanned}" — retrying once`);
-      const retryPrompt = buildSkillsPrompt({
-        student_code,
-        iep_goals: iep_goals || [],
-        dese_standards: dese_standards || [],
-        audience: resolvedAudience,
-        retry_hint: foundBanned,
-      });
-      const retryResult = await callOpenAiWithRetries(retryPrompt, OPENAI_API_KEY, requestId, 1, isExternal);
-      if (retryResult.ok && !checkForBanned(retryResult.skills)) {
-        skills = retryResult.skills;
-      } else {
-        console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Banned phrase still present after retry — flagging ai_edited per skill`);
-      }
-    }
-
-    // Flag only the individual skills whose text still contains a banned phrase.
-    // Skip the per-skill check entirely when no banned phrase was found (common path).
-    const finalSkills = foundBanned === null
-      ? skills
-      : skills.map(s => {
-          const hasBanned = findBannedPhrase(
-            [s.summary, s.description, s.plain_language, s.goal_recommendation].filter(Boolean).join(' ')
-          ) !== null;
-          return hasBanned ? { ...s, ai_edited: true } : s;
+      const foundBanned = checkForBanned(skills);
+      if (foundBanned) {
+        console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Banned phrase found: "${foundBanned}" — retrying once`);
+        const retryPrompt = buildSkillsPrompt({
+          student_code,
+          iep_goals: iep_goals || [],
+          dese_standards: dese_standards || [],
+          audience: resolvedAudience,
+          retry_hint: foundBanned,
         });
+        const retryResult = await callOpenAiWithRetries(retryPrompt, OPENAI_API_KEY, requestId, 1, isExternal);
+        if (retryResult.ok && !checkForBanned(retryResult.skills)) {
+          skills = retryResult.skills;
+        } else {
+          console.warn(`[teacher-ai-skills-summary-background] [${requestId}] Banned phrase still present after retry — flagging ai_edited per skill`);
+        }
+      }
 
-    console.log(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} complete — ${finalSkills.length} skills`);
-    await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
-      status: 'complete',
-      result: { skills: finalSkills },
-    });
-  } else {
-    console.error(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} failed: ${aiResult.error}`);
-    await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
-      status: 'error',
-      error: aiResult.error,
-    });
+      // Flag only the individual skills whose text still contains a banned phrase.
+      // Skip the per-skill check entirely when no banned phrase was found (common path).
+      const finalSkills = foundBanned === null
+        ? skills
+        : skills.map(s => {
+            const hasBanned = findBannedPhrase(
+              [s.summary, s.description, s.plain_language, s.goal_recommendation].filter(Boolean).join(' ')
+            ) !== null;
+            return hasBanned ? { ...s, ai_edited: true } : s;
+          });
+
+      console.log(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} complete — ${finalSkills.length} skills`);
+      await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
+        status: 'complete',
+        result: { skills: finalSkills },
+      });
+    } else {
+      console.error(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} failed: ${aiResult.error}`);
+      await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
+        status: 'error',
+        error: aiResult.error,
+      });
+    }
+  } catch (unhandledErr) {
+    const errMsg = unhandledErr instanceof Error ? unhandledErr.message : String(unhandledErr);
+    console.error(`[teacher-ai-skills-summary-background] [${requestId}] Unhandled error for job ${job_id}: ${errMsg}`);
+    try {
+      await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
+        status: 'error',
+        error: `Unhandled worker error: ${errMsg}`,
+      });
+    } catch (updateErr) {
+      console.error(`[teacher-ai-skills-summary-background] [${requestId}] Failed to mark job ${job_id} as error after unhandled throw: ${updateErr.message}`);
+    }
   }
 
+  console.log(`[teacher-ai-skills-summary-background] [${requestId}] Handler exit — job ${job_id}`);
   return { statusCode: 202, body: '' };
 };
