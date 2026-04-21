@@ -153,6 +153,17 @@ test('returns pending when job is not yet found in Supabase', async function() {
   assert.strictEqual(parsed.status, 'pending');
 });
 
+test('returns pending when job status is pending (no created_at)', async function() {
+  global.fetch = makeSupabaseResponse([{ status: 'pending', result: null, error: null }]);
+  var res = await handler(authedEvent());
+  assert.strictEqual(res.statusCode, 200);
+  var parsed = JSON.parse(res.body);
+  assert.strictEqual(parsed.ok, true);
+  assert.strictEqual(parsed.status, 'pending');
+  assert.strictEqual(parsed.skills, undefined, 'skills should not be present for pending');
+  assert.strictEqual(parsed.error, undefined, 'error should not be present for pending');
+});
+
 test('returns pending when job status is pending (recent job)', async function() {
   var recentTime = new Date(Date.now() - 60 * 1000).toISOString(); // 1 minute ago — not stuck
   global.fetch = makeSupabaseResponse([{ status: 'pending', result: null, error: null, created_at: recentTime }]);

@@ -185,6 +185,7 @@ exports.handler = async (event) => {
   console.log(`[teacher-ai-skills-summary-background] [${requestId}] Processing job ${job_id} for student ${student_code}`);
 
   // Top-level try/catch ensures the ai_jobs row is always updated — never left pending
+  let finalStatus = 'unknown';
   try {
     // Call OpenAI
     const systemPrompt = buildSkillsPrompt({
@@ -245,16 +246,19 @@ exports.handler = async (event) => {
         status: 'complete',
         result: { skills: finalSkills },
       });
+      finalStatus = 'complete';
     } else {
       console.error(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} failed: ${aiResult.error}`);
       await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
         status: 'error',
         error: aiResult.error,
       });
+      finalStatus = 'error';
     }
   } catch (unhandledErr) {
     const errMsg = unhandledErr instanceof Error ? unhandledErr.message : String(unhandledErr);
     console.error(`[teacher-ai-skills-summary-background] [${requestId}] Unhandled error for job ${job_id}: ${errMsg}`);
+    finalStatus = 'error';
     try {
       await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
         status: 'error',
@@ -265,6 +269,6 @@ exports.handler = async (event) => {
     }
   }
 
-  console.log(`[teacher-ai-skills-summary-background] [${requestId}] Handler exit — job ${job_id}`);
+  console.log(`[teacher-ai-skills-summary-background] [${requestId}] Handler exit — job ${job_id} (status: ${finalStatus})`);
   return { statusCode: 202, body: '' };
 };
