@@ -88,8 +88,8 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   // Support both legacy language_mode and new audience parameter
   const isExternal = audience === 'external' || language_mode === 'parent-friendly';
 
-  let prompt = `You are an educational data analyst for a special education teacher.\n`;
-  prompt += `Analyze the following performance data for student ${safeCode} and write a structured summary for each skill.\n\n`;
+  let prompt = `You are an educational data analyst writing plain-prose skill descriptions for a special education teacher.\n`;
+  prompt += `Write a purely descriptive narrative summary for each skill listed below for student ${safeCode}.\n\n`;
 
   // Banned phrase enforcement
   prompt += `## BANNED PHRASES — NEVER USE ANY OF THESE:\n`;
@@ -103,30 +103,28 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   }
   prompt += `\n`;
 
-  // Required structure
-  prompt += `## REQUIRED SUMMARY STRUCTURE (follow exactly, ~80 words per skill):\n\n`;
-  prompt += `**WHAT HAPPENED** (1-2 sentences — MUST include at least one number AND one date or skill/chapter/assignment name)\n`;
-  prompt += `**WHY IT MATTERS** (1 sentence — ties score to baseline/target/IEP context)\n`;
-  prompt += `**DO THIS NEXT** (1-2 bullet points — concrete actions tied to a specific day or assignment)\n`;
+  // Narrative style rules
+  prompt += `## WRITING RULES — FOLLOW EXACTLY:\n`;
+  prompt += `1. Write 2–3 sentences per skill (~40–60 words total). Plain prose only — no bold text, no headers, no bullet points anywhere in the summary.\n`;
+  prompt += `2. Always use ${safeCode} as the subject of every sentence. Never write "the student."\n`;
+  prompt += `3. Every sentence must include at least one number (score, count, percentage, or data-point count).\n`;
+  prompt += `4. Active voice only.\n`;
+  prompt += `5. Purely descriptive — NO action items, tips, next steps, recommendations, or suggestions of any kind.\n`;
   if (isExternal) {
-    prompt += `  Each "DO THIS NEXT" bullet MUST be prefixed with: "Suggested — review before sending."\n`;
-  }
-  prompt += `\nThen add: **In plain words:** {one sentence a parent or student could read, < 200 characters}\n\n`;
-
-  // Tone rules
-  prompt += `## THREE RULES:\n`;
-  prompt += `1. Specific, not generic: every sentence contains at least one number, date, chapter, or assignment name.\n`;
-  prompt += `2. Active voice, named actor: "The student scored..." or "We will..." — never passive constructions.\n`;
-  if (isExternal) {
-    prompt += `3. Plain words (~6th-grade level): use do, get, miss, score, practice, try. Avoid all IEP/SPED jargon.\n\n`;
+    prompt += `6. Vocabulary at approximately 6th-grade reading level. Use plain everyday words. Avoid all IEP/SPED jargon.\n`;
+    prompt += `   Use "starting score" instead of "baseline" and "quiz scores" instead of "data points."\n\n`;
   } else {
-    prompt += `3. Plain words (~8th-grade level): use do, get, miss, score, practice, reteach, try. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n\n`;
+    prompt += `6. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n\n`;
   }
 
+  // Narrative patterns
+  prompt += `## NARRATIVE PATTERNS TO FOLLOW:\n`;
   if (isExternal) {
-    prompt += `## AUDIENCE: External (parents, guardians, official documents). Use warm, jargon-free language. "Do this next" must be prefixed with "Suggested — review before sending."\n\n`;
+    prompt += `- On-track or above target: "${safeCode} has increased their [area] skills, scoring [X]% across [N] quiz scores — above their [target]% goal and up from a [starting score]% starting score."\n`;
+    prompt += `- Below target: "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] quiz scores, which is below their [target]% goal. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
   } else {
-    prompt += `## AUDIENCE: Internal (teacher-facing). "Do this next" should include 1-2 specific actions the teacher can take this week.\n\n`;
+    prompt += `- On-track or above target: "${safeCode} has increased their [area] skills, scoring [X]% across [N] data points — above their [target]% target and up from a [baseline]% baseline."\n`;
+    prompt += `- Below target: "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] assessments, which is below their [target]% target. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
   }
 
   if (Array.isArray(iep_goals) && iep_goals.length > 0) {
@@ -170,15 +168,15 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   } else {
     prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured. For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed.\n`;
   }
-  prompt += `  "summary": the full three-section summary (WHAT HAPPENED / WHY IT MATTERS / DO THIS NEXT + "In plain words:" line)\n`;
-  prompt += `  "plain_language": the "In plain words:" one-liner extracted separately (< 200 characters)\n`;
+  prompt += `  "summary": the plain-prose narrative (2–3 sentences, no bold, no headers, no bullets)\n`;
+  if (isExternal) {
+    prompt += `  "plain_language": one sentence under 200 characters, parent-friendly, purely descriptive (e.g. "${safeCode} is reading at 100% — well above their goal.") — no tips\n`;
+  } else {
+    prompt += `  "plain_language": one sentence under 200 characters, purely descriptive (e.g. "${safeCode} is reading at 100% — well above their 80% target.") — no tips\n`;
+  }
   prompt += `  "tier": one of "excellent" (>=80%), "on-track" (60-79%), "needs-support" (40-59%), "critical" (<40%)\n`;
   prompt += `  "source": "iep" if from IEP Goals, or "dese" if from DESE Standards\n`;
-  if (!isExternal) {
-    prompt += `  "goal_recommendation": only for needs-support or critical tiers — 1-2 sentence IEP goal draft. Omit entirely for excellent/on-track.\n`;
-  } else {
-    prompt += `  Do NOT include "goal_recommendation" — external summaries omit this field.\n`;
-  }
+  prompt += `Do NOT include a "goal_recommendation" field.\n`;
   prompt += `Include every IEP goal and every DESE standard provided. Do not add or remove entries.\n`;
 
   return prompt;
