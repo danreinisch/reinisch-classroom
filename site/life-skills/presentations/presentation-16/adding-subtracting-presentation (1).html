@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adding &amp; Subtracting with Money – 12-Day Unit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;overflow:hidden;height:100vh;width:100vw;user-select:none}
+.slide{position:absolute;top:0;left:0;width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:54px 60px 84px;text-align:center;visibility:hidden}.slide.active{visibility:visible;z-index:10}
+h1{font-size:2.6rem;font-weight:800;color:#14b8a6;margin-bottom:10px;line-height:1.15}h2{font-size:2.2rem;font-weight:700;color:#14b8a6;margin-bottom:12px}h3{font-size:1.5rem;font-weight:600;color:#5eead4;margin-bottom:6px}p{font-size:1.35rem;font-weight:300;color:#b5c4d6;line-height:1.5;max-width:1100px}
+.big{font-size:1.8rem;font-weight:400;color:#e6edf3}.hl{color:#14b8a6;font-weight:600}.wn{color:#ef4444;font-weight:600}.gn{color:#22c55e;font-weight:600}.gl{color:#f59e0b;font-weight:600}.mono{font-family:'JetBrains Mono',monospace}
+.card{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:24px;margin:8px auto;max-width:1100px;width:100%}.card-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.rule-box{background:linear-gradient(135deg,rgba(20,184,166,.12),#0d1117);border:2px solid #14b8a6;border-radius:14px;padding:22px;margin:8px auto;max-width:920px}
+.step-list{text-align:left;max-width:920px;margin:0 auto}.step{display:flex;align-items:flex-start;gap:12px;margin:9px 0;font-size:1.25rem;color:#b5c4d6}.step .num{background:#14b8a6;color:#0d1117;font-weight:700;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.05rem}
+.practice{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:22px;margin:8px auto;max-width:1020px}
+.money-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:10px 0;align-items:flex-end}
+.cw{cursor:pointer;position:relative;display:inline-block;transition:transform .15s}.cw:hover{transform:translateY(-3px)}.cw:hover svg{filter:drop-shadow(0 0 10px rgba(20,184,166,.65))}.cw.hairy svg{filter:drop-shadow(0 0 6px rgba(20,184,166,.4))}.cw .hg{opacity:0;transition:opacity .25s}.cw.hairy .hg{opacity:1}.cw .ct{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font-size:.55rem;color:#484f58;white-space:nowrap;pointer-events:none}.cw.hairy .ct{opacity:0}
+.bw{display:inline-block;transition:transform .15s}.bw:hover{transform:translateY(-3px)}.bw:hover svg{filter:drop-shadow(0 0 10px rgba(34,197,94,.6))}
+.sep{width:2px;height:40px;background:#30363d;border-radius:1px;margin:0 4px;align-self:center;flex-shrink:0}
+.ps-l{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:700;color:#22c55e;align-self:center;margin:0 5px}
+.ms-l{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:700;color:#ef4444;align-self:center;margin:0 5px}
+.pi{display:inline-block;background:#161b22;border:2px solid #30363d;border-radius:10px;padding:6px 12px;margin:3px;text-align:center}.pi .em{font-size:1.6rem;display:block}.pi .co{font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#f59e0b;font-weight:600}
+.wp{background:#0d1117;border:2px solid #30363d;border-radius:10px;padding:12px;margin:8px 0;font-size:1.1rem;color:#e6edf3;line-height:1.4;text-align:center}
+.wt{background:#14b8a6;color:#0d1117;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1rem;padding:3px 10px;border-radius:6px;display:inline-block}
+.pt{background:#f59e0b;color:#0d1117;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1rem;padding:3px 10px;border-radius:6px;display:inline-block}
+.stack{background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:14px 10px;margin:8px auto;max-width:280px}
+.sr{display:flex;align-items:center;justify-content:center;gap:0;height:38px}.sr.cr{height:20px}
+.sop{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;width:22px;text-align:center;flex-shrink:0}.sop.add{color:#22c55e}.sop.sub{color:#ef4444}
+.sdl{font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#5eead4;width:14px;text-align:center;flex-shrink:0}
+.sdt{font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#5eead4;width:9px;text-align:center;flex-shrink:0}
+.sd{font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:#e6edf3;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.sline{border:none;border-top:3px solid #14b8a6;margin:2px 0;width:100%}
+.sa{font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:#14b8a6;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#161b22;border:2px solid #30363d;border-radius:6px;cursor:pointer;user-select:none}.sa:hover{border-color:#14b8a6;transform:scale(1.08)}.sa.filled{border-color:#14b8a6}.sa.empty{color:#484f58}
+.cc{width:30px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cs{width:22px;flex-shrink:0}.cds{width:14px;flex-shrink:0}
+.c1{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#f59e0b;font-weight:700;background:rgba(245,158,11,.15);border-radius:4px;padding:1px 3px}
+.ba{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#f59e0b;font-weight:700;opacity:0;transition:opacity .4s}.ba.show{opacity:1}
+.crl{position:absolute;top:50%;left:10%;width:80%;height:2px;background:#ef4444;transform:rotate(-15deg);opacity:0;transition:opacity .4s}.crl.show{opacity:1}
+.col-hl{background:rgba(239,68,68,.12);border-radius:3px}
+.chk-btn{background:#14b8a6;color:#0d1117;border:none;border-radius:8px;padding:6px 18px;font-family:'Outfit',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;margin:8px auto;display:block}.chk-btn:hover{background:#5eead4}
+.chk-fb{text-align:center;font-size:.9rem;font-weight:600;min-height:18px;margin-top:4px}.chk-fb.ok{color:#22c55e}.chk-fb.no{color:#ef4444}
+.bbtn{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-family:'Outfit',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;margin:4px auto;display:block}.bbtn:hover{background:#f87171}
+.flow{margin:6px auto;max-width:340px}.flow-step{border:2px solid #30363d;border-radius:12px;padding:10px}.flow-step.step-add{border-color:rgba(34,197,94,.35)}.flow-step.step-sub{border-color:rgba(239,68,68,.35)}
+.flow-lbl{font-size:.75rem;font-weight:700;text-align:center;margin-bottom:4px;padding:2px 8px;border-radius:5px;display:inline-block}.flow-lbl.al{background:rgba(34,197,94,.15);color:#22c55e}.flow-lbl.sl{background:rgba(239,68,68,.15);color:#ef4444}
+.flow-arr{text-align:center;font-size:1.1rem;color:#5eead4;margin:3px 0}.flow-ctr{text-align:center}
+.review-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:900px;margin:8px auto}.rv{background:#161b22;border:2px solid #30363d;border-radius:10px;padding:12px;text-align:center}.rv h3{color:#14b8a6;font-size:.95rem;margin-bottom:3px}.rv p{font-size:.8rem}
+.day-banner{position:absolute;top:14px;left:30px;background:rgba(20,184,166,.18);border:1px solid rgba(20,184,166,.35);border-radius:8px;padding:4px 12px;font-size:.8rem;color:#5eead4;font-weight:600;z-index:20}
+.nav-bar{position:fixed;bottom:0;left:0;right:0;height:62px;background:#161b22;border-top:2px solid #30363d;display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:200}
+.nav-btn{background:#0d1117;border:2px solid #30363d;border-radius:10px;padding:8px 22px;font-family:'Outfit',sans-serif;font-size:1rem;font-weight:600;color:#b5c4d6;cursor:pointer;display:flex;align-items:center;gap:6px;outline:none}.nav-btn:hover{border-color:#14b8a6;color:#14b8a6}.nav-btn.off{opacity:.2;pointer-events:none}
+.nav-center{display:flex;align-items:center;gap:10px}.slide-ctr{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#5eead4}
+.prog-track{width:160px;height:5px;background:#30363d;border-radius:3px;overflow:hidden}.prog-fill{height:100%;background:#14b8a6;border-radius:3px;transition:width .3s}
+.footer-info{position:absolute;bottom:70px;right:24px;font-size:.6rem;color:#30363d;z-index:5}
+.dp-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:600;justify-content:center;align-items:center}.dp-ov.open{display:flex}
+.dp-bx{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:14px;width:190px}.dp-t{text-align:center;color:#5eead4;font-size:.8rem;margin-bottom:6px}
+.dp-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.dp-k{background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:12px 0;font-family:'JetBrains Mono',monospace;font-size:1.3rem;color:#e6edf3;cursor:pointer;text-align:center;outline:none;user-select:none}.dp-k:hover{border-color:#14b8a6;color:#14b8a6}.dp-k:active{transform:scale(.93)}.dp-k.dc{color:#ef4444;border-color:rgba(239,68,68,.3);font-size:.9rem}.dp-k.dc:hover{background:rgba(239,68,68,.1);border-color:#ef4444}
+</style>
+</head>
+<body>
+<div id="deck"></div>
+<div class="nav-bar"><button class="nav-btn" id="prevBtn" onclick="go(-1)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M13 4L7 10L13 16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Previous</button><div class="nav-center"><div class="prog-track"><div class="prog-fill" id="progFill"></div></div><div class="slide-ctr" id="slideCtr"></div></div><button class="nav-btn" id="nextBtn" onclick="go(1)">Next <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7 4L13 10L7 16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+<div class="dp-ov" id="dpOv"><div class="dp-bx"><div class="dp-t" id="dpT">Pick a digit</div><div class="dp-g"><button class="dp-k" onclick="dpP(1)">1</button><button class="dp-k" onclick="dpP(2)">2</button><button class="dp-k" onclick="dpP(3)">3</button><button class="dp-k" onclick="dpP(4)">4</button><button class="dp-k" onclick="dpP(5)">5</button><button class="dp-k" onclick="dpP(6)">6</button><button class="dp-k" onclick="dpP(7)">7</button><button class="dp-k" onclick="dpP(8)">8</button><button class="dp-k" onclick="dpP(9)">9</button><button class="dp-k dc" onclick="dpP(-1)">Clear</button><button class="dp-k" onclick="dpP(0)">0</button><button class="dp-k dc" onclick="dpCl()">Done</button></div></div></div>
+<script>
+var dpAB=null;
+function dpO(id,lbl){dpAB=id;document.getElementById('dpT').textContent=lbl||'Pick';document.getElementById('dpOv').classList.add('open');}
+function dpP(n){if(!dpAB)return;var el=document.getElementById(dpAB);if(n===-1){el.textContent='0';el.classList.remove('filled');el.classList.add('empty');el.setAttribute('data-val','');}else{el.textContent=n;el.classList.add('filled');el.classList.remove('empty');el.setAttribute('data-val',String(n));dpCl();}}
+function dpCl(){document.getElementById('dpOv').classList.remove('open');dpAB=null;}
+document.getElementById('dpOv').addEventListener('click',function(e){if(e.target===this)dpCl();});
+
+var CD={quarter:{hairs:5,r:26,fill:'#C0C0C0',stroke:'#888',tf:'#444',label:'25\u00A2',w:60,h:68},dime:{hairs:2,r:21,fill:'#D4D4D4',stroke:'#999',tf:'#444',label:'10\u00A2',w:50,h:58},nickel:{hairs:1,r:24,fill:'#C0C0C0',stroke:'#888',tf:'#444',label:'5\u00A2',w:56,h:64},penny:{hairs:0,r:24,fill:'#b87333',stroke:'#8B5A2B',tf:'#5a3010',label:'1\u00A2',w:56,h:64}};
+function coinSVG(t){var c=CD[t],cx=c.w/2,cy=c.h/2+8,sh=c.h+5,hm='';if(t==='penny'){hm='<circle class="hg" cx="'+cx+'" cy="'+(cy-c.r-6)+'" r="4" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="3 2"/>';}else{var sp=t==='quarter'?52:t==='dime'?16:0;for(var i=0;i<c.hairs;i++){var a=-90+(c.hairs===1?0:(i/(c.hairs-1)*sp*2-sp));var rad=a*Math.PI/180;hm+='<line class="hg" x1="'+(cx+Math.cos(rad)*(c.r-1))+'" y1="'+(cy+Math.sin(rad)*(c.r-1)-1)+'" x2="'+(cx+Math.cos(rad)*(c.r+12))+'" y2="'+(cy+Math.sin(rad)*(c.r+12)-1)+'" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round"/>';}}return '<div class="cw" onclick="this.classList.toggle(\'hairy\')"><svg width="'+c.w+'" height="'+sh+'" viewBox="0 0 '+c.w+' '+sh+'">'+hm+'<circle cx="'+cx+'" cy="'+cy+'" r="'+c.r+'" fill="'+c.fill+'" stroke="'+c.stroke+'" stroke-width="2"/><text x="'+cx+'" y="'+(cy+2)+'" text-anchor="middle" fill="'+c.tf+'" font-family="Outfit" font-weight="700" font-size="11">'+c.label+'</text></svg><span class="ct">tap</span></div>';}
+function billSVG(v){var n={1:'WASHINGTON',5:'LINCOLN',10:'HAMILTON',20:'JACKSON'};return '<div class="bw"><svg width="90" height="42" viewBox="0 0 150 68"><rect x="2" y="2" width="146" height="64" rx="6" fill="#2d5a27" stroke="#1a3a18" stroke-width="2.5"/><rect x="8" y="8" width="134" height="52" rx="3" fill="none" stroke="#4a8a42" stroke-width="1" stroke-dasharray="3 2.5"/><text x="75" y="30" text-anchor="middle" fill="#c5e8c0" font-family="Outfit" font-weight="800" font-size="22">$'+v+'</text><text x="75" y="50" text-anchor="middle" fill="#8ab885" font-family="Outfit" font-size="10">'+(n[v]||'')+'</text></svg></div>';}
+var CM={q:'quarter',d:'dime',n:'nickel',p:'penny'};
+function coins(s){var h='';for(var i=0;i<s.length;i++)h+=coinSVG(CM[s[i]]);return h;}
+function pi(em,pr){return '<div class="pi"><span class="em">'+em+'</span><span class="co">'+pr+'</span></div>';}
+
+var LBL=['Tens','Ones','Tenths','Hundredths'];var sc=0;function uid(){return 's'+(sc++);}
+function toD(n){var c=Math.round(n*100);return[Math.floor(c/1000)%10,Math.floor(c/100)%10,Math.floor(c/10)%10,c%10];}
+
+function addStack(a,b){var id=uid(),ad=toD(a),bd=toD(b),carry=0,carries=[0,0,0,0];for(var i=3;i>=0;i--){var s=ad[i]+bd[i]+carry;carries[i]=s>=10?1:0;carry=carries[i];}var h='<div class="stack"><div class="sr cr"><div class="cs"></div><div class="cds"></div>';h+='<div class="cc">'+(carries[1]?'<span class="c1">1</span>':'')+'</div>';h+='<div class="cc">'+(carries[2]?'<span class="c1">1</span>':'')+'</div>';h+='<div class="cc" style="width:9px"></div>';h+='<div class="cc">'+(carries[3]?'<span class="c1">1</span>':'')+'</div>';h+='<div class="cc"></div></div>';h+='<div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="sdt">.</div>';h+='<div class="sd">'+ad[i]+'</div>';}h+='</div>';h+='<div class="sr"><div class="sop add">+</div><div class="sdl">$</div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="sdt">.</div>';h+='<div class="sd">'+bd[i]+'</div>';}h+='</div>';h+='<hr class="sline">';h+='<div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="sdt">.</div>';h+='<div class="sa empty" id="'+id+'a'+i+'" data-val="" onclick="dpO(\''+id+'a'+i+'\',\''+LBL[i]+'\')">0</div>';}h+='</div></div>';return h;}
+
+function computeB(a,b){var ad=toD(a),bd=toD(b),adj=ad.slice(),bw=[false,false,false,false];for(var i=3;i>=0;i--){if(adj[i]<bd[i]){bw[i]=true;for(var j=i-1;j>=0;j--){if(adj[j]>0){adj[j]--;adj[i]+=10;break;}else adj[j]=9;}}}return{borrows:bw,adjusted:adj,original:ad};}
+
+function subStack(a,b){var id=uid(),ad=toD(a),bd=toD(b),bi=computeB(a,b),nb=bi.borrows.indexOf(true)!==-1;var h='<div class="stack"><div class="sr cr"><div class="cs"></div><div class="cds"></div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="cc" style="width:9px"></div>';var av=bi.adjusted[i],sh=bi.borrows[i]||(bi.original[i]!==av);h+='<div class="cc"><span class="ba" id="'+id+'ba'+i+'">'+(sh?av:'')+'</span></div>';}h+='</div>';h+='<div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="sdt">.</div>';h+='<div class="sd" id="'+id+'d'+i+'">'+ad[i]+'<div class="crl" id="'+id+'cl'+i+'"></div></div>';}h+='</div>';h+='<div class="sr"><div class="sop sub">\u2212</div><div class="sdl">$</div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="sdt">.</div>';h+='<div class="sd">'+bd[i]+'</div>';}h+='</div>';h+='<hr class="sline">';h+='<div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div>';for(var i=0;i<4;i++){if(i===2)h+='<div class="sdt">.</div>';h+='<div class="sa empty" id="'+id+'a'+i+'" data-val="" onclick="dpO(\''+id+'a'+i+'\',\''+LBL[i]+'\')">0</div>';}h+='</div>';if(nb)h+='<button class="bbtn" id="'+id+'bb" onclick="animB(\''+id+'\')">Show Borrow \u25B6</button>';h+='</div>';return h;}
+
+function flowChart(addA,addB,subFrom){var subtotal=Math.round((addA+addB)*100)/100;var h='<div class="flow"><div class="flow-step step-add"><div class="flow-ctr"><span class="flow-lbl al">\u2795 Step 1: ADD</span></div>'+addStack(addA,addB)+'</div><div class="flow-arr">\u2B07</div><div class="flow-step step-sub"><div class="flow-ctr"><span class="flow-lbl sl">\u2796 Step 2: SUBTRACT</span></div>'+subStack(subFrom,subtotal)+'</div></div>';return h;}
+
+function animB(id){var btn=document.getElementById(id+'bb');if(!btn)return;btn.textContent='...';btn.disabled=true;var d=0;for(var i=0;i<4;i++){(function(x){var cl=document.getElementById(id+'cl'+x);var ba=document.getElementById(id+'ba'+x);if(ba&&ba.textContent){setTimeout(function(){var dd=document.getElementById(id+'d'+x);if(dd)dd.classList.add('col-hl');},d);d+=300;setTimeout(function(){if(cl)cl.classList.add('show');},d);d+=200;setTimeout(function(){if(ba)ba.classList.add('show');},d);d+=200;}})(i);}setTimeout(function(){btn.textContent='\u2705';btn.style.background='#22c55e';},d+100);}
+
+function addStackChk(a,b,answer){
+  var h=addStack(a,b);
+  var lastId='s'+(sc-1);
+  registerStack(lastId,answer);
+  h+='<button class="chk-btn" onclick="doCheckPres(\''+lastId+'\')">Check \u2714</button>';
+  h+='<div class="chk-fb" id="'+lastId+'_fb"></div>';
+  return h;
+}
+function subStackChk(a,b,answer){
+  var h=subStack(a,b);
+  var lastId='s'+(sc-1);
+  registerStack(lastId,answer);
+  h+='<button class="chk-btn" onclick="doCheckPres(\''+lastId+'\')">Check \u2714</button>';
+  h+='<div class="chk-fb" id="'+lastId+'_fb"></div>';
+  return h;
+}
+function flowChartChk(addA,addB,subFrom,answer){
+  var subtotal=Math.round((addA+addB)*100)/100;
+  var h='<div class="flow"><div class="flow-step step-add"><div class="flow-ctr"><span class="flow-lbl al">\u2795 Step 1: ADD</span></div>'+addStack(addA,addB)+'</div><div class="flow-arr">\u2B07</div><div class="flow-step step-sub"><div class="flow-ctr"><span class="flow-lbl sl">\u2796 Step 2: SUBTRACT</span></div>'+subStack(subFrom,subtotal)+'</div></div>';
+  var lastId='s'+(sc-1);
+  registerStack(lastId,answer);
+  h+='<button class="chk-btn" onclick="doCheckPres(\''+lastId+'\')">Check Final Answer \u2714</button>';
+  h+='<div class="chk-fb" id="'+lastId+'_fb"></div>';
+  return h;
+}
+
+/* ── Stack answer checking ── */
+var stackAnswers={};
+function registerStack(id,answer){stackAnswers[id]=answer;}
+function checkPresStack(id){
+  var aid=id+'a';var vals=[];
+  for(var i=0;i<4;i++){var el=document.getElementById(aid+i);vals.push(el?el.getAttribute('data-val'):'');}
+  if(vals[1]===''||vals[2]===''||vals[3]==='')return null;
+  var t=(vals[0]===''?0:parseInt(vals[0]));
+  return t*10+parseInt(vals[1])+parseInt(vals[2])*0.1+parseInt(vals[3])*0.01;
+}
+function doCheckPres(id){
+  var v=checkPresStack(id);
+  var fb=document.getElementById(id+'_fb');
+  if(v===null){fb.textContent='Fill in all boxes!';fb.className='chk-fb no';return;}
+  var ans=stackAnswers[id];
+  if(Math.abs(v-ans)<0.006){fb.textContent='\u2705 Correct! $'+ans.toFixed(2);fb.className='chk-fb ok';}
+  else{fb.textContent='\u274C Try again!';fb.className='chk-fb no';}
+}
+
+var S=[];function slide(day,banner,content){S.push({day:day,banner:banner,html:content});}
+
+slide(1,'Day 1 of 12','<h1>Adding & Subtracting with Money</h1><p class="big">A 12-Day Unit for Life Skills</p>');
+slide(1,'Day 1 \u2014 Review','<h2>Quick Hairy Money Review</h2><p style="margin-bottom:6px">Click each coin to see its hairs!</p><div class="card-row"><div style="text-align:center;padding:6px">'+coinSVG('quarter')+'<p style="font-size:.9rem;color:#5eead4;margin-top:3px">5 hairs</p></div><div style="text-align:center;padding:6px">'+coinSVG('dime')+'<p style="font-size:.9rem;color:#5eead4;margin-top:3px">2 hairs</p></div><div style="text-align:center;padding:6px">'+coinSVG('nickel')+'<p style="font-size:.9rem;color:#5eead4;margin-top:3px">1 hair</p></div><div style="text-align:center;padding:6px">'+coinSVG('penny')+'<p style="font-size:.9rem;color:#ef4444;margin-top:3px">BALD</p></div></div>');
+slide(1,'Day 1 \u2014 Adding Coins','<h2>Adding Two Groups of Coins</h2><div class="rule-box"><p style="text-align:center;font-size:1.4rem"><span class="hl">Count Group 1</span> <span class="ps-l" style="font-size:1.4rem">+</span> <span class="hl">Count Group 2</span> <span style="color:#5eead4;font-weight:700;font-size:1.4rem">=</span> <span class="hl">Total</span></p></div>');
+slide(1,'Day 1 \u2014 Practice','<h2>Try It! Tap coins, then fill the stack</h2><div class="practice" style="display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap"><div style="text-align:center"><p style="font-size:.8rem;color:#5eead4">Group 1</p><div class="money-row" style="margin:3px 0">'+coins('qd')+'</div><p class="mono" style="font-size:.9rem;color:#14b8a6">= $0.35</p></div><div class="ps-l">+</div><div style="text-align:center"><p style="font-size:.8rem;color:#f59e0b">Group 2</p><div class="money-row" style="margin:3px 0">'+coins('dnp')+'</div><p class="mono" style="font-size:.9rem;color:#f59e0b">= $0.16</p></div><div style="margin-left:8px">'+addStackChk(0.35,0.16,0.51)+'</div></div>');
+
+slide(2,'Day 2 of 12','<h1>Day 2: Adding Prices</h1><p class="big">Line up the decimal dots and add!</p>');
+slide(2,'Day 2 \u2014 Method','<h2>The Decimal Trick</h2><div class="card"><p style="text-align:center;font-size:1.2rem">Line up the dots! Dollars + Dollars, Cents + Cents. Carries appear automatically!</p></div>');
+slide(2,'Day 2 \u2014 Practice','<h2>Add These Prices!</h2><div class="practice"><div class="card-row">'+pi('\uD83C\uDF54','$3.50')+pi('\uD83C\uDF7F','$2.25')+'</div>'+addStackChk(3.50,2.25,5.75)+'</div>');
+
+slide(3,'Day 3 of 12','<h1>Day 3: Adding 3+ Items</h1><p class="big">Shopping with multiple items!</p>');
+slide(3,'Day 3 \u2014 Practice','<h2>What\u2019s the Total?</h2><div class="practice"><div class="card-row">'+pi('\uD83C\uDF55','$4.25')+pi('\uD83E\uDD64','$1.50')+pi('\uD83C\uDF6A','$0.75')+'</div><p style="font-size:.85rem;color:#5eead4;margin:4px 0">Step 1: Add first two</p>'+addStack(4.25,1.50)+'<p style="font-size:.85rem;color:#5eead4;margin:4px 0">Step 2: Add subtotal + third</p>'+addStackChk(5.75,0.75,6.50)+'</div>');
+
+slide(4,'Day 4 of 12','<h1>Day 4: Word Problems</h1><p class="big">"You buy ___ and ___. How much total?"</p>');
+slide(4,'Day 4 \u2014 Steps','<h2>Solving Word Problems</h2><div class="step-list"><div class="step"><div class="num">1</div><div><span class="hl">Find the prices</span></div></div><div class="step"><div class="num">2</div><div>Putting together? = <span class="gn">ADD</span></div></div><div class="step"><div class="num">3</div><div><span class="hl">Line up dots</span> in the stack</div></div><div class="step"><div class="num">4</div><div>Write with <span class="hl">$ and two decimals</span></div></div></div>');
+slide(4,'Day 4 \u2014 Practice','<h2>Try This One!</h2><div class="practice"><div class="wp">Notebook <span class="hl">$2.99</span> and pen <span class="hl">$1.50</span>. Total?</div>'+addStackChk(2.99,1.50,4.49)+'</div>');
+
+slide(5,'Day 5 of 12','<h1>Day 5: Subtracting Money</h1><p class="big">What\u2019s left after you spend?</p>');
+slide(5,'Day 5 \u2014 Concept','<h2>Subtraction = Taking Away</h2><div class="card"><p style="text-align:center;font-size:1.3rem"><span class="hl">What you have</span> <span class="ms-l" style="font-size:1.3rem">\u2212</span> <span class="gl">What you spend</span> <span style="color:#5eead4;font-weight:700;font-size:1.3rem">=</span> <span class="gn">What\u2019s left</span></p></div><div class="rule-box"><p style="text-align:center;font-size:1.1rem">Spend or give away = <span class="wn">SUBTRACT</span>. Use "Show Borrow" when needed!</p></div>');
+slide(5,'Day 5 \u2014 Practice','<h2>What\u2019s Left?</h2><div class="practice"><div class="wp">Have <span class="wt">$5.00</span>, spend <span class="pt">$2.00</span></div>'+subStackChk(5.00,2.00,3.00)+'</div>');
+
+slide(6,'Day 6 of 12','<h1>Day 6: Subtracting Coins</h1><p class="big">Find the difference between coin groups</p>');
+slide(6,'Day 6 \u2014 Practice','<h2>Find the Difference!</h2><div class="practice"><div style="display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap"><div style="text-align:center"><p style="font-size:.8rem;color:#5eead4">You Have</p><div class="money-row" style="margin:3px 0">'+coins('qqd')+'</div><p class="mono" style="font-size:.9rem;color:#14b8a6">= $0.60</p></div><div class="ms-l">\u2212</div><div style="text-align:center"><p style="font-size:.8rem;color:#f59e0b">You Spend</p><div class="money-row" style="margin:3px 0">'+coins('qn')+'</div><p class="mono" style="font-size:.9rem;color:#f59e0b">= $0.30</p></div></div>'+subStackChk(0.60,0.30,0.30)+'</div>');
+
+slide(7,'Day 7 of 12','<h1>Day 7: Subtracting $$</h1><p class="big">Subtracting dollars and cents</p>');
+slide(7,'Day 7 \u2014 Method','<h2>Line Up the Dots!</h2><div class="card"><p style="text-align:center;font-size:1.1rem">Same as addition but subtract. Start from the right. Use "Show Borrow" when the top digit is smaller!</p></div>');
+slide(7,'Day 7 \u2014 Practice','<h2>How Much Left?</h2><div class="practice"><div class="wp">Have <span class="wt">$10.00</span>, buy shirt <span class="pt">$3.75</span></div>'+subStackChk(10.00,3.75,6.25)+'</div>');
+
+slide(8,'Day 8 of 12','<h1>Day 8: Making Change</h1><p class="big">Subtraction in action!</p>');
+slide(8,'Day 8 \u2014 Concept','<h2>Change = Subtraction!</h2><div class="rule-box"><p style="text-align:center;font-size:1.3rem"><span class="hl">What you pay</span> <span class="ms-l" style="font-size:1.3rem">\u2212</span> <span class="gl">The price</span> <span style="color:#5eead4;font-weight:700;font-size:1.3rem">=</span> <span class="gn">Your change</span></p></div>');
+slide(8,'Day 8 \u2014 Practice','<h2>Find the Change!</h2><div class="practice"><div class="wp">Item <span class="pt">$6.75</span>, pay <span class="wt">$10.00</span></div>'+subStackChk(10.00,6.75,3.25)+'</div>');
+
+slide(9,'Day 9 of 12','<h1>Day 9: Add Then Subtract</h1><p class="big">Two steps: total up, then find what\u2019s left</p>');
+slide(9,'Day 9 \u2014 Practice','<h2>Try the Flowchart!</h2><div class="practice"><div class="wp">Have <span class="wt">$10.00</span>. Buy \uD83C\uDF54 <span class="pt">$4.50</span> + \uD83C\uDF5F <span class="pt">$2.25</span></div>'+flowChartChk(4.50,2.25,10.00,3.25)+'</div>');
+
+slide(10,'Day 10 of 12','<h1>Day 10: Comparing Prices</h1><p class="big">"How much more?" = Subtraction!</p>');
+slide(10,'Day 10 \u2014 Practice','<h2>Find the Difference!</h2><div class="practice"><div class="card-row">'+pi('\uD83C\uDF55','$8.99')+pi('\uD83C\uDF2E','$5.49')+'</div><p style="font-size:1rem;margin:5px 0">How much more does the pizza cost?</p>'+subStackChk(8.99,5.49,3.50)+'</div>');
+
+slide(11,'Day 11 of 12','<h1>Day 11: Budget Shopping</h1><p class="big">Multi-step real-world problems!</p>');
+slide(11,'Day 11 \u2014 Practice','<h2>Shopping Trip!</h2><div class="practice"><div class="wp">Budget <span class="wt">$20.00</span>. Buy \uD83D\uDCDA <span class="pt">$7.99</span> + \u270F\uFE0F <span class="pt">$2.50</span></div>'+flowChartChk(7.99,2.50,20.00,9.51)+'</div>');
+
+slide(12,'Day 12 of 12','<h1>\uD83C\uDFC6 Review!</h1><p class="big">Everything in 12 days</p>');
+slide(12,'Day 12 \u2014 Grid','<h2>Our Journey</h2><div class="review-grid"><div class="rv"><h3>Day 1</h3><p>Add coins</p></div><div class="rv"><h3>Day 2</h3><p>Add prices</p></div><div class="rv"><h3>Day 3</h3><p>Add 3+</p></div><div class="rv"><h3>Day 4</h3><p>Word probs</p></div><div class="rv"><h3>Day 5</h3><p>Subtract</p></div><div class="rv"><h3>Day 6</h3><p>Sub coins</p></div><div class="rv"><h3>Day 7</h3><p>Sub $$</p></div><div class="rv"><h3>Day 8</h3><p>Change</p></div><div class="rv"><h3>Day 9</h3><p>Add+Sub</p></div><div class="rv"><h3>Day 10</h3><p>Compare</p></div><div class="rv"><h3>Day 11</h3><p>Budget</p></div><div class="rv"><h3>Day 12</h3><p>Review</p></div></div>');
+slide(12,'Day 12 \u2014 Rules','<h2>The Big Rules</h2><div class="card" style="text-align:left"><div class="step-list"><div class="step"><div class="num">\u2705</div><div><span class="gn">Buying / total</span> = <span class="gn">ADD</span></div></div><div class="step"><div class="num">\u2705</div><div><span class="wn">Spending / change</span> = <span class="wn">SUBTRACT</span></div></div><div class="step"><div class="num">\u2705</div><div>Always <span class="hl">line up the decimal dots</span></div></div><div class="step"><div class="num">\u2705</div><div>Use <span class="hl">Hairy Money</span> for coins</div></div><div class="step"><div class="num">\u2705</div><div>Write with <span class="hl">$ and two decimal places</span></div></div></div></div>');
+slide(12,'Complete!','<h1>\uD83C\uDF89 You Did It!</h1><p class="big">You can now <span class="gn">add</span> and <span class="wn">subtract</span> with money!</p>');
+
+var deck=document.getElementById('deck');for(var i=0;i<S.length;i++){var d=document.createElement('div');d.className='slide'+(i===0?' active':'');d.innerHTML='<div class="day-banner">'+S[i].banner+'</div>'+S[i].html+'<div class="footer-info">Room 406 \u2022 Winfield R-IV \u2022 reinischclassroom.com</div>';deck.appendChild(d);}
+var slides=document.querySelectorAll('.slide');var cur=0,total=slides.length;
+function go(dir){slides[cur].classList.remove('active');cur=Math.max(0,Math.min(cur+dir,total-1));slides[cur].classList.add('active');upd();}
+function upd(){document.getElementById('progFill').style.width=((cur+1)/total*100)+'%';document.getElementById('slideCtr').textContent=(cur+1)+' / '+total;document.getElementById('prevBtn').className='nav-btn'+(cur===0?' off':'');document.getElementById('nextBtn').className='nav-btn'+(cur===total-1?' off':'');}
+document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key===' ')go(1);if(e.key==='ArrowLeft')go(-1);});
+upd();
+</script>
+</body>
+</html>
