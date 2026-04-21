@@ -96,6 +96,22 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   for (const phrase of BANNED_PHRASES) {
     prompt += `- "${phrase}"\n`;
   }
+  // Additional prompt-level banned phrases (vague qualitative judgments)
+  const promptBannedPhrases = [
+    'shows some clarity',
+    'needs further development',
+    'lacks some organization',
+    'has room for improvement',
+    'indicating a need for improvement',
+    'indicating a need',
+    'some clarity',
+    'room for improvement',
+    'needs improvement',
+    'would benefit',
+  ];
+  for (const phrase of promptBannedPhrases) {
+    prompt += `- "${phrase}"\n`;
+  }
   if (retry_hint) {
     const safeHint = sanitizeForPrompt(retry_hint, 100);
     prompt += `\nIMPORTANT: Your previous draft contained the banned phrase "${safeHint}". `;
@@ -109,31 +125,61 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   prompt += `2. Always use ${safeCode} as the subject of every sentence. Never write "the student."\n`;
   prompt += `3. Every sentence must include at least one number (score, count, percentage, or data-point count).\n`;
   prompt += `4. Active voice only.\n`;
-  prompt += `5. Purely descriptive — NO action items, tips, next steps, recommendations, or suggestions of any kind.\n`;
+  prompt += `5. Purely descriptive — NO action items, tips, next steps, recommendations, suggestions, or editorial opinions of any kind. No qualitative adjectives such as "good," "poor," "weak," "strong," "some clarity," or "room for improvement."\n`;
+  prompt += `6. No vague qualitative judgments — state numbers only.\n`;
   if (isExternal) {
-    prompt += `6. Vocabulary at approximately 6th-grade reading level. Use plain everyday words. Avoid all IEP/SPED jargon.\n`;
+    prompt += `7. Vocabulary at approximately 6th-grade reading level. Use plain everyday words. Avoid all IEP/SPED jargon.\n`;
     prompt += `   Use "starting score" instead of "baseline" and "quiz scores" instead of "data points."\n\n`;
   } else {
-    prompt += `6. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n\n`;
+    prompt += `7. Vocabulary at approximately 8th-grade reading level. Avoid: proficiency, mastery, monitoring, demonstrate, performance.\n\n`;
   }
 
   // Narrative patterns
   prompt += `## NARRATIVE PATTERNS TO FOLLOW:\n`;
+  prompt += `Each IEP goal below is pre-labeled STATUS: AT_OR_ABOVE_TARGET or BELOW_TARGET. Use that label to pick the correct pattern.\n`;
   if (isExternal) {
-    prompt += `- On-track or above target: "${safeCode} has increased their [area] skills, scoring [X]% across [N] quiz scores — above their [target]% goal and up from a [starting score]% starting score."\n`;
-    prompt += `- Below target: "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] quiz scores, which is below their [target]% goal. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
+    prompt += `- AT_OR_ABOVE_TARGET (data_points = 1): "${safeCode} has increased their [area] skills, scoring [X]% on 1 quiz score — above their [target]% goal and up from a [starting score]% starting score."\n`;
+    prompt += `- AT_OR_ABOVE_TARGET (data_points > 1): "${safeCode} has increased their [area] skills, averaging [X]% across [N] quiz scores — above their [target]% goal and up from a [starting score]% starting score."\n`;
+    prompt += `- BELOW_TARGET (data_points = 1): "${safeCode} is still working to grow their [area] skills, scoring [X]% on 1 quiz score, which is below their [target]% goal. [One evidence sentence from the specific skill struggles list, if available.]"\n`;
+    prompt += `- BELOW_TARGET (data_points > 1): "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] quiz scores, which is below their [target]% goal. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
   } else {
-    prompt += `- On-track or above target: "${safeCode} has increased their [area] skills, scoring [X]% across [N] data points — above their [target]% target and up from a [baseline]% baseline."\n`;
-    prompt += `- Below target: "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] assessments, which is below their [target]% target. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
+    prompt += `- AT_OR_ABOVE_TARGET (data_points = 1): "${safeCode} has increased their [area] skills, scoring [X]% on 1 assessment — above their [target]% target and up from a [baseline]% baseline."\n`;
+    prompt += `- AT_OR_ABOVE_TARGET (data_points > 1): "${safeCode} has increased their [area] skills, averaging [X]% across [N] assessments — above their [target]% target and up from a [baseline]% baseline."\n`;
+    prompt += `- BELOW_TARGET (data_points = 1): "${safeCode} is still working to grow their [area] skills, scoring [X]% on 1 assessment, which is below their [target]% target. [One evidence sentence from the specific skill struggles list, if available.]"\n`;
+    prompt += `- BELOW_TARGET (data_points > 1): "${safeCode} is still working to grow their [area] skills, averaging [X]% across [N] assessments, which is below their [target]% target. [One evidence sentence from the specific skill struggles list, if available.]"\n\n`;
   }
 
+  // Same-area goal rule
+  prompt += `## SAME-AREA GOAL RULE:\n`;
+  prompt += `When multiple IEP goals share the same area name, you MUST reference the specific goal code in the summary to differentiate them. Do not repeat the same generic sentence for each.\n\n`;
+
+  // DESE Standard rules
+  prompt += `## DESE STANDARD RULES:\n`;
+  prompt += `The summary for DESE standards must state only the score and item count — do NOT include phrases like "indicating a need for improvement" or any other editorial judgment.\n\n`;
+
   if (Array.isArray(iep_goals) && iep_goals.length > 0) {
+    // Count how many goals share each area name
+    const areaCounts = {};
+    for (const g of iep_goals) {
+      const area = sanitizeForPrompt(g.area, 100);
+      areaCounts[area] = (areaCounts[area] || 0) + 1;
+    }
+
     prompt += `IEP Goals:\n`;
     for (const g of iep_goals) {
       const code = sanitizeForPrompt(g.code, 50);
       const area = sanitizeForPrompt(g.area, 100);
       const trend = sanitizeForPrompt(g.trend, 10);
-      prompt += `- Code: ${code}, Area: ${area}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%\n`;
+      const currentAvg = parseFloat(g.current_avg);
+      const target = parseFloat(g.target);
+      const status = (!isNaN(currentAvg) && !isNaN(target) && currentAvg >= target)
+        ? 'AT_OR_ABOVE_TARGET'
+        : 'BELOW_TARGET';
+      let goalLine = `- Code: ${code}, Area: ${area}, STATUS: ${status}, Current average: ${sanitizeNumber(g.current_avg)}%, Trend: ${trend}, Data points: ${sanitizeNumber(g.data_points)}, Target: ${sanitizeNumber(g.target)}%, Baseline: ${sanitizeNumber(g.baseline)}%`;
+      if (areaCounts[area] > 1) {
+        goalLine += `, NOTE: multiple goals share this area name — you MUST reference the goal code "${code}" in the summary to differentiate`;
+      }
+      prompt += goalLine + '\n';
 
       if (Array.isArray(g.question_weaknesses) && g.question_weaknesses.length > 0) {
         prompt += `  Specific skill struggles for ${code}:\n`;
@@ -164,9 +210,9 @@ function buildSkillsPrompt({ student_code, iep_goals, dese_standards, language_m
   prompt += `Return a JSON object with a single "skills" array. Each element must have:\n`;
   prompt += `  "code": the goal or DESE code exactly as provided\n`;
   if (isExternal) {
-    prompt += `  "description": a plain-English description of this skill (no acronyms/jargon; parent-friendly)\n`;
+    prompt += `  "description": a plain-English description of this skill (no acronyms/jargon; parent-friendly). For DESE/MLS standards, name the specific standard code and describe what that standard actually measures — not a generic strand blurb.\n`;
   } else {
-    prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, include the full strand name, cluster, and specific skill being measured. For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed.\n`;
+    prompt += `  "description": a thorough, IEP-ready description of this skill area. For DESE/MLS standards, name the specific standard code and describe what that standard actually measures — not a generic strand blurb repeated across multiple standards. For IEP goals, include the goal area, a clear restatement of what the goal measures, and the specific skill deficit being addressed.\n`;
   }
   prompt += `  "summary": the plain-prose narrative (2–3 sentences, no bold, no headers, no bullets)\n`;
   if (isExternal) {
