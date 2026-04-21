@@ -91,8 +91,9 @@ async function findPendingJobByHash(url, key, payload_hash) {
 }
 
 async function countPendingJobsByTeacher(url, key, created_by) {
+  const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const res = await fetch(
-    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&select=id`,
+    `${url}/rest/v1/ai_jobs?created_by=eq.${encodeURIComponent(created_by)}&status=eq.pending&created_at=gte.${encodeURIComponent(since)}&select=id`,
     {
       method: 'GET',
       headers: { ...supabaseHeaders(key), Prefer: 'count=exact' },
@@ -195,7 +196,7 @@ exports.handler = async (event) => {
   // Check cache first
   try {
     const cached = await findCachedJob(SUPABASE_URL, SUPABASE_KEY, payloadHash);
-    if (cached) {
+    if (cached && Array.isArray(cached.skills) && cached.skills.length > 0) {
       console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Cache hit for ${student_code} — returning cached result`);
       await upsertJobComplete(SUPABASE_URL, SUPABASE_KEY, {
         id: job_id,
