@@ -165,6 +165,25 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'job_id is required' };
   }
 
+  // Top-level try/catch: any unhandled throw marks the job as error so it never stays pending
+  try {
+    return await _runHandler(event, requestId, { job_id, student_code, iep_goals, dese_standards, language_mode, audience });
+  } catch (topErr) {
+    const errMsg = topErr instanceof Error ? topErr.message : String(topErr);
+    console.error(`[teacher-ai-skills-summary-background] [${requestId}] Unhandled exception for job ${job_id}: ${errMsg}`);
+    const { url: SUPABASE_URL, key: SUPABASE_KEY } = getSupabaseConfig();
+    if (SUPABASE_URL && SUPABASE_KEY && job_id) {
+      await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
+        status: 'error',
+        error: `Unhandled exception: ${errMsg}`,
+      }).catch(updateErr => console.error(`[teacher-ai-skills-summary-background] [${requestId}] Failed to mark job error: ${updateErr.message}`));
+    }
+    console.log(`[teacher-ai-skills-summary-background] [${requestId}] Handler exit — job ${job_id} (status: error)`);
+    return { statusCode: 500, body: 'Internal Server Error' };
+  }
+};
+
+async function _runHandler(event, requestId, { job_id, student_code, iep_goals, dese_standards, language_mode, audience }) {
   // Support both legacy language_mode and new audience parameter
   // audience takes precedence; language_mode kept for backward compatibility
   const resolvedAudience = audience === 'external' || language_mode === 'parent-friendly' ? 'external' : 'internal';
@@ -243,13 +262,15 @@ exports.handler = async (event) => {
       status: 'complete',
       result: { skills: finalSkills },
     });
+    console.log(`[teacher-ai-skills-summary-background] [${requestId}] Handler exit — job ${job_id} (status: complete)`);
   } else {
     console.error(`[teacher-ai-skills-summary-background] [${requestId}] Job ${job_id} failed: ${aiResult.error}`);
     await updateJob(SUPABASE_URL, SUPABASE_KEY, job_id, {
       status: 'error',
       error: aiResult.error,
     });
+    console.log(`[teacher-ai-skills-summary-background] [${requestId}] Handler exit — job ${job_id} (status: error)`);
   }
 
   return { statusCode: 202, body: '' };
-};
+}

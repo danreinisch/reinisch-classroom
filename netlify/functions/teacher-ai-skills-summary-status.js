@@ -65,7 +65,7 @@ exports.handler = async (event) => {
   let row;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error&limit=1`,
+      `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}&created_by=eq.${encodeURIComponent(auth.user.username)}&select=status,result,error,created_at&limit=1`,
       {
         method: 'GET',
         headers: {
@@ -106,6 +106,24 @@ exports.handler = async (event) => {
     return jsonResponse(event, 200, { ok: true, status: 'error', error: row.error || 'AI generation failed' }, {}, requestId);
   }
 
-  // status === 'pending'
+  // status === 'pending' — check for stuck job (> 5 minutes old)
+  if (row.created_at) {
+    const ageMs = Date.now() - new Date(row.created_at).getTime();
+    const STUCK_JOB_MS = 5 * 60 * 1000; // 5 minutes
+    if (ageMs > STUCK_JOB_MS) {
+      console.warn(`[teacher-ai-skills-summary-status] [${requestId}] Job ${job_id} has been pending for ${Math.round(ageMs / 1000)}s — marking as error`);
+      // Fire-and-forget PATCH to mark job as error
+      fetch(
+        `${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}`,
+        {
+          method: 'PATCH',
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ status: 'error', error: 'Job timed out — background worker never completed' }),
+        }
+      ).catch(patchErr => console.warn(`[teacher-ai-skills-summary-status] [${requestId}] Stuck-job PATCH failed: ${patchErr.message}`));
+      return jsonResponse(event, 200, { ok: true, status: 'error', error: 'Job timed out — background worker never completed' }, {}, requestId);
+    }
+  }
+
   return jsonResponse(event, 200, { ok: true, status: 'pending' }, {}, requestId);
 };
