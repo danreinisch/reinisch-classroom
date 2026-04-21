@@ -248,30 +248,50 @@ exports.handler = async (event) => {
 
   console.log(`[teacher-ai-skills-summary-submit] [${requestId}] Job ${job_id} created for student ${student_code}`);
 
-  // Fire background function asynchronously — do not await
+  // Await the background function trigger to ensure the TCP request flushes
+  // before Lambda freezes the event loop. The background function returns 202
+  // immediately, so this adds negligible latency.
   const backgroundUrl = process.env.URL
     ? `${process.env.URL}/.netlify/functions/teacher-ai-skills-summary-background`
     : `http://localhost:8888/.netlify/functions/teacher-ai-skills-summary-background`;
 
   const internalSecret = process.env.INTERNAL_FUNCTION_SECRET || process.env.SESSION_SECRET;
 
-  fetch(backgroundUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(internalSecret ? { 'X-Internal-Secret': internalSecret } : {}),
-    },
-    body: JSON.stringify({
-      job_id,
-      student_code,
-      iep_goals: iep_goals || [],
-      dese_standards: dese_standards || [],
-      language_mode,
-      audience: resolvedAudience,
-    }),
-  }).catch(err => {
-    console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Background fire-and-forget failed: ${err.message}`);
-  });
+  let bgTriggered = false;
+  try {
+    const bgRes = await fetch(backgroundUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(internalSecret ? { 'X-Internal-Secret': internalSecret } : {}),
+      },
+      body: JSON.stringify({
+        job_id,
+        student_code,
+        iep_goals: iep_goals || [],
+        dese_standards: dese_standards || [],
+        language_mode,
+        audience: resolvedAudience,
+      }),
+    });
+    bgTriggered = bgRes.ok || bgRes.status === 202;
+    if (!bgTriggered) {
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Background function returned ${bgRes.status}`);
+    }
+  } catch (bgErr) {
+    console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Background trigger failed: ${bgErr.message}`);
+  }
+
+  if (!bgTriggered) {
+    // Background never fired — immediately mark job as error so UI doesn't poll forever
+    await fetch(`${SUPABASE_URL}/rest/v1/ai_jobs?id=eq.${encodeURIComponent(job_id)}`, {
+      method: 'PATCH',
+      headers: { ...supabaseHeaders(SUPABASE_KEY), Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'error', error: 'Background worker could not be invoked' }),
+    }).catch(patchErr => {
+      console.warn(`[teacher-ai-skills-summary-submit] [${requestId}] Failed to mark job ${job_id} as error: ${patchErr.message}`);
+    });
+  }
 
   // Probabilistic cleanup: on ~1% of requests, fire-and-forget a DELETE of jobs older than 7 days
   if (Math.random() < 0.01) {
