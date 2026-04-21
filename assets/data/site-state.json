@@ -1,11 +1,11 @@
 {
   "version": "v1",
-  "updated": "2026-04-21T16:37:23.841Z",
+  "updated": "2026-04-21T17:21:25.800Z",
   "categories": {
     "toolkit": {
       "slots": 8,
       "titles": [
-        "",
+        "Math Money Practice",
         "Summarizing vs Retelling: Quality Over Quantity",
         "Topic Sentence Checker",
         "Transition Words and Phrases: Creating Flow",
@@ -15,7 +15,7 @@
         "Essay Builder"
       ],
       "links": [
-        "",
+        "/presentations/language-arts-toolkit/presentation-01/",
         "/presentations/language-arts-toolkit/presentation-02/",
         "/presentations/language-arts-toolkit/presentation-03/",
         "/presentations/language-arts-toolkit/presentation-04/",
