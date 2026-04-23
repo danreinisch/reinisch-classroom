@@ -2308,9 +2308,17 @@
           </div>
         </div>
       ` : '';
+
+      // Build question container CSS classes
+      const containerClasses = ['st-question-container'];
+      if (isLocked) {
+        containerClasses.push('retry-locked', 'revision-correct');
+      } else if (isRevisionMode && !isReadOnly) {
+        containerClasses.push('revision-incorrect');
+      }
       
       return `
-        <div class="st-question-container${isLocked ? ' retry-locked revision-correct' : (isRevisionMode && !isLocked && !isReadOnly ? ' revision-incorrect' : '')}">
+        <div class="${containerClasses.join(' ')}">
           <div class="st-question-number">Question ${q.number}${retryLockedBadge}</div>
           <div class="st-question-text">
             ${escapeHtml(q.text)}
