@@ -326,8 +326,8 @@ async function handleMarkReviewed(body, requestId) {
 }
 
 // Action: return_for_revision
-// For re-issued assignments with retry_config: mark submission as 'returned' and reset instance to 'Assigned'.
-// Skips createResubmission so that an already-used resubmission_count does not block the operation.
+// Mark submission as 'returned', reset instance to 'Assigned', and build retry_config so the
+// student sees Revision Mode (correct answers locked + green, incorrect answers pre-filled + red).
 async function handleReturnForRevision(body, requestId) {
   const { submissionId, instanceId, feedback, gradedBy } = body;
 
@@ -353,7 +353,10 @@ async function handleReturnForRevision(body, requestId) {
     return { statusCode: 500, error: 'Failed to return submission for revision', detail: subRes.data };
   }
 
-  // Reset instance status to Assigned so the student can see it again in retry mode
+  const submissionRow = Array.isArray(subRes.data) && subRes.data.length > 0 ? subRes.data[0] : null;
+  const scoreTotal = submissionRow ? submissionRow.score_total : null;
+
+  // Reset instance status to Assigned so the student can see it again in revision mode
   const iid = instanceId || await lookupInstanceId(submissionId, requestId);
   if (iid) {
     const instRes = await supaFetch(
@@ -362,6 +365,89 @@ async function handleReturnForRevision(body, requestId) {
     );
     if (!instRes.ok) {
       console.error(`[teacher-review-save] [${requestId}] return_for_revision instance status reset FAILED — student may not see the assignment: status=${instRes.status}`, instRes.data);
+    }
+
+    // Build retry_config from submission_answers so the portal can show Revision Mode
+    try {
+      // 1. Fetch all submission_answers for this submission
+      const answersRes = await supaFetch(
+        `/rest/v1/submission_answers?submission_id=eq.${encodeURIComponent(submissionId)}&select=assignment_item_id,is_correct,raw_answer`
+      );
+      const subAnswers = (answersRes.ok && Array.isArray(answersRes.data)) ? answersRes.data : [];
+
+      if (subAnswers.length === 0) {
+        console.warn(`[teacher-review-save] [${requestId}] return_for_revision: no submission_answers found for submission=${submissionId} — skipping retry_config build`);
+      } else {
+        // 2. Fetch the assignment_id from the instance
+        const instDetailRes = await supaFetch(
+          `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(iid)}&select=assignment_id,settings`
+        );
+        const instDetail = (instDetailRes.ok && Array.isArray(instDetailRes.data) && instDetailRes.data.length > 0)
+          ? instDetailRes.data[0]
+          : null;
+
+        if (!instDetail || !instDetail.assignment_id) {
+          console.warn(`[teacher-review-save] [${requestId}] return_for_revision: could not fetch instance detail for iid=${iid}`);
+        } else {
+          const { assignment_id: assignmentId, settings: existingSettings } = instDetail;
+
+          // 3. Fetch assignment_items to build item_id → item_ref lookup
+          const itemsRes = await supaFetch(
+            `/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(assignmentId)}&select=id,item_ref`
+          );
+          const allItems = (itemsRes.ok && Array.isArray(itemsRes.data)) ? itemsRes.data : [];
+
+          const itemRefById = {};
+          for (const item of allItems) {
+            if (item.id && item.item_ref) itemRefById[item.id] = item.item_ref;
+          }
+
+          // 4. Build retry_config
+          const lockedQuestionIds = [];
+          const originalAnswers = {};
+          for (const ans of subAnswers) {
+            const itemRef = itemRefById[ans.assignment_item_id];
+            if (!itemRef) continue;
+            const answerVal = ans.raw_answer && ans.raw_answer.value != null
+              ? String(ans.raw_answer.value)
+              : null;
+            if (answerVal !== null) {
+              // Include ALL answers (correct + incorrect) so the student can see what they picked
+              originalAnswers[itemRef] = answerVal;
+            }
+            if (ans.is_correct === true) {
+              lockedQuestionIds.push(itemRef);
+            }
+          }
+
+          const retryConfig = {
+            locked_question_ids: lockedQuestionIds,
+            original_answers: originalAnswers,
+            original_score: scoreTotal != null ? Math.round(scoreTotal) : null,
+            retry_initiated_at: new Date().toISOString(),
+            revision_mode: true,
+          };
+
+          // 5. PATCH the instance to store retry_config and pre-populate answers
+          const updatedSettings = { ...(existingSettings || {}), retry_config: retryConfig, answers: originalAnswers };
+          const configPatchRes = await supaFetch(
+            `/rest/v1/assignment_instances?id=eq.${encodeURIComponent(iid)}`,
+            {
+              method: 'PATCH',
+              headers: { Prefer: 'return=minimal' },
+              body: JSON.stringify({ settings: updatedSettings }),
+            }
+          );
+          if (!configPatchRes.ok) {
+            console.error(`[teacher-review-save] [${requestId}] return_for_revision: failed to save retry_config to instance settings:`, configPatchRes.status, configPatchRes.data);
+          } else {
+            console.log(`[teacher-review-save] [${requestId}] return_for_revision: retry_config saved — locked=${lockedQuestionIds.length} correct, total=${Object.keys(originalAnswers).length} answers`);
+          }
+        }
+      }
+    } catch (retryConfigErr) {
+      // Non-fatal: log the error but still return success so the student is unblocked
+      console.error(`[teacher-review-save] [${requestId}] return_for_revision: unexpected error building retry_config (non-fatal):`, retryConfigErr);
     }
   }
 
