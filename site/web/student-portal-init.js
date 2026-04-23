@@ -1854,14 +1854,17 @@
     assignmentViewerState.isReadOnly = isReadOnly;
     assignmentViewerState.isGraded = isGraded;
 
-    // Detect retry mode from re-issued assignment settings
+    // Detect retry/revision mode from re-issued or returned assignment settings
     const retryConfig = instance.settings && instance.settings.retry_config;
     if (retryConfig && !isReadOnly && Array.isArray(retryConfig.locked_question_ids) && retryConfig.locked_question_ids.length > 0) {
       assignmentViewerState.isRetryMode = true;
       assignmentViewerState.retryLockedQuestionIds = new Set(retryConfig.locked_question_ids);
-      console.log(LOG_PREFIX, 'Retry mode activated from instance retry_config:', retryConfig.locked_question_ids.length, 'locked question(s)');
+      // revision_mode: true means this was returned for revision (not a re-issue)
+      assignmentViewerState.isRevisionMode = retryConfig.revision_mode === true;
+      console.log(LOG_PREFIX, 'Retry mode activated from instance retry_config:', retryConfig.locked_question_ids.length, 'locked question(s)', assignmentViewerState.isRevisionMode ? '[revision mode]' : '[re-issue mode]');
     } else {
       assignmentViewerState.isRetryMode = false;
+      assignmentViewerState.isRevisionMode = false;
       assignmentViewerState.retryLockedQuestionIds = new Set();
     }
     
@@ -2211,6 +2214,7 @@
     const isReadOnly = assignmentViewerState.isReadOnly;
     const isGraded = assignmentViewerState.isGraded;
     const isRetryMode = assignmentViewerState.isRetryMode;
+    const isRevisionMode = assignmentViewerState.isRevisionMode;
     const retryLockedIds = assignmentViewerState.retryLockedQuestionIds || new Set();
     const scoringResults = assignmentViewerState.scoringResults || [];
     const submissionAnswers = assignmentViewerState.submissionAnswers || [];
@@ -2241,9 +2245,16 @@
             choiceClass = 'incorrect';
           }
         } else {
-          // In retry mode, mark the selected choice of a locked question with the locked-correct style
+          // In retry/revision mode, style locked (correct) choices and pre-selected wrong choices
           const isSelectedLockedChoice = isLocked && savedAnswer === choice.letter;
-          choiceClass = isSelectedLockedChoice ? 'locked-correct' : (isLocked ? 'locked-disabled' : '');
+          if (isSelectedLockedChoice) {
+            choiceClass = 'locked-correct';
+          } else if (isLocked) {
+            choiceClass = 'locked-disabled';
+          } else if (isRevisionMode && !isLocked && savedAnswer === choice.letter) {
+            // Pre-selected wrong answer in revision mode — highlight red so student sees what they picked
+            choiceClass = 'revision-preselected-incorrect';
+          }
         }
         return `
           <div class="st-choice ${choiceClass}" data-question-id="${questionId}" data-letter="${choice.letter}">
@@ -2297,9 +2308,17 @@
           </div>
         </div>
       ` : '';
+
+      // Build question container CSS classes
+      const containerClasses = ['st-question-container'];
+      if (isLocked) {
+        containerClasses.push('retry-locked', 'revision-correct');
+      } else if (isRevisionMode && !isReadOnly) {
+        containerClasses.push('revision-incorrect');
+      }
       
       return `
-        <div class="st-question-container${isLocked ? ' retry-locked' : ''}">
+        <div class="${containerClasses.join(' ')}">
           <div class="st-question-number">Question ${q.number}${retryLockedBadge}</div>
           <div class="st-question-text">
             ${escapeHtml(q.text)}
@@ -2328,11 +2347,12 @@
         </div>`
       : '';
 
-    const retryBanner = isRetryMode ? `
-      <div class="st-retry-banner">
-        🔄 Retry Mode — Correct answers are locked. Only your incorrect answers can be changed.
-      </div>
-    ` : '';
+    // Show Revision Mode banner (amber) for returned-for-revision, Retry Mode banner (blue) for re-issues
+    const retryBanner = isRetryMode ? (
+      isRevisionMode
+        ? `<div class="st-revision-banner">📝 Revision Mode — Your correct answers are locked (green). Please correct the questions with a red border.</div>`
+        : `<div class="st-retry-banner">🔄 Retry Mode — Correct answers are locked. Only your incorrect answers can be changed.</div>`
+    ) : '';
 
     // Feature 3: Progress tracker in viewer
     const totalQuestions = getTotalQuestionCount(instance);
@@ -2407,9 +2427,9 @@
           // Mark the selected answer
           input.checked = true;
           
-          // Remove previous selection styling and retry-mode incorrect highlight
+          // Remove previous selection styling and retry-mode / revision-mode incorrect highlight
           choicesContainer.querySelectorAll('.st-choice').forEach(c => {
-            c.classList.remove('selected', 'incorrect');
+            c.classList.remove('selected', 'incorrect', 'revision-preselected-incorrect');
           });
           
           // Mark this choice as selected (neutral styling)
