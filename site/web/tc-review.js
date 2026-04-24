@@ -945,8 +945,10 @@
       const totalEarned = (Number(submission.score_auto) || 0) + (Number(submission.score_manual) || 0);
       const pct = Number(submission.score_total);
       // Prefer totalMax from items cache; fall back to deriving from earned/pct.
+      // score_total is stored as a 0-100 whole-number percentage, so the formula is:
+      // totalMax = totalEarned * 100 / pct  (equivalent to: totalEarned / pct * 100)
       let totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
-      if (!totalMax && pct > 0) {
+      if (totalMax === 0 && pct > 0) {
         totalMax = Math.round((totalEarned / pct) * 100);
       }
       if (totalMax > 0) {
