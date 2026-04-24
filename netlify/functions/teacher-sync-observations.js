@@ -52,12 +52,15 @@ exports.handler = async (event) => {
     return jsonResponse(event, 401, { ok: false, error: 'Unauthorized' }, {}, requestId);
   }
 
-  const body = safeJsonParse(event.body);
-  if (!body) {
+  // safeJsonParse returns { ok, data } on success or { ok: false, error } on failure.
+  // Do NOT treat the wrapper object as the body — use parseResult.data.
+  const parseResult = safeJsonParse(event.body);
+  if (!parseResult.ok) {
+    console.log(`[teacher-sync-observations] [${requestId}] Invalid JSON: ${parseResult.error}`);
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { entries } = body;
+  const { entries } = parseResult.data;
   if (!Array.isArray(entries) || entries.length === 0) {
     return jsonResponse(event, 400, { ok: false, error: 'entries must be a non-empty array' }, {}, requestId);
   }

@@ -295,12 +295,27 @@
           console.log('[tc-observation] Batch sync succeeded:', result.synced, 'synced,', result.failed?.length || 0, 'failed');
         }
       } else if (response.status === 400) {
-        // Client-side data issue — log details and stop retrying these entries
         const errBody = await response.json().catch(() => ({}));
-        console.error('[tc-observation] Batch sync rejected (400):', errBody);
-        // Mark as synced to prevent infinite retry loop on bad data
-        for (const entry of entries) {
-          markSynced(entry._saved_at, entry.student_code, entry._goal_code);
+        // Server-side envelope/parse errors mean the server couldn't process the
+        // request at all — do NOT mark entries as synced, leave them queued for retry.
+        const SERVER_SIDE_ERRORS = [
+          'entries must be a non-empty array',
+          'Invalid JSON in request body',
+          'Content-Type must be application/json',
+          'Request body too large',
+          'Unauthorized',
+          'Service unavailable',
+          'Server not configured',
+        ];
+        if (errBody.error && SERVER_SIDE_ERRORS.includes(errBody.error)) {
+          console.error('[tc-observation] Batch sync rejected (400) — server-side error, keeping entries queued for retry:', errBody);
+        } else {
+          // Genuine per-entry validation failure — mark entries as synced to prevent
+          // infinite retry loop on permanently-bad data.
+          console.error('[tc-observation] Batch sync rejected (400) — entry validation error, discarding:', errBody);
+          for (const entry of entries) {
+            markSynced(entry._saved_at, entry.student_code, entry._goal_code);
+          }
         }
       } else {
         console.warn('[tc-observation] Batch sync request failed:', response.status);
