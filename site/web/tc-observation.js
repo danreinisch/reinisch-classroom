@@ -55,13 +55,27 @@
   border-bottom: 1px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
 }
-.obs-tray-title { font-weight: 700; font-size: 14px; flex: 1; }
+.obs-tray-title { font-weight: 700; font-size: 14px; flex: 1; display: flex; align-items: center; gap: 4px; }
 .obs-tray-close-btn {
   padding: 4px; border: none; background: none;
   color: rgba(255,255,255,0.5); cursor: pointer;
   border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
 }
 .obs-tray-close-btn:hover { background: rgba(255,255,255,0.08); color: var(--rc-ink, #e8edf4); }
+.obs-tray-nav-btn {
+  padding: 2px 6px; border: none; background: none;
+  color: rgba(255,255,255,0.5); cursor: pointer;
+  border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.obs-tray-nav-btn:hover { background: rgba(255,255,255,0.08); color: var(--rc-ink, #e8edf4); }
+.obs-tray-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.obs-tray-today-btn {
+  padding: 2px 8px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); cursor: pointer;
+  border-radius: 6px; font-size: 11px; margin-left: 2px;
+}
+.obs-tray-today-btn:hover { background: rgba(255,255,255,0.12); }
 .obs-tray-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
 .obs-tray-empty { padding: 28px 0; text-align: center; color: rgba(255,255,255,0.35); font-size: 13px; }
 .obs-tray-footer {
@@ -194,6 +208,17 @@
       + String(d.getDate()).padStart(2, '0');
   }
 
+  function isWeekend(date) {
+    const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
+    return d.getDay() === 0 || d.getDay() === 6; // Sun=0, Sat=6
+  }
+
+  function addDays(dateString, days) {
+    const d = new Date(dateString + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   // ─── State ────────────────────────────────────────────────────────────────
   let allGoals = [];
   let allStudents = [];
@@ -201,9 +226,10 @@
   let trayEl = null;
   let trayBackdropEl = null;
   let isTrayOpen = false;
-  // Set of "studentCode|goalCode|date" for goals recorded today (populated from Supabase on init)
-  let todayRecordedSet = new Set();
-  let todayRecordedDate = null;
+  // Map of date => Set<"studentCode|goalCode|date"> (populated from Supabase per date)
+  const recordedByDate = new Map();
+  let todayRecordedDate = null; // tracks the last date we fetched today's Supabase entries
+  let currentTrayDate = null; // the date currently being viewed in the tray
 
   // ─── localStorage Queue ───────────────────────────────────────────────────
   const QUEUE_KEY = 'rc_obs_pending';
@@ -295,12 +321,25 @@
           console.log('[tc-observation] Batch sync succeeded:', result.synced, 'synced,', result.failed?.length || 0, 'failed');
         }
       } else if (response.status === 400) {
-        // Client-side data issue — log details and stop retrying these entries
         const errBody = await response.json().catch(() => ({}));
         console.error('[tc-observation] Batch sync rejected (400):', errBody);
-        // Mark as synced to prevent infinite retry loop on bad data
-        for (const entry of entries) {
-          markSynced(entry._saved_at, entry.student_code, entry._goal_code);
+        // Envelope-level errors (server/auth/parse issues) — leave entries queued for retry
+        const ENVELOPE_ERRORS = new Set([
+          'entries must be a non-empty array',
+          'Invalid JSON in request body',
+          'Content-Type must be application/json',
+          'Request body too large',
+          'Unauthorized',
+          'Service unavailable',
+          'Server not configured',
+        ]);
+        if (!ENVELOPE_ERRORS.has(errBody.error)) {
+          // Per-entry rejection — mark as synced to prevent infinite retry
+          for (const entry of entries) {
+            markSynced(entry._saved_at, entry.student_code, entry._goal_code);
+          }
+        } else {
+          console.warn('[tc-observation] Envelope error — keeping entries queued for retry:', errBody.error);
         }
       } else {
         console.warn('[tc-observation] Batch sync request failed:', response.status);
@@ -313,8 +352,9 @@
 
   // ─── Duplicate Check (date-only, no period label) ─────────────────────────
   function isAlreadyRecorded(studentCode, goalCode, date) {
-    // Check Supabase pre-load set first (keyed with date to avoid midnight staleness)
-    if (todayRecordedSet.has(`${studentCode}|${goalCode}|${date}`)) return true;
+    // Check Supabase pre-load map first (keyed with date to avoid midnight staleness)
+    const dateSet = recordedByDate.get(date);
+    if (dateSet && dateSet.has(`${studentCode}|${goalCode}|${date}`)) return true;
     // Then check localStorage queue
     const queue = readQueue();
     return queue.some(e =>
@@ -381,11 +421,11 @@
   }
 
   // ─── Save Observation ─────────────────────────────────────────────────────
-  async function saveObservation(goal, responseData, noteText, saveIndicatorEl, onSave) {
+  async function saveObservation(goal, responseData, noteText, saveIndicatorEl, onSave, date) {
     const category = goal.observation_config?.category;
     const value = calcValue(category, responseData);
     const notes = buildObservationNotes(category, responseData, noteText);
-    const date = todayStr();
+    if (!date) date = todayStr();
 
     console.log(
       '[tc-observation] saveObservation: goal=', goal.code,
@@ -406,8 +446,9 @@
     };
 
     replaceOrPushToQueue(queueEntry);
-    // Mark in the recorded set so future checks reflect this immediately
-    todayRecordedSet.add(`${goal.student_code}|${goal.code}|${date}`);
+    // Mark in the recorded map so future checks reflect this immediately
+    if (!recordedByDate.has(date)) recordedByDate.set(date, new Set());
+    recordedByDate.get(date).add(`${goal.student_code}|${goal.code}|${date}`);
     if (onSave) onSave();
 
     // Attempt server-side save via Netlify function (uses service role key, bypasses RLS)
@@ -495,7 +536,7 @@
   // All 4 forms take (goal, cardEl, saveIndicatorEl, preRecorded, onSave)
   // periodLabel has been removed — we now use date-only dedup.
 
-  function renderSessionOutcomeForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
+  function renderSessionOutcomeForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
     const config = goal.observation_config || {};
     const container = document.createElement('div');
 
@@ -543,7 +584,7 @@
         btn.classList.add('active');
         btn.setAttribute('aria-checked', 'true');
         selectedResponse = response;
-        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave, date);
       });
       row.appendChild(btn);
     });
@@ -570,7 +611,7 @@
     noteInput.placeholder = 'Optional note…';
     noteInput.addEventListener('change', async () => {
       if (selectedResponse) {
-        await saveObservation(goal, { response: selectedResponse }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response: selectedResponse }, noteInput.value, saveIndicatorEl, onSave, date);
       }
     });
     formWrapper.appendChild(noteInput);
@@ -581,7 +622,7 @@
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, date);
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'session_outcome') {
           const matchingBtn = row.querySelector(`[data-response="${parsed.rawData}"]`);
@@ -603,7 +644,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderTallyForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
+  function renderTallyForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
     const container = document.createElement('div');
 
     let badgeEl = null;
@@ -653,7 +694,7 @@
       if (o > 0) {
         const pct = Math.round((s / o) * 100);
         resultEl.textContent = `${pct}%`;
-        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave, date);
       } else {
         resultEl.textContent = '';
       }
@@ -686,7 +727,7 @@
         noOppBtns.querySelectorAll('.obs-response-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         noOppResponse = response;
-        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response }, noteInput.value, saveIndicatorEl, onSave, date);
       });
       noOppBtns.appendChild(btn);
     });
@@ -704,9 +745,9 @@
       const s = Number(succInput.value) || 0;
       const o = Number(oppInput.value) || 0;
       if (noOppResponse) {
-        await saveObservation(goal, { response: noOppResponse }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { response: noOppResponse }, noteInput.value, saveIndicatorEl, onSave, date);
       } else if (o > 0) {
-        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { successful: s, opportunities: o }, noteInput.value, saveIndicatorEl, onSave, date);
       }
     });
     formWrapper.appendChild(noteInput);
@@ -717,7 +758,7 @@
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, date);
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'tally') {
           const parts = parsed.rawData.split('/');
@@ -737,7 +778,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderPromptCountForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
+  function renderPromptCountForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
     const config = goal.observation_config || {};
     const maxPrompts = config.target_max_prompts ?? 2;
     const container = document.createElement('div');
@@ -779,7 +820,7 @@
         selectedCount = numVal;
         statusEl.textContent = `Target: ${maxPrompts} or fewer prompts`;
         statusEl.style.color = numVal <= maxPrompts ? '#22c55e' : '#ef4444';
-        await saveObservation(goal, { promptCount: numVal }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { promptCount: numVal }, noteInput.value, saveIndicatorEl, onSave, date);
       });
       row.appendChild(btn);
     });
@@ -792,7 +833,7 @@
     noteInput.placeholder = 'Optional note…';
     noteInput.addEventListener('change', async () => {
       if (selectedCount !== null) {
-        await saveObservation(goal, { promptCount: selectedCount }, noteInput.value, saveIndicatorEl, onSave);
+        await saveObservation(goal, { promptCount: selectedCount }, noteInput.value, saveIndicatorEl, onSave, date);
       }
     });
     formWrapper.appendChild(noteInput);
@@ -803,7 +844,7 @@
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, date);
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'prompt_count') {
           const preCount = parseInt(parsed.rawData, 10);
@@ -828,7 +869,7 @@
     cardEl.appendChild(container);
   }
 
-  function renderBehaviorChecklistForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave) {
+  function renderBehaviorChecklistForm(goal, cardEl, saveIndicatorEl, preRecorded, onSave, date) {
     const config = goal.observation_config || {};
     const subBehaviors = Array.isArray(config.sub_behaviors) ? config.sub_behaviors : [];
     const container = document.createElement('div');
@@ -875,7 +916,8 @@
         { checkedBehaviors: checkedStates, subBehaviors },
         noteInput.value,
         saveIndicatorEl,
-        onSave
+        onSave,
+        date
       );
     };
 
@@ -908,7 +950,8 @@
         { response: 'not_addressed', checkedBehaviors: checkedStates, subBehaviors },
         noteInput.value,
         saveIndicatorEl,
-        onSave
+        onSave,
+        date
       );
     });
     formWrapper.appendChild(notAddressedBtn);
@@ -926,7 +969,7 @@
       editBtn.addEventListener('click', () => {
         badgeEl.style.display = 'none';
         formWrapper.style.display = '';
-        const queueEntry = getQueueEntry(goal.student_code, goal.code, todayStr());
+        const queueEntry = getQueueEntry(goal.student_code, goal.code, date);
         const parsed = queueEntry ? parseObservationNotes(queueEntry.notes) : null;
         if (parsed && parsed.category === 'checklist') {
           if (parsed.rawData === 'not_addressed') {
@@ -996,26 +1039,27 @@
     const saveIndicatorEl = document.createElement('div');
     saveIndicatorEl.className = 'obs-save-indicator';
 
-    // onSave callback — updates card status and collapses if newly recorded
+    // onSave callback — updates card status; only auto-collapses for session_outcome
     const onSave = () => {
       const nowRecorded = isAlreadyRecorded(goal.student_code, goal.code, date);
       if (nowRecorded && !statusBadge.innerHTML) {
         statusBadge.innerHTML = OBS_CHECK_SVG + ' Recorded';
       }
-      if (nowRecorded) {
+      // Only auto-collapse for session_outcome; multi-input categories stay expanded
+      if (nowRecorded && category === 'session_outcome') {
         applyExpanded(false);
       }
       onAnyRecorded();
     };
 
     if (category === 'session_outcome') {
-      renderSessionOutcomeForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+      renderSessionOutcomeForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
     } else if (category === 'tally') {
-      renderTallyForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+      renderTallyForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
     } else if (category === 'prompt_count') {
-      renderPromptCountForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+      renderPromptCountForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
     } else if (category === 'behavior_checklist') {
-      renderBehaviorChecklistForm(goal, body, saveIndicatorEl, isRecorded, onSave);
+      renderBehaviorChecklistForm(goal, body, saveIndicatorEl, isRecorded, onSave, date);
     } else {
       const unknownMsg = document.createElement('div');
       unknownMsg.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.4);padding:4px 0;';
@@ -1091,7 +1135,7 @@
     const badge = trayIconEl.querySelector('.obs-tray-badge');
     if (!badge) return;
 
-    if (allGoals.length === 0) {
+    if (allGoals.length === 0 || isWeekend(new Date())) {
       badge.style.display = 'none';
       return;
     }
@@ -1114,8 +1158,7 @@
   function openTray() {
     if (isTrayOpen) return;
     isTrayOpen = true;
-
-    const date = todayStr();
+    currentTrayDate = todayStr(); // reset to today on each open
 
     // Semi-transparent backdrop — click outside closes tray
     trayBackdropEl = document.createElement('div');
@@ -1137,13 +1180,37 @@
     const header = document.createElement('div');
     header.className = 'obs-tray-header';
 
-    const title = document.createElement('div');
-    title.className = 'obs-tray-title';
-    // Parse today's date string (YYYY-MM-DD) to build the display title consistently
-    const [yyyy, mm, dd] = date.split('-').map(Number);
-    const dateDisplay = new Date(yyyy, mm - 1, dd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    title.innerHTML = OBS_CLIPBOARD_SVG + ' <span>Observation Goals — ' + escapeHtml(dateDisplay) + '</span>';
-    title.querySelector('svg').style.cssText = 'vertical-align:middle;margin-right:6px;opacity:0.7;';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'obs-tray-title';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'obs-tray-nav-btn tc-btn';
+    prevBtn.setAttribute('aria-label', 'Previous day');
+    prevBtn.textContent = '◀';
+
+    const titleIconEl = document.createElement('span');
+    titleIconEl.innerHTML = OBS_CLIPBOARD_SVG;
+    titleIconEl.querySelector('svg').style.cssText = 'vertical-align:middle;margin-right:4px;opacity:0.7;';
+
+    const titleSpan = document.createElement('span');
+
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'obs-tray-nav-btn tc-btn';
+    nextBtn.setAttribute('aria-label', 'Next day');
+    nextBtn.textContent = '▶';
+
+    const todayBtn = document.createElement('button');
+    todayBtn.type = 'button';
+    todayBtn.className = 'obs-tray-today-btn tc-btn';
+    todayBtn.textContent = 'Today';
+
+    titleEl.appendChild(prevBtn);
+    titleEl.appendChild(titleIconEl);
+    titleEl.appendChild(titleSpan);
+    titleEl.appendChild(nextBtn);
+    titleEl.appendChild(todayBtn);
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'obs-tray-close-btn tc-btn';
@@ -1151,44 +1218,96 @@
     closeBtn.innerHTML = OBS_CLOSE_SVG;
     closeBtn.addEventListener('click', closeTray);
 
-    header.appendChild(title);
+    header.appendChild(titleEl);
     header.appendChild(closeBtn);
     trayEl.appendChild(header);
 
     // Body (scrollable)
     const bodyEl = document.createElement('div');
     bodyEl.className = 'obs-tray-body';
-
-    if (allGoals.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'obs-tray-empty';
-      empty.textContent = 'No observation goals configured for your students.';
-      bodyEl.appendChild(empty);
-    } else {
-      const onAnyRecorded = () => {
-        updateTrayBadge();
-        updateFooterText();
-      };
-      bodyEl.appendChild(buildTrayContent(date, onAnyRecorded));
-    }
     trayEl.appendChild(bodyEl);
 
     // Footer
     const footerEl = document.createElement('div');
     footerEl.className = 'obs-tray-footer';
+    trayEl.appendChild(footerEl);
+
+    document.body.appendChild(trayEl);
+
+    // ── Render helpers ──
+    const getDateDisplay = (d) => {
+      const [y, m, day] = d.split('-').map(Number);
+      return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    };
+
+    const updateTitle = () => {
+      titleSpan.textContent = 'Observation Goals \u2014 ' + getDateDisplay(currentTrayDate);
+    };
+
+    const updateNavButtons = () => {
+      nextBtn.disabled = currentTrayDate >= todayStr();
+      todayBtn.style.display = currentTrayDate !== todayStr() ? '' : 'none';
+    };
+
     const updateFooterText = () => {
+      if (isWeekend(currentTrayDate)) {
+        footerEl.textContent = '';
+        return;
+      }
       const total = allGoals.length;
-      const recorded = total - countUnrecorded(date);
+      const recorded = total - countUnrecorded(currentTrayDate);
       if (recorded >= total && total > 0) {
-        footerEl.innerHTML = OBS_CHECK_SVG + ` <span style="color:#22c55e;">${recorded} of ${total} recorded — all done!</span>`;
+        footerEl.innerHTML = OBS_CHECK_SVG + ` <span style="color:#22c55e;">${recorded} of ${total} recorded \u2014 all done!</span>`;
       } else {
         footerEl.textContent = total > 0 ? `${recorded} of ${total} recorded` : '';
       }
     };
-    updateFooterText();
-    trayEl.appendChild(footerEl);
 
-    document.body.appendChild(trayEl);
+    const onAnyRecorded = () => {
+      updateTrayBadge();
+      updateFooterText();
+    };
+
+    const renderBody = () => {
+      bodyEl.innerHTML = '';
+      if (isWeekend(currentTrayDate)) {
+        const empty = document.createElement('div');
+        empty.className = 'obs-tray-empty';
+        empty.textContent = 'No observations scheduled on weekends. Use the arrows to navigate to a weekday.';
+        bodyEl.appendChild(empty);
+      } else if (allGoals.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'obs-tray-empty';
+        empty.textContent = 'No observation goals configured for your students.';
+        bodyEl.appendChild(empty);
+      } else {
+        bodyEl.appendChild(buildTrayContent(currentTrayDate, onAnyRecorded));
+      }
+      updateFooterText();
+    };
+
+    const navigateTo = async (newDate) => {
+      currentTrayDate = newDate;
+      updateTitle();
+      updateNavButtons();
+      if (!isWeekend(newDate) && !recordedByDate.has(newDate)) {
+        bodyEl.innerHTML = '<div class="obs-tray-empty">Loading\u2026</div>';
+        await loadRecordedEntriesForDate(newDate);
+      }
+      renderBody();
+    };
+
+    prevBtn.addEventListener('click', () => { navigateTo(addDays(currentTrayDate, -1)); });
+    nextBtn.addEventListener('click', () => {
+      if (currentTrayDate >= todayStr()) return;
+      navigateTo(addDays(currentTrayDate, 1));
+    });
+    todayBtn.addEventListener('click', () => { navigateTo(todayStr()); });
+
+    // Initial render
+    updateTitle();
+    updateNavButtons();
+    renderBody();
 
     // Keyboard: Escape closes tray; Tab stays within tray
     trayEl.addEventListener('keydown', (e) => {
@@ -1277,25 +1396,29 @@
       const obsTypeGoals = rawGoals.filter(g => g.measurement_type === 'Observation');
       const withConfig = obsTypeGoals.filter(g => g.observation_config != null);
 
-      allGoals = withConfig;
-      allStudents = students || [];
+      // S027 has exited the observation caseload — exclude from tray to avoid phantom entries.
+      // Revisit if the student re-enters the observation programme.
+      const EXCLUDED_STUDENT_CODES = new Set(['S027']);
+      allGoals = withConfig.filter(g => !EXCLUDED_STUDENT_CODES.has(g.student_code));
+      allStudents = (students || []).filter(s => !EXCLUDED_STUDENT_CODES.has(s.code));
 
       console.log(
         '[tc-observation] loadData: total goals=', rawGoals.length,
         'observation=', obsTypeGoals.length,
-        'with config=', withConfig.length
+        'with config=', withConfig.length,
+        'after exclusions=', allGoals.length
       );
     } catch (err) {
       console.warn('[tc-observation] loadData error:', err.message);
     }
   }
 
-  // ─── Pre-load Today's Supabase Entries ────────────────────────────────────
-  // Populates todayRecordedSet so the tray accurately reflects recorded state
+  // ─── Load Recorded Entries from Supabase (per date) ─────────────────────
+  // Populates recordedByDate so the tray accurately reflects recorded state
   // even if localStorage was cleared or the teacher is on a different device.
-  async function loadTodaySupabaseEntries() {
+  async function loadRecordedEntriesForDate(date) {
     if (allGoals.length === 0) return;
-    const date = todayStr();
+    if (!date) date = todayStr();
     try {
       const goalCodes = allGoals.map(g => g.code);
       const entries = await db.listGoalProgress({
@@ -1303,28 +1426,30 @@
         endDate: date,
         goalCodes
       });
+      if (!recordedByDate.has(date)) recordedByDate.set(date, new Set());
+      const dateSet = recordedByDate.get(date);
       let count = 0;
       for (const entry of (entries || [])) {
         if (entry.student_code && entry.goal_code) {
           const key = `${entry.student_code}|${entry.goal_code}|${date}`;
-          if (!todayRecordedSet.has(key)) {
-            todayRecordedSet.add(key);
+          if (!dateSet.has(key)) {
+            dateSet.add(key);
             count++;
           }
         }
       }
-      todayRecordedDate = date;
+      if (date === todayStr()) todayRecordedDate = date;
       if (count > 0) {
-        console.log('[tc-observation] Pre-loaded', count, 'already-recorded goal(s) from Supabase for today');
+        console.log('[tc-observation] Pre-loaded', count, 'already-recorded goal(s) from Supabase for', date);
       }
     } catch (err) {
-      console.warn('[tc-observation] Could not pre-load today\'s Supabase entries:', err.message);
+      console.warn('[tc-observation] Could not pre-load Supabase entries for', date, ':', err.message);
     }
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   await loadData();
-  await loadTodaySupabaseEntries();
+  await loadRecordedEntriesForDate(todayStr());
   await syncQueue();
 
   // Inject the tray icon into the topbar
@@ -1333,15 +1458,15 @@
 
   // Reload data every 5 minutes
   const _dataInterval = setInterval(async () => {
-    // If the date has changed since the last Supabase load, clear the stale set
-    // so midnight-stale entries don't hide newly-required observations.
+    // If the date has changed since the last Supabase load, clear the stale entry
+    // so midnight-stale data doesn't hide newly-required observations.
     if (todayRecordedDate !== null && todayStr() !== todayRecordedDate) {
-      todayRecordedSet = new Set();
+      recordedByDate.delete(todayRecordedDate);
       todayRecordedDate = null;
-      console.log('[tc-observation] New day detected — cleared todayRecordedSet');
+      console.log('[tc-observation] New day detected — cleared stale recorded set');
     }
     await loadData();
-    await loadTodaySupabaseEntries();
+    await loadRecordedEntriesForDate(todayStr());
     await syncQueue();
     updateTrayBadge();
     // If tray is open, refresh its content
