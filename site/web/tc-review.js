@@ -69,8 +69,9 @@
   // Helper to determine score color class based on percentage
   function scoreColorClass(score) {
     if (score == null || isNaN(score)) return "";
-    if (score >= 80) return "rv-score-green";
-    if (score >= 60) return "rv-score-amber";
+    if (score >= 90) return "rv-score-green";
+    if (score >= 80) return "rv-score-blue";
+    if (score >= 70) return "rv-score-amber";
     return "rv-score-red";
   }
 
@@ -875,6 +876,22 @@
       });
     });
 
+    // Preload items for every assignment in the queue so the score preview
+    // (X/Y — Z%) can render on collapsed rows even before a submission is expanded.
+    // getAssignmentItemsForAssignment is memoized via assignmentItemsCache, so this
+    // is a no-op for already-loaded assignments.
+    const uniqueAssignmentIdsInQueue = [...new Set(
+      queue.map(s => resolveAssignmentId(s)).filter(Boolean)
+    )];
+    await Promise.all(
+      uniqueAssignmentIdsInQueue.map(id =>
+        getAssignmentItemsForAssignment(id).catch(err => {
+          console.warn('[tc-review] Preload items failed for assignment', id, err);
+          return [];
+        })
+      )
+    );
+
     // Render each submission as accordion item
     const itemsHtml = await Promise.all(queue.map(submission => 
       renderSubmissionRow(submission)
@@ -920,17 +937,25 @@
     // Score preview for collapsed rows (from cache if available)
     let scorePreview = '';
     const assignmentId = resolveAssignmentId(submission);
-    if (assignmentId && assignmentItemsCache[assignmentId]) {
-      const items = assignmentItemsCache[assignmentId];
-      const answers = submissionAnswersCache[submission.id] || [];
+    const items = assignmentId ? (assignmentItemsCache[assignmentId] || []) : [];
+    const answers = submissionAnswersCache[submission.id] || [];
+
+    // For finalized/reviewed rows, always render a preview using stored scores.
+    if ((status === 'reviewed' || status === 'finalized') && submission.score_total != null) {
+      const totalEarned = (Number(submission.score_auto) || 0) + (Number(submission.score_manual) || 0);
+      const pct = Number(submission.score_total);
+      // Prefer totalMax from items cache; fall back to deriving from earned/pct.
+      let totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
+      if (!totalMax && pct > 0) {
+        totalMax = Math.round((totalEarned / pct) * 100);
+      }
+      if (totalMax > 0) {
+        const cls = scoreColorClass(pct);
+        scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
+      }
+    } else if (items.length > 0) {
       const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
       if (totalMax > 0) {
-        if (submission.review_status === 'reviewed' && submission.score_total != null) {
-          const totalEarned = (Number(submission.score_auto) || 0) + (Number(submission.score_manual) || 0);
-          const pct = Number(submission.score_total);
-          const cls = scoreColorClass(pct);
-          scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
-        } else {
         const constructedItems = items.filter(i => i.answer_type === 'constructed');
         const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
         if (hasUnscored) {
@@ -971,7 +996,6 @@
           const pct = Math.round((totalEarned / totalMax) * 100);
           const cls = scoreColorClass(pct);
           scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
-        }
         }
       }
     }
