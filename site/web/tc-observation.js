@@ -425,7 +425,7 @@
     const category = goal.observation_config?.category;
     const value = calcValue(category, responseData);
     const notes = buildObservationNotes(category, responseData, noteText);
-    if (!date) date = todayStr();
+    if (date == null) date = todayStr();
 
     console.log(
       '[tc-observation] saveObservation: goal=', goal.code,
@@ -1245,6 +1245,7 @@
     };
 
     const updateNavButtons = () => {
+      // YYYY-MM-DD strings compare correctly via lexicographic order (ISO 8601)
       nextBtn.disabled = currentTrayDate >= todayStr();
       todayBtn.style.display = currentTrayDate !== todayStr() ? '' : 'none';
     };
@@ -1418,7 +1419,7 @@
   // even if localStorage was cleared or the teacher is on a different device.
   async function loadRecordedEntriesForDate(date) {
     if (allGoals.length === 0) return;
-    if (!date) date = todayStr();
+    if (date == null) date = todayStr();
     try {
       const goalCodes = allGoals.map(g => g.code);
       const entries = await db.listGoalProgress({
