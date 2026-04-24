@@ -1856,12 +1856,14 @@
 
     // Detect retry/revision mode from re-issued or returned assignment settings
     const retryConfig = instance.settings && instance.settings.retry_config;
-    if (retryConfig && !isReadOnly && Array.isArray(retryConfig.locked_question_ids) && retryConfig.locked_question_ids.length > 0) {
+    const hasLocked = retryConfig && Array.isArray(retryConfig.locked_question_ids) && retryConfig.locked_question_ids.length > 0;
+    const isRevision = retryConfig && retryConfig.revision_mode === true;
+
+    if (retryConfig && !isReadOnly && (hasLocked || isRevision)) {
       assignmentViewerState.isRetryMode = true;
-      assignmentViewerState.retryLockedQuestionIds = new Set(retryConfig.locked_question_ids);
-      // revision_mode: true means this was returned for revision (not a re-issue)
-      assignmentViewerState.isRevisionMode = retryConfig.revision_mode === true;
-      console.log(LOG_PREFIX, 'Retry mode activated from instance retry_config:', retryConfig.locked_question_ids.length, 'locked question(s)', assignmentViewerState.isRevisionMode ? '[revision mode]' : '[re-issue mode]');
+      assignmentViewerState.isRevisionMode = isRevision;
+      assignmentViewerState.retryLockedQuestionIds = new Set(retryConfig.locked_question_ids || []);
+      console.log(LOG_PREFIX, 'Retry mode activated from instance retry_config:', (retryConfig.locked_question_ids || []).length, 'locked question(s)', isRevision ? '[revision mode]' : '[re-issue mode]');
     } else {
       assignmentViewerState.isRetryMode = false;
       assignmentViewerState.isRevisionMode = false;
