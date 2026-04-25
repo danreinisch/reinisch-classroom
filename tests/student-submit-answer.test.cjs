@@ -70,9 +70,12 @@ let fetchHandlers = {};
 
 // Captured request data available for assertions
 let capturedInstancePatch = null;
+let capturedInstancePatches = [];
 let capturedSubAnswers = null;
 let capturedGoalProgressPosts = [];
 let capturedGoalDataPointsPosts = [];
+let capturedSubmissionPatch = null;
+let capturedSubmissionPatches = [];
 let submissionPostCalled = false;
 let submissionGetCalled = false;
 
@@ -88,9 +91,12 @@ function makeOkResponse(data, status = 200) {
 function reset() {
   fetchHandlers = {};
   capturedInstancePatch = null;
+  capturedInstancePatches = [];
   capturedSubAnswers = null;
   capturedGoalProgressPosts = [];
   capturedGoalDataPointsPosts = [];
+  capturedSubmissionPatch = null;
+  capturedSubmissionPatches = [];
   submissionPostCalled = false;
   submissionGetCalled = false;
 }
@@ -121,7 +127,11 @@ global.fetch = async (url, options) => {
   }
 
   if (urlStr.includes('/assignment_instances') && method === 'PATCH') {
-    if (options && options.body) capturedInstancePatch = JSON.parse(options.body);
+    if (options && options.body) {
+      const parsed = JSON.parse(options.body);
+      capturedInstancePatch = parsed;
+      capturedInstancePatches.push(parsed);
+    }
     const h = fetchHandlers.instancePatch;
     return h ? h(urlStr, options) : makeOkResponse([{}]);
   }
@@ -173,6 +183,11 @@ global.fetch = async (url, options) => {
   }
 
   if (urlStr.includes('/submissions') && method === 'PATCH') {
+    if (options && options.body) {
+      const parsed = JSON.parse(options.body);
+      capturedSubmissionPatch = parsed;
+      capturedSubmissionPatches.push(parsed);
+    }
     const h = fetchHandlers.submissionPatch;
     return h ? h(urlStr, options) : makeOkResponse([{}]);
   }
@@ -1245,6 +1260,249 @@ console.log('Running student-submit-answer function unit tests...\n');
     const answer = capturedSubAnswers[0];
     assert.strictEqual(answer.is_correct, false, 'is_correct false when foundCount < min_keywords');
     assert.strictEqual(answer.earned_points, 2, 'Partial credit: 1/3 of 6 pts = 2 pts');
+  })();
+
+  // ── Group: Revision Mode Re-submission ────────────────────────────────────
+  console.log('\n--- Revision Mode Re-submission ---');
+
+  await test('revision-mode re-submit: submission_answers refreshed with new scored_at and answers', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned', // teacher set back to Assigned on "Return for Revision"
+      settings: {
+        retry_config: {
+          revision_mode: true,
+          locked_question_ids: ['q1'],
+          original_answers: { q1: 'A', q2: 'B' },
+          original_score: 50
+        },
+        answers: { q1: 'A', q2: 'C' } // student updated q2 via auto-save
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 1, meta: { correct: 'C' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'C' }, // updated answers
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200, 'Revision re-submit should return 200');
+    assert(capturedSubAnswers, 'submission_answers should be upserted');
+    assert.strictEqual(capturedSubAnswers.length, 2, 'Both MCQ items should be scored');
+    const q2Answer = capturedSubAnswers.find(a => a.raw_answer.value === 'C');
+    assert(q2Answer, 'Updated q2=C should be in submission_answers');
+    assert.strictEqual(q2Answer.is_correct, true, 'q2=C (correct) should now score correctly');
+    // Verify both items are present
+    const q1Answer = capturedSubAnswers.find(a => a.raw_answer.value === 'A');
+    assert(q1Answer, 'q1=A should be in submission_answers');
+    assert.strictEqual(q1Answer.is_correct, true, 'q1=A is correct');
+  })();
+
+  await test('revision-mode re-submit: review_status reset to pending so teacher can re-review', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: [], original_answers: {}, original_score: 0 },
+        answers: { q1: 'B' }
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'B' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'B' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    // The first submission PATCH resets review_status; a second PATCH updates score_auto.
+    const reviewStatusPatch = capturedSubmissionPatches.find(p => p.review_status !== undefined);
+    assert(reviewStatusPatch, 'A submission PATCH with review_status should have been sent');
+    assert.strictEqual(reviewStatusPatch.review_status, 'pending',
+      'review_status must be reset to pending so the teacher sees the re-submission');
+  })();
+
+  await test('revision-mode re-submit: resubmission_count incremented on instance', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      resubmission_count: 0, // starts at 0
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: ['q1'], original_answers: { q1: 'A' }, original_score: 100 },
+        answers: { q1: 'A', q2: 'D' }
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 1, meta: { correct: 'D' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'D' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    // The PATCH to increment resubmission_count is the SECOND patch to assignment_instances
+    // (first is the settings/status update, second is the count increment)
+    const countPatch = capturedInstancePatches.find(p => p.resubmission_count !== undefined);
+    assert(countPatch, 'A PATCH with resubmission_count should have been sent to assignment_instances');
+    assert.strictEqual(countPatch.resubmission_count, 1, 'resubmission_count should be incremented to 1');
+  })();
+
+  await test('revision-mode re-submit: non-auto-scoreable constructed item NOT overwritten (preserves teacher manual grade)', async () => {
+    reset();
+    // Instance has retry_config with revision_mode=true. The original answers include a WP_4 writing
+    // response stored in settings.answers (pre-populated by "Return for Revision").
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: ['q1'], original_answers: { q1: 'A', WP_4: 'student original essay' }, original_score: 50 },
+        answers: { q1: 'A', WP_4: 'student original essay' } // WP_4 in priorAnswers from retry_config pre-population
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } },
+      { id: 'item-wp4', item_ref: 'WP_4', answer_type: 'constructed', points: 5, meta: {} }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' }, // MCQ only — student did NOT change the writing response
+      // No writing_response field → hasWriting is false
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers, 'submission_answers should be upserted');
+    // WP_4 should NOT appear in the upserted rows because it's a non-auto-scoreable
+    // constructed item and isRevisionResubmission=true.
+    const wp4Row = capturedSubAnswers.find(r => r.assignment_item_id === 'item-wp4');
+    assert(!wp4Row, 'WP_4 (non-auto-scoreable constructed item) must NOT be upserted on revision re-submit without new writing_response — preserves teacher manual grade');
+    // q1 should still be scored correctly
+    const q1Row = capturedSubAnswers.find(r => r.assignment_item_id === 'item-1');
+    assert(q1Row, 'q1 MCQ answer should be upserted');
+    assert.strictEqual(q1Row.is_correct, true, 'q1=A should score correctly');
+  })();
+
+  await test('revision-mode re-submit with new writing_response: writing item IS updated', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: [], original_answers: { WP_4: 'old essay' }, original_score: 0 },
+        answers: { WP_4: 'old essay' }
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-wp4', item_ref: 'WP_4', answer_type: 'constructed', points: 5, meta: {} }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      writing_response: 'My improved essay response with much better content.', // student wrote a new response
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers, 'submission_answers should be upserted');
+    const wp4Row = capturedSubAnswers.find(r => r.raw_answer.value === 'My improved essay response with much better content.');
+    assert(wp4Row, 'New writing_response should be upserted when student provides one on revision re-submit');
+  })();
+
+  await test('revision-mode re-submit: score_auto and score_total are recomputed', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: ['q1'], original_answers: { q1: 'A', q2: 'B' }, original_score: 50 },
+        answers: { q1: 'A', q2: 'C' }
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'mcq', points: 1, meta: { correct: 'C' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'C' }, // both correct now
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.ok, true);
+    assert.strictEqual(body.score_total, 100, 'score_total should be 100% when both MCQ are now correct');
+  })();
+
+  await test('first-time submission (no retry_config): review_status NOT set to pending, no resubmission_count increment', async () => {
+    reset();
+    // Standard first-time submission: no retry_config, no existing submission
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]); // no existing submission
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'mcq', points: 1, meta: { correct: 'A' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200, 'First-time submission must still succeed');
+    assert.strictEqual(submissionPostCalled, true, 'First-time submission should POST a new submission record');
+    // No submission PATCH to reset review_status (no existing submission to update)
+    const reviewStatusPatch = capturedSubmissionPatches.find(p => p.review_status !== undefined);
+    assert(!reviewStatusPatch, 'First-time submission should not PATCH review_status');
+    // Only ONE instance PATCH (settings/status) — no second PATCH for resubmission_count
+    const countPatch = capturedInstancePatches.find(p => p.resubmission_count !== undefined);
+    assert(!countPatch, 'First-time submission must NOT increment resubmission_count');
+  })();
+
+  await test('auto-save (submit: false) with retry_config present: still no submission records or resubmission_count change', async () => {
+    reset();
+    setupBasicMocks({}, {
+      status: 'In Progress',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: ['q1'], original_answers: { q1: 'A' }, original_score: 100 },
+        answers: { q1: 'A', q2: 'B' }
+      }
+    });
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: 'A', q2: 'C' },
+      submit: false // auto-save
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200, 'Auto-save should still succeed with retry_config present');
+    assert.strictEqual(submissionGetCalled, false, 'Auto-save must NOT check submissions table');
+    assert.strictEqual(submissionPostCalled, false, 'Auto-save must NOT create a submission record');
+    assert(!capturedSubmissionPatch, 'Auto-save must NOT PATCH submissions');
+    const countPatch = capturedInstancePatches.find(p => p.resubmission_count !== undefined);
+    assert(!countPatch, 'Auto-save must NOT increment resubmission_count');
   })();
 
   console.log('\n✓ All student-submit-answer tests passed!');

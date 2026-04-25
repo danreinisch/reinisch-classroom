@@ -128,7 +128,7 @@ exports.handler = async (event) => {
     const student = students[0];
 
     // Step 2: Verify assignment instance exists and belongs to this student
-    const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,assignment_id,settings,status&id=eq.${encodeURIComponent(instance_id)}`;
+    const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,assignment_id,settings,status,resubmission_count&id=eq.${encodeURIComponent(instance_id)}`;
     
     const instanceResponse = await fetch(instanceUrl, {
       method: 'GET',
@@ -222,9 +222,30 @@ exports.handler = async (event) => {
       const existingSubs = checkSubResponse.ok ? await checkSubResponse.json() : [];
       const existingSubmission = existingSubs && existingSubs[0];
 
+      // Detect whether this is a revision-mode re-submission (teacher used "Return for Revision").
+      // When true, we must also reset review_status to 'pending' and increment resubmission_count
+      // so the teacher sees the re-submission in their review queue.
+      const isRevisionResubmission = !!(
+        existingSubmission &&
+        instance.settings &&
+        instance.settings.retry_config &&
+        instance.settings.retry_config.revision_mode === true
+      );
+
       if (existingSubmission) {
         // Update existing submission instead of creating a duplicate
         const updateSubUrl = `${SUPABASE_URL}/rest/v1/submissions?id=eq.${encodeURIComponent(existingSubmission.id)}`;
+        const subPatchBody = {
+          answers: updatedSettings.answers || answers || {},
+          submitted_at: new Date().toISOString()
+        };
+        // On revision-mode re-submission, reset review_status to 'pending' so the teacher is
+        // prompted to re-review the updated answers. The original status was 'returned' (set by
+        // "Return for Revision"); after the student re-submits we move it back to the normal
+        // pending/auto-finalize queue.
+        if (isRevisionResubmission) {
+          subPatchBody.review_status = 'pending';
+        }
         const updateSubResponse = await fetch(updateSubUrl, {
           method: 'PATCH',
           headers: {
@@ -233,10 +254,7 @@ exports.handler = async (event) => {
             'Content-Type': 'application/json',
             'Prefer': 'return=representation'
           },
-          body: JSON.stringify({
-            answers: updatedSettings.answers || answers || {},
-            submitted_at: new Date().toISOString()
-          })
+          body: JSON.stringify(subPatchBody)
         });
 
         if (!updateSubResponse.ok) {
@@ -244,7 +262,28 @@ exports.handler = async (event) => {
           console.error(`[student-submit-answer] [${requestId}] Submission update failed: ${updateSubResponse.status} - ${errorText}`);
         } else {
           submissionId = existingSubmission.id;
-          console.log(`[student-submit-answer] [${requestId}] Submission updated with ID: ${submissionId}`);
+          console.log(`[student-submit-answer] [${requestId}] Submission updated with ID: ${submissionId}${isRevisionResubmission ? ' [revision re-submission]' : ''}`);
+
+          // Increment resubmission_count on the instance for revision-mode re-submissions.
+          if (isRevisionResubmission) {
+            const rcPatchUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?id=eq.${encodeURIComponent(instance_id)}`;
+            const rcPatch = await fetch(rcPatchUrl, {
+              method: 'PATCH',
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({ resubmission_count: (instance.resubmission_count || 0) + 1 })
+            });
+            if (!rcPatch.ok) {
+              const errText = await rcPatch.text();
+              console.warn(`[student-submit-answer] [${requestId}] resubmission_count increment failed (non-fatal): ${rcPatch.status} - ${errText}`);
+            } else {
+              console.log(`[student-submit-answer] [${requestId}] Incremented resubmission_count to ${(instance.resubmission_count || 0) + 1}`);
+            }
+          }
         }
       } else {
         // Create new submission
@@ -401,6 +440,17 @@ exports.handler = async (event) => {
                     }
                     earnedPoints = isCorrect ? maxPoints : 0;
                   }
+                }
+
+                // On revision-mode re-submissions, skip non-auto-scoreable constructed items
+                // from the MCQ answers loop. These items landed in cumulativeAnswers because
+                // "Return for Revision" pre-populates instance.settings.answers with the
+                // student's original answers (including any written response). Upserting them
+                // here with earned_points=null would silently clear any teacher manual grade.
+                // The hasWriting block below handles them only when the student provides a new
+                // writing_response.
+                if (isRevisionResubmission && item.answer_type === 'constructed' && earnedPoints === null && isCorrect === null) {
+                  continue;
                 }
 
                 subAnswers.push({
