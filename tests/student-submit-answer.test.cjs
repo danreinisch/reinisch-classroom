@@ -1364,7 +1364,7 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(countPatch.resubmission_count, 1, 'resubmission_count should be incremented to 1');
   })();
 
-  await test('revision-mode re-submit: non-auto-scoreable constructed item NOT overwritten (preserves teacher manual grade)', async () => {
+  await test('revision-mode re-submit: non-auto-scoreable constructed item NOT overwritten', async () => {
     reset();
     // Instance has retry_config with revision_mode=true. The original answers include a WP_4 writing
     // response stored in settings.answers (pre-populated by "Return for Revision").

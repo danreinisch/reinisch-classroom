@@ -39,9 +39,10 @@ LEFT JOIN submission_answers sa ON sa.submission_id = sub.id
 WHERE
   -- Instance was returned for revision (has revision_mode flag)
   (ai.settings -> 'retry_config' ->> 'revision_mode')::boolean = true
-  -- submitted_at advanced past the last scored_at, meaning re-scoring never ran
-  AND sub.submitted_at > COALESCE(MAX(sa.scored_at), '1970-01-01'::timestamptz)
 GROUP BY ai.id, s.code, sub.id, sub.submitted_at, sub.score_auto, sub.score_total, sub.review_status, ai.settings, ai.resubmission_count
+HAVING
+  -- submitted_at advanced past the last scored_at, meaning re-scoring never ran
+  sub.submitted_at > COALESCE(MAX(sa.scored_at), '1970-01-01'::timestamptz)
 ORDER BY sub.submitted_at DESC;
 
 -- ─── STEP 2: TARGETED FIX ────────────────────────────────────────────────────
