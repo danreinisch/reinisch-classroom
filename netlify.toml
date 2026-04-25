@@ -9,6 +9,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."scheduled-auto-release"]
+  schedule = "*/10 * * * *"
+
 # Global security headers for all routes
 [[headers]]
   for = "/*"
