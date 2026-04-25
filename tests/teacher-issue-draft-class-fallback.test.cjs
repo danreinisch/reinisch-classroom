@@ -40,6 +40,7 @@ const validToken = makeTeacherToken(SESSION_SECRET, { teacherId: TEACHER_UUID })
 // ── Minimal draft body ────────────────────────────────────────────────────────
 
 const DRAFT = {
+  id: 'draft-class-fallback-001',
   title: 'Week 10 Test',
   className: 'Language Arts 3 SC',
   // Minimal required fields so that the function gets past draft validation
@@ -112,6 +113,9 @@ global.fetch = async (url, opts) => {
 function okJson(data) {
   return { ok: true, status: 200, json: async () => data, text: async () => JSON.stringify(data) };
 }
+function noContent() {
+  return { ok: true, status: 204, json: async () => ({}), text: async () => '' };
+}
 function failStatus(status) {
   return { ok: false, status, json: async () => ({}), text: async () => `error ${status}` };
 }
@@ -140,10 +144,10 @@ async function test(name, fn) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-// Number of stub 500 responses appended after the critical calls to absorb any
-// remaining DB/storage fetch calls that the function makes after class lookup.
-// The exact count doesn't matter — tests assert on named flags, not queue length.
-const REMAINING_CALL_STUBS = Array.from({ length: 20 }, () => () => failStatus(500));
+// Number of stub 500 responses appended after the explicit calls to absorb any
+// unexpected remaining fetch calls and fail loudly (small count so a future
+// added fetch call breaks the test noticeably instead of being silently absorbed).
+const REMAINING_CALL_STUBS = Array.from({ length: 5 }, () => () => failStatus(500));
 
 (async () => {
 
@@ -193,6 +197,18 @@ await test('uses fallback name-only query when teacher-scoped query returns empt
     () => okJson([]),   // enrollments fallback
     // Assignment duplicate check
     () => okJson([]),
+    // Assignment create — returns the new assignment so the function can proceed to PATCH
+    () => okJson([{ id: 'assignment-fb-001', title: 'Week 10 Test' }]),
+    // Trailing teacher_drafts PATCH from PR #1296 — issued_at stamp
+    (url, opts) => {
+      assert.strictEqual(opts.method, 'PATCH', 'Expected PATCH for issued_at stamp');
+      assert.ok(url.includes('teacher_drafts'), 'PATCH URL should target teacher_drafts');
+      assert.ok(url.includes('id=eq.draft-class-fallback-001'), 'PATCH should target draft by ID');
+      const body = JSON.parse(opts.body);
+      assert.strictEqual(body.auto_release_status, 'issued', 'PATCH should set auto_release_status=issued');
+      assert.ok(body.issued_at && !isNaN(new Date(body.issued_at).getTime()), 'issued_at should be a valid ISO timestamp');
+      return noContent();
+    },
     // Remaining calls — let them fail softly; we only care about the class lookup above
     ...REMAINING_CALL_STUBS,
   ];
@@ -231,6 +247,22 @@ await test('does NOT trigger fallback when teacher-scoped query returns the clas
       }
       return okJson([]);
     },
+    // 3. enrollments fallback → empty
+    () => okJson([]),
+    // 4. Duplicate check → no existing assignment
+    () => okJson([]),
+    // 5. Assignment create → success
+    () => okJson([{ id: 'assignment-no-fallback-001', title: 'Week 10 Test' }]),
+    // Trailing teacher_drafts PATCH from PR #1296 — issued_at stamp
+    (url, opts) => {
+      assert.strictEqual(opts.method, 'PATCH', 'Expected PATCH for issued_at stamp');
+      assert.ok(url.includes('teacher_drafts'), 'PATCH URL should target teacher_drafts');
+      assert.ok(url.includes('id=eq.draft-class-fallback-001'), 'PATCH should target draft by ID');
+      const body = JSON.parse(opts.body);
+      assert.strictEqual(body.auto_release_status, 'issued', 'PATCH should set auto_release_status=issued');
+      assert.ok(body.issued_at && !isNaN(new Date(body.issued_at).getTime()), 'issued_at should be a valid ISO timestamp');
+      return noContent();
+    },
     ...REMAINING_CALL_STUBS,
   ];
 
@@ -254,6 +286,24 @@ await test('auto-creates class when neither teacher-scoped nor fallback query fi
       assert.strictEqual(opts.method, 'POST', 'Expected POST to auto-create class');
       autoCreateCalled = true;
       return okJson([{ id: 'new-class-id', name: 'Language Arts 3 SC', teacher_id: TEACHER_UUID }]);
+    },
+    // 4. class_enrollments → empty
+    () => okJson([]),
+    // 5. enrollments fallback → empty
+    () => okJson([]),
+    // 6. Duplicate check → no existing assignment
+    () => okJson([]),
+    // 7. Assignment create → success
+    () => okJson([{ id: 'assignment-autocreate-001', title: 'Week 10 Test' }]),
+    // Trailing teacher_drafts PATCH from PR #1296 — issued_at stamp
+    (url, opts) => {
+      assert.strictEqual(opts.method, 'PATCH', 'Expected PATCH for issued_at stamp');
+      assert.ok(url.includes('teacher_drafts'), 'PATCH URL should target teacher_drafts');
+      assert.ok(url.includes('id=eq.draft-class-fallback-001'), 'PATCH should target draft by ID');
+      const body = JSON.parse(opts.body);
+      assert.strictEqual(body.auto_release_status, 'issued', 'PATCH should set auto_release_status=issued');
+      assert.ok(body.issued_at && !isNaN(new Date(body.issued_at).getTime()), 'issued_at should be a valid ISO timestamp');
+      return noContent();
     },
     ...REMAINING_CALL_STUBS,
   ];
