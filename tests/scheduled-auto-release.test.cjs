@@ -85,12 +85,16 @@ require.cache[require.resolve('../netlify/functions/_lib/auth')] = {
   },
 };
 
-// Mock _lib/supa — lookupActiveTeacherId always returns TEACHER_UUID
+// Mock _lib/supa — lookupActiveTeacherId and lookupTeacherIdByUsername are
+// overridable per test via the mock* variables below.
+let mockLookupTeacherIdByUsernameFn = async () => null; // default: returns null → falls back
+let mockLookupActiveTeacherIdFn = async () => TEACHER_UUID; // default: returns TEACHER_UUID
+
 require.cache[require.resolve('../netlify/functions/_lib/supa')] = {
   exports: {
     getSupabaseConfig: () => ({ url: 'https://test.supabase.co', key: 'test-service-key' }),
-    lookupActiveTeacherId: async () => TEACHER_UUID,
-    lookupTeacherIdByUsername: async () => null, // returns null → falls back to lookupActiveTeacherId
+    lookupActiveTeacherId: async () => mockLookupActiveTeacherIdFn(),
+    lookupTeacherIdByUsername: async (u) => mockLookupTeacherIdByUsernameFn(u),
     SUPABASE_URL: 'https://test.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
   },
@@ -352,6 +356,83 @@ async function test(name, fn) {
       erroredPatchBody.auto_release_error.length <= 500,
       `Error should be truncated to ≤500 chars, got ${erroredPatchBody.auto_release_error.length}`
     );
+  });
+
+  // ── Test 7: lookupTeacherIdByUsername resolves UUID directly (happy path) ─
+  await test('uses lookupTeacherIdByUsername result directly when it returns a UUID', async () => {
+    const row = makeRow();
+    let issueDraftCoreParams = null;
+
+    mockLookupTeacherIdByUsernameFn = async (u) => {
+      assert.strictEqual(u, row.teacher, "Should look up the draft's teacher username");
+      return TEACHER_UUID;
+    };
+    // If the fallback is called, it should fail the test
+    mockLookupActiveTeacherIdFn = async () => {
+      throw new Error('lookupActiveTeacherId should not be called when username lookup succeeds');
+    };
+
+    mockIssueDraftCoreFn = async (params) => {
+      issueDraftCoreParams = params;
+      return { ok: true, assignment_id: ASSIGNMENT_ID, issued_count: 3 };
+    };
+
+    _fetchQueue = [
+      () => okJson([row]),
+      () => noContent(), // stampAttempted
+      () => noContent(), // markIssued
+    ];
+
+    const resp = await handler({});
+    const body = JSON.parse(resp.body);
+
+    assert.strictEqual(body.ok, true);
+    assert.strictEqual(body.issued, 1);
+    assert.strictEqual(body.errored, 0);
+    assert.ok(issueDraftCoreParams, 'issueDraftCore should have been called');
+    assert.strictEqual(issueDraftCoreParams.teacherUUID, TEACHER_UUID);
+
+    // Reset to defaults for subsequent tests
+    mockLookupTeacherIdByUsernameFn = async () => null;
+    mockLookupActiveTeacherIdFn = async () => TEACHER_UUID;
+  });
+
+  // ── Test 8: both lookups return null → draft marked errored ───────────────
+  await test('marks draft errored when both teacher lookups return null', async () => {
+    const row = makeRow();
+    let patchBodies = [];
+
+    mockLookupTeacherIdByUsernameFn = async () => null;
+    mockLookupActiveTeacherIdFn = async () => null;
+
+    mockIssueDraftCoreFn = async () => {
+      throw new Error('issueDraftCore should not be called when teacher UUID cannot be resolved');
+    };
+
+    _fetchQueue = [
+      () => okJson([row]),
+      () => noContent(), // stampAttempted
+      (_url, opts) => { patchBodies.push(JSON.parse(opts.body)); return noContent(); }, // markErrored
+    ];
+
+    const resp = await handler({});
+    const body = JSON.parse(resp.body);
+
+    assert.strictEqual(body.ok, true);
+    assert.strictEqual(body.attempted, 1);
+    assert.strictEqual(body.issued, 0);
+    assert.strictEqual(body.errored, 1);
+
+    assert.strictEqual(patchBodies.length, 1, 'markErrored PATCH should have been called');
+    assert.strictEqual(patchBodies[0].auto_release_status, 'errored');
+    assert.ok(
+      patchBodies[0].auto_release_error.includes(row.teacher),
+      `Error message should mention the teacher username, got: "${patchBodies[0].auto_release_error}"`
+    );
+
+    // Reset to defaults for subsequent tests
+    mockLookupTeacherIdByUsernameFn = async () => null;
+    mockLookupActiveTeacherIdFn = async () => TEACHER_UUID;
   });
 
   console.log('\n✓ All scheduled-auto-release tests complete\n');

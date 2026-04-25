@@ -168,11 +168,22 @@ exports.handler = async (_event) => {
         if (!teacherUUID) {
           teacherUUID = await lookupActiveTeacherId();
           if (teacherUUID) {
-            console.warn(`[scheduled-auto-release] [${requestId}] Could not resolve teacher UUID for username "${teacherUsername}", falling back to active teacher: ${teacherUUID}`);
+            console.warn(
+              `[scheduled-auto-release] [${requestId}] Could not resolve teacher UUID for username "${teacherUsername}" (draft ${draftId}) — ` +
+              `falling back to single active teacher: ${teacherUUID}. ` +
+              `This is only safe in single-teacher deployments — add a username value to public.teacher.username to silence this warning.`
+            );
           }
         }
         if (!teacherUUID) {
-          console.warn(`[scheduled-auto-release] [${requestId}] Could not resolve teacher UUID for draft ${draftId}`);
+          const safeUsername = String(teacherUsername || '').slice(0, 100);
+          const errMsg = `Could not resolve teacher UUID for username "${safeUsername}" (draft ${draftId}). ` +
+            `Neither username lookup nor active-teacher fallback returned a result. ` +
+            `Ensure public.teacher has a row with username='${safeUsername}' and active=true.`;
+          console.error(`[scheduled-auto-release] [${requestId}] ${errMsg}`);
+          await markErrored(draftId, errMsg, requestId);
+          errored++;
+          continue;
         }
 
         // Reshape the DB row into the camelCase draft object

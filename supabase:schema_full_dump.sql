@@ -1168,7 +1168,8 @@ CREATE TABLE IF NOT EXISTS "public"."teacher" (
     "last_name" "text",
     "active" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "username" "text"
 );
 
 
@@ -1421,6 +1422,10 @@ CREATE UNIQUE INDEX "unique_class_code" ON "public"."classes" USING "btree" ("co
 
 
 CREATE UNIQUE INDEX "unique_class_name" ON "public"."classes" USING "btree" ("name");
+
+
+
+CREATE UNIQUE INDEX "teacher_username_lower_uidx" ON "public"."teacher" USING "btree" ("lower"("username")) WHERE ("username" IS NOT NULL);
 
 
 
