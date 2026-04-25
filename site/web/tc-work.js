@@ -283,6 +283,14 @@
       span.style.background = "rgba(34,197,94,0.15)";
       span.style.color = "rgba(34,197,94,0.9)";
       span.style.border = "1px solid rgba(34,197,94,0.3)";
+    } else if (d.autoReleaseStatus === 'errored') {
+      span.textContent = "⚠ Auto-release failed";
+      span.style.background = "rgba(239,68,68,0.12)";
+      span.style.color = "rgba(239,68,68,0.9)";
+      span.style.border = "1px solid rgba(239,68,68,0.3)";
+      if (d.autoReleaseError) {
+        span.title = d.autoReleaseError; // SAFETY: title attribute, no HTML injection
+      }
     } else {
       span.textContent = "Draft";
       span.style.background = "rgba(156,163,175,0.15)";
@@ -1755,14 +1763,18 @@
       const remoteDrafts = data.drafts.map(row => ({
         id: row.id,
         title: row.title,
-        className: row.class_name,
-        releaseAt: row.release_at,
-        dueAt: row.due_at,
+        className: row.className !== undefined ? row.className : row.class_name,
+        releaseAt: row.releaseAt !== undefined ? row.releaseAt : row.release_at,
+        dueAt: row.dueAt !== undefined ? row.dueAt : row.due_at,
         notes: row.notes,
         assignment: row.assignment || {},
         mapping: row.mapping || {},
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
+        createdAt: row.createdAt !== undefined ? row.createdAt : row.created_at,
+        updatedAt: row.updatedAt !== undefined ? row.updatedAt : row.updated_at,
+        autoRelease: row.autoRelease || false,
+        issuedAt: row.issuedAt || null,
+        autoReleaseStatus: row.autoReleaseStatus || null,
+        autoReleaseError: row.autoReleaseError || null,
       }));
       
       // Merge: remote wins on conflicts (by updatedAt)

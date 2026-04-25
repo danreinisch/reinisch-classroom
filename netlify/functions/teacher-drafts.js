@@ -79,10 +79,29 @@ exports.handler = async (event) => {
       
       console.log(`[teacher-drafts] [${requestId}] Successfully fetched ${drafts.length} drafts`);
       
+      // Map snake_case DB fields back to camelCase for the client
+      const mappedDrafts = (drafts || []).map(row => ({
+        id: row.id,
+        teacher: row.teacher,
+        title: row.title,
+        className: row.class_name,
+        releaseAt: row.release_at,
+        dueAt: row.due_at,
+        notes: row.notes,
+        assignment: row.assignment,
+        mapping: row.mapping,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        autoRelease: row.auto_release || false,
+        issuedAt: row.issued_at || null,
+        autoReleaseStatus: row.auto_release_status || null,
+        autoReleaseError: row.auto_release_error || null,
+      }));
+
       return jsonResponse(
         event,
         200,
-        { ok: true, drafts: drafts || [] },
+        { ok: true, drafts: mappedDrafts },
         { 'Cache-Control': 'no-store' },
         requestId
       );
@@ -105,6 +124,20 @@ exports.handler = async (event) => {
         return jsonResponse(event, 400, { ok: false, error: 'Missing draft id' }, {}, requestId);
       }
 
+      // Derive auto_release_status from the request fields.
+      // If the teacher is explicitly saving with autoRelease=true and no issuedAt
+      // → reset to 'pending' (intentional teacher action, re-arms errored drafts).
+      // If issuedAt is set → 'issued'.
+      // Otherwise → 'disabled'.
+      let autoReleaseStatus;
+      if (body.issuedAt) {
+        autoReleaseStatus = 'issued';
+      } else if (body.autoRelease) {
+        autoReleaseStatus = 'pending';
+      } else {
+        autoReleaseStatus = 'disabled';
+      }
+
       // Convert from client schema to DB schema
       const dbRow = {
         id: body.id,
@@ -117,7 +150,10 @@ exports.handler = async (event) => {
         assignment: body.assignment || {},
         mapping: body.mapping || {},
         created_at: body.createdAt || new Date().toISOString(),
-        updated_at: body.updatedAt || new Date().toISOString()
+        updated_at: body.updatedAt || new Date().toISOString(),
+        auto_release: !!body.autoRelease,
+        issued_at: body.issuedAt || null,
+        auto_release_status: autoReleaseStatus
       };
 
       console.log(`[teacher-drafts] [${requestId}] Upserting draft: ${body.id}`);
