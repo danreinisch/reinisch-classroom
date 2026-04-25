@@ -124,16 +124,51 @@ exports.handler = async (event) => {
         return jsonResponse(event, 400, { ok: false, error: 'Missing draft id' }, {}, requestId);
       }
 
+      // Fetch the existing row so we can preserve 'errored' status when releaseAt hasn't changed.
+      let existingRow = null;
+      try {
+        const existingUrl = `${SUPABASE_URL}/rest/v1/teacher_drafts?select=auto_release_status,release_at&id=eq.${encodeURIComponent(body.id)}&teacher=eq.${encodeURIComponent(teacher)}&limit=1`;
+        const existingRes = await fetch(existingUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (existingRes.ok) {
+          const rows = await existingRes.json();
+          existingRow = rows[0] || null;
+        }
+      } catch (fetchErr) {
+        // Non-fatal: if we can't fetch the existing row, treat as if it doesn't exist
+        console.warn(`[teacher-drafts] [${requestId}] Could not fetch existing row for status preservation:`, fetchErr.message);
+      }
+
       // Derive auto_release_status from the request fields.
-      // If the teacher is explicitly saving with autoRelease=true and no issuedAt
-      // → reset to 'pending' (intentional teacher action, re-arms errored drafts).
       // If issuedAt is set → 'issued'.
+      // If autoRelease=true and the draft is currently 'errored', only re-arm to 'pending'
+      // when the teacher has changed releaseAt (a clear signal of intentional re-arming).
+      // Otherwise preserve 'errored' so it stays visible and doesn't silently retry.
       // Otherwise → 'disabled'.
       let autoReleaseStatus;
       if (body.issuedAt) {
         autoReleaseStatus = 'issued';
       } else if (body.autoRelease) {
-        autoReleaseStatus = 'pending';
+        if (existingRow && existingRow.auto_release_status === 'errored') {
+          // Normalize both timestamps to compare them reliably across format variants
+          let oldReleaseAt = null;
+          let newReleaseAt = null;
+          try { oldReleaseAt = existingRow.release_at ? new Date(existingRow.release_at).toISOString() : null; } catch (_) { oldReleaseAt = null; }
+          try { newReleaseAt = body.releaseAt ? new Date(body.releaseAt).toISOString() : null; } catch (_) { newReleaseAt = null; }
+          if (oldReleaseAt !== newReleaseAt) {
+            autoReleaseStatus = 'pending';  // teacher changed releaseAt → intentional re-arm
+          } else {
+            autoReleaseStatus = 'errored';  // preserve error state
+          }
+        } else {
+          autoReleaseStatus = 'pending';
+        }
       } else {
         autoReleaseStatus = 'disabled';
       }

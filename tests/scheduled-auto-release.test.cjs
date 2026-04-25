@@ -90,6 +90,7 @@ require.cache[require.resolve('../netlify/functions/_lib/supa')] = {
   exports: {
     getSupabaseConfig: () => ({ url: 'https://test.supabase.co', key: 'test-service-key' }),
     lookupActiveTeacherId: async () => TEACHER_UUID,
+    lookupTeacherIdByUsername: async () => null, // returns null → falls back to lookupActiveTeacherId
     SUPABASE_URL: 'https://test.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
   },
@@ -206,8 +207,8 @@ async function test(name, fn) {
     const issuedPatch = patchBodies[1]; // second PATCH is markIssued
     assert.strictEqual(issuedPatch.auto_release_status, 'issued');
     assert.ok(issuedPatch.issued_at, 'issued_at should be set');
-    assert.strictEqual(issuedPatch.assignment_id, ASSIGNMENT_ID);
     assert.strictEqual(issuedPatch.auto_release_error, null);
+    assert.strictEqual(issuedPatch.assignment_id, undefined, 'assignment_id must NOT be in the markIssued PATCH body (no such column on teacher_drafts)');
   });
 
   // ── Test 2: future draft is not in the query results ────────────────────

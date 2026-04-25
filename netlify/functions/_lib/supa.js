@@ -102,6 +102,34 @@ async function lookupActiveTeacherId() {
   }
 }
 
+/**
+ * Resolve a teacher UUID by username. Returns null if no active teacher matches.
+ * Used by the scheduled auto-release function, where there is no JWT to read teacherId from.
+ * @param {string} username - The teacher's login username to look up.
+ * @returns {Promise<string|null>} teacher UUID, or null if not found or on error
+ */
+async function lookupTeacherIdByUsername(username) {
+  if (!username) return null;
+  const { url, key } = getSupabaseConfig();
+  if (!url || !key) return null;
+  try {
+    const lookupUrl = `${url}/rest/v1/teacher?select=id&username=eq.${encodeURIComponent(username)}&active=eq.true&limit=1`;
+    const res = await fetch(lookupUrl, {
+      method: 'GET',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return (Array.isArray(rows) && rows.length > 0) ? rows[0].id : null;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = { 
   rest, 
   jsonRes, 
@@ -109,6 +137,7 @@ module.exports = {
   parseBooleanRpcResponse,
   getSupabaseConfig,
   lookupActiveTeacherId,
+  lookupTeacherIdByUsername,
   SUPABASE_URL, 
   SUPABASE_SERVICE_ROLE_KEY 
 };

@@ -66,10 +66,10 @@ If a draft ends up in the `errored` state:
 1. Go to Teacher Center → Work.
 2. Click **Edit** on the failed draft.
 3. Leave **"Auto-release on date"** checked (or re-check it if needed).
-4. Optionally adjust the `Release` datetime to a time still in the future.
+4. **Adjust the Release datetime to a time in the future.** This is required — simply clicking Save without changing the release date will NOT clear the error state (this is intentional, to prevent silent retries and force a conscious choice of a new release time).
 5. Click **Save Draft**.
 
-The POST handler resets `auto_release_status` back to `'pending'` whenever `autoRelease = true` and `issuedAt` is not set, so re-saving is all that's required.
+The POST handler resets `auto_release_status` back to `'pending'` only when `autoRelease = true`, `issuedAt` is not set, and the `releaseAt` timestamp has been changed. Editing any other field (e.g. notes) without changing the release date leaves the status as `'errored'`.
 
 ## Database Columns
 

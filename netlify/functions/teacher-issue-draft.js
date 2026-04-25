@@ -1675,7 +1675,36 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
   }
 
   console.log(`[teacher-issue-draft] [${requestId}] Successfully issued: ${issued_count} instances created/updated`);
-  
+
+  // Stamp issued_at on the teacher_drafts row (if one exists) so the scheduler
+  // skips this draft on future ticks and the manual-issue path is also covered.
+  // This is best-effort: a failure here does NOT roll back the already-created
+  // assignment_instances — it only means the scheduler may re-issue on the next tick
+  // (which is idempotent due to the assignment_instances on_conflict=merge-duplicates).
+  if (draft.id) {
+    try {
+      const patchUrl = `${SUPABASE_URL}/rest/v1/teacher_drafts?id=eq.${encodeURIComponent(draft.id)}`;
+      const patchRes = await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          auto_release_status: 'issued',
+          issued_at: new Date().toISOString(),
+        }),
+      });
+      if (!patchRes.ok) {
+        console.warn(`[teacher-issue-draft] [${requestId}] Failed to stamp issued_at on teacher_drafts row ${draft.id}: ${patchRes.status}`);
+      }
+    } catch (patchErr) {
+      console.warn(`[teacher-issue-draft] [${requestId}] Error stamping issued_at on teacher_drafts row ${draft.id}:`, patchErr.message);
+    }
+  }
+
   return { ok: true, assignment_id: assignmentId, issued_count: issued_count };
 }
 
