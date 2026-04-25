@@ -105,6 +105,8 @@ async function lookupActiveTeacherId() {
 /**
  * Resolve a teacher UUID by username. Returns null if no active teacher matches.
  * Used by the scheduled auto-release function, where there is no JWT to read teacherId from.
+ * Usernames are stored lower-cased in public.teacher.username; the input is lowercased
+ * before the query so the partial unique index (lower(username)) is used correctly.
  * @param {string} username - The teacher's login username to look up.
  * @returns {Promise<string|null>} teacher UUID, or null if not found or on error
  */
@@ -112,8 +114,9 @@ async function lookupTeacherIdByUsername(username) {
   if (!username) return null;
   const { url, key } = getSupabaseConfig();
   if (!url || !key) return null;
+  const lowercased = username.toLowerCase();
   try {
-    const lookupUrl = `${url}/rest/v1/teacher?select=id&username=eq.${encodeURIComponent(username)}&active=eq.true&limit=1`;
+    const lookupUrl = `${url}/rest/v1/teacher?select=id&username=eq.${encodeURIComponent(lowercased)}&active=eq.true&limit=1`;
     const res = await fetch(lookupUrl, {
       method: 'GET',
       headers: {
@@ -122,10 +125,18 @@ async function lookupTeacherIdByUsername(username) {
         'Content-Type': 'application/json',
       },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const snippet = await res.text().catch(() => '');
+      console.warn(
+        `[supa] lookupTeacherIdByUsername: query failed (status ${res.status}) for username "${lowercased}" — ` +
+        `response: ${snippet.slice(0, 200)}`
+      );
+      return null;
+    }
     const rows = await res.json();
     return (Array.isArray(rows) && rows.length > 0) ? rows[0].id : null;
-  } catch {
+  } catch (err) {
+    console.warn(`[supa] lookupTeacherIdByUsername: unexpected error for username "${lowercased}" — ${err.message}`);
     return null;
   }
 }
