@@ -162,7 +162,10 @@ exports.handler = async (_event) => {
       attempted++;
 
       try {
-        // Resolve teacher UUID (needed for class scoping)
+        // Resolve teacher UUID (needed for class scoping).
+        // lookupActiveTeacherId() is designed for the single-teacher deployment model
+        // and returns the UUID of the single active teacher record.  In a multi-teacher
+        // scenario, this would need to look up by teacherUsername instead.
         const teacherUUID = await lookupActiveTeacherId();
         if (!teacherUUID) {
           console.warn(`[scheduled-auto-release] [${requestId}] Could not resolve teacher UUID for draft ${draftId}`);

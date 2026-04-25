@@ -21,7 +21,6 @@ const ASSIGNMENT_ID = 'assignment-uuid-0001';
 
 // Fake "now" in the past, so release_at in the past is really in the past
 const PAST_RELEASE = new Date(Date.now() - 60 * 60 * 1000).toISOString();  // 1 hour ago
-const FUTURE_RELEASE = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour from now
 
 function makeRow(overrides = {}) {
   return {
