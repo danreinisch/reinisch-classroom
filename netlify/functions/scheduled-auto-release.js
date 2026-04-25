@@ -4,7 +4,7 @@
 
 'use strict';
 
-const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
+const { getSupabaseConfig, lookupActiveTeacherId, lookupTeacherIdByUsername } = require('./_lib/supa');
 const { generateRequestId } = require('./_lib/http');
 const { issueDraftCore } = require('./teacher-issue-draft');
 
@@ -66,14 +66,13 @@ async function stampAttempted(draftId, requestId) {
 /**
  * Mark a draft as issued after successful auto-release.
  */
-async function markIssued(draftId, assignmentId, requestId) {
+async function markIssued(draftId, requestId) {
   const now = new Date().toISOString();
   const patch = {
     auto_release_status: 'issued',
     issued_at: now,
     auto_release_error: null,
   };
-  if (assignmentId) patch.assignment_id = assignmentId;
 
   const url = `${SUPABASE_URL}/rest/v1/teacher_drafts?id=eq.${encodeURIComponent(draftId)}`;
   const res = await fetch(url, {
@@ -163,10 +162,15 @@ exports.handler = async (_event) => {
 
       try {
         // Resolve teacher UUID (needed for class scoping).
-        // lookupActiveTeacherId() is designed for the single-teacher deployment model
-        // and returns the UUID of the single active teacher record.  In a multi-teacher
-        // scenario, this would need to look up by teacherUsername instead.
-        const teacherUUID = await lookupActiveTeacherId();
+        // Try to resolve by username first (correct for multi-teacher deployments).
+        // Fall back to active-teacher lookup for single-teacher backward compat.
+        let teacherUUID = await lookupTeacherIdByUsername(teacherUsername);
+        if (!teacherUUID) {
+          teacherUUID = await lookupActiveTeacherId();
+          if (teacherUUID) {
+            console.warn(`[scheduled-auto-release] [${requestId}] Could not resolve teacher UUID for username "${teacherUsername}", falling back to active teacher: ${teacherUUID}`);
+          }
+        }
         if (!teacherUUID) {
           console.warn(`[scheduled-auto-release] [${requestId}] Could not resolve teacher UUID for draft ${draftId}`);
         }
@@ -179,7 +183,7 @@ exports.handler = async (_event) => {
 
         if (result.ok) {
           console.log(`[scheduled-auto-release] [${requestId}] Draft "${row.title}" issued successfully (assignment_id: ${result.assignment_id}, issued_count: ${result.issued_count})`);
-          await markIssued(draftId, result.assignment_id, requestId);
+          await markIssued(draftId, requestId);
           issued++;
         } else {
           const errMsg = result.error || 'issueDraftCore returned ok=false';
