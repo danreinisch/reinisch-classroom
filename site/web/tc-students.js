@@ -9372,7 +9372,7 @@
       const safeDeseCode = escapeHtml(card.code);
       calloutHtml = `
         <div class="st-skill-callout st-skill-callout--dese-bridge">
-          <span>&#128161; This DESE standard is below 50% &#8212; consider adding an IEP goal for this area</span>
+          <span><svg class="st-callout-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg> This DESE standard is below 50% &#8212; consider adding an IEP goal for this area</span>
           <button class="st-skill-callout-btn" data-action="create-iep-goal"
             data-student-code="${safeStudentCode}" data-dese-code="${safeDeseCode}"
             data-dese-area="${escapeHtml(card.area)}"
@@ -9424,7 +9424,7 @@
         </div>
         ${metaHtml}
         <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || SKILL_NARRATIVE_PLACEHOLDER_HTML}</div>
-        ${studentCode && narrativeHtml ? `<div class="st-regen-row"><button class="st-regen-btn" data-action="regen-narrative" data-student-code="${escapeHtml(studentCode)}" data-skill-code="${escapeHtml(card.code)}" data-skill-type="${escapeHtml(card.type)}" aria-label="Regenerate AI summary for ${escapeHtml(card.area)}">&#9855; Regenerate AI summary</button></div>` : ''}
+        ${studentCode && narrativeHtml ? `<div class="st-regen-row"><button class="st-regen-btn" data-action="regen-narrative" data-student-code="${escapeHtml(studentCode)}" data-skill-code="${escapeHtml(card.code)}" data-skill-type="${escapeHtml(card.type)}" aria-label="Regenerate AI summary for ${escapeHtml(card.area)}"><svg class="st-regen-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Regenerate AI summary</button></div>` : ''}
         ${calloutHtml}
         ${evidenceToggleHtml}
       </div>
