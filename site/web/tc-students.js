@@ -10079,7 +10079,16 @@
         detailHtml += `<div class="st-ev-item-card__detail-row"><span class="st-ev-item-card__detail-label">Date:</span>${escapeHtml(item.date)}</div>`;
       }
       if (item.earned_points !== null && item.max_points !== null) {
-        const verdict = item.is_correct === true ? '✅ Correct' : item.is_correct === false ? '❌ Incorrect' : pct !== null && pct >= 60 ? '⚠️ Partial' : '❌ Incorrect';
+        let verdict;
+        if (item.is_correct === true) {
+          verdict = '✅ Correct';
+        } else if (item.is_correct === false) {
+          verdict = '❌ Incorrect';
+        } else if (pct !== null && pct >= 60) {
+          verdict = '⚠️ Partial';
+        } else {
+          verdict = '❌ Incorrect';
+        }
         detailHtml += `<div class="st-ev-item-card__detail-row"><span class="st-ev-item-card__detail-label">Score:</span>${escapeHtml(String(item.earned_points))} / ${escapeHtml(String(item.max_points))} pts — ${verdict}</div>`;
       }
       if (item.teacher_note) {
