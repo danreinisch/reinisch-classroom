@@ -20,6 +20,56 @@ const {
 
 const { SESSION_SECRET } = process.env;
 
+// ── Per-session token bucket rate limiter ────────────────────────────────────
+// Capacity: 5 tokens, refill rate: 1 token per 12 seconds
+// Keyed on teacher username resolved from the verified session JWT.
+const BUCKET_CAPACITY = 5;
+const REFILL_INTERVAL_MS = 12000; // 1 token per 12 seconds
+const BUCKET_EVICTION_AGE_MS = 10 * 60 * 1000; // 10 minutes
+
+/** @type {Map<string, { tokens: number, lastRefillMs: number }>} */
+const rateLimitBuckets = new Map();
+
+/**
+ * Check and consume a token for the given session key.
+ * Returns { allowed: true } or { allowed: false, retryAfterSeconds: number }.
+ */
+function checkRateLimit(sessionKey) {
+  const now = Date.now();
+
+  // Opportunistically evict stale entries to keep the Map bounded.
+  // A single linear pass per request is intentional (spec: "keep this simple").
+  for (const [key, bucket] of rateLimitBuckets) {
+    if (now - bucket.lastRefillMs > BUCKET_EVICTION_AGE_MS) {
+      rateLimitBuckets.delete(key);
+    }
+  }
+
+  let bucket = rateLimitBuckets.get(sessionKey);
+  if (!bucket) {
+    bucket = { tokens: BUCKET_CAPACITY, lastRefillMs: now };
+    rateLimitBuckets.set(sessionKey, bucket);
+  }
+
+  // Refill tokens based on elapsed time since last refill.
+  const elapsed = now - bucket.lastRefillMs;
+  const tokensToAdd = Math.floor(elapsed / REFILL_INTERVAL_MS);
+  if (tokensToAdd > 0) {
+    bucket.tokens = Math.min(BUCKET_CAPACITY, bucket.tokens + tokensToAdd);
+    bucket.lastRefillMs += tokensToAdd * REFILL_INTERVAL_MS;
+  }
+
+  if (bucket.tokens >= 1) {
+    bucket.tokens -= 1;
+    return { allowed: true };
+  }
+
+  // Calculate seconds until the next token refills.
+  const msUntilNext = REFILL_INTERVAL_MS - (now - bucket.lastRefillMs);
+  const retryAfterSeconds = Math.max(1, Math.ceil(msUntilNext / 1000));
+  return { allowed: false, retryAfterSeconds };
+}
+
 /**
  * Map a DESE standard code prefix to a recommended IEP goal area.
  */
@@ -149,6 +199,19 @@ exports.handler = async (event) => {
     return jsonResponse(event, 401, { ok: false, error: 'Unauthorized' }, {}, requestId);
   }
 
+  const sessionKey = auth.user.username;
+  const rlResult = checkRateLimit(sessionKey);
+  if (!rlResult.allowed) {
+    console.log(JSON.stringify({ event: 'iep_goal_rate_limited', sessionKey, tokensRemaining: 0 }));
+    return jsonResponse(
+      event,
+      429,
+      { error: 'rate_limited', retry_after_seconds: rlResult.retryAfterSeconds },
+      { 'Retry-After': String(rlResult.retryAfterSeconds) },
+      requestId,
+    );
+  }
+
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
   if (!OPENAI_API_KEY) {
     console.warn(`[teacher-ai-iep-goal] [${requestId}] OPENAI_API_KEY not configured`);
@@ -252,3 +315,6 @@ exports.handler = async (event) => {
 
   return jsonResponse(event, 200, { ok: true, goal }, {}, requestId);
 };
+
+// Exported for test isolation only — do not use in production code.
+exports._rateLimitBuckets = rateLimitBuckets;
