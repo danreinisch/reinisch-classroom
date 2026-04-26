@@ -6291,7 +6291,10 @@
                   dese_code: deseCode,
                   dese_area: deseArea,
                   percent_correct: percentCorrect,
-                  item_count: itemCount,
+                  // item_count reflects the actual evidence attached so the prompt is internally consistent.
+                  // rollup_item_count is the badge count from the rollup RPC (may differ due to query limits or filter differences).
+                  item_count: evidenceItems.length,
+                  rollup_item_count: itemCount,
                   evidence_items: evidenceItems.slice(0, 10),
                 }),
                 credentials: 'same-origin',
@@ -6360,7 +6363,8 @@
             try {
               const student = allStudents.find(s => s.code === studentCode);
               const items = student ? await fetchDeseEvidenceItems(student, deseCode) : [];
-              panel.innerHTML = renderDeseEvidenceCards(items, panelId);
+              const expectedCount = parseInt(evidenceToggle.dataset.itemCount, 10) || 0;
+              panel.innerHTML = renderDeseEvidenceCards(items, panelId, expectedCount);
             } catch (err) {
               panel.innerHTML = `<div class="st-skill-evidence-empty">Could not load evidence items.</div>`;
               console.warn('[tc-students] evidence load failed:', err);
@@ -9169,7 +9173,8 @@
   /** In-memory cache: student_code → deseRollup[] to avoid re-fetching on tab switch */
   const deseRollupCache = new Map();
 
-  /** In-memory cache: `${student_code}::${dese_code}` → evidence items array */
+  /** In-memory cache: student_code → Map<dese_code, Item[]>
+   * One Supabase query fires per student per refresh; items are bucketed by dese_code. */
   const deseEvidenceCache = new Map();
 
   /** Guard against duplicate in-flight AI generation requests (e.g. rapid tab switching) */
@@ -9382,12 +9387,15 @@
     if (card.type === 'dese' && studentCode && card.itemCount > 0) {
       const safeEvidStudentCode = escapeHtml(studentCode);
       const safeEvidDeseCode = escapeHtml(card.code);
-      const panelId = `dese-ev-${safeEvidStudentCode}-${card.code.replace(/[^a-z0-9]/gi, '_')}`;
+      // Build panelId from raw values; escape exactly once at each HTML output boundary.
+      // Using raw values here ensures getElementById(panelId) always finds the element.
+      const panelId = `dese-ev-${studentCode}-${card.code.replace(/[^a-z0-9]/gi, '_')}`;
       const safePanelId = escapeHtml(panelId);
       evidenceToggleHtml = `
         <button class="st-skill-evidence-toggle" data-action="toggle-dese-evidence"
           data-dese-code="${safeEvidDeseCode}" data-student-code="${safeEvidStudentCode}"
           data-panel-id="${safePanelId}"
+          data-item-count="${escapeHtml(String(card.itemCount))}"
           aria-expanded="false" aria-controls="${safePanelId}">
           <svg class="st-skill-evidence-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
           View evidence (${escapeHtml(String(card.itemCount))} item${card.itemCount !== 1 ? 's' : ''})
@@ -9909,28 +9917,25 @@
   }
 
   /**
-   * Fetch individual graded evidence items for a given student + DESE standard code.
-   * Returns an array of item objects:
-   *   { question_text, assignment_title, assignment_id, date, earned_points, max_points,
-   *     is_correct, score_pct, teacher_note }
-   * Results are cached in deseEvidenceCache.
+   * Fetch ALL graded evidence items for a student in one Supabase query, then
+   * bucket them into a Map<deseCode, Item[]>.  Results are cached per student
+   * so opening multiple standards never fires duplicate round-trips.
    */
-  async function fetchDeseEvidenceItems(student, deseCode) {
-    if (!student?.id || !deseCode) return [];
-
-    const cacheKey = `${student.code}::${deseCode}`;
-    if (deseEvidenceCache.has(cacheKey)) return deseEvidenceCache.get(cacheKey);
+  async function fetchAllEvidenceForStudent(student) {
+    if (!student?.id) return new Map();
+    if (deseEvidenceCache.has(student.code)) return deseEvidenceCache.get(student.code);
 
     try {
       const supabase = await getSupabase();
-      if (!supabase) return [];
+      if (!supabase) return new Map();
 
       const now = new Date();
       const m = now.getMonth() + 1;
       const schoolYear = m >= 7 ? now.getFullYear() : now.getFullYear() - 1;
 
       // Query: assignment_instances → assignments + submissions → submission_answers → assignment_items
-      // Filter by student_id + school_year; filter items by dese_code client-side.
+      // Filter by student_id + school_year; bucket items by dese_code client-side.
+      // Limit is 1000 to cover essentially all real students without multiple round-trips.
       const { data, error } = await supabase
         .from('assignment_instances')
         .select(`
@@ -9955,11 +9960,12 @@
         `)
         .eq('student_id', student.id)
         .eq('school_year', schoolYear)
-        .limit(300);
+        .limit(1000);
 
       if (error) throw error;
 
-      const items = [];
+      const buckets = new Map(); // deseCode → Item[]
+
       for (const instance of data || []) {
         const assignment = instance.assignments;
         const assignmentTitle = assignment?.title || '';
@@ -9972,8 +9978,10 @@
 
           for (const sa of sub.submission_answers || []) {
             const ai = sa.assignment_items;
-            if (!ai || !Array.isArray(ai.dese_codes)) continue;
-            if (!ai.dese_codes.includes(deseCode)) continue;
+            if (!ai || !Array.isArray(ai.dese_codes) || ai.dese_codes.length === 0) continue;
+            // Exclude ungraded prompts — max_points > 0 is intentional here.
+            // Note: this filter may cause counts to diverge slightly from the student_dese_rollups
+            // RPC, which may count zero-point items differently.  The UI surfaces any divergence.
             if (typeof sa.max_points !== 'number' || sa.max_points <= 0) continue;
 
             const earned = typeof sa.earned_points === 'number' ? sa.earned_points : null;
@@ -9981,7 +9989,7 @@
             const scorePct = earned !== null && max ? Math.round(earned / max * 100) : null;
             const questionText = ai.meta?.question || ai.item_ref || null;
 
-            items.push({
+            const item = {
               question_text: questionText,
               assignment_title: assignmentTitle,
               assignment_id: assignmentId,
@@ -9991,25 +9999,44 @@
               is_correct: sa.is_correct,
               score_pct: scorePct,
               teacher_note: sa.teacher_note || null,
-            });
+            };
+
+            // A single submission_answer can match multiple dese_codes; add to every bucket.
+            for (const code of ai.dese_codes) {
+              if (!buckets.has(code)) buckets.set(code, []);
+              buckets.get(code).push(item);
+            }
           }
         }
       }
 
-      // Sort by date descending (most recent first)
-      items.sort((a, b) => {
-        if (!a.date && !b.date) return 0;
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(b.date) - new Date(a.date);
-      });
+      // Sort each bucket by date descending (most recent first)
+      for (const items of buckets.values()) {
+        items.sort((a, b) => {
+          if (!a.date && !b.date) return 0;
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+          return new Date(b.date) - new Date(a.date);
+        });
+      }
 
-      deseEvidenceCache.set(cacheKey, items);
-      return items;
+      deseEvidenceCache.set(student.code, buckets);
+      return buckets;
     } catch (err) {
-      console.warn('[tc-students] fetchDeseEvidenceItems failed:', err);
-      return [];
+      console.warn('[tc-students] fetchAllEvidenceForStudent failed:', err);
+      return new Map();
     }
+  }
+
+  /**
+   * Return the evidence items for a single student + DESE standard code.
+   * Delegates to fetchAllEvidenceForStudent so at most one Supabase query
+   * fires per student per data refresh.
+   */
+  async function fetchDeseEvidenceItems(student, deseCode) {
+    if (!student?.id || !deseCode) return [];
+    const buckets = await fetchAllEvidenceForStudent(student);
+    return buckets.get(deseCode) || [];
   }
 
   /**
@@ -10017,11 +10044,21 @@
    * Mirrors the st-qcat-card pattern from the student portal for consistency.
    * All dynamic values are escaped via escapeHtml() to prevent XSS.
    * @param {Array} items - from fetchDeseEvidenceItems
-   * @param {string} panelId - unique id for the panel container
+   * @param {string} panelId - unique id for the panel container (raw, unescaped)
+   * @param {number} [expectedCount] - badge count from rollup RPC; shown as drift note when it differs
    */
-  function renderDeseEvidenceCards(items, panelId) {
+  function renderDeseEvidenceCards(items, panelId, expectedCount) {
     if (!items || items.length === 0) {
       return `<div class="st-skill-evidence-empty">No individual item data available for this standard.</div>`;
+    }
+
+    // Show a drift note when the rendered count differs from the rollup badge count.
+    // Drift can occur because: (a) the query limit may exclude high-volume tail rows,
+    // (b) the max_points > 0 filter differs from what the rollup RPC counts, or
+    // (c) the school-year boundary may be computed differently.
+    let driftNoteHtml = '';
+    if (typeof expectedCount === 'number' && expectedCount > 0 && items.length !== expectedCount) {
+      driftNoteHtml = `<p class="st-skill-evidence-drift"><em>Showing ${escapeHtml(String(items.length))} of ${escapeHtml(String(expectedCount))} graded items (some not loaded).</em></p>`;
     }
 
     // SVG icons (inline, aria-hidden, Feather/Lucide style)
@@ -10031,9 +10068,10 @@
     const svgNote = '<svg class="st-ev-verdict-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
     const chevronSvg = '<svg class="st-ev-item-card__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
 
-    return items.map((item, idx) => {
+    const cards = items.map((item, idx) => {
       const itemNum = idx + 1;
-      const detailId = `${escapeHtml(panelId)}-item-${itemNum}-detail`;
+      // Build detailId from the raw panelId; escape at each HTML output boundary below.
+      const detailId = `${panelId}-item-${itemNum}-detail`;
       const pct = item.score_pct;
 
       // Determine color + label
@@ -10116,6 +10154,7 @@
         `<div class="st-ev-item-card__detail" id="${escapeHtml(detailId)}" hidden>${detailHtml}</div>` +
         `</div>`;
     }).join('');
+    return driftNoteHtml + cards;
   }
 
   /**

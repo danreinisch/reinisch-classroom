@@ -1,7 +1,9 @@
 // AI-assisted IEP goal generation endpoint
 // POST /.netlify/functions/teacher-ai-iep-goal
 // Auth: Requires teacher session cookie
-// Body: { student_code, dese_code, dese_area, percent_correct, item_count, evidence_items }
+// Body: { student_code, dese_code, dese_area, percent_correct, item_count, rollup_item_count, evidence_items }
+//   item_count: actual number of evidence items attached (matches evidence_items.length before the 10-item cap)
+//   rollup_item_count: (optional) badge count from the student_dese_rollups RPC; may differ from item_count
 //   evidence_items: [{ question_text, assignment_title, date, earned_points, max_points, is_correct, teacher_note }]
 // Returns: { ok: true, goal: { goal_area, goal_code, description, measurement_type, baseline, mastery, target } }
 
@@ -43,20 +45,29 @@ function sanitize(val, maxLen = 200) {
 /**
  * Build the OpenAI prompt for IEP goal generation.
  */
-function buildIepGoalPrompt({ student_code, dese_code, dese_area, percent_correct, item_count, evidence_items }) {
+function buildIepGoalPrompt({ student_code, dese_code, dese_area, percent_correct, item_count, rollup_item_count, evidence_items }) {
   const safeCode = sanitize(student_code, 20);
   const safeDesCode = sanitize(dese_code, 50);
   const safeArea = sanitize(dese_area, 100);
   const safePct = typeof percent_correct === 'number' ? Math.round(percent_correct * 10) / 10 : 0;
   const safeCount = typeof item_count === 'number' ? item_count : 0;
+  const safeRollupCount = typeof rollup_item_count === 'number' ? rollup_item_count : null;
   const goalArea = deseCodeToGoalArea(dese_code);
+
+  // Build the "items reviewed" phrase; include rollup count when it differs from attached count.
+  let itemsPhrase;
+  if (safeRollupCount !== null && safeRollupCount !== safeCount) {
+    itemsPhrase = `${safeCount} graded items reviewed (${safeRollupCount} total in rollup)`;
+  } else {
+    itemsPhrase = `${safeCount} graded items`;
+  }
 
   let prompt = `You are a special education IEP (Individualized Education Program) goal writing assistant. `;
   prompt += `Draft a single, specific, measurable, achievable, relevant, and time-bound (SMART) IEP goal for a student.\n\n`;
 
   prompt += `STUDENT: ${safeCode}\n`;
   prompt += `DESE STANDARD: ${safeDesCode} — ${safeArea}\n`;
-  prompt += `CURRENT PERFORMANCE: ${safePct}% correct across ${safeCount} graded items\n`;
+  prompt += `CURRENT PERFORMANCE: ${safePct}% correct across ${itemsPhrase}\n`;
   prompt += `SUGGESTED GOAL AREA: ${goalArea}\n\n`;
 
   if (Array.isArray(evidence_items) && evidence_items.length > 0) {
@@ -154,7 +165,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
   }
 
-  const { student_code, dese_code, dese_area, percent_correct, item_count, evidence_items } = parseResult.data;
+  const { student_code, dese_code, dese_area, percent_correct, item_count, rollup_item_count, evidence_items } = parseResult.data;
 
   if (!student_code || typeof student_code !== 'string' || student_code.trim() === '') {
     return jsonResponse(event, 400, { ok: false, error: 'student_code is required' }, {}, requestId);
@@ -169,6 +180,7 @@ exports.handler = async (event) => {
     dese_area: typeof dese_area === 'string' ? dese_area.trim() : dese_code.trim(),
     percent_correct: typeof percent_correct === 'number' ? percent_correct : 0,
     item_count: typeof item_count === 'number' ? item_count : 0,
+    rollup_item_count: typeof rollup_item_count === 'number' ? rollup_item_count : null,
     evidence_items: Array.isArray(evidence_items) ? evidence_items : [],
   });
 
