@@ -2773,6 +2773,7 @@
       // data doesn't persist if a student completes new graded assignments.
       deseRollupCache.clear();
       deseEvidenceCache.clear();
+      iepGoalGenerationInFlight.clear();
 
       // Load schedule periods for observation config UI (best-effort, don't block on failure)
       getSchedule().then(s => {
@@ -6269,6 +6270,14 @@
             const percentCorrect = parseFloat(skillCalloutBtn.dataset.percentCorrect) || 0;
             const itemCount = parseInt(skillCalloutBtn.dataset.itemCount, 10) || 0;
 
+            // Single-flight guard: prevent concurrent requests for the same (student, dese) pair
+            const iepInFlightKey = `${studentCode}::${deseCode}`;
+            if (iepGoalGenerationInFlight.get(iepInFlightKey) === true) {
+              e.stopPropagation();
+              return;
+            }
+            iepGoalGenerationInFlight.set(iepInFlightKey, true);
+
             // Show loading state on the button
             const origHTML = skillCalloutBtn.innerHTML;
             skillCalloutBtn.disabled = true;
@@ -6337,6 +6346,8 @@
               skillCalloutBtn.dataset.aiLoading = 'false';
               skillCalloutBtn.innerHTML = origHTML;
               showAddGoalModal(studentCode, { prefillDesc: `IEP goal for DESE standard: ${deseCode}` });
+            } finally {
+              iepGoalGenerationInFlight.delete(iepInFlightKey);
             }
           }
           e.stopPropagation();
@@ -9179,6 +9190,9 @@
 
   /** Guard against duplicate in-flight AI generation requests (e.g. rapid tab switching) */
   const skillsGenerationInFlight = new Map(); // student.code → true
+
+  /** Guard against duplicate in-flight IEP-goal AI requests (e.g. rapid double-click or keyboard re-fire) */
+  const iepGoalGenerationInFlight = new Map(); // `${student.code}::${dese_code}` → true
 
   /** Last HTTP status code from the AI skills summary request (for error messaging) */
   const skillsLastStatus = new Map(); // student.code → status code
