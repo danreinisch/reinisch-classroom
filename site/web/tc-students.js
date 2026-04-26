@@ -2772,6 +2772,7 @@
       // Invalidate per-student DESE rollup cache on each data refresh so stale
       // data doesn't persist if a student completes new graded assignments.
       deseRollupCache.clear();
+      deseEvidenceCache.clear();
 
       // Load schedule periods for observation config UI (best-effort, don't block on failure)
       getSchedule().then(s => {
@@ -6264,8 +6265,120 @@
           } else if (action === 'create-iep-goal') {
             const studentCode = skillCalloutBtn.dataset.studentCode;
             const deseCode = skillCalloutBtn.dataset.deseCode;
-            showAddGoalModal(studentCode, { prefillDesc: `IEP goal for DESE standard: ${deseCode}` });
+            const deseArea = skillCalloutBtn.dataset.deseArea || deseCode;
+            const percentCorrect = parseFloat(skillCalloutBtn.dataset.percentCorrect) || 0;
+            const itemCount = parseInt(skillCalloutBtn.dataset.itemCount, 10) || 0;
+
+            // Show loading state on the button
+            const origText = skillCalloutBtn.textContent;
+            skillCalloutBtn.disabled = true;
+            skillCalloutBtn.dataset.aiLoading = 'true';
+            skillCalloutBtn.textContent = '⏳ Drafting goal…';
+
+            try {
+              // Fetch evidence items (may come from cache)
+              const student = allStudents.find(s => s.code === studentCode);
+              const evidenceItems = student
+                ? await fetchDeseEvidenceItems(student, deseCode)
+                : [];
+
+              // Call AI endpoint
+              const res = await fetch('/.netlify/functions/teacher-ai-iep-goal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  student_code: studentCode,
+                  dese_code: deseCode,
+                  dese_area: deseArea,
+                  percent_correct: percentCorrect,
+                  item_count: itemCount,
+                  evidence_items: evidenceItems.slice(0, 10),
+                }),
+                credentials: 'same-origin',
+              });
+
+              skillCalloutBtn.disabled = false;
+              skillCalloutBtn.dataset.aiLoading = 'false';
+              skillCalloutBtn.textContent = origText;
+
+              if (res.ok) {
+                const data = await res.json().catch(() => ({ ok: false }));
+                if (data.ok && data.goal) {
+                  const g = data.goal;
+                  showAddGoalModal(studentCode, {
+                    prefillArea: g.goal_area || '',
+                    prefillGoalCode: g.goal_code || '',
+                    prefillDesc: g.description || '',
+                    prefillMeasurementType: g.measurement_type || 'Accuracy',
+                    prefillBaseline: g.baseline !== undefined ? String(g.baseline) : String(percentCorrect),
+                    prefillMastery: g.mastery !== undefined ? String(g.mastery) : '70',
+                    prefillTarget: g.target !== undefined ? String(g.target) : '70',
+                  });
+                } else {
+                  console.warn('[tc-students] AI IEP goal: API returned error:', data.error);
+                  showAddGoalModal(studentCode, { prefillDesc: `IEP goal for DESE standard: ${deseCode}` });
+                }
+              } else {
+                // Non-OK HTTP (503 = no API key, etc.) — fall back gracefully
+                const status = res.status;
+                const isMisconfigured = status === 503;
+                console.warn('[tc-students] AI IEP goal: HTTP', status);
+                if (!isMisconfigured) {
+                  await rcAlert('AI Draft Unavailable', 'Could not generate an AI draft for this goal. The form has been opened with a basic description — please fill in the details manually.');
+                }
+                showAddGoalModal(studentCode, { prefillDesc: `IEP goal for DESE standard: ${deseCode}` });
+              }
+            } catch (err) {
+              console.warn('[tc-students] AI IEP goal: fetch failed:', err);
+              skillCalloutBtn.disabled = false;
+              skillCalloutBtn.dataset.aiLoading = 'false';
+              skillCalloutBtn.textContent = origText;
+              showAddGoalModal(studentCode, { prefillDesc: `IEP goal for DESE standard: ${deseCode}` });
+            }
           }
+          e.stopPropagation();
+          return;
+        }
+
+        // Evidence toggle button on DESE skill cards
+        const evidenceToggle = e.target.closest('[data-action="toggle-dese-evidence"]');
+        if (evidenceToggle) {
+          const panelId = evidenceToggle.dataset.panelId;
+          const deseCode = evidenceToggle.dataset.deseCode;
+          const studentCode = evidenceToggle.dataset.studentCode;
+          const panel = panelId ? document.getElementById(panelId) : null;
+          if (!panel) { e.stopPropagation(); return; }
+
+          const isExpanded = evidenceToggle.getAttribute('aria-expanded') === 'true';
+          const nowOpen = !isExpanded;
+          evidenceToggle.setAttribute('aria-expanded', String(nowOpen));
+          panel.hidden = !nowOpen;
+
+          // Lazy-load evidence items on first open
+          if (nowOpen && panel.children.length === 0) {
+            panel.innerHTML = `<div class="st-skill-evidence-loading">Loading evidence…</div>`;
+            try {
+              const student = allStudents.find(s => s.code === studentCode);
+              const items = student ? await fetchDeseEvidenceItems(student, deseCode) : [];
+              panel.innerHTML = renderDeseEvidenceCards(items, panelId);
+            } catch (err) {
+              panel.innerHTML = `<div class="st-skill-evidence-empty">Could not load evidence items.</div>`;
+              console.warn('[tc-students] evidence load failed:', err);
+            }
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        // Evidence item card expand/collapse (delegated — items rendered lazily)
+        const evItemSummary = e.target.closest('.st-ev-item-card__summary');
+        if (evItemSummary) {
+          const detailId = evItemSummary.getAttribute('aria-controls');
+          const detailEl = detailId ? document.getElementById(detailId) : null;
+          const expanded = evItemSummary.getAttribute('aria-expanded') === 'true';
+          const nowOpen = !expanded;
+          evItemSummary.setAttribute('aria-expanded', String(nowOpen));
+          if (detailEl) detailEl.hidden = !nowOpen;
           e.stopPropagation();
           return;
         }
@@ -7472,13 +7585,29 @@
       const select = modal.querySelector('select[name="goal_area"]');
       if (select) select.value = prefill.prefillArea;
     }
-    if (prefill.prefillBaseline !== undefined && prefill.prefillBaseline !== '') {
-      const input = modal.querySelector('input[name="baseline"]');
-      if (input) input.value = prefill.prefillBaseline;
+    if (prefill.prefillGoalCode) {
+      const input = modal.querySelector('input[name="goal_code"]');
+      if (input) input.value = prefill.prefillGoalCode;
     }
     if (prefill.prefillDesc) {
       const textarea = modal.querySelector('textarea[name="goal_text"]');
       if (textarea) textarea.value = prefill.prefillDesc;
+    }
+    if (prefill.prefillMeasurementType) {
+      const select = modal.querySelector('select[name="measurement_type"]');
+      if (select) select.value = prefill.prefillMeasurementType;
+    }
+    if (prefill.prefillBaseline !== undefined && prefill.prefillBaseline !== '') {
+      const input = modal.querySelector('input[name="baseline"]');
+      if (input) input.value = prefill.prefillBaseline;
+    }
+    if (prefill.prefillMastery !== undefined && prefill.prefillMastery !== '') {
+      const input = modal.querySelector('input[name="mastery"]');
+      if (input) input.value = prefill.prefillMastery;
+    }
+    if (prefill.prefillTarget !== undefined && prefill.prefillTarget !== '') {
+      const input = modal.querySelector('input[name="target"]');
+      if (input) input.value = prefill.prefillTarget;
     }
 
     // Wire up observation config show/hide
@@ -9040,6 +9169,9 @@
   /** In-memory cache: student_code → deseRollup[] to avoid re-fetching on tab switch */
   const deseRollupCache = new Map();
 
+  /** In-memory cache: `${student_code}::${dese_code}` → evidence items array */
+  const deseEvidenceCache = new Map();
+
   /** Guard against duplicate in-flight AI generation requests (e.g. rapid tab switching) */
   const skillsGenerationInFlight = new Map(); // student.code → true
 
@@ -9237,8 +9369,30 @@
         <div class="st-skill-callout st-skill-callout--dese-bridge">
           <span>💡 This DESE standard is below 50% — consider adding an IEP goal for this area</span>
           <button class="st-skill-callout-btn" data-action="create-iep-goal"
-            data-student-code="${safeStudentCode}" data-dese-code="${safeDeseCode}">+ Create IEP Goal for ${safeDeseCode}</button>
+            data-student-code="${safeStudentCode}" data-dese-code="${safeDeseCode}"
+            data-dese-area="${escapeHtml(card.area)}"
+            data-percent-correct="${escapeHtml(String(card.displayScore !== null ? card.displayScore : 0))}"
+            data-item-count="${escapeHtml(String(card.itemCount || 0))}">+ Create IEP Goal for ${safeDeseCode}</button>
         </div>
+      `;
+    }
+
+    // For DESE cards, add an expandable evidence toggle if item count > 0
+    let evidenceToggleHtml = '';
+    if (card.type === 'dese' && studentCode && card.itemCount > 0) {
+      const safeCode = escapeHtml(card.code);
+      const safeStudentCode = escapeHtml(studentCode);
+      const panelId = `dese-ev-${safeStudentCode}-${card.code.replace(/[^a-z0-9]/gi, '_')}`;
+      const safePanel = escapeHtml(panelId);
+      evidenceToggleHtml = `
+        <button class="st-skill-evidence-toggle" data-action="toggle-dese-evidence"
+          data-dese-code="${safeCode}" data-student-code="${safeStudentCode}"
+          data-panel-id="${safePanel}"
+          aria-expanded="false" aria-controls="${safePanel}">
+          <svg class="st-skill-evidence-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          View evidence (${card.itemCount} item${card.itemCount !== 1 ? 's' : ''})
+        </button>
+        <div class="st-skill-evidence-panel" id="${safePanel}" hidden></div>
       `;
     }
 
@@ -9264,6 +9418,7 @@
         <div class="st-skill-narrative" id="narrative-${escapeHtml(card.code.replace(/[^a-z0-9]/gi, '_'))}" aria-live="polite" aria-label="AI-generated summary for ${escapeHtml(card.area)}">${narrativeHtml || SKILL_NARRATIVE_PLACEHOLDER_HTML}</div>
         ${studentCode && narrativeHtml ? `<div class="st-regen-row"><button class="st-regen-btn" data-action="regen-narrative" data-student-code="${escapeHtml(studentCode)}" data-skill-code="${escapeHtml(card.code)}" data-skill-type="${escapeHtml(card.type)}" aria-label="Regenerate AI summary for ${escapeHtml(card.area)}">♻ Regenerate AI summary</button></div>` : ''}
         ${calloutHtml}
+        ${evidenceToggleHtml}
       </div>
     `;
   }
@@ -9751,6 +9906,197 @@
       console.warn('[tc-students] tryLegacySyncFallback failed:', err);
       return false;
     }
+  }
+
+  /**
+   * Fetch individual graded evidence items for a given student + DESE standard code.
+   * Returns an array of item objects:
+   *   { question_text, assignment_title, assignment_id, date, earned_points, max_points,
+   *     is_correct, score_pct, teacher_note }
+   * Results are cached in deseEvidenceCache.
+   */
+  async function fetchDeseEvidenceItems(student, deseCode) {
+    if (!student?.id || !deseCode) return [];
+
+    const cacheKey = `${student.code}::${deseCode}`;
+    if (deseEvidenceCache.has(cacheKey)) return deseEvidenceCache.get(cacheKey);
+
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return [];
+
+      const now = new Date();
+      const m = now.getMonth() + 1;
+      const schoolYear = m >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+
+      // Query: assignment_instances → assignments + submissions → submission_answers → assignment_items
+      // Filter by student_id + school_year; filter items by dese_code client-side.
+      const { data, error } = await supabase
+        .from('assignment_instances')
+        .select(`
+          assignment_id,
+          assignments!assignment_id ( id, title ),
+          submissions (
+            submitted_at,
+            submission_answers (
+              earned_points,
+              max_points,
+              is_correct,
+              scored_at,
+              teacher_note,
+              assignment_items!assignment_item_id (
+                id,
+                item_ref,
+                dese_codes,
+                meta
+              )
+            )
+          )
+        `)
+        .eq('student_id', student.id)
+        .eq('school_year', schoolYear)
+        .limit(300);
+
+      if (error) throw error;
+
+      const items = [];
+      for (const instance of data || []) {
+        const assignment = instance.assignments;
+        const assignmentTitle = assignment?.title || '';
+        const assignmentId = instance.assignment_id;
+
+        for (const sub of instance.submissions || []) {
+          const dateStr = sub.submitted_at
+            ? new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : null;
+
+          for (const sa of sub.submission_answers || []) {
+            const ai = sa.assignment_items;
+            if (!ai || !Array.isArray(ai.dese_codes)) continue;
+            if (!ai.dese_codes.includes(deseCode)) continue;
+            if (typeof sa.max_points !== 'number' || sa.max_points <= 0) continue;
+
+            const earned = typeof sa.earned_points === 'number' ? sa.earned_points : null;
+            const max = typeof sa.max_points === 'number' ? sa.max_points : null;
+            const scorePct = earned !== null && max ? Math.round(earned / max * 100) : null;
+            const questionText = ai.meta?.question || ai.item_ref || null;
+
+            items.push({
+              question_text: questionText,
+              assignment_title: assignmentTitle,
+              assignment_id: assignmentId,
+              date: dateStr,
+              earned_points: earned,
+              max_points: max,
+              is_correct: sa.is_correct,
+              score_pct: scorePct,
+              teacher_note: sa.teacher_note || null,
+            });
+          }
+        }
+      }
+
+      // Sort by date descending (most recent first)
+      items.sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
+
+      deseEvidenceCache.set(cacheKey, items);
+      return items;
+    } catch (err) {
+      console.warn('[tc-students] fetchDeseEvidenceItems failed:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Render individual evidence items as expandable cards (teacher-facing).
+   * Mirrors the st-qcat-card pattern from the student portal for consistency.
+   * @param {Array} items - from fetchDeseEvidenceItems
+   * @param {string} panelId - unique id for the panel container
+   */
+  function renderDeseEvidenceCards(items, panelId) {
+    if (!items || items.length === 0) {
+      return `<div class="st-skill-evidence-empty">No individual item data available for this standard.</div>`;
+    }
+
+    const chevronSvg = '<svg class="st-ev-item-card__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
+    return items.map((item, idx) => {
+      const itemNum = idx + 1;
+      const detailId = `${panelId}-item-${itemNum}-detail`;
+      const pct = item.score_pct;
+
+      // Determine color + label
+      let borderColor, dotColor, scoreColor;
+      if (item.is_correct === true || pct === 100) {
+        borderColor = 'rgba(34,197,94,0.5)';
+        dotColor = '#22c55e';
+        scoreColor = '#4ade80';
+      } else if (pct !== null && pct >= 60) {
+        borderColor = 'rgba(250,204,21,0.5)';
+        dotColor = '#facc15';
+        scoreColor = '#fde047';
+      } else if (item.is_correct === false || pct !== null) {
+        borderColor = 'rgba(239,68,68,0.5)';
+        dotColor = '#ef4444';
+        scoreColor = '#f87171';
+      } else {
+        borderColor = 'rgba(148,163,184,0.4)';
+        dotColor = '#94a3b8';
+        scoreColor = 'rgba(255,255,255,0.5)';
+      }
+
+      const cardText = item.question_text
+        ? (item.question_text.length > 70 ? item.question_text.slice(0, 70) + '…' : item.question_text)
+        : (item.assignment_title || 'Item');
+      const ariaLabel = `Item ${itemNum}: ${item.question_text || item.assignment_title || 'Item'}`;
+
+      let scoreDisplay = '';
+      if (pct !== null) {
+        scoreDisplay = `<span class="st-ev-item-card__score" style="color:${scoreColor};">${pct}%</span>`;
+      } else if (item.is_correct === true) {
+        scoreDisplay = `<span class="st-ev-item-card__score" style="color:#4ade80;">✅</span>`;
+      } else if (item.is_correct === false) {
+        scoreDisplay = `<span class="st-ev-item-card__score" style="color:#f87171;">❌</span>`;
+      }
+
+      // Build detail content
+      let detailHtml = '';
+      if (item.question_text) {
+        detailHtml += `<div class="st-ev-item-card__detail-row"><span class="st-ev-item-card__detail-label">Question:</span>${escapeHtml(item.question_text)}</div>`;
+      }
+      if (item.assignment_title) {
+        const titleHtml = item.assignment_id
+          ? `<a href="/teacher/assignments?id=${encodeURIComponent(item.assignment_id)}" style="color:rgba(147,197,253,0.9);text-decoration:underline;" target="_blank" rel="noopener">${escapeHtml(item.assignment_title)}</a>`
+          : escapeHtml(item.assignment_title);
+        detailHtml += `<div class="st-ev-item-card__detail-row"><span class="st-ev-item-card__detail-label">Assignment:</span>${titleHtml}</div>`;
+      }
+      if (item.date) {
+        detailHtml += `<div class="st-ev-item-card__detail-row"><span class="st-ev-item-card__detail-label">Date:</span>${escapeHtml(item.date)}</div>`;
+      }
+      if (item.earned_points !== null && item.max_points !== null) {
+        const verdict = item.is_correct === true ? '✅ Correct' : item.is_correct === false ? '❌ Incorrect' : pct !== null && pct >= 60 ? '⚠️ Partial' : '❌ Incorrect';
+        detailHtml += `<div class="st-ev-item-card__detail-row"><span class="st-ev-item-card__detail-label">Score:</span>${escapeHtml(String(item.earned_points))} / ${escapeHtml(String(item.max_points))} pts — ${verdict}</div>`;
+      }
+      if (item.teacher_note) {
+        detailHtml += `<div class="st-ev-item-card__teacher-note"><strong>📝 Teacher note:</strong> ${escapeHtml(item.teacher_note)}</div>`;
+      }
+
+      return `<div class="st-ev-item-card" style="border-left-color:${borderColor};">` +
+        `<button class="st-ev-item-card__summary" aria-expanded="false" aria-controls="${escapeHtml(detailId)}" aria-label="${escapeHtml(ariaLabel)}">` +
+          `<span class="st-ev-item-card__num" aria-hidden="true">#${itemNum}</span>` +
+          `<span class="st-ev-item-card__dot" style="background:${dotColor};" aria-hidden="true"></span>` +
+          `<span class="st-ev-item-card__text">${escapeHtml(cardText)}</span>` +
+          scoreDisplay +
+          chevronSvg +
+        `</button>` +
+        `<div class="st-ev-item-card__detail" id="${escapeHtml(detailId)}" hidden>${detailHtml}</div>` +
+        `</div>`;
+    }).join('');
   }
 
   /**
