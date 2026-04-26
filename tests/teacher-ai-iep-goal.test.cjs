@@ -326,6 +326,123 @@ test('truncates long description from AI to 600 chars', async function() {
   assert.ok(body.goal.description.length <= 600);
 });
 
-// ── Run ───────────────────────────────────────────────────────────────────────
+test('uses rollup_item_count in prompt phrase when it differs from item_count', async function() {
+  // Capture the prompt sent to OpenAI to verify the "X reviewed (Y total)" phrasing
+  var capturedPrompt = null;
+  global.fetch = function(_url, opts) {
+    var parsed = JSON.parse(opts.body);
+    capturedPrompt = parsed.messages[0].content;
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: function() {
+        return Promise.resolve({
+          choices: [{ message: { content: JSON.stringify({
+            goal_area: 'Reading Comprehension',
+            goal_code: 'RC1A-1',
+            description: 'Test goal.',
+            measurement_type: 'Accuracy',
+            baseline: 45,
+            mastery: 70,
+            target: 70,
+          }) } }],
+        });
+      },
+      text: function() { return Promise.resolve(''); },
+    });
+  };
+
+  var res = await handler(authedEvent({
+    student_code: 'S016',
+    dese_code: 'R.1.A.9-12.a',
+    dese_area: 'Textual Evidence',
+    percent_correct: 45.5,
+    item_count: 9,
+    rollup_item_count: 11,
+  }));
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(capturedPrompt, 'prompt should have been captured');
+  assert.ok(capturedPrompt.includes('9 graded items reviewed'), 'prompt should reference item_count (9)');
+  assert.ok(capturedPrompt.includes('11 total in rollup'), 'prompt should reference rollup_item_count (11)');
+});
+
+test('omits rollup phrase when rollup_item_count equals item_count', async function() {
+  var capturedPrompt = null;
+  global.fetch = function(_url, opts) {
+    var parsed = JSON.parse(opts.body);
+    capturedPrompt = parsed.messages[0].content;
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: function() {
+        return Promise.resolve({
+          choices: [{ message: { content: JSON.stringify({
+            goal_area: 'Reading Comprehension',
+            goal_code: 'RC1A-1',
+            description: 'Test goal.',
+            measurement_type: 'Accuracy',
+            baseline: 45,
+            mastery: 70,
+            target: 70,
+          }) } }],
+        });
+      },
+      text: function() { return Promise.resolve(''); },
+    });
+  };
+
+  var res = await handler(authedEvent({
+    student_code: 'S016',
+    dese_code: 'R.1.A.9-12.a',
+    percent_correct: 45.5,
+    item_count: 11,
+    rollup_item_count: 11,
+  }));
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(capturedPrompt, 'prompt should have been captured');
+  assert.ok(capturedPrompt.includes('11 graded items'), 'prompt should reference 11 items');
+  assert.ok(!capturedPrompt.includes('total in rollup'), 'prompt should NOT include rollup phrase when counts match');
+});
+
+test('omits rollup phrase when rollup_item_count is not provided', async function() {
+  var capturedPrompt = null;
+  global.fetch = function(_url, opts) {
+    var parsed = JSON.parse(opts.body);
+    capturedPrompt = parsed.messages[0].content;
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: function() {
+        return Promise.resolve({
+          choices: [{ message: { content: JSON.stringify({
+            goal_area: 'Reading Comprehension',
+            goal_code: 'RC1A-1',
+            description: 'Test goal.',
+            measurement_type: 'Accuracy',
+            baseline: 45,
+            mastery: 70,
+            target: 70,
+          }) } }],
+        });
+      },
+      text: function() { return Promise.resolve(''); },
+    });
+  };
+
+  // rollup_item_count intentionally omitted
+  var res = await handler(authedEvent({
+    student_code: 'S016',
+    dese_code: 'R.1.A.9-12.a',
+    percent_correct: 45.5,
+    item_count: 9,
+  }));
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(capturedPrompt, 'prompt should have been captured');
+  assert.ok(capturedPrompt.includes('9 graded items'), 'prompt should reference item_count');
+  assert.ok(!capturedPrompt.includes('total in rollup'), 'prompt should NOT include rollup phrase when rollup_item_count is absent');
+});
 
 runAll();
