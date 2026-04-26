@@ -10058,7 +10058,7 @@
     // (c) the school-year boundary may be computed differently.
     let driftNoteHtml = '';
     if (typeof expectedCount === 'number' && expectedCount > 0 && items.length !== expectedCount) {
-      driftNoteHtml = `<p class="st-skill-evidence-drift"><em>Showing ${escapeHtml(String(items.length))} of ${escapeHtml(String(expectedCount))} graded items (some not loaded).</em></p>`;
+      driftNoteHtml = `<p class="st-skill-evidence-drift"><em>Showing ${escapeHtml(String(items.length))} of ${escapeHtml(String(expectedCount))} graded items (counts may differ due to filters or query limits).</em></p>`;
     }
 
     // SVG icons (inline, aria-hidden, Feather/Lucide style)
