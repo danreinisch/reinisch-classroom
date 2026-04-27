@@ -86,7 +86,7 @@ require.cache[require.resolve('../netlify/functions/_lib/auth')] = { exports: re
 process.env.SESSION_SECRET = SESSION_SECRET;
 process.env.OPENAI_API_KEY = OPENAI_API_KEY;
 
-const { handler } = require('../netlify/functions/teacher-ai-skills-summary');
+const { handler, _rateLimitBuckets } = require('../netlify/functions/teacher-ai-skills-summary');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -444,6 +444,7 @@ async function runAll() {
   for (const t of tests) {
     process.env.SESSION_SECRET = SESSION_SECRET;
     process.env.OPENAI_API_KEY = OPENAI_API_KEY;
+    if (_rateLimitBuckets) _rateLimitBuckets.clear();
     try {
       await t.fn();
       console.log(`✓ ${t.name}`);

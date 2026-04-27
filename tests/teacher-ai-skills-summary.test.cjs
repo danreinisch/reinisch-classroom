@@ -31,10 +31,10 @@ var validToken = makeTeacherToken(SESSION_SECRET);
 
 var mockHttpLib = {
   generateRequestId: function() { return 'test-req-id'; },
-  jsonResponse: function(_event, status, body) {
+  jsonResponse: function(_event, status, body, extraHeaders) {
     return {
       statusCode: status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, extraHeaders || {}),
       body: JSON.stringify(body),
     };
   },
@@ -65,6 +65,7 @@ process.env.SESSION_SECRET = SESSION_SECRET;
 process.env.OPENAI_API_KEY = OPENAI_API_KEY;
 
 var handler = require('../netlify/functions/teacher-ai-skills-summary').handler;
+var _rateLimitBuckets = require('../netlify/functions/teacher-ai-skills-summary')._rateLimitBuckets;
 
 // ── Test utilities ────────────────────────────────────────────────────────────
 
@@ -117,6 +118,7 @@ async function runAll() {
     process.env.SESSION_SECRET = SESSION_SECRET;
     process.env.OPENAI_API_KEY = OPENAI_API_KEY;
     global.fetch = null;
+    if (_rateLimitBuckets) _rateLimitBuckets.clear();
     try {
       await t.fn();
       console.log('\u2713 ' + t.name);
@@ -286,6 +288,115 @@ test('returns 504 when OpenAI request times out', async function() {
   assert.strictEqual(res.statusCode, 504);
   var parsed = JSON.parse(res.body);
   assert.strictEqual(parsed.ok, false);
+});
+
+// ── Rate limiting helpers ─────────────────────────────────────────────────────
+
+function makeTeacherTokenForUser(username) {
+  var b64url = function(buf) {
+    return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  var jsonb64 = function(obj) { return b64url(JSON.stringify(obj)); };
+  var header = { alg: 'HS256', typ: 'JWT' };
+  var now = Math.floor(Date.now() / 1000);
+  var payload = { role: 'teacher', username: username, iat: now, exp: now + 3600 };
+  var data = jsonb64(header) + '.' + jsonb64(payload);
+  var sig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest();
+  return data + '.' + b64url(sig);
+}
+
+function authedEventForUser(username, body) {
+  return {
+    httpMethod: 'POST',
+    headers: { cookie: 'tc=' + makeTeacherTokenForUser(username) },
+    body: JSON.stringify(body),
+  };
+}
+
+var validSkillsBody = {
+  student_code: 'S001',
+  iep_goals: [
+    { code: 'G001', area: 'Reading', current_avg: 75, trend: 'up', data_points: 5, target: 85, baseline: 50 },
+  ],
+};
+
+var successSkillsData = {
+  skills: [
+    { code: 'G001', summary: 'Good progress.', tier: 'on-track', source: 'iep' },
+  ],
+};
+
+function mockOpenAI(skillsData) {
+  return function(_url, _opts) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: function() {
+        return Promise.resolve({
+          choices: [{ message: { content: JSON.stringify(skillsData) } }],
+        });
+      },
+    });
+  };
+}
+
+// ── Rate limiting tests ───────────────────────────────────────────────────────
+
+test('rate limiter: 5 sequential requests from same session all succeed', async function() {
+  global.fetch = mockOpenAI(successSkillsData);
+  for (var i = 0; i < 5; i++) {
+    var res = await handler(authedEventForUser('rl-user-a', validSkillsBody));
+    assert.strictEqual(res.statusCode, 200, 'Request ' + (i + 1) + ' should succeed');
+  }
+});
+
+test('rate limiter: 6th request within refill window returns 429', async function() {
+  global.fetch = mockOpenAI(successSkillsData);
+  for (var i = 0; i < 5; i++) {
+    await handler(authedEventForUser('rl-user-b', validSkillsBody));
+  }
+  var res = await handler(authedEventForUser('rl-user-b', validSkillsBody));
+  assert.strictEqual(res.statusCode, 429, '6th request should return 429');
+  var body = JSON.parse(res.body);
+  assert.strictEqual(body.error, 'rate_limited', 'error field should be rate_limited');
+  assert.ok(typeof body.retry_after_seconds === 'number', 'retry_after_seconds should be a number');
+  assert.ok(body.retry_after_seconds > 0, 'retry_after_seconds should be positive');
+  assert.ok(res.headers['Retry-After'], 'Retry-After header should be present');
+  assert.strictEqual(res.headers['Retry-After'], String(body.retry_after_seconds), 'Retry-After header should match retry_after_seconds');
+});
+
+test('rate limiter: two different session keys do not interfere', async function() {
+  global.fetch = mockOpenAI(successSkillsData);
+  for (var i = 0; i < 5; i++) {
+    await handler(authedEventForUser('rl-user-c', validSkillsBody));
+  }
+  var blocked = await handler(authedEventForUser('rl-user-c', validSkillsBody));
+  assert.strictEqual(blocked.statusCode, 429, 'user-c should be rate limited');
+  var allowed = await handler(authedEventForUser('rl-user-d', validSkillsBody));
+  assert.strictEqual(allowed.statusCode, 200, 'user-d should not be affected by user-c exhausting its bucket');
+});
+
+test('rate limiter: after one refill interval one additional request succeeds', async function() {
+  var realDateNow = Date.now;
+  var t0 = realDateNow();
+  try {
+    Date.now = function() { return t0; };
+    global.fetch = mockOpenAI(successSkillsData);
+    for (var i = 0; i < 5; i++) {
+      await handler(authedEventForUser('rl-user-e', validSkillsBody));
+    }
+    var blocked = await handler(authedEventForUser('rl-user-e', validSkillsBody));
+    assert.strictEqual(blocked.statusCode, 429, 'Should be rate limited before refill');
+    // Advance time by exactly one refill interval (12000 ms — matches REFILL_INTERVAL_MS in the function)
+    Date.now = function() { return t0 + 12000; };
+    var refilled = await handler(authedEventForUser('rl-user-e', validSkillsBody));
+    assert.strictEqual(refilled.statusCode, 200, 'Should succeed after one refill interval');
+    // Immediately after, the one refilled token is spent — should be limited again
+    var blockedAgain = await handler(authedEventForUser('rl-user-e', validSkillsBody));
+    assert.strictEqual(blockedAgain.statusCode, 429, 'Should be rate limited again after consuming the refilled token');
+  } finally {
+    Date.now = realDateNow;
+  }
 });
 
 runAll();

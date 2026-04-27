@@ -548,4 +548,30 @@ test('rate limiter: after one refill interval one additional request succeeds', 
   }
 });
 
+test('rate limiter: 429 log line includes requestId', async function() {
+  global.fetch = mockOpenAI(successGoalData);
+  // Exhaust the bucket
+  for (var i = 0; i < 5; i++) {
+    await handler(authedEventForUser('rl-log-user', validIepBody));
+  }
+  var loggedLines = [];
+  var origLog = console.log;
+  console.log = function() {
+    loggedLines.push(Array.prototype.slice.call(arguments).join(' '));
+    origLog.apply(console, arguments);
+  };
+  try {
+    var res = await handler(authedEventForUser('rl-log-user', validIepBody));
+    assert.strictEqual(res.statusCode, 429, '6th request should return 429');
+  } finally {
+    console.log = origLog;
+  }
+  var rateLimitedLine = loggedLines.find(function(line) {
+    try { return JSON.parse(line).event === 'iep_goal_rate_limited'; } catch (_) { return false; }
+  });
+  assert.ok(rateLimitedLine, 'Should have logged a rate_limited event');
+  var parsed = JSON.parse(rateLimitedLine);
+  assert.ok('requestId' in parsed, '429 log line should include requestId');
+});
+
 runAll();
