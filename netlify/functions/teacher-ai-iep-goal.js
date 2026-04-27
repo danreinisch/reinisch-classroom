@@ -202,7 +202,7 @@ exports.handler = async (event) => {
   const sessionKey = auth.user.username;
   const rlResult = checkRateLimit(sessionKey);
   if (!rlResult.allowed) {
-    console.log(JSON.stringify({ event: 'iep_goal_rate_limited', sessionKey, tokensRemaining: 0 }));
+    console.log(JSON.stringify({ event: 'iep_goal_rate_limited', sessionKey, tokensRemaining: 0, requestId }));
     return jsonResponse(
       event,
       429,
