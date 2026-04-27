@@ -29,10 +29,10 @@ var validToken = makeTeacherToken(SESSION_SECRET);
 
 var mockHttpLib = {
   generateRequestId: function() { return 'test-req-id'; },
-  jsonResponse: function(_event, status, body) {
+  jsonResponse: function(_event, status, body, extraHeaders) {
     return {
       statusCode: status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, extraHeaders || {}),
       body: JSON.stringify(body),
     };
   },
@@ -61,7 +61,9 @@ require.cache[require.resolve('../netlify/functions/_lib/auth')] = { exports: re
 process.env.SESSION_SECRET = SESSION_SECRET;
 process.env.OPENAI_API_KEY = OPENAI_API_KEY;
 
-var handler = require('../netlify/functions/teacher-ai-iep-goal').handler;
+var iepGoalModule = require('../netlify/functions/teacher-ai-iep-goal');
+var handler = iepGoalModule.handler;
+var _rateLimitBuckets = iepGoalModule._rateLimitBuckets;
 
 // ── Test utilities ────────────────────────────────────────────────────────────
 
@@ -99,6 +101,7 @@ async function runAll() {
     process.env.SESSION_SECRET = SESSION_SECRET;
     process.env.OPENAI_API_KEY = OPENAI_API_KEY;
     global.fetch = null;
+    if (_rateLimitBuckets) _rateLimitBuckets.clear();
     try {
       await t.fn();
       console.log('\u2713 ' + t.name);
@@ -443,6 +446,106 @@ test('omits rollup phrase when rollup_item_count is not provided', async functio
   assert.ok(capturedPrompt, 'prompt should have been captured');
   assert.ok(capturedPrompt.includes('9 graded items'), 'prompt should reference item_count');
   assert.ok(!capturedPrompt.includes('total in rollup'), 'prompt should NOT include rollup phrase when rollup_item_count is absent');
+});
+
+// ── Rate limiting helpers ─────────────────────────────────────────────────────
+
+function makeTeacherTokenForUser(username) {
+  var b64url = function(buf) {
+    return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  var jsonb64 = function(obj) { return b64url(JSON.stringify(obj)); };
+  var header = { alg: 'HS256', typ: 'JWT' };
+  var now = Math.floor(Date.now() / 1000);
+  var payload = { role: 'teacher', username: username, iat: now, exp: now + 3600 };
+  var data = jsonb64(header) + '.' + jsonb64(payload);
+  var sig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest();
+  return data + '.' + b64url(sig);
+}
+
+function authedEventForUser(username, body) {
+  return {
+    httpMethod: 'POST',
+    headers: { cookie: 'tc=' + makeTeacherTokenForUser(username) },
+    body: JSON.stringify(body),
+  };
+}
+
+var validIepBody = {
+  student_code: 'S016',
+  dese_code: 'R.1.A.9-12.a',
+  dese_area: 'Textual Evidence',
+  percent_correct: 45.5,
+  item_count: 5,
+};
+
+var successGoalData = {
+  goal_area: 'Reading Comprehension',
+  goal_code: 'RC1A-1',
+  description: 'Test goal.',
+  measurement_type: 'Accuracy',
+  baseline: 45,
+  mastery: 70,
+  target: 70,
+};
+
+// ── Rate limiting tests ───────────────────────────────────────────────────────
+
+test('rate limiter: 5 sequential requests from same session all succeed', async function() {
+  global.fetch = mockOpenAI(successGoalData);
+  for (var i = 0; i < 5; i++) {
+    var res = await handler(authedEventForUser('rl-user-a', validIepBody));
+    assert.strictEqual(res.statusCode, 200, 'Request ' + (i + 1) + ' should succeed');
+  }
+});
+
+test('rate limiter: 6th request within refill window returns 429', async function() {
+  global.fetch = mockOpenAI(successGoalData);
+  for (var i = 0; i < 5; i++) {
+    await handler(authedEventForUser('rl-user-b', validIepBody));
+  }
+  var res = await handler(authedEventForUser('rl-user-b', validIepBody));
+  assert.strictEqual(res.statusCode, 429, '6th request should return 429');
+  var body = JSON.parse(res.body);
+  assert.strictEqual(body.error, 'rate_limited', 'error field should be rate_limited');
+  assert.ok(typeof body.retry_after_seconds === 'number', 'retry_after_seconds should be a number');
+  assert.ok(body.retry_after_seconds > 0, 'retry_after_seconds should be positive');
+  assert.ok(res.headers['Retry-After'], 'Retry-After header should be present');
+  assert.strictEqual(res.headers['Retry-After'], String(body.retry_after_seconds), 'Retry-After header should match retry_after_seconds');
+});
+
+test('rate limiter: two different session keys do not interfere', async function() {
+  global.fetch = mockOpenAI(successGoalData);
+  for (var i = 0; i < 5; i++) {
+    await handler(authedEventForUser('rl-user-c', validIepBody));
+  }
+  var blocked = await handler(authedEventForUser('rl-user-c', validIepBody));
+  assert.strictEqual(blocked.statusCode, 429, 'user-c should be rate limited');
+  var allowed = await handler(authedEventForUser('rl-user-d', validIepBody));
+  assert.strictEqual(allowed.statusCode, 200, 'user-d should not be affected by user-c exhausting its bucket');
+});
+
+test('rate limiter: after one refill interval one additional request succeeds', async function() {
+  var realDateNow = Date.now;
+  var t0 = realDateNow();
+  try {
+    Date.now = function() { return t0; };
+    global.fetch = mockOpenAI(successGoalData);
+    for (var i = 0; i < 5; i++) {
+      await handler(authedEventForUser('rl-user-e', validIepBody));
+    }
+    var blocked = await handler(authedEventForUser('rl-user-e', validIepBody));
+    assert.strictEqual(blocked.statusCode, 429, 'Should be rate limited before refill');
+    // Advance time by exactly one refill interval (12 000 ms — matches REFILL_INTERVAL_MS in the function)
+    Date.now = function() { return t0 + 12000; };
+    var refilled = await handler(authedEventForUser('rl-user-e', validIepBody));
+    assert.strictEqual(refilled.statusCode, 200, 'Should succeed after one refill interval');
+    // Immediately after, the one refilled token is spent — should be limited again
+    var blockedAgain = await handler(authedEventForUser('rl-user-e', validIepBody));
+    assert.strictEqual(blockedAgain.statusCode, 429, 'Should be rate limited again after consuming the refilled token');
+  } finally {
+    Date.now = realDateNow;
+  }
 });
 
 runAll();
