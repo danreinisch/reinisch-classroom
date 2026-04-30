@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Final Exam Review — Language Arts</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #0d1117;
+  --bg-card: #161b22;
+  --border: #30363d;
+  --teal: #14b8a6;
+  --teal-glow: rgba(20, 184, 166, 0.15);
+  --teal-bright: #2dd4bf;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-dim: #484f58;
+  --green: #3fb950;
+  --amber: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --blue: #58a6ff;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ── SLIDE CONTAINER ── */
+.slide-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.slide {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 80px;
+  opacity: 0;
+  will-change: opacity;
+  transform: translate3d(0,0,0);
+  transition: opacity 0.5s ease;
+}
+.slide.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* ── TITLE SLIDE ── */
+.title-slide {
+  text-align: center;
+}
+.title-slide h1 {
+  font-size: 4.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--teal-bright), var(--teal), var(--blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.title-slide .subtitle {
+  font-size: 1.8rem;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+.title-slide .exam-info {
+  margin-top: 40px;
+  padding: 24px 36px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: inline-block;
+}
+.title-slide .exam-info p {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin: 6px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.title-slide .exam-info span {
+  color: var(--teal);
+  font-weight: 600;
+}
+
+/* ── CONTENT SLIDES ── */
+.slide h2 {
+  font-size: 2.6rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--teal-bright);
+  width: 100%;
+  text-align: left;
+}
+.slide .skill-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
+  width: 100%;
+  text-align: left;
+}
+
+/* Card grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  width: 100%;
+  max-width: 1400px;
+}
+.card-grid.single-col {
+  grid-template-columns: 1fr;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+.card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--teal);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card h3 .icon {
+  font-size: 1.3rem;
+}
+.card p, .card li {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.card ul {
+  list-style: none;
+  padding: 0;
+}
+.card li {
+  padding: 4px 0;
+  padding-left: 20px;
+  position: relative;
+}
+.card li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--teal);
+}
+
+/* Example box */
+.example-box {
+  background: rgba(20,184,166,0.06);
+  border-left: 3px solid var(--teal);
+  padding: 16px 20px;
+  border-radius: 0 8px 8px 0;
+  margin-top: 12px;
+}
+.example-box p {
+  font-size: 1rem;
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+.example-box .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+/* Highlight */
+.hl { color: var(--teal-bright); font-weight: 600; }
+.hl-amber { color: var(--amber); font-weight: 600; }
+.hl-green { color: var(--green); font-weight: 600; }
+.hl-red { color: var(--red); font-weight: 600; }
+.hl-purple { color: var(--purple); font-weight: 600; }
+.hl-blue { color: var(--blue); font-weight: 600; }
+
+/* Full-width content */
+.full-content {
+  width: 100%;
+  max-width: 1400px;
+}
+.full-content p {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+
+/* Signal word chips */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.chip {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.chip-teal { background: rgba(20,184,166,0.15); color: var(--teal-bright); border: 1px solid rgba(20,184,166,0.3); }
+.chip-amber { background: rgba(210,153,34,0.15); color: var(--amber); border: 1px solid rgba(210,153,34,0.3); }
+.chip-purple { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+.chip-green { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+
+/* ── NAVIGATION ── */
+.nav-bar {
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 40px;
+  background: rgba(13,17,23,0.9);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+}
+.nav-btn {
+  padding: 10px 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.nav-btn:hover {
+  border-color: var(--teal);
+  background: var(--teal-glow);
+}
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.slide-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+/* ── FINAL SLIDE ── */
+.final-slide {
+  text-align: center;
+}
+.final-slide h2 {
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+.final-tips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 1200px;
+  margin-top: 24px;
+}
+.tip-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+.tip-card .tip-icon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+}
+.tip-card h3 {
+  font-size: 1.1rem;
+  color: var(--teal);
+  margin-bottom: 8px;
+}
+.tip-card p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+</style>
+</head>
+<body>
+
+<div class="slide-container" id="slideContainer">
+
+<!-- ══════ SLIDE 1: TITLE ══════ -->
+<div class="slide title-slide active" id="slide-1">
+  <h1>Final Exam Review</h1>
+  <p class="subtitle">Language Arts — Year-End ELA Skills</p>
+  <div class="exam-info">
+    <p><span>25</span> questions total</p>
+    <p><span>24</span> multiple choice / true-false</p>
+    <p><span>1</span> written response (paragraph)</p>
+    <p><span>6</span> skills covered</p>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 2: WHAT'S ON THE EXAM ══════ -->
+<div class="slide" id="slide-2">
+  <h2>What's on the Final Exam?</h2>
+  <p class="skill-label">Overview — 6 Skills, 4 Questions Each + 1 Writing</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3><span class="icon">🔤</span> Skill 1: Verb Tenses</h3>
+      <p>Identify past, present, and future tense. Find tense errors in sentences.</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon">🔍</span> Skill 2: Context Clues & Word Parts</h3>
+      <p>Use clues in a sentence to figure out unknown words. Break words into prefixes, roots, and suffixes.</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon">🔗</span> Skill 3: Sentence Structure & Transitions</h3>
+      <p>Identify complete sentences, fragments, and run-ons. Choose the right transition word.</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon">🧠</span> Skill 4: Making Inferences</h3>
+      <p>Use text clues + what you already know to figure out what the author does not say directly.</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon">⚡</span> Skill 5: Cause & Effect</h3>
+      <p>Identify WHY something happened (cause) and WHAT happened as a result (effect).</p>
+    </div>
+    <div class="card">
+      <h3><span class="icon">⚖️</span> Skill 6: Compare & Contrast</h3>
+      <p>Explain how two things are ALIKE (compare) or DIFFERENT (contrast). Identify signal words.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 3: VERB TENSES — REVIEW ══════ -->
+<div class="slide" id="slide-3">
+  <h2>Verb Tenses</h2>
+  <p class="skill-label">Skill 1 of 6 — Keeping your verbs consistent</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>The Three Tenses</h3>
+      <ul>
+        <li><span class="hl-green">Past tense</span> = already happened → walked, ran, built</li>
+        <li><span class="hl-blue">Present tense</span> = happening now → walks, runs, builds</li>
+        <li><span class="hl-purple">Future tense</span> = will happen → will walk, will run, will build</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>The Rule</h3>
+      <p>All verbs in a sentence should match the <span class="hl">same tense</span> unless there is a clear reason for a shift.</p>
+      <div class="example-box">
+        <p class="label">Tense Shift Error</p>
+        <p>"The warrior <span class="hl-green">drew</span> his sword and <span class="hl-red">charges</span> forward."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ "drew" is past, but "charges" is present. They don't match!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 4: VERB TENSES — PRACTICE ══════ -->
+<div class="slide" id="slide-4">
+  <h2>Verb Tenses — Practice Strategy</h2>
+  <p class="skill-label">Skill 1 of 6 — How to spot tense errors on the exam</p>
+  <div class="card-grid single-col">
+    <div class="card">
+      <h3>Step-by-Step Approach</h3>
+      <ul>
+        <li><span class="hl">Step 1:</span> Find every verb (action word) in the sentence.</li>
+        <li><span class="hl">Step 2:</span> Label each one — is it past, present, or future?</li>
+        <li><span class="hl">Step 3:</span> Do they all match? If ONE is different, that's your answer.</li>
+        <li><span class="hl">Step 4:</span> Look for "will" — it always signals future tense.</li>
+      </ul>
+      <div class="example-box" style="margin-top: 16px;">
+        <p class="label">Try This</p>
+        <p>"The explorer mapped the trail and <strong>marks</strong> each turn on his notebook."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ "mapped" = past. "marks" = present. The error is "marks" — it should be "marked."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 5: CONTEXT CLUES & WORD PARTS — REVIEW ══════ -->
+<div class="slide" id="slide-5">
+  <h2>Context Clues & Word Parts</h2>
+  <p class="skill-label">Skill 2 of 6 — Figuring out words you don't know</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Context Clues</h3>
+      <p>The words <span class="hl">around</span> an unfamiliar word give you clues about its meaning.</p>
+      <div class="example-box">
+        <p class="label">Example</p>
+        <p>"The <span class="hl-amber">famished</span> travelers ate everything on their plates within minutes."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ Clue: "ate everything within minutes" = very hungry</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Word Parts</h3>
+      <ul>
+        <li><span class="hl-green">Prefix</span> = beginning → un-, re-, pre-, mis-, dis-</li>
+        <li><span class="hl-blue">Root</span> = core meaning → port (carry), struct (build)</li>
+        <li><span class="hl-purple">Suffix</span> = ending → -ful, -less, -able, -ment, -tion</li>
+      </ul>
+      <div class="example-box">
+        <p class="label">Break it down</p>
+        <p><span class="hl-green">un</span> + <span class="hl-blue">break</span> + <span class="hl-purple">able</span> = not able to be broken</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 6: CONTEXT CLUES — PRACTICE ══════ -->
+<div class="slide" id="slide-6">
+  <h2>Context Clues — Practice Strategy</h2>
+  <p class="skill-label">Skill 2 of 6 — Key prefixes, roots, and suffixes to know</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Common Prefixes</h3>
+      <ul>
+        <li><span class="hl">un-</span> = not → unhappy = not happy</li>
+        <li><span class="hl">re-</span> = again → rebuild = build again</li>
+        <li><span class="hl">pre-</span> = before → preview = view before</li>
+        <li><span class="hl">mis-</span> = wrong → misjudge = judge wrongly</li>
+        <li><span class="hl">dis-</span> = opposite → disappear = opposite of appear</li>
+        <li><span class="hl">anti-</span> = against → antithesis = against/opposite</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Common Suffixes</h3>
+      <ul>
+        <li><span class="hl">-ful</span> = full of → hopeful = full of hope</li>
+        <li><span class="hl">-less</span> = without → fearless = without fear</li>
+        <li><span class="hl">-able</span> = can be done → breakable = can be broken</li>
+        <li><span class="hl">-ment</span> = result of → enjoyment = result of enjoying</li>
+        <li><span class="hl">-tion</span> = act of → exploration = act of exploring</li>
+      </ul>
+      <div class="example-box">
+        <p class="label">Exam Tip</p>
+        <p>If you see a word you don't know, <span class="hl">break it apart</span> first. Then look at the sentence around it for more clues.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 7: SENTENCE STRUCTURE & TRANSITIONS — REVIEW ══════ -->
+<div class="slide" id="slide-7">
+  <h2>Sentence Structure & Transitions</h2>
+  <p class="skill-label">Skill 3 of 6 — Complete sentences, fragments, run-ons, and connectors</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Three Sentence Types</h3>
+      <ul>
+        <li><span class="hl-green">Complete Sentence</span> = subject + verb + complete thought</li>
+        <li><span class="hl-red">Fragment</span> = missing a subject, verb, or complete thought</li>
+        <li><span class="hl-amber">Run-On</span> = two thoughts smashed together without punctuation</li>
+      </ul>
+      <div class="example-box">
+        <p class="label">Spot the difference</p>
+        <p><span class="hl-green">✓</span> "The messenger delivered the scroll at dawn."</p>
+        <p><span class="hl-red">✗</span> "Delivering the scroll at dawn."</p>
+        <p><span class="hl-amber">✗</span> "The messenger arrived he delivered the scroll."</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Transition Word Types</h3>
+      <div class="chip-row">
+        <span class="chip chip-teal">Time Order</span>
+      </div>
+      <p style="margin-bottom:8px;">first, next, then, finally</p>
+      <div class="chip-row">
+        <span class="chip chip-amber">Contrast</span>
+      </div>
+      <p style="margin-bottom:8px;">however, but, although, on the other hand</p>
+      <div class="chip-row">
+        <span class="chip chip-purple">Cause/Result</span>
+      </div>
+      <p style="margin-bottom:8px;">therefore, as a result, consequently, so</p>
+      <div class="chip-row">
+        <span class="chip chip-green">Addition</span>
+      </div>
+      <p>also, in addition, furthermore</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 8: TRANSITIONS — PRACTICE ══════ -->
+<div class="slide" id="slide-8">
+  <h2>Transitions — Practice Strategy</h2>
+  <p class="skill-label">Skill 3 of 6 — Choosing the right connector</p>
+  <div class="card-grid single-col">
+    <div class="card">
+      <h3>Ask Yourself: What is the RELATIONSHIP between the two sentences?</h3>
+      <ul>
+        <li>Are they in <span class="hl-teal">order</span>? → Use <span class="hl">then, next, finally</span></li>
+        <li>Is there a <span class="hl-amber">surprise or change</span>? → Use <span class="hl-amber">however, nevertheless, although</span></li>
+        <li>Did one <span class="hl-purple">cause</span> the other? → Use <span class="hl-purple">as a result, therefore, consequently</span></li>
+        <li>Are they <span class="hl-green">adding similar ideas</span>? → Use <span class="hl-green">also, in addition, furthermore</span></li>
+      </ul>
+      <div class="example-box" style="margin-top: 16px;">
+        <p class="label">Try This</p>
+        <p>"The scouts found footprints in the mud. _______, they followed the trail deeper into the forest."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ Relationship: time order / sequence → Answer: <span class="hl">Then</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 9: MAKING INFERENCES — REVIEW ══════ -->
+<div class="slide" id="slide-9">
+  <h2>Making Inferences</h2>
+  <p class="skill-label">Skill 4 of 6 — Reading between the lines</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>What Is an Inference?</h3>
+      <p>An inference is a <span class="hl">conclusion</span> you figure out by combining:</p>
+      <ul>
+        <li><span class="hl-blue">What the text SAYS</span> (the clues the author gives you)</li>
+        <li><span class="hl-green">What you already KNOW</span> (your background knowledge)</li>
+      </ul>
+      <p style="margin-top: 10px;">The answer is <span class="hl-amber">NOT stated directly</span> — you have to figure it out from the evidence.</p>
+    </div>
+    <div class="card">
+      <h3>What to Look For</h3>
+      <ul>
+        <li><span class="hl">Character actions</span> — What do they DO? Why?</li>
+        <li><span class="hl">Details the author chose</span> — Why include this detail?</li>
+        <li><span class="hl">Emotions and reactions</span> — How does the character feel?</li>
+        <li><span class="hl">What's missing</span> — What does the author NOT say?</li>
+      </ul>
+      <div class="example-box">
+        <p class="label">Example</p>
+        <p>"Ella grabbed two extra blankets and stacked firewood by the door."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ Inference: She is preparing for cold weather.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 10: INFERENCES — PRACTICE ══════ -->
+<div class="slide" id="slide-10">
+  <h2>Making Inferences — Practice Strategy</h2>
+  <p class="skill-label">Skill 4 of 6 — Text clues + background knowledge = inference</p>
+  <div class="card-grid single-col">
+    <div class="card">
+      <h3>The Inference Formula</h3>
+      <ul>
+        <li><span class="hl">Step 1:</span> Read the passage carefully. Underline key details.</li>
+        <li><span class="hl">Step 2:</span> Ask: "What do ALL of these details have in common?"</li>
+        <li><span class="hl">Step 3:</span> Think: "Based on what I know about the real world, what makes sense?"</li>
+        <li><span class="hl">Step 4:</span> Choose the answer that is SUPPORTED by the text — not just a guess.</li>
+      </ul>
+      <div class="example-box" style="margin-top: 16px;">
+        <p class="label">Try This</p>
+        <p>"The old man polished the medal every evening. He kept it in a velvet box on the mantle. Once, when a visitor tried to pick it up, he gently but firmly took it back."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ All details point to the same conclusion: the medal has deep personal meaning to him.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 11: CAUSE & EFFECT — REVIEW ══════ -->
+<div class="slide" id="slide-11">
+  <h2>Cause & Effect</h2>
+  <p class="skill-label">Skill 5 of 6 — Why it happened and what happened as a result</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Cause vs. Effect</h3>
+      <ul>
+        <li><span class="hl-amber">CAUSE</span> = the REASON / WHY something happens</li>
+        <li><span class="hl-blue">EFFECT</span> = the RESULT / WHAT happens</li>
+      </ul>
+      <div class="example-box">
+        <p class="label">Example</p>
+        <p>"<span class="hl-amber">Because the river flooded</span>, <span class="hl-blue">the village had to evacuate</span>."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">Cause = flood | Effect = evacuation</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Signal Words</h3>
+      <div class="chip-row">
+        <span class="chip chip-amber">because</span>
+        <span class="chip chip-amber">since</span>
+        <span class="chip chip-amber">due to</span>
+      </div>
+      <p style="margin: 8px 0; color: var(--text-dim);">↑ These point to the CAUSE</p>
+      <div class="chip-row">
+        <span class="chip chip-teal">so</span>
+        <span class="chip chip-teal">therefore</span>
+        <span class="chip chip-teal">as a result</span>
+      </div>
+      <p style="margin-top: 8px; color: var(--text-dim);">↑ These point to the EFFECT</p>
+      <div class="example-box" style="margin-top: 12px;">
+        <p class="label">Chain of events</p>
+        <p>Sometimes: A causes B, B causes C, C causes D...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 12: CAUSE & EFFECT — PRACTICE ══════ -->
+<div class="slide" id="slide-12">
+  <h2>Cause & Effect — Practice Strategy</h2>
+  <p class="skill-label">Skill 5 of 6 — Finding the signal words</p>
+  <div class="card-grid single-col">
+    <div class="card">
+      <h3>Step-by-Step Approach</h3>
+      <ul>
+        <li><span class="hl">Step 1:</span> Find the signal word (because, so, since, as a result).</li>
+        <li><span class="hl">Step 2:</span> "Because" and "since" point <span class="hl-amber">backward</span> to the cause.</li>
+        <li><span class="hl">Step 3:</span> "So," "therefore," and "as a result" point <span class="hl-blue">forward</span> to the effect.</li>
+        <li><span class="hl">Step 4:</span> For chains: read the passage in order — each event triggers the next.</li>
+      </ul>
+      <div class="example-box" style="margin-top: 16px;">
+        <p class="label">Try This</p>
+        <p>"The well dried up during the heat wave, <span class="hl-teal">so</span> the shepherds moved their flock to the eastern hills."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ "so" points forward to the effect. Cause = well dried up. Effect = shepherds moved.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 13: COMPARE & CONTRAST — REVIEW ══════ -->
+<div class="slide" id="slide-13">
+  <h2>Compare & Contrast</h2>
+  <p class="skill-label">Skill 6 of 6 — Finding similarities and differences</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Compare vs. Contrast</h3>
+      <ul>
+        <li><span class="hl-green">COMPARE</span> = how things are <span class="hl-green">ALIKE</span></li>
+        <li><span class="hl-amber">CONTRAST</span> = how things are <span class="hl-amber">DIFFERENT</span></li>
+      </ul>
+      <div class="example-box" style="margin-top: 12px;">
+        <p class="label">Compare</p>
+        <p>"<span class="hl-green">Both</span> warriors carried shields into battle."</p>
+        <p class="label" style="margin-top: 10px;">Contrast</p>
+        <p>"One fought with a sword; <span class="hl-amber">however</span>, the other used a bow."</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Signal Words to Know</h3>
+      <p style="margin-bottom: 6px; font-weight: 600; color: var(--green);">Comparison (alike):</p>
+      <div class="chip-row">
+        <span class="chip chip-green">both</span>
+        <span class="chip chip-green">similarly</span>
+        <span class="chip chip-green">also</span>
+        <span class="chip chip-green">alike</span>
+        <span class="chip chip-green">likewise</span>
+      </div>
+      <p style="margin-bottom: 6px; margin-top: 12px; font-weight: 600; color: var(--amber);">Contrast (different):</p>
+      <div class="chip-row">
+        <span class="chip chip-amber">however</span>
+        <span class="chip chip-amber">but</span>
+        <span class="chip chip-amber">unlike</span>
+        <span class="chip chip-amber">conversely</span>
+        <span class="chip chip-amber">on the other hand</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 14: COMPARE & CONTRAST — PRACTICE ══════ -->
+<div class="slide" id="slide-14">
+  <h2>Compare & Contrast — Practice Strategy</h2>
+  <p class="skill-label">Skill 6 of 6 — What to look for on the exam</p>
+  <div class="card-grid single-col">
+    <div class="card">
+      <h3>Step-by-Step Approach</h3>
+      <ul>
+        <li><span class="hl">Step 1:</span> Identify the TWO things being compared or contrasted.</li>
+        <li><span class="hl">Step 2:</span> Look for signal words (both, similarly, however, unlike).</li>
+        <li><span class="hl">Step 3:</span> Ask: "What is the SAME?" and "What is DIFFERENT?"</li>
+        <li><span class="hl">Step 4:</span> For character contrasts — look at what each person <span class="hl">DOES</span> in the same situation and what the <span class="hl">RESULT</span> is.</li>
+      </ul>
+      <div class="example-box" style="margin-top: 16px;">
+        <p class="label">Try This</p>
+        <p>"Olen wrote his speech weeks in advance and practiced every night. His classmate Dara wrote hers the night before. <span class="hl-green">Both</span> of them, <span class="hl-amber">however</span>, received applause from the audience."</p>
+        <p style="margin-top:8px;color:var(--text-dim)">→ Different: preparation style. Same: both got applause.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 15: WRITING TIPS ══════ -->
+<div class="slide" id="slide-15">
+  <h2>Question 25: Written Response</h2>
+  <p class="skill-label">Writing a Strong Paragraph</p>
+  <div class="card-grid">
+    <div class="card">
+      <h3>What You'll Write</h3>
+      <p>A <span class="hl">one-paragraph</span> response with:</p>
+      <ul>
+        <li><span class="hl-green">Topic Sentence</span> — tells the reader what the paragraph is about</li>
+        <li><span class="hl-blue">Three Supporting Details</span> — each starts with a transition word</li>
+        <li><span class="hl-purple">Conclusion Sentence</span> — wraps up and connects back to the topic</li>
+      </ul>
+      <p style="margin-top: 12px; color: var(--text-dim);">The prompt will ask you to describe something fun and creative!</p>
+    </div>
+    <div class="card">
+      <h3>Transition Words to Use</h3>
+      <div class="chip-row">
+        <span class="chip chip-teal">First</span>
+        <span class="chip chip-teal">Next</span>
+        <span class="chip chip-teal">Then</span>
+        <span class="chip chip-teal">After that</span>
+        <span class="chip chip-teal">Finally</span>
+        <span class="chip chip-teal">Also</span>
+        <span class="chip chip-teal">In addition</span>
+      </div>
+      <div class="example-box" style="margin-top: 12px;">
+        <p class="label">Example Structure</p>
+        <p><span class="hl-green">Topic:</span> "If I could go anywhere, I would visit Japan."</p>
+        <p><span class="hl-blue">Detail 1:</span> "<span class="hl">First</span>, I would explore the temples in Kyoto..."</p>
+        <p><span class="hl-blue">Detail 2:</span> "<span class="hl">Next</span>, I would try authentic ramen..."</p>
+        <p><span class="hl-blue">Detail 3:</span> "<span class="hl">Finally</span>, I would ride the bullet train..."</p>
+        <p><span class="hl-purple">Conclusion:</span> "Japan would be the perfect trip because..."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 16: WRITING CHECKLIST ══════ -->
+<div class="slide" id="slide-16">
+  <h2>Writing Checklist</h2>
+  <p class="skill-label">Check these before you submit Question 25</p>
+  <div class="card-grid single-col">
+    <div class="card">
+      <h3>Before You Submit, Check:</h3>
+      <ul>
+        <li>☐ Does my <span class="hl-green">topic sentence</span> introduce the main idea?</li>
+        <li>☐ Do I have <span class="hl-blue">three supporting details</span>?</li>
+        <li>☐ Does each detail start with a <span class="hl">transition word</span>?</li>
+        <li>☐ Does my <span class="hl-purple">conclusion sentence</span> wrap it up?</li>
+        <li>☐ Does every sentence have a <span class="hl-amber">subject and a verb</span>?</li>
+        <li>☐ Did I check <span class="hl-amber">verb tense consistency</span>?</li>
+        <li>☐ Did I use <span class="hl-amber">correct capitalization and punctuation</span>?</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SLIDE 17: FINAL TIPS ══════ -->
+<div class="slide final-slide" id="slide-17">
+  <h2>You've Got This!</h2>
+  <p class="skill-label" style="text-align:center;">Final Exam Tips</p>
+  <div class="final-tips">
+    <div class="tip-card">
+      <div class="tip-icon">📖</div>
+      <h3>Read Carefully</h3>
+      <p>Read the passage AND the question all the way through before looking at the answers.</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">🔑</div>
+      <h3>Use the Hints</h3>
+      <p>Every question has a hint. If you're stuck, the hint will point you in the right direction.</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">🎯</div>
+      <h3>Read the Teaching Stems</h3>
+      <p>The gray text at the top of each question teaches you the skill. Use it!</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">❌</div>
+      <h3>Eliminate Wrong Answers</h3>
+      <p>If you can rule out even ONE choice, your odds of getting it right go up.</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">✍️</div>
+      <h3>Plan Your Paragraph</h3>
+      <p>For Question 25, think of your three details BEFORE you start writing.</p>
+    </div>
+    <div class="tip-card">
+      <div class="tip-icon">✅</div>
+      <h3>Review Your Work</h3>
+      <p>If you finish early, go back and double-check your answers — especially T/F questions.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- end slide-container -->
+
+<!-- ── NAVIGATION ── -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)" disabled>← Previous</button>
+  <span class="slide-counter" id="slideCounter">1 / 17</span>
+  <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+</div>
+
+<script>
+var currentSlide = 1;
+var totalSlides = 17;
+
+function changeSlide(delta) {
+  var newSlide = currentSlide + delta;
+  if (newSlide < 1 || newSlide > totalSlides) return;
+
+  var oldEl = document.getElementById('slide-' + currentSlide);
+  var newEl = document.getElementById('slide-' + newSlide);
+
+  if (oldEl) {
+    oldEl.style.opacity = '0';
+    setTimeout(function() { oldEl.classList.remove('active'); }, 500);
+  }
+
+  currentSlide = newSlide;
+
+  setTimeout(function() {
+    if (newEl) {
+      newEl.classList.add('active');
+      // Force reflow
+      newEl.offsetHeight;
+      newEl.style.opacity = '1';
+    }
+    document.getElementById('slideCounter').textContent = currentSlide + ' / ' + totalSlides;
+    document.getElementById('prevBtn').disabled = (currentSlide === 1);
+    document.getElementById('nextBtn').disabled = (currentSlide === totalSlides);
+  }, 300);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ') { changeSlide(1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft') { changeSlide(-1); e.preventDefault(); }
+});
+</script>
+
+</body>
+</html>
