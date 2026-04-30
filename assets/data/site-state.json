@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-04-30T14:53:23.756Z",
+  "updated": "2026-04-30T15:23:29.926Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -1145,7 +1145,7 @@
     "student_resources": {
       "slots": 40,
       "titles": [
-        "",
+        "Language Arts Skill Builder",
         "\"Lost in Kragdon-ah\" by Shawn Inmon",
         "",
         "",
@@ -1187,7 +1187,7 @@
         ""
       ],
       "links": [
-        "",
+        "/student/resources/presentation-01/",
         "/student/resources/presentation-02/",
         "",
         "",
