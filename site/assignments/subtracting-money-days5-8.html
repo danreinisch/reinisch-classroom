@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subtracting Money – Days 5–8</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height:100vh;}
+.header{background:#161b22;border-bottom:2px solid #30363d;padding:18px 24px;text-align:center;}
+.header h1{font-size:1.6rem;font-weight:800;color:#14b8a6;margin-bottom:4px;}
+.header p{font-size:0.95rem;color:#8b949e;}
+.day-tabs{display:flex;gap:8px;padding:16px 24px;overflow-x:auto;background:#0d1117;border-bottom:1px solid #21262d;}
+.day-tab{flex-shrink:0;padding:8px 20px;border:2px solid #30363d;border-radius:10px;background:#161b22;color:#8b949e;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.day-tab:hover{border-color:#14b8a6;color:#14b8a6;}
+.day-tab.active{border-color:#14b8a6;background:rgba(20,184,166,0.12);color:#14b8a6;}
+.day-panel{display:none;padding:20px 24px 100px;}
+.day-panel.active{display:block;}
+.day-heading{font-size:1.2rem;font-weight:700;color:#e6edf3;margin-bottom:6px;}
+.day-sub{font-size:0.85rem;color:#8b949e;margin-bottom:20px;}
+.qc{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color 0.2s;}
+.q-num{font-size:0.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#484f58;margin-bottom:6px;}
+.q-prompt{font-size:0.95rem;color:#c9d1d9;line-height:1.5;margin-bottom:14px;}
+.stack{background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:14px 10px;margin:10px auto;max-width:300px;}
+.sr{display:flex;align-items:center;justify-content:center;gap:0;height:40px;}
+.sop{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;width:24px;text-align:center;flex-shrink:0;color:#8b949e;}
+.sop.sub{color:#ef4444;}
+.sdl{font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:#5eead4;width:16px;text-align:center;flex-shrink:0;}
+.sdt{font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:#5eead4;width:10px;text-align:center;flex-shrink:0;}
+.sd{font-family:'JetBrains Mono',monospace;font-size:1.3rem;color:#e6edf3;width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sa{font-family:'JetBrains Mono',monospace;font-size:1.3rem;color:#14b8a6;width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#161b22;border:2px solid #30363d;border-radius:7px;cursor:pointer;user-select:none;transition:border-color 0.2s,transform 0.1s;}
+.sa:hover{border-color:#14b8a6;transform:scale(1.08);}
+.sa.filled{border-color:#14b8a6;}
+.sa.empty{color:#484f58;}
+.sline{border:none;border-top:3px solid #14b8a6;margin:4px 0;width:100%;}
+.dp-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:600;justify-content:center;align-items:center;}
+.dp-modal.open{display:flex;}
+.dp-box{background:#161b22;border:2px solid #30363d;border-radius:16px;padding:16px;width:210px;}
+.dp-title{text-align:center;color:#5eead4;font-size:0.85rem;margin-bottom:10px;font-family:'Outfit',sans-serif;}
+.dp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.dp-key{background:#0d1117;border:2px solid #30363d;border-radius:10px;padding:13px 0;font-family:'JetBrains Mono',monospace;font-size:1.4rem;color:#e6edf3;cursor:pointer;text-align:center;outline:none;user-select:none;transition:border-color 0.15s,transform 0.1s;}
+.dp-key:hover{border-color:#14b8a6;color:#14b8a6;}
+.dp-key:active{transform:scale(0.93);}
+.dp-key.dc{color:#ef4444;border-color:rgba(239,68,68,0.3);font-size:0.95rem;}
+.dp-key.dc:hover{background:rgba(239,68,68,0.1);border-color:#ef4444;}
+.dp-key.done{color:#5eead4;border-color:rgba(94,234,212,0.3);font-size:0.95rem;}
+.dp-key.done:hover{background:rgba(94,234,212,0.1);border-color:#5eead4;}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#161b22;border-top:2px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;gap:10px;flex-wrap:wrap;}
+.score-display{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:#8b949e;}
+.score-display span{color:#14b8a6;font-weight:700;}
+.save-status{font-size:0.8rem;color:#22c55e;min-width:100px;transition:opacity 0.3s;}
+.btn-row{display:flex;gap:10px;}
+.btn{font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:600;padding:9px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-save{background:#30363d;color:#e6edf3;}
+.btn-save:hover{background:#484f58;}
+.btn-submit{background:#14b8a6;color:#0d1117;}
+.btn-submit:hover{background:#0d9488;}
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;}
+.confirm-overlay.show{display:flex;}
+.confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
+.confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
+.confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Subtracting Money – Days 5–8</h1>
+  <p>Use the digit picker to enter your answer for each problem.</p>
+</div>
+
+<div class="day-tabs" role="tablist">
+  <button class="day-tab active" onclick="showDay('day5',this)" role="tab" type="button">Day 5 – Subtracting</button>
+  <button class="day-tab" onclick="showDay('day6',this)" role="tab" type="button">Day 6 – Subtracting</button>
+  <button class="day-tab" onclick="showDay('day7',this)" role="tab" type="button">Day 7 – Subtracting</button>
+  <button class="day-tab" onclick="showDay('day8',this)" role="tab" type="button">Day 8 – Subtracting</button>
+</div>
+
+<div id="day5" class="day-panel active">
+  <div class="day-heading">Day 5 – Subtracting</div>
+  <div class="day-sub">Subtract the two amounts.</div>
+  <div class="qc" data-qref="D5Q1" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">5</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">3</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q1_a0" data-val="" onclick="dpOpen('D5Q1_a0','Tens')">0</div><div class="sa empty" id="D5Q1_a1" data-val="" onclick="dpOpen('D5Q1_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q1_a2" data-val="" onclick="dpOpen('D5Q1_a2','Dimes')">0</div><div class="sa empty" id="D5Q1_a3" data-val="" onclick="dpOpen('D5Q1_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q2" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q2_a0" data-val="" onclick="dpOpen('D5Q2_a0','Tens')">0</div><div class="sa empty" id="D5Q2_a1" data-val="" onclick="dpOpen('D5Q2_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q2_a2" data-val="" onclick="dpOpen('D5Q2_a2','Dimes')">0</div><div class="sa empty" id="D5Q2_a3" data-val="" onclick="dpOpen('D5Q2_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q3" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">1</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q3_a0" data-val="" onclick="dpOpen('D5Q3_a0','Tens')">0</div><div class="sa empty" id="D5Q3_a1" data-val="" onclick="dpOpen('D5Q3_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q3_a2" data-val="" onclick="dpOpen('D5Q3_a2','Dimes')">0</div><div class="sa empty" id="D5Q3_a3" data-val="" onclick="dpOpen('D5Q3_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q4" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q4_a0" data-val="" onclick="dpOpen('D5Q4_a0','Tens')">0</div><div class="sa empty" id="D5Q4_a1" data-val="" onclick="dpOpen('D5Q4_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q4_a2" data-val="" onclick="dpOpen('D5Q4_a2','Dimes')">0</div><div class="sa empty" id="D5Q4_a3" data-val="" onclick="dpOpen('D5Q4_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q5" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q5_a0" data-val="" onclick="dpOpen('D5Q5_a0','Tens')">0</div><div class="sa empty" id="D5Q5_a1" data-val="" onclick="dpOpen('D5Q5_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q5_a2" data-val="" onclick="dpOpen('D5Q5_a2','Dimes')">0</div><div class="sa empty" id="D5Q5_a3" data-val="" onclick="dpOpen('D5Q5_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q6" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q6_a0" data-val="" onclick="dpOpen('D5Q6_a0','Tens')">0</div><div class="sa empty" id="D5Q6_a1" data-val="" onclick="dpOpen('D5Q6_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q6_a2" data-val="" onclick="dpOpen('D5Q6_a2','Dimes')">0</div><div class="sa empty" id="D5Q6_a3" data-val="" onclick="dpOpen('D5Q6_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q7" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q7_a0" data-val="" onclick="dpOpen('D5Q7_a0','Tens')">0</div><div class="sa empty" id="D5Q7_a1" data-val="" onclick="dpOpen('D5Q7_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q7_a2" data-val="" onclick="dpOpen('D5Q7_a2','Dimes')">0</div><div class="sa empty" id="D5Q7_a3" data-val="" onclick="dpOpen('D5Q7_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q8" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">5</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q8_a0" data-val="" onclick="dpOpen('D5Q8_a0','Tens')">0</div><div class="sa empty" id="D5Q8_a1" data-val="" onclick="dpOpen('D5Q8_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q8_a2" data-val="" onclick="dpOpen('D5Q8_a2','Dimes')">0</div><div class="sa empty" id="D5Q8_a3" data-val="" onclick="dpOpen('D5Q8_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q9" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q9_a0" data-val="" onclick="dpOpen('D5Q9_a0','Tens')">0</div><div class="sa empty" id="D5Q9_a1" data-val="" onclick="dpOpen('D5Q9_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q9_a2" data-val="" onclick="dpOpen('D5Q9_a2','Dimes')">0</div><div class="sa empty" id="D5Q9_a3" data-val="" onclick="dpOpen('D5Q9_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D5Q10" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D5Q10_a0" data-val="" onclick="dpOpen('D5Q10_a0','Tens')">0</div><div class="sa empty" id="D5Q10_a1" data-val="" onclick="dpOpen('D5Q10_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D5Q10_a2" data-val="" onclick="dpOpen('D5Q10_a2','Dimes')">0</div><div class="sa empty" id="D5Q10_a3" data-val="" onclick="dpOpen('D5Q10_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="day6" class="day-panel">
+  <div class="day-heading">Day 6 – Subtracting</div>
+  <div class="day-sub">Subtract the two amounts.</div>
+  <div class="qc" data-qref="D6Q1" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">5</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">1</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q1_a0" data-val="" onclick="dpOpen('D6Q1_a0','Tens')">0</div><div class="sa empty" id="D6Q1_a1" data-val="" onclick="dpOpen('D6Q1_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q1_a2" data-val="" onclick="dpOpen('D6Q1_a2','Dimes')">0</div><div class="sa empty" id="D6Q1_a3" data-val="" onclick="dpOpen('D6Q1_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q2" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">1</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">4</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q2_a0" data-val="" onclick="dpOpen('D6Q2_a0','Tens')">0</div><div class="sa empty" id="D6Q2_a1" data-val="" onclick="dpOpen('D6Q2_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q2_a2" data-val="" onclick="dpOpen('D6Q2_a2','Dimes')">0</div><div class="sa empty" id="D6Q2_a3" data-val="" onclick="dpOpen('D6Q2_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q3" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">6</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q3_a0" data-val="" onclick="dpOpen('D6Q3_a0','Tens')">0</div><div class="sa empty" id="D6Q3_a1" data-val="" onclick="dpOpen('D6Q3_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q3_a2" data-val="" onclick="dpOpen('D6Q3_a2','Dimes')">0</div><div class="sa empty" id="D6Q3_a3" data-val="" onclick="dpOpen('D6Q3_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q4" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">8</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q4_a0" data-val="" onclick="dpOpen('D6Q4_a0','Tens')">0</div><div class="sa empty" id="D6Q4_a1" data-val="" onclick="dpOpen('D6Q4_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q4_a2" data-val="" onclick="dpOpen('D6Q4_a2','Dimes')">0</div><div class="sa empty" id="D6Q4_a3" data-val="" onclick="dpOpen('D6Q4_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q5" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">3</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q5_a0" data-val="" onclick="dpOpen('D6Q5_a0','Tens')">0</div><div class="sa empty" id="D6Q5_a1" data-val="" onclick="dpOpen('D6Q5_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q5_a2" data-val="" onclick="dpOpen('D6Q5_a2','Dimes')">0</div><div class="sa empty" id="D6Q5_a3" data-val="" onclick="dpOpen('D6Q5_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q6" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">1</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">8</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q6_a0" data-val="" onclick="dpOpen('D6Q6_a0','Tens')">0</div><div class="sa empty" id="D6Q6_a1" data-val="" onclick="dpOpen('D6Q6_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q6_a2" data-val="" onclick="dpOpen('D6Q6_a2','Dimes')">0</div><div class="sa empty" id="D6Q6_a3" data-val="" onclick="dpOpen('D6Q6_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q7" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">3</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q7_a0" data-val="" onclick="dpOpen('D6Q7_a0','Tens')">0</div><div class="sa empty" id="D6Q7_a1" data-val="" onclick="dpOpen('D6Q7_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q7_a2" data-val="" onclick="dpOpen('D6Q7_a2','Dimes')">0</div><div class="sa empty" id="D6Q7_a3" data-val="" onclick="dpOpen('D6Q7_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q8" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">9</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q8_a0" data-val="" onclick="dpOpen('D6Q8_a0','Tens')">0</div><div class="sa empty" id="D6Q8_a1" data-val="" onclick="dpOpen('D6Q8_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q8_a2" data-val="" onclick="dpOpen('D6Q8_a2','Dimes')">0</div><div class="sa empty" id="D6Q8_a3" data-val="" onclick="dpOpen('D6Q8_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q9" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q9_a0" data-val="" onclick="dpOpen('D6Q9_a0','Tens')">0</div><div class="sa empty" id="D6Q9_a1" data-val="" onclick="dpOpen('D6Q9_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q9_a2" data-val="" onclick="dpOpen('D6Q9_a2','Dimes')">0</div><div class="sa empty" id="D6Q9_a3" data-val="" onclick="dpOpen('D6Q9_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D6Q10" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">6</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D6Q10_a0" data-val="" onclick="dpOpen('D6Q10_a0','Tens')">0</div><div class="sa empty" id="D6Q10_a1" data-val="" onclick="dpOpen('D6Q10_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D6Q10_a2" data-val="" onclick="dpOpen('D6Q10_a2','Dimes')">0</div><div class="sa empty" id="D6Q10_a3" data-val="" onclick="dpOpen('D6Q10_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="day7" class="day-panel">
+  <div class="day-heading">Day 7 – Subtracting</div>
+  <div class="day-sub">Subtract the two amounts.</div>
+  <div class="qc" data-qref="D7Q1" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q1_a0" data-val="" onclick="dpOpen('D7Q1_a0','Tens')">0</div><div class="sa empty" id="D7Q1_a1" data-val="" onclick="dpOpen('D7Q1_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q1_a2" data-val="" onclick="dpOpen('D7Q1_a2','Dimes')">0</div><div class="sa empty" id="D7Q1_a3" data-val="" onclick="dpOpen('D7Q1_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q2" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q2_a0" data-val="" onclick="dpOpen('D7Q2_a0','Tens')">0</div><div class="sa empty" id="D7Q2_a1" data-val="" onclick="dpOpen('D7Q2_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q2_a2" data-val="" onclick="dpOpen('D7Q2_a2','Dimes')">0</div><div class="sa empty" id="D7Q2_a3" data-val="" onclick="dpOpen('D7Q2_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q3" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q3_a0" data-val="" onclick="dpOpen('D7Q3_a0','Tens')">0</div><div class="sa empty" id="D7Q3_a1" data-val="" onclick="dpOpen('D7Q3_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q3_a2" data-val="" onclick="dpOpen('D7Q3_a2','Dimes')">0</div><div class="sa empty" id="D7Q3_a3" data-val="" onclick="dpOpen('D7Q3_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q4" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">8</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">5</div><div class="sdt">.</div><div class="sd">3</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q4_a0" data-val="" onclick="dpOpen('D7Q4_a0','Tens')">0</div><div class="sa empty" id="D7Q4_a1" data-val="" onclick="dpOpen('D7Q4_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q4_a2" data-val="" onclick="dpOpen('D7Q4_a2','Dimes')">0</div><div class="sa empty" id="D7Q4_a3" data-val="" onclick="dpOpen('D7Q4_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q5" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">8</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q5_a0" data-val="" onclick="dpOpen('D7Q5_a0','Tens')">0</div><div class="sa empty" id="D7Q5_a1" data-val="" onclick="dpOpen('D7Q5_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q5_a2" data-val="" onclick="dpOpen('D7Q5_a2','Dimes')">0</div><div class="sa empty" id="D7Q5_a3" data-val="" onclick="dpOpen('D7Q5_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q6" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q6_a0" data-val="" onclick="dpOpen('D7Q6_a0','Tens')">0</div><div class="sa empty" id="D7Q6_a1" data-val="" onclick="dpOpen('D7Q6_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q6_a2" data-val="" onclick="dpOpen('D7Q6_a2','Dimes')">0</div><div class="sa empty" id="D7Q6_a3" data-val="" onclick="dpOpen('D7Q6_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q7" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">3</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">8</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q7_a0" data-val="" onclick="dpOpen('D7Q7_a0','Tens')">0</div><div class="sa empty" id="D7Q7_a1" data-val="" onclick="dpOpen('D7Q7_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q7_a2" data-val="" onclick="dpOpen('D7Q7_a2','Dimes')">0</div><div class="sa empty" id="D7Q7_a3" data-val="" onclick="dpOpen('D7Q7_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q8" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q8_a0" data-val="" onclick="dpOpen('D7Q8_a0','Tens')">0</div><div class="sa empty" id="D7Q8_a1" data-val="" onclick="dpOpen('D7Q8_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q8_a2" data-val="" onclick="dpOpen('D7Q8_a2','Dimes')">0</div><div class="sa empty" id="D7Q8_a3" data-val="" onclick="dpOpen('D7Q8_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q9" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">9</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q9_a0" data-val="" onclick="dpOpen('D7Q9_a0','Tens')">0</div><div class="sa empty" id="D7Q9_a1" data-val="" onclick="dpOpen('D7Q9_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q9_a2" data-val="" onclick="dpOpen('D7Q9_a2','Dimes')">0</div><div class="sa empty" id="D7Q9_a3" data-val="" onclick="dpOpen('D7Q9_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D7Q10" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">6</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D7Q10_a0" data-val="" onclick="dpOpen('D7Q10_a0','Tens')">0</div><div class="sa empty" id="D7Q10_a1" data-val="" onclick="dpOpen('D7Q10_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D7Q10_a2" data-val="" onclick="dpOpen('D7Q10_a2','Dimes')">0</div><div class="sa empty" id="D7Q10_a3" data-val="" onclick="dpOpen('D7Q10_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="day8" class="day-panel">
+  <div class="day-heading">Day 8 – Subtracting</div>
+  <div class="day-sub">Subtract the two amounts.</div>
+  <div class="qc" data-qref="D8Q1" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 1</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">2</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">5</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q1_a0" data-val="" onclick="dpOpen('D8Q1_a0','Tens')">0</div><div class="sa empty" id="D8Q1_a1" data-val="" onclick="dpOpen('D8Q1_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q1_a2" data-val="" onclick="dpOpen('D8Q1_a2','Dimes')">0</div><div class="sa empty" id="D8Q1_a3" data-val="" onclick="dpOpen('D8Q1_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q2" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 2</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">5</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q2_a0" data-val="" onclick="dpOpen('D8Q2_a0','Tens')">0</div><div class="sa empty" id="D8Q2_a1" data-val="" onclick="dpOpen('D8Q2_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q2_a2" data-val="" onclick="dpOpen('D8Q2_a2','Dimes')">0</div><div class="sa empty" id="D8Q2_a3" data-val="" onclick="dpOpen('D8Q2_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q3" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 3</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q3_a0" data-val="" onclick="dpOpen('D8Q3_a0','Tens')">0</div><div class="sa empty" id="D8Q3_a1" data-val="" onclick="dpOpen('D8Q3_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q3_a2" data-val="" onclick="dpOpen('D8Q3_a2','Dimes')">0</div><div class="sa empty" id="D8Q3_a3" data-val="" onclick="dpOpen('D8Q3_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q4" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 4</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q4_a0" data-val="" onclick="dpOpen('D8Q4_a0','Tens')">0</div><div class="sa empty" id="D8Q4_a1" data-val="" onclick="dpOpen('D8Q4_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q4_a2" data-val="" onclick="dpOpen('D8Q4_a2','Dimes')">0</div><div class="sa empty" id="D8Q4_a3" data-val="" onclick="dpOpen('D8Q4_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q5" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 5</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">1</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q5_a0" data-val="" onclick="dpOpen('D8Q5_a0','Tens')">0</div><div class="sa empty" id="D8Q5_a1" data-val="" onclick="dpOpen('D8Q5_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q5_a2" data-val="" onclick="dpOpen('D8Q5_a2','Dimes')">0</div><div class="sa empty" id="D8Q5_a3" data-val="" onclick="dpOpen('D8Q5_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q6" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 6</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">6</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">8</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q6_a0" data-val="" onclick="dpOpen('D8Q6_a0','Tens')">0</div><div class="sa empty" id="D8Q6_a1" data-val="" onclick="dpOpen('D8Q6_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q6_a2" data-val="" onclick="dpOpen('D8Q6_a2','Dimes')">0</div><div class="sa empty" id="D8Q6_a3" data-val="" onclick="dpOpen('D8Q6_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q7" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 7</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">3</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">4</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q7_a0" data-val="" onclick="dpOpen('D8Q7_a0','Tens')">0</div><div class="sa empty" id="D8Q7_a1" data-val="" onclick="dpOpen('D8Q7_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q7_a2" data-val="" onclick="dpOpen('D8Q7_a2','Dimes')">0</div><div class="sa empty" id="D8Q7_a3" data-val="" onclick="dpOpen('D8Q7_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q8" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 8</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">0</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q8_a0" data-val="" onclick="dpOpen('D8Q8_a0','Tens')">0</div><div class="sa empty" id="D8Q8_a1" data-val="" onclick="dpOpen('D8Q8_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q8_a2" data-val="" onclick="dpOpen('D8Q8_a2','Dimes')">0</div><div class="sa empty" id="D8Q8_a3" data-val="" onclick="dpOpen('D8Q8_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q9" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 9</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">7</div><div class="sdt">.</div><div class="sd">5</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">0</div><div class="sd">9</div><div class="sdt">.</div><div class="sd">7</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q9_a0" data-val="" onclick="dpOpen('D8Q9_a0','Tens')">0</div><div class="sa empty" id="D8Q9_a1" data-val="" onclick="dpOpen('D8Q9_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q9_a2" data-val="" onclick="dpOpen('D8Q9_a2','Dimes')">0</div><div class="sa empty" id="D8Q9_a3" data-val="" onclick="dpOpen('D8Q9_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+  <div class="qc" data-qref="D8Q10" data-type="single" data-points="1" data-answer-type="constructed">
+    <div class="q-num">Question 10</div>
+    <div class="q-prompt">Subtract the amounts shown.</div>
+    <div class="stack">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sd">2</div><div class="sd">0</div><div class="sdt">.</div><div class="sd">0</div><div class="sd">0</div></div>
+      <div class="sr"><div class="sop sub">&#8722;</div><div class="sdl">$</div><div class="sd">1</div><div class="sd">1</div><div class="sdt">.</div><div class="sd">2</div><div class="sd">5</div></div>
+      <hr class="sline">
+      <div class="sr"><div class="sop">&nbsp;</div><div class="sdl">$</div><div class="sa empty" id="D8Q10_a0" data-val="" onclick="dpOpen('D8Q10_a0','Tens')">0</div><div class="sa empty" id="D8Q10_a1" data-val="" onclick="dpOpen('D8Q10_a1','Ones')">0</div><div class="sdt">.</div><div class="sa empty" id="D8Q10_a2" data-val="" onclick="dpOpen('D8Q10_a2','Dimes')">0</div><div class="sa empty" id="D8Q10_a3" data-val="" onclick="dpOpen('D8Q10_a3','Pennies')">0</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="dp-modal" id="dpModal">
+  <div class="dp-box">
+    <div class="dp-title" id="dpTitle">Pick a digit</div>
+    <div class="dp-grid">
+      <button class="dp-key" type="button" onclick="dpPick(1)">1</button>
+      <button class="dp-key" type="button" onclick="dpPick(2)">2</button>
+      <button class="dp-key" type="button" onclick="dpPick(3)">3</button>
+      <button class="dp-key" type="button" onclick="dpPick(4)">4</button>
+      <button class="dp-key" type="button" onclick="dpPick(5)">5</button>
+      <button class="dp-key" type="button" onclick="dpPick(6)">6</button>
+      <button class="dp-key" type="button" onclick="dpPick(7)">7</button>
+      <button class="dp-key" type="button" onclick="dpPick(8)">8</button>
+      <button class="dp-key" type="button" onclick="dpPick(9)">9</button>
+      <button class="dp-key dc" type="button" onclick="dpPick(-1)">Clear</button>
+      <button class="dp-key" type="button" onclick="dpPick(0)">0</button>
+      <button class="dp-key done" type="button" onclick="dpClose()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span>40</span></div>
+  <div id="save-status" class="save-status"></div>
+  <div class="btn-row">
+    <button class="btn btn-save" type="button" onclick="manualSave()">Save Progress</button>
+    <button class="btn btn-submit" type="button" onclick="submitAll()">Submit Assignment</button>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true">
+  <div class="confirm-box">
+    <p>Are you sure you want to submit? You cannot change your answers after submitting.</p>
+    <div class="confirm-btn-row">
+      <button class="btn btn-save" type="button" onclick="cancelSubmit()">Cancel</button>
+      <button class="btn btn-submit" type="button" onclick="confirmSubmit()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function showDay(dayId, tabEl) {
+    document.querySelectorAll('.day-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.day-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById(dayId).classList.add('active');
+    if (tabEl) tabEl.classList.add('active');
+  }
+
+  var dpActive = null;
+  function dpOpen(id, lbl) {
+    dpActive = id;
+    document.getElementById('dpTitle').textContent = lbl || 'Pick a digit';
+    document.getElementById('dpModal').classList.add('open');
+  }
+  function dpPick(n) {
+    if (!dpActive) return;
+    var el = document.getElementById(dpActive);
+    if (!el) return;
+    if (n === -1) {
+      el.textContent = '0';
+      el.classList.remove('filled');
+      el.classList.add('empty');
+      el.setAttribute('data-val', '');
+    } else {
+      el.textContent = String(n);
+      el.classList.add('filled');
+      el.classList.remove('empty');
+      el.setAttribute('data-val', String(n));
+      dpClose();
+    }
+    saveToLocalStorage();
+    scheduleAutosavePostMessage();
+    updateAnsweredCount();
+  }
+  function dpClose() {
+    document.getElementById('dpModal').classList.remove('open');
+    dpActive = null;
+  }
+  document.getElementById('dpModal').addEventListener('click', function(e) {
+    if (e.target === this) dpClose();
+  });
+  window.dpOpen = dpOpen;
+  window.dpPick = dpPick;
+  window.dpClose = dpClose;
+
+  function readS(qref) {
+    var t = document.getElementById(qref + '_a0');
+    var o = document.getElementById(qref + '_a1');
+    var d = document.getElementById(qref + '_a2');
+    var p = document.getElementById(qref + '_a3');
+    if (!t || !o || !d || !p) return null;
+    var ov = o.getAttribute('data-val') || '';
+    var dv = d.getAttribute('data-val') || '';
+    var pv = p.getAttribute('data-val') || '';
+    if (ov === '' || dv === '' || pv === '') return null;
+    var tv = t.getAttribute('data-val') || '';
+    return (tv !== '') ? tv + ov + '.' + dv + pv : ov + '.' + dv + pv;
+  }
+
+  function getAnswers() {
+    var answers = {};
+    document.querySelectorAll('.qc[data-qref]').forEach(function(card) {
+      var qref = card.dataset.qref;
+      var final = readS(qref);
+      if (final !== null) {
+        answers[qref] = final;
+      }
+    });
+    return answers;
+  }
+
+  function updateAnsweredCount() {
+    var count = 0;
+    document.querySelectorAll('.qc[data-qref]').forEach(function(card) {
+      if (readS(card.dataset.qref) !== null) count++;
+    });
+    var el = document.getElementById('answeredCount');
+    if (el) el.textContent = String(count);
+  }
+
+  var _statusTimer = null;
+  function showStatus(msg) {
+    var el = document.getElementById('save-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.opacity = '1';
+    if (_statusTimer) clearTimeout(_statusTimer);
+    _statusTimer = setTimeout(function() { el.style.opacity = '0'; }, 3000);
+  }
+
+  var LS_KEY = 'rc-assign-subtracting-money-days5-8';
+  var _storageAvailable = false;
+  var _storage = null;
+  try {
+    localStorage.setItem('__rc_test', '1');
+    localStorage.removeItem('__rc_test');
+    _storage = localStorage;
+    _storageAvailable = true;
+  } catch(e) {
+    try {
+      sessionStorage.setItem('__rc_test', '1');
+      sessionStorage.removeItem('__rc_test');
+      _storage = sessionStorage;
+      _storageAvailable = true;
+    } catch(e2) { /* unavailable */ }
+  }
+
+  function saveToLocalStorage() {
+    if (!_storageAvailable) return;
+    try {
+      var state = {};
+      document.querySelectorAll('.sa[id]').forEach(function(el) {
+        state[el.id] = { val: el.getAttribute('data-val') || '', text: el.textContent };
+      });
+      _storage.setItem(LS_KEY, JSON.stringify(state));
+      showStatus('Progress saved!');
+    } catch(e) { /* ignore */ }
+  }
+
+  function loadFromLocalStorage() {
+    if (!_storageAvailable) return;
+    try {
+      var raw = _storage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (!state || typeof state !== 'object') return;
+      Object.keys(state).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var saved = state[id];
+        if (saved.val !== '') {
+          el.setAttribute('data-val', saved.val);
+          el.textContent = saved.val;
+          el.classList.add('filled');
+          el.classList.remove('empty');
+        }
+      });
+    } catch(e) { /* ignore corrupt */ }
+  }
+
+  var _autosaveTimer = null;
+  function scheduleAutosavePostMessage() {
+    if (window.parent === window) return;
+    if (_autosaveTimer) clearTimeout(_autosaveTimer);
+    _autosaveTimer = setTimeout(function() {
+      _autosaveTimer = null;
+      var answers = getAnswers();
+      if (Object.keys(answers).length > 0) {
+        window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+      }
+    }, 4000);
+  }
+
+  function flushPendingSave() {
+    if (_autosaveTimer) {
+      clearTimeout(_autosaveTimer);
+      _autosaveTimer = null;
+    }
+    saveToLocalStorage();
+    var answers = getAnswers();
+    if (Object.keys(answers).length > 0 && window.parent !== window) {
+      window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+    }
+  }
+
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') flushPendingSave();
+  });
+  window.addEventListener('pagehide', flushPendingSave);
+  window.addEventListener('beforeunload', flushPendingSave);
+
+  var _bgSaveInterval = setInterval(function() {
+    if (_storageAvailable) {
+      saveToLocalStorage();
+      scheduleAutosavePostMessage();
+    }
+  }, 60000);
+  window.addEventListener('pagehide', function() { clearInterval(_bgSaveInterval); });
+
+  function manualSave() {
+    saveToLocalStorage();
+    var answers = getAnswers();
+    if (Object.keys(answers).length === 0) {
+      showStatus('No answers to save yet.');
+      return;
+    }
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'rc-assignment-autosave', answers: answers }, '*');
+    }
+    showStatus('Progress saved!');
+  }
+
+  function submitAll() {
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+
+  function cancelSubmit() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+  }
+
+  function confirmSubmit() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    saveToLocalStorage();
+    var answers = getAnswers();
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
+    }
+  }
+
+  window.showDay = showDay;
+  window.manualSave = manualSave;
+  window.submitAll = submitAll;
+  window.cancelSubmit = cancelSubmit;
+  window.confirmSubmit = confirmSubmit;
+
+  loadFromLocalStorage();
+  updateAnsweredCount();
+
+}());
+</script>
+</body>
+</html>
