@@ -2028,7 +2028,7 @@
       </div>
       <iframe
         src="${escapeHtml(iframeSrc)}"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
         style="width: 100%; flex: 1; border: none; min-height: 0;"
         title="${title}"
       ></iframe>
@@ -2065,7 +2065,7 @@
     const htmlSrc = meta.html_src || '';
 
     const iframe = document.createElement('iframe');
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
     iframe.style.cssText = 'width: 100%; flex: 1; border: none; min-height: 0;';
     iframe.title = assignment.title || 'Assignment';
     iframe.srcdoc = htmlSrc;
