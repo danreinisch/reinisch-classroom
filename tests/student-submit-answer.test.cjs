@@ -1505,5 +1505,145 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert(!countPatch, 'Auto-save must NOT increment resubmission_count');
   })();
 
+  // ── Group: Fill-in-Blank Constructed (Counting Money) ─────────────────────
+  console.log('\n--- Fill-in-Blank Constructed (Counting Money) ---');
+
+  await test('fill-in-blank: blank answer → scored 0, not in manual bucket', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'constructed', points: 1, meta: { correct: '1.00' } },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'constructed', points: 1, meta: { correct: '0.50' } }
+    ]);
+    // Student only answers q1, leaves q2 blank
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: '1.00' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers, 'submission_answers should be upserted');
+    assert.strictEqual(capturedSubAnswers.length, 2, 'Both items must have submission_answer rows');
+    const q1 = capturedSubAnswers.find(a => a.assignment_item_id === 'item-1');
+    const q2 = capturedSubAnswers.find(a => a.assignment_item_id === 'item-2');
+    assert(q1, 'q1 (answered) must be in submission_answers');
+    assert.strictEqual(q1.is_correct, true, 'q1=1.00 (correct) must score as correct');
+    assert.strictEqual(q1.earned_points, 1);
+    assert(q2, 'q2 (blank) must be in submission_answers');
+    assert.strictEqual(q2.is_correct, false, 'blank q2 must score as incorrect');
+    assert.strictEqual(q2.earned_points, 0, 'blank q2 must earn 0 points');
+    assert.deepStrictEqual(q2.raw_answer, { value: '' }, 'blank q2 raw_answer must be empty sentinel');
+    // score_total should reflect both items (1 correct out of 2 = 50%)
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.score_total, 50, 'score_total should be 50% (1/2 correct)');
+  })();
+
+  await test('fill-in-blank: all blank submission → all items scored 0, score_total=0', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    // Simulate a 62-item Counting Money assignment: all fill-in-blank with string correct answers
+    const items = Array.from({ length: 62 }, (_, i) => ({
+      id: `item-${i + 1}`,
+      item_ref: `cm_${i + 1}`,
+      answer_type: 'constructed',
+      points: 1,
+      meta: { correct: (Math.random() * 2).toFixed(2) },
+      goal_codes: []
+    }));
+    fetchHandlers.items = () => makeOkResponse(items);
+    // Student submits with NO answers (completely blank)
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: {},
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers, 'submission_answers must be upserted even for blank submission');
+    assert.strictEqual(capturedSubAnswers.length, 62, 'All 62 items must have submission_answer rows');
+    const allZero = capturedSubAnswers.every(a => a.is_correct === false && a.earned_points === 0);
+    assert(allZero, 'All blank items must score 0');
+    const body = JSON.parse(response.body);
+    assert.strictEqual(body.score_total, 0, 'score_total must be 0 for all-blank submission');
+  })();
+
+  await test('fill-in-blank: true writing prompt (no meta.correct) NOT zero-scored', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-wp', item_ref: 'WP_1', answer_type: 'constructed', points: 5, meta: {} }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: {},
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    // True writing prompt with no meta.correct must NOT get a 0-scored row
+    // (no submission_answers rows should be written since no answer was provided)
+    assert(!capturedSubAnswers || capturedSubAnswers.length === 0,
+      'True writing prompt with no meta.correct must NOT get a 0-scored blank row');
+  })();
+
+  await test('fill-in-blank: keyword-scored item (array meta.correct) NOT zero-scored', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      {
+        id: 'item-kw', item_ref: 'q_kw', answer_type: 'constructed', points: 4,
+        meta: { scoring: { keywords: ['DNA', 'RNA'], min_keywords: 1 } },
+        goal_codes: []
+      }
+    ]);
+    // Student leaves keyword item blank — should NOT get a 0-row (keyword items have their own path)
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: {},
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(!capturedSubAnswers || capturedSubAnswers.length === 0,
+      'Keyword-scored constructed item with blank answer must NOT get a 0-scored blank row');
+  })();
+
+  await test('fill-in-blank: revision-mode re-submit does NOT overwrite teacher-graded fill-in-blank rows', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: [], original_answers: {}, original_score: 50 },
+        answers: { q1: '1.00' }
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: 'q1', answer_type: 'constructed', points: 1, meta: { correct: '1.00' } },
+      { id: 'item-2', item_ref: 'q2', answer_type: 'constructed', points: 1, meta: { correct: '0.50' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { q1: '1.00' }, // q2 still blank on revision re-submit
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    // On revision re-submit, blank fill-in-blank pass is skipped to preserve any teacher grade
+    const q2Row = capturedSubAnswers ? capturedSubAnswers.find(a => a.assignment_item_id === 'item-2') : null;
+    assert(!q2Row, 'Blank fill-in-blank item must NOT get a 0-row during revision re-submission (preserves teacher grade)');
+  })();
+
   console.log('\n✓ All student-submit-answer tests passed!');
 })();
