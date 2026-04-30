@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interior Design – Payton Hall</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blush:    #f2b5b5;
+  --peach:    #fde9cc;
+  --sage:     #c8ddd0;
+  --lavender: #dcd6f7;
+  --sky:      #c9dff0;
+  --cream:    #fdf6ee;
+  --charcoal: #2d2d2d;
+  --nav-h:    84px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; background:#111; }
+
+/* ── SLIDE WRAPPER ─────────────────────── */
+.slides-container { width:100%; height:100vh; position:relative; }
+
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:center;
+  padding:44px 60px calc(var(--nav-h) + 28px) 60px;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.7s ease;
+  overflow:hidden;
+}
+.slide.active { opacity:1; pointer-events:all; }
+
+/* ── BACKGROUND IMAGE LAYER ────────────── */
+.slide-bg {
+  position:absolute; inset:0;
+  background-size:cover; background-position:center;
+  opacity:0;
+  transition:opacity 1.1s ease 0.1s;
+  z-index:0;
+}
+.slide.active .slide-bg { opacity:1; }
+
+/* Colour overlay sits on top of image */
+.slide-overlay {
+  position:absolute; inset:0;
+  z-index:1;
+}
+
+/* All content above overlays */
+.slide > *:not(.slide-bg):not(.slide-overlay) { position:relative; z-index:2; }
+
+/* ── ANIMATED PARTICLES ────────────────── */
+.particles { position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.particle {
+  position:absolute;
+  border-radius:50%;
+  background:rgba(255,255,255,0.18);
+  animation:floatP linear infinite;
+}
+@keyframes floatP {
+  0%   { transform:translateY(0) scale(1); opacity:0.18; }
+  50%  { opacity:0.32; }
+  100% { transform:translateY(-110vh) scale(1.15); opacity:0; }
+}
+
+/* ── ENTRANCE ANIMATIONS ───────────────── */
+.anim {
+  opacity:0;
+  transform:translateY(24px);
+  transition:opacity 0.55s ease, transform 0.55s ease;
+}
+.anim-left  { opacity:0; transform:translateX(-30px); transition:opacity 0.55s ease,transform 0.55s ease; }
+.anim-right { opacity:0; transform:translateX(30px);  transition:opacity 0.55s ease,transform 0.55s ease; }
+.anim-scale { opacity:0; transform:scale(0.85);       transition:opacity 0.5s ease,transform 0.5s ease; }
+
+.slide.active .anim,
+.slide.active .anim-left,
+.slide.active .anim-right,
+.slide.active .anim-scale { opacity:1; transform:none; }
+
+/* stagger delays */
+.slide.active .d1  { transition-delay:0.15s; }
+.slide.active .d2  { transition-delay:0.30s; }
+.slide.active .d3  { transition-delay:0.45s; }
+.slide.active .d4  { transition-delay:0.60s; }
+.slide.active .d5  { transition-delay:0.75s; }
+.slide.active .d6  { transition-delay:0.90s; }
+.slide.active .d7  { transition-delay:1.05s; }
+.slide.active .d8  { transition-delay:1.15s; }
+.slide.active .d9  { transition-delay:1.25s; }
+
+/* ── BG TINTS ──────────────────────────── */
+.tint-blush    { background:linear-gradient(135deg,rgba(242,181,181,0.80),rgba(232,152,152,0.85)); }
+.tint-peach    { background:linear-gradient(135deg,rgba(253,233,204,0.80),rgba(250,211,160,0.85)); }
+.tint-sage     { background:linear-gradient(135deg,rgba(200,221,208,0.78),rgba(174,207,186,0.83)); }
+.tint-sky      { background:linear-gradient(135deg,rgba(196,222,240,0.80),rgba(175,208,234,0.85)); }
+.tint-lavender { background:linear-gradient(135deg,rgba(220,214,247,0.80),rgba(205,197,241,0.85)); }
+.tint-cream    { background:linear-gradient(135deg,rgba(253,246,238,0.82),rgba(237,227,206,0.87)); }
+
+/* ── TYPOGRAPHY ────────────────────────── */
+.display-title {
+  font-family:'Cormorant Garant',serif;
+  font-size:clamp(3rem,7.5vw,5.8rem);
+  font-weight:700; line-height:1.08;
+  color:var(--charcoal); text-align:center;
+  text-shadow:0 2px 16px rgba(255,255,255,0.5);
+}
+.display-sub {
+  font-family:'Cormorant Garant',serif;
+  font-size:clamp(1.1rem,2.5vw,1.65rem);
+  font-style:italic; color:rgba(45,45,45,0.7); text-align:center;
+  text-shadow:0 1px 8px rgba(255,255,255,0.4);
+}
+.slide-title {
+  font-family:'Cormorant Garant',serif;
+  font-size:clamp(1.8rem,4vw,3rem);
+  font-weight:700; color:var(--charcoal);
+  border-bottom:3px solid rgba(45,45,45,0.2);
+  padding-bottom:10px; margin-bottom:22px;
+  width:100%; text-align:center;
+  text-shadow:0 2px 10px rgba(255,255,255,0.45);
+}
+.label {
+  font-family:'Cormorant Garant',serif;
+  font-size:clamp(1rem,2vw,1.3rem);
+  font-weight:600; color:var(--charcoal);
+  text-decoration:underline; text-underline-offset:4px;
+  margin-bottom:8px; display:block;
+}
+.body-text {
+  font-size:clamp(0.78rem,1.4vw,1rem);
+  color:rgba(45,45,45,0.87); line-height:1.65;
+}
+.big-num {
+  font-family:'Cormorant Garant',serif;
+  font-size:clamp(1.7rem,3.8vw,2.6rem);
+  font-weight:700; color:var(--charcoal);
+}
+
+/* ── CARD ──────────────────────────────── */
+.card {
+  background:rgba(255,255,255,0.52);
+  backdrop-filter:blur(8px);
+  border-radius:18px; padding:20px 24px;
+  border:1.5px solid rgba(255,255,255,0.78);
+  box-shadow:0 4px 28px rgba(0,0,0,0.08);
+  transition:transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover { transform:translateY(-3px); box-shadow:0 10px 36px rgba(0,0,0,0.12); }
+.card-center { text-align:center; }
+
+/* ── LAYOUT ────────────────────────────── */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:28px; width:100%; max-width:1080px; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; width:100%; max-width:1080px; }
+.vstack { display:flex; flex-direction:column; gap:16px; }
+
+/* ── TITLE SLIDE EXTRAS ─────────────────── */
+.title-badge {
+  background:rgba(255,255,255,0.55);
+  border-radius:60px; padding:9px 26px;
+  font-size:clamp(0.78rem,1.5vw,0.95rem);
+  font-weight:500; color:rgba(45,45,45,0.7);
+  letter-spacing:0.09em; text-transform:uppercase;
+  box-shadow:0 2px 14px rgba(0,0,0,0.07);
+}
+.title-deco { width:72px; height:4px; background:linear-gradient(90deg,transparent,rgba(45,45,45,0.28),transparent); border-radius:2px; margin:16px auto; }
+
+/* Typewriter cursor */
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+.cursor { animation:blink 0.9s infinite; }
+
+/* ── SALARY BARS ────────────────────────── */
+.bar-track { background:rgba(255,255,255,0.45); border-radius:8px; height:10px; overflow:hidden; margin-top:10px; }
+.bar-fill  { height:100%; border-radius:8px; background:linear-gradient(90deg,rgba(45,45,45,0.18),rgba(45,45,45,0.55)); width:0%; transition:width 1.5s cubic-bezier(0.4,0,0.2,1) 0.9s; }
+.slide.active .bf-low  { width:24%; }
+.slide.active .bf-avg  { width:40%; }
+.slide.active .bf-high { width:100%; }
+
+/* Pulse glow on average card */
+@keyframes pulseGlow {
+  0%,100% { box-shadow:0 4px 28px rgba(0,0,0,0.08); }
+  50%      { box-shadow:0 4px 40px rgba(90,150,90,0.25), 0 0 0 3px rgba(90,150,90,0.12); }
+}
+.pulse-avg { animation:pulseGlow 2.4s ease-in-out infinite; animation-delay:1.2s; }
+
+/* ── STYLED LIST ────────────────────────── */
+.slist { list-style:none; padding:0; }
+.slist li { padding:4px 0 4px 20px; position:relative; font-size:clamp(0.78rem,1.35vw,0.97rem); color:rgba(45,45,45,0.85); line-height:1.55; }
+.slist li::before { content:'◆'; position:absolute; left:0; font-size:0.45em; top:9px; color:rgba(45,45,45,0.38); }
+
+/* ── BUDGET TABLE ───────────────────────── */
+.btable { width:100%; border-collapse:collapse; font-size:clamp(0.72rem,1.25vw,0.9rem); }
+.btable th { font-family:'Cormorant Garant',serif; font-weight:700; font-size:clamp(0.85rem,1.4vw,1.05rem); color:var(--charcoal); padding:7px 12px; text-align:left; border-bottom:2px solid rgba(45,45,45,0.18); }
+.btable td { padding:6px 12px; color:rgba(45,45,45,0.85); border-bottom:1px solid rgba(45,45,45,0.08); }
+.btable .sec td { font-family:'Cormorant Garant',serif; font-weight:700; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--charcoal); padding-top:12px; }
+.btable .sumrow td { font-family:'Cormorant Garant',serif; font-weight:700; font-size:clamp(0.9rem,1.5vw,1rem); color:var(--charcoal); border-top:2px solid rgba(45,45,45,0.22); padding-top:9px; }
+.chip { display:inline-block; background:rgba(255,255,255,0.65); border-radius:20px; padding:2px 11px; font-weight:600; color:var(--charcoal); }
+
+/* ── CONCLUSION ─────────────────────────── */
+@keyframes popIn { from{opacity:0;transform:scale(0.3)rotate(-15deg);} to{opacity:1;transform:scale(1)rotate(0deg);} }
+.pop-icon { display:inline-block; animation:popIn 0.55s cubic-bezier(0.175,0.885,0.32,1.275) forwards; animation-delay:0.9s; opacity:0; font-size:clamp(2rem,5vw,3.5rem); }
+
+/* ── FLOATING DECORATION CIRCLES ───────── */
+@keyframes floatA {
+  0%,100% { transform:translateY(0px) translateX(0px) scale(1); }
+  33%      { transform:translateY(-18px) translateX(8px) scale(1.03); }
+  66%      { transform:translateY(-8px) translateX(-10px) scale(0.97); }
+}
+@keyframes floatB {
+  0%,100% { transform:translateY(0px) translateX(0px) scale(1); }
+  40%      { transform:translateY(-24px) translateX(-12px) scale(1.04); }
+  70%      { transform:translateY(-6px) translateX(14px) scale(0.96); }
+}
+@keyframes floatC {
+  0%,100% { transform:translateY(0px) translateX(0px); }
+  50%      { transform:translateY(-14px) translateX(6px); }
+}
+.deco {
+  position:absolute; border-radius:50%;
+  background:rgba(255,255,255,0.18);
+  pointer-events:none; z-index:1;
+  animation:floatA 9s ease-in-out infinite;
+}
+.deco:nth-child(even) { animation-name:floatB; animation-duration:11s; }
+.deco:nth-child(3n)   { animation-name:floatC; animation-duration:7s; animation-delay:-3s; }
+
+/* ── SHIMMER ON CARDS (hover) ───────────── */
+@keyframes shimmer { 0%{background-position:-400px center;} 100%{background-position:400px center;} }
+
+/* ── NAV ────────────────────────────────── */
+.nav {
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; gap:14px; z-index:100;
+  background:rgba(255,255,255,0.62); backdrop-filter:blur(12px);
+  border-radius:50px; padding:10px 22px;
+  border:1.5px solid rgba(255,255,255,0.85);
+  box-shadow:0 4px 22px rgba(0,0,0,0.13);
+  height:var(--nav-h);
+}
+.nav-btn {
+  width:40px; height:40px; border-radius:50%;
+  border:1.5px solid rgba(45,45,45,0.2);
+  background:rgba(255,255,255,0.65); cursor:pointer; font-size:1.1rem;
+  display:flex; align-items:center; justify-content:center;
+  transition:background 0.2s,transform 0.2s; color:var(--charcoal);
+}
+.nav-btn:hover { background:rgba(255,255,255,0.92); transform:scale(1.1); }
+.nav-ctr { font-family:'Cormorant Garant',serif; font-size:1rem; color:rgba(45,45,45,0.65); min-width:50px; text-align:center; font-weight:600; }
+.dots { display:flex; gap:7px; align-items:center; }
+.dot { width:8px; height:8px; border-radius:50%; background:rgba(45,45,45,0.22); transition:background 0.3s,transform 0.3s; cursor:pointer; }
+.dot.on { background:rgba(45,45,45,0.6); transform:scale(1.35); }
+.kbhint { font-size:0.7rem; color:rgba(45,45,45,0.4); letter-spacing:0.04em; white-space:nowrap; }
+
+/* ── RESPONSIVE ─────────────────────────── */
+@media(max-width:720px) {
+  .two-col,.three-col { grid-template-columns:1fr; gap:14px; }
+  .slide { padding:28px 20px calc(var(--nav-h)+20px); }
+}
+</style>
+</head>
+<body>
+<div class="slides-container">
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 1 — TITLE                                 -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s0">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-blush"></div>
+  <div class="particles" id="p0"></div>
+  <div class="deco" style="width:300px;height:300px;top:-80px;right:-60px;"></div>
+  <div class="deco" style="width:180px;height:180px;bottom:100px;left:-40px;"></div>
+
+  <div class="anim d1 title-badge">Career Exploration Project</div>
+  <div style="height:20px;"></div>
+  <h1 class="anim d2 display-title" id="typeTitle">Interior<br><em>Design</em></h1>
+  <div class="anim d3 title-deco"></div>
+  <p class="anim d4 display-sub">The art and science of creating beautiful, functional spaces</p>
+  <div style="height:22px;"></div>
+  <div class="anim d5">
+    <span style="display:inline-block;background:rgba(255,255,255,0.52);border-radius:30px;padding:8px 24px;font-size:clamp(0.78rem,1.4vw,0.92rem);color:rgba(45,45,45,0.68);letter-spacing:0.04em;">
+      Payton Hall &nbsp;·&nbsp; 8th Period &nbsp;·&nbsp; April 28, 2026
+    </span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 2 — CAREER OVERVIEW                       -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-blush"></div>
+  <div class="deco" style="width:220px;height:220px;top:-60px;left:-50px;"></div>
+
+  <h2 class="anim d1 slide-title">Career Overview</h2>
+
+  <div class="two-col">
+    <div class="card anim-left d2">
+      <span class="label">What is this career?</span>
+      <p class="body-text">Interior Design is the art and science of <strong>refining a room or building</strong> to make it more functional and aesthetically pleasing — transforming an ordinary space into a thoughtfully designed home.</p>
+    </div>
+    <div class="vstack">
+      <div class="card anim-right d3">
+        <span class="label">Daily Responsibilities</span>
+        <ul class="slist body-text">
+          <li>Work directly with clients to understand their vision</li>
+          <li>Draft and present detailed design plans</li>
+          <li>Source materials, furniture, and finishes</li>
+          <li>Oversee contractors to bring the vision to life</li>
+        </ul>
+      </div>
+      <div class="card anim-right d4">
+        <span class="label">Work Environment</span>
+        <p class="body-text">No two days are the same — you might be sketching in a <strong>creative studio</strong>, planning from an <strong>office</strong>, or walking through an active <strong>job site</strong>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 3 — EDUCATION & TRAINING                  -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-peach"></div>
+  <div class="deco" style="width:260px;height:260px;bottom:-70px;right:-50px;"></div>
+
+  <h2 class="anim d1 slide-title">Education &amp; Training</h2>
+
+  <div class="two-col">
+    <div class="vstack">
+      <div class="card anim-left d2">
+        <span class="label">Degree Required</span>
+        <p class="body-text">Most interior designers earn a <strong>Bachelor's degree in Interior Design</strong> or a related field such as architecture. Programs typically take 4 years and cover design theory, drafting, CAD software, and project management.</p>
+      </div>
+      <div class="card anim-left d3 card-center">
+        <span class="label" style="text-align:center;">Cost of College</span>
+        <div class="big-num">$10,000 – $40,000</div>
+        <p class="body-text" style="margin-top:5px;">per year, depending on the school</p>
+      </div>
+    </div>
+    <div class="card anim-right d4" style="display:flex;flex-direction:column;justify-content:center;">
+      <span class="label">Spotlight: Savannah College of Art &amp; Design (SCAD)</span>
+      <p class="body-text">SCAD is one of the top schools for interior design. They offer a variety of <strong>institutional scholarships</strong> — including academic and achievement honors — making the cost more manageable for students who qualify.</p>
+      <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.52);border-radius:12px;">
+        <p class="body-text" style="font-size:0.82rem;"><strong>💡 Scholarship resource:</strong><br>scholarships.com › Interior Design scholarships directory</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 4 — SALARY & INCOME                       -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-sage"></div>
+  <div class="deco" style="width:240px;height:240px;top:-60px;right:-40px;"></div>
+
+  <h2 class="anim d1 slide-title">Salary &amp; Income</h2>
+
+  <div class="three-col" style="margin-bottom:20px;">
+    <div class="card anim d2 card-center">
+      <p class="body-text" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:7px;">Lowest</p>
+      <div class="big-num" style="color:#b05050;" id="cntLow">$0</div>
+      <p class="body-text" style="font-size:0.78rem;margin-top:3px;">per year</p>
+      <div class="bar-track"><div class="bar-fill bf-low"></div></div>
+    </div>
+    <div class="card anim d3 card-center pulse-avg" style="border:2px solid rgba(255,255,255,0.9);transform:scale(1.05);">
+      <p class="body-text" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:7px;">⭐ Average</p>
+      <div class="big-num" id="cntAvg">$0</div>
+      <p class="body-text" style="font-size:0.78rem;margin-top:3px;">per year</p>
+      <div class="bar-track"><div class="bar-fill bf-avg"></div></div>
+    </div>
+    <div class="card anim d4 card-center">
+      <p class="body-text" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:7px;">Highest</p>
+      <div class="big-num" style="color:#3a7a55;" id="cntHigh">$0</div>
+      <p class="body-text" style="font-size:0.78rem;margin-top:3px;">per year</p>
+      <div class="bar-track"><div class="bar-fill bf-high"></div></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card anim-left d5">
+      <span class="label">Monthly Income Breakdown</span>
+      <p class="body-text">$30.52/hr × 40 hrs = $1,220.80/week<br>× 52 weeks = $63,481.60/year<br>÷ 12 months = <strong>$5,290.13/month</strong></p>
+    </div>
+    <div class="card anim-right d6">
+      <span class="label">Missouri Tax Estimate (on $63,490)</span>
+      <ul class="slist body-text">
+        <li>Self-employment tax: $8,971</li>
+        <li>Federal income tax: $3,871</li>
+        <li>Missouri state tax: $1,836</li>
+        <li><strong>Take-home pay: ~$48,812/year</strong></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 5 — COST OF LIVING                        -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-sky"></div>
+  <div class="deco" style="width:300px;height:300px;bottom:-90px;left:-70px;"></div>
+
+  <h2 class="anim d1 slide-title">Cost of Living — Columbus, Ohio</h2>
+
+  <div class="two-col">
+    <div class="vstack">
+      <div class="card anim-left d2">
+        <span class="label">Why Columbus?</span>
+        <p class="body-text">Chosen for its <strong>low-cost housing</strong> and affordable utilities and groceries — a smart move for a first-year professional looking to keep expenses manageable.</p>
+      </div>
+      <div class="card anim-left d3">
+        <span class="label">Rent by Apartment Size</span>
+        <ul class="slist body-text">
+          <li>Studio: ~$930 – $1,195/mo</li>
+          <li>1-Bedroom: ~$1,077 – $1,297/mo</li>
+          <li>2-Bedroom: ~$1,052 – $1,399/mo</li>
+          <li>3-Bedroom: ~$1,510 – $1,623/mo</li>
+        </ul>
+      </div>
+    </div>
+    <div class="vstack">
+      <div class="card anim-right d4">
+        <span class="label">Monthly Groceries</span>
+        <p class="body-text">A single adult in Columbus typically spends <strong>$331 – $450/month</strong> on groceries. Market District offers competitive prices for budget-conscious shoppers.</p>
+      </div>
+      <div class="card anim-right d5">
+        <span class="label">Monthly Utility Bills</span>
+        <ul class="slist body-text">
+          <li>Electricity: $255 – $270/mo</li>
+          <li>Water &amp; Sewer: $50 – $75/mo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 6 — LIFESTYLE CHOICES                     -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-lavender"></div>
+  <div class="deco" style="width:220px;height:220px;top:-50px;right:-50px;"></div>
+
+  <h2 class="anim d1 slide-title">Lifestyle Choices</h2>
+
+  <div class="two-col">
+    <div class="card anim-left d2">
+      <span class="label">🚗 Car Choice: 2026 Nissan Versa</span>
+      <ul class="slist body-text" style="margin-top:10px;">
+        <li>Price: $17,500</li>
+        <li>Down Payment: $3,000</li>
+        <li>Loan Term: 60 months (5 years)</li>
+        <li>Estimated APR: 6.0%</li>
+        <li><strong>Estimated Payment: ~$290/month</strong></li>
+      </ul>
+      <div style="margin-top:13px;padding:10px;background:rgba(255,255,255,0.52);border-radius:10px;">
+        <p class="body-text" style="font-size:0.82rem;">The Versa is one of the most fuel-efficient and affordable new cars available — a practical choice for a young professional.</p>
+      </div>
+    </div>
+    <div class="vstack">
+      <div class="card anim-right d3">
+        <span class="label">📱 Phone &amp; Internet</span>
+        <ul class="slist body-text">
+          <li>High-speed Internet: $50 – $80/month</li>
+          <li>Mobile Phone Plan: ~$45 – $70/month (standard plan with data)</li>
+        </ul>
+      </div>
+      <div class="card anim-right d4">
+        <span class="label">🏠 Housing</span>
+        <p class="body-text">Targeting a <strong>1-bedroom apartment</strong> in Columbus (~$1,200/month), with access to nearby budget-friendly shopping. Live High Point Columbus is a top contender.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 7 — BUDGET BREAKDOWN                      -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-cream"></div>
+  <div class="deco" style="width:280px;height:280px;bottom:-80px;right:-55px;"></div>
+
+  <h2 class="anim d1 slide-title">Budget Breakdown — Monthly</h2>
+
+  <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:26px;width:100%;max-width:1000px;align-items:start;">
+    <div class="card anim-left d2">
+      <table class="btable">
+        <thead><tr><th>Category</th><th>Item</th><th style="text-align:right;">Cost</th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="3">Income</td></tr>
+          <tr><td></td><td>Monthly Income</td><td style="text-align:right;"><span class="chip">$5,290</span></td></tr>
+          <tr class="sec"><td colspan="3">Essential Expenses</td></tr>
+          <tr><td></td><td>Rent (1BR Avg)</td><td style="text-align:right;">$1,200</td></tr>
+          <tr><td></td><td>Electricity</td><td style="text-align:right;">$260</td></tr>
+          <tr><td></td><td>Water / Sewer</td><td style="text-align:right;">$65</td></tr>
+          <tr><td></td><td>Groceries</td><td style="text-align:right;">$400</td></tr>
+          <tr><td></td><td>Internet</td><td style="text-align:right;">$70</td></tr>
+          <tr><td></td><td>Phone</td><td style="text-align:right;">$70</td></tr>
+          <tr><td></td><td>Transportation</td><td style="text-align:right;">$250</td></tr>
+          <tr><td></td><td>Insurance</td><td style="text-align:right;">$300</td></tr>
+          <tr class="sec"><td colspan="3">Additional Spending</td></tr>
+          <tr><td></td><td>Eating Out / Fun</td><td style="text-align:right;">$300</td></tr>
+          <tr><td></td><td>Savings</td><td style="text-align:right;">$500</td></tr>
+          <tr><td></td><td>Misc / Unexpected</td><td style="text-align:right;">$300</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="vstack">
+      <div class="card anim-right d3 card-center">
+        <p class="body-text" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:7px;">Total Monthly Expenses</p>
+        <div class="big-num" style="color:#b05050;">$3,715</div>
+      </div>
+      <div class="card anim-right d4 card-center" style="border:2px solid rgba(255,255,255,0.9);">
+        <p class="body-text" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:7px;">Money Left Over</p>
+        <div class="big-num" style="color:#3a7a55;">$1,575</div>
+        <p class="body-text" style="font-size:0.8rem;margin-top:5px;">each month, after all expenses</p>
+      </div>
+      <div class="card anim-right d5">
+        <p class="body-text" style="font-size:0.85rem;line-height:1.65;">With <strong>$500/month going to savings</strong> ($6,000/year!) and $1,575 still available, this budget shows a healthy financial cushion — room for both saving and enjoying life.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SLIDE 8 — CONCLUSION                            -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-bg" style="background-image:url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1920&q=80');"></div>
+  <div class="slide-overlay tint-blush"></div>
+  <div class="particles" id="p7"></div>
+  <div class="deco" style="width:340px;height:340px;top:-100px;right:-80px;"></div>
+  <div class="deco" style="width:200px;height:200px;bottom:80px;left:-40px;"></div>
+
+  <h2 class="anim d1 slide-title">Conclusion</h2>
+
+  <div class="two-col" style="margin-bottom:20px;max-width:920px;">
+    <div class="card anim-left d2 card-center">
+      <div class="pop-icon">✅</div>
+      <span class="label" style="display:block;text-align:center;margin-top:12px;">Is this career realistic?</span>
+      <p class="body-text" style="margin-top:8px;">Yes — the projected income covers all essential expenses <em>and</em> leaves $1,575/month to spare. It's a financially solid path.</p>
+    </div>
+    <div class="card anim-right d3 card-center">
+      <div class="pop-icon" style="animation-delay:1.1s;">💛</div>
+      <span class="label" style="display:block;text-align:center;margin-top:12px;">Would I still choose this career?</span>
+      <p class="body-text" style="margin-top:8px;">Absolutely — because it's what I love to do. Interior design is creative, meaningful, and lets me shape the spaces where people live their lives.</p>
+    </div>
+  </div>
+
+  <div class="anim d6" style="text-align:center;">
+    <p style="font-family:'Cormorant Garant',serif;font-size:clamp(1.2rem,3vw,1.9rem);font-style:italic;color:rgba(45,45,45,0.68);">That is the end of my Interior Design presentation, thanks for watching!</p>
+    <p class="body-text" style="margin-top:8px;font-size:0.82rem;color:rgba(45,45,45,0.48);">Payton Hall &nbsp;·&nbsp; 8th Period &nbsp;·&nbsp; April 28, 2026</p>
+  </div>
+</div>
+
+</div><!-- /slides-container -->
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- NAV BAR                                         -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="nav">
+  <button class="nav-btn" onclick="go(-1)">&#8592;</button>
+  <div class="dots" id="dots"></div>
+  <span class="nav-ctr" id="ctr">1 / 8</span>
+  <button class="nav-btn" onclick="go(1)">&#8594;</button>
+  <span class="kbhint">← → keys</span>
+</div>
+
+<script>
+var slides = document.querySelectorAll('.slide');
+var N = slides.length;
+var cur = 0;
+
+// Build dots
+var dotsEl = document.getElementById('dots');
+for (var i = 0; i < N; i++) {
+  (function(idx){
+    var d = document.createElement('div');
+    d.className = 'dot' + (idx===0?' on':'');
+    d.onclick = function(){ goTo(idx); };
+    dotsEl.appendChild(d);
+  })(i);
+}
+
+// Activate first slide
+slides[0].classList.add('active');
+spawnParticles(0);
+startCounters(0);
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  cur = Math.max(0, Math.min(N-1, n));
+  slides[cur].classList.add('active');
+  spawnParticles(cur);
+  startCounters(cur);
+  document.getElementById('ctr').textContent = (cur+1) + ' / ' + N;
+  var ds = document.querySelectorAll('.dot');
+  ds.forEach(function(d,i){ d.classList.toggle('on', i===cur); });
+}
+
+function go(dir){ goTo(cur+dir); }
+
+document.addEventListener('keydown', function(e){
+  if (e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); go(1); }
+  else if (e.key==='ArrowLeft'||e.key==='ArrowUp'){ e.preventDefault(); go(-1); }
+});
+
+// ── PARTICLES ──────────────────────────────────────
+function spawnParticles(idx) {
+  var container = document.getElementById('p'+idx);
+  if (!container) return;
+  container.innerHTML = '';
+  for (var i = 0; i < 18; i++) {
+    (function(){
+      var p = document.createElement('div');
+      p.className = 'particle';
+      var size = 6 + Math.random()*14;
+      p.style.cssText = [
+        'width:'+size+'px','height:'+size+'px',
+        'left:'+(Math.random()*100)+'%',
+        'top:'+(60+Math.random()*40)+'%',
+        'animation-duration:'+(7+Math.random()*10)+'s',
+        'animation-delay:'+(-Math.random()*8)+'s',
+        'opacity:'+(0.1+Math.random()*0.18)
+      ].join(';');
+      container.appendChild(p);
+    })();
+  }
+}
+
+// ── COUNT-UP ANIMATION ──────────────────────────────
+var countersStarted = {};
+function startCounters(idx) {
+  if (idx !== 3) return; // only salary slide
+  if (countersStarted[idx]) return;
+  countersStarted[idx] = true;
+  setTimeout(function(){
+    animCount('cntLow',  38480,  '$', 900);
+    animCount('cntAvg',  63490,  '$', 1100);
+    animCount('cntHigh', 160090, '$', 1400);
+  }, 500);
+}
+function animCount(elId, target, prefix, duration) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var start = 0;
+  var step = target / (duration / 16);
+  var fn = function(){
+    start = Math.min(start + step, target);
+    el.textContent = prefix + Math.floor(start).toLocaleString();
+    if (start < target) requestAnimationFrame(fn);
+    else el.textContent = prefix + target.toLocaleString();
+  };
+  requestAnimationFrame(fn);
+}
+</script>
+</body>
+</html>
