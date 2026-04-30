@@ -325,7 +325,7 @@ exports.handler = async (event) => {
       const cumulativeAnswers = { ...priorAnswers, ...incomingAnswers };
       const hasAnswers = Object.keys(cumulativeAnswers).length > 0;
       const hasWriting = writing_response && typeof writing_response === 'string' && writing_response.trim().length > 0;
-      if (submissionId && (hasAnswers || hasWriting) && instance.assignment_id) {
+      if (submissionId && instance.assignment_id) {
         const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,points,meta,goal_codes`;
         const itemsResponse = await fetch(itemsUrl, {
           method: 'GET',
@@ -467,6 +467,37 @@ exports.handler = async (event) => {
                 if (isCorrect !== null) {
                   responseScoringResults.push({ item_ref: itemRef, is_correct: isCorrect });
                 }
+              }
+            }
+
+            // Pass 2: For fill-in-blank constructed items (primitive meta.correct), write a
+            // 0-scored row for any item not yet in subAnswers so blank inputs are treated as
+            // auto-scored wrong rather than falling into the manual "Written Responses" bucket.
+            // Guard: skip during revision-mode re-submissions to avoid overwriting teacher grades.
+            if (!isRevisionResubmission) {
+              for (const item of items) {
+                if (item.answer_type !== 'constructed') continue;
+                // Only handle fill-in-blank: primitive meta.correct (string/number/boolean)
+                const correctMeta = item.meta && item.meta.correct;
+                if (correctMeta == null) continue; // true writing prompt — leave for teacher
+                if (Array.isArray(correctMeta)) continue; // keyword list — handled by keyword scorer
+                // Skip keyword-scored items (meta.scoring.keywords array)
+                const hasKeywords = item.meta && item.meta.scoring && Array.isArray(item.meta.scoring.keywords) && item.meta.scoring.keywords.length > 0;
+                if (hasKeywords) continue;
+                // Skip if student answered this item (already in subAnswers)
+                const alreadyQueued = subAnswers.some(a => a.assignment_item_id === item.id);
+                if (alreadyQueued) continue;
+                // Write a 0-scored row for this blank fill-in-blank item
+                const maxPoints = item.points != null ? Number(item.points) : 1;
+                subAnswers.push({
+                  submission_id: submissionId,
+                  assignment_item_id: item.id,
+                  raw_answer: { value: '' },
+                  is_correct: false,
+                  earned_points: 0,
+                  max_points: maxPoints,
+                  scored_at: new Date().toISOString()
+                });
               }
             }
 

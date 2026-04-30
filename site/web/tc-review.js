@@ -627,6 +627,20 @@
   }
 
   /**
+   * True if this constructed item is a fill-in-blank with a primitive correct answer
+   * (e.g. Counting Money "1.00", a single word, etc.) — i.e. it should be treated as
+   * objectively auto-gradeable, NOT as a writing prompt requiring teacher rubric scoring.
+   */
+  function isFillInBlankConstructed(item) {
+    if (item.answer_type !== 'constructed') return false;
+    const c = item.meta?.correct;
+    if (c == null) return false;
+    if (Array.isArray(c)) return false; // keyword list = writing-prompt-with-keywords
+    // strings/numbers/booleans = fill-in-blank
+    return typeof c === 'string' || typeof c === 'number' || typeof c === 'boolean';
+  }
+
+  /**
    * Reconstruct virtual answer objects from raw submission.answers JSONB for display.
    * Used when submission_answers rows are absent (backfill not yet run).
    * Returns display-only answer objects — NOT cached in submissionAnswersCache.
@@ -738,8 +752,8 @@
       const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
-      if (constructedItems.length === 0) continue; // MCQ-only handled by autoFinalize
+      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
+      if (constructedItems.length === 0) continue; // MCQ-only or fill-in-blank-only handled by autoFinalize
       const answers = submissionAnswersCache[submission.id] || [];
       // A constructed item counts as scored if it is auto-scored (earned_points != null),
       // whether by the keyword engine or by a teacher rubric.
@@ -753,7 +767,7 @@
       const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
       const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
@@ -958,7 +972,7 @@
     } else if (items.length > 0) {
       const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
       if (totalMax > 0) {
-        const constructedItems = items.filter(i => i.answer_type === 'constructed');
+        const constructedItems = items.filter(i => i.answer_type === 'constructed' && !isFillInBlankConstructed(i));
         const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
         if (hasUnscored) {
           scorePreview = `<span class="rv-score-preview" style="font-size:13px;font-family:monospace;opacity:0.75;">___/${totalMax} — ___%</span>`;
@@ -1083,8 +1097,16 @@
     // Separate auto-graded and constructed items.
     // Fill-in-blank (constructed) items that were keyword-auto-scored by the server
     // already have earned_points populated — treat those as auto-graded too.
-    const autoGradedItems = items.filter(item => isAutoScoredItem(item, displayAnswers));
-    const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, displayAnswers));
+    // Also treat fill-in-blank constructed items (primitive meta.correct) as auto-graded
+    // even if no submission_answers row exists yet (blank submission before Fix 1 runs).
+    const autoGradedItems = items.filter(item =>
+      isAutoScoredItem(item, displayAnswers) || isFillInBlankConstructed(item)
+    );
+    const constructedItems = items.filter(item =>
+      item.answer_type === 'constructed'
+      && !isAutoScoredItem(item, displayAnswers)
+      && !isFillInBlankConstructed(item)
+    );
     
     // Calculate stats
     let autoCorrect = 0;
@@ -1124,8 +1146,12 @@
       const autoRows = autoGradedItems.map(item => {
         const answer = displayAnswers.find(a => a.item_id === item.id);
         const correctAnswer = item.meta?.correct || item.correct || '—';
-        const studentAnswer = answer?.raw_answer || '—';
-        const isCorrect = answer?.is_correct;
+        // For fill-in-blank items with no answer row (blank submission before Fix 1), show (blank)
+        const noAnswer = answer == null && isFillInBlankConstructed(item);
+        const studentAnswer = answer?.raw_answer || (noAnswer ? '(blank)' : '—');
+        const isCorrect = answer != null ? answer.is_correct : (noAnswer ? false : null);
+        const earnedPoints = answer != null ? (Number(answer.earned_points) || 0) : 0;
+        const maxPoints = item.points || 0;
         
         return `
           <tr>
@@ -1133,8 +1159,8 @@
             <td><span class="rv-type-badge">${escapeHtml(item.answer_type)}</span></td>
             <td>${escapeHtml(typeof studentAnswer === 'object' ? JSON.stringify(studentAnswer) : studentAnswer)}</td>
             <td>${escapeHtml(typeof correctAnswer === 'object' ? JSON.stringify(correctAnswer) : correctAnswer)}</td>
-            <td>${isCorrect ? CHECK_SVG : X_SVG}</td>
-            <td>${Number(answer?.earned_points) || 0}/${item.points || 0}</td>
+            <td>${isCorrect === true ? CHECK_SVG : (isCorrect === false ? X_SVG : '—')}</td>
+            <td>${earnedPoints}/${maxPoints}</td>
           </tr>
         `;
       }).join('');
@@ -1210,7 +1236,7 @@
         return `
           <div class="rv-response-card" data-item-id="${escapeHtml(item.id)}">
             <div class="rv-response-header">
-              ${escapeHtml(item.item_ref || item.ref)} — &ldquo;${escapeHtml(item.meta?.question || 'Written Response')}&rdquo;
+              ${escapeHtml(item.item_ref || item.ref)}${item.meta?.question ? ` — \u201c${escapeHtml(item.meta.question)}\u201d` : ''}
             </div>
             
             <div class="rv-student-response">
@@ -1671,7 +1697,7 @@
       // would cause a bigint error when writing submission_answers rows.
       if (syntheticAssignmentIds.has(assignmentId)) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
       // A constructed item counts as scored if keyword-auto-scored or teacher-scored
@@ -1699,7 +1725,7 @@
                 }, 0)
             : (Number(submission.score_auto) || 0);
           let scoreManual = 0;
-          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers))
+          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers) && !isFillInBlankConstructed(item))
             .forEach(item => {
               const answer = answers.find(a => a.item_id === item.id);
               if (answer) scoreManual += Number(answer.earned_points) || 0;
@@ -1759,7 +1785,7 @@
     for (const submission of unreviewed) {
       const assignmentId = resolveAssignmentId(submission);
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
       if (constructedItems.length > 0) {
         const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
         // Only skip if there are truly unscored constructed items (not keyword-auto-scored)
@@ -1798,12 +1824,12 @@
                 }, 0)
             : (Number(submission.score_auto) || 0);
           let scoreManual = 0;
-          const manualConstructed = items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers));
+          const manualConstructed = items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers) && !isFillInBlankConstructed(item));
           manualConstructed.forEach(item => {
             const answer = answers.find(a => a.item_id === item.id);
             if (answer) scoreManual += Number(answer.earned_points) || 0;
           });
-          if (items.filter(i => i.answer_type === 'constructed').length === 0) scoreManual = Number(submission.score_manual) || 0;
+          if (items.filter(i => i.answer_type === 'constructed' && !isFillInBlankConstructed(i)).length === 0) scoreManual = Number(submission.score_manual) || 0;
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
