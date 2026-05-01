@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interior Design – Payton Hall</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nav-h:80px;
+  --ink:#243332;
+  --muted:#496260;
+  --card:rgba(255,255,255,.80);
+  --card-2:rgba(255,255,255,.72);
+  --line:rgba(36,51,50,.16);
+  --shadow:0 18px 50px rgba(0,0,0,.18);
+  --radius:24px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#071713;color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:#0d677b;font-weight:800;word-break:break-word}
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:none;opacity:0;transition:opacity .45s ease;overflow:hidden}
+.slide.active{display:block;opacity:1}
+.bg-photo,.bg-overlay,.bg-vignette,.texture,.orb,.spark{position:absolute;inset:0}
+.bg-photo{
+  z-index:0;
+  background-size:cover;
+  background-position:center;
+  transform:scale(1.05);
+  animation:kenBurns 18s ease-in-out infinite alternate;
+}
+.bg-overlay{z-index:1}
+.bg-vignette{z-index:2;background:radial-gradient(circle at center, rgba(255,255,255,.05), rgba(7,23,19,.26) 76%)}
+.texture{z-index:3;background:linear-gradient(135deg, rgba(255,255,255,.06), transparent 42%, rgba(255,255,255,.03));pointer-events:none}
+.tint-blush{background:linear-gradient(135deg,rgba(245,197,203,.83),rgba(255,232,218,.81) 46%,rgba(245,214,231,.84))}
+.tint-peach{background:linear-gradient(135deg,rgba(255,230,194,.86),rgba(255,241,221,.82) 48%,rgba(247,176,111,.76))}
+.tint-sage{background:linear-gradient(135deg,rgba(220,239,216,.84),rgba(197,226,201,.81) 46%,rgba(238,249,236,.82))}
+.tint-sky{background:linear-gradient(135deg,rgba(216,237,241,.86),rgba(183,220,230,.84) 48%,rgba(238,250,255,.82))}
+.tint-lavender{background:linear-gradient(135deg,rgba(228,220,255,.86),rgba(214,208,241,.83) 46%,rgba(248,236,255,.84))}
+.tint-cream{background:linear-gradient(135deg,rgba(250,243,233,.88),rgba(243,234,222,.86) 46%,rgba(255,251,246,.85))}
+.orb{z-index:4;border-radius:50%;pointer-events:none;background:rgba(255,255,255,.26);filter:blur(1px);animation:floatOrb 12s ease-in-out infinite}
+.orb.a{width:32vw;height:32vw;left:-8vw;top:-10vw}
+.orb.b{width:18vw;height:18vw;right:-4vw;bottom:10vh;animation-delay:-4s}
+.orb.c{width:12vw;height:12vw;right:14vw;top:12vh;animation-delay:-7s;opacity:.18}
+.spark{z-index:5;height:5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);transform:translateX(-110%);animation:sweep 6s ease-in-out infinite;pointer-events:none}
+@keyframes kenBurns{from{transform:scale(1.05) translate3d(0,0,0)}to{transform:scale(1.12) translate3d(-1.5%, -1.2%, 0)}}
+@keyframes floatOrb{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(16px,-18px,0)}}
+@keyframes sweep{0%{transform:translateX(-110%)}45%,100%{transform:translateX(110%)}}
+.slide-scroll{position:relative;z-index:10;height:calc(100vh - var(--nav-h));overflow-y:auto;padding:34px clamp(26px,5vw,72px) 24px;scrollbar-width:thin;scrollbar-color:rgba(36,51,50,.35) transparent}
+.slide-wrap{width:min(1180px,100%);margin:0 auto}
+.title-slide{min-height:calc(100vh - var(--nav-h) - 10px);display:flex;align-items:center;justify-content:center;text-align:center}
+.kicker{font-size:clamp(.82rem,1.2vw,1rem);text-transform:uppercase;letter-spacing:.14em;font-weight:800;color:rgba(36,51,50,.68);margin-bottom:10px}
+.title-main{font-size:clamp(3.2rem,7vw,6rem);font-weight:800;line-height:.92;color:#fff;text-shadow:0 4px 22px rgba(0,0,0,.18);letter-spacing:-.05em}
+.title-sub{font-family:'Cormorant Garamond',serif;font-size:clamp(2.5rem,5.8vw,5.2rem);line-height:1;color:rgba(36,51,50,.86);margin-top:12px;text-decoration:underline;text-underline-offset:10px}
+.meta-pill{display:inline-block;margin-top:24px;padding:12px 24px;border-radius:999px;background:rgba(255,255,255,.72);box-shadow:var(--shadow);font-weight:700;color:rgba(36,51,50,.78)}
+.hero-blurb{width:min(820px,100%);margin:30px auto 0;background:rgba(255,255,255,.28);border:1.5px solid rgba(255,255,255,.56);border-radius:26px;padding:22px 24px;box-shadow:0 12px 36px rgba(0,0,0,.12)}
+.hero-blurb p{font-size:clamp(1rem,1.5vw,1.18rem);line-height:1.6;color:rgba(36,51,50,.82);font-weight:700}
+.slide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:24px}
+.slide-head h2{flex:1;font-family:'Cormorant Garamond',serif;font-size:clamp(2.6rem,5vw,4.3rem);line-height:1;color:rgba(36,51,50,.94);text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:8px;text-shadow:0 2px 12px rgba(255,255,255,.45)}
+.speak{border:1px solid rgba(255,255,255,.88);background:rgba(255,255,255,.74);padding:12px 18px;border-radius:999px;font-weight:800;color:#155d57;box-shadow:0 10px 24px rgba(0,0,0,.08);cursor:pointer;white-space:nowrap}
+.speak:hover{transform:translateY(-1px);background:#fff}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.layout-main{display:grid;grid-template-columns:minmax(0,1.24fr) minmax(250px,.76fr);gap:22px;align-items:start}
+.stack{display:grid;gap:18px}
+.card{position:relative;overflow:hidden;background:var(--card);border:1.4px solid rgba(255,255,255,.86);border-radius:var(--radius);padding:20px 22px;box-shadow:0 16px 42px rgba(0,0,0,.11)}
+.card.alt{background:var(--card-2)}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:7px;background:rgba(36,51,50,.26)}
+.card.center{text-align:center}
+.card h3{font-size:clamp(1.08rem,1.8vw,1.45rem);line-height:1.18;color:rgba(36,51,50,.88);margin-bottom:10px;text-decoration:underline;text-underline-offset:5px}
+.card p,.card li{font-size:clamp(.98rem,1.35vw,1.14rem);line-height:1.58;color:rgba(36,51,50,.82);font-weight:600}
+.card ul{list-style:none;display:grid;gap:8px}
+.card li::before{content:'○ ';color:rgba(36,51,50,.52);font-weight:900}
+.big-number{font-family:'Cormorant Garamond',serif;font-size:clamp(1.8rem,3.4vw,3rem);font-weight:700;color:rgba(36,51,50,.94)}
+.note{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.48);margin-top:12px;border:1px solid rgba(36,51,50,.08)}
+.stat-card{background:rgba(255,255,255,.78);text-align:center}
+.bar{height:10px;border-radius:999px;background:rgba(36,51,50,.12);margin-top:12px;overflow:hidden}
+.fill{height:100%;border-radius:999px;background:linear-gradient(90deg, rgba(36,51,50,.35), rgba(36,51,50,.78));transform:scaleX(0);transform-origin:left center;transition:transform 1.2s ease .3s}
+.slide.active .fill{transform:scaleX(1)}
+.fill.low{width:24%}.fill.avg{width:40%}.fill.high{width:100%}
+.callout{display:grid;gap:18px}
+.callout .card{min-height:110px}
+.table-wrap{overflow:auto;border-radius:20px}
+table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.38)}
+th,td{padding:10px 12px;border-bottom:1px solid rgba(36,51,50,.12);text-align:left;font-weight:700;color:rgba(36,51,50,.84)}
+th{background:rgba(255,255,255,.52);font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:rgba(36,51,50,.9)}
+tr.section td{background:rgba(255,255,255,.34);font-weight:800}
+tr.summary td{background:rgba(36,51,50,.10);font-weight:900}
+.footer-note{margin-top:16px;text-align:center;font-size:.95rem;color:rgba(36,51,50,.72);font-weight:700}
+.reveal{opacity:0;transform:translate3d(0,24px,0) scale(.985);transition:opacity .6s ease, transform .6s ease}
+.slide.active .reveal{opacity:1;transform:translate3d(0,0,0) scale(1)}
+.d1{transition-delay:.05s}.d2{transition-delay:.14s}.d3{transition-delay:.23s}.d4{transition-delay:.32s}.d5{transition-delay:.41s}.d6{transition-delay:.50s}.d7{transition-delay:.59s}.d8{transition-delay:.68s}
+.nav{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:12px;height:calc(var(--nav-h) - 16px);padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.68);border:1.5px solid rgba(255,255,255,.88);box-shadow:0 14px 38px rgba(0,0,0,.18);backdrop-filter:blur(14px)}
+.nav button{border:0;border-radius:999px;background:rgba(36,51,50,.88);color:#fff;width:42px;height:42px;font-size:1.2rem;font-weight:900;cursor:pointer}
+.nav button:hover{transform:scale(1.06)}
+.nav .home{width:auto;padding:0 16px;font-size:.92rem}
+.count{font-weight:900;color:rgba(36,51,50,.74);min-width:58px;text-align:center}
+.dots{display:flex;gap:7px}
+.dot{width:10px;height:10px;border-radius:999px;background:rgba(36,51,50,.24);cursor:pointer;transition:transform .2s, background .2s}
+.dot.on{background:rgba(36,51,50,.8);transform:scale(1.35)}
+
+/* ── CLEAR SLIDE ANIMATIONS ───────────────────────
+   These are intentionally more visible for classroom display / Newline TV use. */
+.slide.active .slide-head h2{
+  animation:titleDrop .78s cubic-bezier(.2,.8,.2,1) both;
+}
+.slide.active .speak{
+  animation:buttonPop .72s cubic-bezier(.2,.8,.2,1) .18s both;
+}
+.slide.active .card{
+  animation:cardRise .72s cubic-bezier(.2,.8,.2,1) both;
+}
+.slide.active .card:nth-child(1){animation-delay:.10s}
+.slide.active .card:nth-child(2){animation-delay:.20s}
+.slide.active .card:nth-child(3){animation-delay:.30s}
+.slide.active .card:nth-child(4){animation-delay:.40s}
+.slide.active .title-main{
+  animation:heroTitle .9s cubic-bezier(.18,.89,.32,1.28) both;
+}
+.slide.active .title-sub{
+  animation:heroSub .9s cubic-bezier(.2,.8,.2,1) .22s both;
+}
+.slide.active .meta-pill{
+  animation:pillSlide .7s ease .42s both;
+}
+.slide.active .hero-blurb{
+  animation:cardRise .75s cubic-bezier(.2,.8,.2,1) .56s both;
+}
+.slide.active .bg-photo{
+  animation:bgEnter 1.2s ease both, kenBurns 18s ease-in-out 1.2s infinite alternate;
+}
+.slide.active .orb.a{animation:orbAppear .75s ease .15s both, floatOrb 12s ease-in-out .9s infinite}
+.slide.active .orb.b{animation:orbAppear .75s ease .30s both, floatOrb 13s ease-in-out 1s infinite}
+.slide.active .orb.c{animation:orbAppear .75s ease .45s both, floatOrb 10s ease-in-out 1.1s infinite}
+.slide.active .spark{animation:sweep 4.8s ease-in-out .7s infinite}
+.slide.active .reveal{
+  animation:revealUp .72s cubic-bezier(.2,.8,.2,1) both;
+}
+.slide.active .d1{animation-delay:.06s}
+.slide.active .d2{animation-delay:.18s}
+.slide.active .d3{animation-delay:.30s}
+.slide.active .d4{animation-delay:.42s}
+.slide.active .d5{animation-delay:.54s}
+.slide.active .d6{animation-delay:.66s}
+.slide.active .d7{animation-delay:.78s}
+.slide.active .d8{animation-delay:.90s}
+
+.card::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(110deg,transparent 0%,rgba(255,255,255,.26) 42%,transparent 64%);
+  transform:translateX(-120%);
+  pointer-events:none;
+}
+.slide.active .card::after{
+  animation:cardShine 2.8s ease .65s both;
+}
+
+@keyframes revealUp{
+  from{opacity:0;transform:translate3d(0,34px,0) scale(.97)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes titleDrop{
+  from{opacity:0;transform:translate3d(0,-34px,0) scale(.96);filter:blur(4px)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}
+}
+@keyframes buttonPop{
+  from{opacity:0;transform:scale(.75)}
+  70%{opacity:1;transform:scale(1.08)}
+  to{opacity:1;transform:scale(1)}
+}
+@keyframes cardRise{
+  from{opacity:0;transform:translate3d(0,36px,0) scale(.96);filter:blur(3px)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}
+}
+@keyframes heroTitle{
+  from{opacity:0;transform:translate3d(0,26px,0) scale(.9);filter:blur(4px)}
+  70%{opacity:1;transform:translate3d(0,-4px,0) scale(1.03);filter:blur(0)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes heroSub{
+  from{opacity:0;transform:translate3d(0,24px,0);letter-spacing:.08em}
+  to{opacity:1;transform:translate3d(0,0,0);letter-spacing:normal}
+}
+@keyframes pillSlide{
+  from{opacity:0;transform:translate3d(0,20px,0) scale(.94)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes bgEnter{
+  from{opacity:.72;transform:scale(1.16)}
+  to{opacity:1;transform:scale(1.05)}
+}
+@keyframes orbAppear{
+  from{opacity:0;transform:scale(.65)}
+  to{opacity:.34;transform:scale(1)}
+}
+@keyframes cardShine{
+  from{transform:translateX(-120%)}
+  to{transform:translateX(120%)}
+}
+
+
+/* ── EXTRA MOTION PACK ─────────────────────────────
+   More visible movement: animated titles, floating design icons,
+   moving gradient overlays, table/list stagger, and card breathing. */
+
+.motion-icons{
+  position:absolute;
+  inset:0;
+  z-index:6;
+  pointer-events:none;
+  overflow:hidden;
+}
+.motion-icons span{
+  position:absolute;
+  width:54px;
+  height:54px;
+  display:block;
+  border-radius:18px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.56), rgba(255,255,255,.16)),
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.75), transparent 42%);
+  border:1px solid rgba(255,255,255,.52);
+  box-shadow:0 10px 30px rgba(0,0,0,.10);
+  
+  opacity:0;
+  transform:translateY(20px) scale(.7) rotate(-12deg);
+}
+.slide.active .motion-icons span{
+  animation:iconPopFloat 8.5s ease-in-out infinite;
+}
+.motion-icons span:nth-child(1){left:7%;top:16%;animation-delay:.35s}
+.motion-icons span:nth-child(2){right:9%;top:18%;animation-delay:.75s}
+.motion-icons span:nth-child(3){left:12%;bottom:18%;animation-delay:1.15s}
+.motion-icons span:nth-child(4){right:13%;bottom:20%;animation-delay:1.55s}
+.motion-icons span:nth-child(5){left:48%;top:8%;animation-delay:1.95s}
+
+.slide.active .bg-overlay{
+  animation:colorWave 9s ease-in-out infinite alternate;
+}
+.slide.active .texture{
+  animation:textureSlide 7s ease-in-out infinite alternate;
+}
+.slide.active .slide-head h2::after{
+  content:'';
+  display:block;
+  width:0;
+  height:6px;
+  border-radius:999px;
+  margin-top:10px;
+  background:linear-gradient(90deg,rgba(36,51,50,.25),rgba(255,255,255,.75),rgba(36,51,50,.25));
+  animation:underlineGrow 1.2s ease .28s both, underlineGlow 2.8s ease-in-out 1.5s infinite;
+}
+.slide.active .card{
+  animation:cardRise .72s cubic-bezier(.2,.8,.2,1) both, cardBreathe 4.5s ease-in-out 1.4s infinite;
+}
+.slide.active .card:hover{
+  animation-play-state:paused;
+}
+.slide.active li{
+  animation:listItemIn .46s ease both;
+}
+.slide.active li:nth-child(1){animation-delay:.30s}
+.slide.active li:nth-child(2){animation-delay:.40s}
+.slide.active li:nth-child(3){animation-delay:.50s}
+.slide.active li:nth-child(4){animation-delay:.60s}
+.slide.active li:nth-child(5){animation-delay:.70s}
+.slide.active li:nth-child(6){animation-delay:.80s}
+.slide.active tr{
+  animation:rowSlideIn .44s ease both;
+}
+.slide.active tr:nth-child(1){animation-delay:.18s}
+.slide.active tr:nth-child(2){animation-delay:.24s}
+.slide.active tr:nth-child(3){animation-delay:.30s}
+.slide.active tr:nth-child(4){animation-delay:.36s}
+.slide.active tr:nth-child(5){animation-delay:.42s}
+.slide.active tr:nth-child(6){animation-delay:.48s}
+.slide.active tr:nth-child(7){animation-delay:.54s}
+.slide.active tr:nth-child(8){animation-delay:.60s}
+.slide.active tr:nth-child(9){animation-delay:.66s}
+.slide.active tr:nth-child(10){animation-delay:.72s}
+.slide.active tr:nth-child(11){animation-delay:.78s}
+.slide.active tr:nth-child(12){animation-delay:.84s}
+.slide.active tr:nth-child(13){animation-delay:.90s}
+.slide.active tr:nth-child(14){animation-delay:.96s}
+.slide.active tr:nth-child(15){animation-delay:1.02s}
+.slide.active tr:nth-child(16){animation-delay:1.08s}
+.slide.active tr:nth-child(17){animation-delay:1.14s}
+.slide.active tr:nth-child(18){animation-delay:1.20s}
+.slide.active tr:nth-child(19){animation-delay:1.26s}
+.slide.active .big-number{
+  animation:numberPunch .95s cubic-bezier(.18,.89,.32,1.28) both, numberGlow 3.2s ease-in-out 1.4s infinite;
+}
+.slide.active .note{
+  animation:noteWiggle .9s ease .7s both;
+}
+.slide.active .nav{
+  animation:navPulse 3.2s ease-in-out infinite;
+}
+.slide.active .meta-pill{
+  animation:pillSlide .7s ease .42s both, pillGlow 3s ease-in-out 1.5s infinite;
+}
+.slide.active .title-main{
+  background:linear-gradient(90deg,#fff,#fff1f1,#ffffff,#eafff8,#fff);
+  background-size:240% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  animation:heroTitle .9s cubic-bezier(.18,.89,.32,1.28) both, titleShimmer 4s ease-in-out 1s infinite;
+}
+.slide.active .title-sub{
+  animation:heroSub .9s cubic-bezier(.2,.8,.2,1) .22s both, gentleTilt 5s ease-in-out 1.3s infinite;
+}
+.slide.active .hero-blurb{
+  animation:cardRise .75s cubic-bezier(.2,.8,.2,1) .56s both, floatSmall 4.7s ease-in-out 1.4s infinite;
+}
+.slide.active .speak{
+  animation:buttonPop .72s cubic-bezier(.2,.8,.2,1) .18s both, attentionPulse 2.8s ease-in-out 1.6s infinite;
+}
+
+@keyframes iconPopFloat{
+  0%{opacity:0;transform:translateY(22px) scale(.72) rotate(-12deg)}
+  12%{opacity:.82;transform:translateY(0) scale(1) rotate(0)}
+  50%{opacity:.86;transform:translateY(-16px) scale(1.05) rotate(6deg)}
+  88%{opacity:.82;transform:translateY(0) scale(1) rotate(-4deg)}
+  100%{opacity:0;transform:translateY(22px) scale(.72) rotate(-12deg)}
+}
+@keyframes colorWave{
+  from{filter:saturate(1) brightness(1)}
+  to{filter:saturate(1.16) brightness(1.04)}
+}
+@keyframes textureSlide{
+  from{transform:translateX(-2%) translateY(-1%);opacity:.7}
+  to{transform:translateX(2%) translateY(1%);opacity:1}
+}
+@keyframes underlineGrow{
+  from{width:0;opacity:0}
+  to{width:min(420px,70%);opacity:1}
+}
+@keyframes underlineGlow{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.35)}
+}
+@keyframes cardBreathe{
+  0%,100%{box-shadow:0 16px 42px rgba(0,0,0,.11);transform:translate3d(0,0,0) scale(1)}
+  50%{box-shadow:0 22px 56px rgba(0,0,0,.16);transform:translate3d(0,-3px,0) scale(1.006)}
+}
+@keyframes listItemIn{
+  from{opacity:0;transform:translateX(-18px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes rowSlideIn{
+  from{opacity:0;transform:translateX(-22px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes numberPunch{
+  from{opacity:0;transform:scale(.72)}
+  70%{opacity:1;transform:scale(1.08)}
+  to{opacity:1;transform:scale(1)}
+}
+@keyframes numberGlow{
+  0%,100%{text-shadow:0 0 0 rgba(255,255,255,0)}
+  50%{text-shadow:0 0 18px rgba(255,255,255,.68)}
+}
+@keyframes noteWiggle{
+  0%{opacity:0;transform:rotate(-2deg) translateY(14px)}
+  65%{opacity:1;transform:rotate(1.5deg) translateY(0)}
+  100%{opacity:1;transform:rotate(0) translateY(0)}
+}
+@keyframes navPulse{
+  0%,100%{box-shadow:0 14px 38px rgba(0,0,0,.18)}
+  50%{box-shadow:0 16px 50px rgba(0,0,0,.25),0 0 0 5px rgba(255,255,255,.18)}
+}
+@keyframes pillGlow{
+  0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.18)}
+  50%{box-shadow:0 18px 56px rgba(255,255,255,.24),0 0 0 5px rgba(255,255,255,.18)}
+}
+@keyframes titleShimmer{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+@keyframes gentleTilt{
+  0%,100%{transform:rotate(0)}
+  50%{transform:rotate(-1deg)}
+}
+@keyframes floatSmall{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-8px)}
+}
+@keyframes attentionPulse{
+  0%,100%{box-shadow:0 10px 24px rgba(0,0,0,.08);transform:scale(1)}
+  50%{box-shadow:0 12px 32px rgba(21,93,87,.22);transform:scale(1.04)}
+}
+
+@media (max-width:980px){
+  .layout-main{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  :root{--nav-h:84px}
+  .slide-scroll{padding:22px 16px 20px}
+  .slide-head{display:block}
+  .speak{margin-top:12px}
+  .grid-2{grid-template-columns:1fr}
+  .title-main{font-size:clamp(2.7rem,11vw,4.2rem)}
+  .title-sub{font-size:clamp(2rem,9vw,3.3rem)}
+}
+
+
+/* ── NEWLINE SMART TV SAFE MODE ───────────────────
+   Static backgrounds. No blur, blend modes, infinite animations, or whole-slide fades.
+   Only small one-time content animations are allowed. */
+*, *::before, *::after {
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  will-change: auto !important;
+}
+.slide {
+  opacity: 0;
+  display: none;
+  transform: none !important;
+  transition: none !important;
+}
+.slide.active {
+  display: block;
+  opacity: 1;
+}
+.bg-photo {
+  transform: none !important;
+  animation: none !important;
+  background-size: cover !important;
+  background-position: center center !important;
+}
+.bg-overlay,
+.bg-vignette,
+.texture {
+  animation: none !important;
+  transform: none !important;
+}
+.bg-overlay::after {
+  display: none !important;
+}
+.orb,
+.spark,
+.motion-icons,
+.motion-icons span {
+  display: none !important;
+}
+.card,
+.meta-pill,
+.hero-blurb,
+.nav,
+.speak {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.card::after {
+  display: none !important;
+}
+.title-main {
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+}
+.reveal,
+.card,
+.slide-head h2,
+.speak,
+.title-main,
+.title-sub,
+.meta-pill,
+.hero-blurb,
+.big-number {
+  opacity: 1 !important;
+  animation: none;
+}
+.slide.active .reveal,
+.slide.active .card,
+.slide.active .slide-head h2,
+.slide.active .speak,
+.slide.active .title-main,
+.slide.active .title-sub,
+.slide.active .meta-pill,
+.slide.active .hero-blurb,
+.slide.active .big-number {
+  animation: newlineSafeRise .42s ease-out both;
+}
+.slide.active .d1 { animation-delay: .04s; }
+.slide.active .d2 { animation-delay: .10s; }
+.slide.active .d3 { animation-delay: .16s; }
+.slide.active .d4 { animation-delay: .22s; }
+.slide.active .d5 { animation-delay: .28s; }
+.slide.active .d6 { animation-delay: .34s; }
+
+.slide-head h2::after {
+  content:'';
+  display:block;
+  width:0;
+  height:5px;
+  border-radius:999px;
+  margin-top:10px;
+  background:rgba(36,51,50,.38);
+}
+.slide.active .slide-head h2::after {
+  animation: newlineUnderline .55s ease-out .18s both;
+}
+.card::before {
+  transform: scaleY(.15);
+  transform-origin: top center;
+}
+.slide.active .card::before {
+  animation: newlineAccent .45s ease-out .18s both;
+}
+.nav {
+  box-shadow: 0 10px 28px rgba(0,0,0,.18) !important;
+}
+@keyframes newlineSafeRise {
+  from { transform: translate3d(0,14px,0); }
+  to { transform: translate3d(0,0,0); }
+}
+@keyframes newlineUnderline {
+  from { width:0; }
+  to { width:min(360px,68%); }
+}
+@keyframes newlineAccent {
+  from { transform: scaleY(.15); }
+  to { transform: scaleY(1); }
+}
+
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <section class="slide active">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-blush"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="orb c"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap title-slide">
+        <div>
+          <div class="kicker reveal d1">For my project I chose</div>
+          <div class="title-main reveal d2">Interior</div>
+          <div class="title-sub reveal d3">Design</div>
+          <div class="meta-pill reveal d4">Payton Hall &nbsp;>&nbsp; 6th &nbsp;>&nbsp; 5/1/2026</div>
+          <div class="hero-blurb reveal d5"><p>Interior design combines creativity and planning to shape rooms and buildings into spaces that are both beautiful and functional.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-blush"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Career Overview</h2><button class="speak" onclick="speakSlide(1)">Read slide</button></div>
+        <div class="grid-2">
+          <div class="card reveal d2">
+            <h3>What is this career?</h3>
+            <p>Interior Design is the art and science of refining a room or building to enhance a more functional and aesthetically pleasing home.</p>
+          </div>
+          <div class="card reveal d3">
+            <h3>What are the daily Responsibilities of an Interior Designer?</h3>
+            <p>Interior Designers must work with clients, Draft design plans, Source materials, and oversee contractors to bring a cohesive vision alive.</p>
+          </div>
+          <div class="card reveal d4" style="grid-column:1 / -1;">
+            <h3>What does the work environment look like for an Interior Designer?</h3>
+            <p>The work environment varies from a creative studio, office, or active on-site visits.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-peach"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Education and Training</h2><button class="speak" onclick="speakSlide(2)">Read slide</button></div>
+        <div class="grid-2">
+          <div class="stack">
+            <div class="card reveal d2">
+              <h3>What degree or training is required to become an Interior Designer?</h3>
+              <p>To become an interior designer, you typically need a bachelor’s degree in interior design or a related field, such as architecture.</p>
+            </div>
+            <div class="card reveal d3 center">
+              <h3>What is the cost of most colleges for interior design?</h3>
+              <div class="big-number">$10,000 to $40,000</div>
+              <p>per year.</p>
+            </div>
+          </div>
+          <div class="card reveal d4">
+            <h3>Scholarships / Financial Aid</h3>
+            <p>-The Savannah College of Art and Design is a perfect college if you need scholarships or financial aid they offer a variety of institutional scholarships, including academic and achievement honors, which you can find here.</p>
+            <div class="note"><p><a href="https://www.scholarships.com/financial-aid/college-scholarships/scholarship-directory/academic-major/interior-design" target="_blank" rel="noopener">https://www.scholarships.com/financial-aid/college-scholarships/scholarship-directory/academic-major/interior-design</a></p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-sage"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Salary and Income</h2><button class="speak" onclick="speakSlide(3)">Read slide</button></div>
+        <div class="grid-3 reveal d2">
+          <div class="card stat-card center"><h3>Lowest</h3><div class="big-number">$38,480</div><p>per year</p><div class="bar"><div class="fill low"></div></div></div>
+          <div class="card stat-card center"><h3>Average</h3><div class="big-number">$63,490</div><p>per year</p><div class="bar"><div class="fill avg"></div></div></div>
+          <div class="card stat-card center"><h3>Highest</h3><div class="big-number">$160,090</div><p>per year</p><div class="bar"><div class="fill high"></div></div></div>
+        </div>
+        <div class="grid-2" style="margin-top:18px;">
+          <div class="card reveal d3">
+            <h3>What is the monthly income?</h3>
+            <p>The average hourly rate for an interior designer is $30.52. If you multiply that by 40 (average working hours per week), that is $1,220.80. Then, if you take that and multiply it by it by 52, you end up with $63,481.60. Then, you can divide that by 12 to learn the average monthly income…which is $5,290.13. Doing it this way avoids issues with differences in number of weeks per month.</p>
+          </div>
+          <div class="card reveal d4">
+            <h3>What is the Tax estimate?</h3>
+            <p>If you are earning $63,490 annually minus that by $8,971 for self-employment tax minus $3,871 for federal income tax minus $1,836 for the Missouri tax and that leaves you with minus $14,678 for yearly taxes which leaves you with $48,812</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-sky"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Cost of Living</h2><button class="speak" onclick="speakSlide(4)">Read slide</button></div>
+        <div class="grid-2">
+          <div class="stack">
+            <div class="card reveal d2">
+              <h3>Where would I want to live?</h3>
+              <p>I would like to live in Columbus,Ohio for its low cost housing and utility/grocery price.</p>
+            </div>
+            <div class="card reveal d3">
+              <h3>Costs by Apartment Size:</h3>
+              <ul>
+                <li>Studio: ~$930 - $1,195</li>
+                <li>1-Bedroom: ~$1,077 - $1,297</li>
+                <li>2-Bedroom: ~$1,052 - $1,399</li>
+                <li>3-Bedroom: ~$1,510 - $1,623</li>
+              </ul>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="card reveal d4">
+              <h3>Cost of groceries:</h3>
+              <p>A Single Person in Columbus,Ohio has a typical monthly grocery budget for one adult is estimated at $331 to $450.</p>
+            </div>
+            <div class="card reveal d5">
+              <h3>Cost of utility bills:</h3>
+              <p>Monthly electricity will cost between $255 to $270.</p>
+              <p style="margin-top:8px;">The monthly water and power will cost $50 to $75</p>
+            </div>
+            <div class="card reveal d6">
+              <h3>Where to shop for low cost?</h3>
+              <p><a href="https://www.marketdistrict.com/stores/6539?utm_source=google&utm_medium=organic&utm_campaign=md_ll" target="_blank" rel="noopener">https://www.marketdistrict.com/stores/6539?utm_source=google&utm_medium=organic&utm_campaign=md_ll</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-lavender"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Lifestyle Choices</h2><button class="speak" onclick="speakSlide(5)">Read slide</button></div>
+        <div class="layout-main">
+          <div class="grid-2">
+            <div class="card reveal d2">
+              <h3>Car Choice:</h3>
+              <p>I would choose a 2026 Nissan Versa which would cost</p>
+              <ul style="margin-top:10px;">
+                <li>Price: $17,500</li>
+                <li>Down Payment: $3,000</li>
+                <li>Loan Term: 60 months (5 years)</li>
+                <li>Estimated APR: 6.0%</li>
+                <li>Estimated Payment: ~$290/month</li>
+              </ul>
+            </div>
+            <div class="card reveal d3">
+              <h3>Phone expenses:</h3>
+              <p>High-speed Internet: Typically ranges from $50 to $80 per month.</p>
+              <p style="margin-top:8px;">Mobile Phone Plan: A standard plan with data averages about</p>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="card reveal d4">
+              <h3>Apartments for sale</h3>
+              <p><a href="https://www.livehighpointcolumbus.com/?rcstdid=Mg%3D%3D-YRjTEizZPgM%3D" target="_blank" rel="noopener">https://www.livehighpointcolumbus.com/?rcstdid=Mg%3D%3D-YRjTEizZPgM%3D</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-cream"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Budget Breakdown</h2><button class="speak" onclick="speakSlide(6)">Read slide</button></div>
+        <div class="card reveal d2">
+          <h3>MONTHLY BUDGET – COLUMBUS, OHIO</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Category</th><th>Item</th><th>Monthly Cost</th></tr></thead>
+              <tbody>
+                <tr class="section"><td colspan="3">INCOME</td></tr>
+                <tr><td></td><td>Monthly Income</td><td>$5,290</td></tr>
+                <tr class="section"><td colspan="3">ESSENTIAL EXPENSES</td></tr>
+                <tr><td></td><td>Rent (1BR Avg)</td><td>$1,200</td></tr>
+                <tr><td></td><td>Electricity</td><td>$260</td></tr>
+                <tr><td></td><td>Water/Sewer</td><td>$65</td></tr>
+                <tr><td></td><td>Groceries</td><td>$400</td></tr>
+                <tr><td></td><td>Internet</td><td>$70</td></tr>
+                <tr><td></td><td>Phone</td><td>$70</td></tr>
+                <tr><td></td><td>Transportation</td><td>$250</td></tr>
+                <tr><td></td><td>Insurance</td><td>$300</td></tr>
+                <tr class="section"><td colspan="3">ADDITIONAL SPENDING</td></tr>
+                <tr><td></td><td>Eating Out / Fun</td><td>$300</td></tr>
+                <tr><td></td><td>Savings</td><td>$500</td></tr>
+                <tr><td></td><td>Misc / Unexpected</td><td>$300</td></tr>
+                <tr class="summary"><td></td><td>Total Expenses</td><td>$3,715</td></tr>
+                <tr class="summary"><td></td><td>Money Left Over</td><td>$1,575</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="bg-photo" style="background-image:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1800&q=80');"></div>
+    <div class="bg-overlay tint-blush"></div><div class="bg-vignette"></div><div class="texture"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="spark"></div>
+    <div class="motion-icons"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="slide-scroll">
+      <div class="slide-wrap">
+        <div class="slide-head reveal d1"><h2>Conclusion</h2><button class="speak" onclick="speakSlide(7)">Read slide</button></div>
+        <div class="grid-2">
+          <div class="card reveal d2">
+            <h3>Is this career realistic for my desired lifestyle?</h3>
+            <p>I’d say yes, because I would be able to pay for everything I need and want and still have money leftover</p>
+          </div>
+          <div class="card reveal d3">
+            <h3>Would I still choose this career?</h3>
+            <p>Yes I would, because it's what I love to do.</p>
+          </div>
+        </div>
+        <div class="card reveal d4 center" style="margin-top:18px;">
+          <h3>That is the end of my Interior Design presentation, thanks for watching</h3>
+          <p>Thank you for watching.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="nav" aria-label="Slide controls">
+  <button onclick="prevSlide()" aria-label="Previous slide">←</button>
+  <button class="home" onclick="goSlide(0)" aria-label="First slide">Start</button>
+  <div class="dots" id="dots"></div>
+  <span class="count" id="count">1 / 8</span>
+  <button onclick="nextSlide()" aria-label="Next slide">→</button>
+</nav>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let cur=0;
+const dots=document.getElementById('dots');
+slides.forEach((_,i)=>{
+  const d=document.createElement('span');
+  d.className='dot'+(i===0?' on':'');
+  d.onclick=()=>goSlide(i);
+  dots.appendChild(d);
+});
+function resetScroll(i){ const sc=slides[i].querySelector('.slide-scroll'); if(sc) sc.scrollTop=0; }
+function restartAnimations(slide){}
+function goSlide(i){
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  slides[cur].classList.remove('active');
+  cur=Math.max(0,Math.min(slides.length-1,i));
+  slides[cur].classList.add('active');
+  restartAnimations(slides[cur]);
+  resetScroll(cur);
+  document.getElementById('count').textContent=(cur+1)+' / '+slides.length;
+  [...dots.children].forEach((d,idx)=>d.classList.toggle('on',idx===cur));
+}
+function nextSlide(){goSlide(cur+1)}
+function prevSlide(){goSlide(cur-1)}
+document.addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();nextSlide();}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prevSlide();}
+});
+function speakSlide(i){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const slide=slides[i];
+  const text=[...slide.querySelectorAll('h1,h2,h3,p,li,td,th')].map(x=>x.textContent.trim()).filter(Boolean).join('. ');
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=.92; u.pitch=1; speechSynthesis.speak(u);
+}
+restartAnimations(slides[cur]);
+</script>
+</body>
+</html>
