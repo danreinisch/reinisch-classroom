@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>30 Fun Word Search Adventures</title>
+<style>
+:root {
+  --accent:#69bfff;
+  --accent-2:#ffd166;
+  --ink:#1a0f35;
+  --soft-ink:#4c3f66;
+  --scene-image:none;
+  --page-overlay:rgba(18,24,42,.42);
+  --card-scene:none;
+  --cell-bg:#ffffff;
+  --cell-border:#d8c9f0;
+  --cell-ink:#160f2d;
+  --found:#5ee087;
+  --found-border:#209c4b;
+  --selected:#ffd84d;
+  --selected-border:#d4a30c;
+  --revealed:#bed0ff;
+  --revealed-border:#557eda;
+}
+
+* { box-sizing:border-box; }
+html, body { min-height:100%; }
+body {
+  margin:0;
+  font-family: "Trebuchet MS", "Nunito", ui-rounded, system-ui, sans-serif;
+  color:var(--ink);
+  background:#111827;
+  overflow-x:hidden;
+}
+body::before {
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-3;
+  background-image:var(--scene-image);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  transform:scale(1.02);
+}
+body::after {
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  background:
+    radial-gradient(circle at 15% 12%, rgba(255,255,255,.10), transparent 22%),
+    radial-gradient(circle at 85% 80%, rgba(255,255,255,.07), transparent 24%),
+    linear-gradient(180deg, rgba(8,10,18,.08), var(--page-overlay));
+  pointer-events:none;
+}
+body.puzzle-active {
+  overflow:hidden;
+}
+body.puzzle-active .shell {
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+body.puzzle-active #puzzleView.active {
+  display:flex;
+  flex:1;
+  min-height:0;
+  flex-direction:column;
+}
+
+.shell {
+  width:min(1460px, 100%);
+  margin:0 auto;
+  padding:12px;
+}
+.view { display:none; }
+.view.active { display:block; }
+
+.window {
+  position:relative;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,.38);
+  background:rgba(255,255,255,.54);
+  box-shadow:
+    0 18px 44px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.42);
+  backdrop-filter:blur(16px) saturate(1.08);
+  border-radius:24px;
+}
+.window::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,.42), rgba(255,255,255,.12));
+  pointer-events:none;
+  z-index:0;
+}
+.window > * { position:relative; z-index:1; }
+
+.home-hero {
+  min-height:150px;
+  padding:22px 28px;
+  color:white;
+  background:rgba(15,20,38,.44);
+}
+.home-hero::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 78% 36%, rgba(255,255,255,.16), transparent 24%),
+    linear-gradient(120deg, rgba(0,0,0,.18), rgba(0,0,0,.05));
+  pointer-events:none;
+}
+.hero-inner {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+}
+.eyebrow,
+.theme-badge,
+.counter-chip,
+.mini-pill,
+.pill {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border-radius:999px;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.eyebrow {
+  padding:6px 13px;
+  background:rgba(255,255,255,.20);
+  border:2px solid rgba(255,255,255,.28);
+  color:#fff;
+  font-size:.78rem;
+  text-transform:uppercase;
+}
+.hero-title {
+  margin:8px 0 0;
+  font-size:clamp(2rem, 4vw, 3.15rem);
+  line-height:1.02;
+  max-width:760px;
+  text-shadow:0 3px 12px rgba(0,0,0,.26);
+}
+.hero-copy {
+  margin:8px 0 0;
+  max-width:700px;
+  color:rgba(255,255,255,.88);
+  line-height:1.4;
+  font-weight:700;
+}
+.hero-stats {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.stat {
+  min-width:92px;
+  padding:10px 12px;
+  border-radius:16px;
+  background:rgba(255,255,255,.18);
+  border:2px solid rgba(255,255,255,.22);
+  text-align:center;
+  color:white;
+}
+.stat strong {
+  display:block;
+  font-size:1.25rem;
+}
+.stat span {
+  font-size:.8rem;
+  font-weight:800;
+}
+
+.toolbar {
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:12px;
+  margin:14px 0 16px;
+}
+.search-wrap {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px 15px;
+  border-radius:18px;
+  background:rgba(255,255,255,.70);
+  border:2px solid rgba(255,255,255,.44);
+  backdrop-filter:blur(14px);
+  box-shadow:0 8px 22px rgba(0,0,0,.12);
+}
+.search-wrap label {
+  font-weight:900;
+  color:var(--soft-ink);
+}
+.search-wrap input {
+  width:100%;
+  border:none;
+  outline:none;
+  background:transparent;
+  font:inherit;
+  font-weight:800;
+  color:var(--ink);
+}
+.search-wrap input::placeholder { color:#826f9d; }
+.pill {
+  padding:10px 16px;
+  background:rgba(255,255,255,.72);
+  border:2px solid rgba(255,255,255,.46);
+  color:var(--ink);
+  box-shadow:0 8px 22px rgba(0,0,0,.12);
+  white-space:nowrap;
+}
+
+.theme-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+  gap:16px;
+}
+.theme-card {
+  --card-scene:none;
+  position:relative;
+  min-height:190px;
+  padding:0;
+  border:2px solid rgba(255,255,255,.50);
+  border-radius:24px;
+  cursor:pointer;
+  overflow:hidden;
+  color:white;
+  text-align:left;
+  background:rgba(255,255,255,.18);
+  box-shadow:0 14px 34px rgba(0,0,0,.20);
+  backdrop-filter:blur(12px);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.theme-card::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:var(--card-scene);
+  background-size:cover;
+  background-position:center;
+  transform:scale(1.06);
+  filter:saturate(1.10);
+  opacity:.92;
+  transition:transform .22s ease, opacity .22s ease;
+}
+.theme-card::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg, rgba(5,8,18,.05), rgba(5,8,18,.58)),
+    linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+}
+.theme-card:hover {
+  transform:translateY(-4px);
+  border-color:rgba(255,255,255,.78);
+  box-shadow:0 20px 44px rgba(0,0,0,.25);
+}
+.theme-card:hover::before { transform:scale(1.10); opacity:1; }
+.card-inner {
+  position:relative;
+  z-index:1;
+  height:100%;
+  min-height:190px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:14px 16px;
+}
+.card-progress {
+  position:absolute;
+  top:12px;
+  right:12px;
+  padding:5px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.30);
+  border:1px solid rgba(255,255,255,.32);
+  color:white;
+  font-weight:900;
+  font-size:.78rem;
+}
+.card-title {
+  margin:0 0 4px;
+  font-size:1.35rem;
+  line-height:1.12;
+  text-shadow:0 3px 12px rgba(0,0,0,.36);
+}
+.card-copy {
+  margin:0 0 10px;
+  max-width:92%;
+  color:rgba(255,255,255,.86);
+  font-size:.86rem;
+  line-height:1.28;
+  font-weight:700;
+}
+.card-meta {
+  display:flex;
+  justify-content:flex-end;
+}
+.card-meta span:first-child { display:none; }
+.card-meta span:last-child {
+  display:inline-flex;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.32);
+  background:rgba(255,255,255,.18);
+  color:#fff;
+  font-weight:900;
+  font-size:.82rem;
+}
+.hidden-note {
+  text-align:center;
+  padding:32px 10px;
+  color:white;
+  font-weight:900;
+}
+
+.puzzle-hero {
+  padding:10px 14px;
+  color:white;
+  background:rgba(12,17,30,.38);
+  flex:0 0 auto;
+}
+.puzzle-hero::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(120deg, rgba(0,0,0,.20), rgba(0,0,0,.02));
+  pointer-events:none;
+}
+.compact-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:8px;
+}
+.nav-group,
+.control-row {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.btn {
+  border:none;
+  border-radius:12px;
+  padding:7px 12px;
+  background:rgba(255,255,255,.22);
+  color:white;
+  border:1px solid rgba(255,255,255,.24);
+  font:inherit;
+  font-weight:900;
+  font-size:.86rem;
+  cursor:pointer;
+  box-shadow:0 5px 14px rgba(0,0,0,.14);
+  transition:transform .12s ease, background .12s ease;
+}
+.btn:hover { transform:translateY(-1px); background:rgba(255,255,255,.32); }
+.btn:disabled { opacity:.40; cursor:not-allowed; transform:none; }
+.btn.primary {
+  background:var(--accent);
+  color:#102033;
+}
+.btn.warning {
+  background:var(--accent-2);
+  color:#2f2200;
+}
+.btn.danger {
+  background:#ff6b6b;
+  color:white;
+}
+.compact-title {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:end;
+}
+.theme-badge {
+  width:max-content;
+  padding:5px 11px;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.30);
+  color:white;
+  font-size:.80rem;
+}
+.compact-title h2 {
+  margin:3px 0 0;
+  font-size:clamp(1.45rem, 2.6vw, 2.1rem);
+  color:white;
+  text-shadow:0 2px 10px rgba(0,0,0,.26);
+}
+.puzzle-subtitle { display:none; }
+.summary-stack {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+.puzzle-summary {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+}
+.counter-chip {
+  padding:6px 10px;
+  color:white;
+  font-size:.82rem;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.28);
+}
+.progress-bar {
+  width:166px;
+  height:10px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(0,0,0,.24);
+  border:1px solid rgba(255,255,255,.22);
+}
+.progress-fill {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius:999px;
+  transition:width .25s ease;
+}
+.status-bar {
+  min-height:18px;
+  margin-top:6px;
+  color:#fff3bd;
+  font-size:.86rem;
+  font-weight:900;
+}
+
+.puzzle-layout {
+  display:grid;
+  grid-template-columns:minmax(0, 1.1fr) minmax(300px, .9fr);
+  gap:12px;
+  flex:1;
+  min-height:0;
+  height:calc(100vh - 154px);
+  margin-top:10px;
+}
+.panel {
+  min-height:0;
+  padding:12px;
+  color:var(--ink);
+  background:rgba(255,255,255,.64);
+  border-color:rgba(255,255,255,.58);
+  display:flex;
+  flex-direction:column;
+}
+.panel-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  margin-bottom:7px;
+}
+.panel h3 {
+  margin:0;
+  font-size:1.02rem;
+}
+.mini-pill {
+  padding:5px 10px;
+  background:rgba(255,255,255,.55);
+  color:var(--soft-ink);
+  font-size:.76rem;
+}
+.panel-copy { display:none; }
+.grid-shell {
+  flex:1;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  padding:10px;
+  border-radius:18px;
+  background:rgba(255,255,255,.58);
+  border:1px solid rgba(255,255,255,.70);
+}
+.puzzle-grid {
+  display:grid;
+  grid-template-columns:repeat(20, 27px);
+  gap:1px;
+  width:max-content;
+  padding:4px;
+  background:#cfc1e8;
+  border-radius:10px;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+}
+.cell {
+  width:27px;
+  height:27px;
+  display:grid;
+  place-items:center;
+  border-radius:5px;
+  border:1px solid var(--cell-border);
+  background:var(--cell-bg);
+  color:var(--cell-ink);
+  font-weight:900;
+  font-size:.92rem;
+  line-height:1;
+  cursor:pointer;
+  transition:background .10s ease, transform .10s ease, border-color .10s ease;
+}
+.cell:hover {
+  border-color:var(--accent);
+}
+.cell.selected {
+  background:var(--selected);
+  border-color:var(--selected-border);
+  color:#2f2200;
+  transform:scale(1.04);
+  z-index:1;
+}
+.cell.found {
+  background:var(--found);
+  border-color:var(--found-border);
+  color:#062610;
+}
+.cell.revealed {
+  background:var(--revealed);
+  border-color:var(--revealed-border);
+}
+.word-scroll {
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+}
+.word-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:6px;
+}
+.word-list li {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.54);
+  border:1px solid rgba(255,255,255,.72);
+  color:var(--ink);
+  font-weight:900;
+  font-size:.84rem;
+}
+.word-list li.found {
+  background:rgba(118,232,145,.35);
+  color:#155b2a;
+  text-decoration:line-through;
+  text-decoration-thickness:2px;
+}
+.word-list li.revealed:not(.found) {
+  background:rgba(190,208,255,.45);
+  color:#1e3a8a;
+}
+.hint-box {
+  margin-top:8px;
+  padding:10px 12px;
+  border-radius:15px;
+  background:rgba(255,255,255,.54);
+  border:1px solid rgba(255,255,255,.72);
+  color:var(--soft-ink);
+}
+.verify-good { color:#156a31; font-weight:900; }
+.tiny {
+  margin:5px 0 0;
+  font-size:.78rem;
+  line-height:1.3;
+  font-weight:700;
+}
+
+@media (max-width:1200px) {
+  body.puzzle-active { overflow:auto; }
+  body.puzzle-active .shell { height:auto; display:block; }
+  body.puzzle-active #puzzleView.active { display:block; }
+  .puzzle-layout {
+    height:auto;
+    grid-template-columns:1fr;
+  }
+  .toolbar,
+  .compact-title {
+    grid-template-columns:1fr;
+  }
+  .summary-stack { align-items:flex-start; }
+  .grid-shell,
+  .word-scroll { overflow:auto; }
+  .puzzle-grid { grid-template-columns:repeat(20, 28px); }
+  .cell { width:28px; height:28px; font-size:.95rem; }
+}
+@media (max-width:760px) {
+  .shell { padding:10px; }
+  .home-hero { padding:20px; }
+  .hero-inner { flex-direction:column; }
+  .hero-stats { justify-content:flex-start; }
+  .toolbar { grid-template-columns:1fr; }
+  .theme-grid { grid-template-columns:1fr; }
+  .word-list { grid-template-columns:1fr; }
+  .puzzle-grid { min-width:580px; }
+}
+@media print {
+  body, body::before, body::after { background:#fff !important; }
+  #homeView { display:none !important; }
+  #puzzleView { display:block !important; }
+  .shell { max-width:100%; padding:0; }
+  .puzzle-hero { display:none !important; }
+  .puzzle-layout { display:block; height:auto !important; }
+  .panel { box-shadow:none !important; border:none !important; background:#fff !important; }
+  .grid-shell { background:#fff !important; border:none !important; padding:0; overflow:visible; }
+  .puzzle-grid { min-width:0; max-width:7.7in; gap:1px; padding:2px; background:#bbb !important; border-radius:0; }
+  .cell { background:#fff !important; color:#000 !important; border:1px solid #999 !important; border-radius:0 !important; font-family:Arial, sans-serif !important; }
+  .word-list { grid-template-columns:repeat(4, 1fr); gap:4px; }
+  .word-list li { color:#000 !important; border:1px solid #888 !important; background:#fff !important; font-size:9pt; border-radius:0; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <section id="homeView" class="view active">
+    <div id="homeHero" class="home-hero window">
+      <div class="hero-inner">
+        <div>
+          <div class="eyebrow">Word Search Adventure Hub</div>
+          <h1 class="hero-title">Pick a theme and start searching.</h1>
+          <p class="hero-copy">A cleaner cartoon backdrop with puzzle cards that work like little windows into each theme.</p>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><strong>30</strong><span>Themes</span></div>
+          <div class="stat"><strong>20</strong><span>Words each</span></div>
+          <div class="stat"><strong>600</strong><span>Verified</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <label for="themeSearch">Search</label>
+        <input id="themeSearch" type="search" placeholder="pizza, football, mystery, dogs..." aria-label="Search themes" />
+      </div>
+      <div class="pill" id="themeCountPill">30 themes ready</div>
+    </div>
+    <div id="themeGrid" class="theme-grid"></div>
+    <div id="emptyState" class="hidden-note" style="display:none;">No themes matched that search. Try something less specific.</div>
+  </section>
+
+  <section id="puzzleView" class="view">
+    <div id="puzzleHero" class="puzzle-hero window">
+      <div class="compact-top">
+        <div class="nav-group">
+          <button id="homeBtn" class="btn" type="button">Main Page</button>
+          <button id="prevBtn" class="btn" type="button">Previous</button>
+          <button id="nextBtn" class="btn" type="button">Next</button>
+        </div>
+        <div class="control-row">
+          <button id="clearBtn" class="btn" type="button">Clear</button>
+          <button id="resetBtn" class="btn danger" type="button">Reset</button>
+          <button id="revealBtn" class="btn warning" type="button">Reveal</button>
+          <button id="printBtn" class="btn" type="button">Print</button>
+          <button id="verifyBtn" class="btn primary" type="button">Verify</button>
+        </div>
+      </div>
+      <div class="compact-title">
+        <div>
+          <div class="theme-badge"><span id="themeLabel">Theme</span></div>
+          <h2 id="puzzleTitle">Puzzle Title</h2>
+          <p class="puzzle-subtitle" id="puzzleSubtitle">Drag across a word to find it.</p>
+        </div>
+        <div class="summary-stack">
+          <div class="puzzle-summary">
+            <div class="counter-chip" id="puzzleCounter">Puzzle 1 of 30</div>
+            <div class="counter-chip" id="wordCounter">0 of 20 found</div>
+          </div>
+          <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        </div>
+      </div>
+      <div id="statusBar" class="status-bar" aria-live="polite"></div>
+    </div>
+
+    <div class="puzzle-layout">
+      <div class="panel window">
+        <div class="panel-head"><h3>Letter Grid</h3><div class="mini-pill">Drag to select</div></div>
+        <p class="panel-copy">Drag across a word in a straight line.</p>
+        <div class="grid-shell"><div id="puzzleGrid" class="puzzle-grid" aria-label="Word search grid"></div></div>
+      </div>
+      <div class="panel window">
+        <div class="panel-head"><h3>Word List</h3><div class="mini-pill">20 words</div></div>
+        <div class="word-scroll"><ul id="wordList" class="word-list"></ul></div>
+        <div class="hint-box">
+          <div id="verifyStatus"><span class="verify-good">Verified at build time:</span> 600 / 600 words were confirmed in the finished grids.</div>
+          <p class="tiny">The panels are translucent windows over the animated cartoon backdrop.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const PUZZLES = [{"id": "movie_night", "title": "Movie Night", "words": ["POPCORN", "TRAILER", "TICKET", "SCREEN", "COMEDY", "ACTION", "HORROR", "DRAMA", "REMOTE", "COUCH", "CREDITS", "DIRECTOR", "ACTOR", "CAMERA", "THEATER", "SEQUEL", "PREVIEW", "SOUNDTRACK", "VILLAIN", "HERO"], "grid": ["VVXYVPSXRRSCREENMWDU", "PHNYKDIRECTORPVRLKJA", "TSXDVTOJTOHIPEGDOURF", "AOREHRTRAILERPDIMZUK", "RUXMRYAWEIVERPQICXRP", "ZNROCPOPHBMIREMOTETG", "QDHCSNOITCAXLYDTMSLF", "JTCOTPPMLDUMNLRQBSGI", "URGKLIRPETMOMCAQWEIH", "LAREMACYUSPKCCMIKLVP", "BCNJUIPKQZUETAANNJPF", "NKTORRVDEDKOCIWOHZAI", "DJFRIZNWSTRVNFCIFSCI", "EXKNPULLNXLCBUUTLCYZ", "PCHJFIOHRVKBRNWICIUC", "TLPMJILLDVNOSMLGCDPI", "EDXRIIHMEYVXSQEFPXDR", "JVBACGTHVOBECLJWOVEM", "ETCJYJCUJLRBHWOICBAG", "WJIJMVIYDRZKAJVCKFXZ"], "answers": {"SOUNDTRACK": [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1], [11, 1]], "DIRECTOR": [[1, 5], [1, 6], [1, 7], [1, 8], [1, 9], [1, 10], [1, 11], [1, 12]], "THEATER": [[6, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8]], "PREVIEW": [[4, 13], [4, 12], [4, 11], [4, 10], [4, 9], [4, 8], [4, 7]], "VILLAIN": [[4, 10], [5, 11], [6, 12], [7, 13], [8, 14], [9, 15], [10, 16]], "POPCORN": [[5, 7], [5, 6], [5, 5], [5, 4], [5, 3], [5, 2], [5, 1]], "CREDITS": [[0, 11], [1, 12], [2, 13], [3, 14], [4, 15], [5, 16], [6, 17]], "TRAILER": [[3, 6], [3, 7], [3, 8], [3, 9], [3, 10], [3, 11], [3, 12]], "REMOTE": [[5, 12], [5, 13], [5, 14], [5, 15], [5, 16], [5, 17]], "ACTION": [[6, 10], [6, 9], [6, 8], [6, 7], [6, 6], [6, 5]], "SCREEN": [[0, 10], [0, 11], [0, 12], [0, 13], [0, 14], [0, 15]], "HORROR": [[6, 2], [5, 3], [4, 4], [3, 5], [2, 6], [1, 7]], "CAMERA": [[9, 6], [9, 5], [9, 4], [9, 3], [9, 2], [9, 1]], "TICKET": [[7, 4], [8, 5], [9, 6], [10, 7], [11, 8], [12, 9]], "COMEDY": [[6, 3], [5, 3], [4, 3], [3, 3], [2, 3], [1, 3]], "SEQUEL": [[12, 8], [11, 8], [10, 8], [9, 8], [8, 8], [7, 8]], "DRAMA": [[6, 14], [7, 14], [8, 14], [9, 14], [10, 14]], "COUCH": [[9, 12], [8, 11], [7, 10], [6, 9], [5, 8]], "ACTOR": [[8, 14], [9, 13], [10, 12], [11, 11], [12, 10]], "HERO": [[3, 4], [3, 3], [3, 2], [3, 1]]}}, {"id": "pizza_night", "title": "Pizza Night", "words": ["PEPPERONI", "CHEESE", "CRUST", "SAUCE", "OLIVES", "MUSHROOM", "SAUSAGE", "BACON", "ONION", "GARLIC", "SLICE", "DELIVERY", "OVEN", "DOUGH", "TOMATO", "PARMESAN", "MOZZARELLA", "TOPPING", "ANCHOVY", "CALZONE"], "grid": ["FYRDQUQDREDCUSVYPSWE", "IFVUCONLUDOUGHVTUGRK", "FZBWLJBKYLOWJRDCEGNL", "KGBJJYSEIDVDQUQVCCLV", "OBIOWHPVQSEXXSFIIDZF", "LTXAXVEBILNGYAULLUZF", "NGYLESPOIGNJACRDSZAZ", "KXBKCTPVTIQGEAPZUCBN", "ZRRAEXEAPANSGNTPZDVI", "EMFKCRRPRCMQMCALZONE", "GLHUYOOOIMOORHSUMURI", "AIRPZTNQDGELTOURFZPP", "SDILWVINHYGSOVJLNQGN", "USAUCERJUYLWAYOBOZOZ", "ALLERAZZOMBHANPDBKCA", "SYRSUAPJXYRAIWZPIFAZ", "PCNESQCZNPMONIXARWNM", "KFJETGJBSKNNRWOLNUSH", "GCPHERMSYEMRVUSEHZZY", "UPPCXPMIEBPXWKFCVZFX"], "answers": {"MOZZARELLA": [[14, 9], [14, 8], [14, 7], [14, 6], [14, 5], [14, 4], [14, 3], [14, 2], [14, 1], [14, 0]], "PEPPERONI": [[4, 6], [5, 6], [6, 6], [7, 6], [8, 6], [9, 6], [10, 6], [11, 6], [12, 6]], "PARMESAN": [[7, 6], [8, 7], [9, 8], [10, 9], [11, 10], [12, 11], [13, 12], [14, 13]], "DELIVERY": [[3, 11], [4, 10], [5, 9], [6, 8], [7, 7], [8, 6], [9, 5], [10, 4]], "MUSHROOM": [[10, 16], [10, 15], [10, 14], [10, 13], [10, 12], [10, 11], [10, 10], [10, 9]], "ANCHOVY": [[7, 13], [8, 13], [9, 13], [10, 13], [11, 13], [12, 13], [13, 13]], "TOPPING": [[11, 5], [10, 6], [9, 7], [8, 8], [7, 9], [6, 10], [5, 11]], "SAUSAGE": [[15, 0], [14, 0], [13, 0], [12, 0], [11, 0], [10, 0], [9, 0]], "CALZONE": [[9, 13], [9, 14], [9, 15], [9, 16], [9, 17], [9, 18], [9, 19]], "CHEESE": [[19, 3], [18, 3], [17, 3], [16, 3], [15, 3], [14, 3]], "OLIVES": [[1, 10], [2, 9], [3, 8], [4, 7], [5, 6], [6, 5]], "GARLIC": [[8, 12], [7, 13], [6, 14], [5, 15], [4, 16], [3, 17]], "TOMATO": [[11, 12], [10, 11], [9, 10], [8, 9], [7, 8], [6, 7]], "CRUST": [[13, 4], [14, 4], [15, 4], [16, 4], [17, 4]], "BACON": [[7, 2], [8, 3], [9, 4], [10, 5], [11, 6]], "DOUGH": [[1, 9], [1, 10], [1, 11], [1, 12], [1, 13]], "SLICE": [[6, 16], [5, 16], [4, 16], [3, 16], [2, 16]], "ONION": [[13, 14], [14, 13], [15, 12], [16, 11], [17, 10]], "SAUCE": [[13, 1], [13, 2], [13, 3], [13, 4], [13, 5]], "OVEN": [[2, 10], [3, 10], [4, 10], [5, 10]]}}, {"id": "coffee_shop", "title": "Coffee Shop", "words": ["ESPRESSO", "LATTE", "MOCHA", "CAPPUCCINO", "AMERICANO", "ROAST", "BEANS", "BARISTA", "MUG", "FRENCHPRESS", "CREAMER", "DECAF", "CAFFEINE", "SYRUP", "STEAM", "GRINDER", "PASTRY", "CINNAMON", "CARAMEL", "ICED"], "grid": ["CIFQOTPQGESATFMVUQQY", "AWCQOYOWSNIYPPMHVDLM", "NSWEXFWPFBCCNQDRVEDQ", "GRINDERYAKRDDKPDFIJM", "CPAYPEIRMEPACUMTFZKE", "BEANSSIAAAGNZHZECLND", "GMMSYSSMHELCXDDMOSOP", "TBODTYEQKCARAMELUHGL", "JRLABRPRBPOGIQSCZZOR", "VFZWIUYYPZCMDEAYADTG", "EYMCSPXUQHBCRNUQXVDU", "LWAMGSCELZCYSAPLZGJT", "BNEPICINRZINDIRSWVFL", "OQTDIKECJRNUENIEFFAC", "EPSNRLOWRWNTTRUNPTCQ", "JDOJRVMCROASTSFSTLEX", "DZHAMFBMUGMEVBUEZSDR", "EPIPQZLECJOBDFKANQUQ", "RMXCTUSQKKNFPCTRHIHT", "UZGCXMBKANUDEGPOKFGF"], "answers": {"FRENCHPRESS": [[15, 14], [14, 13], [13, 12], [12, 11], [11, 10], [10, 9], [9, 8], [8, 7], [7, 6], [6, 5], [5, 4]], "CAPPUCCINO": [[6, 11], [7, 10], [8, 9], [9, 8], [10, 7], [11, 6], [12, 5], [13, 4], [14, 3], [15, 2]], "AMERICANO": [[5, 8], [6, 7], [7, 6], [8, 5], [9, 4], [10, 3], [11, 2], [12, 1], [13, 0]], "ESPRESSO": [[0, 9], [1, 8], [2, 7], [3, 6], [4, 5], [5, 4], [6, 3], [7, 2]], "CAFFEINE": [[13, 19], [13, 18], [13, 17], [13, 16], [13, 15], [13, 14], [13, 13], [13, 12]], "CINNAMON": [[11, 10], [12, 10], [13, 10], [14, 10], [15, 10], [16, 10], [17, 10], [18, 10]], "CREAMER": [[2, 11], [3, 10], [4, 9], [5, 8], [6, 7], [7, 6], [8, 5]], "GRINDER": [[3, 0], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6]], "BARISTA": [[2, 9], [3, 8], [4, 7], [5, 6], [6, 5], [7, 4], [8, 3]], "CARAMEL": [[7, 9], [7, 10], [7, 11], [7, 12], [7, 13], [7, 14], [7, 15]], "PASTRY": [[4, 1], [5, 2], [6, 3], [7, 4], [8, 5], [9, 6]], "LATTE": [[12, 19], [13, 18], [14, 17], [15, 16], [16, 15]], "BEANS": [[5, 0], [5, 1], [5, 2], [5, 3], [5, 4]], "SYRUP": [[6, 5], [7, 5], [8, 5], [9, 5], [10, 5]], "MOCHA": [[9, 11], [8, 10], [7, 9], [6, 8], [5, 7]], "ROAST": [[15, 8], [15, 9], [15, 10], [15, 11], [15, 12]], "STEAM": [[14, 2], [13, 2], [12, 2], [11, 2], [10, 2]], "DECAF": [[16, 18], [15, 18], [14, 18], [13, 18], [12, 18]], "ICED": [[0, 1], [1, 2], [2, 3], [3, 4]], "MUG": [[16, 7], [16, 8], [16, 9]]}}, {"id": "football_sunday", "title": "Football Sunday", "words": ["TOUCHDOWN", "QUARTERBACK", "RECEIVER", "DEFENSE", "OFFENSE", "HUDDLE", "KICKOFF", "FIELDGOAL", "FUMBLE", "INTERCEPTION", "ENDZONE", "SNAP", "BLITZ", "TACKLE", "HELMET", "CLEATS", "PACKERS", "RIVALRY", "TAILGATE", "COACH"], "grid": ["HJYEDCHGAUDZJJSJONPP", "GOPZGFNOITPECRETNITX", "HLQWFSGWUBCKUELBMUFZ", "MVENJPUZEOLBFCVOBTVJ", "PAFPHEROFFENSEFPUWIT", "NIOMOBGAETAGLIATGFHT", "VWJTIEWTSATRQVXQDACS", "GQGDTZQCEPSNLEMLVHGB", "XMRPOUOUBWTTXRVJWYPA", "EBSGUACMAZCEMAAGSODP", "ENIDCSHJMRZMLGBCJDEN", "AMDHHBPMAFTLFKAGJIAK", "AQUZDCAYQQEEPXCEPRCM", "AWUQODCDZHQHRIVALRYO", "KILCWNKETSUKLBYXTJVQ", "XRBQNKEFIELDGOALDURG", "MBOBWHRELLPSDKICKOFF", "YTXNYDSNBMMPWLVYKNXM", "CIXFPANSQOKCWSEBQLBF", "WXQNOEBEMCNVDAOWVUAU"], "answers": {"INTERCEPTION": [[1, 17], [1, 16], [1, 15], [1, 14], [1, 13], [1, 12], [1, 11], [1, 10], [1, 9], [1, 8], [1, 7], [1, 6]], "QUARTERBACK": [[7, 6], [8, 7], [9, 8], [10, 9], [11, 10], [12, 11], [13, 12], [14, 13], [15, 14], [16, 15], [17, 16]], "FIELDGOAL": [[15, 7], [15, 8], [15, 9], [15, 10], [15, 11], [15, 12], [15, 13], [15, 14], [15, 15]], "TOUCHDOWN": [[7, 4], [8, 4], [9, 4], [10, 4], [11, 4], [12, 4], [13, 4], [14, 4], [15, 4]], "RECEIVER": [[1, 13], [2, 13], [3, 13], [4, 13], [5, 13], [6, 13], [7, 13], [8, 13]], "TAILGATE": [[5, 15], [5, 14], [5, 13], [5, 12], [5, 11], [5, 10], [5, 9], [5, 8]], "ENDZONE": [[9, 0], [10, 1], [11, 2], [12, 3], [13, 4], [14, 5], [15, 6]], "DEFENSE": [[13, 7], [14, 7], [15, 7], [16, 7], [17, 7], [18, 7], [19, 7]], "KICKOFF": [[16, 13], [16, 14], [16, 15], [16, 16], [16, 17], [16, 18], [16, 19]], "PACKERS": [[11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6]], "OFFENSE": [[4, 7], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12], [4, 13]], "RIVALRY": [[13, 12], [13, 13], [13, 14], [13, 15], [13, 16], [13, 17], [13, 18]], "HELMET": [[13, 11], [12, 11], [11, 11], [10, 11], [9, 11], [8, 11]], "CLEATS": [[2, 10], [3, 10], [4, 10], [5, 10], [6, 10], [7, 10]], "HUDDLE": [[13, 9], [14, 10], [15, 11], [16, 12], [17, 13], [18, 14]], "TACKLE": [[14, 16], [13, 15], [12, 14], [11, 13], [10, 12], [9, 11]], "FUMBLE": [[2, 18], [2, 17], [2, 16], [2, 15], [2, 14], [2, 13]], "COACH": [[7, 7], [8, 6], [9, 5], [10, 4], [11, 3]], "BLITZ": [[17, 8], [16, 8], [15, 8], [14, 8], [13, 8]], "SNAP": [[18, 7], [18, 6], [18, 5], [18, 4]]}}, {"id": "golf_day", "title": "Golf Day", "words": ["FAIRWAY", "GREEN", "PUTTER", "DRIVER", "WEDGE", "BUNKER", "CADDIE", "TEEBOX", "PAR", "BIRDIE", "EAGLE", "BOGEY", "CART", "SCORECARD", "DIVOT", "CLUBHOUSE", "RANGE", "CHIP", "SLICE", "HOLE"], "grid": ["UQLFNKTPRJVWXNRBHHAU", "BRXZZYQDIHIKMZTXCJIA", "TXHZRVGSWTRMBNAFLFTE", "EZCNYDOFJTQOAMZNHEPN", "LFYBLQZWAMKTFYNJEAPQ", "GSPSRYDSBJXPGVUNEHKQ", "BFQGPIFLMDYAGDPBVCAR", "FCNFICBINQQTDJPGREVC", "QHHYNAWCRHALOFSFESHG", "KTBIRDIEFFRBALTKININ", "SNLRPDQHAWPNTEEBOXTN", "CEJOWIRILXYEXBSLPKOW", "ODRACEROCSREAZURGVDS", "DIVOTWDEETCRGHONQAFN", "UOZTALGGVKBGEOHZKCEK", "EDUYCNBLEIMPHLBKLERL", "LPGXAJFMNQRPXEUQCART", "IKKRFKHQQBTDUVLXPMYQ", "ZFSVCHZJLFDSKZCHVORO", "ISCVVOWAKEEVLHVWGCMV"], "answers": {"CLUBHOUSE": [[18, 14], [17, 14], [16, 14], [15, 14], [14, 14], [13, 14], [12, 14], [11, 14], [10, 14]], "SCORECARD": [[12, 9], [12, 8], [12, 7], [12, 6], [12, 5], [12, 4], [12, 3], [12, 2], [12, 1]], "FAIRWAY": [[9, 9], [10, 8], [11, 7], [12, 6], [13, 5], [14, 4], [15, 3]], "BUNKER": [[11, 13], [12, 14], [13, 15], [14, 16], [15, 17], [16, 18]], "TEEBOX": [[10, 12], [10, 13], [10, 14], [10, 15], [10, 16], [10, 17]], "CADDIE": [[7, 5], [8, 5], [9, 5], [10, 5], [11, 5], [12, 5]], "PUTTER": [[16, 1], [15, 2], [14, 3], [13, 4], [12, 5], [11, 6]], "BIRDIE": [[9, 2], [9, 3], [9, 4], [9, 5], [9, 6], [9, 7]], "DRIVER": [[17, 11], [16, 10], [15, 9], [14, 8], [13, 7], [12, 6]], "BOGEY": [[15, 14], [14, 13], [13, 12], [12, 11], [11, 10]], "GREEN": [[14, 11], [13, 11], [12, 11], [11, 11], [10, 11]], "DIVOT": [[13, 0], [13, 1], [13, 2], [13, 3], [13, 4]], "RANGE": [[17, 3], [16, 4], [15, 5], [14, 6], [13, 7]], "EAGLE": [[14, 18], [13, 17], [12, 16], [11, 15], [10, 14]], "WEDGE": [[11, 4], [12, 5], [13, 6], [14, 7], [15, 8]], "SLICE": [[5, 7], [6, 7], [7, 7], [8, 7], [9, 7]], "CHIP": [[7, 1], [8, 2], [9, 3], [10, 4]], "HOLE": [[13, 13], [14, 13], [15, 13], [16, 13]], "CART": [[16, 16], [16, 17], [16, 18], [16, 19]], "PAR": [[17, 16], [16, 17], [15, 18]]}}, {"id": "backyard_bbq", "title": "Backyard BBQ", "words": ["BRISKET", "RIBS", "SAUCE", "SMOKER", "CHARCOAL", "BURGER", "HOTDOG", "CHICKEN", "STEAK", "CORN", "BEANS", "COLESLAW", "MARINADE", "TONGS", "GRILL", "MESQUITE", "HICKORY", "PLATE", "PICKLES", "NAPKINS"], "grid": ["PPFWDKUDDUUJHYKIFSBC", "LDZRCFLRBBJCNBDTDJCH", "DYVNRTJMESQUITELRESI", "LOFTDYAAFGCEEJXLJFFC", "OZGKFRNTYKRCEPJSHGJK", "TKNPISXLYXJUQXNZSROE", "ZIINWRAVHGCABMTQSFRN", "JGAQMZTMGCOSTONGSTQA", "RDQBFTCTIMRDBARKBIDP", "ERTLXPRAFKNWTIIWRTOK", "GDMETQYHKOZALORNIBLI", "EBAUSZNQQBSLVUHOSXGN", "TBKEJSOQAKTSVPICKLES", "LZNXJGTFPZEECDCSEBNB", "BLLROKHYZWALFQKDTEFE", "NQEPLWIGREKOMSOCOTQA", "VIYVFLNAPMGCHARCOALA", "WWVHHHBBZIZLZWYALLDZ", "YDMBNNBIMKNNOHZMAPKV", "XXFNPPUNSHEWUJOYEPGZ"], "answers": {"CHARCOAL": [[16, 11], [16, 12], [16, 13], [16, 14], [16, 15], [16, 16], [16, 17], [16, 18]], "MESQUITE": [[2, 7], [2, 8], [2, 9], [2, 10], [2, 11], [2, 12], [2, 13], [2, 14]], "COLESLAW": [[16, 11], [15, 11], [14, 11], [13, 11], [12, 11], [11, 11], [10, 11], [9, 11]], "MARINADE": [[2, 7], [3, 6], [4, 5], [5, 4], [6, 3], [7, 2], [8, 1], [9, 0]], "HICKORY": [[11, 14], [12, 14], [13, 14], [14, 14], [15, 14], [16, 14], [17, 14]], "PICKLES": [[12, 13], [12, 14], [12, 15], [12, 16], [12, 17], [12, 18], [12, 19]], "NAPKINS": [[6, 19], [7, 19], [8, 19], [9, 19], [10, 19], [11, 19], [12, 19]], "BRISKET": [[8, 16], [9, 16], [10, 16], [11, 16], [12, 16], [13, 16], [14, 16]], "CHICKEN": [[0, 19], [1, 19], [2, 19], [3, 19], [4, 19], [5, 19], [6, 19]], "SMOKER": [[15, 13], [15, 12], [15, 11], [15, 10], [15, 9], [15, 8]], "BURGER": [[6, 12], [5, 11], [4, 10], [3, 9], [2, 8], [1, 7]], "HOTDOG": [[11, 14], [10, 13], [9, 12], [8, 11], [7, 10], [6, 9]], "GRILL": [[7, 15], [8, 14], [9, 13], [10, 12], [11, 11]], "SAUCE": [[7, 11], [6, 11], [5, 11], [4, 11], [3, 11]], "TONGS": [[7, 12], [7, 13], [7, 14], [7, 15], [7, 16]], "STEAK": [[11, 10], [12, 10], [13, 10], [14, 10], [15, 10]], "PLATE": [[18, 17], [17, 17], [16, 17], [15, 17], [14, 17]], "BEANS": [[1, 9], [2, 8], [3, 7], [4, 6], [5, 5]], "CORN": [[6, 10], [7, 10], [8, 10], [9, 10]], "RIBS": [[10, 14], [9, 13], [8, 12], [7, 11]]}}, {"id": "rock_concert", "title": "Rock Concert", "words": ["GUITAR", "BASS", "DRUMS", "VOCALS", "STAGE", "AMPLIFIER", "SPEAKERS", "ENCORE", "TICKET", "SETLIST", "RIFF", "SOLO", "CROWD", "LIGHTS", "ROADIE", "MERCH", "BACKSTAGE", "MOSHPIT", "POWERCHORD", "FEEDBACK"], "grid": ["BZBCDVRNZLFOMSXVWCTN", "AFVSHKBZFWVVBWSZVGUM", "RVOSPEAKERSIXTTYEGQE", "JIKSLIGHTSIMIXIWBOBC", "RYBBCVLAZVNFUDHFCACR", "BHETEKCITVMMFRPZGCVJ", "SARIBEDIPSVIVCDLRQIG", "EPXUAVPTWFKAQRCRIGEU", "BXSXSHYDROHCREWOPACQ", "CVXVSONYXPPGAAAAMIEP", "SCNORILBBQCMABTDFPTY", "NRMCEVVOYNCROWDIOCNG", "ZXFAINTYRTVUHPPEUAMT", "CMSLFSCCIJOMZJYYEGLK", "YWPSIFCORENHOUBUYFKL", "WXNLLCYARCZNSJRWUATB", "LVTAPMHCREMHFZFEVDXJ", "OEORMFFSTUQFIOUHJEFJ", "SAFBAAZWHCTXABDDBQKS", "JVDXCUOKJHNRLSXWYJER"], "answers": {"POWERCHORD": [[8, 16], [8, 15], [8, 14], [8, 13], [8, 12], [8, 11], [8, 10], [8, 9], [8, 8], [8, 7]], "BACKSTAGE": [[10, 13], [9, 12], [8, 11], [7, 10], [6, 9], [5, 8], [4, 7], [3, 6], [2, 5]], "AMPLIFIER": [[18, 4], [17, 4], [16, 4], [15, 4], [14, 4], [13, 4], [12, 4], [11, 4], [10, 4]], "FEEDBACK": [[14, 17], [13, 16], [12, 15], [11, 14], [10, 13], [9, 12], [8, 11], [7, 10]], "SPEAKERS": [[2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [2, 9], [2, 10]], "MOSHPIT": [[11, 2], [10, 3], [9, 4], [8, 5], [7, 6], [6, 7], [5, 8]], "SETLIST": [[18, 0], [17, 1], [16, 2], [15, 3], [14, 4], [13, 5], [12, 6]], "LIGHTS": [[3, 4], [3, 5], [3, 6], [3, 7], [3, 8], [3, 9]], "TICKET": [[5, 8], [5, 7], [5, 6], [5, 5], [5, 4], [5, 3]], "VOCALS": [[9, 3], [10, 3], [11, 3], [12, 3], [13, 3], [14, 3]], "GUITAR": [[13, 17], [12, 16], [11, 15], [10, 14], [9, 13], [8, 12]], "ENCORE": [[11, 4], [12, 5], [13, 6], [14, 7], [15, 8], [16, 9]], "ROADIE": [[7, 15], [8, 15], [9, 15], [10, 15], [11, 15], [12, 15]], "MERCH": [[16, 10], [16, 9], [16, 8], [16, 7], [16, 6]], "CROWD": [[11, 10], [11, 11], [11, 12], [11, 13], [11, 14]], "STAGE": [[6, 9], [5, 8], [4, 7], [3, 6], [2, 5]], "DRUMS": [[6, 14], [5, 13], [4, 12], [3, 11], [2, 10]], "RIFF": [[2, 9], [3, 10], [4, 11], [5, 12]], "BASS": [[6, 4], [7, 4], [8, 4], [9, 4]], "SOLO": [[8, 4], [9, 5], [10, 6], [11, 7]]}}, {"id": "road_trip", "title": "Road Trip", "words": ["HIGHWAY", "GAS", "SNACKS", "MAP", "PLAYLIST", "HOTEL", "MOTEL", "RESTSTOP", "EXIT", "MILEAGE", "COOLER", "LUGGAGE", "CAMERA", "TRAFFIC", "DETOUR", "CRUISE", "SUNGLASSES", "ROADSIDE", "DASHBOARD", "TOLLBOOTH"], "grid": ["LYRVULIWDXVRNINQMJDA", "QPTTJUQCRUISEMSBANSF", "UMNLWPJIJTMWDCXPLTWU", "RVGXTURIDXIBIFULHPHT", "IBWGGYWGOSAQSKDAYTKT", "SZZGKYVTNSGKDHIYNMOI", "TCXVJODASHBOARDLFEEX", "SIIPWCCKDTUYODSITDCH", "FFBSWKVNLOAPRERSHOVJ", "EFNNSARESORESTSTOPUX", "CAMERAIMFBHSKOLLTXHL", "ORVNDRMVILAHPUEAEJUP", "QTQKFMOTELCSQRXSLGYW", "YMBEQYVZGOEXHJVEGTGP", "FNVXUWNNCTRANIPAMAAC", "GJBEGPUGTAIWGSGZEGSR", "DCMCFSHZQMUXYEMHXUSH", "NKZYMJNWIZAVEIHTWYVD", "PKVOBSDSBYOPSEVJZARF", "ITJTTYJUJTKIBWIKZDYI"], "answers": {"SUNGLASSES": [[16, 5], [15, 6], [14, 7], [13, 8], [12, 9], [11, 10], [10, 11], [9, 12], [8, 13], [7, 14]], "TOLLBOOTH": [[14, 9], [13, 9], [12, 9], [11, 9], [10, 9], [9, 9], [8, 9], [7, 9], [6, 9]], "DASHBOARD": [[6, 6], [6, 7], [6, 8], [6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14]], "RESTSTOP": [[9, 10], [9, 11], [9, 12], [9, 13], [9, 14], [9, 15], [9, 16], [9, 17]], "PLAYLIST": [[2, 15], [3, 15], [4, 15], [5, 15], [6, 15], [7, 15], [8, 15], [9, 15]], "ROADSIDE": [[8, 12], [7, 12], [6, 12], [5, 12], [4, 12], [3, 12], [2, 12], [1, 12]], "MILEAGE": [[10, 7], [11, 8], [12, 9], [13, 10], [14, 11], [15, 12], [16, 13]], "LUGGAGE": [[10, 19], [11, 18], [12, 17], [13, 16], [14, 15], [15, 14], [16, 13]], "TRAFFIC": [[12, 1], [11, 1], [10, 1], [9, 1], [8, 1], [7, 1], [6, 1]], "HIGHWAY": [[13, 12], [14, 13], [15, 14], [16, 15], [17, 16], [18, 17], [19, 18]], "COOLER": [[7, 18], [8, 17], [9, 16], [10, 15], [11, 14], [12, 13]], "DETOUR": [[7, 13], [8, 13], [9, 13], [10, 13], [11, 13], [12, 13]], "CRUISE": [[1, 7], [1, 8], [1, 9], [1, 10], [1, 11], [1, 12]], "CAMERA": [[10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5]], "SNACKS": [[4, 9], [5, 8], [6, 7], [7, 6], [8, 5], [9, 4]], "MOTEL": [[12, 5], [12, 6], [12, 7], [12, 8], [12, 9]], "HOTEL": [[8, 16], [9, 16], [10, 16], [11, 16], [12, 16]], "EXIT": [[17, 12], [16, 11], [15, 10], [14, 9]], "MAP": [[14, 16], [14, 15], [14, 14]], "GAS": [[13, 16], [14, 17], [15, 18]]}}, {"id": "camping", "title": "Camping", "words": ["TENT", "CAMPFIRE", "SLEEPINGBAG", "LANTERN", "COOLER", "BACKPACK", "TRAIL", "MARSHMALLOW", "SLEEPING", "FIREWOOD", "HIKING", "COMPASS", "CABIN", "MOSQUITO", "FLASHLIGHT", "FOREST", "STREAM", "HAMMOCK", "STARS", "CANOE"], "grid": ["DGIBFMOSQUITODUJWDGY", "EMRFJUUBZRNHHSUPNBWW", "VDJNSLEEPINGBAGXSQPV", "MARSHMALLOWIEYMNCCYV", "IKTKRZMJIBALQTVMOUCR", "ARQYBACVSGAHZXBLONAB", "QIYUUFTPCNESCZPTLCHQ", "WDKGOLTSTICASDTOEXKB", "TOOVPJCETKRLIARTRTCL", "RUPOCVRFDIHFYIPYWPBV", "TQSCWNYVIHGZRLSMCEKR", "XGPTSEROFQYRRRSCOTNC", "DYFMEPRKKESVFIXDFCTC", "FBAKCNBIIIPXXPVBTZXT", "MIMWMBTMFWZKEDDAJQXE", "SBYIYXBGWPOYORNGIITW", "GHIPSSTREAMJNTAIWOVF", "SBYQWHIJMHLAAQISBPHE", "NRZNUZQNOIIKCAPKCABE", "SHXUSVJDGKAOPOMTXXCO"], "answers": {"SLEEPINGBAG": [[2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [2, 9], [2, 10], [2, 11], [2, 12], [2, 13], [2, 14]], "MARSHMALLOW": [[3, 0], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7], [3, 8], [3, 9], [3, 10]], "FLASHLIGHT": [[9, 11], [8, 11], [7, 11], [6, 11], [5, 11], [4, 11], [3, 11], [2, 11], [1, 11], [0, 11]], "FIREWOOD": [[14, 8], [13, 7], [12, 6], [11, 5], [10, 4], [9, 3], [8, 2], [7, 1]], "MOSQUITO": [[0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [0, 10], [0, 11], [0, 12]], "CAMPFIRE": [[18, 12], [17, 11], [16, 10], [15, 9], [14, 8], [13, 7], [12, 6], [11, 5]], "SLEEPING": [[2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [2, 9], [2, 10], [2, 11]], "BACKPACK": [[18, 18], [18, 17], [18, 16], [18, 15], [18, 14], [18, 13], [18, 12], [18, 11]], "HAMMOCK": [[1, 12], [2, 13], [3, 14], [4, 15], [5, 16], [6, 17], [7, 18]], "LANTERN": [[4, 11], [5, 10], [6, 9], [7, 8], [8, 7], [9, 6], [10, 5]], "COMPASS": [[12, 17], [11, 16], [10, 15], [9, 14], [8, 13], [7, 12], [6, 11]], "FOREST": [[11, 8], [11, 7], [11, 6], [11, 5], [11, 4], [11, 3]], "HIKING": [[10, 9], [9, 9], [8, 9], [7, 9], [6, 9], [5, 9]], "COOLER": [[3, 16], [4, 16], [5, 16], [6, 16], [7, 16], [8, 16]], "STREAM": [[16, 5], [16, 6], [16, 7], [16, 8], [16, 9], [16, 10]], "STARS": [[7, 7], [6, 6], [5, 5], [4, 4], [3, 3]], "CABIN": [[19, 18], [18, 17], [17, 16], [16, 15], [15, 14]], "TRAIL": [[8, 15], [8, 14], [8, 13], [8, 12], [8, 11]], "CANOE": [[18, 12], [17, 12], [16, 12], [15, 12], [14, 12]], "TENT": [[11, 3], [12, 4], [13, 5], [14, 6]]}}, {"id": "beach_day", "title": "Beach Day", "words": ["SAND", "OCEAN", "WAVES", "SURFBOARD", "SUNSCREEN", "TOWEL", "UMBRELLA", "SEASHELL", "CASTLE", "BOARDWALK", "FLIPFLOPS", "SNORKEL", "COOLER", "SWIMSUIT", "LIFEGUARD", "BEACHBALL", "SUNGLASSES", "PIER", "TIDE", "DOLPHIN"], "grid": ["FUFHWQFDLOEBWYHYUMDC", "HLKLAWDRAOBFRUSAHPMY", "YSPXQWAACASTLEXESYTS", "QOMANCMUGBUASHLCVPRZ", "JKNJMMRGYDCJYNAOJANG", "MVAAZHLEKRONSOGCOKWL", "IUADNAXFCCQCCEADGCKU", "WYEANXLIHQKTNSVATHDF", "RKHKTAFLYPMTSRYTGRBM", "YNFSEASHELLWUZPEECED", "OXDNOUBGHRPVDDDQUSAG", "WHLREMHXUCBNRIBNAECO", "LZMQEESACRLMTCOYPMHZ", "WCZYTXRYTANIUBDQJMBH", "QXRARXYCMDULEWOTAZAL", "BTSUNGLASSESPOLFPILF", "UZSHDDDWMNBGIHPZINLA", "FHGEERFIZIUBJMHIDYEY", "KRGPUAWZJJJSGGIAEXXH", "VCMWNSGXTLMNVMNSHRYT"], "answers": {"SUNGLASSES": [[15, 2], [15, 3], [15, 4], [15, 5], [15, 6], [15, 7], [15, 8], [15, 9], [15, 10], [15, 11]], "BOARDWALK": [[1, 10], [1, 9], [1, 8], [1, 7], [1, 6], [1, 5], [1, 4], [1, 3], [1, 2]], "SURFBOARD": [[1, 14], [1, 13], [1, 12], [1, 11], [1, 10], [1, 9], [1, 8], [1, 7], [1, 6]], "FLIPFLOPS": [[15, 19], [15, 18], [15, 17], [15, 16], [15, 15], [15, 14], [15, 13], [15, 12], [15, 11]], "LIFEGUARD": [[8, 7], [7, 7], [6, 7], [5, 7], [4, 7], [3, 7], [2, 7], [1, 7], [0, 7]], "SUNSCREEN": [[18, 11], [17, 10], [16, 9], [15, 8], [14, 7], [13, 6], [12, 5], [11, 4], [10, 3]], "BEACHBALL": [[8, 18], [9, 18], [10, 18], [11, 18], [12, 18], [13, 18], [14, 18], [15, 18], [16, 18]], "UMBRELLA": [[13, 12], [12, 11], [11, 10], [10, 9], [9, 8], [8, 7], [7, 6], [6, 5]], "SWIMSUIT": [[19, 5], [18, 6], [17, 7], [16, 8], [15, 9], [14, 10], [13, 11], [12, 12]], "SEASHELL": [[9, 3], [9, 4], [9, 5], [9, 6], [9, 7], [9, 8], [9, 9], [9, 10]], "DOLPHIN": [[13, 14], [14, 14], [15, 14], [16, 14], [17, 14], [18, 14], [19, 14]], "SNORKEL": [[5, 12], [5, 11], [5, 10], [5, 9], [5, 8], [5, 7], [5, 6]], "COOLER": [[6, 17], [5, 16], [4, 15], [3, 14], [2, 13], [1, 12]], "CASTLE": [[2, 8], [2, 9], [2, 10], [2, 11], [2, 12], [2, 13]], "WAVES": [[5, 18], [4, 17], [3, 16], [2, 15], [1, 14]], "TOWEL": [[14, 15], [14, 14], [14, 13], [14, 12], [14, 11]], "OCEAN": [[11, 19], [11, 18], [11, 17], [11, 16], [11, 15]], "PIER": [[16, 14], [17, 15], [18, 16], [19, 17]], "TIDE": [[12, 12], [11, 13], [10, 14], [9, 15]], "SAND": [[9, 6], [8, 5], [7, 4], [6, 3]]}}, {"id": "video_games", "title": "Video Games", "words": ["CONTROLLER", "CONSOLE", "LEVEL", "QUEST", "BOSS", "AVATAR", "LOOT", "HEALTH", "POWERUP", "SAVEPOINT", "JOYSTICK", "PIXEL", "ARCADE", "MULTIPLAYER", "SCORE", "SPEEDRUN", "GAMER", "RESPAWN", "PORTAL", "CRAFTING"], "grid": ["BLWTSCGKAZXQXOFMZBDB", "AIEJDAOZQAYHLZMGDSNN", "TGCMCRVNKTTHMCGXMFVH", "KDANSYTETHQEXOQFWRVG", "DBODUEBZPROCBNALHKXN", "OZPLNITCDOOAMSVETTSI", "QOPIVGNRDJILUOAVXRNT", "VTNATHITNEHNLLTESVUF", "NDOQAWCSQUESTEALCLDA", "VPHJWKXOKLDHIIRRLSDR", "NLAZOPWMZFPDPYIOZCFC", "QFRAWOJUGNFULPCUCKSZ", "ECRLFLOOTARCADETGSJI", "XVYDHOXEYEMRYLMOJYNJ", "NDOYHWPPWSPEEDRUNSWB", "YLGMQNIOUITJRSSOBAGA", "EEMJMHPRNDWIYGPCYYPL", "QWKRNBTTIGLCCNJAWAET", "OKRBIYOAZBWSMKWTWIMF", "OMLPIXELGXTQCRVLSNDW"], "answers": {"MULTIPLAYER": [[5, 12], [6, 12], [7, 12], [8, 12], [9, 12], [10, 12], [11, 12], [12, 12], [13, 12], [14, 12], [15, 12]], "CONTROLLER": [[0, 5], [1, 6], [2, 7], [3, 8], [4, 9], [5, 10], [6, 11], [7, 12], [8, 13], [9, 14]], "SAVEPOINT": [[0, 4], [1, 5], [2, 6], [3, 7], [4, 8], [5, 9], [6, 10], [7, 11], [8, 12]], "CRAFTING": [[10, 19], [9, 19], [8, 19], [7, 19], [6, 19], [5, 19], [4, 19], [3, 19]], "SPEEDRUN": [[14, 9], [14, 10], [14, 11], [14, 12], [14, 13], [14, 14], [14, 15], [14, 16]], "JOYSTICK": [[11, 6], [12, 7], [13, 8], [14, 9], [15, 10], [16, 11], [17, 12], [18, 13]], "RESPAWN": [[13, 11], [14, 12], [15, 13], [16, 14], [17, 15], [18, 16], [19, 17]], "POWERUP": [[16, 6], [15, 7], [14, 8], [13, 9], [12, 10], [11, 11], [10, 12]], "CONSOLE": [[2, 13], [3, 13], [4, 13], [5, 13], [6, 13], [7, 13], [8, 13]], "AVATAR": [[4, 14], [5, 14], [6, 14], [7, 14], [8, 14], [9, 14]], "PORTAL": [[14, 7], [15, 7], [16, 7], [17, 7], [18, 7], [19, 7]], "ARCADE": [[12, 9], [12, 10], [12, 11], [12, 12], [12, 13], [12, 14]], "HEALTH": [[4, 16], [5, 15], [6, 14], [7, 13], [8, 12], [9, 11]], "GAMER": [[11, 8], [12, 9], [13, 10], [14, 11], [15, 12]], "LEVEL": [[8, 15], [7, 15], [6, 15], [5, 15], [4, 15]], "PIXEL": [[19, 3], [19, 4], [19, 5], [19, 6], [19, 7]], "SCORE": [[12, 17], [11, 16], [10, 15], [9, 14], [8, 13]], "QUEST": [[8, 8], [8, 9], [8, 10], [8, 11], [8, 12]], "LOOT": [[12, 5], [12, 6], [12, 7], [12, 8]], "BOSS": [[15, 16], [15, 15], [15, 14], [15, 13]]}}, {"id": "board_games", "title": "Board Games", "words": ["DICE", "TOKEN", "CARDS", "BOARD", "PAWN", "SPINNER", "STRATEGY", "CHECKERS", "CHESS", "TILES", "SCOREPAD", "TIMER", "RULES", "TURN", "WINNER", "TRIVIA", "PUZZLE", "DOMINOES", "SHUFFLE", "DECK"], "grid": ["KNHSYMUFUDZZUGNQBDDW", "EZYATPBMWLWWEPITHZOD", "NPLFSJABGDGYSQEPOJQN", "MTIMEROWAMNCTRIVIAHK", "JCZKOESMDUSCOREPADLM", "TOKENNMDQRXUJQIKNPFY", "MASPINNERMPSCKCUCZGE", "TEEIMIYNUADBWEYVAESY", "ZDCUOWGUCXCNDHICTHHN", "UKCEDJNYGVBRZWCANYUC", "OOTURNZUGATTUXRVNAFD", "JSCZAPEFOFTLATFRRMFT", "CCZFOEXDBHTJSWKTNELF", "EZOVBJITILESPUWRPLEE", "WPUKLUTDOGEEXPOAICNL", "ZAFSOPYRQHLLLKJQINIZ", "ZNUMCLEACHCUWOODLFTZ", "UWKSQBGOSMNREISVWDZU", "IASPXTVARUFDZGZVQSMP", "DPHFLKYMUHXLQFMSAAPK"], "answers": {"DOMINOES": [[9, 4], [8, 4], [7, 4], [6, 4], [5, 4], [4, 4], [3, 4], [2, 4]], "STRATEGY": [[12, 12], [11, 13], [10, 14], [9, 15], [8, 16], [7, 17], [6, 18], [5, 19]], "CHECKERS": [[9, 19], [8, 18], [7, 17], [6, 16], [5, 15], [4, 14], [3, 13], [2, 12]], "SCOREPAD": [[4, 10], [4, 11], [4, 12], [4, 13], [4, 14], [4, 15], [4, 16], [4, 17]], "SPINNER": [[6, 2], [6, 3], [6, 4], [6, 5], [6, 6], [6, 7], [6, 8]], "SHUFFLE": [[7, 18], [8, 18], [9, 18], [10, 18], [11, 18], [12, 18], [13, 18]], "WINNER": [[8, 5], [7, 5], [6, 5], [5, 5], [4, 5], [3, 5]], "TRIVIA": [[3, 12], [3, 13], [3, 14], [3, 15], [3, 16], [3, 17]], "PUZZLE": [[18, 19], [17, 19], [16, 19], [15, 19], [14, 19], [13, 19]], "CHESS": [[16, 8], [15, 9], [14, 10], [13, 11], [12, 12]], "RULES": [[17, 11], [16, 11], [15, 11], [14, 11], [13, 11]], "TIMER": [[3, 1], [3, 2], [3, 3], [3, 4], [3, 5]], "BOARD": [[13, 4], [12, 4], [11, 4], [10, 4], [9, 4]], "TILES": [[13, 7], [13, 8], [13, 9], [13, 10], [13, 11]], "TOKEN": [[5, 0], [5, 1], [5, 2], [5, 3], [5, 4]], "CARDS": [[8, 10], [7, 9], [6, 8], [5, 7], [4, 6]], "TURN": [[10, 2], [10, 3], [10, 4], [10, 5]], "PAWN": [[19, 1], [18, 1], [17, 1], [16, 1]], "DICE": [[16, 15], [15, 16], [14, 17], [13, 18]], "DECK": [[9, 4], [9, 3], [9, 2], [9, 1]]}}, {"id": "pets", "title": "Pets", "words": ["PUG", "DOG", "CAT", "HAMSTER", "RABBIT", "PARROT", "GOLDFISH", "LIZARD", "TURTLE", "SNAKE", "COLLAR", "LEASH", "VET", "KENNEL", "GROOMING", "TREATS", "ADOPTION", "TRAINING", "FUR", "PAWS"], "grid": ["GBBEBQQGLJNYCULAUDCV", "INTWTOYTOBRZQBYCFBTN", "GLOIXYBBQSRGEXMSZWAV", "IAXEYHIMPGVJESGAYIRD", "VDNNFFCMREZUNOTWOOAS", "FLVGDNTFNVUAOZEAGJBW", "EUPNETACMPKPLENNEKBT", "LHUIFGDBUEZKUEIAWRIW", "TIGNIMOORGEHHJKFDVTJ", "RTZIEIPLSSSJCYTFUOQF", "UPIAPDTODPBSPXHURKGU", "TVKRREIAMFYXWQSRLAGW", "DVUTGDOLUDINJKADLBVO", "NFEHUUNOIXZSIPEGJJTL", "DRETSMAHDEXWHZLQEKES", "CAFZWXZBHDOGLFXFKTTN", "ULTRAZPFLSEGPNXOLIBB", "CLBTPRFFAWNJUKKBCQFU", "MOZXBUVPPSBEMPKFEVPO", "VCWYYOAJDNPVBBHESALY"], "answers": {"GROOMING": [[8, 9], [8, 8], [8, 7], [8, 6], [8, 5], [8, 4], [8, 3], [8, 2]], "GOLDFISH": [[7, 5], [8, 6], [9, 7], [10, 8], [11, 9], [12, 10], [13, 11], [14, 12]], "TRAINING": [[12, 3], [11, 3], [10, 3], [9, 3], [8, 3], [7, 3], [6, 3], [5, 3]], "ADOPTION": [[6, 6], [7, 6], [8, 6], [9, 6], [10, 6], [11, 6], [12, 6], [13, 6]], "HAMSTER": [[14, 7], [14, 6], [14, 5], [14, 4], [14, 3], [14, 2], [14, 1]], "COLLAR": [[19, 1], [18, 1], [17, 1], [16, 1], [15, 1], [14, 1]], "RABBIT": [[3, 18], [4, 18], [5, 18], [6, 18], [7, 18], [8, 18]], "LIZARD": [[7, 0], [8, 1], [9, 2], [10, 3], [11, 4], [12, 5]], "PARROT": [[13, 13], [12, 14], [11, 15], [10, 16], [9, 17], [8, 18]], "TREATS": [[8, 18], [7, 17], [6, 16], [5, 15], [4, 14], [3, 13]], "KENNEL": [[6, 17], [6, 16], [6, 15], [6, 14], [6, 13], [6, 12]], "TURTLE": [[11, 0], [10, 0], [9, 0], [8, 0], [7, 0], [6, 0]], "LEASH": [[14, 14], [13, 14], [12, 14], [11, 14], [10, 14]], "SNAKE": [[3, 13], [4, 12], [5, 11], [6, 10], [7, 9]], "PAWS": [[17, 4], [16, 4], [15, 4], [14, 4]], "FUR": [[13, 1], [12, 2], [11, 3]], "CAT": [[6, 7], [6, 6], [6, 5]], "DOG": [[8, 16], [9, 17], [10, 18]], "PUG": [[6, 2], [7, 2], [8, 2]], "VET": [[12, 1], [13, 2], [14, 3]]}}, {"id": "dogs", "title": "Dogs", "words": ["PUG", "BEAGLE", "BOXER", "HUSKY", "COLLIE", "POODLE", "BULLDOG", "TERRIER", "RETRIEVER", "SHEPHERD", "DALMATIAN", "CORGI", "MASTIFF", "LEASH", "BISCUIT", "FETCH", "WAGGING", "GROOMER", "KIBBLE", "DOGPARK"], "grid": ["ZNRJYPNNGCMBUNQKPYLT", "NAZFBDAVDKMBSLEJLAMQ", "MNEMWHIYKSUHDCKRXBOE", "PGOTRCTRQXFXAVRRFHLU", "KGNIGGAWEGZMFHSOSLTN", "TUIIHPMIQYKJPKCORGIB", "GYBIGSLAUBISCUITRXPM", "HIQOCLAIIQCSGIGVEWII", "HCDKOPDEVCITKQZIZFYH", "SZECMKLMLPZJATTYHMCA", "VWZFEILEVOFDAGATDWIB", "AAWZPBASIOEFBKZEJCAM", "FPZDPBSSSDZOTRSMSQRV", "LNDJGLEGHLXHEMBYZKKY", "NKYHRETRIEVERRICFKLC", "LLKKGEJORXPNRRGFPKVP", "TPBULLDOGHAHINARORLI", "HFFITSAMLNDBEAGLEANA", "LSOIMWQEQPVARRUYUKSN", "TEUZCQRRFASXHPDEQLXO"], "answers": {"RETRIEVER": [[14, 4], [14, 5], [14, 6], [14, 7], [14, 8], [14, 9], [14, 10], [14, 11], [14, 12]], "DALMATIAN": [[8, 6], [7, 6], [6, 6], [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6]], "SHEPHERD": [[12, 7], [13, 8], [14, 9], [15, 10], [16, 11], [17, 12], [18, 13], [19, 14]], "TERRIER": [[12, 12], [13, 12], [14, 12], [15, 12], [16, 12], [17, 12], [18, 12]], "DOGPARK": [[8, 2], [7, 3], [6, 4], [5, 5], [4, 6], [3, 7], [2, 8]], "BISCUIT": [[6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14], [6, 15]], "GROOMER": [[13, 7], [14, 7], [15, 7], [16, 7], [17, 7], [18, 7], [19, 7]], "BULLDOG": [[16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7], [16, 8]], "MASTIFF": [[17, 7], [17, 6], [17, 5], [17, 4], [17, 3], [17, 2], [17, 1]], "WAGGING": [[4, 7], [4, 6], [4, 5], [4, 4], [4, 3], [4, 2], [4, 1]], "COLLIE": [[9, 3], [8, 4], [7, 5], [6, 6], [5, 7], [4, 8]], "KIBBLE": [[9, 5], [10, 5], [11, 5], [12, 5], [13, 5], [14, 5]], "POODLE": [[9, 9], [10, 9], [11, 9], [12, 9], [13, 9], [14, 9]], "BEAGLE": [[17, 11], [17, 12], [17, 13], [17, 14], [17, 15], [17, 16]], "FETCH": [[8, 17], [7, 16], [6, 15], [5, 14], [4, 13]], "BOXER": [[11, 12], [12, 11], [13, 10], [14, 9], [15, 8]], "CORGI": [[5, 14], [5, 15], [5, 16], [5, 17], [5, 18]], "HUSKY": [[2, 11], [2, 10], [2, 9], [2, 8], [2, 7]], "LEASH": [[9, 8], [8, 7], [7, 6], [6, 5], [5, 4]], "PUG": [[5, 12], [6, 13], [7, 14]]}}, {"id": "halloween", "title": "Halloween", "words": ["PUMPKIN", "GHOST", "WITCH", "CANDY", "COSTUME", "MONSTER", "VAMPIRE", "WEREWOLF", "ZOMBIE", "SPIDER", "HAUNTED", "CEMETERY", "CAULDRON", "BROOMSTICK", "SKELETON", "BAT", "COBWEB", "MASK", "LANTERN", "TRICKORTREAT"], "grid": ["VUANUXZZRZAEHDWOIUGX", "HLBHWLRKVOUCUTEZGTFF", "OKQDVZQLRNCMONSTERLE", "VQCNHJCOAOLWSBSLNWMG", "EALIDEENYREUTOWPUUFB", "AGMKTILIYDWNHUVETVAO", "CNKPBSIBLLNGOFNSBTIH", "VWSMIMMJMUCATIOPHWRH", "NPOUDRBOWASACCTPWVNN", "LZSPSEEQOCEMETERYHWT", "ABGDIWXPGRPHYHLESEKQ", "TPDPIFEWTYBNIXEDERLI", "ETPKIPQRPHMMASKIXXYK", "INHMQHOWEEVVULSPQGDW", "ZGUDPKHMOWIBAZESYFBI", "XPUOCLHXHIOOWKAHFZMY", "AQXIJHTIKTYLLNHHUBMX", "WNRETNALMCYFFLCZEPPJ", "PTFMDBTRQHNGGBDCVEUK", "NZDHLNIIHRAXCZBIPYVT"], "answers": {"TRICKORTREAT": [[18, 1], [17, 2], [16, 3], [15, 4], [14, 5], [13, 6], [12, 7], [11, 8], [10, 9], [9, 10], [8, 11], [7, 12]], "BROOMSTICK": [[11, 10], [10, 9], [9, 8], [8, 7], [7, 6], [6, 5], [5, 4], [4, 3], [3, 2], [2, 1]], "CEMETERY": [[9, 9], [9, 10], [9, 11], [9, 12], [9, 13], [9, 14], [9, 15], [9, 16]], "WEREWOLF": [[10, 5], [11, 6], [12, 7], [13, 8], [14, 9], [15, 10], [16, 11], [17, 12]], "CAULDRON": [[9, 9], [8, 9], [7, 9], [6, 9], [5, 9], [4, 9], [3, 9], [2, 9]], "SKELETON": [[13, 14], [12, 14], [11, 14], [10, 14], [9, 14], [8, 14], [7, 14], [6, 14]], "COSTUME": [[8, 13], [7, 14], [6, 15], [5, 16], [4, 17], [3, 18], [2, 19]], "HAUNTED": [[6, 19], [5, 18], [4, 17], [3, 16], [2, 15], [1, 14], [0, 13]], "PUMPKIN": [[9, 3], [8, 3], [7, 3], [6, 3], [5, 3], [4, 3], [3, 3]], "MONSTER": [[2, 11], [2, 12], [2, 13], [2, 14], [2, 15], [2, 16], [2, 17]], "VAMPIRE": [[3, 0], [4, 1], [5, 2], [6, 3], [7, 4], [8, 5], [9, 6]], "LANTERN": [[17, 7], [17, 6], [17, 5], [17, 4], [17, 3], [17, 2], [17, 1]], "COBWEB": [[1, 11], [2, 12], [3, 13], [4, 14], [5, 15], [6, 16]], "ZOMBIE": [[9, 1], [8, 2], [7, 3], [6, 4], [5, 5], [4, 6]], "SPIDER": [[14, 15], [13, 15], [12, 15], [11, 15], [10, 15], [9, 15]], "CANDY": [[8, 12], [7, 11], [6, 10], [5, 9], [4, 8]], "GHOST": [[6, 11], [5, 12], [4, 13], [3, 14], [2, 15]], "WITCH": [[14, 9], [15, 9], [16, 9], [17, 9], [18, 9]], "MASK": [[12, 11], [12, 12], [12, 13], [12, 14]], "BAT": [[4, 19], [5, 18], [6, 17]]}}, {"id": "holidays", "title": "Holidays", "words": ["PRESENTS", "CANDLES", "TREE", "TURKEY", "FIREWORKS", "PARADE", "SNOWMAN", "STOCKING", "ORNAMENT", "GARLAND", "COOKIE", "FAMILY", "TRADITION", "FESTIVAL", "WREATH", "RIBBON", "FEAST", "MUSIC", "LIGHTS", "CHEER"], "grid": ["NJPDPERXHLUUCZNNJCRY", "OIFOXSSQDXUSCSCADTLE", "HILYIXCZVGTZVPZYBJWB", "IHWYIGXILIPGVCUEVYTQ", "DYKUQGZHVCOCDAMHFLQJ", "VEAGDTNQKGOCCBDSIITZ", "VZJEASVELGIOWXKMJMRQ", "DCHEERRJXFGUKWFHSAAR", "QYNMZTLZXILAVITSEFDC", "IJQLPVKAZTQJPFEKLMIV", "UPPCFWIBNOBBIRIRDUTU", "SKKTURKEYDKGVBZONSIC", "YSRLUEMUWENPKAHWAIOO", "ZRFEDARAPIGFBGMECCNK", "BLIENTCPKUCFRIFRLLRY", "SIEROHFCXEZPWMCIZDYC", "DZOTNOOABUDTTWGFYKSF", "WWDFSTNESERPFHTPRSDH", "BYPLSNOWMANLTGZXGRVU", "PAYITPEGQXJSRLDHOWKD"], "answers": {"FIREWORKS": [[16, 15], [15, 15], [14, 15], [13, 15], [12, 15], [11, 15], [10, 15], [9, 15], [8, 15]], "TRADITION": [[5, 18], [6, 18], [7, 18], [8, 18], [9, 18], [10, 18], [11, 18], [12, 18], [13, 18]], "STOCKING": [[18, 4], [17, 5], [16, 6], [15, 7], [14, 8], [13, 9], [12, 10], [11, 11]], "ORNAMENT": [[16, 2], [15, 3], [14, 4], [13, 5], [12, 6], [11, 7], [10, 8], [9, 9]], "PRESENTS": [[17, 11], [17, 10], [17, 9], [17, 8], [17, 7], [17, 6], [17, 5], [17, 4]], "FESTIVAL": [[8, 17], [8, 16], [8, 15], [8, 14], [8, 13], [8, 12], [8, 11], [8, 10]], "SNOWMAN": [[18, 4], [18, 5], [18, 6], [18, 7], [18, 8], [18, 9], [18, 10]], "GARLAND": [[5, 3], [6, 4], [7, 5], [8, 6], [9, 7], [10, 8], [11, 9]], "CANDLES": [[13, 16], [12, 16], [11, 16], [10, 16], [9, 16], [8, 16], [7, 16]], "LIGHTS": [[14, 16], [15, 15], [16, 14], [17, 13], [18, 12], [19, 11]], "RIBBON": [[10, 13], [10, 12], [10, 11], [10, 10], [10, 9], [10, 8]], "FAMILY": [[8, 17], [7, 17], [6, 17], [5, 17], [4, 17], [3, 17]], "TURKEY": [[11, 3], [11, 4], [11, 5], [11, 6], [11, 7], [11, 8]], "COOKIE": [[4, 9], [5, 10], [6, 11], [7, 12], [8, 13], [9, 14]], "WREATH": [[10, 5], [11, 5], [12, 5], [13, 5], [14, 5], [15, 5]], "PARADE": [[13, 8], [13, 7], [13, 6], [13, 5], [13, 4], [13, 3]], "CHEER": [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]], "FEAST": [[14, 14], [13, 15], [12, 16], [11, 17], [10, 18]], "MUSIC": [[9, 17], [10, 17], [11, 17], [12, 17], [13, 17]], "TREE": [[16, 3], [15, 3], [14, 3], [13, 3]]}}, {"id": "amusement_park", "title": "Amusement Park", "words": ["ROLLERCOASTER", "CAROUSEL", "FERRISWHEEL", "TICKETS", "ARCADE", "COTTONCANDY", "FUNNELCAKE", "BUMPER", "GAMES", "PRIZES", "WATERPARK", "ZIPPER", "SWINGS", "MIDWAY", "POPCORN", "LEMONADE", "WRISTBAND", "THRILL", "HEIGHTS", "MAP"], "grid": ["LEGJCCDCEBVWNNVEQTYJ", "MGMYBDPOYBRERAKEOTVS", "FMXQHEMYSCKKOIPLRRWW", "NPGOGROHBOOALZSVBSOS", "HHTPWEGFEVECLACTIOUR", "IQUZOPAWNDILEAZGBFIG", "HVMMAPRHOWAERJZSTAUM", "QLXKVICOTTONCANDYFNI", "CMPGVZAOPXNNOPJUIJJD", "STIOLUDIRALUAMFEWFOW", "NKISNEEBLNLFSYEASNEA", "KUWIBBSNKLTYTGTLOSOY", "UYKZQUXUFFIBEEPVLTHL", "FPAAFPMGOFERRISWHEEL", "TKGACRIPHRCPHDGHEKVX", "XXXIUVBOELAGHTAGICFE", "XNTCQGEMHRUCLTMZGIPT", "SVMUTDEGKDFUBQEGHTMR", "AQRYIORTASGNIWSKTCES", "SLZOQOVQPEEPRIZESRVS"], "answers": {"ROLLERCOASTER": [[1, 12], [2, 12], [3, 12], [4, 12], [5, 12], [6, 12], [7, 12], [8, 12], [9, 12], [10, 12], [11, 12], [12, 12], [13, 12]], "FERRISWHEEL": [[13, 9], [13, 10], [13, 11], [13, 12], [13, 13], [13, 14], [13, 15], [13, 16], [13, 17], [13, 18], [13, 19]], "COTTONCANDY": [[7, 6], [7, 7], [7, 8], [7, 9], [7, 10], [7, 11], [7, 12], [7, 13], [7, 14], [7, 15], [7, 16]], "FUNNELCAKE": [[10, 11], [9, 11], [8, 11], [7, 11], [6, 11], [5, 11], [4, 11], [3, 11], [2, 11], [1, 11]], "WRISTBAND": [[0, 11], [1, 12], [2, 13], [3, 14], [4, 15], [5, 16], [6, 17], [7, 18], [8, 19]], "WATERPARK": [[9, 16], [10, 15], [11, 14], [12, 13], [13, 12], [14, 11], [15, 10], [16, 9], [17, 8]], "LEMONADE": [[11, 15], [10, 14], [9, 13], [8, 12], [7, 11], [6, 10], [5, 9], [4, 8]], "CAROUSEL": [[16, 11], [15, 10], [14, 9], [13, 8], [12, 7], [11, 6], [10, 5], [9, 4]], "HEIGHTS": [[13, 16], [14, 16], [15, 16], [16, 16], [17, 16], [18, 16], [19, 16]], "POPCORN": [[4, 3], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 9]], "TICKETS": [[17, 17], [16, 17], [15, 17], [14, 17], [13, 17], [12, 17], [11, 17]], "BUMPER": [[11, 4], [12, 5], [13, 6], [14, 7], [15, 8], [16, 9]], "THRILL": [[15, 13], [14, 12], [13, 11], [12, 10], [11, 9], [10, 8]], "PRIZES": [[19, 11], [19, 12], [19, 13], [19, 14], [19, 15], [19, 16]], "SWINGS": [[18, 14], [18, 13], [18, 12], [18, 11], [18, 10], [18, 9]], "ZIPPER": [[8, 5], [7, 5], [6, 5], [5, 5], [4, 5], [3, 5]], "ARCADE": [[5, 6], [6, 6], [7, 6], [8, 6], [9, 6], [10, 6]], "MIDWAY": [[6, 19], [7, 19], [8, 19], [9, 19], [10, 19], [11, 19]], "GAMES": [[14, 14], [15, 14], [16, 14], [17, 14], [18, 14]], "MAP": [[6, 3], [6, 4], [6, 5]]}}, {"id": "fast_food", "title": "Fast Food", "words": ["BURGER", "FRIES", "SHAKE", "NUGGETS", "TACOS", "SODA", "DRIVETHRU", "KETCHUP", "MUSTARD", "PICKLES", "ONIONRINGS", "CHICKEN", "SANDWICH", "WRAP", "COMBO", "BISCUIT", "COFFEE", "BREAKFAST", "CHEESE", "SAUCE"], "grid": ["IPENGRPUNXITVGWVUAEC", "BEHVMUSTARDGDZMKZAPU", "YMWDHREYEWSMBJBIDJFL", "EKJCMHFPVNBLHXHKNHZE", "LOTTQTYDDFBISCUITOAQ", "UEIMAEWODLTMIEBIGPAZ", "KDDQFVEIEWAWROLUZOJJ", "BNEKCIHCOSDCTDNKRSKJ", "ESGNIRNOINOQPVZKCGSH", "VXWXUDVVAFSBKOYDMIEB", "XAVNQGYSFBASMFPYKJPR", "MWOESMGEZQUEROPMMGGE", "NLYKCHEESECIUKCHECGA", "BIBICVACTOEJGICTGLEK", "BKHCFNZKHSCAPABNMTPF", "CCPCQGMWECNADMFVOOKA", "SUKVQVNXHYRQTCXCKICS", "EXWKYYDASWSSFXPCATFT", "VQQJQUYRPDDCLOTMGYIG", "CZFQLXXPBNFIRTBHKCBW"], "answers": {"ONIONRINGS": [[8, 10], [8, 9], [8, 8], [8, 7], [8, 6], [8, 5], [8, 4], [8, 3], [8, 2], [8, 1]], "DRIVETHRU": [[9, 5], [8, 5], [7, 5], [6, 5], [5, 5], [4, 5], [3, 5], [2, 5], [1, 5]], "BREAKFAST": [[9, 19], [10, 19], [11, 19], [12, 19], [13, 19], [14, 19], [15, 19], [16, 19], [17, 19]], "SANDWICH": [[10, 7], [9, 8], [8, 9], [7, 10], [6, 11], [5, 12], [4, 13], [3, 14]], "CHICKEN": [[7, 7], [7, 6], [7, 5], [7, 4], [7, 3], [7, 2], [7, 1]], "KETCHUP": [[6, 0], [5, 1], [4, 2], [3, 3], [2, 4], [1, 5], [0, 6]], "BISCUIT": [[4, 10], [4, 11], [4, 12], [4, 13], [4, 14], [4, 15], [4, 16]], "PICKLES": [[10, 18], [9, 17], [8, 16], [7, 15], [6, 14], [5, 13], [4, 12]], "NUGGETS": [[8, 3], [9, 4], [10, 5], [11, 6], [12, 7], [13, 8], [14, 9]], "MUSTARD": [[1, 4], [1, 5], [1, 6], [1, 7], [1, 8], [1, 9], [1, 10]], "BURGER": [[5, 14], [6, 15], [7, 16], [8, 17], [9, 18], [10, 19]], "COFFEE": [[7, 11], [8, 10], [9, 9], [10, 8], [11, 7], [12, 6]], "CHEESE": [[12, 4], [12, 5], [12, 6], [12, 7], [12, 8], [12, 9]], "SHAKE": [[11, 4], [12, 5], [13, 6], [14, 7], [15, 8]], "FRIES": [[10, 13], [11, 12], [12, 11], [13, 10], [14, 9]], "TACOS": [[16, 12], [15, 11], [14, 10], [13, 9], [12, 8]], "SAUCE": [[9, 10], [10, 10], [11, 10], [12, 10], [13, 10]], "COMBO": [[12, 14], [11, 13], [10, 12], [9, 11], [8, 10]], "WRAP": [[17, 9], [16, 10], [15, 11], [14, 12]], "SODA": [[9, 10], [8, 10], [7, 10], [6, 10]]}}, {"id": "ice_cream", "title": "Ice Cream", "words": ["VANILLA", "CHOCOLATE", "STRAWBERRY", "SCOOP", "CONE", "SUNDAE", "SPRINKLES", "CARAMEL", "FUDGE", "SHERBET", "GELATO", "WAFFLE", "CHERRY", "BANANA", "COOKIE", "MINT", "PISTACHIO", "FREEZER", "MILKSHAKE", "TOPPING"], "grid": ["DVASOEWNLMIJYSZKPCWK", "XFLSTXAFKKBRQIVXKDSI", "HGFBVRCKSBECZPXXXIHS", "OPGYETALOCOHCOOKIEEK", "KAZGKORWNUIINPTOPYRW", "BMDCSPABBPGRJJNHCUBR", "NULMRPMCHERRYMQFPSEW", "FWQYIIEZMQRDSAKFVZTR", "CLKZCNLQLSPRINKLESBO", "WJEYIGTTFAAJYOCEBHOA", "PKQRVPISTACHIORRFSYO", "MOYLJQAZVCKLNFOCYFAI", "IIAMILKSHAKEULSBSUAE", "UFGELATONJLLKSTZJYSY", "ZNEIHMHAZJCFNROMJJFE", "NFNFWINAQYFYGFZQLUKY", "YAZTWAFFLEADNUSZEXHX", "VDZOBWZMLWMRGHQOLCLE", "FWHPQUFUCBWHUUGPMSZH", "NAXWRDINMMZRRSKJSTOH"], "answers": {"STRAWBERRY": [[0, 3], [1, 4], [2, 5], [3, 6], [4, 7], [5, 8], [6, 9], [7, 10], [8, 11], [9, 12]], "PISTACHIO": [[10, 5], [10, 6], [10, 7], [10, 8], [10, 9], [10, 10], [10, 11], [10, 12], [10, 13]], "MILKSHAKE": [[12, 3], [12, 4], [12, 5], [12, 6], [12, 7], [12, 8], [12, 9], [12, 10], [12, 11]], "CHOCOLATE": [[3, 12], [3, 11], [3, 10], [3, 9], [3, 8], [3, 7], [3, 6], [3, 5], [3, 4]], "SPRINKLES": [[8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14], [8, 15], [8, 16], [8, 17]], "VANILLA": [[17, 0], [16, 1], [15, 2], [14, 3], [13, 4], [12, 5], [11, 6]], "FREEZER": [[11, 13], [10, 14], [9, 15], [8, 16], [7, 17], [6, 18], [5, 19]], "TOPPING": [[3, 5], [4, 5], [5, 5], [6, 5], [7, 5], [8, 5], [9, 5]], "CARAMEL": [[2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [8, 6]], "SHERBET": [[1, 18], [2, 18], [3, 18], [4, 18], [5, 18], [6, 18], [7, 18]], "CHERRY": [[6, 7], [6, 8], [6, 9], [6, 10], [6, 11], [6, 12]], "GELATO": [[13, 2], [13, 3], [13, 4], [13, 5], [13, 6], [13, 7]], "COOKIE": [[3, 12], [3, 13], [3, 14], [3, 15], [3, 16], [3, 17]], "BANANA": [[17, 4], [16, 5], [15, 6], [14, 7], [13, 8], [12, 9]], "WAFFLE": [[16, 4], [16, 5], [16, 6], [16, 7], [16, 8], [16, 9]], "SUNDAE": [[16, 14], [16, 13], [16, 12], [16, 11], [16, 10], [16, 9]], "FUDGE": [[7, 0], [6, 1], [5, 2], [4, 3], [3, 4]], "SCOOP": [[6, 17], [5, 16], [4, 15], [3, 14], [2, 13]], "MINT": [[6, 3], [7, 4], [8, 5], [9, 6]], "CONE": [[9, 14], [10, 13], [11, 12], [12, 11]]}}, {"id": "superheroes", "title": "Superheroes", "words": ["CAPE", "MASK", "HERO", "VILLAIN", "SIDEKICK", "ORIGIN", "POWER", "LAIR", "JUSTICE", "RESCUE", "SHIELD", "SPEED", "STRENGTH", "GADGET", "COSTUME", "CITY", "ALIEN", "MUTANT", "LEAGUE", "SIGNAL"], "grid": ["SIRDEHDFGTKWPREKEWGZ", "OREHLPLMTTUPNNCINCKY", "ZOSWEMEPACTOBIIWDDUJ", "SUCGADISSSAWKJTIVMQY", "UGUJGGHHTGNERTSXXOPE", "PDEMUTSOCCDRCYUHLBEP", "JCUAENRROIQPBDJWLKVN", "SOOSZCEISGLJBEKMBARN", "BVGKTJPGAYHTXRGHPSEI", "YOUUSTPIILTKJDKZIVEZ", "WDLFHCLNQJHKXWLCYJDW", "JEYDACWJJFEMLLMVAXLX", "IYUFCOKPHQJADSNHHYRN", "QACWPVIGWZNADEEPSOBK", "UWKTHTNTQGQCISUIFADH", "MNGJRFENIALLIVWKHLSM", "KUIKGZLSRDAOZTKYKDEC", "BLEKFEBWBGXGEIYIAEAX", "LGFZWDTVVEUUGXNTQCOD", "FIGGZVTNATUMKZGLDJZW"], "answers": {"STRENGTH": [[4, 14], [4, 13], [4, 12], [4, 11], [4, 10], [4, 9], [4, 8], [4, 7]], "SIDEKICK": [[7, 8], [6, 9], [5, 10], [4, 11], [3, 12], [2, 13], [1, 14], [0, 15]], "JUSTICE": [[6, 14], [5, 14], [4, 14], [3, 14], [2, 14], [1, 14], [0, 14]], "COSTUME": [[5, 8], [5, 7], [5, 6], [5, 5], [5, 4], [5, 3], [5, 2]], "VILLAIN": [[15, 13], [15, 12], [15, 11], [15, 10], [15, 9], [15, 8], [15, 7]], "GADGET": [[14, 9], [15, 9], [16, 9], [17, 9], [18, 9], [19, 9]], "SIGNAL": [[16, 7], [15, 8], [14, 9], [13, 10], [12, 11], [11, 12]], "RESCUE": [[0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2]], "MUTANT": [[19, 11], [19, 10], [19, 9], [19, 8], [19, 7], [19, 6]], "SHIELD": [[5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6]], "LEAGUE": [[1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4]], "ORIGIN": [[5, 7], [6, 7], [7, 7], [8, 7], [9, 7], [10, 7]], "ALIEN": [[16, 10], [15, 11], [14, 12], [13, 13], [12, 14]], "SPEED": [[13, 16], [13, 15], [13, 14], [13, 13], [13, 12]], "POWER": [[1, 11], [2, 11], [3, 11], [4, 11], [5, 11]], "CAPE": [[2, 9], [2, 8], [2, 7], [2, 6]], "MASK": [[5, 3], [6, 3], [7, 3], [8, 3]], "LAIR": [[9, 9], [8, 8], [7, 7], [6, 6]], "HERO": [[1, 3], [1, 2], [1, 1], [1, 0]], "CITY": [[14, 11], [15, 12], [16, 13], [17, 14]]}}, {"id": "pirates", "title": "Pirates", "words": ["PIRATE", "TREASURE", "ISLAND", "SHIP", "ANCHOR", "SAIL", "CANNON", "PARROT", "MAP", "COMPASS", "GOLD", "CHEST", "SWORD", "CAPTAIN", "CREW", "PLANK", "HARBOR", "JOLLYROGER", "PEGLEG", "DOUBLOON"], "grid": ["ZEOTTYZUTEBDOVGLJKEF", "ASKHNNROVVWUPEXRLNHK", "MROYXNIIBJIQLAUNOAFJ", "RMMVOITAHGLGPDDNMLNS", "LJCAMDRCTOEAIENYHPYZ", "ZSSXPYGDGPARNAMBSLIN", "CLAXRIOBCLAXCTVLZMSN", "VRNZVURZWERCOOJGDGTH", "BFCRBHEAMBYCMPORGORR", "GLMLTCYWTEHKPKOOTORR", "VJOLLYROGERFAWLQHNDS", "XOMNLHKMSLOUSDZCWNGA", "NKHWTJJTLIEKSNNRMSTF", "DAUDQYPYBUADTANOHOPB", "UMVNZDBMRCLELLEBRCCI", "AVYFPWCVOJREJSIRLGDT", "OLCZRVUMKDDQMIAATRXY", "BIKTLVMEXPHFWPIHSKBH", "HUKNPEYDIRBDEXPZKWBG", "ZIAEPGFVAOBTAWITKCKK"], "answers": {"JOLLYROGER": [[10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7], [10, 8], [10, 9], [10, 10]], "DOUBLOON": [[5, 7], [6, 6], [7, 5], [8, 4], [9, 3], [10, 2], [11, 1], [12, 0]], "TREASURE": [[16, 16], [15, 15], [14, 14], [13, 13], [12, 12], [11, 11], [10, 10], [9, 9]], "CAPTAIN": [[7, 11], [6, 10], [5, 9], [4, 8], [3, 7], [2, 6], [1, 5]], "COMPASS": [[6, 12], [7, 12], [8, 12], [9, 12], [10, 12], [11, 12], [12, 12]], "HARBOR": [[17, 15], [16, 15], [15, 15], [14, 15], [13, 15], [12, 15]], "PEGLEG": [[5, 9], [4, 10], [3, 11], [2, 12], [1, 13], [0, 14]], "ANCHOR": [[13, 13], [12, 14], [11, 15], [10, 16], [9, 17], [8, 18]], "PIRATE": [[5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 9]], "ISLAND": [[16, 13], [15, 13], [14, 13], [13, 13], [12, 13], [11, 13]], "CANNON": [[6, 12], [5, 13], [4, 14], [3, 15], [2, 16], [1, 17]], "PARROT": [[17, 13], [16, 14], [15, 15], [14, 16], [13, 17], [12, 18]], "CHEST": [[8, 11], [9, 10], [10, 9], [11, 8], [12, 7]], "SWORD": [[11, 12], [10, 13], [9, 14], [8, 15], [7, 16]], "PLANK": [[4, 17], [3, 17], [2, 17], [1, 17], [0, 17]], "CREW": [[7, 11], [7, 10], [7, 9], [7, 8]], "SAIL": [[17, 16], [16, 15], [15, 14], [14, 13]], "SHIP": [[17, 16], [17, 15], [17, 14], [17, 13]], "GOLD": [[8, 16], [9, 15], [10, 14], [11, 13]], "MAP": [[3, 2], [4, 3], [5, 4]]}}, {"id": "dinosaurs", "title": "Dinosaurs", "words": ["TREX", "RAPTOR", "TRICERATOPS", "STEGOSAURUS", "BRONTOSAURUS", "FOSSIL", "JURASSIC", "CRETACEOUS", "EGG", "CLAWS", "TAIL", "ROAR", "EXTINCT", "VOLCANO", "HERBIVORE", "CARNIVORE", "BONES", "SPIKES", "TEETH", "FOOTPRINT"], "grid": ["QXKXSHIONSKLQQVBYIPY", "JJWKJBMILPMCCCFOIBMD", "MZCHGGEBGLGKAVMIPQKW", "EQNZQVGXGTKRMMDNVEDD", "EJDBDOGYTSNJQWHXDMTJ", "WFWBUGXHDITOZHWPBIMO", "SHKFSMNDVSNQPLJBCCBL", "YUEKZUSOUUICISSARUJR", "XMKREUROARRLTPPEZKAH", "UFLNBEWUBUPNMIOOGPPW", "QTKOUIWBAATLZKTUTFGA", "MRNSENVOESOIZEAOEINE", "CESZWRDOVOOAESRFDLXA", "SXWXEAWORGFTWLEBRHMY", "WVMXYRLEIEHLNHCYBNFV", "BCWYWCHCETIRTOIGBSRT", "CRETACEOUSDNGDRCFQRD", "ISWNXDAVSFYXSYTBYTUJ", "OOOLZREOYIHXWJKYCCSA", "JJIGODFYCLLDCCALPKAO"], "answers": {"BRONTOSAURUS": [[17, 15], [16, 14], [15, 13], [14, 12], [13, 11], [12, 10], [11, 9], [10, 8], [9, 7], [8, 6], [7, 5], [6, 4]], "TRICERATOPS": [[17, 14], [16, 14], [15, 14], [14, 14], [13, 14], [12, 14], [11, 14], [10, 14], [9, 14], [8, 14], [7, 14]], "STEGOSAURUS": [[16, 9], [15, 9], [14, 9], [13, 9], [12, 9], [11, 9], [10, 9], [9, 9], [8, 9], [7, 9], [6, 9]], "CRETACEOUS": [[16, 0], [16, 1], [16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7], [16, 8], [16, 9]], "HERBIVORE": [[6, 1], [7, 2], [8, 3], [9, 4], [10, 5], [11, 6], [12, 7], [13, 8], [14, 9]], "FOOTPRINT": [[13, 10], [12, 10], [11, 10], [10, 10], [9, 10], [8, 10], [7, 10], [6, 10], [5, 10]], "CARNIVORE": [[1, 13], [2, 12], [3, 11], [4, 10], [5, 9], [6, 8], [7, 7], [8, 6], [9, 5]], "JURASSIC": [[7, 18], [7, 17], [7, 16], [7, 15], [7, 14], [7, 13], [7, 12], [7, 11]], "EXTINCT": [[2, 6], [3, 7], [4, 8], [5, 9], [6, 10], [7, 11], [8, 12]], "VOLCANO": [[12, 8], [13, 7], [14, 6], [15, 5], [16, 4], [17, 3], [18, 2]], "FOSSIL": [[19, 6], [18, 7], [17, 8], [16, 9], [15, 10], [14, 11]], "RAPTOR": [[7, 19], [8, 18], [9, 17], [10, 16], [11, 15], [12, 14]], "SPIKES": [[7, 13], [8, 13], [9, 13], [10, 13], [11, 13], [12, 13]], "BONES": [[9, 4], [10, 3], [11, 2], [12, 1], [13, 0]], "TEETH": [[10, 14], [11, 13], [12, 12], [13, 11], [14, 10]], "CLAWS": [[15, 7], [14, 6], [13, 5], [12, 4], [11, 3]], "TREX": [[10, 1], [11, 1], [12, 1], [13, 1]], "TAIL": [[13, 11], [12, 11], [11, 11], [10, 11]], "ROAR": [[8, 6], [8, 7], [8, 8], [8, 9]], "EGG": [[2, 6], [2, 5], [2, 4]]}}, {"id": "zoo_trip", "title": "Zoo Trip", "words": ["ELEPHANT", "GIRAFFE", "MONKEY", "TIGER", "LION", "ZEBRA", "PANDA", "KOALA", "KANGAROO", "RHINO", "HIPPO", "FLAMINGO", "PENGUIN", "OTTER", "GORILLA", "MEERKAT", "HABITAT", "ZOOKEEPER", "AVIARY", "REPTILE"], "grid": ["HOLDGSMPBSPENGUINNUK", "ZXWITIGERJELSHNOGVCA", "YOYZOOKEEPEROAYOWSNP", "OAPBWNACFRPSFNLRXHPH", "UTSPUTCOFZKAQKDAOWJA", "GYRAIVARASEANXTGOKUV", "FVXIUHRTRWEBTDNNRKGC", "VTQPDNELITPERIAAPJFQ", "KZWCNBXUGBGDMAHKOMWW", "OABTMXZTLVAAKFPZJLFG", "GQORHNNLBILHMOERWQDX", "PFNFXMMQJFGORILLAAVA", "YPWMQGIOAGNOTTERAVEI", "TMZKTELGWKTNKEHGAZCN", "KMLNFPMRELHICENAQYXD", "QZGFTNJYUVXHEADZVSOJ", "BOTAVVAUXNGRMTDWOFOP", "ZZRKLNAGSUOQRMIIKMRZ", "QYCRNNSRMZCHJEDKQQXP", "CMEOXKAVZYJWNNHNTWYM"], "answers": {"ZOOKEEPER": [[2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [2, 9], [2, 10], [2, 11]], "KANGAROO": [[8, 15], [7, 15], [6, 15], [5, 15], [4, 15], [3, 15], [2, 15], [1, 15]], "FLAMINGO": [[11, 9], [10, 10], [9, 11], [8, 12], [7, 13], [6, 14], [5, 15], [4, 16]], "ELEPHANT": [[12, 14], [11, 14], [10, 14], [9, 14], [8, 14], [7, 14], [6, 14], [5, 14]], "GORILLA": [[11, 10], [11, 11], [11, 12], [11, 13], [11, 14], [11, 15], [11, 16]], "GIRAFFE": [[8, 8], [7, 8], [6, 8], [5, 8], [4, 8], [3, 8], [2, 8]], "REPTILE": [[7, 12], [7, 11], [7, 10], [7, 9], [7, 8], [7, 7], [7, 6]], "HABITAT": [[10, 11], [9, 10], [8, 9], [7, 8], [6, 7], [5, 6], [4, 5]], "PENGUIN": [[0, 10], [0, 11], [0, 12], [0, 13], [0, 14], [0, 15], [0, 16]], "MEERKAT": [[0, 6], [1, 7], [2, 8], [3, 9], [4, 10], [5, 11], [6, 12]], "MONKEY": [[10, 12], [11, 11], [12, 10], [13, 9], [14, 8], [15, 7]], "AVIARY": [[5, 6], [5, 5], [5, 4], [5, 3], [5, 2], [5, 1]], "KOALA": [[6, 17], [5, 16], [4, 15], [3, 14], [2, 13]], "PANDA": [[3, 10], [4, 11], [5, 12], [6, 13], [7, 14]], "TIGER": [[1, 4], [1, 5], [1, 6], [1, 7], [1, 8]], "OTTER": [[12, 11], [12, 12], [12, 13], [12, 14], [12, 15]], "ZEBRA": [[4, 9], [5, 10], [6, 11], [7, 12], [8, 13]], "HIPPO": [[6, 5], [5, 4], [4, 3], [3, 2], [2, 1]], "RHINO": [[16, 11], [15, 11], [14, 11], [13, 11], [12, 11]], "LION": [[0, 2], [1, 3], [2, 4], [3, 5]]}}, {"id": "fishing", "title": "Fishing", "words": ["FISHING", "BAIT", "HOOK", "LINE", "ROD", "REEL", "TACKLE", "BOBBER", "LURE", "BOAT", "DOCK", "LAKE", "RIVER", "BASS", "CATFISH", "TROUT", "CRAPPIE", "NET", "CASTING", "COOLER"], "grid": ["SBEAOCLEYBLENRPRQBCF", "TXOHPBVYJFXYACIOMMJA", "XURDPIKBQSUBIDGGVCWL", "DKAOIXVBAITSDFNCWYFE", "JWRRDYXFCCUYTLIAVCVL", "HRGOGNJLODOQOGHMSQNK", "ELCYTDUPPORODHSIFTAC", "GKSKPSTETDTELLIQEIZA", "WBVZFICWEOZCUEFHSNET", "CCHTSWGMTIXFPCRAPPIE", "VMETISCOJLNUYAAECWZL", "LQNFWKDGTTYJOPLSBIAS", "KDQDAVTOMMMRHOKHTKXZ", "CVVENHHBRSGOJSWHEIBL", "ADRIGMLUREZOVEMVSENN", "HOIGEPECFIBDOLBSTFZG", "AFOPOYETSAVMQKAASIWC", "WOFTVDRXYPREBBOBURAJ", "RPYSILCRPGEQRBEOAHGZ", "MQQWBXGBWLSUIVMFHTKA"], "answers": {"FISHING": [[8, 14], [7, 14], [6, 14], [5, 14], [4, 14], [3, 14], [2, 14]], "CRAPPIE": [[9, 13], [9, 14], [9, 15], [9, 16], [9, 17], [9, 18], [9, 19]], "CASTING": [[9, 13], [10, 14], [11, 15], [12, 16], [13, 17], [14, 18], [15, 19]], "CATFISH": [[6, 19], [6, 18], [6, 17], [6, 16], [6, 15], [6, 14], [6, 13]], "BOBBER": [[17, 15], [17, 14], [17, 13], [17, 12], [17, 11], [17, 10]], "TACKLE": [[8, 19], [7, 19], [6, 19], [5, 19], [4, 19], [3, 19]], "COOLER": [[4, 9], [5, 10], [6, 11], [7, 12], [8, 13], [9, 14]], "RIVER": [[14, 8], [15, 9], [16, 10], [17, 11], [18, 12]], "TROUT": [[7, 10], [6, 10], [5, 10], [4, 10], [3, 10]], "HOOK": [[19, 16], [18, 15], [17, 14], [16, 13]], "BAIT": [[3, 7], [3, 8], [3, 9], [3, 10]], "BOAT": [[18, 13], [17, 14], [16, 15], [15, 16]], "LURE": [[14, 6], [14, 7], [14, 8], [14, 9]], "DOCK": [[4, 4], [5, 3], [6, 2], [7, 1]], "LINE": [[10, 19], [9, 18], [8, 17], [7, 16]], "REEL": [[17, 6], [16, 6], [15, 6], [14, 6]], "LAKE": [[10, 19], [11, 18], [12, 17], [13, 16]], "BASS": [[17, 13], [16, 14], [15, 15], [14, 16]], "NET": [[8, 17], [8, 18], [8, 19]], "ROD": [[2, 2], [3, 3], [4, 4]]}}, {"id": "gym_workout", "title": "Gym Workout", "words": ["DUMBBELL", "BARBELL", "BENCH", "SQUAT", "DEADLIFT", "CURLS", "PLANK", "CARDIO", "TREADMILL", "ROWING", "KETTLEBELL", "PUSHUP", "PULLUP", "LUNGE", "STRETCH", "PROTEIN", "WATER", "TIMER", "REPS", "SETS"], "grid": ["DLMLOSIPKZLDSVYYJNBZ", "LXIHPGTBUYAHDHLMWCAI", "TQUXHZMVFUALVUEOUZBM", "ZCYEHIJQKCSXNCMUXSXB", "SPDHUFCMNMYGNQPBYTAC", "HIUWPZVZAEEEHCNEBRID", "AYVENMFILWNWILKZBEZH", "KQXNICJCPUHSUPYEOTLU", "RHZBVAZUUWETDYLRKCQL", "LZJITWLRJTGJOLTMTHPL", "SRPLALHLSUKINPFFOCLE", "HTWTUGPSWGKLGLIBAIJB", "ADEPQYPCZLTPNBLRMKCE", "QRVXSBRBVTSAIVDDEYCL", "VURNGWVGUIKRWIALWPRT", "KRIWLBQOHMJEOEETUUST", "RPZKRQCNIETORPDDNTNE", "MOEXEJFMFRXTJHNMAHZK", "YLEEMUIPGUFITUCTEDUQ", "WRWSKBEAMRISLLEGSCBD"], "answers": {"KETTLEBELL": [[17, 19], [16, 19], [15, 19], [14, 19], [13, 19], [12, 19], [11, 19], [10, 19], [9, 19], [8, 19]], "TREADMILL": [[17, 11], [16, 12], [15, 13], [14, 14], [13, 15], [12, 16], [11, 17], [10, 18], [9, 19]], "DEADLIFT": [[16, 14], [15, 14], [14, 14], [13, 14], [12, 14], [11, 14], [10, 14], [9, 14]], "DUMBBELL": [[1, 12], [2, 13], [3, 14], [4, 15], [5, 16], [6, 17], [7, 18], [8, 19]], "PROTEIN": [[16, 13], [16, 12], [16, 11], [16, 10], [16, 9], [16, 8], [16, 7]], "STRETCH": [[3, 17], [4, 17], [5, 17], [6, 17], [7, 17], [8, 17], [9, 17]], "BARBELL": [[3, 19], [4, 18], [5, 17], [6, 16], [7, 15], [8, 14], [9, 13]], "PUSHUP": [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9], [7, 8]], "CARDIO": [[10, 17], [11, 16], [12, 15], [13, 14], [14, 13], [15, 12]], "ROWING": [[16, 12], [15, 12], [14, 12], [13, 12], [12, 12], [11, 12]], "PULLUP": [[7, 8], [8, 7], [9, 6], [10, 5], [11, 4], [12, 3]], "SQUAT": [[13, 4], [12, 4], [11, 4], [10, 4], [9, 4]], "TIMER": [[13, 9], [14, 9], [15, 9], [16, 9], [17, 9]], "WATER": [[9, 5], [10, 4], [11, 3], [12, 2], [13, 1]], "LUNGE": [[1, 14], [2, 13], [3, 12], [4, 11], [5, 10]], "PLANK": [[7, 8], [6, 8], [5, 8], [4, 8], [3, 8]], "BENCH": [[5, 16], [5, 15], [5, 14], [5, 13], [5, 12]], "CURLS": [[7, 7], [8, 7], [9, 7], [10, 7], [11, 7]], "REPS": [[12, 15], [13, 16], [14, 17], [15, 18]], "SETS": [[7, 11], [8, 10], [9, 9], [10, 8]]}}, {"id": "gardening", "title": "Gardening", "words": ["GARDEN", "SOIL", "SEEDS", "WATERING", "SHOVEL", "TROWEL", "COMPOST", "MULCH", "FLOWERS", "TOMATO", "PEPPER", "HERBS", "WEEDS", "SUNLIGHT", "SPRINKLER", "HOSE", "PLANTER", "BLOOM", "HARVEST", "GREENHOUSE"], "grid": ["QIDDNOWZRISFWIXTZNHM", "JTCKEZVQIOZESHFUIKRO", "UPTKFFJBZAEYCIYVZDEJ", "UQCTUMPOZDVHTDKEKNPS", "GUVKANLMSRWXOGAVGIPI", "COHZAUKIWRKJMVFQNREH", "MNVMQDNYNHEKAJTEIXPT", "ZTDUPUTJKSEWTVDNRYKP", "WWEIUMHBNDDLORKHERBS", "CPPAMBTCRETNALPDTVPU", "SHJPHABTKEAGEVFEAYWN", "OXVEVSQTHSDRSQPQWEUT", "TDYWCFQECGZIUHIOHJTL", "SRZDKDVBLLIWOQVADLEB", "BYEQCKGHUPKLHVRDAVLT", "WNAYBLOOMAYFNVMAOELZ", "SDIPDYLSABYHEUQHWVID", "LOVGLXDEEDOSETSOPMOC", "RORCKFNXNETYRBRAYUST", "SSPHDWIWOIQKGTTVRLLS"], "answers": {"GREENHOUSE": [[19, 12], [18, 12], [17, 12], [16, 12], [15, 12], [14, 12], [13, 12], [12, 12], [11, 12], [10, 12]], "SPRINKLER": [[3, 19], [4, 18], [5, 17], [6, 16], [7, 15], [8, 14], [9, 13], [10, 12], [11, 11]], "WATERING": [[11, 16], [10, 16], [9, 16], [8, 16], [7, 16], [6, 16], [5, 16], [4, 16]], "SUNLIGHT": [[17, 14], [16, 13], [15, 12], [14, 11], [13, 10], [12, 9], [11, 8], [10, 7]], "FLOWERS": [[10, 14], [9, 13], [8, 12], [7, 11], [6, 10], [5, 9], [4, 8]], "HARVEST": [[12, 16], [13, 15], [14, 14], [15, 13], [16, 12], [17, 11], [18, 10]], "COMPOST": [[17, 19], [17, 18], [17, 17], [17, 16], [17, 15], [17, 14], [17, 13]], "PLANTER": [[9, 14], [9, 13], [9, 12], [9, 11], [9, 10], [9, 9], [9, 8]], "GARDEN": [[10, 11], [9, 12], [8, 13], [7, 14], [6, 15], [5, 16]], "TROWEL": [[19, 13], [18, 14], [17, 15], [16, 16], [15, 17], [14, 18]], "SHOVEL": [[17, 14], [16, 15], [15, 16], [14, 17], [13, 18], [12, 19]], "TOMATO": [[3, 12], [4, 12], [5, 12], [6, 12], [7, 12], [8, 12]], "PEPPER": [[6, 18], [5, 18], [4, 18], [3, 18], [2, 18], [1, 18]], "MULCH": [[15, 8], [14, 8], [13, 8], [12, 8], [11, 8]], "HERBS": [[8, 15], [8, 16], [8, 17], [8, 18], [8, 19]], "BLOOM": [[15, 4], [15, 5], [15, 6], [15, 7], [15, 8]], "SEEDS": [[11, 9], [10, 9], [9, 9], [8, 9], [7, 9]], "WEEDS": [[0, 12], [1, 11], [2, 10], [3, 9], [4, 8]], "SOIL": [[18, 18], [17, 18], [16, 18], [15, 18]], "HOSE": [[14, 7], [15, 7], [16, 7], [17, 7]]}}, {"id": "cars", "title": "Cars", "words": ["ENGINE", "BRAKES", "TIRES", "BATTERY", "OIL", "FILTER", "RADIATOR", "GASOLINE", "WIPERS", "HEADLIGHT", "DASHBOARD", "STEERING", "TRANSMISSION", "MUFFLER", "SPARKPLUG", "GARAGE", "ALIGNMENT", "MILEAGE", "TRUNK", "HOOD"], "grid": ["KHUYZDTWISTTHVBSUECQ", "XOJOBYDBCTWNROATLVLB", "HAGOGSROTJTCEETZCTZY", "WDEDARTEPXQXLMTBYMAB", "DBGURVJETJECDENLGUVC", "PSBHAASOETBSUWXGIFMG", "ZRFEGPOVYRATYHSIIFUN", "MEZNEGXBNAIBCQARKLSJ", "CPNGYDMYHNRNTTWRPEAJ", "MIYIWIUHESGWGNMKKRLK", "PWSNLHBRAMAJADRATITR", "FXNEEOKODITDBAROAFZJ", "GRAORBSTLSEQPBDWPIVD", "EGPLBINAISSSTFIHQBGV", "EUTDIVTIGIVRMOELROJA", "UUKCOUIDHOUQRAIGZPMA", "ELGRECEATNCHOODUVYIF", "FRROFZERKZVHDKQVOCTC", "SCJFSYJNZZLLYYGWRYMO", "IWSIJNGUYVGLMUVJDOTQ"], "answers": {"TRANSMISSION": [[5, 9], [6, 9], [7, 9], [8, 9], [9, 9], [10, 9], [11, 9], [12, 9], [13, 9], [14, 9], [15, 9], [16, 9]], "DASHBOARD": [[11, 11], [10, 10], [9, 9], [8, 8], [7, 7], [6, 6], [5, 5], [4, 4], [3, 3]], "HEADLIGHT": [[8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8], [15, 8], [16, 8]], "SPARKPLUG": [[13, 11], [12, 12], [11, 13], [10, 14], [9, 15], [8, 16], [7, 17], [6, 18], [5, 19]], "ALIGNMENT": [[8, 18], [7, 17], [6, 16], [5, 15], [4, 14], [3, 13], [2, 12], [1, 11], [0, 10]], "GASOLINE": [[14, 8], [13, 7], [12, 6], [11, 5], [10, 4], [9, 3], [8, 2], [7, 1]], "STEERING": [[2, 5], [3, 6], [4, 7], [5, 8], [6, 9], [7, 10], [8, 11], [9, 12]], "RADIATOR": [[17, 7], [16, 7], [15, 7], [14, 7], [13, 7], [12, 7], [11, 7], [10, 7]], "MUFFLER": [[3, 17], [4, 17], [5, 17], [6, 17], [7, 17], [8, 17], [9, 17]], "MILEAGE": [[8, 6], [9, 5], [10, 4], [11, 3], [12, 2], [13, 1], [14, 0]], "BATTERY": [[7, 11], [6, 10], [5, 9], [4, 8], [3, 7], [2, 6], [1, 5]], "BRAKES": [[12, 13], [11, 14], [10, 15], [9, 16], [8, 17], [7, 18]], "GARAGE": [[2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4]], "ENGINE": [[6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3]], "FILTER": [[6, 17], [5, 16], [4, 15], [3, 14], [2, 13], [1, 12]], "WIPERS": [[10, 1], [9, 1], [8, 1], [7, 1], [6, 1], [5, 1]], "TRUNK": [[13, 12], [14, 11], [15, 10], [16, 9], [17, 8]], "TIRES": [[14, 6], [13, 5], [12, 4], [11, 3], [10, 2]], "HOOD": [[16, 11], [16, 12], [16, 13], [16, 14]], "OIL": [[16, 13], [15, 14], [14, 15]]}}, {"id": "kitchen", "title": "Kitchen", "words": ["RECIPE", "SKILLET", "SAUCEPAN", "SPATULA", "WHISK", "KNIFE", "CUTTINGBOARD", "OVEN", "STOVE", "MICROWAVE", "TOASTER", "BLENDER", "MIXER", "MEASURE", "APRON", "TIMER", "GARLIC", "ONION", "SEASONING", "BOWL"], "grid": ["QAWYESKIZUGFDZUPYVTG", "UUDTMCPQDTCWKXIFWHOE", "KUIFWZIGWJMRQWAUPULE", "CJUVZUWLTAEFINKDUQLZ", "NIMTPWBZRCAUGEAWATWF", "NYZPWXDGEDSNOIPOHGWI", "VNKTREMITPUXQKEDKIGS", "TUCODFTQSIRFNBPREHSS", "LPMICROWAVELVOHEFVAK", "CEBZLSAYOXWGANIDLUZI", "DOWYWRAOTORTFOJNCNUL", "ATGCOKADBPARVPNEOGBL", "DUSYZUWGPGHETEPLAEGE", "SZHYJBKLHINXPAOBEVMT", "LTEFBSEASONINGBMCIKW", "GRWGQYADKTCMTPOTGLBC", "JUTZLSCPKEOSMTLGSZIR", "YOUOKLKDRSWVALUTAPSD", "DGWQYQIZLOLIELLCOYAN", "FJCSIYTHFXNCQYBVGODB"], "answers": {"CUTTINGBOARD": [[18, 15], [17, 14], [16, 13], [15, 12], [14, 11], [13, 10], [12, 9], [11, 8], [10, 7], [9, 6], [8, 5], [7, 4]], "SEASONING": [[14, 5], [14, 6], [14, 7], [14, 8], [14, 9], [14, 10], [14, 11], [14, 12], [14, 13]], "MICROWAVE": [[8, 2], [8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [8, 8], [8, 9], [8, 10]], "SAUCEPAN": [[7, 19], [8, 18], [9, 17], [10, 16], [11, 15], [12, 14], [13, 13], [14, 12]], "BLENDER": [[13, 15], [12, 15], [11, 15], [10, 15], [9, 15], [8, 15], [7, 15]], "SKILLET": [[7, 19], [8, 19], [9, 19], [10, 19], [11, 19], [12, 19], [13, 19]], "TOASTER": [[10, 8], [9, 8], [8, 8], [7, 8], [6, 8], [5, 8], [4, 8]], "MEASURE": [[2, 10], [3, 10], [4, 10], [5, 10], [6, 10], [7, 10], [8, 10]], "SPATULA": [[17, 18], [17, 17], [17, 16], [17, 15], [17, 14], [17, 13], [17, 12]], "RECIPE": [[17, 8], [16, 9], [15, 10], [14, 11], [13, 12], [12, 13]], "GARLIC": [[12, 7], [11, 6], [10, 5], [9, 4], [8, 3], [7, 2]], "ONION": [[11, 16], [10, 15], [9, 14], [8, 13], [7, 12]], "KNIFE": [[3, 14], [3, 13], [3, 12], [3, 11], [3, 10]], "TIMER": [[6, 8], [6, 7], [6, 6], [6, 5], [6, 4]], "MIXER": [[15, 11], [14, 11], [13, 11], [12, 11], [11, 11]], "APRON": [[15, 6], [16, 7], [17, 8], [18, 9], [19, 10]], "STOVE": [[14, 8], [15, 9], [16, 10], [17, 11], [18, 12]], "WHISK": [[4, 15], [5, 16], [6, 17], [7, 18], [8, 19]], "BOWL": [[11, 8], [10, 9], [9, 10], [8, 11]], "OVEN": [[10, 13], [11, 12], [12, 11], [13, 10]]}}, {"id": "nineties", "title": "90s Nostalgia", "words": ["FLANNEL", "CASSETTE", "WALKMAN", "ARCADE", "BEANIE", "PAGER", "DISC", "VHS", "MIXTAPE", "NINTENDO", "TAMAGOTCHI", "GRUNGE", "ROLLERBLADE", "YOYO", "SCRUNCHIE", "BOOMBOX", "PAYPHONE", "DIALUP", "POSTER", "SLAPBRACELET"], "grid": ["AWXDXVZCSXRXDHQWOYRF", "YVSQKXTRZPAUBJRZSLTG", "PCRHDRBFMNBSKSPVNWMS", "PIZPENOHPYAPWNKRIZWI", "BKRQOYOLNMPOKQBWXODP", "ENAANAMKLAWEGIGJUNEB", "ACESFUBUAEDSSWZYUXXE", "NDVVUIOLIIRGDCTCORKL", "IAISHAXEZFJBHEAGHYVZ", "EIHCNURCSIAGLQOIBTOF", "AVCTCASSETTEDACRADKB", "EXTJXNYGOVCYZGDINGAF", "IQOHNBRSKAYPCLMELSOM", "VPGPAGERRHEELETJFJPM", "UXAUONZBMYXSENJDISCV", "JMMEWSPRMHRGINIOVWIX", "RDAEPATXIMNNKAUCNLEF", "OATRLSNEUUOQLLRCJVZB", "BGRSOQXMREXUKFJXEVRB", "MVGCSYCGNTPEKOVAKVBI"], "answers": {"SLAPBRACELET": [[18, 3], [17, 4], [16, 5], [15, 6], [14, 7], [13, 8], [12, 9], [11, 10], [10, 11], [9, 12], [8, 13], [7, 14]], "ROLLERBLADE": [[2, 5], [3, 6], [4, 7], [5, 8], [6, 9], [7, 10], [8, 11], [9, 12], [10, 13], [11, 14], [12, 15]], "TAMAGOTCHI": [[17, 2], [16, 2], [15, 2], [14, 2], [13, 2], [12, 2], [11, 2], [10, 2], [9, 2], [8, 2]], "SCRUNCHIE": [[9, 8], [9, 7], [9, 6], [9, 5], [9, 4], [9, 3], [9, 2], [9, 1], [9, 0]], "CASSETTE": [[10, 4], [10, 5], [10, 6], [10, 7], [10, 8], [10, 9], [10, 10], [10, 11]], "PAYPHONE": [[3, 11], [3, 10], [3, 9], [3, 8], [3, 7], [3, 6], [3, 5], [3, 4]], "NINTENDO": [[16, 11], [15, 12], [14, 13], [13, 14], [12, 15], [11, 16], [10, 17], [9, 18]], "BOOMBOX": [[2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [8, 6]], "WALKMAN": [[5, 10], [5, 9], [5, 8], [5, 7], [5, 6], [5, 5], [5, 4]], "FLANNEL": [[18, 13], [17, 13], [16, 13], [15, 13], [14, 13], [13, 13], [12, 13]], "MIXTAPE": [[16, 9], [16, 8], [16, 7], [16, 6], [16, 5], [16, 4], [16, 3]], "DIALUP": [[14, 15], [15, 14], [16, 13], [17, 12], [18, 11], [19, 10]], "BEANIE": [[4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]], "POSTER": [[13, 3], [14, 4], [15, 5], [16, 6], [17, 7], [18, 8]], "ARCADE": [[10, 16], [10, 15], [10, 14], [10, 13], [10, 12], [10, 11]], "GRUNGE": [[19, 7], [18, 8], [17, 9], [16, 10], [15, 11], [14, 12]], "PAGER": [[13, 3], [13, 4], [13, 5], [13, 6], [13, 7]], "YOYO": [[6, 15], [7, 16], [8, 17], [9, 18]], "DISC": [[14, 15], [14, 16], [14, 17], [14, 18]], "VHS": [[10, 1], [9, 2], [8, 3]]}}, {"id": "mystery_podcast", "title": "Mystery Podcast", "words": ["DETECTIVE", "PODCAST", "EVIDENCE", "ALIBI", "CASEFILE", "SUSPECT", "WITNESS", "FORENSICS", "MYSTERY", "CLUE", "MOTIVE", "TIMELINE", "INTERVIEW", "DISPATCH", "SEARCH", "ARCHIVE", "REPORT", "SCENE", "FINGERPRINT", "NOTEBOOK"], "grid": ["RKJSWSTRPCWYGTBFIHQV", "IHWZEZYAELNQEUSSRYIJ", "UBLAVTUZETNNFVSAKHFI", "QERSIRONGLNTKKAACGKZ", "BCCGTEIARCHIVEZTWDFQ", "HSMNCLFHILLJRTAYKSOK", "HNOWEIVRETNISPROEFJP", "JHTMTDZHLFFUSYROYOAE", "ZZITEPIBILSIXWREPROX", "ATVRDEEVFPDPUVPEGEKA", "INESLYSSENTIWXMITNRF", "GFHYLVJCSHNNGWZDBSIL", "NQRZKLTUAYPPLRNOLIYF", "DQISIQBPCCZXIXINQCLM", "DRJQIBMATQWIZOAAASWA", "RLCISTEYEWECHMCQMMQB", "YGFBRNJKURTTASRLSUSW", "KOOBETONLOAEWPUMUKFD", "EULCPMUDSSPYQETZVNCW", "HQSYGXSILPJRLOLCFXMB"], "answers": {"FINGERPRINT": [[12, 19], [11, 18], [10, 17], [9, 16], [8, 15], [7, 14], [6, 13], [5, 12], [4, 11], [3, 10], [2, 9]], "DETECTIVE": [[9, 4], [8, 4], [7, 4], [6, 4], [5, 4], [4, 4], [3, 4], [2, 4], [1, 4]], "FORENSICS": [[6, 17], [7, 17], [8, 17], [9, 17], [10, 17], [11, 17], [12, 17], [13, 17], [14, 17]], "INTERVIEW": [[6, 11], [6, 10], [6, 9], [6, 8], [6, 7], [6, 6], [6, 5], [6, 4], [6, 3]], "DISPATCH": [[9, 10], [8, 11], [7, 12], [6, 13], [5, 14], [4, 15], [3, 16], [2, 17]], "CASEFILE": [[13, 8], [12, 8], [11, 8], [10, 8], [9, 8], [8, 8], [7, 8], [6, 8]], "EVIDENCE": [[10, 8], [9, 7], [8, 6], [7, 5], [6, 4], [5, 3], [4, 2], [3, 1]], "TIMELINE": [[9, 1], [8, 2], [7, 3], [6, 4], [5, 5], [4, 6], [3, 7], [2, 8]], "NOTEBOOK": [[17, 7], [17, 6], [17, 5], [17, 4], [17, 3], [17, 2], [17, 1], [17, 0]], "ARCHIVE": [[4, 7], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12], [4, 13]], "SUSPECT": [[6, 12], [7, 11], [8, 10], [9, 9], [10, 8], [11, 7], [12, 6]], "PODCAST": [[6, 19], [5, 18], [4, 17], [3, 16], [2, 15], [1, 14], [0, 13]], "MYSTERY": [[13, 19], [12, 18], [11, 17], [10, 16], [9, 15], [8, 14], [7, 13]], "WITNESS": [[10, 12], [10, 11], [10, 10], [10, 9], [10, 8], [10, 7], [10, 6]], "MOTIVE": [[5, 2], [6, 2], [7, 2], [8, 2], [9, 2], [10, 2]], "REPORT": [[10, 18], [9, 17], [8, 16], [7, 15], [6, 14], [5, 13]], "SEARCH": [[0, 5], [1, 4], [2, 3], [3, 2], [4, 1], [5, 0]], "ALIBI": [[14, 19], [13, 18], [12, 17], [11, 16], [10, 15]], "SCENE": [[19, 2], [18, 3], [17, 4], [16, 5], [15, 6]], "CLUE": [[18, 3], [18, 2], [18, 1], [18, 0]]}}];
+const THEMES = {"movie_night": {"accent": "#f36b6b", "accent2": "#ffd166", "deep": "#7a2941", "dark": "#1b1220", "motif": "clapper", "subtitle": "Movie snacks, big screens, and hidden words waiting in the credits."}, "pizza_night": {"accent": "#ff9850", "accent2": "#ffe066", "deep": "#9a4f1e", "dark": "#21140d", "motif": "pizza", "subtitle": "A cheesy little hunt with zero delivery fees."}, "coffee_shop": {"accent": "#c49063", "accent2": "#f0d1a0", "deep": "#7b523a", "dark": "#1d140f", "motif": "coffee", "subtitle": "A cozy café scene with a full-strength word search."}, "football_sunday": {"accent": "#4fc276", "accent2": "#f5d56d", "deep": "#2e6f3d", "dark": "#102015", "motif": "football", "subtitle": "Game-day words hiding all over the field."}, "golf_day": {"accent": "#6dd774", "accent2": "#dff7a8", "deep": "#4e9b52", "dark": "#122015", "motif": "golf", "subtitle": "Greens, flags, and a cleaner swing than most scorecards."}, "backyard_bbq": {"accent": "#ff7e59", "accent2": "#ffd86e", "deep": "#9a3d24", "dark": "#22130e", "motif": "grill", "subtitle": "Smoke, sizzle, and words hiding near the grill."}, "rock_concert": {"accent": "#d675ff", "accent2": "#6ef0ff", "deep": "#6d33a8", "dark": "#15111f", "motif": "guitar", "subtitle": "Stage lights, loud riffs, and words backstage."}, "road_trip": {"accent": "#5cc2ff", "accent2": "#ffe179", "deep": "#3678a8", "dark": "#111a22", "motif": "car", "subtitle": "A highway scene with words tucked along the route."}, "camping": {"accent": "#7dce84", "accent2": "#f0dda0", "deep": "#527d4a", "dark": "#131c14", "motif": "tent", "subtitle": "Campfire vibes without the mosquito tax."}, "beach_day": {"accent": "#53c7f7", "accent2": "#ffd56e", "deep": "#1f87a9", "dark": "#0d1920", "motif": "beach", "subtitle": "A bright beach scene, minus sand in your keyboard."}, "video_games": {"accent": "#7d6cff", "accent2": "#62ffd4", "deep": "#5140b3", "dark": "#101222", "motif": "controller", "subtitle": "An arcade-style grid with no loading screen."}, "board_games": {"accent": "#f48fb6", "accent2": "#f6d15b", "deep": "#9e446d", "dark": "#1a1118", "motif": "dice", "subtitle": "Strategy, luck, and no missing rulebook page."}, "pets": {"accent": "#ffb670", "accent2": "#89e4f4", "deep": "#9b6a39", "dark": "#1f1610", "motif": "paw", "subtitle": "A friendly pet scene with no cleanup required."}, "dogs": {"accent": "#f3a466", "accent2": "#32a590", "deep": "#a86a34", "dark": "#21140f", "motif": "bone", "subtitle": "Tail-wagging words hiding in plain sight."}, "halloween": {"accent": "#ff9446", "accent2": "#b48cff", "deep": "#733321", "dark": "#170f13", "motif": "pumpkin", "subtitle": "Spooky, silly, and still school-safe."}, "holidays": {"accent": "#ef4f70", "accent2": "#ffd266", "deep": "#b83958", "dark": "#180f12", "motif": "gift", "subtitle": "Festive words without the family logistics."}, "amusement_park": {"accent": "#ff73cb", "accent2": "#ffd469", "deep": "#a64188", "dark": "#1a0f16", "motif": "ferris", "subtitle": "Theme-park energy without the two-hour line."}, "fast_food": {"accent": "#ff8256", "accent2": "#ffe067", "deep": "#a34b22", "dark": "#20120b", "motif": "burger", "subtitle": "A quick puzzle combo with extra focus."}, "ice_cream": {"accent": "#ff92b2", "accent2": "#8be1c8", "deep": "#a94f70", "dark": "#1b1014", "motif": "cone", "subtitle": "Cold treats, warm colors, hidden words."}, "superheroes": {"accent": "#5ca8ff", "accent2": "#ffd56a", "deep": "#3a6cb4", "dark": "#0f1520", "motif": "hero", "subtitle": "Heroic searching. Cape not included."}, "pirates": {"accent": "#f7a020", "accent2": "#ebe0b8", "deep": "#8d5e2a", "dark": "#17130e", "motif": "pirate", "subtitle": "A treasure-map hunt for hidden words."}, "dinosaurs": {"accent": "#7fcf6f", "accent2": "#f8d56c", "deep": "#4f8c46", "dark": "#111711", "motif": "dino", "subtitle": "Ancient lizards, modern puzzle trouble."}, "zoo_trip": {"accent": "#f0a267", "accent2": "#8cc6e9", "deep": "#a26a33", "dark": "#18120e", "motif": "zoo", "subtitle": "A cartoon zoo scene without the smell."}, "fishing": {"accent": "#4cc8f0", "accent2": "#8fc16d", "deep": "#337b8f", "dark": "#0d1418", "motif": "fish", "subtitle": "Cast across the grid and catch every word."}, "gym_workout": {"accent": "#f94b51", "accent2": "#f6c84d", "deep": "#a83236", "dark": "#180f10", "motif": "dumbbell", "subtitle": "A puzzle workout with no burpees."}, "gardening": {"accent": "#71c351", "accent2": "#f2d560", "deep": "#4f8b42", "dark": "#111711", "motif": "plant", "subtitle": "Dig through the grid and grow your word list."}, "cars": {"accent": "#5faee5", "accent2": "#f4b34b", "deep": "#396b98", "dark": "#0e141a", "motif": "car", "subtitle": "A garage-themed search with clean lines."}, "kitchen": {"accent": "#ff9f68", "accent2": "#a7efd4", "deep": "#985738", "dark": "#17110e", "motif": "pan", "subtitle": "A cooking scene with words simmering underneath."}, "nineties": {"accent": "#b391ff", "accent2": "#6ef0ff", "deep": "#6b44a4", "dark": "#13101d", "motif": "cassette", "subtitle": "A retro-style puzzle from the era of dial-up patience."}, "mystery_podcast": {"accent": "#7ea6ff", "accent2": "#d3d7dd", "deep": "#36507f", "dark": "#0f131a", "motif": "mic", "subtitle": "Follow the clues and interrogate the letters."}};
+const MENU_META = {"accent": "#69bfff", "accent2": "#ffd166", "deep": "#4560d5", "dark": "#12182a", "motif": "wordsearch", "subtitle": "A clean cartoon word-search hub with simple animated backdrop."};
+
+const homeView = document.getElementById('homeView');
+const puzzleView = document.getElementById('puzzleView');
+const homeHero = document.getElementById('homeHero');
+const puzzleHero = document.getElementById('puzzleHero');
+const themeGrid = document.getElementById('themeGrid');
+const themeSearch = document.getElementById('themeSearch');
+const themeCountPill = document.getElementById('themeCountPill');
+const emptyState = document.getElementById('emptyState');
+const homeBtn = document.getElementById('homeBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const clearBtn = document.getElementById('clearBtn');
+const resetBtn = document.getElementById('resetBtn');
+const revealBtn = document.getElementById('revealBtn');
+const printBtn = document.getElementById('printBtn');
+const verifyBtn = document.getElementById('verifyBtn');
+const puzzleGrid = document.getElementById('puzzleGrid');
+const wordList = document.getElementById('wordList');
+const themeLabel = document.getElementById('themeLabel');
+const puzzleTitle = document.getElementById('puzzleTitle');
+const puzzleSubtitle = document.getElementById('puzzleSubtitle');
+const puzzleCounter = document.getElementById('puzzleCounter');
+const wordCounter = document.getElementById('wordCounter');
+const progressFill = document.getElementById('progressFill');
+const statusBar = document.getElementById('statusBar');
+const verifyStatus = document.getElementById('verifyStatus');
+
+const state = {
+  currentIndex: 0,
+  filter: '',
+  isDragging: false,
+  dragStart: null,
+  previewCells: [],
+  progress: PUZZLES.map(() => ({ foundWords: new Set(), foundPaths: {}, revealed: false }))
+};
+
+function escapeHtml(text) {
+  return String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+}
+function hexToRgba(hex, alpha) {
+  const clean = String(hex || '#69bfff').replace('#','').trim();
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  const num = parseInt(full, 16);
+  if (Number.isNaN(num)) return `rgba(105,191,255,${alpha})`;
+  const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+function shadeHex(hex, amt) {
+  const clean = String(hex || '#69bfff').replace('#','').trim();
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  const num = parseInt(full, 16);
+  if (Number.isNaN(num)) return '#69bfff';
+  const clamp = v => Math.max(0, Math.min(255, v));
+  const r = clamp(((num >> 16) & 255) + amt);
+  const g = clamp(((num >> 8) & 255) + amt);
+  const b = clamp((num & 255) + amt);
+  return `#${[r,g,b].map(v => v.toString(16).padStart(2,'0')).join('')}`;
+}
+function svgUrl(svg) {
+  return `url("data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}")`;
+}
+function metaFor(id) {
+  return THEMES[id] || MENU_META;
+}
+function motifSvg(motif, x, y, scale, primary, secondary, dark) {
+  const s = scale;
+  const wrap = content => `<g class="motif" transform="translate(${x} ${y}) scale(${s})">${content}</g>`;
+  switch (motif) {
+    case 'wordsearch':
+      return wrap(`<rect x="-34" y="-20" width="172" height="132" rx="22" fill="${hexToRgba('#ffffff',.36)}" stroke="rgba(255,255,255,.65)" stroke-width="5"/><g fill="${dark}" font-family="Arial" font-size="26" font-weight="900"><text x="-6" y="18">W</text><text x="32" y="18">O</text><text x="70" y="18">R</text><text x="-6" y="56">D</text><text x="32" y="56">S</text><text x="70" y="56">E</text><text x="-6" y="94">A</text><text x="32" y="94">R</text><text x="70" y="94">C</text></g><path d="M86 82 L128 124" stroke="${secondary}" stroke-width="13" stroke-linecap="round"/><circle cx="74" cy="70" r="34" fill="none" stroke="${secondary}" stroke-width="10"/>`);
+    case 'clapper':
+      return wrap(`<rect x="4" y="34" width="104" height="72" rx="12" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M8 20 H104 C110 20 114 24 114 30 V50 H4 V30 C4 24 8 20 14 20 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M16 22 L34 48 M42 22 L60 48 M68 22 L86 48 M94 22 L112 48" stroke="#fff" stroke-width="6"/><circle cx="40" cy="74" r="14" fill="${primary}"/><circle cx="78" cy="80" r="13" fill="${dark}"/>`);
+    case 'pizza':
+      return wrap(`<path d="M12 18 C45 2 86 2 120 18 L66 128 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M12 18 C45 31 86 31 120 18" stroke="${primary}" stroke-width="14" stroke-linecap="round"/><circle cx="54" cy="54" r="9" fill="${primary}"/><circle cx="80" cy="74" r="9" fill="${primary}"/><circle cx="62" cy="96" r="9" fill="${primary}"/><circle cx="36" cy="80" r="7" fill="#fff4a3"/>`);
+    case 'coffee':
+      return wrap(`<path d="M18 46 H94 V92 C94 106 82 116 68 116 H44 C30 116 18 106 18 92 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M94 58 H106 C118 58 126 66 126 78 C126 90 118 98 106 98 H94" fill="none" stroke="#fff" stroke-width="8"/><path d="M34 34 C28 20 40 16 38 4 M60 34 C54 20 66 16 64 4 M84 34 C78 20 90 16 88 4" stroke="${primary}" stroke-width="8" stroke-linecap="round" fill="none"/>`);
+    case 'football':
+      return wrap(`<path d="M12 62 C24 24 62 10 110 18 C122 32 128 48 130 66 C120 104 84 126 30 112 C20 98 14 82 12 62 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M48 50 C58 62 72 74 90 82" stroke="#fff" stroke-width="6" fill="none"/><path d="M66 64 H98" stroke="#fff" stroke-width="6"/><path d="M74 56 V72 M82 56 V72 M90 56 V72" stroke="#fff" stroke-width="5"/>`);
+    case 'golf':
+      return wrap(`<path d="M0 116 Q42 70 128 98 L128 134 H0 Z" fill="${primary}"/><circle cx="38" cy="104" r="16" fill="#fff" stroke="#d5dde8" stroke-width="4"/><path d="M76 108 V26" stroke="#fff" stroke-width="6"/><path d="M76 28 L118 40 L76 54 Z" fill="${secondary}" stroke="#fff" stroke-width="4"/>`);
+    case 'grill':
+      return wrap(`<rect x="20" y="38" width="90" height="58" rx="16" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M30 56 H100 M30 70 H100" stroke="#fff" stroke-width="6"/><path d="M40 94 L26 126 M88 94 L102 126" stroke="#fff" stroke-width="6"/><path d="M54 28 C44 16 58 10 54 -2 M76 28 C66 16 80 10 76 -2" stroke="${secondary}" stroke-width="8" stroke-linecap="round" fill="none"/>`);
+    case 'guitar':
+      return wrap(`<rect x="78" y="8" width="20" height="72" rx="8" fill="${secondary}" stroke="#fff" stroke-width="4"/><path d="M50 56 C22 40 14 94 42 108 C58 116 70 104 78 94 C86 104 98 116 114 108 C142 94 134 40 106 56 C96 62 86 74 78 86 C70 74 60 62 50 56 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><circle cx="60" cy="82" r="7" fill="${dark}"/><circle cx="96" cy="82" r="7" fill="${dark}"/><path d="M78 12 L86 94" stroke="#fff" stroke-width="2"/>`);
+    case 'car':
+      return wrap(`<path d="M18 82 L28 54 C32 46 40 40 50 40 H90 C102 40 112 48 118 56 L128 72 V98 H18 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M42 42 L58 22 H84 C94 22 102 28 108 42 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><circle cx="44" cy="98" r="16" fill="${dark}" stroke="#fff" stroke-width="5"/><circle cx="102" cy="98" r="16" fill="${dark}" stroke="#fff" stroke-width="5"/>`);
+    case 'tent':
+      return wrap(`<path d="M10 106 L62 24 L120 106 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M62 24 L80 106" stroke="#fff" stroke-width="5"/><path d="M52 66 H78 V106 H52 Z" fill="${secondary}"/><path d="M98 28 L120 58 L102 58 L126 106" fill="none" stroke="${shadeHex(primary,-20)}" stroke-width="8" stroke-linecap="round"/>`);
+    case 'beach':
+      return wrap(`<path d="M0 112 Q30 92 60 108 T128 104 L128 138 H0 Z" fill="${primary}"/><path d="M0 126 Q30 106 60 122 T128 118" fill="none" stroke="#fff" stroke-width="6" opacity=".6"/><path d="M64 98 V44" stroke="#fff" stroke-width="6"/><path d="M64 46 C38 36 28 56 20 74 H64 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M64 46 C90 36 100 56 108 74 H64 Z" fill="${shadeHex(primary,-10)}" stroke="#fff" stroke-width="5"/>`);
+    case 'controller':
+      return wrap(`<path d="M18 78 C18 46 38 34 64 34 C90 34 110 46 110 78 C110 98 100 110 88 110 C80 110 74 102 64 102 C54 102 48 110 40 110 C28 110 18 98 18 78 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M40 72 H58 M49 63 V81" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="82" cy="68" r="6" fill="#fff"/><circle cx="96" cy="80" r="6" fill="#fff"/>`);
+    case 'dice':
+      return wrap(`<rect x="18" y="24" width="92" height="92" rx="18" fill="${secondary}" stroke="#fff" stroke-width="5"/><circle cx="44" cy="50" r="7" fill="${primary}"/><circle cx="84" cy="50" r="7" fill="${primary}"/><circle cx="64" cy="70" r="7" fill="${primary}"/><circle cx="44" cy="90" r="7" fill="${primary}"/><circle cx="84" cy="90" r="7" fill="${primary}"/>`);
+    case 'paw':
+      return wrap(`<circle cx="34" cy="42" r="14" fill="${primary}"/><circle cx="58" cy="28" r="13" fill="${primary}"/><circle cx="84" cy="28" r="13" fill="${primary}"/><circle cx="108" cy="42" r="14" fill="${primary}"/><path d="M24 82 C24 62 40 52 64 52 C88 52 104 62 104 82 C104 100 90 112 64 112 C38 112 24 100 24 82 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/>`);
+    case 'bone':
+      return wrap(`<path d="M24 42 C12 30 20 12 36 12 C48 12 54 18 56 24 H84 C86 18 92 12 104 12 C120 12 128 30 116 42 C108 50 108 60 116 68 C128 80 120 98 104 98 C92 98 86 92 84 86 H56 C54 92 48 98 36 98 C20 98 12 80 24 68 C32 60 32 50 24 42 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/>`);
+    case 'pumpkin':
+      return wrap(`<ellipse cx="36" cy="72" rx="24" ry="28" fill="${primary}"/><ellipse cx="64" cy="72" rx="28" ry="32" fill="${secondary}" stroke="#fff" stroke-width="4"/><ellipse cx="94" cy="72" rx="24" ry="28" fill="${primary}"/><path d="M64 32 C64 20 72 12 84 10" stroke="#4d7b34" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M56 64 L46 74 L56 74 Z M72 64 L82 74 L72 74 Z M48 88 Q64 100 82 88" fill="${dark}"/>`);
+    case 'gift':
+      return wrap(`<rect x="18" y="36" width="92" height="78" rx="10" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M64 36 V114 M18 72 H110" stroke="#fff" stroke-width="8"/><path d="M64 36 C48 28 38 18 40 8 C56 8 64 18 64 28 C64 18 72 8 88 8 C90 18 80 28 64 36 Z" fill="${secondary}" stroke="#fff" stroke-width="4"/>`);
+    case 'ferris':
+      return wrap(`<circle cx="64" cy="66" r="40" fill="none" stroke="#fff" stroke-width="6"/><path d="M64 26 V106 M24 66 H104 M36 38 L92 94 M92 38 L36 94" stroke="#fff" stroke-width="4"/><rect x="56" y="106" width="16" height="24" rx="6" fill="${primary}"/><path d="M48 130 H80" stroke="#fff" stroke-width="6"/><rect x="14" y="60" width="12" height="10" rx="4" fill="${secondary}"/><rect x="102" y="60" width="12" height="10" rx="4" fill="${secondary}"/><rect x="58" y="14" width="12" height="10" rx="4" fill="${secondary}"/>`);
+    case 'burger':
+      return wrap(`<path d="M18 58 C22 32 40 18 64 18 C88 18 106 32 110 58 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><rect x="18" y="66" width="92" height="14" rx="7" fill="#7d3d20"/><path d="M18 84 H110" stroke="#6fd15b" stroke-width="8"/><rect x="16" y="92" width="96" height="18" rx="9" fill="${primary}" stroke="#fff" stroke-width="5"/>`);
+    case 'cone':
+      return wrap(`<circle cx="64" cy="42" r="26" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M64 58 L92 120 L36 120 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M48 82 L80 112 M40 96 L72 126 M56 72 L88 102" stroke="${shadeHex(primary,-25)}" stroke-width="4"/>`);
+    case 'hero':
+      return wrap(`<path d="M64 12 L108 26 V62 C108 90 92 110 64 124 C36 110 20 90 20 62 V26 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M64 30 L74 54 H102 L79 68 L88 96 L64 80 L40 96 L49 68 L26 54 H54 Z" fill="${secondary}" stroke="#fff" stroke-width="4"/>`);
+    case 'pirate':
+      return wrap(`<path d="M14 104 H116" stroke="#fff" stroke-width="6"/><path d="M34 104 C34 76 52 52 78 52 C92 52 102 60 108 70 C98 72 90 78 86 88 C76 84 66 84 58 90 C50 82 42 80 34 82 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M56 52 V16" stroke="#fff" stroke-width="6"/><path d="M56 18 L92 34 L56 48 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/>`);
+    case 'dino':
+      return wrap(`<path d="M22 94 C22 62 42 40 68 40 C74 26 86 18 102 18 C100 30 94 42 88 48 C104 52 114 64 114 80 C114 100 96 112 74 112 H40 C30 112 22 104 22 94 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><circle cx="90" cy="36" r="4" fill="#fff"/><path d="M36 112 V128 M66 112 V128" stroke="#fff" stroke-width="6"/><path d="M20 82 L4 76" stroke="#fff" stroke-width="6"/>`);
+    case 'zoo':
+      return wrap(`<path d="M38 118 V28 C38 18 46 12 56 12 H72 C82 12 90 18 90 28 V118" fill="${secondary}" stroke="#fff" stroke-width="5"/><circle cx="64" cy="34" r="18" fill="${primary}" stroke="#fff" stroke-width="5"/><circle cx="56" cy="30" r="4" fill="#fff"/><circle cx="72" cy="30" r="4" fill="#fff"/><path d="M58 42 Q64 48 70 42" stroke="#fff" stroke-width="4" fill="none"/><circle cx="52" cy="20" r="6" fill="${primary}"/><circle cx="76" cy="20" r="6" fill="${primary}"/>`);
+    case 'fish':
+      return wrap(`<path d="M14 72 C34 40 80 40 98 72 C80 104 34 104 14 72 Z" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M98 72 L122 52 V92 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><circle cx="42" cy="64" r="4" fill="#fff"/><path d="M22 18 C28 20 34 28 34 38" stroke="#fff" stroke-width="5" fill="none"/><circle cx="18" cy="16" r="6" fill="${secondary}" stroke="#fff" stroke-width="3"/>`);
+    case 'dumbbell':
+      return wrap(`<rect x="40" y="58" width="48" height="20" rx="8" fill="${secondary}" stroke="#fff" stroke-width="5"/><rect x="18" y="46" width="14" height="44" rx="4" fill="${primary}"/><rect x="32" y="50" width="10" height="36" rx="4" fill="${primary}"/><rect x="88" y="50" width="10" height="36" rx="4" fill="${primary}"/><rect x="98" y="46" width="14" height="44" rx="4" fill="${primary}"/>`);
+    case 'plant':
+      return wrap(`<path d="M34 120 H94 L86 88 H42 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M64 88 V40" stroke="#fff" stroke-width="6"/><path d="M64 64 C44 62 34 46 36 26 C54 28 64 42 64 58 Z" fill="${primary}" stroke="#fff" stroke-width="4"/><path d="M64 54 C84 52 94 36 92 16 C74 18 64 32 64 48 Z" fill="${primary}" stroke="#fff" stroke-width="4"/>`);
+    case 'pan':
+      return wrap(`<circle cx="54" cy="66" r="34" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M84 60 H126 V76 H84 Q80 76 80 68 Q80 60 84 60 Z" fill="${secondary}" stroke="#fff" stroke-width="5"/><path d="M40 64 C44 50 60 44 72 54" stroke="#fff" stroke-width="6" fill="none"/>`);
+    case 'cassette':
+      return wrap(`<rect x="14" y="26" width="100" height="88" rx="16" fill="${primary}" stroke="#fff" stroke-width="5"/><rect x="30" y="42" width="68" height="28" rx="8" fill="${secondary}" stroke="#fff" stroke-width="4"/><circle cx="44" cy="84" r="10" fill="${dark}" stroke="#fff" stroke-width="4"/><circle cx="84" cy="84" r="10" fill="${dark}" stroke="#fff" stroke-width="4"/><path d="M52 84 H76" stroke="#fff" stroke-width="4"/><rect x="44" y="104" width="40" height="10" rx="4" fill="#fff" opacity=".7"/>`);
+    case 'mic':
+      return wrap(`<rect x="50" y="18" width="28" height="50" rx="14" fill="${primary}" stroke="#fff" stroke-width="5"/><path d="M64 68 V92" stroke="#fff" stroke-width="6"/><path d="M42 90 Q64 108 86 90" stroke="#fff" stroke-width="6" fill="none"/><path d="M86 40 C106 40 118 56 118 76 C118 96 104 110 84 110 C64 110 50 96 50 76" fill="none" stroke="${secondary}" stroke-width="8"/><path d="M104 100 L124 120" stroke="${secondary}" stroke-width="8" stroke-linecap="round"/>`);
+    default:
+      return wrap(`<circle cx="64" cy="64" r="44" fill="${secondary}" stroke="#fff" stroke-width="5"/><circle cx="64" cy="64" r="18" fill="${primary}"/>`);
+  }
+}
+function buildSceneSvg(id, variant = 'page') {
+  const meta = id === 'menu' ? MENU_META : metaFor(id);
+  const width = variant === 'card' ? 900 : 1600;
+  const height = variant === 'card' ? 480 : 900;
+  const skyTop = meta.accent;
+  const skyBottom = shadeHex(meta.deep, 28);
+  const ridge1 = shadeHex(meta.deep, -8);
+  const ridge2 = shadeHex(meta.deep, 12);
+  const ground = meta.dark;
+  const groundTop = shadeHex(meta.dark, 18);
+  const title = id === 'menu' ? 'Word Search' : (PUZZLES.find(p => p.id === id)?.title || 'Theme');
+  const motifScale = variant === 'card' ? .92 : 1.55;
+  const motifX = variant === 'card' ? 646 : 1165;
+  const motifY = variant === 'card' ? 72 : 118;
+  const tileOpacity = variant === 'card' ? .20 : .12;
+  return `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid slice">
+    <style>
+      @keyframes driftA { 0% { transform: translate(0px,0px); } 100% { transform: translate(36px,-18px); } }
+      @keyframes driftB { 0% { transform: translate(0px,0px); } 100% { transform: translate(-28px,16px); } }
+      @keyframes bob { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-14px); } }
+      .cloudA { animation: driftA 10s ease-in-out infinite alternate; }
+      .cloudB { animation: driftB 13s ease-in-out infinite alternate; }
+      .motif { animation: bob 4.5s ease-in-out infinite; transform-origin:center; }
+      .tileA { animation: bob 5.8s ease-in-out infinite; }
+      .tileB { animation: driftB 8s ease-in-out infinite alternate; }
+    </style>
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${skyTop}" />
+        <stop offset="100%" stop-color="${skyBottom}" />
+      </linearGradient>
+      <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${groundTop}" />
+        <stop offset="100%" stop-color="${ground}" />
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#sky)"/>
+    <circle cx="${variant === 'card' ? 745 : 1310}" cy="${variant === 'card' ? 78 : 130}" r="${variant === 'card' ? 52 : 78}" fill="${hexToRgba(meta.accent2,.30)}"/>
+    <g class="cloudA" opacity=".86">
+      <g transform="translate(${variant === 'card' ? 132 : 210} ${variant === 'card' ? 76 : 118})">
+        <ellipse cx="0" cy="0" rx="52" ry="22" fill="rgba(255,255,255,.78)"/>
+        <ellipse cx="36" cy="-9" rx="28" ry="16" fill="rgba(255,255,255,.86)"/>
+        <ellipse cx="-34" cy="-7" rx="26" ry="16" fill="rgba(255,255,255,.82)"/>
+      </g>
+    </g>
+    <g class="cloudB" opacity=".70">
+      <g transform="translate(${variant === 'card' ? 690 : 1110} ${variant === 'card' ? 54 : 102})">
+        <ellipse cx="0" cy="0" rx="58" ry="24" fill="rgba(255,255,255,.70)"/>
+        <ellipse cx="38" cy="-9" rx="30" ry="16" fill="rgba(255,255,255,.78)"/>
+        <ellipse cx="-36" cy="-8" rx="26" ry="15" fill="rgba(255,255,255,.76)"/>
+      </g>
+    </g>
+    <g opacity="${tileOpacity}" fill="#ffffff" stroke="rgba(255,255,255,.46)" stroke-width="3">
+      <g class="tileA" transform="translate(${variant === 'card' ? 80 : 138} ${variant === 'card' ? 170 : 230}) rotate(-8)">
+        <rect x="0" y="0" width="58" height="58" rx="12"/><text x="29" y="39" text-anchor="middle" font-family="Arial" font-size="31" font-weight="900" fill="${meta.dark}">A</text>
+      </g>
+      <g class="tileB" transform="translate(${variant === 'card' ? 214 : 380} ${variant === 'card' ? 118 : 190}) rotate(9)">
+        <rect x="0" y="0" width="58" height="58" rx="12"/><text x="29" y="39" text-anchor="middle" font-family="Arial" font-size="31" font-weight="900" fill="${meta.dark}">B</text>
+      </g>
+      <g class="tileA" transform="translate(${variant === 'card' ? 360 : 640} ${variant === 'card' ? 190 : 315}) rotate(-5)">
+        <rect x="0" y="0" width="58" height="58" rx="12"/><text x="29" y="39" text-anchor="middle" font-family="Arial" font-size="31" font-weight="900" fill="${meta.dark}">C</text>
+      </g>
+    </g>
+    <path d="M0 ${height*.67} C ${width*.12} ${height*.54}, ${width*.26} ${height*.76}, ${width*.42} ${height*.62} S ${width*.68} ${height*.74}, ${width*.84} ${height*.60} S ${width*.94} ${height*.70}, ${width} ${height*.62} L ${width} ${height} L 0 ${height} Z" fill="${ridge1}" opacity=".90"/>
+    <path d="M0 ${height*.79} C ${width*.14} ${height*.72}, ${width*.24} ${height*.86}, ${width*.40} ${height*.76} S ${width*.68} ${height*.88}, ${width*.84} ${height*.76} S ${width*.94} ${height*.86}, ${width} ${height*.78} L ${width} ${height} L 0 ${height} Z" fill="${ridge2}" opacity=".94"/>
+    <rect x="0" y="${height*.86}" width="${width}" height="${height*.14}" fill="url(#ground)"/>
+    <path d="M0 ${height*.86} Q ${width*.18} ${height*.82}, ${width*.36} ${height*.86} T ${width*.72} ${height*.86} T ${width} ${height*.86}" stroke="${hexToRgba(meta.accent2,.48)}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    ${motifSvg(meta.motif, motifX, motifY, motifScale, meta.accent, meta.accent2, meta.dark)}
+    <g transform="translate(${variant === 'card' ? 58 : 96} ${variant === 'card' ? 348 : 610})">
+      <rect x="0" y="0" width="${variant === 'card' ? 380 : 560}" height="${variant === 'card' ? 70 : 92}" rx="20" fill="rgba(8,12,24,.24)" stroke="rgba(255,255,255,.24)" stroke-width="3"/>
+      <text x="${variant === 'card' ? 22 : 28}" y="${variant === 'card' ? 45 : 60}" fill="#ffffff" font-weight="900" font-size="${variant === 'card' ? 32 : 48}" font-family="Trebuchet MS, Arial, sans-serif">${escapeHtml(title)}</text>
+    </g>
+  </svg>`;
+}
+function setHomeScene() {
+  document.documentElement.style.setProperty('--accent', MENU_META.accent);
+  document.documentElement.style.setProperty('--accent-2', MENU_META.accent2);
+  document.documentElement.style.setProperty('--page-overlay', hexToRgba(MENU_META.dark,.45));
+  document.documentElement.style.setProperty('--scene-image', svgUrl(buildSceneSvg('menu','page')));
+  homeHero.style.setProperty('--hero-scene', svgUrl(buildSceneSvg('menu','page')));
+}
+function setPuzzleScene(id) {
+  const meta = metaFor(id);
+  document.documentElement.style.setProperty('--accent', meta.accent);
+  document.documentElement.style.setProperty('--accent-2', meta.accent2);
+  document.documentElement.style.setProperty('--page-overlay', hexToRgba(meta.dark,.68));
+  document.documentElement.style.setProperty('--scene-image', svgUrl(buildSceneSvg(id,'page')));
+  document.documentElement.style.setProperty('--cell-border', hexToRgba(meta.accent,.28));
+  puzzleHero.style.setProperty('--hero-scene', svgUrl(buildSceneSvg(id,'page')));
+}
+function showView(name) {
+  homeView.classList.toggle('active', name === 'home');
+  puzzleView.classList.toggle('active', name === 'puzzle');
+  document.body.classList.toggle('puzzle-active', name === 'puzzle' && window.innerWidth > 1200);
+  if (name === 'home') setHomeScene();
+}
+function filteredPuzzles() {
+  const term = state.filter.trim().toLowerCase();
+  if (!term) return PUZZLES;
+  return PUZZLES.filter(p => p.title.toLowerCase().includes(term) || p.words.some(w => w.toLowerCase().includes(term)));
+}
+function currentPuzzle() { return PUZZLES[state.currentIndex]; }
+function currentProgress() { return state.progress[state.currentIndex]; }
+function openPuzzle(index) {
+  state.currentIndex = index;
+  showView('puzzle');
+  renderPuzzle();
+}
+function renderHome() {
+  const items = filteredPuzzles();
+  themeCountPill.textContent = `${items.length} theme${items.length === 1 ? '' : 's'} ready`;
+  emptyState.style.display = items.length ? 'none' : 'block';
+  themeGrid.innerHTML = '';
+  items.forEach(puzzle => {
+    const meta = metaFor(puzzle.id);
+    const index = PUZZLES.findIndex(p => p.id === puzzle.id);
+    const progress = state.progress[index];
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'theme-card';
+    card.style.setProperty('--card-scene', svgUrl(buildSceneSvg(puzzle.id, 'card')));
+    const foundCount = progress.foundWords.size;
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="card-progress">${foundCount ? foundCount + '/' + puzzle.words.length : ''}</div>
+        <h3 class="card-title">${escapeHtml(puzzle.title)}</h3>
+        <p class="card-copy">${escapeHtml(meta.subtitle)}</p>
+        <div class="card-meta"><span>20 words</span><span>Play</span></div>
+      </div>`;
+    card.addEventListener('click', () => openPuzzle(index));
+    themeGrid.appendChild(card);
+  });
+}
+function renderWordList(puzzle, progress) {
+  wordList.innerHTML = '';
+  puzzle.words.forEach(word => {
+    const li = document.createElement('li');
+    if (progress.foundWords.has(word)) li.classList.add('found');
+    if (progress.revealed && !progress.foundWords.has(word)) li.classList.add('revealed');
+    li.innerHTML = `<span>${escapeHtml(word)}</span><span>${progress.foundWords.has(word) ? 'Done' : ''}</span>`;
+    wordList.appendChild(li);
+  });
+}
+function isFoundCell(r, c, progress) {
+  return Object.values(progress.foundPaths).some(coords => coords.some(([rr, cc]) => rr === r && cc === c));
+}
+function isRevealCell(r, c, puzzle) {
+  return Object.values(puzzle.answers).some(coords => coords.some(([rr, cc]) => rr === r && cc === c));
+}
+function renderGrid(puzzle, progress) {
+  puzzleGrid.innerHTML = '';
+  puzzle.grid.forEach((row, r) => row.split('').forEach((letter, c) => {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cell';
+    cell.textContent = letter;
+    cell.dataset.row = r;
+    cell.dataset.col = c;
+    if (isFoundCell(r, c, progress)) cell.classList.add('found');
+    if (progress.revealed && !isFoundCell(r, c, progress) && isRevealCell(r, c, puzzle)) cell.classList.add('revealed');
+    cell.addEventListener('pointerdown', onPointerDown);
+    cell.addEventListener('pointerenter', onPointerEnter);
+    cell.addEventListener('pointerup', onPointerUp);
+    puzzleGrid.appendChild(cell);
+  }));
+}
+function renderPuzzle() {
+  const puzzle = currentPuzzle();
+  const progress = currentProgress();
+  const meta = metaFor(puzzle.id);
+  setPuzzleScene(puzzle.id);
+  clearPreview();
+  themeLabel.textContent = puzzle.title;
+  puzzleTitle.textContent = puzzle.title;
+  puzzleSubtitle.textContent = meta.subtitle;
+  puzzleCounter.textContent = `Puzzle ${state.currentIndex + 1} of ${PUZZLES.length}`;
+  wordCounter.textContent = `${progress.foundWords.size} of ${puzzle.words.length} found`;
+  progressFill.style.width = `${(progress.foundWords.size / puzzle.words.length) * 100}%`;
+  revealBtn.textContent = progress.revealed ? 'Hide' : 'Reveal';
+  prevBtn.disabled = state.currentIndex === 0;
+  nextBtn.disabled = state.currentIndex === PUZZLES.length - 1;
+  renderGrid(puzzle, progress);
+  renderWordList(puzzle, progress);
+  statusBar.textContent = progress.foundWords.size === puzzle.words.length
+    ? 'Puzzle complete. You found them all.'
+    : 'Ready. Click or press a starting letter, drag across a word, and release.';
+}
+function getCellEl(r, c) {
+  return puzzleGrid.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+}
+function clearPreview() {
+  document.querySelectorAll('.cell.selected').forEach(el => el.classList.remove('selected'));
+  state.previewCells = [];
+}
+function cellFromPointerEvent(event) {
+  const el = document.elementFromPoint(event.clientX, event.clientY);
+  return el && el.classList && el.classList.contains('cell') ? el : null;
+}
+function buildLineCoords(start, end) {
+  const [r1, c1] = start;
+  const [r2, c2] = end;
+  let dr = r2 - r1;
+  let dc = c2 - c1;
+  if (dr === 0 && dc === 0) return [[r1, c1]];
+  const sameRow = dr === 0;
+  const sameCol = dc === 0;
+  const diagonal = Math.abs(dr) === Math.abs(dc);
+  if (!(sameRow || sameCol || diagonal)) return [];
+  dr = Math.sign(dr);
+  dc = Math.sign(dc);
+  const len = Math.max(Math.abs(r2 - r1), Math.abs(c2 - c1));
+  const coords = [];
+  for (let i = 0; i <= len; i++) coords.push([r1 + dr * i, c1 + dc * i]);
+  return coords;
+}
+function selectionText(coords, puzzle) {
+  return coords.map(([r, c]) => (puzzle.grid[r] || '')[c] || '').join('');
+}
+function updatePreviewFromCell(cell) {
+  if (!state.dragStart) return;
+  const end = [Number(cell.dataset.row), Number(cell.dataset.col)];
+  const coords = buildLineCoords(state.dragStart, end);
+  if (!coords.length) return;
+  clearPreview();
+  state.previewCells = coords;
+  coords.forEach(([r, c]) => {
+    const el = getCellEl(r, c);
+    if (el && !el.classList.contains('found')) el.classList.add('selected');
+  });
+}
+function matchSelectionToWord(selection, puzzle, progress) {
+  const letters = selectionText(selection, puzzle);
+  const reversed = letters.split('').reverse().join('');
+  for (const word of puzzle.words) {
+    if (progress.foundWords.has(word)) continue;
+    if (letters === word || reversed === word) return word;
+  }
+  return null;
+}
+function finalizeSelection() {
+  if (!state.previewCells.length) return;
+  const puzzle = currentPuzzle();
+  const progress = currentProgress();
+  const matchedWord = matchSelectionToWord(state.previewCells, puzzle, progress);
+  if (matchedWord) {
+    progress.foundWords.add(matchedWord);
+    progress.foundPaths[matchedWord] = state.previewCells.map(([r, c]) => [r, c]);
+    renderHome();
+    renderPuzzle();
+    statusBar.textContent = `Found: ${matchedWord}`;
+  } else {
+    clearPreview();
+    statusBar.textContent = 'That selection is not one of the remaining words.';
+    window.setTimeout(() => {
+      if (statusBar.textContent === 'That selection is not one of the remaining words.') {
+        statusBar.textContent = 'Ready. Click or press a starting letter, drag across a word, and release.';
+      }
+    }, 1500);
+  }
+}
+function endDrag() {
+  state.isDragging = false;
+  state.dragStart = null;
+}
+function onPointerDown(event) {
+  const cell = event.currentTarget;
+  state.isDragging = true;
+  state.dragStart = [Number(cell.dataset.row), Number(cell.dataset.col)];
+  clearPreview();
+  updatePreviewFromCell(cell);
+  event.preventDefault();
+}
+function onPointerEnter(event) {
+  if (!state.isDragging) return;
+  updatePreviewFromCell(event.currentTarget);
+}
+function onPointerUp(event) {
+  if (!state.isDragging) return;
+  const cell = cellFromPointerEvent(event);
+  if (cell) updatePreviewFromCell(cell);
+  finalizeSelection();
+  endDrag();
+}
+document.addEventListener('pointermove', event => {
+  if (!state.isDragging) return;
+  const cell = cellFromPointerEvent(event);
+  if (cell) updatePreviewFromCell(cell);
+});
+document.addEventListener('pointerup', event => {
+  if (!state.isDragging) return;
+  const cell = cellFromPointerEvent(event);
+  if (cell) updatePreviewFromCell(cell);
+  finalizeSelection();
+  endDrag();
+});
+document.addEventListener('pointercancel', () => {
+  if (!state.isDragging) return;
+  clearPreview();
+  endDrag();
+});
+function resetCurrentPuzzle() {
+  state.progress[state.currentIndex] = { foundWords: new Set(), foundPaths: {}, revealed: false };
+  renderHome();
+  renderPuzzle();
+  statusBar.textContent = 'Puzzle reset.';
+}
+function toggleReveal() {
+  const progress = currentProgress();
+  progress.revealed = !progress.revealed;
+  renderPuzzle();
+  statusBar.textContent = progress.revealed ? 'Answers revealed.' : 'Answers hidden.';
+}
+function verifyAllPuzzles() {
+  const directions = [[0,1],[1,0],[0,-1],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]];
+  function findWord(grid, word) {
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        if (grid[r][c] !== word[0]) continue;
+        for (const [dr, dc] of directions) {
+          let rr = r, cc = c, ok = true;
+          for (let i = 0; i < word.length; i++) {
+            if (!grid[rr] || grid[rr][cc] !== word[i]) { ok = false; break; }
+            rr += dr;
+            cc += dc;
+          }
+          if (ok) return true;
+        }
+      }
+    }
+    return false;
+  }
+  let total = 0, found = 0;
+  const errors = [];
+  PUZZLES.forEach(puzzle => puzzle.words.forEach(word => {
+    total += 1;
+    const coords = puzzle.answers[word] || [];
+    const letters = coords.map(([r, c]) => (puzzle.grid[r] || '')[c] || '').join('');
+    const searchable = findWord(puzzle.grid, word);
+    if (letters === word && searchable) found += 1;
+    else errors.push(`${puzzle.title}: ${word}`);
+  }));
+  verifyStatus.innerHTML = found === total
+    ? `<span class="verify-good">Verification passed:</span> ${found} / ${total} words confirmed.`
+    : `<span style="color:#b42318;font-weight:900;">Verification issue:</span> ${found} / ${total}. ${errors.slice(0,6).join('; ')}`;
+  statusBar.textContent = found === total ? `Verification complete: ${found} / ${total} words confirmed.` : `Verification found ${errors.length} problem(s).`;
+}
+
+themeSearch.addEventListener('input', () => {
+  state.filter = themeSearch.value;
+  renderHome();
+});
+homeBtn.addEventListener('click', () => { showView('home'); renderHome(); });
+prevBtn.addEventListener('click', () => { if (state.currentIndex > 0) openPuzzle(state.currentIndex - 1); });
+nextBtn.addEventListener('click', () => { if (state.currentIndex < PUZZLES.length - 1) openPuzzle(state.currentIndex + 1); });
+clearBtn.addEventListener('click', () => { clearPreview(); statusBar.textContent = 'Selection cleared.'; });
+resetBtn.addEventListener('click', resetCurrentPuzzle);
+revealBtn.addEventListener('click', toggleReveal);
+printBtn.addEventListener('click', () => window.print());
+verifyBtn.addEventListener('click', verifyAllPuzzles);
+window.addEventListener('resize', () => {
+  document.body.classList.toggle('puzzle-active', puzzleView.classList.contains('active') && window.innerWidth > 1200);
+});
+
+setHomeScene();
+showView('home');
+renderHome();
+</script>
+</body>
+</html>
