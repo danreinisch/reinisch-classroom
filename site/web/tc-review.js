@@ -2041,8 +2041,7 @@
           const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
           const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
           const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
-
-          // Step 1: AI-suggest score for each unscored constructed item
+          const assignmentTitle = instance?.settings?.title || '';
           for (const item of constructedItems) {
             if (isAutoScoredItem(item, answers)) continue; // already scored
 
@@ -2145,7 +2144,7 @@
               max: item.points || 0,
               teacher_note: answer?.teacher_note || '',
             };
-          }).filter(s => s.earned != null || s.type === 'constructed');
+          }).filter(s => s.earned != null || s.type === 'constructed' || s.type === 'written_response');
 
           const totalEarned = itemSummaries.reduce((sum, s) => sum + (s.earned || 0), 0);
           const totalPossible = items.reduce((sum, i) => sum + (i.points || 0), 0);
