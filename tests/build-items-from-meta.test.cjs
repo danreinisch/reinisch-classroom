@@ -330,6 +330,51 @@ function keySignature(item) {
   console.log('✓ Test 6 passed: Week 13 integration — 24 items, uniform keys, 6 FIB with meta.scoring');
 }
 
+// ── Test 7: written_response question → answer_type='written_response', correct=null ──
+
+{
+  const meta = {
+    days: [
+      {
+        day_number: 1,
+        type: 'questions',
+        questions: [
+          { number: 1, type: 'mcq', text: 'Q1?', choices: ['A', 'B', 'C', 'D'], correct: 'B', points: 1 },
+          { number: 2, type: 'boolean', text: 'Q2?', correct: 'A', points: 1 },
+          {
+            number: 25,
+            type: 'written_response',
+            text: 'WRITING PROMPT: Describe your perfect day.',
+            choices: [],
+            correct: '',
+            hint: '',
+            goal_codes: ['S014.12.2'],
+            dese_codes: ['MLS: W.1.A.9-12.a'],
+            points: 1,
+          },
+        ],
+      },
+    ],
+  };
+
+  const items = buildItemsFromMeta(531, meta);
+  assert.strictEqual(items.length, 3, 'Should produce 3 items');
+
+  const wrItem = items.find(it => it.item_ref === '1_25');
+  assert.ok(wrItem, 'Should have item 1_25');
+  assert.strictEqual(wrItem.answer_type, 'written_response', 'Q25 answer_type should be written_response');
+  assert.strictEqual(wrItem.meta.correct, null, 'Q25 meta.correct should be null (not empty string)');
+  assert.strictEqual(wrItem.meta.text, 'WRITING PROMPT: Describe your perfect day.', 'Q25 text preserved');
+  assert.deepStrictEqual(wrItem.goal_codes, ['S014.12.2'], 'goal_codes preserved');
+
+  // MCQ item still has correct answer
+  const mcqItem = items.find(it => it.item_ref === '1_1');
+  assert.strictEqual(mcqItem.answer_type, 'mcq', 'Q1 should still be mcq');
+  assert.strictEqual(mcqItem.meta.correct, 'B', 'Q1 correct answer preserved');
+
+  console.log('✓ Test 7 passed: written_response question → answer_type=written_response, correct=null');
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log('\nAll build-items-from-meta tests passed.');

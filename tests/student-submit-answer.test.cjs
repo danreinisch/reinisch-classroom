@@ -1645,5 +1645,60 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert(!q2Row, 'Blank fill-in-blank item must NOT get a 0-row during revision re-submission (preserves teacher grade)');
   })();
 
+  // ── written_response item handling ─────────────────────────────────────────
+  console.log('\n--- written_response item handling ---');
+
+  await test('written_response: answer stored with null is_correct and null earned_points (needs manual grading)', async () => {
+    reset();
+    setupBasicMocks({}, { assignment_id: 'assignment-uuid-1' });
+    fetchHandlers.submissionGet = () => makeOkResponse([]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-1', item_ref: '1_1', answer_type: 'mcq', points: 1, meta: { correct: 'B' } },
+      { id: 'item-25', item_ref: '1_25', answer_type: 'written_response', points: 1, meta: { correct: null, text: 'WRITING PROMPT: Describe your perfect day.' } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { '1_1': 'B', '1_25': 'My perfect day would start with a sunrise...' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    assert(capturedSubAnswers && capturedSubAnswers.length >= 2, 'Both items should have submission_answers');
+    const wrAnswer = capturedSubAnswers.find(a => a.assignment_item_id === 'item-25');
+    assert(wrAnswer, 'written_response item should have a submission_answer row');
+    assert.strictEqual(wrAnswer.is_correct, null, 'written_response should have null is_correct (no auto-grade)');
+    assert.strictEqual(wrAnswer.earned_points, null, 'written_response should have null earned_points (needs manual grading)');
+    assert.strictEqual(wrAnswer.max_points, 1, 'written_response max_points should equal item.points');
+    assert.strictEqual(wrAnswer.raw_answer.value, 'My perfect day would start with a sunrise...', 'Student text preserved');
+  })();
+
+  await test('written_response: revision re-submit skips item to preserve teacher grade', async () => {
+    reset();
+    setupBasicMocks({}, {
+      assignment_id: 'assignment-uuid-1',
+      status: 'Assigned',
+      settings: {
+        retry_config: { revision_mode: true, locked_question_ids: [], original_answers: {}, original_score: 50 },
+        answers: { '1_25': 'My original essay text.' }
+      }
+    });
+    fetchHandlers.submissionGet = () => makeOkResponse([{ id: 'existing-sub-id' }]);
+    fetchHandlers.items = () => makeOkResponse([
+      { id: 'item-25', item_ref: '1_25', answer_type: 'written_response', points: 1, meta: { correct: null } }
+    ]);
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      student_code: 'S001',
+      answers: { '1_25': 'My original essay text.' },
+      submit: true
+    });
+    const response = await handler(event);
+    assert.strictEqual(response.statusCode, 200);
+    // During revision re-submit, written_response with null scores should be skipped
+    const wrRow = capturedSubAnswers ? capturedSubAnswers.find(a => a.assignment_item_id === 'item-25') : null;
+    assert(!wrRow, 'written_response item must NOT be re-upserted during revision re-submission (preserves teacher grade)');
+  })();
+
   console.log('\n✓ All student-submit-answer tests passed!');
 })();

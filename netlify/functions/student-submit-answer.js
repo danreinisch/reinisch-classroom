@@ -440,6 +440,9 @@ exports.handler = async (event) => {
                     }
                     earnedPoints = isCorrect ? maxPoints : 0;
                   }
+                } else if (item.answer_type === 'written_response') {
+                  // Written responses require manual teacher grading — no auto-scoring.
+                  maxPoints = item.points != null ? Number(item.points) : 1;
                 }
 
                 // On revision-mode re-submissions, skip non-auto-scoreable constructed items
@@ -449,7 +452,7 @@ exports.handler = async (event) => {
                 // here with earned_points=null would silently clear any teacher manual grade.
                 // The hasWriting block below handles them only when the student provides a new
                 // writing_response.
-                if (isRevisionResubmission && item.answer_type === 'constructed' && earnedPoints === null && isCorrect === null) {
+                if (isRevisionResubmission && (item.answer_type === 'constructed' || item.answer_type === 'written_response') && earnedPoints === null && isCorrect === null) {
                   continue;
                 }
 
