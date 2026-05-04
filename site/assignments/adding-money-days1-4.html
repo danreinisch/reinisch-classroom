@@ -68,6 +68,15 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 .confirm-box{background:#161b22;border:2px solid #30363d;border-radius:14px;padding:28px 24px;max-width:380px;width:90%;text-align:center;}
 .confirm-box p{color:#e6edf3;font-size:1rem;line-height:1.6;margin-bottom:20px;}
 .confirm-btn-row{display:flex;gap:10px;justify-content:center;}
+.qc.correct{border-color:rgba(34,197,94,0.45);}
+.qc.wrong{border-color:rgba(239,68,68,0.35);}
+.check-row{display:flex;justify-content:flex-end;margin-top:12px;}
+.btn-check{font-family:'Outfit',sans-serif;font-size:0.85rem;font-weight:600;padding:7px 18px;border-radius:9px;border:1.5px solid #30363d;background:#21262d;color:#8b949e;cursor:pointer;transition:all 0.2s;}
+.btn-check:hover:not(:disabled){border-color:#14b8a6;color:#14b8a6;}
+.btn-check:disabled{opacity:0.7;cursor:default;}
+.fb{min-height:1.4em;margin-top:8px;font-size:0.9rem;font-weight:600;}
+.fb.ok{color:#22c55e;}
+.fb.no{color:#ef4444;}
 </style>
 </head>
 <body>
@@ -825,7 +834,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 </div>
 
 <div class="bottom-bar">
-  <div class="score-display">Answered: <span id="answeredCount">0</span> / <span>40</span></div>
+  <div class="score-display">Answered: <span id="answeredCount">0</span> / 40 &nbsp; Score: <span id="correctCount">0</span> / 40</div>
   <div id="save-status" class="save-status"></div>
   <div class="btn-row">
     <button class="btn btn-save" type="button" onclick="manualSave()">Save Progress</button>
@@ -927,11 +936,22 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       var final = readS(qref);
       if (final !== null) {
         answers[qref] = final;
-        if (type === 'chain') {
-          var step1 = readStep1(qref);
-          if (step1 !== null) {
-            answers[qref + '_step1'] = step1;
-          }
+      } else {
+        // Include partial answer so early progress is captured
+        var a0 = document.getElementById(qref + '_a0');
+        var a1 = document.getElementById(qref + '_a1');
+        var a2 = document.getElementById(qref + '_a2');
+        var a3 = document.getElementById(qref + '_a3');
+        var partial = (a0 ? (a0.getAttribute('data-val') || '') : '') +
+                      (a1 ? (a1.getAttribute('data-val') || '') : '') + '.' +
+                      (a2 ? (a2.getAttribute('data-val') || '') : '') +
+                      (a3 ? (a3.getAttribute('data-val') || '') : '');
+        if (partial !== '.') answers[qref] = partial;
+      }
+      if (type === 'chain') {
+        var step1 = readStep1(qref);
+        if (step1 !== null) {
+          answers[qref + '_step1'] = step1;
         }
       }
     });
@@ -1050,7 +1070,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     saveToLocalStorage();
     var answers = getAnswers();
     if (Object.keys(answers).length === 0) {
-      showStatus('No answers to save yet.');
+      showStatus('Progress saved locally.');
       return;
     }
     if (window.parent !== window) {
@@ -1071,9 +1091,121 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
     document.getElementById('confirmOverlay').classList.remove('show');
     saveToLocalStorage();
     var answers = getAnswers();
+    if (Object.keys(answers).length === 0) {
+      showStatus('Please start answering before submitting.');
+      return;
+    }
     if (window.parent !== window) {
       window.parent.postMessage({ type: 'rc-assignment-submit', answers: answers }, '*');
     }
+    showStatus('\u2705 Submitted!');
+  }
+
+  /* ── Answer keys (all 40 questions across 4 days) ────────────── */
+  var ANSWERS = {
+    D1Q1:{step1:'3.45',final:'5.95'},D1Q2:{step1:'5.75',final:'6.95'},
+    D1Q3:{step1:'5.75',final:'7.75'},D1Q4:{step1:'5.95',final:'7.00'},
+    D1Q5:{step1:'6.25',final:'7.75'},D1Q6:{step1:'6.95',final:'8.95'},
+    D1Q7:{step1:'5.75',final:'8.75'},D1Q8:{step1:'6.75',final:'8.25'},
+    D1Q9:{step1:'7.95',final:'8.95'},D1Q10:{step1:'7.75',final:'9.00'},
+    D2Q1:{final:'3.75'},D2Q2:{final:'5.75'},D2Q3:{final:'5.75'},D2Q4:{final:'4.95'},
+    D2Q5:{final:'7.75'},D2Q6:{final:'5.95'},D2Q7:{final:'7.75'},D2Q8:{final:'7.95'},
+    D2Q9:{final:'7.95'},D2Q10:{final:'8.75'},
+    D3Q1:{step1:'3.75',final:'4.95'},D3Q2:{step1:'5.75',final:'7.75'},
+    D3Q3:{step1:'4.75',final:'7.25'},D3Q4:{step1:'6.55',final:'7.95'},
+    D3Q5:{step1:'6.25',final:'7.75'},D3Q6:{step1:'5.95',final:'7.00'},
+    D3Q7:{step1:'6.75',final:'8.75'},D3Q8:{step1:'6.95',final:'8.75'},
+    D3Q9:{step1:'6.75',final:'8.75'},D3Q10:{step1:'7.75',final:'8.75'},
+    D4Q1:{final:'5.75'},D4Q2:{final:'7.95'},D4Q3:{final:'8.00'},D4Q4:{final:'7.95'},
+    D4Q5:{final:'8.75'},D4Q6:{final:'8.00'},D4Q7:{final:'8.75'},D4Q8:{final:'8.95'},
+    D4Q9:{final:'8.75'},D4Q10:{final:'8.75'}
+  };
+
+  /* Compare answers as integer cents to avoid floating-point issues
+     and to tolerate a leading-zero tens digit (e.g. "05.95" === "5.95") */
+  function toCents(s) {
+    var n = parseFloat(s);
+    return isNaN(n) ? -1 : Math.round(n * 100);
+  }
+
+  var _correctSet = {};
+
+  function updateCorrectCount() {
+    var n = Object.keys(_correctSet).length;
+    var el = document.getElementById('correctCount');
+    if (el) el.textContent = String(n);
+  }
+
+  function checkQuestion(qref) {
+    var card = document.querySelector('.qc[data-qref="' + qref + '"]');
+    var fb   = document.getElementById(qref + '_fb');
+    var ans  = ANSWERS[qref];
+    if (!card || !fb || !ans) return;
+    if (_correctSet[qref]) return;
+
+    var finalVal = readS(qref);
+    if (finalVal === null) {
+      fb.textContent = 'Fill in all answer boxes first.';
+      fb.className = 'fb no';
+      return;
+    }
+
+    var step1Ok = true;
+    if (ans.step1) {
+      var s1 = readStep1(qref);
+      if (s1 === null) {
+        fb.textContent = 'Fill in Step 1 first.';
+        fb.className = 'fb no';
+        return;
+      }
+      step1Ok = toCents(s1) === toCents(ans.step1);
+    }
+
+    var finalOk = toCents(finalVal) === toCents(ans.final);
+
+    if (step1Ok && finalOk) {
+      fb.textContent = '\u2705 Correct!';
+      fb.className = 'fb ok';
+      card.classList.add('correct');
+      card.classList.remove('wrong');
+      _correctSet[qref] = true;
+      var btn = card.querySelector('.btn-check');
+      if (btn) { btn.disabled = true; btn.textContent = '\u2705 Correct'; }
+      updateCorrectCount();
+      scheduleAutosavePostMessage();
+    } else if (!step1Ok) {
+      fb.textContent = '\u274c Step 1 is wrong \u2014 check your addition and try again.';
+      fb.className = 'fb no';
+      card.classList.add('wrong');
+      card.classList.remove('correct');
+    } else {
+      fb.textContent = '\u274c Not quite \u2014 check your addition and try again.';
+      fb.className = 'fb no';
+      card.classList.add('wrong');
+      card.classList.remove('correct');
+    }
+  }
+
+  function addCheckUI() {
+    document.querySelectorAll('.qc[data-qref]').forEach(function(card) {
+      var qref = card.dataset.qref;
+      if (document.getElementById(qref + '_fb')) return;
+      var row = document.createElement('div');
+      row.className = 'check-row';
+      var btn = document.createElement('button');
+      btn.className = 'btn-check';
+      btn.type = 'button';
+      btn.textContent = 'Check Answer';
+      (function(q) {
+        btn.addEventListener('click', function() { checkQuestion(q); });
+      }(qref));
+      row.appendChild(btn);
+      var fb = document.createElement('div');
+      fb.className = 'fb';
+      fb.id = qref + '_fb';
+      card.appendChild(row);
+      card.appendChild(fb);
+    });
   }
 
   window.showDay = showDay;
@@ -1081,7 +1213,9 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   window.submitAll = submitAll;
   window.cancelSubmit = cancelSubmit;
   window.confirmSubmit = confirmSubmit;
+  window.checkQuestion = checkQuestion;
 
+  addCheckUI();
   loadFromLocalStorage();
   updateAnsweredCount();
 
