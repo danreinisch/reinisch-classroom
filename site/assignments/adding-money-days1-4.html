@@ -834,7 +834,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
 </div>
 
 <div class="bottom-bar">
-  <div class="score-display">Answered: <span id="answeredCount">0</span> / 40 &nbsp; Score: <span id="correctCount">0</span> / 40</div>
+  <div class="score-display"><span>Answered: <span id="answeredCount">0</span> / 40</span><span aria-hidden="true" style="margin:0 6px;opacity:0.4">|</span><span>Score: <span id="correctCount">0</span> / 40</span></div>
   <div id="save-status" class="save-status"></div>
   <div class="btn-row">
     <button class="btn btn-save" type="button" onclick="manualSave()">Save Progress</button>
@@ -937,7 +937,8 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
       if (final !== null) {
         answers[qref] = final;
       } else {
-        // Include partial answer so early progress is captured
+        // Include partial answer so early progress is captured.
+        // Format matches the fixed [Tens][Ones].[Dimes][Pennies] 4-box layout.
         var a0 = document.getElementById(qref + '_a0');
         var a1 = document.getElementById(qref + '_a1');
         var a2 = document.getElementById(qref + '_a2');
@@ -1122,10 +1123,11 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
   };
 
   /* Compare answers as integer cents to avoid floating-point issues
-     and to tolerate a leading-zero tens digit (e.g. "05.95" === "5.95") */
+     and to tolerate a leading-zero tens digit (e.g. "05.95" === "5.95").
+     Returns null for unparseable strings so callers can detect bad input. */
   function toCents(s) {
     var n = parseFloat(s);
-    return isNaN(n) ? -1 : Math.round(n * 100);
+    return isNaN(n) ? null : Math.round(n * 100);
   }
 
   var _correctSet = {};
@@ -1158,10 +1160,14 @@ body{background:#0d1117;color:#e6edf3;font-family:'Outfit',sans-serif;min-height
         fb.className = 'fb no';
         return;
       }
-      step1Ok = toCents(s1) === toCents(ans.step1);
+      var s1c = toCents(s1);
+      var a1c = toCents(ans.step1);
+      step1Ok = s1c !== null && a1c !== null && s1c === a1c;
     }
 
-    var finalOk = toCents(finalVal) === toCents(ans.final);
+    var fc = toCents(finalVal);
+    var afc = toCents(ans.final);
+    var finalOk = fc !== null && afc !== null && fc === afc;
 
     if (step1Ok && finalOk) {
       fb.textContent = '\u2705 Correct!';
