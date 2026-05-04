@@ -26,7 +26,7 @@ for (const [short, long] of Object.entries(CLASS_ALIASES)) {
  * Parse TXT assignment content into structured JSON metadata
  * (Copied from teacher-issue-draft.js for testing)
  */
-function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
+function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCode) {
   if (!txtContent || typeof txtContent !== 'string') {
     return null;
   }
@@ -44,6 +44,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   // In this format, a multi-line header block appears between two === separators.
   // One line in the block contains "Class: <className>" (e.g. "Student: S002 | Class: Language Arts 3 SC").
   // The actual assignment content starts AFTER the closing === of that header block.
+  // When studentCode is provided (e.g. "S022"), only the block whose header also contains
+  // "Student: S022" is used — allowing multiple students in the same file and class to be
+  // correctly routed to their own section.
   const separatorIndices = [];
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].trim().match(/^={3,}$/)) {
@@ -60,9 +63,17 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       return upper.includes(resolvedClassName.toUpperCase()) ||
              (shortAlias && upper.includes(shortAlias.toUpperCase()));
     });
-    if (hasClassField) {
+    // When a studentCode is specified, require the block to also contain
+    // "Student: <code>" so that files with multiple students in the same class
+    // are routed to the correct per-student section (Final Exam format).
+    const hasStudentField = !studentCode || blockLines.some(l => {
+      const upper = l.trim().toUpperCase();
+      return upper.includes('STUDENT:') && upper.includes(studentCode.toUpperCase());
+    });
+    if (hasClassField && hasStudentField) {
       classStartIndex = separatorIndices[si + 1] + 1;
-      console.log('[parseTxtToMeta] Per-student format detected, content starts at line', classStartIndex, 'for class', resolvedClassName);
+      console.log('[parseTxtToMeta] Per-student format detected, content starts at line', classStartIndex,
+        'for class', resolvedClassName, studentCode ? `student ${studentCode}` : '(any student)');
       break;
     }
   }
@@ -252,7 +263,27 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       continue;
     }
 
+    // Final Exam / per-student format: if the first "Question N:" item is encountered
+    // before any DAY or Chapter header (currentDay is still null), synthesize an implicit
+    // "Final Exam" day so that the questions can be collected normally below.
+    // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
+    if (!currentDay && strippedLine.match(/^(?:Question\s+|Q)(\d+):/i)) {
+      currentDay = {
+        label: 'Final Exam',
+        day_number: 1,
+        type: 'questions',
+        questions: []
+      };
+      console.log('[parseTxtToMeta] No DAY/Chapter header before first "Question N:" — creating implicit Final Exam day');
+    }
+
     if (!currentDay) continue;
+
+    // Skip "Total Questions:" and similar end-of-section summary lines (Final Exam format)
+    // NOTE: Keep in sync with netlify/functions/teacher-issue-draft.js
+    if (/^Total\s+(?:Questions?|Score|Points?)(?::|\s)/i.test(trimmed)) {
+      continue;
+    }
 
     // Skip DESE Standard(s) lines
     if (/^DESE\s+Standard/i.test(trimmed)) {
@@ -2372,4 +2403,200 @@ Hints for your response:
   assert(day.prompt && day.prompt.includes('challenges'), 'prompt should be populated from Writing Prompt: line');
   assert(day.structure.length >= 2, 'structure should have at least 2 entries from - bullets');
   assert(day.hints.length >= 1, 'hints should have at least 1 entry from - bullets');
+});
+
+// ── Final Exam / per-student "Question N:" format tests ───────────────────────
+// These tests cover the new Final Exam format where each student's section is
+// delimited by === lines and the content has Question N: items with no DAY/Chapter
+// headers.  This is the format used by final_exam_seniors_05-05-2026.txt etc.
+
+test('Final Exam: implicit day created when Question N: appears before any DAY/Chapter header', () => {
+  // Single-student final exam excerpt with no DAY/Chapter headers
+  const txtContent = `================================================================================
+FINAL EXAM — Language Arts (Year-End ELA Skills Review)
+Student: S022 | Class: Language Arts 4 SC
+IEP Goal Codes: S022.12.1, S022.12.2
+Format: 25 questions (24 MC/TF + 1 Written Response)
+================================================================================
+
+─── Verb Tenses ───
+
+Question 1: [MLS.L.1.A.9-12] [IG: S022.12.1]
+   Which sentence uses the PAST PERFECT tense correctly?
+   A) She has finished the exam before lunch.
+   B) She had finished the exam before lunch.
+   C) She finished the exam before lunch.
+   Correct: B
+   Hint: Past perfect uses "had + past participle".
+
+Question 2: [MLS.L.1.A.9-12] [IG: S022.12.2] [T/F]
+   True or False: "She will have finished" is future perfect tense.
+   Correct: TRUE
+   Hint: Future perfect = "will have + past participle".
+
+Total Questions: 25`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'final_exam_seniors_05-05-2026.txt', 'S022');
+
+  assert(result !== null, 'Should parse Final Exam per-student format (not return null)');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 implicit day');
+  const day = result.days[0];
+  assert.strictEqual(day.label, 'Final Exam', 'Implicit day label should be "Final Exam"');
+  assert.strictEqual(day.day_number, 1, 'Implicit day number should be 1');
+  assert.strictEqual(day.type, 'questions', 'Day type should be questions');
+  assert.strictEqual(day.questions.length, 2, 'Should have 2 questions');
+
+  const q1 = day.questions[0];
+  assert.strictEqual(q1.number, 1, 'Q1 number should be 1');
+  assert.strictEqual(q1.type, 'mcq', 'Q1 should be MCQ');
+  assert.strictEqual(q1.correct, 'B', 'Q1 correct answer should be B');
+  assert.strictEqual(q1.choices.length, 3, 'Q1 should have 3 choices');
+  assert.deepStrictEqual(q1.goal_codes, ['S022.12.1'], 'Q1 should have goal code S022.12.1');
+  assert.deepStrictEqual(q1.dese_codes, ['MLS.L.1.A.9-12'], 'Q1 should have DESE code');
+
+  const q2 = day.questions[1];
+  assert.strictEqual(q2.number, 2, 'Q2 number should be 2');
+  assert.strictEqual(q2.type, 'boolean', 'Q2 should be boolean ([T/F])');
+  assert.strictEqual(q2.correct, 'A', 'Q2 correct: TRUE → A');
+  assert.deepStrictEqual(q2.goal_codes, ['S022.12.2'], 'Q2 should have goal code S022.12.2');
+});
+
+test('Final Exam: Total Questions: summary line is skipped (does not pollute question text)', () => {
+  // Verify that the "Total Questions: N" footer line is silently discarded
+  const txtContent = `================================================================================
+FINAL EXAM
+Student: S011 | Class: Language Arts 4 SC
+================================================================================
+
+Question 1: [IG: S011.12.1]
+   What is the theme of the novel?
+   A) Courage
+   B) Greed
+   Correct: A
+   Hint: Think about the main character's journey.
+
+Total Questions: 1`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'test.txt', 'S011');
+
+  assert(result !== null, 'Should parse successfully');
+  const q = result.days[0].questions[0];
+  assert(!q.text.includes('Total Questions'), 'question text must NOT contain "Total Questions"');
+  assert.strictEqual(q.correct, 'A', 'Correct answer should be A');
+});
+
+test('Final Exam: multiple students in same class — studentCode routes to correct section', () => {
+  // Multi-student seniors file.  When studentCode='S013', we must get S013's questions,
+  // not S022's.  Both students are in the same class ("Language Arts 4 SC").
+  const txtContent = `================================================================================
+FINAL EXAM — Language Arts (Year-End ELA Skills Review)
+Student: S022 | Class: Language Arts 4 SC
+IEP Goal Codes: S022.12.1
+Format: 3 questions
+================================================================================
+
+Question 1: [IG: S022.12.1]
+   S022's question about verb tenses.
+   A) Option A for S022
+   B) Option B for S022
+   Correct: A
+   Hint: S022 hint.
+
+Question 2: [IG: S022.12.1]
+   S022's second question.
+   A) Yes
+   B) No
+   Correct: B
+
+Question 3: [IG: S022.12.1] [T/F]
+   S022 true/false.
+   Correct: TRUE
+
+================================================================================
+FINAL EXAM — Language Arts (Year-End ELA Skills Review)
+Student: S013 | Class: Language Arts 4 SC
+IEP Goal Codes: S013.12.1
+Format: 2 questions
+================================================================================
+
+Question 1: [IG: S013.12.1]
+   S013's question about grammar.
+   A) Option A for S013
+   B) Option B for S013
+   Correct: B
+   Hint: S013 hint.
+
+Question 2: [IG: S013.12.1] [T/F]
+   S013 true/false.
+   Correct: FALSE
+
+Total Questions: 2`;
+
+  // Issue for S022 — should get S022's 3 questions
+  const resultS022 = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'final_exam_seniors.txt', 'S022');
+  assert(resultS022 !== null, 'S022 parse should not return null');
+  assert.strictEqual(resultS022.days[0].questions.length, 3, 'S022 should have 3 questions');
+  assert(resultS022.days[0].questions[0].text.includes('S022'), 'S022 Q1 should be S022 question');
+  assert.deepStrictEqual(resultS022.days[0].questions[0].goal_codes, ['S022.12.1'], 'S022 Q1 goal code');
+
+  // Issue for S013 — should get S013's 2 questions
+  const resultS013 = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'final_exam_seniors.txt', 'S013');
+  assert(resultS013 !== null, 'S013 parse should not return null');
+  assert.strictEqual(resultS013.days[0].questions.length, 2, 'S013 should have 2 questions');
+  assert(resultS013.days[0].questions[0].text.includes('S013'), 'S013 Q1 should be S013 question');
+  assert.deepStrictEqual(resultS013.days[0].questions[0].goal_codes, ['S013.12.1'], 'S013 Q1 goal code');
+  assert.strictEqual(resultS013.days[0].questions[1].type, 'boolean', 'S013 Q2 should be boolean');
+  assert.strictEqual(resultS013.days[0].questions[1].correct, 'B', 'S013 Q2 correct: FALSE → B');
+});
+
+test('Final Exam: no studentCode provided — first matching class section is used (backward compat)', () => {
+  // When no studentCode is passed, Strategy 0 picks the first block whose header has a
+  // matching "Class:" field (same as the old behavior before studentCode filtering).
+  const txtContent = `================================================================================
+FINAL EXAM
+Student: S001 | Class: Language Arts 4 SC
+================================================================================
+
+Question 1: [IG: S001.12.1]
+   First student question.
+   A) Choice A
+   B) Choice B
+   Correct: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'test.txt');
+  assert(result !== null, 'Should parse without studentCode');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+  assert(result.days[0].questions[0].text.includes('First student question'), 'Should get first student content');
+});
+
+test('Final Exam: section decorative headers (─── Topic ───) are silently skipped', () => {
+  // Verify that topic-section headers between === delimiters and Question N: lines are
+  // harmlessly skipped (they appear before currentDay is set or before any question).
+  const txtContent = `================================================================================
+FINAL EXAM
+Student: S014 | Class: Language Arts 4 SC
+================================================================================
+
+─── Vocabulary ───
+
+Question 1: [IG: S014.12.1]
+   What does "verbose" mean?
+   A) Talkative
+   B) Silent
+   Correct: A
+
+─── Grammar ───
+
+Question 2: [IG: S014.12.1]
+   Which is correct?
+   A) He don't know.
+   B) He doesn't know.
+   Correct: B`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'final_exam_seniors.txt', 'S014');
+
+  assert(result !== null, 'Should parse with decorative section headers');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions despite decorative headers');
+  assert.strictEqual(result.days[0].questions[0].correct, 'A', 'Q1 correct answer');
+  assert.strictEqual(result.days[0].questions[1].correct, 'B', 'Q2 correct answer');
 });

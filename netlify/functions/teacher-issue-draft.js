@@ -74,7 +74,7 @@ function getCurrentSchoolYear() {
  * @param {string} sourceFileName - Original filename for reference
  * @returns {object|null} Parsed meta object or null if no content found
  */
-function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
+function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCode) {
   if (!txtContent || typeof txtContent !== 'string') {
     return null;
   }
@@ -101,6 +101,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   // In this format, a multi-line header block appears between two === separators.
   // One line in the block contains "Class: <className>" (e.g. "Student: S002 | Class: Language Arts 3 SC").
   // The actual assignment content starts AFTER the closing === of that header block.
+  // When studentCode is provided (e.g. "S022"), only the block whose header also contains
+  // "Student: S022" is used — allowing multiple students in the same file and class to be
+  // correctly routed to their own section.
   const separatorIndices = [];
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].trim().match(/^={3,}$/)) {
@@ -117,9 +120,17 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       return upper.includes(resolvedClassName.toUpperCase()) ||
              (shortAlias && upper.includes(shortAlias.toUpperCase()));
     });
-    if (hasClassField) {
+    // When a studentCode is specified, require the block to also contain
+    // "Student: <code>" so that files with multiple students in the same class
+    // are routed to the correct per-student section (Final Exam format).
+    const hasStudentField = !studentCode || blockLines.some(l => {
+      const upper = l.trim().toUpperCase();
+      return upper.includes('STUDENT:') && upper.includes(studentCode.toUpperCase());
+    });
+    if (hasClassField && hasStudentField) {
       classStartIndex = separatorIndices[si + 1] + 1;
-      console.log('[parseTxtToMeta] Per-student format detected, content starts at line', classStartIndex, 'for class', resolvedClassName);
+      console.log('[parseTxtToMeta] Per-student format detected, content starts at line', classStartIndex,
+        'for class', resolvedClassName, studentCode ? `student ${studentCode}` : '(any student)');
       break;
     }
   }
@@ -311,7 +322,25 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       continue;
     }
 
+    // Final Exam / per-student format: if the first "Question N:" item is encountered
+    // before any DAY or Chapter header (currentDay is still null), synthesize an implicit
+    // "Final Exam" day so that the questions can be collected normally below.
+    if (!currentDay && strippedLine.match(/^(?:Question\s+|Q)(\d+):/i)) {
+      currentDay = {
+        label: 'Final Exam',
+        day_number: 1,
+        type: 'questions',
+        questions: []
+      };
+      console.log('[parseTxtToMeta] No DAY/Chapter header before first "Question N:" — creating implicit Final Exam day');
+    }
+
     if (!currentDay) continue;
+
+    // Skip "Total Questions:" and similar end-of-section summary lines (Final Exam format)
+    if (/^Total\s+(?:Questions?|Score|Points?)(?::|\s)/i.test(trimmed)) {
+      continue;
+    }
 
     // Skip DESE Standard(s) lines
     if (/^DESE\s+Standard/i.test(trimmed)) {
@@ -1049,21 +1078,22 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
       parsedMeta = parseTxtToMeta(
         draft.assignment.text,
         resolvedClassName,
-        fileName
+        fileName,
+        draft.studentCode || null
       );
 
       if (parsedMeta) {
         console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
       } else {
         // Fail loudly: never silently insert an assignment with meta = {}.
-        // The parser returned null which means no DAY/Chapter section headers were
+        // The parser returned null which means no recognized section headers were
         // found.  Returning a 422 here prevents orphaned assignment_instance rows
         // whose associated assignment has empty meta (the root cause of the Week 13
         // "No Content Available" bug).
         const parseErrorMsg =
           `Cannot issue: no structured content was found in "${fileName}". ` +
-          `The file must contain "DAY N" or "Chapter N:" section headers ` +
-          `(e.g. "DAY 1 QUESTIONS", "Chapter 38: Title"). ` +
+          `The file must contain "DAY N", "Chapter N:", or per-student ("Student: SXXX") section headers ` +
+          `(e.g. "DAY 1 QUESTIONS", "Chapter 38: Title", or a student header block delimited by === lines). ` +
           `Check that the file is correctly formatted for class "${resolvedClassName}".`;
         console.error(`[teacher-issue-draft] [${requestId}] ${parseErrorMsg}`);
         return { ok: false, error: parseErrorMsg, statusCode: 422 };
@@ -1104,7 +1134,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
         const reissueErrMsg =
           `Cannot re-issue: the existing assignment (ID ${assignmentId}) has empty meta ` +
           `and no new assignment file was provided. ` +
-          `Re-upload the assignment TXT file with "DAY N" or "Chapter N:" section headers ` +
+          `Re-upload the assignment TXT file with "DAY N", "Chapter N:", or per-student ("Student: SXXX") section headers ` +
           `so that meta.days can be populated.`;
         console.error(`[teacher-issue-draft] [${requestId}] ${reissueErrMsg}`);
         return { ok: false, error: reissueErrMsg, statusCode: 422 };
