@@ -42,6 +42,7 @@ function buildItemsFromMeta(assignmentId, meta) {
         for (const q of day.questions) {
           const { goalCodes, deseCodes } = extractCodesFromHint(q.hint);
           const isFillInBlank = q.type === 'fill_in_blank';
+          const isWrittenResponse = q.type === 'written_response';
           // For fill_in_blank: prefer 'accepted' (Week 13 pipe-separated alternatives)
           // over 'keywords' (older semicolon-separated format). When 'accepted' is present,
           // treat each alternative as a keyword with min_keywords=1 (any match is correct).
@@ -67,7 +68,7 @@ function buildItemsFromMeta(assignmentId, meta) {
               question_number: q.number,
               text: q.text,
               choices: q.choices,
-              correct: isFillInBlank ? null : q.correct,
+              correct: (isFillInBlank || isWrittenResponse) ? null : q.correct,
               hint: q.hint,
               ...(isFillInBlank ? {
                 scoring: {

@@ -619,7 +619,7 @@
     if (item.answer_type === 'mcq' || item.answer_type === 'boolean' || item.answer_type === 'multi') {
       return true;
     }
-    if (item.answer_type === 'constructed') {
+    if (item.answer_type === 'constructed' || item.answer_type === 'written_response') {
       const answer = answers.find(a => a.item_id === item.id);
       return answer != null && answer.earned_points != null;
     }
@@ -638,6 +638,15 @@
     if (Array.isArray(c)) return false; // keyword list = writing-prompt-with-keywords
     // strings/numbers/booleans = fill-in-blank
     return typeof c === 'string' || typeof c === 'number' || typeof c === 'boolean';
+  }
+
+  /**
+   * True if this item requires manual (teacher) grading.
+   * Matches constructed items that are NOT fill-in-blank, AND explicit written_response items.
+   */
+  function isManualGradeItem(item) {
+    if (item.answer_type === 'written_response') return true;
+    return item.answer_type === 'constructed' && !isFillInBlankConstructed(item);
   }
 
   /**
@@ -672,8 +681,8 @@
         continue;
       }
 
-      // Handle constructed (writing) items — pull response from instance settings
-      if (item.answer_type === 'constructed') {
+      // Handle constructed / written_response (writing) items — pull response from instance settings
+      if (item.answer_type === 'constructed' || item.answer_type === 'written_response') {
         const writingResponse = submission.instance?.settings?.writing_response;
         if (writingResponse) {
           virtualAnswers.push({
@@ -752,7 +761,7 @@
       const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
+      const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length === 0) continue; // MCQ-only or fill-in-blank-only handled by autoFinalize
       const answers = submissionAnswersCache[submission.id] || [];
       // A constructed item counts as scored if it is auto-scored (earned_points != null),
@@ -767,7 +776,7 @@
       const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
+      const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
       const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
@@ -972,7 +981,7 @@
     } else if (items.length > 0) {
       const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
       if (totalMax > 0) {
-        const constructedItems = items.filter(i => i.answer_type === 'constructed' && !isFillInBlankConstructed(i));
+        const constructedItems = items.filter(i => isManualGradeItem(i));
         const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
         if (hasUnscored) {
           scorePreview = `<span class="rv-score-preview" style="font-size:13px;font-family:monospace;opacity:0.75;">___/${totalMax} — ___%</span>`;
@@ -1103,9 +1112,8 @@
       isAutoScoredItem(item, displayAnswers) || isFillInBlankConstructed(item)
     );
     const constructedItems = items.filter(item =>
-      item.answer_type === 'constructed'
+      isManualGradeItem(item)
       && !isAutoScoredItem(item, displayAnswers)
-      && !isFillInBlankConstructed(item)
     );
     
     // Calculate stats
@@ -1697,7 +1705,7 @@
       // would cause a bigint error when writing submission_answers rows.
       if (syntheticAssignmentIds.has(assignmentId)) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
+      const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || [];
       // A constructed item counts as scored if keyword-auto-scored or teacher-scored
@@ -1725,7 +1733,7 @@
                 }, 0)
             : (Number(submission.score_auto) || 0);
           let scoreManual = 0;
-          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers) && !isFillInBlankConstructed(item))
+          items.filter(item => isManualGradeItem(item) && !isAutoScoredItem(item, answers))
             .forEach(item => {
               const answer = answers.find(a => a.item_id === item.id);
               if (answer) scoreManual += Number(answer.earned_points) || 0;
@@ -1785,7 +1793,7 @@
     for (const submission of unreviewed) {
       const assignmentId = resolveAssignmentId(submission);
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed' && !isFillInBlankConstructed(item));
+      const constructedItems = items.filter(item => isManualGradeItem(item));
       if (constructedItems.length > 0) {
         const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
         // Only skip if there are truly unscored constructed items (not keyword-auto-scored)
@@ -1824,12 +1832,12 @@
                 }, 0)
             : (Number(submission.score_auto) || 0);
           let scoreManual = 0;
-          const manualConstructed = items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers) && !isFillInBlankConstructed(item));
+          const manualConstructed = items.filter(item => isManualGradeItem(item) && !isAutoScoredItem(item, answers));
           manualConstructed.forEach(item => {
             const answer = answers.find(a => a.item_id === item.id);
             if (answer) scoreManual += Number(answer.earned_points) || 0;
           });
-          if (items.filter(i => i.answer_type === 'constructed' && !isFillInBlankConstructed(i)).length === 0) scoreManual = Number(submission.score_manual) || 0;
+          if (items.filter(i => isManualGradeItem(i)).length === 0) scoreManual = Number(submission.score_manual) || 0;
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
@@ -1879,7 +1887,7 @@
                 }, 0)
             : (Number(submission.score_auto) || 0);
           let scoreManual = 0;
-          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers))
+          items.filter(item => (item.answer_type === 'constructed' || item.answer_type === 'written_response') && !isAutoScoredItem(item, answers))
             .forEach(item => {
               const answer = answers.find(a => a.item_id === item.id);
               if (answer) scoreManual += Number(answer.earned_points) || 0;
@@ -1997,7 +2005,7 @@
       const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId || syntheticAssignmentIds.has(assignmentId)) continue;
       const items = assignmentItemsCache[assignmentId] || [];
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
       if (constructedItems.length === 0) continue;
       const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
       const hasUnscored = constructedItems.some(item => !isAutoScoredItem(item, answers));
@@ -2031,9 +2039,8 @@
           const assignmentId = resolveAssignmentId(submission);
           const items = assignmentItemsCache[assignmentId] || [];
           const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
-          const constructedItems = items.filter(item => item.answer_type === 'constructed');
+          const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
           const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
-          const assignmentTitle = instance?.settings?.title || '';
 
           // Step 1: AI-suggest score for each unscored constructed item
           for (const item of constructedItems) {
@@ -2179,7 +2186,7 @@
                 }, 0)
             : (Number(submission.score_auto) || 0);
           let scoreManual = 0;
-          items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, latestAnswers))
+          items.filter(item => (item.answer_type === 'constructed' || item.answer_type === 'written_response') && !isAutoScoredItem(item, latestAnswers))
             .forEach(item => {
               const answer = latestAnswers.find(a => a.item_id === item.id);
               if (answer) scoreManual += Number(answer.earned_points) || 0;
@@ -2517,7 +2524,7 @@
 
           // Check whether all constructed items on this submission are now scored
           const latestAnswers = submissionAnswersCache[submissionId] || [];
-          const constructedItems = items.filter(it => it.answer_type === 'constructed');
+          const constructedItems = items.filter(it => it.answer_type === 'constructed' || it.answer_type === 'written_response');
           const allScored = constructedItems.length > 0 &&
             constructedItems.every(it => isAutoScoredItem(it, latestAnswers));
 
@@ -2534,7 +2541,7 @@
                   max: it.points || 0,
                   teacher_note: ans?.teacher_note || '',
                 };
-              }).filter(s => s.earned != null || s.type === 'constructed');
+              }).filter(s => s.earned != null || s.type === 'constructed' || s.type === 'written_response');
 
               const totalEarned = itemSummaries.reduce((sum, s) => sum + (s.earned || 0), 0);
               const totalPossible = items.reduce((sum, it) => sum + (it.points || 0), 0);
@@ -2573,7 +2580,7 @@
                     }, 0)
                 : (Number(submission.score_auto) || 0);
               let scoreManual = 0;
-              items.filter(it => it.answer_type === 'constructed' && !isAutoScoredItem(it, latestAnswers))
+              items.filter(it => (it.answer_type === 'constructed' || it.answer_type === 'written_response') && !isAutoScoredItem(it, latestAnswers))
                 .forEach(it => {
                   const ans = latestAnswers.find(a => a.item_id === it.id);
                   if (ans) scoreManual += Number(ans.earned_points) || 0;
@@ -2816,7 +2823,7 @@
       
       // Calculate manual score — only true writing-prompt items (not keyword-auto-scored fill-in-blank)
       let scoreManual = 0;
-      items.filter(item => item.answer_type === 'constructed' && !isAutoScoredItem(item, answers))
+      items.filter(item => (item.answer_type === 'constructed' || item.answer_type === 'written_response') && !isAutoScoredItem(item, answers))
         .forEach(item => {
           const answer = answers.find(a => a.item_id === item.id);
           if (answer) {
@@ -3053,7 +3060,7 @@
       submission.assignment_id = assignmentId;
 
       const items = await getAssignmentItemsForAssignment(assignmentId);
-      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
 
       if (items.length === 0) continue;
 
@@ -3214,7 +3221,7 @@
     if (!submission) return;
     const items = assignmentItemsCache[resolveAssignmentId(submission)] || [];
     const answers = submissionAnswersCache[submissionId] || [];
-    const constructedItems = items.filter(item => item.answer_type === 'constructed');
+    const constructedItems = items.filter(item => item.answer_type === 'constructed' || item.answer_type === 'written_response');
     let scoreManual = 0;
     constructedItems.forEach(item => {
       if (isAutoScoredItem(item, answers)) return; // keyword-auto-scored — goes to scoreAuto
