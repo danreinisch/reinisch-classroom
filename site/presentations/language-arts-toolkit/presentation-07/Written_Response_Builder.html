@@ -45,7 +45,6 @@
         }
 
         .header h1 {
-            font-family: 'Outfit', sans-serif;
             font-size: 2.2em;
             font-weight: 700;
             color: #ffffff;
@@ -57,6 +56,61 @@
             font-size: 1.05em;
             color: #8b949e;
             font-weight: 400;
+        }
+
+        /* ── Progress Bar ── */
+        .progress-container {
+            margin: 0 0 24px;
+            padding: 16px 20px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .progress-stats {
+            display: flex;
+            gap: 16px;
+        }
+
+        .progress-stat {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8em;
+            color: #14b8a6;
+            background: rgba(20, 184, 166, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(20, 184, 166, 0.2);
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 8px;
+            background: #0d1117;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #14b8a6, #2dd4bf);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         /* ── Breadcrumb ── */
@@ -106,7 +160,6 @@
         }
 
         .prompt-section h2 {
-            font-family: 'Outfit', sans-serif;
             font-size: 1.15em;
             font-weight: 600;
             color: #14b8a6;
@@ -162,6 +215,7 @@
             align-items: center;
             margin-bottom: 16px;
             gap: 12px;
+            flex-wrap: wrap;
         }
 
         .section-tag {
@@ -173,6 +227,25 @@
             border-radius: 6px;
             text-transform: uppercase;
             white-space: nowrap;
+        }
+
+        .section-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #30363d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65em;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .section-status.complete {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: #fff;
         }
 
         .topic-sentence .section-tag {
@@ -251,8 +324,72 @@
             box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
         }
 
+        /* ChromeOS select option dark background fix */
+        select option {
+            background: #0f172a;
+            color: #e8f1ec;
+        }
+
+        .transition-selected {
+            margin-top: 6px;
+            font-size: 0.8em;
+            color: #14b8a6;
+            font-style: italic;
+            min-height: 1.2em;
+        }
+
         .content-input {
             flex: 1;
+        }
+
+        /* ── Feedback ── */
+        .feedback {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-height: 0;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.82em;
+            line-height: 1.4;
+            animation: fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-item.success {
+            background: rgba(34, 197, 94, 0.08);
+            border-left: 3px solid #22c55e;
+            color: #4ade80;
+        }
+
+        .feedback-item.warn {
+            background: rgba(250, 204, 21, 0.08);
+            border-left: 3px solid #facc15;
+            color: #fde047;
+        }
+
+        .feedback-item.error {
+            background: rgba(239, 68, 68, 0.08);
+            border-left: 3px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        .feedback-icon {
+            flex-shrink: 0;
+            font-size: 1em;
+            line-height: 1.4;
         }
 
         /* ── Tips ── */
@@ -282,6 +419,15 @@
             background: #161b22;
             border: 1px solid #30363d;
             border-radius: 12px;
+            flex-wrap: wrap;
+        }
+
+        .actions .shortcut-hint {
+            width: 100%;
+            text-align: center;
+            font-size: 0.78em;
+            color: #484f58;
+            margin-top: 4px;
         }
 
         .btn {
@@ -300,6 +446,10 @@
 
         .btn:hover {
             transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-clear {
@@ -364,7 +514,6 @@
         }
 
         .preview-content h2 {
-            font-family: 'Outfit', sans-serif;
             color: #14b8a6;
             font-size: 1.3em;
             margin-bottom: 20px;
@@ -377,11 +526,29 @@
             line-height: 1.9;
             font-size: 1.05em;
             color: #e6edf3;
-            font-family: 'Outfit', sans-serif;
         }
 
         .preview-text p {
             margin-bottom: 12px;
+        }
+
+        .preview-meta {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #30363d;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .preview-meta-item {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78em;
+            color: #8b949e;
+            background: rgba(139, 148, 158, 0.08);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
         }
 
         /* ── Toast Notification ── */
@@ -409,6 +576,32 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.35);
+        }
+
+        /* ── Saved indicator ── */
+        .save-indicator {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            font-size: 0.78em;
+            color: #484f58;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 6px 12px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+        }
+
+        .save-indicator.visible {
+            opacity: 1;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 700px) {
             .writing-content {
@@ -431,25 +624,57 @@
             .header h1 {
                 font-size: 1.6em;
             }
+
+            .progress-stats {
+                gap: 8px;
+            }
+
+            .progress-stat {
+                font-size: 0.7em;
+                padding: 3px 8px;
+            }
         }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
     </style>
 </head>
 <body>
+    <div class="save-indicator" id="saveIndicator">💾 Saved</div>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
             <div class="header-icon">✏️</div>
             <h1>Written Response Builder</h1>
-            <p>Structure your essay with clear organization and smooth transitions</p>
+            <p>Structure your response with clear organization and smooth transitions</p>
         </div>
 
         <!-- Breadcrumb -->
         <div class="breadcrumb">
             <a href="https://reinischclassroom.com">Home</a>
             <span>›</span>
-            <a href="#">Language Arts Toolkit</a>
+            <a href="https://reinischclassroom.com">Language Arts Toolkit</a>
             <span>›</span>
             Written Response Builder
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-label">Progress</span>
+                <div class="progress-stats">
+                    <span class="progress-stat" id="totalWords">0 words</span>
+                    <span class="progress-stat" id="totalSentences">0 sentences</span>
+                    <span class="progress-stat" id="sectionsDone">0 / 5 sections</span>
+                </div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
         </div>
 
         <!-- Prompt Section -->
@@ -467,6 +692,7 @@
         <!-- Topic Sentence -->
         <div class="card topic-sentence">
             <div class="section-header">
+                <div class="section-status" id="statusTopic"></div>
                 <div class="section-tag">Topic Sentence</div>
                 <div class="word-count" id="topicWordCount">0 words</div>
             </div>
@@ -477,6 +703,7 @@
                         id="topicSentence"
                         placeholder="Write your main thesis or topic sentence here. This should clearly state your position or main argument..."
                     ></textarea>
+                    <div class="feedback" id="topicFeedback"></div>
                     <div class="tips">
                         💡 <strong>Tip:</strong> Your topic sentence should clearly state your main argument and preview what you'll discuss in your supporting details.
                     </div>
@@ -487,6 +714,7 @@
         <!-- Supporting Detail 1 -->
         <div class="card supporting-detail-1">
             <div class="section-header">
+                <div class="section-status" id="statusDetail1"></div>
                 <div class="section-tag">Supporting Detail 1</div>
                 <div class="word-count" id="detail1WordCount">0 words</div>
             </div>
@@ -494,14 +722,15 @@
                 <div class="transition-dropdown">
                     <select id="transition1">
                         <option value="">Choose transition...</option>
-                        <option value="First,">First,</option>
-                        <option value="To begin with,">To begin with,</option>
-                        <option value="Initially,">Initially,</option>
-                        <option value="One reason is that">One reason is that</option>
-                        <option value="The first point is">The first point is</option>
-                        <option value="For instance,">For instance,</option>
-                        <option value="For example,">For example,</option>
+                        <option value="First, ">First,</option>
+                        <option value="To begin with, ">To begin with,</option>
+                        <option value="Initially, ">Initially,</option>
+                        <option value="One reason is that ">One reason is that</option>
+                        <option value="The first point is ">The first point is</option>
+                        <option value="For instance, ">For instance,</option>
+                        <option value="For example, ">For example,</option>
                     </select>
+                    <div class="transition-selected" id="transition1Label"></div>
                 </div>
                 <div class="content-input">
                     <textarea 
@@ -509,6 +738,7 @@
                         id="supportingDetail1"
                         placeholder="Provide your first supporting point with evidence and explanation..."
                     ></textarea>
+                    <div class="feedback" id="detail1Feedback"></div>
                     <div class="tips">
                         💡 <strong>Tip:</strong> Include specific evidence, examples, or reasoning to support your main argument.
                     </div>
@@ -519,6 +749,7 @@
         <!-- Supporting Detail 2 -->
         <div class="card supporting-detail-2">
             <div class="section-header">
+                <div class="section-status" id="statusDetail2"></div>
                 <div class="section-tag">Supporting Detail 2</div>
                 <div class="word-count" id="detail2WordCount">0 words</div>
             </div>
@@ -526,14 +757,15 @@
                 <div class="transition-dropdown">
                     <select id="transition2">
                         <option value="">Choose transition...</option>
-                        <option value="Second,">Second,</option>
-                        <option value="Additionally,">Additionally,</option>
-                        <option value="Furthermore,">Furthermore,</option>
-                        <option value="Another reason is">Another reason is</option>
-                        <option value="In addition,">In addition,</option>
-                        <option value="Moreover,">Moreover,</option>
-                        <option value="Also,">Also,</option>
+                        <option value="Second, ">Second,</option>
+                        <option value="Additionally, ">Additionally,</option>
+                        <option value="Furthermore, ">Furthermore,</option>
+                        <option value="Another reason is ">Another reason is</option>
+                        <option value="In addition, ">In addition,</option>
+                        <option value="Moreover, ">Moreover,</option>
+                        <option value="Also, ">Also,</option>
                     </select>
+                    <div class="transition-selected" id="transition2Label"></div>
                 </div>
                 <div class="content-input">
                     <textarea 
@@ -541,6 +773,7 @@
                         id="supportingDetail2"
                         placeholder="Provide your second supporting point with evidence and explanation..."
                     ></textarea>
+                    <div class="feedback" id="detail2Feedback"></div>
                     <div class="tips">
                         💡 <strong>Tip:</strong> Make sure this point is different from your first detail but still supports your main argument.
                     </div>
@@ -551,6 +784,7 @@
         <!-- Supporting Detail 3 -->
         <div class="card supporting-detail-3">
             <div class="section-header">
+                <div class="section-status" id="statusDetail3"></div>
                 <div class="section-tag">Supporting Detail 3</div>
                 <div class="word-count" id="detail3WordCount">0 words</div>
             </div>
@@ -558,14 +792,14 @@
                 <div class="transition-dropdown">
                     <select id="transition3">
                         <option value="">Choose transition...</option>
-                        <option value="Third,">Third,</option>
-                        <option value="Finally,">Finally,</option>
-                        <option value="Lastly,">Lastly,</option>
-                        <option value="Most importantly,">Most importantly,</option>
-                        <option value="The final reason is">The final reason is</option>
-                        <option value="In conclusion,">In conclusion,</option>
-                        <option value="Above all,">Above all,</option>
+                        <option value="Third, ">Third,</option>
+                        <option value="Finally, ">Finally,</option>
+                        <option value="Lastly, ">Lastly,</option>
+                        <option value="Most importantly, ">Most importantly,</option>
+                        <option value="The final reason is ">The final reason is</option>
+                        <option value="Above all, ">Above all,</option>
                     </select>
+                    <div class="transition-selected" id="transition3Label"></div>
                 </div>
                 <div class="content-input">
                     <textarea 
@@ -573,6 +807,7 @@
                         id="supportingDetail3"
                         placeholder="Provide your third supporting point with evidence and explanation..."
                     ></textarea>
+                    <div class="feedback" id="detail3Feedback"></div>
                     <div class="tips">
                         💡 <strong>Tip:</strong> Consider making this your strongest point to leave a lasting impression.
                     </div>
@@ -583,6 +818,7 @@
         <!-- Conclusion -->
         <div class="card conclusion">
             <div class="section-header">
+                <div class="section-status" id="statusConclusion"></div>
                 <div class="section-tag">Conclusion</div>
                 <div class="word-count" id="conclusionWordCount">0 words</div>
             </div>
@@ -590,14 +826,15 @@
                 <div class="transition-dropdown">
                     <select id="transitionConclusion">
                         <option value="">Choose transition...</option>
-                        <option value="In conclusion,">In conclusion,</option>
-                        <option value="To summarize,">To summarize,</option>
-                        <option value="In summary,">In summary,</option>
-                        <option value="Therefore,">Therefore,</option>
-                        <option value="As a result,">As a result,</option>
-                        <option value="That is why,">That is why,</option>
-                        <option value="Ultimately,">Ultimately,</option>
+                        <option value="In conclusion, ">In conclusion,</option>
+                        <option value="To summarize, ">To summarize,</option>
+                        <option value="In summary, ">In summary,</option>
+                        <option value="Therefore, ">Therefore,</option>
+                        <option value="As a result, ">As a result,</option>
+                        <option value="That is why ">That is why</option>
+                        <option value="Ultimately, ">Ultimately,</option>
                     </select>
+                    <div class="transition-selected" id="transitionConclusionLabel"></div>
                 </div>
                 <div class="content-input">
                     <textarea 
@@ -605,6 +842,7 @@
                         id="conclusion"
                         placeholder="Restate your main argument and summarize your key points. End with a strong closing thought..."
                     ></textarea>
+                    <div class="feedback" id="conclusionFeedback"></div>
                     <div class="tips">
                         💡 <strong>Tip:</strong> Restate your thesis in different words and leave the reader with something to think about.
                     </div>
@@ -617,6 +855,7 @@
             <button class="btn btn-clear" onclick="clearAll()">🗑️ Clear All</button>
             <button class="btn btn-preview" onclick="previewResponse()">👁️ Preview</button>
             <button class="btn btn-copy" onclick="copyResponse()">📋 Copy to Clipboard</button>
+            <div class="shortcut-hint">Keyboard shortcuts: <kbd>Ctrl+P</kbd> Preview &nbsp;·&nbsp; <kbd>Ctrl+Shift+C</kbd> Copy</div>
         </div>
     </div>
 
@@ -625,6 +864,7 @@
         <div class="preview-content">
             <h2>📄 Your Written Response</h2>
             <div class="preview-text" id="previewText"></div>
+            <div class="preview-meta" id="previewMeta"></div>
             <div style="text-align: center; margin-top: 24px;">
                 <button class="btn btn-preview" onclick="closePreview()">Close Preview</button>
             </div>
@@ -635,105 +875,335 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ── Toast notification ──
-        function showToast(message) {
+        // ── Utilities ──
+        function countWords(text) {
+            const t = text.trim();
+            return t === '' ? 0 : t.split(/\s+/).length;
+        }
+
+        function countSentences(text) {
+            const t = text.trim();
+            if (!t) return 0;
+            const matches = t.match(/[.!?]+/g);
+            return matches ? matches.length : 0;
+        }
+
+        // ── Toast ──
+        function showToast(message, isError) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2400);
+            toast.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => toast.className = 'toast', 2800);
         }
 
-        // ── Word count ──
-        function updateWordCount(textareaId, countId) {
-            const textarea = document.getElementById(textareaId);
-            const countElement = document.getElementById(countId);
-            const text = textarea.value.trim();
-            const wordCount = text === '' ? 0 : text.split(/\s+/).length;
-            countElement.textContent = `${wordCount} words`;
+        // ── Debounce ──
+        function debounce(fn, delay) {
+            let timer;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
         }
 
-        const textareas = [
-            { id: 'topicSentence', counter: 'topicWordCount' },
-            { id: 'supportingDetail1', counter: 'detail1WordCount' },
-            { id: 'supportingDetail2', counter: 'detail2WordCount' },
-            { id: 'supportingDetail3', counter: 'detail3WordCount' },
-            { id: 'conclusion', counter: 'conclusionWordCount' }
+        // ── Feedback Helpers ──
+        function fb(type, icon, msg) {
+            return `<div class="feedback-item ${type}"><span class="feedback-icon">${icon}</span><span>${msg}</span></div>`;
+        }
+
+        // ── Section Configs ──
+        const sectionConfigs = [
+            { id: 'topicSentence', counter: 'topicWordCount', feedback: 'topicFeedback', status: 'statusTopic', type: 'topic' },
+            { id: 'supportingDetail1', counter: 'detail1WordCount', feedback: 'detail1Feedback', status: 'statusDetail1', type: 'detail' },
+            { id: 'supportingDetail2', counter: 'detail2WordCount', feedback: 'detail2Feedback', status: 'statusDetail2', type: 'detail' },
+            { id: 'supportingDetail3', counter: 'detail3WordCount', feedback: 'detail3Feedback', status: 'statusDetail3', type: 'detail' },
+            { id: 'conclusion', counter: 'conclusionWordCount', feedback: 'conclusionFeedback', status: 'statusConclusion', type: 'conclusion' }
         ];
 
-        textareas.forEach(item => {
-            const textarea = document.getElementById(item.id);
-            textarea.addEventListener('input', () => updateWordCount(item.id, item.counter));
-        });
+        // ── Feedback Engine ──
+        function analyzeSentence(text, type) {
+            const messages = [];
+            if (!text.trim()) return messages;
 
-        // ── Clear All ──
-        function clearAll() {
-            if (confirm('Are you sure you want to clear all content?')) {
-                document.getElementById('promptInput').value = '';
-                document.getElementById('topicSentence').value = '';
-                document.getElementById('supportingDetail1').value = '';
-                document.getElementById('supportingDetail2').value = '';
-                document.getElementById('supportingDetail3').value = '';
-                document.getElementById('conclusion').value = '';
-                
-                document.getElementById('transition1').value = '';
-                document.getElementById('transition2').value = '';
-                document.getElementById('transition3').value = '';
-                document.getElementById('transitionConclusion').value = '';
-                
-                textareas.forEach(item => updateWordCount(item.id, item.counter));
-                showToast('All fields cleared');
+            // Capitalization (skip leading quotes)
+            const firstLetter = text.replace(/^["'"'\s]+/, '')[0];
+            if (firstLetter && /[a-z]/.test(firstLetter)) {
+                messages.push(fb('error', '🔴', 'Start with a capital letter.'));
+            }
+
+            // Ending punctuation
+            if (!/[.!?]["'"]?$/.test(text.trim())) {
+                messages.push(fb('error', '🔴', 'End with proper punctuation (. ! or ?).'));
+            }
+
+            // Length
+            const words = countWords(text);
+            if (words < 5) {
+                messages.push(fb('error', '🔴', 'Too short — add more detail.'));
+            } else if (words >= 8 && words <= 40) {
+                messages.push(fb('success', '✅', 'Good sentence length.'));
+            } else if (words > 40) {
+                messages.push(fb('warn', '⚠️', 'Quite long — consider breaking into two sentences.'));
+            }
+
+            // Contractions
+            if (/\b\w+(n't|'re|'ve|'ll|'d)\b/i.test(text)) {
+                messages.push(fb('warn', '⚠️', 'Avoid contractions in formal writing (e.g., "don\'t" → "do not").'));
+            }
+
+            // Vague words
+            if (/\b(thing|things|stuff|a lot|very|really)\b/i.test(text)) {
+                messages.push(fb('warn', '⚠️', 'Replace vague words ("thing," "stuff," "a lot") with specific language.'));
+            }
+
+            // Type-specific checks
+            if (type === 'topic') {
+                const weak = /^(i think|i believe|i feel|in my opinion)/i;
+                if (weak.test(text.trim())) {
+                    messages.push(fb('error', '🔴', 'State your argument directly — remove "I think" / "I believe."'));
+                }
+                if (/(because|demonstrates|shows|proves|reveals|argues|should|must)/i.test(text)) {
+                    messages.push(fb('success', '✅', 'Strong, clear position statement!'));
+                }
+                if (text.trim().endsWith('?')) {
+                    messages.push(fb('error', '🔴', 'Your topic sentence should be a statement, not a question.'));
+                }
+            }
+
+            if (type === 'detail') {
+                if (/(for example|for instance|according to|such as|specifically|one example|evidence|research)/i.test(text)) {
+                    messages.push(fb('success', '✅', 'Good use of evidence!'));
+                } else if (words >= 8) {
+                    messages.push(fb('warn', '⚠️', 'Strengthen with evidence — try "for example," "according to," or "this shows."'));
+                }
+                if (/(this means|this shows|this demonstrates|this proves|therefore|because of this|as a result)/i.test(text)) {
+                    messages.push(fb('success', '✅', 'Nice explanation connecting evidence to your point.'));
+                }
+            }
+
+            if (type === 'conclusion') {
+                const topicText = document.getElementById('topicSentence').value.trim();
+                if (topicText && text.trim().toLowerCase() === topicText.toLowerCase()) {
+                    messages.push(fb('error', '🔴', "Don't copy your topic sentence exactly — restate it in new words."));
+                } else if (topicText && words >= 6) {
+                    messages.push(fb('success', '✅', 'Good job restating in your own words.'));
+                }
+                if (/(therefore|thus|clearly|in short|overall|ultimately|as shown|significance|important)/i.test(text)) {
+                    messages.push(fb('success', '✅', 'Strong concluding language!'));
+                }
+                if (/^(for example|for instance|according to|one study)/i.test(text.trim())) {
+                    messages.push(fb('error', '🔴', "Don't introduce new evidence in your conclusion."));
+                }
+            }
+
+            return messages;
+        }
+
+        function renderFeedback(section) {
+            const text = document.getElementById(section.id).value;
+            const feedbackEl = document.getElementById(section.feedback);
+            const messages = analyzeSentence(text, section.type);
+            feedbackEl.innerHTML = messages.join('');
+        }
+
+        // ── Word Count & Status ──
+        function updateSectionMeta(section) {
+            const text = document.getElementById(section.id).value.trim();
+            const words = countWords(text);
+            document.getElementById(section.counter).textContent = `${words} words`;
+
+            const statusEl = document.getElementById(section.status);
+            if (words >= 5) {
+                statusEl.classList.add('complete');
+                statusEl.textContent = '✓';
+            } else {
+                statusEl.classList.remove('complete');
+                statusEl.textContent = '';
             }
         }
 
-        // ── Generate Response ──
+        // ── Global Progress ──
+        function updateProgress() {
+            let totalW = 0, totalS = 0, done = 0;
+            sectionConfigs.forEach(s => {
+                const text = document.getElementById(s.id).value.trim();
+                const w = countWords(text);
+                totalW += w;
+                totalS += countSentences(text);
+                if (w >= 5) done++;
+            });
+            document.getElementById('totalWords').textContent = `${totalW} words`;
+            document.getElementById('totalSentences').textContent = `${totalS} sentences`;
+            document.getElementById('sectionsDone').textContent = `${done} / 5 sections`;
+            document.getElementById('progressFill').style.width = `${(done / 5) * 100}%`;
+        }
+
+        // ── Transition Labels ──
+        function setupTransitionLabels() {
+            const pairs = [
+                { select: 'transition1', label: 'transition1Label' },
+                { select: 'transition2', label: 'transition2Label' },
+                { select: 'transition3', label: 'transition3Label' },
+                { select: 'transitionConclusion', label: 'transitionConclusionLabel' }
+            ];
+            pairs.forEach(p => {
+                const sel = document.getElementById(p.select);
+                const lbl = document.getElementById(p.label);
+                sel.addEventListener('change', () => {
+                    lbl.textContent = sel.value ? `✓ Using: "${sel.value.trim()}"` : '';
+                    saveState();
+                });
+            });
+        }
+
+        // ── LocalStorage ──
+        const STORAGE_KEY = 'wrb_state';
+
+        function saveState() {
+            const state = {
+                prompt: document.getElementById('promptInput').value,
+                topic: document.getElementById('topicSentence').value,
+                d1: document.getElementById('supportingDetail1').value,
+                d2: document.getElementById('supportingDetail2').value,
+                d3: document.getElementById('supportingDetail3').value,
+                conc: document.getElementById('conclusion').value,
+                t1: document.getElementById('transition1').value,
+                t2: document.getElementById('transition2').value,
+                t3: document.getElementById('transition3').value,
+                tc: document.getElementById('transitionConclusion').value
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                const ind = document.getElementById('saveIndicator');
+                ind.classList.add('visible');
+                setTimeout(() => ind.classList.remove('visible'), 1500);
+            } catch(e) {}
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const s = JSON.parse(raw);
+                document.getElementById('promptInput').value = s.prompt || '';
+                document.getElementById('topicSentence').value = s.topic || '';
+                document.getElementById('supportingDetail1').value = s.d1 || '';
+                document.getElementById('supportingDetail2').value = s.d2 || '';
+                document.getElementById('supportingDetail3').value = s.d3 || '';
+                document.getElementById('conclusion').value = s.conc || '';
+                document.getElementById('transition1').value = s.t1 || '';
+                document.getElementById('transition2').value = s.t2 || '';
+                document.getElementById('transition3').value = s.t3 || '';
+                document.getElementById('transitionConclusion').value = s.tc || '';
+
+                // Restore transition labels
+                ['transition1','transition2','transition3','transitionConclusion'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    const lbl = document.getElementById(id + 'Label');
+                    if (sel.value && lbl) lbl.textContent = `✓ Using: "${sel.value.trim()}"`;
+                });
+
+                // Trigger updates
+                sectionConfigs.forEach(s => {
+                    updateSectionMeta(s);
+                    renderFeedback(s);
+                });
+                updateProgress();
+            } catch(e) {}
+        }
+
+        const debouncedSave = debounce(saveState, 800);
+
+        // ── Wire up event listeners ──
+        sectionConfigs.forEach(section => {
+            const textarea = document.getElementById(section.id);
+            const debouncedFeedback = debounce(() => renderFeedback(section), 350);
+
+            textarea.addEventListener('input', () => {
+                updateSectionMeta(section);
+                updateProgress();
+                debouncedFeedback();
+                debouncedSave();
+            });
+        });
+
+        document.getElementById('promptInput').addEventListener('input', debouncedSave);
+        setupTransitionLabels();
+
+        // ── Generate plain-text response (no HTML tags) ──
         function generateResponse() {
-            const prompt = document.getElementById('promptInput').value;
-            const topic = document.getElementById('topicSentence').value;
-            const detail1 = document.getElementById('supportingDetail1').value;
-            const detail2 = document.getElementById('supportingDetail2').value;
-            const detail3 = document.getElementById('supportingDetail3').value;
-            const conclusionText = document.getElementById('conclusion').value;
-            
-            const transition1 = document.getElementById('transition1').value;
-            const transition2 = document.getElementById('transition2').value;
-            const transition3 = document.getElementById('transition3').value;
-            const transitionConc = document.getElementById('transitionConclusion').value;
-            
-            let response = '';
-            
-            if (prompt.trim()) {
-                response += `<strong>Prompt:</strong> ${prompt}\n\n`;
-            }
-            if (topic.trim()) {
-                response += `${topic}\n\n`;
-            }
-            if (detail1.trim()) {
-                response += `${transition1 ? transition1 + ' ' : ''}${detail1}\n\n`;
-            }
-            if (detail2.trim()) {
-                response += `${transition2 ? transition2 + ' ' : ''}${detail2}\n\n`;
-            }
-            if (detail3.trim()) {
-                response += `${transition3 ? transition3 + ' ' : ''}${detail3}\n\n`;
-            }
-            if (conclusionText.trim()) {
-                response += `${transitionConc ? transitionConc + ' ' : ''}${conclusionText}`;
-            }
-            
-            return response;
+            const topic = document.getElementById('topicSentence').value.trim();
+            const d1 = document.getElementById('supportingDetail1').value.trim();
+            const d2 = document.getElementById('supportingDetail2').value.trim();
+            const d3 = document.getElementById('supportingDetail3').value.trim();
+            const conc = document.getElementById('conclusion').value.trim();
+
+            const t1 = document.getElementById('transition1').value;
+            const t2 = document.getElementById('transition2').value;
+            const t3 = document.getElementById('transition3').value;
+            const tc = document.getElementById('transitionConclusion').value;
+
+            const parts = [];
+            if (topic) parts.push(topic);
+            if (d1) parts.push((t1 || '') + d1);
+            if (d2) parts.push((t2 || '') + d2);
+            if (d3) parts.push((t3 || '') + d3);
+            if (conc) parts.push((tc || '') + conc);
+
+            return parts.join('\n\n');
+        }
+
+        // ── Clear ──
+        function clearAll() {
+            if (!confirm('Are you sure you want to clear all content? This cannot be undone.')) return;
+            document.getElementById('promptInput').value = '';
+            ['topicSentence','supportingDetail1','supportingDetail2','supportingDetail3','conclusion'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            ['transition1','transition2','transition3','transitionConclusion'].forEach(id => {
+                document.getElementById(id).value = '';
+                const lbl = document.getElementById(id + 'Label');
+                if (lbl) lbl.textContent = '';
+            });
+            sectionConfigs.forEach(s => {
+                updateSectionMeta(s);
+                document.getElementById(s.feedback).innerHTML = '';
+            });
+            updateProgress();
+            try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+            showToast('✓ All fields cleared');
         }
 
         // ── Preview ──
         function previewResponse() {
             const response = generateResponse();
-            if (response.trim() === '') {
-                showToast('Write something before previewing!');
+            if (!response.trim()) {
+                showToast('Write something before previewing!', true);
                 return;
             }
-            
-            const formattedResponse = response.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
-            document.getElementById('previewText').innerHTML = `<p>${formattedResponse}</p>`;
+
+            const prompt = document.getElementById('promptInput').value.trim();
+            let html = '';
+            if (prompt) {
+                html += `<p style="font-weight:600; color:#14b8a6; margin-bottom:16px; font-style:italic;">Prompt: ${escapeHtml(prompt)}</p>`;
+            }
+            const paragraphs = response.split('\n\n');
+            html += paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+            document.getElementById('previewText').innerHTML = html;
+
+            const totalW = countWords(response);
+            const totalS = countSentences(response);
+            document.getElementById('previewMeta').innerHTML = `
+                <span class="preview-meta-item">📝 ${totalW} words</span>
+                <span class="preview-meta-item">📋 ${totalS} sentences</span>
+                <span class="preview-meta-item">📄 ${paragraphs.length} paragraphs</span>
+            `;
             document.getElementById('previewModal').style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function closePreview() {
@@ -743,30 +1213,45 @@
         // ── Copy ──
         function copyResponse() {
             const response = generateResponse();
-            if (response.trim() === '') {
-                showToast('Write something before copying!');
+            if (!response.trim()) {
+                showToast('Write something before copying!', true);
                 return;
             }
-            
-            const plainText = response.replace(/<[^>]*>/g, '');
-            
-            navigator.clipboard.writeText(plainText).then(() => {
+            navigator.clipboard.writeText(response).then(() => {
                 showToast('✓ Copied to clipboard!');
             }).catch(() => {
-                const textArea = document.createElement('textarea');
-                textArea.value = plainText;
-                document.body.appendChild(textArea);
-                textArea.select();
+                const ta = document.createElement('textarea');
+                ta.value = response;
+                document.body.appendChild(ta);
+                ta.select();
                 document.execCommand('copy');
-                document.body.removeChild(textArea);
+                document.body.removeChild(ta);
                 showToast('✓ Copied to clipboard!');
             });
         }
 
-        // Close modal on backdrop click
+        // ── Modal backdrop click ──
         document.getElementById('previewModal').addEventListener('click', function(e) {
             if (e.target === this) closePreview();
         });
+
+        // ── Keyboard Shortcuts ──
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                previewResponse();
+            }
+            if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+                e.preventDefault();
+                copyResponse();
+            }
+            if (e.key === 'Escape') {
+                closePreview();
+            }
+        });
+
+        // ── Init ──
+        loadState();
     </script>
 </body>
 </html>
