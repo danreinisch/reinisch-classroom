@@ -327,56 +327,95 @@
 
         <!-- New Category helper (Language Arts) -->
         <section class="panel" id="unitScaffolderCard" style="margin-top: 1rem; display:none">
-          <h2 style="margin: 0 0 .5rem 0;">New Category (Language Arts)</h2>
+          <h2 style="margin: 0 0 .5rem 0;">Legacy Local Scaffolder (Language Arts)</h2>
           <div class="hint" style="margin-bottom:.75rem;">
-            This does not modify the live site directly. It generates the exact commands to run locally to scaffold a new unit folder and regenerate the Lessons index.
+            Legacy helper: this only copies Terminal commands for manually scaffolding folders and regenerating the Lessons index. For 2026–27 collection setup, use the Curriculum Collection Manager below.
           </div>
 
-          <label for="newUnitTitle" style="display:block; font-weight:600; margin:.5rem 0 .25rem;">Unit title</label>
+          <label for="newUnitTitle" style="display:block; font-weight:600; margin:.5rem 0 .25rem;">Legacy scaffold title</label>
           <input id="newUnitTitle" type="text" placeholder="e.g., Long Way Down" style="width:100%; padding:.6rem .7rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: inherit;" />
 
           <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0;">
-            <button class="admin-btn primary" id="copyNewUnitCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: scaffold category + Presentation 1</button>
-            <button class="admin-btn warn" id="copyNewUnitCmdNoPres"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: scaffold category only</button>
-            <button class="admin-btn primary" id="copyGenerateIndexCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: regenerate Lessons index</button>
-            <button class="admin-btn warn" id="copyFullWorkflowCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: full workflow</button>
+            <button class="admin-btn primary" id="copyNewUnitCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy legacy scaffold + Presentation 1</button>
+            <button class="admin-btn warn" id="copyNewUnitCmdNoPres"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy legacy scaffold only</button>
+            <button class="admin-btn primary" id="copyGenerateIndexCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy regenerate Lessons index</button>
+            <button class="admin-btn warn" id="copyFullWorkflowCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy legacy full workflow</button>
           </div>
 
           <pre id="unitCmdPreview" style="white-space:pre-wrap; padding:.75rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.25); margin:0;"></pre>
 
           <div class="hint" style="margin-top:.5rem;">
-            Paste into Terminal at repo root. Then commit + push (or open a PR) like normal.
+            Use only when you intentionally need the older local folder-scaffolding workflow. The registry workflow below is the preferred 2026–27 collection path.
           </div>
         </section>
 
         <div class="card" id="unitManagerCard" style="margin-top:12px; display:none">
           <div class="card-header">
-            <div>Category Manager</div>
+            <div>Curriculum Collection Manager</div>
           </div>
 
           <div class="hint" style="margin-bottom:10px">
-            Creates/updates a category by writing <code>units.json</code> + initializing <code>site-state.json</code>.
-            Also creates a safe default unit landing page if missing (won't overwrite custom pages).
+            Recommended 2026–27 workflow: create, update, archive, and reorder Language Arts collections through the existing guarded draft-PR path.
+            Existing book routes and presentation folders are preserved. New Language Arts collections land on the shared collection page and use a managed presentation folder.
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="grid-column:1 / -1">
+              <label style="display:block;font-weight:700;margin-bottom:6px">Existing collection</label>
+              <div style="display:flex;gap:10px;align-items:center">
+                <select id="unitMgrExisting" class="input" style="flex:1">
+                  <option value="">Create a new collection</option>
+                </select>
+                <button class="admin-btn" id="btnUnitMgrNew" type="button">New collection</button>
+              </div>
+              <div class="hint">Choose an existing collection to edit it. Use Active/Archived instead of deleting instructional history.</div>
+            </div>
+
             <div>
               <label style="display:block;font-weight:700;margin-bottom:6px">Title</label>
               <input id="unitMgrTitle" class="input" placeholder="Fahrenheit 451" />
             </div>
 
             <div>
-              <label style="display:block;font-weight:700;margin-bottom:6px">Unit ID (lowercase)</label>
-              <input id="unitMgrId" class="input" placeholder="f451" />
-              <div class="hint">2–32 chars: a–z, 0–9, <code>-</code>, <code>_</code></div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Collection ID (lowercase)</label>
+              <input id="unitMgrId" class="input" placeholder="long-way-down" />
+              <div class="hint">2–32 chars: a–z, 0–9, <code>-</code>, <code>_</code>. Existing IDs are preserved.</div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Collection type</label>
+              <select id="unitMgrKind" class="input">
+                <option value="book">Book</option>
+                <option value="unit">Unit</option>
+                <option value="theme">Theme</option>
+                <option value="text-set">Text set</option>
+                <option value="collection">Other collection</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Status</label>
+              <select id="unitMgrStatusField" class="input">
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Display order</label>
+              <input id="unitMgrSortOrder" class="input" type="number" step="10" value="10" />
+              <div class="hint">Lower numbers appear first.</div>
             </div>
 
             <div>
               <label style="display:block;font-weight:700;margin-bottom:6px">Section</label>
-              <select id="unitMgrSection" class="input">
-                <option value="language-arts">Language Arts</option>
-                <option value="life-skills">Life Skills</option>
-              </select>
+              <input
+                id="unitMgrSection"
+                class="input"
+                value="language-arts"
+                readonly
+              />
+              <div class="hint">This manager is currently scoped to the safe Language Arts collection workflow.</div>
             </div>
 
             <div>
@@ -385,15 +424,21 @@
             </div>
 
             <div style="grid-column:1 / -1">
-              <label style="display:block;font-weight:700;margin-bottom:6px">baseOut</label>
-              <input id="unitMgrBaseOut" class="input" placeholder="presentations/fahrenheit-451" />
-              <div class="hint">Where presentations live (relative path). No leading slash.</div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Managed presentation folder</label>
+              <input id="unitMgrBaseOut" class="input" placeholder="presentations/collection-id" readonly />
+              <div class="hint">Created automatically for new collections and protected for existing collections.</div>
             </div>
 
             <div style="grid-column:1 / -1">
-              <label style="display:block;font-weight:700;margin-bottom:6px">pagePath</label>
-              <input id="unitMgrPagePath" class="input" placeholder="/language-arts/fahrenheit-451/" />
-              <div class="hint">Must start and end with <code>/</code></div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Managed collection route</label>
+              <input id="unitMgrPagePath" class="input" placeholder="/language-arts/collection/" readonly />
+              <div class="hint">New Language Arts collections use the shared collection page. Existing routes stay protected.</div>
+            </div>
+
+            <div style="grid-column:1 / -1">
+              <label style="display:block;font-weight:700;margin-bottom:6px">Teacher-facing description</label>
+              <textarea id="unitMgrDescription" class="input" rows="3" maxlength="500" placeholder="Optional description for the Language Arts collection page."></textarea>
+              <div class="hint">This is shown to teachers on the Language Arts landing page. It does not issue material to students.</div>
             </div>
           </div>
 
@@ -404,7 +449,7 @@
             </button>
             <button class="admin-btn primary" id="btnUnitMgrUpsert">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-              Create / Update Category
+              Save Collection Draft
             </button>
             <div class="hint" id="unitMgrStatus" style="margin-left:auto"></div>
           </div>

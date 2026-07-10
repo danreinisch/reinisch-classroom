@@ -35,6 +35,61 @@
     return '';
   }
 
+  function requestedCollectionId(){
+    try {
+      const value = new URLSearchParams(window.location.search).get('collection');
+      return value ? String(value).trim() : '';
+    } catch {
+      return '';
+    }
+  }
+
+  function isGenericCollectionRoute(){
+    const clean = location.pathname
+      .replace(/index\.html$/, '')
+      .replace(/\/+$/, '/') || '/';
+
+    return clean === '/language-arts/collection/';
+  }
+
+  function resolveUnitId(units){
+    const requestedId = requestedCollectionId();
+
+    if (requestedId && isGenericCollectionRoute()) {
+      const requestedCollection = units.find(function(unit){
+        return unit &&
+          unit.id === requestedId &&
+          unit.section === 'language-arts' &&
+          unit.id !== 'toolkit' &&
+          (unit.status || 'active') === 'active';
+      });
+
+      return requestedCollection ? requestedCollection.id : '';
+    }
+
+    return inferUnitId(units, location.pathname);
+  }
+
+  function applyGenericCollectionLabels(unit){
+    if (!isGenericCollectionRoute() || !unit) return;
+
+    const title = unit.title || 'Curriculum Collection';
+    const titleEl = qs('[data-collection-title]');
+    const descriptionEl = qs('[data-collection-description]');
+    const app = qs('.tc-app');
+
+    if (titleEl) titleEl.textContent = title;
+
+    if (descriptionEl) {
+      descriptionEl.textContent =
+        unit.description || 'Explore presentations and activities';
+    }
+
+    if (app) app.setAttribute('data-page-title', title);
+
+    document.title = title + ' – Reinisch Classroom';
+  }
+
   // Config: Enable defensive slot checking (check if presentation exists even when link missing)
   const DEFENSIVE_SLOT_CHECK = true;
 
@@ -170,9 +225,11 @@
     const unitsData = await loadUnits();
     const units = Array.isArray(unitsData.units) ? unitsData.units : [];
 
-    const unitId = inferUnitId(units, location.pathname);
+    const unitId = resolveUnitId(units);
     const unit = units.find(u => u.id === unitId);
     if (!unit) return;
+
+    applyGenericCollectionLabels(unit);
 
     const state = await loadState();
     await buildGrid(grid, unit, state);

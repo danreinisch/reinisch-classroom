@@ -295,7 +295,11 @@ async function scanLanguageArts(maps, unitsData, siteState) {
   const unitByFolderName = new Map();
   if (unitsData?.units) {
     for (const u of unitsData.units) {
-      if (u.section === 'language-arts' && u.id !== 'toolkit') {
+      if (
+        u.section === 'language-arts' &&
+        u.id !== 'toolkit' &&
+        (u.status || 'active') === 'active'
+      ) {
         // Extract folder name from baseOut (e.g., "presentations/lost-in-kragdon-ah" -> "lost-in-kragdon-ah")
         const folder = u.baseOut.split('/').pop();
         unitByFolderName.set(folder, u);
@@ -352,6 +356,17 @@ async function scanLanguageArts(maps, unitsData, siteState) {
       }
     }
   }
+
+  units.sort((a, b) => {
+    const aMeta = unitByFolderName.get(a.id) || {};
+    const bMeta = unitByFolderName.get(b.id) || {};
+    const aOrder = Number.isFinite(Number(aMeta.sortOrder)) ? Number(aMeta.sortOrder) : 0;
+    const bOrder = Number.isFinite(Number(bMeta.sortOrder)) ? Number(bMeta.sortOrder) : 0;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
 
   return { name: 'LANGUAGE ARTS', units };
 }

@@ -892,6 +892,8 @@ async function showPRResult(pr){
 
 
 (function () {
+  let knownUnits = [];
+
   function slugify(s) {
     return String(s || '')
       .toLowerCase()
@@ -903,128 +905,351 @@ async function showPRResult(pr){
       .replace(/^-|-$/g, '');
   }
 
-  function qs(id) { return document.getElementById(id); }
+  function qs(id) {
+    return document.getElementById(id);
+  }
+
+  function value(id, fallback = '') {
+    return String(qs(id)?.value || fallback).trim();
+  }
 
   function setStatus(msg) {
     const el = qs('unitMgrStatus');
     if (el) el.textContent = msg || '';
   }
 
+  function languageArtsCollections() {
+    return knownUnits
+      .filter((unit) =>
+        unit &&
+        unit.section === 'language-arts' &&
+        unit.id !== 'toolkit'
+      )
+      .sort((a, b) => {
+        const aOrder = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : 0;
+        const bOrder = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : 0;
+
+        if (aOrder !== bOrder) return aOrder - bOrder;
+
+        return String(a.title || '').localeCompare(String(b.title || ''));
+      });
+  }
+
+  function nextLanguageArtsSortOrder() {
+    const orders = languageArtsCollections()
+      .map((unit) => Number(unit.sortOrder))
+      .filter(Number.isFinite);
+
+    return orders.length ? Math.max(...orders) + 10 : 10;
+  }
+
+  function selectedExistingUnit() {
+    const id = value('unitMgrExisting');
+    return knownUnits.find((unit) => unit && unit.id === id) || null;
+  }
+
   function buildPayload() {
-    const title = (qs('unitMgrTitle')?.value || '').trim();
-    const id = (qs('unitMgrId')?.value || '').trim();
-    const section = (qs('unitMgrSection')?.value || 'language-arts').trim();
-    const slots = Number(qs('unitMgrSlots')?.value || 16);
+    const existing = selectedExistingUnit();
+    const title = value('unitMgrTitle');
+    const id = value('unitMgrId');
+    const section = value('unitMgrSection', 'language-arts');
+    const slots = Number(value('unitMgrSlots', '16'));
+    const kind = value('unitMgrKind', 'collection');
+    const description = value('unitMgrDescription');
+    const status = value('unitMgrStatusField', 'active');
+    const sortOrder = Number(value('unitMgrSortOrder', '0'));
 
-    const baseOut = (qs('unitMgrBaseOut')?.value || '').trim();
-    const pagePath = (qs('unitMgrPagePath')?.value || '').trim();
+    let baseOut = value('unitMgrBaseOut');
+    let pagePath = value('unitMgrPagePath');
 
-    return { id, title, section, slots, baseOut, pagePath };
+    if (section === 'language-arts' && !existing) {
+      if (!baseOut && id) baseOut = `presentations/${id}`;
+      if (!pagePath) pagePath = '/language-arts/collection/';
+    }
+
+    return {
+      id,
+      title,
+      kind,
+      description,
+      status,
+      sortOrder,
+      section,
+      slots,
+      baseOut,
+      pagePath,
+    };
   }
 
   function renderPreview(payload) {
     const pre = qs('unitMgrPreview');
     if (!pre) return;
+
     pre.textContent = JSON.stringify(payload, null, 2);
   }
 
-  function validateClient(p) {
-    if (!p.title) return 'Title is required';
-    if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(p.id)) return 'Invalid Unit ID (use lowercase a–z, 0–9, - or _)';
-    if (!['language-arts', 'life-skills'].includes(p.section)) return 'Invalid section';
-    if (!Number.isFinite(p.slots) || p.slots < 1 || p.slots > 64) return 'Slots must be 1–64';
-    if (!p.baseOut || p.baseOut.startsWith('/') || p.baseOut.includes('..')) return 'baseOut must be a relative path (no leading "/" or "..")';
-    if (!p.pagePath.startsWith('/') || !p.pagePath.endsWith('/')) return 'pagePath must start and end with "/"';
+  function validateClient(payload) {
+    if (!payload.title) return 'Title is required';
+    if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(payload.id)) {
+      return 'Invalid Collection ID (use lowercase a–z, 0–9, - or _)';
+    }
+    if (!['book', 'unit', 'theme', 'text-set', 'collection'].includes(payload.kind)) {
+      return 'Invalid collection type';
+    }
+    if (payload.description.length > 500) {
+      return 'Description must be 500 characters or fewer';
+    }
+    if (!['active', 'archived'].includes(payload.status)) {
+      return 'Invalid collection status';
+    }
+    if (!Number.isFinite(payload.sortOrder)) {
+      return 'Display order must be a number';
+    }
+    if (payload.section !== 'language-arts') {
+      return 'Curriculum Collection Manager is currently scoped to Language Arts.';
+    }
+    if (!Number.isFinite(payload.slots) || payload.slots < 1 || payload.slots > 64) {
+      return 'Slots must be 1–64';
+    }
+    if (!payload.baseOut || payload.baseOut.startsWith('/') || payload.baseOut.includes('..')) {
+      return 'Presentation folder must be a relative path without ".."';
+    }
+    if (!payload.pagePath.startsWith('/') || !payload.pagePath.endsWith('/')) {
+      return 'Collection route must start and end with "/"';
+    }
+
     return '';
   }
 
-  async function upsert() {
-    const btn = qs('btnUnitMgrUpsert');
-    const p = buildPayload();
-    renderPreview(p);
+  function populateCollectionSelect() {
+    const select = qs('unitMgrExisting');
+    if (!select) return;
 
-    const err = validateClient(p);
-    if (err) { await rcAlert('Error', err); return; }
+    const currentValue = select.value;
+    select.innerHTML = '';
+
+    const newOption = document.createElement('option');
+    newOption.value = '';
+    newOption.textContent = 'Create a new collection';
+    select.appendChild(newOption);
+
+    languageArtsCollections().forEach((unit) => {
+      const option = document.createElement('option');
+      option.value = unit.id;
+      option.textContent =
+        `${unit.title || unit.id} — ${unit.status || 'active'}`;
+      select.appendChild(option);
+    });
+
+    if ([...select.options].some((option) => option.value === currentValue)) {
+      select.value = currentValue;
+    }
+  }
+
+  function resetNewCollection() {
+    const select = qs('unitMgrExisting');
+    if (select) select.value = '';
+
+    if (qs('unitMgrTitle')) qs('unitMgrTitle').value = '';
+    if (qs('unitMgrId')) qs('unitMgrId').value = '';
+    if (qs('unitMgrKind')) qs('unitMgrKind').value = 'book';
+    if (qs('unitMgrDescription')) qs('unitMgrDescription').value = '';
+    if (qs('unitMgrStatusField')) qs('unitMgrStatusField').value = 'active';
+    if (qs('unitMgrSortOrder')) {
+      qs('unitMgrSortOrder').value = String(nextLanguageArtsSortOrder());
+    }
+    if (qs('unitMgrSection')) qs('unitMgrSection').value = 'language-arts';
+    if (qs('unitMgrSlots')) qs('unitMgrSlots').value = '16';
+    if (qs('unitMgrBaseOut')) qs('unitMgrBaseOut').value = '';
+    if (qs('unitMgrPagePath')) {
+      qs('unitMgrPagePath').value = '/language-arts/collection/';
+    }
+
+    setStatus('New Language Arts collection');
+    renderPreview(buildPayload());
+  }
+
+  function loadSelectedCollection() {
+    const unit = selectedExistingUnit();
+
+    if (!unit) {
+      resetNewCollection();
+      return;
+    }
+
+    if (qs('unitMgrTitle')) qs('unitMgrTitle').value = unit.title || '';
+    if (qs('unitMgrId')) qs('unitMgrId').value = unit.id || '';
+    if (qs('unitMgrKind')) qs('unitMgrKind').value = unit.kind || 'collection';
+    if (qs('unitMgrDescription')) qs('unitMgrDescription').value = unit.description || '';
+    if (qs('unitMgrStatusField')) qs('unitMgrStatusField').value = unit.status || 'active';
+    if (qs('unitMgrSortOrder')) {
+      qs('unitMgrSortOrder').value = String(
+        Number.isFinite(Number(unit.sortOrder)) ? Number(unit.sortOrder) : 0
+      );
+    }
+    if (qs('unitMgrSection')) qs('unitMgrSection').value = unit.section || 'language-arts';
+    if (qs('unitMgrSlots')) qs('unitMgrSlots').value = String(unit.slots || 16);
+    if (qs('unitMgrBaseOut')) qs('unitMgrBaseOut').value = unit.baseOut || '';
+    if (qs('unitMgrPagePath')) qs('unitMgrPagePath').value = unit.pagePath || '';
+
+    setStatus(`Editing "${unit.title || unit.id}"`);
+    renderPreview(buildPayload());
+  }
+
+  async function loadKnownCollections() {
+    try {
+      const response = await fetch('/assets/data/units.json?t=' + Date.now(), {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) throw new Error(`units.json ${response.status}`);
+
+      const data = await response.json();
+      knownUnits = Array.isArray(data.units) ? data.units : [];
+      populateCollectionSelect();
+      resetNewCollection();
+    } catch (error) {
+      knownUnits = [];
+      console.warn('[Curriculum Collection Manager] Could not load units.json:', error);
+      setStatus('Registry unavailable; manual fields remain available.');
+      renderPreview(buildPayload());
+    }
+  }
+
+  async function upsert() {
+    const button = qs('btnUnitMgrUpsert');
+    const payload = buildPayload();
+    renderPreview(payload);
+
+    const err = validateClient(payload);
+    if (err) {
+      await rcAlert('Collection validation', err);
+      return;
+    }
 
     try {
-      if (btn) btn.disabled = true;
-      setStatus('Saving…');
+      if (button) button.disabled = true;
+      setStatus('Saving draft…');
 
-      const res = await fetch('/.netlify/functions/admin-units-upsert', {
+      const response = await fetch('/.netlify/functions/admin-units-upsert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         cache: 'no-store',
-        body: JSON.stringify(Object.assign({}, p, { createPr: true })),
+        body: JSON.stringify({ ...payload, createPr: true }),
       });
 
-      const bodyText = await res.text().catch((err) => {
-        console.warn('[Category Manager] Failed to read response body:', err);
-        return '';
-      });
-      let data = null;
-      try { data = JSON.parse(bodyText); } catch { data = { ok: false, error: bodyText }; }
-      if (!res.ok || !data.ok) {
-        console.error('[Category Manager] error:', { status: res.status, body: bodyText, parsed: data });
-        await rcAlert('Error', `Create/Update failed: ${data.error || bodyText || res.status}`);
-        setStatus('Error');
+      const bodyText = await response.text().catch(() => '');
+      let data;
+
+      try {
+        data = JSON.parse(bodyText);
+      } catch {
+        data = { ok: false, error: bodyText };
+      }
+
+      if (!response.ok || !data.ok) {
+        console.error('[Curriculum Collection Manager] Save failed:', {
+          status: response.status,
+          body: bodyText,
+          parsed: data,
+        });
+        await rcAlert(
+          'Collection save failed',
+          data.error || bodyText || String(response.status)
+        );
+        setStatus('Save failed');
         return;
       }
 
-      try { showPRResult((data && data.pr) ? data.pr : null); } catch (e) { /* ignore */ }
+      try {
+        showPRResult(data.pr || null);
+      } catch (_) {
+        // The save itself completed. A blocked pop-up should not make it look failed.
+      }
 
-      setStatus('Saved ✓');
-      await rcAlert('Upload Complete', `Saved! Commit: ${data.commit}\nIndex created: ${data.createdIndex ? 'YES' : 'NO'}`);
+      setStatus('Draft saved');
+      await rcAlert(
+        'Collection draft saved',
+        `Saved "${payload.title}". Commit: ${data.commit}\nDraft PR: ${data.pr?.url || 'not created'}`
+      );
 
-      location.reload();
-    } catch (e) {
-      console.error(e);
-      await rcAlert('Error', 'Create/Update failed: ' + (e?.message || String(e)));
-      setStatus('Error');
+      await loadKnownCollections();
+    } catch (error) {
+      console.error('[Curriculum Collection Manager] Save error:', error);
+      await rcAlert(
+        'Collection save failed',
+        error?.message || String(error)
+      );
+      setStatus('Save failed');
     } finally {
-      if (btn) btn.disabled = false;
+      if (button) button.disabled = false;
     }
   }
 
   async function autofill() {
-    const title = (qs('unitMgrTitle')?.value || '').trim();
-    if (!title) { await rcAlert('Validation', 'Enter a Title first'); return; }
+    const title = value('unitMgrTitle');
+    if (!title) {
+      await rcAlert('Collection setup', 'Enter a collection title first.');
+      return;
+    }
 
     const slug = slugify(title);
-    const section = (qs('unitMgrSection')?.value || 'language-arts').trim();
+    const section = value('unitMgrSection', 'language-arts');
 
-    if (qs('unitMgrId') && !qs('unitMgrId').value.trim()) qs('unitMgrId').value = slug.slice(0, 32);
-    if (qs('unitMgrBaseOut') && !qs('unitMgrBaseOut').value.trim()) {
-      qs('unitMgrBaseOut').value = section === 'life-skills'
-        ? 'life-skills/presentations'
-        : `presentations/${slug}`;
-    }
-    if (qs('unitMgrPagePath') && !qs('unitMgrPagePath').value.trim()) {
-      qs('unitMgrPagePath').value = section === 'life-skills'
-        ? '/life-skills/'
-        : `/language-arts/${slug}/`;
+    if (qs('unitMgrId') && !value('unitMgrId')) {
+      qs('unitMgrId').value = slug.slice(0, 32);
     }
 
-    const p = buildPayload();
-    renderPreview(p);
+    const id = value('unitMgrId');
+
+    if (qs('unitMgrBaseOut') && !value('unitMgrBaseOut')) {
+      qs('unitMgrBaseOut').value =
+        section === 'life-skills'
+          ? 'life-skills/presentations'
+          : `presentations/${id || slug}`;
+    }
+
+    if (qs('unitMgrPagePath') && !value('unitMgrPagePath')) {
+      qs('unitMgrPagePath').value =
+        section === 'life-skills'
+          ? '/life-skills/'
+          : '/language-arts/collection/';
+    }
+
+    if (qs('unitMgrSortOrder') && !value('unitMgrSortOrder')) {
+      qs('unitMgrSortOrder').value = String(nextLanguageArtsSortOrder());
+    }
+
+    renderPreview(buildPayload());
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     const card = qs('unitManagerCard');
     if (!card) return;
 
-    const btnAuto = qs('btnUnitMgrAutofill');
-    const btnUp = qs('btnUnitMgrUpsert');
+    qs('btnUnitMgrAutofill')?.addEventListener('click', autofill);
+    qs('btnUnitMgrUpsert')?.addEventListener('click', upsert);
+    qs('btnUnitMgrNew')?.addEventListener('click', resetNewCollection);
+    qs('unitMgrExisting')?.addEventListener('change', loadSelectedCollection);
 
-    btnAuto?.addEventListener('click', autofill);
-    btnUp?.addEventListener('click', upsert);
-
-    ['unitMgrTitle','unitMgrId','unitMgrSection','unitMgrSlots','unitMgrBaseOut','unitMgrPagePath'].forEach((id) => {
+    [
+      'unitMgrTitle',
+      'unitMgrId',
+      'unitMgrKind',
+      'unitMgrDescription',
+      'unitMgrStatusField',
+      'unitMgrSortOrder',
+      'unitMgrSection',
+      'unitMgrSlots',
+      'unitMgrBaseOut',
+      'unitMgrPagePath',
+    ].forEach((id) => {
       qs(id)?.addEventListener('input', () => renderPreview(buildPayload()));
       qs(id)?.addEventListener('change', () => renderPreview(buildPayload()));
     });
 
-    renderPreview(buildPayload());
+    loadKnownCollections();
   });
 })();
 

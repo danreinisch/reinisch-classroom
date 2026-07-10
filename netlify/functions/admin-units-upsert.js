@@ -27,6 +27,10 @@ function normalizeUnits(data) {
     const nu = {
       id: String(u.id),
       title: String(u.title || ''),
+      kind: String(u.kind || 'collection'),
+      description: String(u.description || ''),
+      status: String(u.status || 'active'),
+      sortOrder: Number.isFinite(Number(u.sortOrder)) ? Number(u.sortOrder) : 0,
       section: String(u.section || ''),
       baseOut: String(u.baseOut || ''),
       slots: Number(u.slots || 0),
@@ -306,20 +310,69 @@ async function verifySession(event) {
 function validatePayload(p) {
   const title = String(p?.title || '').trim();
   const id = String(p?.id || '').trim();
+  const kind = String(p?.kind || 'collection').trim();
+  const description = String(p?.description || '').trim();
+  const status = String(p?.status || 'active').trim();
+  const sortOrder = Number(p?.sortOrder || 0);
   const section = String(p?.section || '').trim();
   const slots = Number(p?.slots || 0);
   const baseOut = String(p?.baseOut || '').trim();
   const pagePath = String(p?.pagePath || '').trim();
 
   if (!title) return 'Title is required';
-  if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(id)) return 'Invalid id (2–32 chars: a–z, 0–9, - or _)';
+  if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(id)) {
+    return 'Invalid id (2–32 chars: a–z, 0–9, - or _)';
+  }
+  if (!['book', 'unit', 'theme', 'text-set', 'collection', 'toolkit'].includes(kind)) {
+    return 'Invalid collection type';
+  }
+  if (description.length > 500) return 'Description must be 500 characters or fewer';
+  if (!['active', 'archived'].includes(status)) return 'Invalid collection status';
+  if (!Number.isFinite(sortOrder) || sortOrder < -100000 || sortOrder > 100000) {
+    return 'Invalid display order';
+  }
   if (!['language-arts', 'life-skills'].includes(section)) return 'Invalid section';
   if (!Number.isFinite(slots) || slots < 1 || slots > 64) return 'Slots must be 1–64';
-  if (!baseOut || baseOut.startsWith('/') || baseOut.includes('..')) return 'baseOut must be a relative path (no leading "/" or "..")';
-  if (!pagePath.startsWith('/') || !pagePath.endsWith('/')) return 'pagePath must start and end with "/"';
+  if (!baseOut || baseOut.startsWith('/') || baseOut.includes('..')) {
+    return 'baseOut must be a relative path (no leading "/" or "..")';
+  }
+  if (!pagePath.startsWith('/') || !pagePath.endsWith('/')) {
+    return 'pagePath must start and end with "/"';
+  }
 
   return '';
 }
+
+
+function policyValue(value) {
+  return String(value || '').trim();
+}
+
+function validateUnitUpdatePolicy(existingUnit, unit) {
+  if (existingUnit) {
+    for (const field of ['section', 'baseOut', 'pagePath']) {
+      if (policyValue(existingUnit[field]) !== policyValue(unit[field])) {
+        return `Existing collection ${field} is locked to preserve live routes and materials.`;
+      }
+    }
+
+    return '';
+  }
+
+  if (unit.section === 'language-arts') {
+    if (unit.pagePath !== '/language-arts/collection/') {
+      return 'New Language Arts collections must use the shared collection route.';
+    }
+
+    if (unit.baseOut !== `presentations/${unit.id}`) {
+      return 'New Language Arts collections must use the managed presentation folder.';
+    }
+  }
+
+  return '';
+}
+
+exports.validateUnitUpdatePolicy = validateUnitUpdatePolicy;
 
 exports.handler = async (event) => {
   // Parse request body once (used for branch + confirmMain)
@@ -340,6 +393,10 @@ exports.handler = async (event) => {
     const unit = {
       id: String(payload.id).trim(),
       title: String(payload.title).trim(),
+      kind: String(payload.kind || 'collection').trim(),
+      description: String(payload.description || '').trim(),
+      status: String(payload.status || 'active').trim(),
+      sortOrder: Number.isFinite(Number(payload.sortOrder)) ? Number(payload.sortOrder) : 0,
       section: String(payload.section).trim(),
       slots: Number(payload.slots),
       baseOut: String(payload.baseOut).trim(),
@@ -364,6 +421,11 @@ exports.handler = async (event) => {
     // Upsert unit in units.json (preserve order; replace if exists)
     const existingUnits = Array.isArray(unitsDoc.units) ? unitsDoc.units.slice() : [];
     const idx = existingUnits.findIndex(u => u && String(u.id) === unit.id);
+    const existingUnit = idx >= 0 ? existingUnits[idx] : null;
+
+    const policyError = validateUnitUpdatePolicy(existingUnit, unit);
+    if (policyError) return json(400, { ok: false, error: policyError });
+
     const nextUnit = { ...unit };
 
     if (idx >= 0) existingUnits[idx] = { ...existingUnits[idx], ...nextUnit };
@@ -418,9 +480,15 @@ exports.handler = async (event) => {
       blobs.set('assets/data/site-state.json', Buffer.from(JSON.stringify(nextState, null, 2) + '\n', 'utf8'));
     }
 
-    // Create a safe unit landing page if missing (don’t overwrite custom pages)
+    // New Language Arts collections use the reusable generic collection page.
+    // Do not create a one-off static page for them. Existing explicit routes
+    // retain their current create-if-missing behavior.
+    const usesGenericCollectionRoute =
+      unit.section === 'language-arts' &&
+      unit.pagePath === '/language-arts/collection/';
+
     let createdIndex = false;
-    if (!paths.has(unitIndexPath)) {
+    if (!usesGenericCollectionRoute && !paths.has(unitIndexPath)) {
       const html = generateCategoryIndex(unit.id, nextState, units);
       blobs.set(unitIndexPath, Buffer.from(html, 'utf8'));
       createdIndex = true;
@@ -440,6 +508,7 @@ exports.handler = async (event) => {
       branch,
       pr, unit,
       createdIndex,
+      usesGenericCollectionRoute,
       unitIndexPath,
     });
   } catch (e) {

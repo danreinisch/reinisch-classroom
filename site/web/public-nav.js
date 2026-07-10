@@ -34,15 +34,76 @@
   ];
 
   var LA_NAV = [
-    { href: '/',                                   label: 'Home',                  icon: I.home   },
-    { href: '/language-arts/',                     label: 'Language Arts',         icon: I.book   },
-    { href: '/language-arts/toolkit/',             label: 'Toolkit',               icon: I.wrench },
-    { href: '/language-arts/a-door-into-time/',    label: 'A Door Into Time',      icon: I.book   },
-    { href: '/language-arts/lost-in-kragdon-ah/',  label: 'Lost in Kragdon-ah',    icon: I.book   },
-    { href: '/language-arts/return-from-kragdon-ah/', label: 'Return from Kragdon-ah', icon: I.book },
-    { href: '/language-arts/warrior-of-kragdon-ah/',  label: 'Warrior of Kragdon-ah',  icon: I.book },
-    { href: '/toolkits/',                          label: 'All Toolkits',          icon: I.wrench },
+    { href: '/',                       label: 'Home',          icon: I.home   },
+    { href: '/language-arts/',         label: 'Language Arts', icon: I.book   },
+    { href: '/language-arts/toolkit/', label: 'Toolkit',       icon: I.wrench },
+    { href: '/toolkits/',              label: 'All Toolkits',  icon: I.wrench },
   ];
+
+  function activeLanguageArtsCollections(units){
+    return (units || [])
+      .filter(function(unit){
+        return unit &&
+          unit.section === 'language-arts' &&
+          unit.id !== 'toolkit' &&
+          (unit.status || 'active') === 'active';
+      })
+      .sort(function(a, b){
+        var aOrder = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : 0;
+        var bOrder = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : 0;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return String(a.title || '').localeCompare(String(b.title || ''));
+      });
+  }
+
+  function collectionHref(unit){
+    var path = String(unit && unit.pagePath || '').trim();
+
+    if (path === '/language-arts/collection/') {
+      return path + '?collection=' + encodeURIComponent(String(unit && unit.id || ''));
+    }
+
+    return path || '/language-arts/';
+  }
+
+  async function appendLanguageArtsCollections(){
+    if (!location.pathname.startsWith('/language-arts/')) return;
+
+    var nav = document.querySelector('.tc-sidebar .tc-nav');
+    if (!nav || nav.querySelector('[data-collection-nav="true"]')) return;
+
+    try {
+      var response = await fetch('/assets/data/units.json?t=' + Date.now(), {
+        cache: 'no-store'
+      });
+      if (!response.ok) return;
+
+      var data = await response.json();
+      var collections = activeLanguageArtsCollections(
+        Array.isArray(data.units) ? data.units : []
+      );
+
+      var insertBefore = nav.querySelector('a[data-href="/toolkits/"]');
+
+      collections.forEach(function(unit){
+        var href = collectionHref(unit);
+        var html =
+          '<a href="' + esc(href) + '" data-href="' + esc(href) + '"' +
+          ' data-collection-nav="true">' +
+          '<span class="tc-icon">' + I.book + '</span>' +
+          '<span class="tc-label">' + esc(unit.title || unit.id) + '</span>' +
+          '</a>';
+
+        if (insertBefore) {
+          insertBefore.insertAdjacentHTML('beforebegin', html);
+        } else {
+          nav.insertAdjacentHTML('beforeend', html);
+        }
+      });
+    } catch (_) {
+      // Keep base navigation available if the registry cannot be loaded.
+    }
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function esc(s){
@@ -119,6 +180,8 @@
     setTimeout(function() {
       document.dispatchEvent(new CustomEvent('rc-nav-ready'));
     }, 0);
+
+    appendLanguageArtsCollections();
   }
 
   if(document.readyState === 'loading'){
