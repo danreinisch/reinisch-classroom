@@ -14,7 +14,11 @@
       "section": "language-arts",
       "baseOut": "presentations/a-door-into-time",
       "slots": 16,
-      "pagePath": "/language-arts/a-door-into-time/"
+      "pagePath": "/language-arts/a-door-into-time/",
+      "kind": "book",
+      "description": "",
+      "status": "active",
+      "sortOrder": 10
     },
     {
       "id": "lik",
@@ -22,7 +26,11 @@
       "section": "language-arts",
       "baseOut": "presentations/lost-in-kragdon-ah",
       "slots": 16,
-      "pagePath": "/language-arts/lost-in-kragdon-ah/"
+      "pagePath": "/language-arts/lost-in-kragdon-ah/",
+      "kind": "book",
+      "description": "",
+      "status": "active",
+      "sortOrder": 20
     },
     {
       "id": "rfk",
@@ -30,7 +38,11 @@
       "section": "language-arts",
       "baseOut": "presentations/return-from-kragdon-ah",
       "slots": 16,
-      "pagePath": "/language-arts/return-from-kragdon-ah/"
+      "pagePath": "/language-arts/return-from-kragdon-ah/",
+      "kind": "book",
+      "description": "",
+      "status": "active",
+      "sortOrder": 30
     },
     {
       "id": "wok",
@@ -38,7 +50,11 @@
       "section": "language-arts",
       "baseOut": "presentations/warrior-of-kragdon-ah",
       "slots": 16,
-      "pagePath": "/language-arts/warrior-of-kragdon-ah/"
+      "pagePath": "/language-arts/warrior-of-kragdon-ah/",
+      "kind": "book",
+      "description": "",
+      "status": "active",
+      "sortOrder": 40
     },
     {
       "id": "life",
