@@ -327,25 +327,25 @@
 
         <!-- New Category helper (Language Arts) -->
         <section class="panel" id="unitScaffolderCard" style="margin-top: 1rem; display:none">
-          <h2 style="margin: 0 0 .5rem 0;">New Category (Language Arts)</h2>
+          <h2 style="margin: 0 0 .5rem 0;">Legacy Local Scaffolder (Language Arts)</h2>
           <div class="hint" style="margin-bottom:.75rem;">
-            This does not modify the live site directly. It generates the exact commands to run locally to scaffold a new unit folder and regenerate the Lessons index.
+            Legacy helper: this only copies Terminal commands for manually scaffolding folders and regenerating the Lessons index. For 2026–27 collection setup, use the Curriculum Collection Manager below.
           </div>
 
-          <label for="newUnitTitle" style="display:block; font-weight:600; margin:.5rem 0 .25rem;">Unit title</label>
+          <label for="newUnitTitle" style="display:block; font-weight:600; margin:.5rem 0 .25rem;">Legacy scaffold title</label>
           <input id="newUnitTitle" type="text" placeholder="e.g., Long Way Down" style="width:100%; padding:.6rem .7rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: inherit;" />
 
           <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0;">
-            <button class="admin-btn primary" id="copyNewUnitCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: scaffold category + Presentation 1</button>
-            <button class="admin-btn warn" id="copyNewUnitCmdNoPres"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: scaffold category only</button>
-            <button class="admin-btn primary" id="copyGenerateIndexCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: regenerate Lessons index</button>
-            <button class="admin-btn warn" id="copyFullWorkflowCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy: full workflow</button>
+            <button class="admin-btn primary" id="copyNewUnitCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy legacy scaffold + Presentation 1</button>
+            <button class="admin-btn warn" id="copyNewUnitCmdNoPres"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy legacy scaffold only</button>
+            <button class="admin-btn primary" id="copyGenerateIndexCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy regenerate Lessons index</button>
+            <button class="admin-btn warn" id="copyFullWorkflowCmd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copy legacy full workflow</button>
           </div>
 
           <pre id="unitCmdPreview" style="white-space:pre-wrap; padding:.75rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.25); margin:0;"></pre>
 
           <div class="hint" style="margin-top:.5rem;">
-            Paste into Terminal at repo root. Then commit + push (or open a PR) like normal.
+            Use only when you intentionally need the older local folder-scaffolding workflow. The registry workflow below is the preferred 2026–27 collection path.
           </div>
         </section>
 
@@ -355,8 +355,8 @@
           </div>
 
           <div class="hint" style="margin-bottom:10px">
-            Create, update, archive, and reorder curriculum collections through the existing guarded draft-PR path.
-            Existing book routes and presentation folders are preserved. New Language Arts collections use the shared collection page.
+            Recommended 2026–27 workflow: create, update, archive, and reorder Language Arts collections through the existing guarded draft-PR path.
+            Existing book routes and presentation folders are preserved. New Language Arts collections land on the shared collection page and use a managed presentation folder.
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
