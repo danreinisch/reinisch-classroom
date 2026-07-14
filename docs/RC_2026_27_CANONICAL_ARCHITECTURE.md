@@ -39,7 +39,7 @@ When an older product idea conflicts with this document, this document governs f
 5. Scores may become evidence, but a score alone is not an IEP conclusion.
 6. Teacher confirmation is required before evidence supports formal progress interpretation or documentation drafts.
 7. New sensitive features require authenticated server-side boundaries and least-privilege access.
-8. Student identity remains code-only. Do not store or require student names, addresses, birth dates, guardian information, official student IDs, personal contact information, or code-to-name mappings.
+8. Student identity remains code-based and pseudonymous. Use internal student codes such as `S001` in authenticated workspace views and teacher working drafts. Do not store or require student names, addresses, birth dates, guardian information, official student IDs, personal contact information, or code-to-name mappings.
 9. Use fake or sanitized coded data for development and automated testing.
 10. Archive and version historical records; do not casually overwrite or delete them.
 11. Implement through narrow, independently testable slices rather than broad rewrites.
@@ -204,7 +204,9 @@ The workbench must distinguish independent, supported, inconsistent, not-yet-dem
 - **Teacher working draft:** evidence links, dates, readiness indicators, conflicts, missing information, and questions.
 - **Clean draft:** polished copy/paste-ready language without internal annotations.
 
-Drafts must use “the student” or an explicit non-identifying placeholder. They must not require or generate student PII.
+Authenticated workspace views and teacher working drafts use the internal student code—for example, `S001`—so the record remains unambiguous.
+
+Clean exports default to “the student” or `[Student]`. The teacher may deliberately retain the internal code when appropriate, but drafts must never require or generate student PII or a code-to-name mapping.
 
 Neither output is official until reviewed through the required process.
 
@@ -224,7 +226,7 @@ Packages should support draft, validation, teacher review, activation, versionin
 
 ## 11. Security, Privacy, and Governance
 
-1. Reinisch Classroom uses code-only student identity for this architecture.
+1. Reinisch Classroom uses pseudonymous, code-based student identity for this architecture—for example, `S001`. A student code must not be described or treated as anonymous.
 2. Do not store or require names, addresses, birth dates, guardian information, official student IDs, personal contact information, or code-to-name mappings.
 3. Do not expose sensitive student/IEP data through public files, curriculum manifests, client logs, telemetry, or unauthenticated routes.
 4. New protected features use authenticated server-side access patterns.
