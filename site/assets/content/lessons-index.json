@@ -4,7 +4,19 @@
   "sections": [
     {
       "name": "LANGUAGE ARTS",
-      "units": []
+      "units": [
+        {
+          "id": "1984-2026-27",
+          "name": "1984",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Inference & Character Development - Surveillance & Thoughtcrime",
+              "url": "/presentations/1984-2026-27/presentation-01/"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "LIFE SKILLS",
