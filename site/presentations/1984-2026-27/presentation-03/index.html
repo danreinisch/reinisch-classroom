@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 3: Evidence, Inference &amp; Character Development - Control of Personal Choice &amp; Hope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#9aa8bd; --accent-deep:#333d4d; --glow:rgba(154,168,189,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 3 SC • Week 3</div><h1>1984</h1><div class="body"><div class="sub">by George Orwell &mdash; audiobook listening unit</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b> (Apply)<br>This week: Part 1, Chapters V-B, VI, VII-A + Written Response</div><div class="theme">Theme: Control of Personal Choice &amp; Hope</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td><b>P1 Ch. V-B</b> (15:40&ndash;end) &mdash; Parsons, Hate Week preparations, the lottery, and work. <i>Start with Parsons approaching the table; stop at the end of Ch. V.</i></td><td>7</td></tr><tr><td>Day 2</td><td><b>P1 Ch. VI</b> (full &mdash; 12:51) &mdash; Winston&rsquo;s diary and Party regulation of private relationships.</td><td>7</td></tr><tr><td>Day 3</td><td><b>P1 Ch. VII-A</b> (0:00&ndash;12:45) &mdash; hope in the proles, Party propaganda, uncertainty about the past. <i>Stop before Winston recalls the photograph of Jones, Aaronson, and Rutherford.</i></td><td>7</td></tr><tr><td>Day 4</td><td>Written Response</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>2 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our skills</h3><p><b>Applying evidence and character analysis independently.</b> This week we explain how the Party&rsquo;s control of <b>personal choice</b>, <b>loyalty</b>, and <b>hope</b> shapes Winston&rsquo;s decisions &mdash; and why his eyes keep turning to the proles.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Explain WHY the Party regulates even private life &mdash; using its own logic.</li><li>Weigh Winston&rsquo;s argument about the proles like an argument: claim, evidence, gaps.</li><li>Discuss competing interpretations with evidence (SL.1.B&ndash;C).</li></ul></div></div>
+<p class="note">Standards this week: 11-12.RL.1.A — Evidence &amp; Inference • 11-12.RL.2.D — Text Elements • SL.1.B&ndash;C — Competing Interpretations • W.2.A — Written Explanation</p></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>3 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">Why does the Party regulate private behavior and personal loyalty, and why does Winston look to the proles?</div></div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>4 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The True Believer</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Meet the Party&rsquo;s favorite citizen: sweating, cheerful, unquestioning Parsons. Today we study a character built to show what total belief looks like &mdash; and what it costs to stand near it.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week in Oceania</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. V-B + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week in Oceania</h1><div class="body"><ol class="q"><li>Recap the three attacks on truth we traced: memory, records, and ___. Which did the class rate most dangerous?</li><li>Winston predicted Syme will be vaporized for being too intelligent. Predict: what kind of person is SAFE in Oceania?</li><li>Today we meet that person. Watch for what safety costs him.</li></ol></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>6 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">ration</div><div class="pos">noun / verb • RA-shun</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> doublethink &bull; rectify &bull; orthodoxy</div><div class="means">A fixed, limited share of something scarce; to limit shares on purpose.</div>
+<div class="morph"><div><b>ratio</b><span>Latin <i>ratio</i> — a reckoning, a calculation</span></div><div class="plus">+</div><div><b>-tion</b><span>suffix: the act or thing</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">allowance</span><span class="pill">portion</span><span class="pill">quota</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">abundance</span><span class="pill anti">surplus</span><span class="pill anti">plenty</span></div>
+<div class="family"><b>Word family:</b> rational (adj) &bull; ratio (n) &bull; rationing (n) &mdash; all from &ldquo;calculation&rdquo;</div></div>
+<div><div class="quote">&hellip;it appeared that there had even been demonstrations to thank Big Brother for raising the chocolate ration to twenty grams a week.<span class="who">&mdash; Part 1, Chapter V</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Listen for how the telescreen ANNOUNCES this reduction &mdash; and how the room receives it. One number, two realities: that gap is last week&rsquo;s vocabulary word in action. Which one?</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>7 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Characterization: How Authors Build People</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Direct characterization</h3>
+<p>The narrator tells you flat out: <i>&ldquo;Ben was brave.&rdquo;</i> Rare, and less interesting.</p></div>
+<div class="card"><h3>Indirect characterization</h3>
+<p>The author shows you and lets you conclude. Remember <b>STEAL</b>: what a character <b>S</b>ays, <b>T</b>hinks, their <b>E</b>ffect on others, how they <b>A</b>ct, how they <b>L</b>ook.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend says &ldquo;I&rsquo;m not mad&rdquo; &mdash; then answers every text with one word. Words say one thing; behavior says another. You believe the behavior. So do readers.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Motivation &mdash; the why</h3>
+<p>Behind every action is a <b>want</b> or a <b>fear</b>. Find what a character wants most and fears most, and their choices start making sense.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Parsons is a <b>foil</b> &mdash; a character built for contrast. Run STEAL on him today, then hold him against Winston and Syme: three men, three ways of surviving the same system.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>8 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Three Men at One Table</h1><div class="body"><table class="mini">
+<tr><th>Character</th><th>Relationship to the Party</th><th>Fate the text hints at</th></tr>
+<tr><td><b>Parsons</b></td><td>Total, sweaty, happy belief &mdash; collects for Hate Week, brags about his children&rsquo;s spying</td><td>&ldquo;Safe&rdquo; &mdash; belief without thought is exactly what the Party wants</td></tr>
+<tr><td><b>Syme</b></td><td>Brilliant, loyal &mdash; and understands too clearly</td><td>Winston&rsquo;s prediction: vaporized</td></tr>
+<tr><td><b>Winston</b></td><td>Outward conformity, inward rebellion</td><td>He believes he&rsquo;s already dead &mdash; the diary is proof</td></tr></table>
+<p class="note">Apply-level focus: the author places these three side by side on purpose. As you listen, gather one detail for each man &mdash; the contrast will do your analysis for you. And when the chocolate announcement comes, watch Parsons swallow it whole.</p></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>9 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>The Foil at Work</h1><div class="body"><div class="mcq"><div class="qq">Parsons proudly reports his children&rsquo;s spying &mdash; including on him. As characterization, this shows&hellip;</div><button class="opt" data-ok="1">The Party&rsquo;s ideal citizen: family loyalty fully replaced by Party loyalty, and he calls it pride</button><button class="opt" data-ok="0">Parsons secretly resents his children</button><button class="opt" data-ok="0">The children are unusually naughty</button><div class="fb">Week 1&rsquo;s theme completed in one man: the informer children of Chapter II, seen now from a proud parent&rsquo;s side.</div></div><div class="mcq"><div class="qq">The chocolate ration drops from thirty grams to twenty &mdash; and is announced as an increase. The crowd&rsquo;s acceptance is evidence of&hellip;</div><button class="opt" data-ok="1">Doublethink working at scale: memory loses to announcement, publicly, in real time</button><button class="opt" data-ok="0">A simple clerical error</button><button class="opt" data-ok="0">Genuine abundance in Oceania</button><div class="fb">Last week you watched Winston rewrite the past at a desk. Today you hear the finished product land on a lunchroom.</div></div><div class="rev"><div class="rq">Competing interpretations (SL.1.B): Is Parsons happy? Build the best case for YES and the best case for NO &mdash; each with a detail.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">YES: his enthusiasm never flags; belief spares him fear. NO: his &ldquo;happiness&rdquo; requires never thinking a single step ahead &mdash; comfort purchased by unconsciousness. The text supports both; that&rsquo;s why he unsettles.</div></div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>10 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Listen</div><h1>P1 Chapter V-B (15:40&ndash;end)</h1><div class="body"><p><span class="badge">Listen</span> Start with Parsons approaching the table. <b>Stop at the end of Chapter V.</b></p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>Parsons&rsquo; <b>Hate Week</b> collections &mdash; and his pride in his children&rsquo;s spying.</li><li>The <b>chocolate ration</b> announcement &mdash; and how the canteen receives it.</li><li>One detail each for Parsons, Syme, and Winston &mdash; your three-man contrast chart.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> Turn in your three-man chart: one detail per character + one sentence on what the contrast reveals.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>11 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Party in Private Life</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Today&rsquo;s chapter is Winston&rsquo;s hardest diary entry: how far the Party reaches into marriage, loyalty, and private feeling &mdash; and why it bothers reaching at all.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. V-B</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. VI + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The True Believer</h1><div class="body"><ol class="q"><li>Share your three-man chart. Which single detail did the class find most revealing?</li><li>The chocolate announcement: walk through exactly what a listener must do inside their own head to accept it.</li><li>Preview question: the Party already controls work, news, and children. Predict WHY it would also want to control marriage and private loyalty.</li></ol></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>13 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">loyalty</div><div class="pos">noun • LOY-ul-tee</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> doublethink &bull; rectify &bull; orthodoxy</div><div class="means">Faithful commitment to a person, group, or cause.</div>
+<div class="morph"><div><b>loial</b><span>Old French, from Latin <i>legalis</i> — lawful, true to obligation</span></div><div class="plus">+</div><div><b>-ty</b><span>suffix: the state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">faithfulness</span><span class="pill">devotion</span><span class="pill">allegiance</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">betrayal</span><span class="pill anti">treachery</span><span class="pill anti">disloyalty</span></div>
+<div class="family"><b>Word family:</b> loyal (adj) &bull; loyalist (n) &bull; disloyal (adj) &bull; legal &mdash; same root!</div></div>
+<div><div class="quote">The aim of the Party was not merely to prevent men and women from forming loyalties which it might not be able to control.<span class="who">&mdash; Part 1, Chapter VI</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The Party&rsquo;s enemy in this chapter isn&rsquo;t an action &mdash; it&rsquo;s a <i>bond</i>. Why would a private loyalty between two people threaten a state that controls everything else?</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>14 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Cause &amp; Effect: Nonfiction&rsquo;s Engine</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The pattern</h3>
+<p>Nonfiction writers constantly argue <b>because X, therefore Y</b>. Your job: separate what happened (effect) from what produced it (cause) &mdash; and notice when one effect becomes the next cause.</p></div>
+<div class="card"><h3>Signal words</h3>
+<p>because &bull; as a result &bull; therefore &bull; led to &bull; consequently &bull; so that &bull; in order to &bull; this meant that</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Chains, not pairs</h3>
+<p>Real causes come in chains: scarce food &rarr; competition &rarr; broken trust &rarr; isolation. Trace the whole chain and you understand a system, not just an event.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>Phone dies &rarr; alarm doesn&rsquo;t ring &rarr; late to school &rarr; missed quiz. One cause, cascading effects. Authors build these chains on purpose &mdash; find the first domino.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Build the Party&rsquo;s own logic chain today: private loyalty &rarr; divided allegiance &rarr; a loyalty the Party cannot audit &rarr; forbidden. Follow the chain and the strangest rules become coldly rational.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>15 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Why Regulate the Private?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>What the chapter establishes</h3>
+<p>Winston&rsquo;s diary turns to his marriage to <b>Katharine</b> &mdash; a union of duty, arranged around the Party&rsquo;s rules, empty of affection. Marriage exists to serve the Party; personal attachment between spouses is treated as suspect. Winston&rsquo;s memories of seeking any genuine human connection are written as <b>confession</b> &mdash; he cannot stop the pen.</p></div>
+<div class="card"><h3>The Party&rsquo;s reasoning (RL.1.A &mdash; use its own words)</h3>
+<p>A private loyalty is a rival government of two. Strong personal bonds create an allegiance the Party cannot see into or redirect &mdash; so bonds themselves become the crime. Energy that might flow between people must flow to Big Brother instead.</p></div></div>
+<p class="note">Academic frame for this chapter: we analyze the <i>system&rsquo;s design</i> &mdash; what the Party regulates and why &mdash; not the private details of Winston&rsquo;s past. The diary&rsquo;s function matters most: writing what cannot be said aloud, to no reader, at mortal risk.</p></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>16 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>The Party&rsquo;s Logic</h1><div class="body"><div class="mcq"><div class="qq">Complete the chain: private loyalty between two people &rarr; ___ &rarr; forbidden.</div><button class="opt" data-ok="1">An allegiance the Party cannot monitor or control &mdash; a rival claim on the heart</button><button class="opt" data-ok="0">More marriages and larger families</button><button class="opt" data-ok="0">Less work getting done at the Ministry</button><div class="fb">The chapter says it plainly: the aim is to prevent loyalties the Party &ldquo;might not be able to control.&rdquo; Control is the whole sentence.</div></div><div class="mcq"><div class="qq">Winston writes his most private memories into the diary as confession. The best inference about WHY:</div><button class="opt" data-ok="1">The diary is the one place a true self can exist &mdash; writing is how he stays a person</button><button class="opt" data-ok="0">He hopes the Party will read and forgive him</button><button class="opt" data-ok="0">He enjoys record-keeping</button><div class="fb">Connect to Week 1: thoughtcrime IS death, and he writes anyway. Each entry is a vote that his inner life is real.</div></div><div class="rev"><div class="rq">Competing interpretations (SL.1.C): Is Winston&rsquo;s diary an act of hope or of despair? One piece of evidence each way.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Hope: he addresses the future, &ldquo;a time when thought is free.&rdquo; Despair: he believes he is already dead and writes like a man leaving a note. Strong essays let both stand &mdash; Orwell built the tension on purpose.</div></div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>17 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Listen</div><h1>P1 Chapter VI (full &mdash; 12:51)</h1><div class="body"><p><span class="badge">Listen</span> Winston&rsquo;s diary: memories he cannot stop writing, and the Party&rsquo;s reach into marriage and loyalty. <b>Stop at the end of Chapter VI.</b></p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>The marriage to <b>Katharine</b>: what the Party made of marriage, and what was missing.</li><li>The Party&rsquo;s <b>aim</b> &mdash; the sentence about loyalties it &ldquo;might not be able to control.&rdquo;</li><li>The diary as <b>confession</b>: what writing does for Winston that nothing else can.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> One paragraph, academic tone: why does the Party regulate private loyalty? Use its own logic, then add one sentence on what this costs Winston.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>18 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>If There Is Hope</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Eighty-five percent of Oceania is proles &mdash; ignored, unmonitored, alive. Today Winston writes his most dangerous sentence yet, and we grade it like the argument it is.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. VI</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. VII-A + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">SL.1.B&ndash;C — Competing Interpretations</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The Party in Private Life</h1><div class="body"><ol class="q"><li>Share your paragraph&rsquo;s best sentence: the Party&rsquo;s logic in your own words.</li><li>Hope or despair &mdash; where did you land on the diary? Has anyone moved since yesterday?</li><li>Preview: if rebellion can&rsquo;t come from Party members (watched) or from Winston alone (doomed), where is left to look?</li></ol></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>20 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">conscious</div><div class="pos">adjective • KON-shus</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> doublethink &bull; rectify &bull; orthodoxy</div><div class="means">Awake and aware &mdash; knowing what is happening and what it means.</div>
+<div class="morph"><div><b>con-</b><span>prefix: with, together</span></div><div class="plus">+</div><div><b>sci</b><span>Latin <i>scire</i> — to know</span></div><div class="plus">+</div><div><b>-ous</b><span>suffix: full of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">aware</span><span class="pill">awake</span><span class="pill">mindful</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">unaware</span><span class="pill anti">oblivious</span><span class="pill anti">unconscious</span></div>
+<div class="family"><b>Word family:</b> consciousness (n) &bull; conscience (n) &mdash; knowing right &bull; science &mdash; same knowing root</div></div>
+<div><div class="quote">Until they become conscious they will never rebel, and until after they have rebelled they cannot become conscious.<span class="who">&mdash; Winston&rsquo;s diary, Part 1, Chapter VII</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Read Winston&rsquo;s sentence twice &mdash; it&rsquo;s a perfect circle. Name the trap: what must come first, and why can&rsquo;t it?</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>21 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Central Idea: Nonfiction&rsquo;s Main Point</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one or two words)</h3>
+<p>School lunch. Prison camps. Social media. Just the subject &mdash; no point made.</p></div>
+<div class="card"><h3>Central idea (a complete point)</h3>
+<p>&ldquo;The district&rsquo;s new lunch program is failing students.&rdquo; A claim the author develops with stacked evidence.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How authors build it: evidence stacking</h3>
+<p>Nonfiction writers pile up facts, examples, statistics, and testimony that all push the same direction. Your job: notice the direction the pile is pushing.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend lists: the coach benched them twice, cut their minutes, skipped their name at awards. They never say &ldquo;the coach dislikes me&rdquo; &mdash; but that&rsquo;s the central idea of the evidence.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Winston&rsquo;s diary entry today is an <b>argument</b> &mdash; a claim about the proles with evidence stacked under it. Treat it exactly like a nonfiction text: find his central idea, grade his receipts, and mark the gap he can&rsquo;t close.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>22 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Grading Winston&rsquo;s Argument</h1><div class="body"><table class="mini">
+<tr><th>Winston&rsquo;s move</th><th>Grade it</th></tr>
+<tr><td><b>Claim:</b> &ldquo;If there is hope, it lies in the proles.&rdquo;</td><td>Arguable, consequential &mdash; a real claim</td></tr>
+<tr><td><b>Evidence:</b> 85% of the population; too many to watch; telescreens rare among them; their loyalty is to each other, not the Party</td><td>Strong &mdash; the Party&rsquo;s own neglect is the receipt</td></tr>
+<tr><td><b>Counter-evidence he admits:</b> their attention goes to the lottery, quarrels, and getting by; Party propaganda calls them &ldquo;natural inferiors&rdquo; and leaves them be</td><td>Honest &mdash; he includes what hurts his claim</td></tr>
+<tr><td><b>The gap:</b> the consciousness circle &mdash; they can&rsquo;t rebel until aware, can&rsquo;t become aware until they rebel</td><td>Unclosed &mdash; and Winston knows it</td></tr></table>
+<p class="note">Stop point matters today: end at 12:45, <i>before</i> the photograph of Jones, Aaronson, and Rutherford &mdash; that evidence belongs to next week.</p></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>23 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Hope Under a Microscope</h1><div class="body"><div class="mcq"><div class="qq">The Party barely monitors the proles &mdash; few telescreens, little propaganda effort. By the Party&rsquo;s own logic, this proves&hellip;</div><button class="opt" data-ok="1">It fears organized thought, not people: the unwatched are the ones judged incapable of rebellion</button><button class="opt" data-ok="0">The Party is generous to the poor</button><button class="opt" data-ok="0">The proles are secretly in charge</button><div class="fb">Surveillance maps fear. Where the Party doesn&rsquo;t bother to watch, it doesn&rsquo;t believe consciousness can form &mdash; which is exactly Winston&rsquo;s trap.</div></div><div class="mcq"><div class="qq">&ldquo;Until they become conscious they will never rebel&hellip;&rdquo; The structure of this sentence is&hellip;</div><button class="opt" data-ok="1">A closed circle &mdash; each condition requires the other first, so hope has no starting point</button><button class="opt" data-ok="0">A simple cause and effect</button><button class="opt" data-ok="0">A contradiction Winston doesn&rsquo;t notice</button><div class="fb">He notices &mdash; that&rsquo;s the anguish. He has found where hope lives and proved he can&rsquo;t reach it in the same breath.</div></div><div class="rev"><div class="rq">Competing interpretations (SL.1.C): Is Winston&rsquo;s hope in the proles clear-eyed analysis &mdash; or a believer&rsquo;s wish wearing the costume of analysis? Evidence both ways.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Analysis: his receipts are real &mdash; numbers, neglect, surviving loyalty. Wish: he needs hope to exist, and he&rsquo;s honest enough to log the counter-evidence that undercuts it. Hold both &mdash; tomorrow you&rsquo;ll have to choose and defend.</div></div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>24 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Listen</div><h1>P1 Chapter VII-A (0:00&ndash;12:45)</h1><div class="body"><p><span class="badge">Listen</span> Winston&rsquo;s diary turns to the proles &mdash; the 85% the Party ignores. <b>Stop before Winston recalls the photograph of Jones, Aaronson, and Rutherford.</b></p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>The famous sentence &mdash; and every piece of <b>evidence</b> Winston stacks beneath it.</li><li>The <b>counter-evidence</b> he honestly includes: the lottery, the quarrels, the Party&rsquo;s dismissive propaganda.</li><li>The <b>consciousness circle</b> &mdash; the trap that keeps hope out of reach.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> Star your <b>two strongest pieces of evidence</b> for tomorrow &mdash; one about the Party&rsquo;s control of private life, one about the proles.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>25 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Two questions, one essay: why the Party regulates the private, and why Winston looks to the proles. Connect them and you&rsquo;ve understood Part 1.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. VII-A</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">SL.1.B&ndash;C — Competing Interpretations</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: If There Is Hope</h1><div class="body"><ol class="q"><li>Where did you land: analysis or wish? Defend with one starred receipt.</li><li>Connect the week: the Party crushes private loyalty (Ch. VI) &mdash; yet prole life still runs on personal loyalty. Why is that connection the real answer to the essential question?</li><li>Check your starred pair: one control detail + one proles detail = the essay&rsquo;s two pillars.</li></ol></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>27 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> This EQ has two halves joined by one idea: <b>uncontrolled loyalty</b>. The Party fears it in Party members &mdash; and Winston finds it surviving among the proles. Build your claim on that hinge.</div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>28 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:32px">Why does the Party regulate private behavior and personal loyalty, and why does Winston look to the proles?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Parsons&rsquo; pride in his children&rsquo;s spying &mdash; family loyalty converted to Party loyalty (Ch. V-B)</li><li>The chocolate ration &ldquo;increase&rdquo; swallowed by the room (Ch. V-B)</li><li>&ldquo;The aim of the Party was not merely to prevent men and women from forming loyalties which it might not be able to control&rdquo; (Ch. VI)</li><li>&ldquo;If there is hope, it lies in the proles&rdquo; &mdash; and the 85% the Party doesn&rsquo;t watch (Ch. VII-A)</li><li>&ldquo;Until they become conscious they will never rebel&hellip;&rdquo; &mdash; the circle (Ch. VII-A)</li></ul></div></div></div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>29 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Supported <span>&mdash; one well-developed paragraph</span></h3><p>Organizer and evidence bank available. One claim connecting the two halves + one strong receipt from each + explanation.</p></div><div class="card"><h3>Extension <span>&mdash; 2&ndash;3 analytical paragraphs</span></h3><p>Independent claim, evidence from all three segments, and engage a competing interpretation: is Winston&rsquo;s hope analysis or wish &mdash; and does the difference matter?</p></div></div><p class="note">Self-check: both halves of the EQ addressed &bull; evidence from at least two segments &bull; one competing interpretation acknowledged.</p></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>30 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 3 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>The Party&rsquo;s reach runs all the way into marriage and private feeling &mdash; loyalty itself is the threat. And in the one place the Party doesn&rsquo;t bother to look, Winston finds loyalty still alive: the proles, 85 percent of everything, guarded only by the Party&rsquo;s contempt. Hope exists. He just can&rsquo;t find the door to it.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What would make the proles &ldquo;conscious&rdquo; &mdash; and could anything?</li><li>Parsons or Syme: which fate is worse?</li><li>What photograph is Winston about to remember &mdash; and why does the week stop right before it?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: P1 Ch. VII-B and VIII &mdash; the photograph, and Winston&rsquo;s walk into prole London.</p></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>31 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page during listening, discussion, and review.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Winston Smith</b></td><td>Diarist and quiet rebel &mdash; this week: confessing his private past, and locating hope where the Party never looks.</td></tr><tr><td><b>Parsons</b></td><td>Winston&rsquo;s neighbor; Hate Week organizer; proud father of junior spies &mdash; the Party&rsquo;s ideal, unthinking citizen.</td></tr><tr><td><b>Katharine</b></td><td>Winston&rsquo;s estranged wife &mdash; a marriage of duty, arranged around Party rules, empty of personal bond.</td></tr><tr><td><b>The proles</b></td><td>The ignored 85%: few telescreens, little propaganda, loyalty still personal &mdash; and attention absorbed by the lottery and daily life.</td></tr><tr><td><b>Syme (recap)</b></td><td>The too-brilliant philologist of Week 2 &mdash; keep Winston&rsquo;s prediction in mind.</td></tr><tr><td><b>Key terms</b></td><td>ration &bull; foil &bull; loyalty &bull; conscious &bull; the lottery &bull; Hate Week</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. V-B (15:40&ndash;end)</b></td><td>Parsons collects for Hate Week and brags about his children; the chocolate ration falls and is cheered as a rise; three survival strategies share one table.</td></tr><tr><td><b>Ch. VI (12:51)</b></td><td>Winston&rsquo;s diary confesses his past and his empty marriage; the Party&rsquo;s aim stated plainly &mdash; no loyalties it cannot control.</td></tr><tr><td><b>Ch. VII-A (to 12:45)</b></td><td>&ldquo;If there is hope, it lies in the proles&rdquo; &mdash; the evidence, the honest counter-evidence, and the consciousness circle. Stops before the photograph.</td></tr></table></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>32 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>ration</b></td><td>a fixed share of something scarce (ant.: abundance)</td></tr><tr><td><b>loyalty</b></td><td>faithful commitment &mdash; the Party&rsquo;s true rival (ant.: betrayal)</td></tr><tr><td><b>conscious</b></td><td>aware of what is happening and what it means (ant.: oblivious)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">The aim of the Party was not merely to prevent men and women from forming loyalties which it might not be able to control.<span class="who">&mdash; Chapter VI</span></div><div class="quote" style="margin:10px 0">If there is hope [wrote Winston] it lies in the proles.<span class="who">&mdash; Winston&rsquo;s diary, Chapter VII</span></div><div class="quote" style="margin:10px 0">Until they become conscious they will never rebel, and until after they have rebelled they cannot become conscious.<span class="who">&mdash; Chapter VII</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;The Party regulates private life because ___.&rdquo;</li><li>&ldquo;Winston looks to the proles because ___.&rdquo;</li><li>&ldquo;These connect through ___.&rdquo;</li><li>&ldquo;A skeptic might argue ___, but ___.&rdquo;</li></ul></div></div><div class="footer"><span>1984 • Week 3 • Control of Personal Choice &amp; Hope</span><span>33 of 33</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

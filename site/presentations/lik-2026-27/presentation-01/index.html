@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1: Evidence, Inference &amp; Character Development - Commitment, Duty, and Beginning the Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#34d399; --accent-deep:#14532d; --glow:rgba(52,211,153,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts SC • Week 1</div><h1>Lost in Kragdon-ah</h1><div class="body"><div class="sub">by Shawn Inmon &mdash; An Alex Hawk Time Travel Adventure</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b><br>This week: Chapters 1&ndash;3 + Written Response</div><div class="theme">Theme: Commitment, Duty, and Beginning the Journey</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 1, &ldquo;Alex&rsquo;s Oath&rdquo; &mdash; identify details and annotate</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 2, &ldquo;A Journey of a Thousand Miles&hellip;&rdquo; &mdash; build analysis</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 3, &ldquo;The First Mighty River&rdquo; &mdash; synthesize</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 1&ndash;3</td><td>5</td></tr></table></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skill</h3><p><b>Evidence and inference.</b> We identify details showing how Alex&rsquo;s <b>oath</b>, his competing responsibilities, and his <b>lack of preparation</b> shape the start of the journey.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Explain what Alex&rsquo;s oath requires him to give up.</li><li>Contrast this rushed journey with careful planning.</li><li>Cite evidence for every claim I make.</li></ul></div></div>
+<p class="note">Standards this week: 9-10.RL.1.A — Evidence &amp; Inference • 9-10.RL.1.B — Word Meanings • 9-10.RL.2.D — Development of Text Elements • 9-10.W.2.A / W.3.A.a — Written Response</p></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do Alex&rsquo;s oath and competing responsibilities shape the way he begins the journey?</div></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Before We Begin</div><h1>Where the Story Begins</h1><div class="body"><div class="cols2"><div class="card"><h3>Alex Hawk (Manta-ak)</h3><p>Four years in Kragdon-ah. He has just won a war and was finally about to go home to his daughter Amy &mdash; when everything changed.</p></div><div class="card"><h3>The attack</h3><p>While the warriors were away, invaders struck Winten-ah, killed almost a generation of children, and kidnapped <b>Lanta-eh</b>, the tribe&rsquo;s Chosen One.</p></div><div class="card"><h3>The rescue team</h3><p><b>Senta-eh</b>, fearless archer &bull; <b>Werda-ak</b>, a teenage tracker with something to prove &bull; <b>Monda-ak</b>, Alex&rsquo;s giant dog.</p></div><div class="card"><h3>The oath</h3><p>Alex once gave his word to Ganku-eh&rsquo;s husband. Now the grieving chieftain claims that promise: <i>save Lanta-eh</i>.</p></div></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>A Promise Claimed</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Today we study how a single value &mdash; keeping your word &mdash; can outweigh everything a character wants.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 1 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Before We Open the Book</h1><div class="body"><ol class="q"><li>What makes a promise <i>binding</i> &mdash; witnesses? honor? consequences? Something else?</li><li>Have you ever had two duties collide &mdash; two people or commitments needing you at once? How did you weigh them?</li><li>Predict: what does a journey cost when you leave in a rush, without a plan?</li></ol><p class="note">Alex faces all three of these today &mdash; and he gets about five minutes to decide.</p></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">oath</div><div class="pos">noun • OHTH</div>
+<div class="means">A serious, binding promise &mdash; one that puts your honor on the line.</div>
+<div class="morph"><div><b>oath</b><span>Old English <i>&#257;th</i> — a solemn vow (some words are ancient roots all by themselves)</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">vow</span><span class="pill">pledge</span><span class="pill">word of honor</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">betrayal</span><span class="pill anti">broken promise</span></div>
+<div class="family"><b>Word family:</b> swear an oath (collocation) &bull; oath-keeper / oath-breaker</div></div>
+<div><div class="quote">I claim the oath you gave my husband&hellip; You must save Lanta-eh.<span class="who">&mdash; Ganku-eh, Chapter 1</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>An oath is stronger than a promise: witnesses, honor, consequences. Where do people still swear oaths today? Name two places.</p></div></div>
+</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Explicit vs. Implicit: How Readers Know Things</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit &mdash; the text says it</h3>
+<p>Information stated directly. <i>&ldquo;Maria slammed the door.&rdquo;</i> We know the door slammed &mdash; it&rsquo;s on the page.</p></div>
+<div class="card"><h3>Implicit &mdash; the text suggests it</h3>
+<p>An <b>inference</b> = detail from the text + what you already know. Slammed door + your life experience &rarr; Maria is probably angry. The text never said &ldquo;angry.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday inference</h3>
+<p>You come home: wet umbrella by the door, muddy shoes on the mat. Nobody told you it rained &mdash; you <b>inferred</b> it. You do this skill all day already.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The one rule</h3>
+<p>Every inference must trace back to a detail you can point to. Evidence is your receipt &mdash; no receipt, no claim.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Chapter 1 is built on one six-word decision. Find the explicit words of the oath &mdash; then infer everything it will cost.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Values Drive Decisions: The Anatomy of a Choice</h1><div class="body"><div class="cols2">
+<div class="card"><h3>What Alex wants</h3>
+<p>To go home. <i>&ldquo;How much longer will Amy think I have abandoned her?&rdquo;</i> Four years of fighting &mdash; all of it to get back to his daughter.</p></div>
+<div class="card"><h3>What Alex values more</h3>
+<p><i>&ldquo;Does any of that matter? I gave my word. That&rsquo;s the end of it.&rdquo;</i> Six words end the debate. The oath outweighs the want.</p></div></div>
+<div class="card flat" style="margin-top:16px"><h3>Reader&rsquo;s move</h3>
+<p>When a character decides <b>fast</b>, slow down. Ask: what value made this choice feel automatic? That value will be tested for the rest of the book.</p></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>The Oath Under a Microscope</h1><div class="body"><div class="mcq"><div class="qq">Which one is an <b>explicit detail</b>?</div><button class="opt" data-ok="0">Alex secretly wants an excuse to stay in Kragdon-ah.</button><button class="opt" data-ok="1">Ganku-eh says: &ldquo;I claim the oath you gave my husband.&rdquo;</button><button class="opt" data-ok="0">The rescue mission is doomed from the start.</button><div class="fb">It&rsquo;s stated directly &mdash; quoted dialogue is the most pointable evidence there is.</div></div><div class="mcq"><div class="qq">&ldquo;I gave my word. That&rsquo;s the end of it.&rdquo; Best inference about Alex?</div><button class="opt" data-ok="0">He makes decisions carelessly.</button><button class="opt" data-ok="1">Honor works like law for him &mdash; once his word is given, there is no debate.</button><button class="opt" data-ok="0">He has forgotten about Amy.</button><div class="fb">Six words end an argument between everything he wants and everything he promised. That speed tells you his values.</div></div><div class="rev"><div class="rq">What does saying <b>yes</b> cost Alex? Receipt required.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">More years away from Amy. Receipt: &ldquo;How much longer will Amy think I have abandoned her?&rdquo; The cost is on the page &mdash; in his own thoughts.</div></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 1 &mdash; &ldquo;Alex&rsquo;s Oath&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Hours from going home, Alex is asked to give it up and chase the kidnappers instead.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>What Ganku-eh asks &mdash; and the <b>oath</b> she claims.</li><li>What saying yes costs Alex &mdash; find the sentence about Amy.</li><li>How the team is chosen: why Werda-ak? Why Senta-eh? Why only four?</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write the two things pulling at Alex, and circle the one that wins: <b>Amy</b> or <b>the oath</b>. Give one piece of evidence.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>An Unplanned Hunt</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">We talk through the oath, then study <b>contrast</b> as an author&rsquo;s tool: careful-planner Alex vs. no-plan Alex &mdash; and what that contrast warns us about.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 1</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 2 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Alex&rsquo;s Oath</h1><div class="body"><ol class="q"><li>&ldquo;I gave my word. That&rsquo;s the end of it.&rdquo; What does this tell us about Alex&rsquo;s character &mdash; and what does it cost him?</li><li>Ganku-eh gave up being chieftain. What evidence showed the weight leaders carry in this chapter?</li><li>Alex insisted on a small team so they can move fast. What are the risks of that choice?</li></ol></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">impetuous</div><div class="pos">adjective • im-PEH-choo-us</div>
+<div class="means">Acting quickly on emotion, without thinking it through.</div>
+<div class="morph"><div><b>impet</b><span>Latin <i>impetus</i> — a rush, force, attack</span></div><div class="plus">+</div><div><b>-ous</b><span>suffix: full of, having the quality of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">rash</span><span class="pill">hasty</span><span class="pill">impulsive</span><span class="pill">headlong</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">cautious</span><span class="pill anti">deliberate</span><span class="pill anti">patient</span></div>
+<div class="family"><b>Word family:</b> impetus (n) &bull; impetuously (adv) &bull; impetuousness (n)</div></div>
+<div><div class="quote">Driven by exhaustion and disappointment, he had put almost no planning into this rescue mission.<span class="who">&mdash; Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p><b>-ous</b> means full of: danger<b>ous</b>, courage<b>ous</b>, impetu<b>ous</b>. Alex has been impetuous before &mdash; stepping through the door itself. What did it cost him then?</p></div></div>
+</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Characterization: How Authors Build People</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Direct characterization</h3>
+<p>The narrator tells you flat out: <i>&ldquo;Ben was brave.&rdquo;</i> Rare, and less interesting.</p></div>
+<div class="card"><h3>Indirect characterization</h3>
+<p>The author shows you and lets you conclude. Remember <b>STEAL</b>: what a character <b>S</b>ays, <b>T</b>hinks, their <b>E</b>ffect on others, how they <b>A</b>ct, how they <b>L</b>ook.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend says &ldquo;I&rsquo;m not mad&rdquo; &mdash; then answers every text with one word. Words say one thing; behavior says another. You believe the behavior. So do readers.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Motivation &mdash; the why</h3>
+<p>Behind every action is a <b>want</b> or a <b>fear</b>. Find what a character wants most and fears most, and their choices start making sense.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Today, characterize the whole <b>team</b> through their actions: the tracker, the archer, the dog &mdash; and a leader running on empty.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Reading Contrast: The Planner Who Didn&rsquo;t Plan</h1><div class="body"><table class="mini">
+<tr><th>The war on Denta-ah</th><th>This rescue mission</th></tr>
+<tr><td>&ldquo;He had planned every detail meticulously.&rdquo;</td><td>&ldquo;He didn&rsquo;t even know what was in the pack he carried.&rdquo;</td></tr>
+<tr><td>An army of four hundred, trained together</td><td>Three people and a dog, two weeks behind the enemy</td></tr>
+<tr><td>Time to prepare, drill, and scout</td><td>Driven out the door by &ldquo;exhaustion and disappointment&rdquo;</td></tr></table>
+<p class="note">Why show us this contrast on page one of the journey? Writers plant weaknesses early. As you read, watch what the team must <i>improvise</i>: the trap hole, the split trail, the found helmet.</p></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Contrast Radar</h1><div class="body"><div class="mcq"><div class="qq">Authors use <b>contrast</b> to&hellip;</div><button class="opt" data-ok="0">fill extra pages</button><button class="opt" data-ok="1">spotlight a difference so readers ask <i>why</i> it exists</button><button class="opt" data-ok="0">confuse the reader on purpose</button><div class="fb">When a careful planner suddenly doesn&rsquo;t plan, the contrast IS the message: something is off.</div></div><div class="mcq"><div class="qq">Which pairing is this chapter&rsquo;s key contrast?</div><button class="opt" data-ok="1">The meticulously planned war vs. the unplanned rescue</button><button class="opt" data-ok="0">Day hiking vs. night hiking</button><button class="opt" data-ok="0">Old dogs vs. young dogs</button><div class="fb">&ldquo;He had planned every detail meticulously&rdquo; vs. &ldquo;he didn&rsquo;t even know what was in the pack.&rdquo; Same man, opposite state.</div></div><div class="rev"><div class="rq">The spiked trap dug on the enemy&rsquo;s own back-trail &mdash; what inference about the invaders?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">They plan for pursuit: disciplined, strategic, patient. Not raiders &mdash; professionals. Which makes Alex&rsquo;s lack of planning matter even more.</div></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 2 &mdash; &ldquo;A Journey of a Thousand Miles Begins with a Single Step&rdquo;</h1><div class="body"><p><span class="badge">Read</span> The hunt begins &mdash; and Alex realizes he has done almost <b>no planning</b> for it.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>trap hole</b> with spikes &mdash; what it proves about the enemy&rsquo;s intelligence.</li><li>Each member&rsquo;s contribution: Werda-ak&rsquo;s tracking, Senta-eh&rsquo;s hunting, Monda-ak&rsquo;s nose.</li><li>The found <b>helmet</b> with three wavy lines &mdash; evidence the kidnappers come from far away.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> One sentence: name one problem from the chapter that better planning would have prevented &mdash; or explain why no plan could have.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>The Footprint</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">We talk through the traps and the trail, then track a <b>turning point</b>: the small detail that changes a mission of duty into a mission of the heart.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 2</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 3 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.2.A — Theme Development</span><span class="pill">9-10.RL.1.D — Comprehension &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: A Journey Begins</h1><div class="body"><ol class="q"><li>Why did Alex leave with almost no planning this time? What pushed him?</li><li>The invaders dug a spiked trap on their own back-trail. What inference can we make about them as enemies?</li><li>Werda-ak said, &ldquo;I can run around the world and never become tired.&rdquo; Confidence or hubris? Support your answer.</li></ol></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">determination</div><div class="pos">noun • dih-ter-mih-NAY-shun</div>
+<div class="means">Firm resolve to finish what you started, no matter the difficulty.</div>
+<div class="morph"><div><b>de-</b><span>prefix: completely</span></div><div class="plus">+</div><div><b>termin</b><span>Latin <i>terminus</i> — end, boundary</span></div><div class="plus">+</div><div><b>-ation</b><span>suffix: the act or state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">resolve</span><span class="pill">grit</span><span class="pill">persistence</span><span class="pill">commitment</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">hesitation</span><span class="pill anti">doubt</span><span class="pill anti">wavering</span></div>
+<div class="family"><b>Word family:</b> determine (v) &bull; determined (adj) &bull; determinedly (adv)</div></div>
+<div><div class="quote">The smallest of things &mdash; a half-smudged print, lit a fire inside of Alex.<span class="who">&mdash; Chapter 3</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>termin</i> means end: <b>termin</b>ate, <b>termin</b>al, de<b>termin</b>ation &mdash; deciding the end before you get there. Watch today for the moment Alex decides his &ldquo;end.&rdquo;</p></div></div>
+</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Theme: The Idea Under the Story</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one word)</h3>
+<p>Loss. Curiosity. Duty. Survival. A topic is just a subject &mdash; it makes no point.</p></div>
+<div class="card"><h3>Theme (a complete claim)</h3>
+<p>&ldquo;Loss can push people to build new purpose.&rdquo; A theme says something <i>about</i> the topic that the story proves.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How writers plant themes</h3>
+<p>Themes are almost never stated. Trace them through <b>repeated images</b>, <b>choices characters make</b>, and <b>consequences</b> of those choices. When a pattern repeats, the author is pointing at something.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The portability test</h3>
+<p>A real theme statement works <i>outside</i> the book too. &ldquo;Alex misses Amy&rdquo; is plot. &ldquo;Keeping a promise can cost the people you love&rdquo; is theme.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Our topic is <b>duty</b>. Watch one half-smudged footprint turn that topic into something warmer &mdash; and into your theme statement.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Small Details, Big Turns: Reading a Turning Point</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Before the footprint</h3>
+<p>Alex thinks of the mission as &ldquo;not much more than an inconvenience that was delaying his return to Amy.&rdquo; Duty without heart.</p></div>
+<div class="card"><h3>After the footprint</h3>
+<p>One small moccasin print in the dirt &mdash; a girl &ldquo;not so much older than Amy herself.&rdquo; Now the two responsibilities point the <b>same direction</b>.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Synthesis frame (we build it together)</h3>
+<p>Alex begins the journey because of ___, but by Chapter 3 he continues it because of ___. The footprint matters because ___.</p></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Turning Point Check</h1><div class="body"><div class="mcq"><div class="qq">Before the footprint, the mission felt to Alex like&hellip;</div><button class="opt" data-ok="0">the greatest adventure of his life</button><button class="opt" data-ok="1">&ldquo;not much more than an inconvenience&rdquo; delaying his return to Amy</button><button class="opt" data-ok="0">a chance to become chieftain</button><div class="fb">The narrator says it almost word for word &mdash; which makes the change that follows measurable.</div></div><div class="mcq"><div class="qq">Which one is a <b>theme</b> the footprint scene supports?</div><button class="opt" data-ok="0">Footprints are useful in tracking.</button><button class="opt" data-ok="1">Duty becomes devotion when the person you serve gets a face.</button><button class="opt" data-ok="0">Rivers are hard to cross.</button><div class="fb">Portable, arguable, and proven by the scene: Lanta-eh stops being a task and becomes a girl Amy&rsquo;s age.</div></div><div class="rev"><div class="rq">Portability test: where does &ldquo;duty becomes devotion when it gets a face&rdquo; happen in real life?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: volunteering feels like a chore until you meet the person you&rsquo;re helping &mdash; names and faces convert obligation into determination.</div></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 3 &mdash; &ldquo;The First Mighty River&rdquo;</h1><div class="body"><p><span class="badge">Read</span> The team finds its rhythm, the trail splits, and a small footprint changes everything for Alex.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The team&rsquo;s <b>routine</b>: who fishes, who hunts, who tracks, who guards.</li><li>The kidnappers&rsquo; trick of splitting their trail &mdash; and how Alex reasons through it.</li><li>The arrival at <b>Kranda-ah</b> &mdash; the river Alex knew as the Columbia.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Star the <b>two strongest pieces of evidence</b> for tomorrow &mdash; one about the oath, one about how the journey begins.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">We talk through the river and the footprint, review the evidence bank, then you write: how the oath and competing responsibilities shape the journey&rsquo;s beginning.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 3</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft with frames</span><span>Self-check and turn in</span></div>
+<div class="stdchips"><span class="pill">9-10.W.2.A — Development of Writing</span><span class="pill">9-10.W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The First Mighty River</h1><div class="body"><ol class="q"><li>The footprint &ldquo;lit a fire inside of Alex.&rdquo; Why did seeing it change how he feels about the mission?</li><li>How did the team use each member&rsquo;s strengths to solve the split trail? Give specific evidence.</li><li>The Kranda-ah is legend to Senta-eh and Werda-ak but memory to Alex. What does that show about his two lives?</li></ol><p class="note">Check your starred evidence as we talk &mdash; still your strongest two? Swap if better ones come up.</p></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your written response today is exactly this structure: a claim about the oath and its costs, evidence from Chapters 1&ndash;3, explanation in your own words.</div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How do Alex&rsquo;s oath and competing responsibilities shape the way he begins the journey?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>&ldquo;I gave my word. That&rsquo;s the end of it.&rdquo; &mdash; Alex accepts the mission (Ch. 1)</li><li>His grief about Amy: &ldquo;How much longer will Amy think I have abandoned her?&rdquo; (Ch. 1)</li><li>He leaves with &ldquo;almost no planning&rdquo; &mdash; rushed by duty and exhaustion (Ch. 2)</li><li>Lanta-eh&rsquo;s footprint turns duty into determination (Ch. 3)</li></ul></div></div></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Foundation <span>&mdash; 4&ndash;6 sentences</span></h3><p>Use <b>one</b> detail and the frames: &ldquo;Alex promised ___.&rdquo; &ldquo;Because of his oath, he ___.&rdquo; &ldquo;This shows ___.&rdquo;</p></div><div class="card"><h3>Supported <span>&mdash; one developed paragraph</span></h3><p>Use <b>two</b> details &mdash; one about the oath, one about what Alex gives up or rushes past &mdash; and explain how they shape the journey&rsquo;s beginning.</p></div><div class="card"><h3>Extension <span>&mdash; multi-paragraph response</span></h3><p>Use <b>two or three</b> details. Also consider: is keeping your word still honorable when it hurts the people waiting for you at home?</p></div></div><p class="note">Self-check: Did I state a claim? Did I use real moments from the text? Did I explain the connection in my own words?</p></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Alex Hawk / Manta-ak</b></td><td>Four years in Kragdon-ah; hours from going home when the oath is claimed.</td></tr><tr><td><b>Ganku-eh</b></td><td>Grieving chieftain; claims Alex&rsquo;s oath, then steps down from leadership.</td></tr><tr><td><b>Sekun-ak</b></td><td>The tribe&rsquo;s greatest hunter &mdash; named the new chieftain.</td></tr><tr><td><b>Senta-eh</b></td><td>Lead archer of Alex&rsquo;s old army; joins the rescue team.</td></tr><tr><td><b>Werda-ak</b></td><td>Teenage master tracker, grandson of Doken-ak; whippet-thin, proud, unproven.</td></tr><tr><td><b>Lanta-eh</b></td><td>The kidnapped Chosen One &mdash; the small footprint on the trail.</td></tr><tr><td><b>Monda-ak</b></td><td>Alex&rsquo;s giant dog; nose, alarm system, and battle partner. <b>Kranda-ah:</b> the mighty river Alex once knew as the Columbia.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 1 &mdash; Alex&rsquo;s Oath</b></td><td>Invaders massacred the children and took Lanta-eh. Ganku-eh claims Alex&rsquo;s oath; he accepts in six words; a four-member team forms; Ganku-eh hands leadership to Sekun-ak.</td></tr><tr><td><b>Ch. 2 &mdash; A Journey of a Thousand Miles&hellip;</b></td><td>Alex realizes he did almost no planning. The team finds a spiked trap on the trail, a corpse, and a leather helmet carved with three wavy lines &mdash; the enemy is from far away.</td></tr><tr><td><b>Ch. 3 &mdash; The First Mighty River</b></td><td>The team finds its rhythm; the enemy splits the trail to confuse them; a small footprint &ldquo;lit a fire inside of Alex&rdquo;; they reach the legendary Kranda-ah.</td></tr></table></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>oath</b></td><td>a binding promise, honor on the line (ant.: betrayal)</td></tr><tr><td><b>impetuous</b></td><td>acting fast on emotion, without a plan (ant.: deliberate)</td></tr><tr><td><b>determination</b></td><td>firm resolve to finish what you started (ant.: wavering)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">I claim the oath you gave my husband&hellip; You must save Lanta-eh.<span class="who">&mdash; Ganku-eh, Chapter 1</span></div><div class="quote" style="margin:10px 0">Does any of that matter? I gave my word. That&rsquo;s the end of it.<span class="who">&mdash; Alex, Chapter 1</span></div><div class="quote" style="margin:10px 0">Driven by exhaustion and disappointment, he had put almost no planning into this rescue mission.<span class="who">&mdash; Chapter 2</span></div><div class="quote" style="margin:10px 0">The smallest of things &mdash; a half-smudged print, lit a fire inside of Alex.<span class="who">&mdash; Chapter 3</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;In Chapter ___, the text says ___.&rdquo;</li><li>&ldquo;This detail shows / suggests ___.&rdquo;</li><li>&ldquo;For example, when ___, it reveals ___.&rdquo;</li><li>&ldquo;This matters because ___.&rdquo;</li><li>&ldquo;Ultimately, ___.&rdquo;</li></ul></div></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Alex trades his trip home for an oath: rescue Lanta-eh. With Senta-eh, Werda-ak, and Monda-ak, he tracks the kidnappers north past traps and false trails to the mighty Kranda-ah river.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What does it cost to keep a promise?</li><li>Can this small, under-prepared team really win?</li><li>Who are the kidnappers with the three-wave helmets?</li></ul></div></div>
+<p class="note">Next class: Chapters 4&ndash;6, as the trail crosses the great river.</p></div><div class="footer"><span>Lost in Kragdon-ah • Week 1 • Evidence, Inference &amp; Character Development</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

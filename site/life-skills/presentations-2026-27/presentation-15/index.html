@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 15: Workplace Communication - Asking for Help and Clarification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 15</div><h1>Asking for Help &amp; Clarification</h1><div class="body"><div class="sub">Workplace Communication &mdash; Asking for Help and Clarification</div>
+<div class="meta">This week: when to ask, the phrases that work, help vs. refusal, and the graded conversation &mdash; 20 points</div><div class="theme">Big idea: Asking for help isn&rsquo;t weakness at work &mdash; it&rsquo;s the strongest move a smart worker makes</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>When should I ask for help? &mdash; the ask-now signals</td><td>5</td></tr><tr><td>Day 2</td><td>Useful clarification phrases &mdash; the toolbox</td><td>5</td></tr><tr><td>Day 3</td><td>Help versus refusal &mdash; two very different sentences</td><td>5</td></tr><tr><td>Day 4</td><td>Practice the conversation &mdash; live, graded</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>The Voice Gets Its Most Important Job</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you&hellip;</h3>
+<p>Built the <b>professional voice</b>: word swaps, three tone dials, four anchors. A great voice with nothing hard to say is just practice.</p></div>
+<div class="card"><h3>This week you&hellip;</h3>
+<p>Give it the hardest, most valuable sentence at any job: <b>&ldquo;I need help.&rdquo;</b> When to say it, exactly how to say it, and why it&rsquo;s the OPPOSITE of refusing work. You&rsquo;ve met the pieces all year &mdash; &ldquo;ask when unsure&rdquo; from day one, &ldquo;I want to get it right&rdquo; from Week 11, &ldquo;A or B first?&rdquo; from Week 13. This week they become a skill with your name on it.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>When Should I Ask?</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Ask too fast and you never learn; wait too long and small problems grow teeth. Today: the four ask-NOW signals, and the try-first rule for everything else.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the signals</span><span>You try it</span><span>Do: ask or try?</span></div>
+<div class="stdchips"><span class="pill">Self-Advocacy</span><span class="pill">Decision Making</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Be honest: when you&rsquo;re stuck, do you ask too fast, too slow, or just right? What&rsquo;s behind that habit?</li><li>What&rsquo;s the worst thing that ever happened because someone (anyone) DIDN&rsquo;T ask for help?</li><li>Why might a new worker be scared to ask &mdash; and why is that fear usually backwards?</li></ol></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>Ask NOW vs. Try First</h1><div class="body"><table class="mini">
+<tr><th>Signal</th><th>Ask NOW &mdash; no trying first</th></tr>
+<tr><td><b>Safety</b></td><td>Anything that could hurt you or someone &mdash; unfamiliar machine, spill, lifting past your limit. Guessing here is the one unforgivable</td></tr>
+<tr><td><b>Broken</b></td><td>Equipment down, register frozen, door won&rsquo;t lock &mdash; you can&rsquo;t fix what you don&rsquo;t own</td></tr>
+<tr><td><b>Money &amp; customers</b></td><td>Refunds, an upset customer, a register that won&rsquo;t balance &mdash; above a new worker&rsquo;s pay grade on purpose</td></tr>
+<tr><td><b>Truly lost</b></td><td>You don&rsquo;t know what the task even IS &mdash; no starting point means no try to make</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Everything else: the try-first rule</h3>
+<p>Give it <b>one honest try</b> &mdash; check the checklist, look at how it was done last time, apply the two ordering questions. Still stuck after one real attempt? Ask &mdash; and now your ask is BETTER: &ldquo;I tried ___, and I&rsquo;m stuck at ___.&rdquo; That sentence tells the manager you&rsquo;re a worker, not a passenger.</p></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Ask or Try?</h1><div class="body"><div class="mcq"><div class="qq">The box cutter&rsquo;s blade is loose and wobbling. Ask now or try first?</div><button class="opt" data-ok="1">Ask NOW &mdash; safety signal; a wobbling blade is nobody&rsquo;s experiment</button><button class="opt" data-ok="0">Try first &mdash; tighten it with your thumb mid-cut</button><button class="opt" data-ok="0">Use it fast before it gets worse</button><div class="fb">Safety asks are ALWAYS now. No manager alive says &ldquo;I wish you&rsquo;d improvised with the broken blade.&rdquo;</div></div><div class="mcq"><div class="qq">You&rsquo;re shelving stock and can&rsquo;t remember if sauces face label-out or label-up. Ask now or try first?</div><button class="opt" data-ok="1">Try first &mdash; look at the shelf next to yours; the answer is standing right there</button><button class="opt" data-ok="0">Ask now &mdash; interrupt the manager&rsquo;s meeting</button><button class="opt" data-ok="0">Hide the sauces so no one knows</button><div class="fb">One honest try: the last worker&rsquo;s shelf IS the instruction. If the whole aisle is chaos &mdash; then ask, and your ask carries proof you looked.</div></div><div class="mcq"><div class="qq">A customer wants a refund and is getting loud. You&rsquo;ve never done a refund. Ask now or try first?</div><button class="opt" data-ok="1">Ask now &mdash; money AND customer signals at once: &ldquo;Let me get my manager to take care of you&rdquo;</button><button class="opt" data-ok="0">Try first &mdash; open the register and wing it</button><button class="opt" data-ok="0">Tell the customer refunds are a myth</button><div class="fb">Getting the manager IS the correct move, not a failure &mdash; refunds are gated on purpose. &ldquo;Let me get someone who can take care of you&rdquo; is service, not surrender.</div></div><div class="rev"><div class="rq">The try-first rule says one honest try makes your ask BETTER. What&rsquo;s the difference between &ldquo;How do I do this?&rdquo; and &ldquo;I tried ___ and I&rsquo;m stuck at ___&rdquo; &mdash; to the manager&rsquo;s ears?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The first says &ldquo;do my thinking for me.&rdquo; The second says &ldquo;I think &mdash; I just hit a wall.&rdquo; Same help needed, opposite reputations. The try is what turns asking from a cost into a credit.</div></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Signal Sort</h1><div class="body"><p><span class="badge">Your task</span> Twelve scenario cards. Sort each: ASK NOW (label which signal &mdash; safety, broken, money/customer, truly lost) or TRY FIRST (write the one honest try you&rsquo;d make). Two cards are designed to be arguable &mdash; be ready to defend your call.</p>
+<div class="exit"><b>Before you leave:</b> Defend one arguable card &mdash; your sort and your reason.</div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Clarification Toolbox</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Knowing WHEN to ask is half; the other half is the words. Today: five phrases that get you unstuck fast &mdash; each one built for a different kind of stuck.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the five phrases</span><span>You try it</span><span>Do: phrase match</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Self-Advocacy</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>From Week 13: what was the either/or question for task order? Say it exactly.</li><li>Why does &ldquo;huh?&rdquo; get worse results than &ldquo;could you say that once more?&rdquo; &mdash; same confusion, same person?</li><li>When someone asks YOU for help, what kind of asking makes you glad to give it?</li></ol></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>Five Phrases, Five Kinds of Stuck</h1><div class="body"><table class="mini">
+<tr><th>Kind of stuck</th><th>The phrase</th></tr>
+<tr><td><b>Missed it</b> &mdash; too fast, too quiet</td><td>&ldquo;Could you say that once more?&rdquo;</td></tr>
+<tr><td><b>Need to see it</b> &mdash; words aren&rsquo;t enough</td><td>&ldquo;Could you show me the first one, and I&rsquo;ll do the rest?&rdquo;</td></tr>
+<tr><td><b>Which first</b> &mdash; two tasks, one you</td><td>&ldquo;Do you want A or B first?&rdquo;</td></tr>
+<tr><td><b>Almost sure</b> &mdash; one detail wobbling</td><td>&ldquo;Just to check &mdash; I should ___, right?&rdquo;</td></tr>
+<tr><td><b>Tried and stuck</b> &mdash; the wall</td><td>&ldquo;I tried ___, and I&rsquo;m stuck at ___. Could you help?&rdquo;</td></tr></table>
+<p class="note">Notice what every phrase has in common: each one is SPECIFIC about what you need &mdash; a repeat, a demo, an order, a confirm, a rescue. Vague stuck (&ldquo;I don&rsquo;t get it&rdquo;) makes the helper do detective work first. The right phrase skips straight to the help &mdash; delivered in last week&rsquo;s voice, dials set.</p></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Pick the Phrase</h1><div class="body"><div class="mcq"><div class="qq">The trainer demonstrated the label gun once, fast, and your first three price tags came out crooked. Which phrase?</div><button class="opt" data-ok="1">&ldquo;Could you show me the first one, and I&rsquo;ll do the rest?&rdquo; &mdash; you need to SEE it again</button><button class="opt" data-ok="0">&ldquo;Do you want A or B first?&rdquo;</button><button class="opt" data-ok="0">&ldquo;I don&rsquo;t get it&rdquo; with a shrug</button><div class="fb">Crooked tags after a fast demo = a see-it problem. The &ldquo;I&rsquo;ll do the rest&rdquo; half matters &mdash; it promises you&rsquo;re borrowing a demo, not the whole task.</div></div><div class="mcq"><div class="qq">You&rsquo;re 90% sure the mop water gets dumped in the FLOOR drain, not the sink &mdash; but 90% isn&rsquo;t 100%. Which phrase?</div><button class="opt" data-ok="1">&ldquo;Just to check &mdash; mop water goes in the floor drain, right?&rdquo;</button><button class="opt" data-ok="0">&ldquo;Could you say that once more?&rdquo; &mdash; nobody said anything</button><button class="opt" data-ok="0">Dump it somewhere with confidence</button><div class="fb">The confirm phrase costs five seconds and shows your thinking. Wrong-drain confidence costs a plumber. &ldquo;Just to check&rdquo; is the cheapest insurance at any job.</div></div><div class="mcq"><div class="qq">Manager, walking past: &ldquo;Restock the cooler and face the shelves.&rdquo; Both look urgent. Which phrase?</div><button class="opt" data-ok="1">&ldquo;Do you want the cooler or the shelves first?&rdquo;</button><button class="opt" data-ok="0">&ldquo;I tried ___ and I&rsquo;m stuck at ___&rdquo; &mdash; you haven&rsquo;t started</button><button class="opt" data-ok="0">Do half of each, alternating every minute</button><div class="fb">Week 13&rsquo;s question, now in its toolbox home. Either/or asks are the fastest in the box &mdash; managers answer them mid-stride without breaking step.</div></div><div class="rev"><div class="rq">Build the &ldquo;tried and stuck&rdquo; phrase for this: you&rsquo;re assembling a display stand, got the base and poles together, but the top shelf won&rsquo;t click in after three tries. Say it out loud, dials set.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">&ldquo;I got the base and poles together, but the top shelf won&rsquo;t click in &mdash; I&rsquo;ve tried it three ways. Could you take a look?&rdquo; Specific try + specific wall + clear ask. That&rsquo;s a worker&rsquo;s sentence.</div></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Phrase Match</h1><div class="body"><p><span class="badge">Your task</span> Ten stuck-scenario cards: match each to its phrase from the toolbox and write the phrase FILLED IN with the scenario&rsquo;s real details (no blank ___s left). Then pick your two best and rehearse them out loud with a partner, dials checked.</p>
+<div class="exit"><b>Before you leave:</b> Deliver one filled-in phrase to me cold &mdash; scenario card in hand.</div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Help vs. Refusal</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">&ldquo;I need help with this&rdquo; and &ldquo;I&rsquo;m not doing this&rdquo; are opposite sentences &mdash; but said wrong, they sound alike. Today: keeping them separate, and the honest way to handle a task you truly can&rsquo;t do.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the line between</span><span>You try it</span><span>Do: rewrite the refusals</span></div>
+<div class="stdchips"><span class="pill">Self-Advocacy</span><span class="pill">Workplace Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>What&rsquo;s the difference between &ldquo;I can&rsquo;t&rdquo; and &ldquo;I won&rsquo;t&rdquo;? Give an example of each at a job.</li><li>Last week&rsquo;s swap card had &ldquo;that&rsquo;s not my job.&rdquo; Why does that line land so badly &mdash; even when it&rsquo;s technically true?</li><li>Is it ever RIGHT to say no to a task at work? When?</li></ol></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Line Between</h1><div class="body"><table class="mini">
+<tr><th>Sounds like refusal</th><th>What a worker says instead</th></tr>
+<tr><td>&ldquo;I can&rsquo;t do this.&rdquo; (walks away)</td><td>&ldquo;I&rsquo;m stuck at ___ &mdash; could you help me get past it?&rdquo; &mdash; help keeps you IN the task</td></tr>
+<tr><td>&ldquo;That&rsquo;s not my job.&rdquo;</td><td>&ldquo;I haven&rsquo;t been trained on that yet &mdash; want me to grab someone, or can you show me?&rdquo;</td></tr>
+<tr><td>&ldquo;I&rsquo;m not lifting that.&rdquo;</td><td>&ldquo;That&rsquo;s past my safe lifting limit &mdash; can we team-lift it, or is there a cart?&rdquo; &mdash; an honest limit PLUS a path forward</td></tr>
+<tr><td>(silently doesn&rsquo;t do it)</td><td>Anything out loud &mdash; silent skipping reads as refusal even when it was fear</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The pattern</h3>
+<p>Refusal <b>closes</b> the task: no, not me, walks off. A worker&rsquo;s sentence <b>keeps it open</b>: names the real barrier (stuck, untrained, unsafe) + offers a path (help me, show me, team-lift, get someone). Honest limits are respected at every good job &mdash; especially safety limits, which you NEVER apologize for. It&rsquo;s the closed door that costs you, not the limit.</p></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Which Is It?</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;I&rsquo;ve never used the slicer, and honestly it makes me nervous. Could someone train me before I take that station?&rdquo; Help or refusal?</div><button class="opt" data-ok="1">Help &mdash; honest barrier (untrained, unsafe) plus a path (train me); the task stays open</button><button class="opt" data-ok="0">Refusal &mdash; nervous means no</button><button class="opt" data-ok="0">Neither; slicers run themselves</button><div class="fb">Naming nerves around a blade is SMART, and &ldquo;train me before&rdquo; keeps the door wide open. That&rsquo;s exactly the sentence safety-minded managers want to hear.</div></div><div class="mcq"><div class="qq">Asked to mop, a coworker says &ldquo;nah&rdquo; and keeps scrolling. Same coworker later says they were &ldquo;just asking for help.&rdquo; What made it refusal?</div><button class="opt" data-ok="1">No barrier named, no path offered, task closed &mdash; &ldquo;nah&rdquo; contains zero help-seeking</button><button class="opt" data-ok="0">The word &ldquo;nah&rdquo; specifically; &ldquo;nope&rdquo; would be fine</button><button class="opt" data-ok="0">Nothing &mdash; all no&rsquo;s are equal</button><div class="fb">Run the pattern: barrier? none. path? none. task? closed. Help-seeking has a shape, and &ldquo;nah + scroll&rdquo; isn&rsquo;t it &mdash; no tone dial can save that one.</div></div><div class="mcq"><div class="qq">Your manager asks you to carry a load you know is past your safe limit. The RIGHT response&hellip;</div><button class="opt" data-ok="1">&ldquo;That&rsquo;s past my safe lifting limit &mdash; can we team-lift, or should I use the cart?&rdquo; &mdash; and you never apologize for a safety limit</button><button class="opt" data-ok="0">Lift it anyway; limits are for quitters</button><button class="opt" data-ok="0">&ldquo;I&rsquo;m not lifting that&rdquo; and walk off</button><div class="fb">An honest limit + a path forward is the strongest sentence on this slide. Hurting yourself to avoid an awkward moment is the worst trade at any job &mdash; and good managers know it.</div></div><div class="rev"><div class="rq">Why does SILENT skipping &mdash; just quietly not doing the task &mdash; read as refusal, even when the real reason was fear or confusion?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The manager can&rsquo;t see inside your head &mdash; they see an undone task and no words. Fear and refusal look identical from the outside; only your voice can tell them apart. That&rsquo;s why every worker sentence this week happens OUT LOUD.</div></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>Rewrite the Refusals</h1><div class="body"><p><span class="badge">Your task</span> Eight refusal cards (&ldquo;can&rsquo;t,&rdquo; &ldquo;not my job,&rdquo; &ldquo;nah,&rdquo; silent skips, and one that&rsquo;s secretly a real safety limit). Rewrite each as a worker&rsquo;s sentence: barrier named + path offered. Flag the safety card &mdash; and write why that one gets zero apology.</p>
+<div class="exit"><b>Before you leave:</b> Read me your best rewrite, before and after.</div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Practice the Conversation</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Live fire: real scenarios, a manager (me), and the full skill &mdash; the right timing, the right phrase, the worker&rsquo;s shape, and last week&rsquo;s dials. Graded on the conversation, not the memorization.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: the live rounds</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>The four ask-NOW signals &mdash; class lightning round.</li><li>Five phrases in the toolbox: how many can you say from memory?</li><li>The worker&rsquo;s shape for a hard no: what two things does the sentence need?</li></ol></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>Live Rounds</h1><div class="body"><p><span class="badge">Your task</span> Draw two scenario cards and run each as a live conversation with me as the manager: decide ask-now or try-first (and say your try), choose and fill the right phrase, keep the worker&rsquo;s shape if it&rsquo;s a limit, dials set throughout. I&rsquo;ll respond like a real manager &mdash; sometimes with a follow-up question. Partners run warm-up rounds while they wait.</p>
+<div class="card flat" style="margin-top:12px"><h3>Full credit sounds like</h3>
+<p>&ldquo;I tried the checklist and the shelf next to mine &mdash; I&rsquo;m still not sure if these face out or up. Just to check: label out, right?&rdquo; &bull; &ldquo;That&rsquo;s past my safe limit &mdash; can we team-lift it?&rdquo; &bull; Calm voice, eyes up, no apology for honest limits.</p></div>
+<div class="exit"><b>Check out:</b> Your two live rounds are the grade. Asking well is a skill for LIFE &mdash; school, work, everywhere. You just proved you have it.</div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 15 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You know the four ask-NOW signals cold and give everything else one honest try that upgrades your ask. You own five specific phrases for five kinds of stuck, keep help and refusal on opposite sides of the line &mdash; barrier named, path offered &mdash; and you never apologize for a safety limit. And you&rsquo;ve done it all live, out loud, under follow-up questions.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Which phrase is becoming MY signature ask?</li><li>What&rsquo;s my honest safe lifting limit &mdash; do I actually know it?</li><li>Where at school this week can I practice &ldquo;I tried ___, stuck at ___&rdquo;?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Accepting Feedback and Fixing Mistakes: the difference between correction and criticism, professional responses to feedback, and finding-and-fixing like a pro. The conversation continues.</p></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Ask NOW / Try First Card</h1><div class="body"><table class="mini">
+<tr><th>Ask NOW signals</th><th>Try-first rule</th></tr>
+<tr><td><b>Safety</b> &mdash; could hurt someone<br><b>Broken</b> &mdash; equipment down<br><b>Money &amp; customers</b> &mdash; refunds, upset customers<br><b>Truly lost</b> &mdash; no starting point</td><td>One honest try: checklist &bull; how it was done last time &bull; the two ordering questions.<br>Still stuck &rarr; ask with proof: &ldquo;I tried ___, and I&rsquo;m stuck at ___.&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Never</h3>
+<p>Never guess on safety &bull; never silent-skip &mdash; fear and refusal look identical from outside; only your voice tells them apart.</p></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Clarification Toolbox Card</h1><div class="body"><table class="mini">
+<tr><th>Stuck</th><th>Phrase</th></tr>
+<tr><td>Missed it</td><td>&ldquo;Could you say that once more?&rdquo;</td></tr>
+<tr><td>Need to see it</td><td>&ldquo;Could you show me the first one, and I&rsquo;ll do the rest?&rdquo;</td></tr>
+<tr><td>Which first</td><td>&ldquo;Do you want A or B first?&rdquo;</td></tr>
+<tr><td>Almost sure</td><td>&ldquo;Just to check &mdash; I should ___, right?&rdquo;</td></tr>
+<tr><td>Tried &amp; stuck</td><td>&ldquo;I tried ___, and I&rsquo;m stuck at ___. Could you help?&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Hard no, worker&rsquo;s shape</h3>
+<p>Barrier named + path offered: &ldquo;Past my safe limit &mdash; team-lift or cart?&rdquo; &bull; &ldquo;Not trained yet &mdash; show me, or grab someone?&rdquo; No apology for safety limits, ever.</p></div></div><div class="footer"><span>Life Skills SC • Week 15 • Workplace Communication — Asking for Help and Clarification</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

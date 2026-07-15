@@ -7,7 +7,7 @@ function stableGeneratedAt() {
   // We use the latest commit time affecting presentation directories.
   try {
     const out = execSync(
-      "git log -1 --format=%cI -- site/presentations site/life-skills/presentations",
+      "git log -1 --format=%cI -- site/presentations site/life-skills",
       { stdio: ["ignore", "pipe", "ignore"] }
     ).toString().trim();
     if (out) return out;
@@ -27,7 +27,6 @@ const SITE_DIR = path.join(process.cwd(), 'site');
 const OUT_PATH = path.join(SITE_DIR, 'assets', 'content', 'lessons-index.json');
 
 const LANG_DIR = path.join(SITE_DIR, 'presentations');
-const LIFE_DIR = path.join(SITE_DIR, 'life-skills', 'presentations');
 
 const UNITS_JSON = path.join(SITE_DIR, 'assets', 'data', 'units.json');
 const SITE_STATE_JSON = path.join(SITE_DIR, 'assets', 'data', 'site-state.json');
@@ -375,61 +374,70 @@ async function scanLanguageArts(maps, unitsData, siteState) {
 }
 
 async function scanLifeSkills(maps, unitsData, siteState) {
-  const lifeUnit = unitsData?.units?.find(u => u.id === 'life');
+  const registeredUnits = Array.isArray(unitsData?.units)
+    ? unitsData.units
+        .filter(
+          unit =>
+            unit.section === 'life-skills' &&
+            (unit.status || 'active') === 'active'
+        )
+        .sort(
+          (left, right) =>
+            Number(left.sortOrder || 0) - Number(right.sortOrder || 0) ||
+            String(left.title || left.id).localeCompare(
+              String(right.title || right.id)
+            )
+        )
+    : [];
 
-  if (lifeUnit && (lifeUnit.status || 'active') !== 'active') {
-    return { name: 'LIFE SKILLS', units: [] };
-  }
+  const units = [];
 
-  // Life Skills is a single unit, presentations live directly under /life-skills/presentations/presentation-XX/
-  const dirs = (await listDirs(LIFE_DIR)).filter(isPresentationDirName);
-  dirs.sort((a, b) => presNum(a) - presNum(b));
+  for (const unitMeta of registeredUnits) {
+    const baseOut = String(unitMeta.baseOut || '')
+      .trim()
+      .replace(/\\/g, '/');
 
-  const presentations = [];
-  for (const d of dirs) {
-    const indexHtml = path.join(LIFE_DIR, d, 'index.html');
-    if (!(await exists(indexHtml))) continue;
-
-    const url = `/life-skills/presentations/${d.toLowerCase()}/`;
-    const id = d.toLowerCase();
-
-    let name = maps.presNameByUrl.get(url) || null;
-    const old = (name || '').trim();
-    const generic = /^presentation\s+\d+$/i.test(old) || old.toLowerCase() === 'open' || old === '';
-    if (generic) {
-      const title = await readHtmlTitle(indexHtml);
-      if (title) name = title;
+    if (
+      !baseOut ||
+      baseOut.startsWith('/') ||
+      baseOut.split('/').includes('..')
+    ) {
+      throw new Error(
+        `Invalid Life Skills baseOut for ${unitMeta.id}: ${baseOut}`
+      );
     }
-    if (!name) name = niceFromId(d);
 
-    presentations.push({ id, name, url });
-  }
+    const segments = baseOut.split('/').filter(Boolean);
+    const folderName = segments.at(-1);
+    const parentPrefix = `/${segments.slice(0, -1).join('/')}`;
+    const absoluteDirectory = path.join(SITE_DIR, ...segments);
 
-  // Merge presentations from site-state
-  if (siteState?.categories?.life) {
-    const siteStatePres = extractPresentationsFromSiteState(siteState, 'life');
-    if (siteStatePres.length > 0) {
-      mergePresentationsFromSiteState(presentations, siteStatePres);
+    const unit = await scanUnit(
+      folderName,
+      absoluteDirectory,
+      parentPrefix,
+      maps
+    );
+
+    unit.id = unitMeta.id;
+    unit.name = unitMeta.title || unit.name;
+
+    const siteStatePresentations =
+      extractPresentationsFromSiteState(siteState, unitMeta.id);
+
+    if (siteStatePresentations.length > 0) {
+      unit.presentations = mergePresentationsFromSiteState(
+        unit.presentations,
+        siteStatePresentations
+      );
+    }
+
+    if (unit.presentations.length > 0) {
+      unit.groups = groupPresentations(unit.presentations);
+      units.push(unit);
     }
   }
 
-  // Get canonical name from units.json
-  let unitName = maps.unitNameById.get('life-skills') || 'Life Skills';
-  if (lifeUnit && lifeUnit.title) {
-    unitName = lifeUnit.title;
-  }
-
-  // Generate groups for Life Skills presentations
-  const groups = groupPresentations(presentations);
-
-  const unit = {
-    id: 'life-skills',
-    name: unitName,
-    groups, // Add groups array
-    presentations
-  };
-
-  const units = unit.presentations.length > 0 ? [unit] : [];
   return { name: 'LIFE SKILLS', units };
 }
 
@@ -443,7 +451,15 @@ async function main() {
 
   const sections = [];
   if (await exists(LANG_DIR)) sections.push(await scanLanguageArts(maps, unitsData, siteState));
-  if (await exists(LIFE_DIR)) sections.push(await scanLifeSkills(maps, unitsData, siteState));
+  const hasActiveLifeSkills = unitsData?.units?.some(
+    unit =>
+      unit.section === 'life-skills' &&
+      (unit.status || 'active') === 'active'
+  );
+
+  if (hasActiveLifeSkills) {
+    sections.push(await scanLifeSkills(maps, unitsData, siteState));
+  }
 
   const out = {
     version: 1,

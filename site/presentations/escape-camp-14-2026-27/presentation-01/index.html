@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1: Evidence, Central Ideas &amp; Objective Summary - Control, Survival, and the Destruction of Family Bonds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#fb7185; --accent-deep:#881337; --glow:rgba(251,113,133,.12);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 2 SC • Week 1</div><h1>Escape from Camp 14</h1><div class="body"><div class="sub">by Blaine Harden &mdash; nonfiction</div>
+<div class="meta">Language Arts focus: <b>Evidence, Central Ideas &amp; Objective Summary</b><br>This week: Preface + Introduction (Parts A&ndash;B) + Chapter 1 + Written Response</div><div class="theme">Theme: Control, Survival, and the Destruction of Family Bonds</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Reading With Care</div><h1>Before We Begin</h1><div class="body"><div class="card"><h3>This is a true story &mdash; and a hard one</h3>
+<p>This book documents real events inside a North Korean prison camp, including executions, hunger, and violence. We read it because the world needs witnesses &mdash; and because Shin&rsquo;s survival is worth understanding.</p></div>
+<div class="card" style="margin-top:16px"><h3>Our classroom agreements</h3>
+<ul><li>We treat the people in this book with respect &mdash; they are real.</li>
+<li>We use academic language when we discuss difficult events.</li>
+<li>If a passage is too heavy, you may take a break or use an alternate response format. Just tell me.</li></ul></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Preface + Introduction Part A &mdash; <i>stop before</i> &ldquo;My first encounter with Shin&hellip;&rdquo;</td><td>7</td></tr><tr><td>Day 2</td><td>Introduction Part B &mdash; <i>start at</i> &ldquo;My first encounter with Shin&hellip;&rdquo; to the end</td><td>7</td></tr><tr><td>Day 3</td><td>Chapter 1 &mdash; trace central ideas; practice objective summary</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Preface&ndash;Chapter 1</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skills</h3><p><b>Central ideas &amp; objective summary.</b> In nonfiction, we identify the <b>central ideas</b> an author develops, support them with textual evidence, and summarize <b>objectively</b> &mdash; without adding our own opinions.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Find explicit details about how Camp 14 controls people.</li><li>Explain a central idea and how it develops.</li><li>Write a summary that sticks to the facts of the text.</li></ul></div></div>
+<p class="note">Standards this week: RI.1.A — Evidence &amp; Inference • RI.1.B — Word Meanings • RI.1.D — Central Ideas &amp; Objective Summary • W.2.A / W.3.A.a (9-10 / 11-12)</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How does Harden show that Camp 14 reshapes the meaning of family, trust, and survival?</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Camp System</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Today we learn the difference between a <b>topic</b> and a <b>central idea</b> &mdash; then we begin the testimony of the only person born in the camps who ever escaped.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Preface + Intro A + assignment</span></div>
+<div class="stdchips"><span class="pill">RI.1.A — Evidence &amp; Inference</span><span class="pill">RI.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Before We Open the Book</h1><div class="body"><ol class="q"><li>What do you already know &mdash; or think you know &mdash; about North Korea?</li><li>Why might a government hide a prison camp &mdash; and how could the world still find out the truth?</li><li>What makes a <i>true</i> story harder to read than fiction? What makes it more important?</li></ol><p class="note">This is a heavy book. Our agreements from the start of class apply every day we read it.</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">oppression</div><div class="pos">noun • uh-PREH-shun</div>
+<div class="means">Cruel, unjust control of people by those in power, continued over time.</div>
+<div class="morph"><div><b>op- (ob-)</b><span>prefix: against</span></div><div class="plus">+</div><div><b>press</b><span>Latin <i>premere</i> — to press, push down</span></div><div class="plus">+</div><div><b>-ion</b><span>suffix: the act or state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">tyranny</span><span class="pill">domination</span><span class="pill">persecution</span><span class="pill">subjugation</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">freedom</span><span class="pill anti">liberation</span><span class="pill anti">justice</span></div>
+<div class="family"><b>Word family:</b> oppress (v) &bull; oppressive (adj) &bull; oppressor (n)</div></div>
+<div><div class="quote">The labour camp used a public killing, and the fear it generated, as a teachable moment.<span class="who">&mdash; Preface</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>press</i> means push: <b>press</b>ure, de<b>press</b>, op<b>press</b>. As you read, collect details that show people being &ldquo;pressed down&rdquo; by the camp system.</p></div></div>
+</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Explicit vs. Implicit: How Readers Know Things</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit &mdash; the text says it</h3>
+<p>Information stated directly. <i>&ldquo;Maria slammed the door.&rdquo;</i> We know the door slammed &mdash; it&rsquo;s on the page.</p></div>
+<div class="card"><h3>Implicit &mdash; the text suggests it</h3>
+<p>An <b>inference</b> = detail from the text + what you already know. Slammed door + your life experience &rarr; Maria is probably angry. The text never said &ldquo;angry.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday inference</h3>
+<p>You come home: wet umbrella by the door, muddy shoes on the mat. Nobody told you it rained &mdash; you <b>inferred</b> it. You do this skill all day already.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The one rule</h3>
+<p>Every inference must trace back to a detail you can point to. Evidence is your receipt &mdash; no receipt, no claim.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Nonfiction runs on the same engine: the Preface gives you explicit horrors, and asks you to infer what a system like this does to a child&rsquo;s mind.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Topic vs. Central Idea</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one or two words)</h3>
+<p>Camp 14. Prison camps. Shin&rsquo;s childhood.</p><p class="note">A topic is just the subject &mdash; it makes no point.</p></div>
+<div class="card"><h3>Central idea (a complete point)</h3>
+<p>Camp 14 uses fear, rules, and hunger to control every part of a prisoner&rsquo;s life &mdash; even family.</p><p class="note">A central idea is a claim the author develops with evidence.</p></div></div>
+<table class="mini" style="margin-top:14px">
+<tr><th>Evidence Harden stacks</th><th>How it builds the central idea</th></tr>
+<tr><td>Everyone must attend executions &mdash; even children.</td><td>Fear is public, planned, and mandatory.</td></tr>
+<tr><td>The Ten Rules; rule one: escape = death.</td><td>Rules replace law, family, and conscience.</td></tr>
+<tr><td>Guards select who marries whom as a &ldquo;reward.&rdquo;</td><td>Even love and family exist only by permission.</td></tr></table></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Topic vs. Central Idea Drill</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Camp 14&rdquo; is a&hellip;</div><button class="opt" data-ok="1">Topic &mdash; a subject with no point made yet</button><button class="opt" data-ok="0">Central idea &mdash; a developed claim</button><button class="opt" data-ok="0">Objective summary</button><div class="fb">Two words, no claim. The central idea is what the author proves <i>about</i> Camp 14.</div></div><div class="mcq"><div class="qq">Which is a <b>central idea</b> of the Preface?</div><button class="opt" data-ok="0">Shin walked with his mother to a wheat field.</button><button class="opt" data-ok="1">The camp uses public fear to control every part of prisoners&rsquo; lives.</button><button class="opt" data-ok="0">North Korea is located in Asia.</button><div class="fb">It&rsquo;s a complete claim that the stacked details &mdash; mandatory executions, the Ten Rules &mdash; all support.</div></div><div class="rev"><div class="rq">The Preface opens: &ldquo;His first memory is an execution.&rdquo; What direction is the evidence pile pushing?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Toward control-through-fear: mandatory attendance, pebbles forced into the mouth, a four-year-old in the front row. Every detail stacks the same way &mdash; that&rsquo;s the central idea forming.</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Preface + Introduction Part A</h1><div class="body"><p><span class="badge">Read</span> <b>Stop before</b> the sentence &ldquo;My first encounter with Shin was at lunch in the winter of 2008.&rdquo;</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>Explicit details that establish the <b>camp system</b>: the rules, the executions, the reward marriages.</li><li>The contrast between <b>Shin</b> and <b>Kim Jong Eun</b> &mdash; born the same year, worlds apart.</li><li>How Shin&rsquo;s story is <b>different</b> from other survival stories like Elie Wiesel&rsquo;s <i>Night</i>.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write the topic of today&rsquo;s reading in two words &mdash; then write one central idea about it in a full sentence.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Testimony and Trust</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">We talk through the Preface, then think like journalists: how do you <b>verify</b> a story only one person can tell &mdash; and what happens to credibility when it changes?</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Day 1 reading</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Intro B + assignment</span></div>
+<div class="stdchips"><span class="pill">RI.1.A — Evidence &amp; Inference</span><span class="pill">RI.1.D — Central Ideas</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Reading: The Camp System</h1><div class="body"><ol class="q"><li>The book opens: &ldquo;His first memory is an execution.&rdquo; Why might Harden begin there? What does that one sentence establish?</li><li>Find one detail showing how the camp used fear as a &ldquo;teachable moment.&rdquo; What was it teaching?</li><li>Harden writes that Shin &ldquo;was born and raised there. He accepted its values. He called it home.&rdquo; Why does that make Shin&rsquo;s story different from other survivors&rsquo; stories?</li></ol></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">credibility</div><div class="pos">noun • kreh-dih-BIH-lih-tee</div>
+<div class="means">How believable and trustworthy a person or source is.</div>
+<div class="morph"><div><b>cred</b><span>Latin <i>credere</i> — to believe, to trust</span></div><div class="plus">+</div><div><b>-ibility</b><span>suffix: the quality of being able to be</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">believability</span><span class="pill">trustworthiness</span><span class="pill">reliability</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">doubtfulness</span><span class="pill anti">unreliability</span><span class="pill anti">dishonesty</span></div>
+<div class="family"><b>Word family:</b> credible (adj) &bull; incredible (adj) &bull; credit (n) &mdash; same root</div></div>
+<div><div class="quote">In assessing Shin&rsquo;s story, one should keep in mind that many others in the camps have endured similar or worse hardships.<span class="who">&mdash; Introduction</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>cred</i> means believe: <b>cred</b>it, in<b>cred</b>ible, <b>cred</b>entials. What could make a witness&rsquo;s story <i>more</i> credible? What makes it <i>less</i>?</p></div></div>
+</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Author&rsquo;s Purpose &amp; Credibility</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Purpose: PIE</h3>
+<p>Authors write to <b>P</b>ersuade, <b>I</b>nform, or <b>E</b>ntertain &mdash; usually a mix. Ask: what does this author want to happen inside my head?</p></div>
+<div class="card"><h3>Credibility: can I trust this?</h3>
+<p>Check the receipts: Does the author <b>name sources</b>? Do other witnesses <b>corroborate</b> (confirm independently)? Is the author <b>transparent</b> about what they can&rsquo;t verify?</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>Two YouTubers make the same claim. One shows documents and links sources; one says &ldquo;trust me bro.&rdquo; You already run credibility checks &mdash; we&rsquo;re just making the checklist visible.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The counterintuitive rule</h3>
+<p>A source that admits the limits of its own story is usually <i>more</i> trustworthy, not less. Perfect stories should worry you.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Harden is a journalist. Today, watch his PIE purpose (inform &mdash; and quietly persuade the world to look) and grade his receipts.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>The Journalist&rsquo;s Toolkit: Verifying One Person&rsquo;s Story</h1><div class="body"><table class="mini">
+<tr><th>Harden&rsquo;s move</th><th>Why it builds trust</th></tr>
+<tr><td>Interviews scores of defectors, former guards, and scholars</td><td>Corroboration &mdash; other witnesses confirm the camp system is real.</td></tr>
+<tr><td>Points to satellite photos anyone can view</td><td>Physical evidence that cannot lie or forget.</td></tr>
+<tr><td>Tells us openly that Shin changed parts of his story</td><td>Transparency &mdash; hiding it would be the real danger to credibility.</td></tr>
+<tr><td>Quotes a former guard: Shin&rsquo;s life was &ldquo;relatively comfortable&rdquo; by camp standards</td><td>Includes evidence that complicates the story instead of simplifying it.</td></tr></table>
+<p class="note">Carry this question into the reading: does honesty about a changed story make a witness weaker &mdash; or stronger?</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Credibility Court</h1><div class="body"><div class="mcq"><div class="qq">Harden tells us openly that Shin changed parts of his story. That choice makes the book&hellip;</div><button class="opt" data-ok="0">Less credible &mdash; the story has an error in it</button><button class="opt" data-ok="1">More credible &mdash; transparency is itself a receipt</button><button class="opt" data-ok="0">Neither &mdash; it doesn&rsquo;t matter</button><div class="fb">Hiding the change would be the real danger. Showing his work is what journalists do when they expect to be checked.</div></div><div class="mcq"><div class="qq">Which of these is <b>corroboration</b>?</div><button class="opt" data-ok="1">A former camp guard and satellite photos independently confirm the camps exist</button><button class="opt" data-ok="0">Shin tells his story twice</button><button class="opt" data-ok="0">The book sold many copies</button><div class="fb">Corroboration = independent sources agreeing. Repetition by the same source proves nothing; sales prove popularity, not truth.</div></div><div class="rev"><div class="rq">Why might a survivor hide the worst part of his story at first? Does that change your trust?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Shame, guilt, fear of judgment &mdash; hiding his role in his mother&rsquo;s capture protected him from strangers&rsquo; eyes. Harden&rsquo;s openness about the change is what protects the book&rsquo;s credibility.</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Introduction Part B</h1><div class="body"><p><span class="badge">Read</span> <b>Start at</b> &ldquo;My first encounter with Shin was at lunch in the winter of 2008&rdquo; and read to the end of the Introduction.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>How Harden <b>frames</b> Shin: what he notices, what he questions, what he verifies.</li><li>Why Shin at first hid parts of his story &mdash; and what changing it cost him.</li><li>Why the camps have &ldquo;barely pricked the world&rsquo;s collective conscience.&rdquo;</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> One sentence: name one verification move Harden makes, and what it proves.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Family as Competition</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">We talk through Harden&rsquo;s methods, then master the <b>objective summary</b>: the facts, the central idea, and none of our opinions.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Intro B</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 1 + assignment</span></div>
+<div class="stdchips"><span class="pill">RI.1.A — Evidence &amp; Inference</span><span class="pill">RI.1.D — Objective Summary</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Reading: Testimony and Trust</h1><div class="body"><ol class="q"><li>What steps did Harden take to check Shin&rsquo;s account? Why does that matter for us as readers?</li><li>Does learning that Shin first hid parts of his story make him more credible or less credible to you? Use evidence.</li><li>Why has the world paid so little attention to the camps? List two reasons the text gave.</li></ol></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">survival</div><div class="pos">noun • ser-VY-vul</div>
+<div class="means">Staying alive through danger, hardship, or scarcity.</div>
+<div class="morph"><div><b>sur-</b><span>prefix: over, beyond</span></div><div class="plus">+</div><div><b>viv</b><span>Latin <i>vivere</i> — to live</span></div><div class="plus">+</div><div><b>-al</b><span>suffix: the act or state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">endurance</span><span class="pill">persistence</span><span class="pill">self-preservation</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">perishing</span><span class="pill anti">surrender</span><span class="pill anti">defeat</span></div>
+<div class="family"><b>Word family:</b> survive (v) &bull; survivor (n) &bull; vivid (adj) &mdash; same root</div></div>
+<div><div class="quote">He saw her as competition for survival.<span class="who">&mdash; Chapter 1 (Shin, about his own mother)</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>viv</i> means live: sur<b>viv</b>e, <b>viv</b>id, re<b>viv</b>e. In Camp 14, what does survival cost Shin that it should never cost a child?</p></div></div>
+</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Quote, Paraphrase, or Summarize?</h1><div class="body"><table class="mini">
+<tr><th>Move</th><th>What it is</th><th>When to use it</th></tr>
+<tr><td><b>Quote</b></td><td>The author&rsquo;s exact words in &ldquo;quotation marks&rdquo;</td><td>When the wording itself is powerful evidence</td></tr>
+<tr><td><b>Paraphrase</b></td><td>The same idea, your words, about the same length</td><td>When you need the idea but not the exact words</td></tr>
+<tr><td><b>Summary</b></td><td>The whole passage shrunk to its key points, your words</td><td>When the reader needs the big picture fast</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>Example &mdash; one sentence, three ways</h3>
+<p><b>Original:</b> &ldquo;His first memory is an execution.&rdquo;<br>
+<b>Quote:</b> Harden opens by revealing that Shin&rsquo;s &ldquo;first memory is an execution.&rdquo;<br>
+<b>Paraphrase:</b> Harden opens by telling us the earliest thing Shin can remember is watching someone be killed.<br>
+<b>Summary (of the whole preface):</b> The preface introduces Shin&rsquo;s childhood in Camp 14 through the executions he was forced to attend.</p></div>
+<p class="note">All three still need a citation &mdash; changing the words does not make an idea yours.</p><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your written response tomorrow will need all three moves. Today, practice shrinking Chapter 1 without adding a single opinion.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Objective vs. Subjective: Build a Clean Summary</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Subjective (opinion added) &mdash; not a summary</h3>
+<p>&ldquo;The horrible guards cruelly forced poor Shin to watch executions, which was absolutely evil.&rdquo;</p></div>
+<div class="card"><h3>Objective (facts only) &mdash; the goal</h3>
+<p>&ldquo;Harden describes Shin&rsquo;s childhood in Camp 14, where attendance at executions was mandatory and food was scarce.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Four-sentence summary formula</h3>
+<p><b>1.</b> Author + text + topic &nbsp;<b>2.</b> The central idea &nbsp;<b>3.</b> Key detail one &nbsp;<b>4.</b> Key detail two. No opinions, no &ldquo;I think,&rdquo; no judgment words.</p></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Quote, Paraphrase, or Summary?</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Harden reports that Shin saw his own mother as competition for survival.&rdquo; This is a&hellip;</div><button class="opt" data-ok="0">Quote</button><button class="opt" data-ok="1">Paraphrase &mdash; same idea, new words, same size</button><button class="opt" data-ok="0">Summary</button><div class="fb">The idea is restated in the writer&rsquo;s own words at about the same length &mdash; no quotation marks needed, but a citation still is.</div></div><div class="mcq"><div class="qq">Which sentence is <b>objective</b>?</div><button class="opt" data-ok="0">The cruel guards evilly starved poor Shin.</button><button class="opt" data-ok="1">Prisoners ate the same corn porridge, cabbage, and cabbage soup nearly every day.</button><button class="opt" data-ok="0">I think Camp 14 is the most horrifying place ever.</button><div class="fb">Facts only &mdash; no judgment words, no &ldquo;I think.&rdquo; The other two editorialize.</div></div><div class="rev"><div class="rq">Shrink all of Chapter 1 into <b>one objective sentence</b>.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: Chapter 1 describes Shin&rsquo;s early childhood in Camp 14&rsquo;s model village, where food, housing, work, and even marriages were controlled by guards.</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 1</h1><div class="body"><p><span class="badge">Read</span> Shin&rsquo;s earliest life in the &ldquo;model village&rdquo;: hunger, rules, and a family designed by guards.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li><b>Hunger</b> shapes every relationship &mdash; even between mother and son.</li><li><b>Family</b> in Camp 14 is arranged, controlled, and rewarded by guards.</li><li>Mark two details you would put in an objective summary of this chapter.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write a two-sentence objective summary of Chapter 1 &mdash; then reread it and cross out any opinion words that slipped in.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">We talk through Chapter 1, review the evidence bank, then you write: how Camp 14 reshapes family, trust, and survival.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 1</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft with frames</span><span>Self-check and turn in</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Reading: Chapter 1</h1><div class="body"><ol class="q"><li>Describe daily life in the model village using only explicit details (food, housing, electricity, work).</li><li>What was a &ldquo;reward marriage&rdquo;? What does its existence tell us about the camp&rsquo;s control over families?</li><li>Shin &ldquo;saw her as competition for survival.&rdquo; How does this single sentence carry the week&rsquo;s central idea?</li></ol><p class="note">As we talk, choose the evidence you&rsquo;ll use today &mdash; at least one detail from each day&rsquo;s reading is strongest.</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Same anatomy, nonfiction edition: claim about what Camp 14 reshapes, evidence from the text, explanation &mdash; in an objective, academic tone.</div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How does Harden show that Camp 14 reshapes the meaning of family, trust, and survival?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Shin&rsquo;s first memory: a public execution used to teach obedience (Preface)</li><li>Shin watching his mother&rsquo;s execution &mdash; and feeling relief, then guilt (Preface)</li><li>&ldquo;Love and mercy and family were words without meaning&rdquo; (Introduction)</li><li>Shin stealing his mother&rsquo;s lunch; seeing her as &ldquo;competition for survival&rdquo; (Ch. 1)</li><li>Reward marriages arranged by guards (Ch. 1)</li></ul></div></div></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Language Arts 2 SC <span>&mdash; one developed paragraph</span></h3><p>Use chunked directions, the organizer, and the evidence bank. State a clear claim, include <b>at least one strong piece of evidence</b>, and explain how it supports your claim.</p></div><div class="card"><h3>Challenge / Extension <span>&mdash; 2&ndash;3 analytical paragraphs</span></h3><p>Develop a nuanced claim with <b>multiple pieces of evidence</b>. Address credibility or complexity &mdash; for example, how Harden handles the changes in Shin&rsquo;s testimony.</p></div></div><p class="note">Sentence starters: &ldquo;Harden shows that Camp 14 reshapes ___ when ___.&rdquo; &nbsp;&ldquo;This evidence suggests ___.&rdquo; Self-check: claim &rarr; evidence &rarr; explanation &rarr; objective tone.</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Shin Dong-hyuk (Shin In Geun)</b></td><td>Born inside Camp 14 in 1982; escaped January 2, 2005 &mdash; the only person born in the camps known to have escaped.</td></tr><tr><td><b>Blaine Harden</b></td><td>The journalist author; interviewed Shin repeatedly and verified his account against guards, defectors, and satellite imagery.</td></tr><tr><td><b>Jang Hye Gyung</b></td><td>Shin&rsquo;s mother &mdash; assigned to his father in a &ldquo;reward marriage&rdquo;; executed after a failed escape plan.</td></tr><tr><td><b>Shin&rsquo;s father &amp; brother</b></td><td>Father: a lathe operator he barely knew. Brother: a stranger, executed alongside their mother.</td></tr><tr><td><b>Kim Jong Eun</b></td><td>Born the same era as Shin &mdash; Harden&rsquo;s contrast between total privilege and total privation.</td></tr><tr><td><b>Camp 14</b></td><td>A political prison camp the North Korean government says does not exist; visible on satellite photos.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Preface</b></td><td>Shin&rsquo;s first memory: a public execution at age four. Years later he watches his mother and brother executed &mdash; feeling relief, then carrying the guilt for fifteen years.</td></tr><tr><td><b>Introduction Part A</b></td><td>Shin&rsquo;s 2005 escape; his scarred body as a &ldquo;roadmap&rdquo; of the camp; the Shin/Kim contrast; why his story differs from <i>Night</i> &mdash; he was born in the dark and called it home.</td></tr><tr><td><b>Introduction Part B</b></td><td>Harden meets Shin in 2008; Shin&rsquo;s story changes and Harden documents why; the world&rsquo;s attention has never truly landed on the camps.</td></tr><tr><td><b>Chapter 1</b></td><td>The model village: corn porridge every meal, shared privies, two hours of electricity &mdash; and a boy who stole his mother&rsquo;s lunch and &ldquo;saw her as competition for survival.&rdquo;</td></tr></table><p class="note">Content reminder: we discuss these real events with respect and academic language.</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>oppression</b></td><td>cruel, unjust control by those in power (ant.: liberation)</td></tr><tr><td><b>credibility</b></td><td>how trustworthy a source is (ant.: unreliability)</td></tr><tr><td><b>survival</b></td><td>staying alive through hardship (ant.: perishing)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">His first memory is an execution.<span class="who">&mdash; Preface</span></div><div class="quote" style="margin:10px 0">Love and mercy and family were words without meaning.<span class="who">&mdash; Introduction</span></div><div class="quote" style="margin:10px 0">He saw her as competition for survival.<span class="who">&mdash; Chapter 1</span></div><div class="quote" style="margin:10px 0">The labour camp used a public killing, and the fear it generated, as a teachable moment.<span class="who">&mdash; Preface</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;Harden shows that Camp 14 reshapes ___ when ___.&rdquo;</li><li>&ldquo;According to the text, ___.&rdquo;</li><li>&ldquo;This evidence suggests ___.&rdquo;</li><li>&ldquo;A skeptic might ask ___, but Harden ___.&rdquo;</li><li>&ldquo;Objectively stated: ___.&rdquo;</li></ul></div></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Camp 14 is a closed world where rules, hunger, and fear reshape every human bond. Shin was born inside it, knew nothing else, and is the only person born in the camps known to have escaped. Harden verifies and frames his testimony.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>How does a system make family bonds dangerous?</li><li>What makes testimony believable?</li><li>What does &ldquo;survival&rdquo; cost a person?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: Chapters 2&ndash;4.</p></div><div class="footer"><span>Escape from Camp 14 • Week 1 • Evidence, Central Ideas &amp; Objective Summary</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

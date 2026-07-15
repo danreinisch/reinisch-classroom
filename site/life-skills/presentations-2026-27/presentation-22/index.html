@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 22: Interviewing - Answering Interview Questions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 22</div><h1>Answering Interview Questions</h1><div class="body"><div class="sub">Interviewing &mdash; Answering Interview Questions</div>
+<div class="meta">This week: why do you want this job, scenario questions, availability and support, and building your full answer bank &mdash; 20 points</div><div class="theme">Big idea: Interviewers aren&rsquo;t trying to trick you &mdash; they&rsquo;re trying to give you enough rope to prove yourself</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>&ldquo;Why do you want this job?&rdquo; &mdash; the honest specific answer</td><td>5</td></tr><tr><td>Day 2</td><td>&ldquo;What would you do if&hellip;&rdquo; &mdash; scenario questions</td><td>5</td></tr><tr><td>Day 3</td><td>Availability and support questions &mdash; honest, handled</td><td>5</td></tr><tr><td>Day 4</td><td>My interview answer bank &mdash; built and practiced</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>The Map Is in Your Head &mdash; Now Fill the Rooms</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you built&hellip;</h3>
+<p>The interview map, your &ldquo;tell me about yourself,&rdquo; and strength/reliability receipt answers. You know the format and you have the first three answers ready.</p></div>
+<div class="card"><h3>This week you add&hellip;</h3>
+<p>The harder questions: why you want THIS job, what you&rsquo;d do in a real workplace situation, and the honest handling of availability and support needs. By Friday you have a complete answer bank &mdash; the thing you walk in with. Week 24 is the live practice. This week you load the weapon.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>&ldquo;Why Do You Want This Job?&rdquo;</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">The real version of this question is &ldquo;why THIS job at THIS place?&rdquo; A generic answer is a red flag. An honest, specific one is a green one &mdash; even if the reason is simple.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the honest-specific formula</span><span>You try it</span><span>Do: build your why</span></div>
+<div class="stdchips"><span class="pill">Self-Advocacy</span><span class="pill">Career Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Why would YOU actually want a specific entry-level job near you? Be honest, not impressive.</li><li>What&rsquo;s wrong with &ldquo;I need money&rdquo; as the full answer &mdash; even though it&rsquo;s true?</li><li>What does an interviewer actually want to know when they ask this question?</li></ol></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>Honest + Specific = Strong</h1><div class="body"><table class="mini">
+<tr><th>Answer type</th><th>Example</th><th>What it signals</th></tr>
+<tr><td><b>Generic</b></td><td>&ldquo;I&rsquo;m a hard worker and I want to gain experience.&rdquo;</td><td>You didn&rsquo;t read the posting; they&rsquo;re a backup</td></tr>
+<tr><td><b>Only money</b></td><td>&ldquo;I need a job.&rdquo;</td><td>You&rsquo;ll leave the second something better appears</td></tr>
+<tr><td><b>Honest + specific</b></td><td>&ldquo;I walk past here every day and I&rsquo;ve always liked that it&rsquo;s clean and busy. I want my first job to be somewhere I actually like being.&rdquo;</td><td>You know where you are and you chose it on purpose</td></tr>
+<tr><td><b>Honest + skill-tied</b></td><td>&ldquo;I&rsquo;ve been caring for animals at home and with neighbors for two years. A kennel job is a real next step, and I looked up Paws &amp; Claws specifically because you take walk-ins.&rdquo;</td><td>You did research; you connect the dots</td></tr></table>
+<p class="note">The formula is simple: one real reason + one detail that shows you know where you are. The detail doesn&rsquo;t have to be impressive &mdash; &ldquo;you&rsquo;re on the bus route&rdquo; plus &ldquo;and I want steady hours&rdquo; is more compelling than a fake passion for food service delivery metrics. They can feel the difference.</p></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Why This Job?</h1><div class="body"><div class="mcq"><div class="qq">Which &ldquo;why this job&rdquo; answer is most likely to move an interviewer?</div><button class="opt" data-ok="1">&ldquo;I&rsquo;ve walked dogs and fed cats for neighbors for two years. A kennel role is the first time those hours actually count on paper &mdash; and I looked Paws &amp; Claws up because you have good reviews for how you treat the animals.&rdquo;</button><button class="opt" data-ok="0">&ldquo;I&rsquo;m a really hard worker and I&rsquo;m very responsible and I really really want to work.&rdquo;</button><button class="opt" data-ok="0">&ldquo;I need money for a car.&rdquo;</button><div class="fb">Option A: real experience + specific detail about THIS employer. It tells the story without performing it. Options B and C tell the interviewer nothing that distinguishes you from the ten people before you.</div></div><div class="mcq"><div class="qq">You honestly don&rsquo;t have a strong reason &mdash; you applied because it was close. How do you handle that?</div><button class="opt" data-ok="1">&ldquo;Location matters to me &mdash; I&rsquo;m on foot and I need something I can get to reliably. And from what I&rsquo;ve seen, this place is clean and busy, which is where I want my first job to be.&rdquo;</button><button class="opt" data-ok="0">&ldquo;I&rsquo;ve always been passionate about retail logistics.&rdquo;</button><button class="opt" data-ok="0">&ldquo;I don&rsquo;t know, I just applied.&rdquo;</button><div class="fb">Honest proximity + one real observation (&ldquo;clean and busy&rdquo;) is both true and compelling. Fake passion is detectable and embarrassing when followed up. Saying &ldquo;I don&rsquo;t know&rdquo; is forfeit.</div></div><div class="mcq"><div class="qq">Why does &ldquo;I need a job&rdquo; hurt you even though the interviewer knows it&rsquo;s true?</div><button class="opt" data-ok="1">It signals you&rsquo;ll leave for anything better &mdash; and employers invest time in training; they need someone who chose them, not just someone who needed a paycheck</button><button class="opt" data-ok="0">It&rsquo;s a lie &mdash; nobody actually needs money</button><button class="opt" data-ok="0">It&rsquo;s fine; honesty always wins</button><div class="fb">Honesty wins &mdash; but honest AND specific wins more. Employers hire people who want the job, not just a job. Even one detail that shows you looked at them specifically changes the signal completely.</div></div><div class="rev"><div class="rq">Build a &ldquo;why this job&rdquo; answer for a counter server role at the school cafeteria &mdash; using real reasons someone like you might actually have.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">&ldquo;I eat here every day and I like how fast the line moves &mdash; I want to know what that looks like from the other side. And it&rsquo;s on campus, which solves the transportation problem for now.&rdquo; That&rsquo;s honest + specific + shows you noticed something real. No fake passion required.</div></div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Build Your Why</h1><div class="body"><p><span class="badge">Your task</span> For two jobs on your folder list: write your honest-specific &ldquo;why this job&rdquo; answer for each &mdash; one real reason + one detail that shows you know where you are. Then deliver one of them to a partner. Partner gives a thumbs on: does it sound real? Is there a specific detail? Would you believe it?</p>
+<div class="exit"><b>Before you leave:</b> Give me your best &ldquo;why this job&rdquo; in under 30 seconds, no notes.</div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Scenario Questions</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">&ldquo;What would you do if a customer was upset?&rdquo; &mdash; not a trap, a preview. They want to see how you think under pressure. Today: the scenario formula that uses your real skills.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the scenario formula</span><span>You try it</span><span>Do: scenario drills</span></div>
+<div class="stdchips"><span class="pill">Problem Solving</span><span class="pill">Communication</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Why would an interviewer ask &ldquo;what would you do if&hellip;?&rdquo; instead of just &ldquo;are you good under pressure?&rdquo;</li><li>Which skills from our year answer the upset-customer scenario? (Think back &mdash; Weeks 14, 15, 17 all touched it.)</li><li>What&rsquo;s the danger of going too long on a scenario answer?</li></ol></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>The Scenario Formula</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>What you say</th><th>Example: upset customer</th></tr>
+<tr><td><b>1. Your move</b></td><td>What you&rsquo;d do FIRST &mdash; specific action</td><td>&ldquo;I&rsquo;d stop what I&rsquo;m doing, give them full attention, and let them finish&mdash;&rdquo;</td></tr>
+<tr><td><b>2. Your limit</b></td><td>What you&rsquo;d handle vs. escalate &mdash; honest</td><td>&ldquo;&mdash;if I could fix it, I would &mdash; wrong item, easy to replace; refund or big complaint, I&rsquo;d get a manager&mdash;&rdquo;</td></tr>
+<tr><td><b>3. Tie back</b></td><td>Connect to the skill or the job, one sentence</td><td>&ldquo;&mdash;I learned from handling difficult moments in school that staying calm makes them shorter.&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The scenarios they always ask</h3>
+<p>Upset customer &bull; coworker conflict &bull; made a mistake &bull; two tasks at once, which first &bull; don&rsquo;t know how to do something. Notice anything? Every single one of these has been in Life Skills SC: Weeks 10, 13, 15, 16, 17. Your scenario answers are already written. Today you put them in interview language.</p></div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Scenario Checks</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;What would you do if you made a mistake at work?&rdquo; Best answer shape?</div><button class="opt" data-ok="1">&ldquo;I&rsquo;d own it fast, tell the right person before it caused more problems, fix what I could, and figure out how not to repeat it &mdash; I built that habit in my classroom aide role when I shelved something wrong and corrected it before anyone else noticed.&rdquo;</button><button class="opt" data-ok="0">&ldquo;I don&rsquo;t really make mistakes.&rdquo;</button><button class="opt" data-ok="0">&ldquo;It depends on the mistake, I guess. I&rsquo;d probably just fix it if I could.&rdquo;</button><div class="fb">Option A: three-step structure (own, fix, prevent) plus a real receipt. Option B: a red flag &mdash; everyone makes mistakes; that answer proves you either lie or don&rsquo;t notice. Option C: too vague to be convincing.</div></div><div class="mcq"><div class="qq">&ldquo;What would you do if a coworker asked you to cover their shift but you&rsquo;re already scheduled?&rdquo;</div><button class="opt" data-ok="1">&ldquo;I&rsquo;d check my own schedule first, then get manager approval before saying yes &mdash; two yeses to a shift swap that the manager doesn&rsquo;t know about makes both of us look unreliable.&rdquo;</button><button class="opt" data-ok="0">&ldquo;Sure, I&rsquo;d do it &mdash; I&rsquo;m flexible.&rdquo;</button><button class="opt" data-ok="0">&ldquo;No, schedules are schedules.&rdquo;</button><div class="fb">The right answer shows you understand workplace process, not just people-pleasing or rule-following. Manager-in-the-loop is always the right step for schedule changes &mdash; and saying so shows you get how jobs actually work.</div></div><div class="mcq"><div class="qq">Your scenario answer is 3 minutes long. The problem?</div><button class="opt" data-ok="1">It signals you panic and over-explain under pressure &mdash; 45&ndash;60 seconds, three steps, is the target</button><button class="opt" data-ok="0">Nothing; thorough answers show preparation</button><button class="opt" data-ok="0">Only a problem if they look bored</button><div class="fb">Scenario answers should be shorter than they feel. The three-step structure naturally caps them: your move, your limit, tie back. Three tight sentences beats a three-minute stream of consciousness &mdash; every time.</div></div><div class="rev"><div class="rq">Pick one scenario question. Map it to the Life Skills SC week that taught you the answer &mdash; and build the three-step response from that lesson.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Example: &ldquo;What would you do if a customer was upset?&rdquo; &rarr; Week 17 (coworkers/customers) + Week 15 (asking for help when it&rsquo;s above your level). Move: listen fully, calm tone. Limit: handle what&rsquo;s mine, get manager for money/complaints. Tie: &ldquo;I learned staying calm makes the situation shorter.&rdquo; Your whole school year is a scenario prep course.</div></div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Scenario Drills</h1><div class="body"><p><span class="badge">Your task</span> Five scenario cards (upset customer, coworker conflict, mistake, two tasks/which first, don&rsquo;t know how). For each: write your three-step answer, then deliver it to a partner timed. Target: 45&ndash;60 seconds per answer. Partner marks: move? limit? tie back? Delivery under time?</p>
+<div class="exit"><b>Before you leave:</b> Deliver your best scenario answer cold, timed, start to finish.</div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Availability &amp; Support Questions</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Two questions that feel risky but are actually opportunities: &ldquo;when are you available?&rdquo; and &ldquo;do you have any limitations we should know about?&rdquo; Today: honest answers that protect you AND the employer.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the honest-protective answer</span><span>You try it</span><span>Do: write your availability statement</span></div>
+<div class="stdchips"><span class="pill">Self-Advocacy</span><span class="pill">Honesty</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Week 4&rsquo;s availability grid &mdash; what were the two rules? (Lock in school first; never &ldquo;anytime.&rdquo;)</li><li>Why might someone say &ldquo;anytime&rdquo; in an interview even when it&rsquo;s not true &mdash; and what happens next?</li><li>What&rsquo;s the difference between disclosing a limitation and apologizing for it?</li></ol></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>Honest + Protective = Strong</h1><div class="body"><table class="mini">
+<tr><th>Question</th><th>Answer structure</th><th>Example</th></tr>
+<tr><td><b>&ldquo;When are you available?&rdquo;</b></td><td>Specific days and hours from your real grid &mdash; never &ldquo;anytime&rdquo;</td><td>&ldquo;Weekdays after 3:15pm, and I&rsquo;m open Saturday and Sunday mornings from 8am on.&rdquo;</td></tr>
+<tr><td><b>&ldquo;Any limitations we should know about?&rdquo;</b></td><td>State what&rsquo;s relevant + what you can do &mdash; never over-explain or apologize</td><td>&ldquo;I use a communication support for reading long instructions &mdash; for task work I follow directions accurately and I check in to confirm I&rsquo;ve got it right.&rdquo;</td></tr>
+<tr><td><b>&ldquo;Can you work weekends?&rdquo;</b></td><td>Yes/no + specific, never vague</td><td>&ldquo;Saturday mornings yes, Sunday depends on my family&rsquo;s schedule &mdash; I can confirm weekly.&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>You are not required to disclose a disability</h3>
+<p>That&rsquo;s the law. You ARE required to tell them what you can and can&rsquo;t do for the job &mdash; those are different conversations. If you have a support that helps you do the job BETTER, you can frame it that way: &ldquo;I use a checklist to stay accurate on multi-step tasks &mdash; I find it keeps me from rushing.&rdquo; That&rsquo;s not disclosure; that&rsquo;s a strength.</p></div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Availability Calls</h1><div class="body"><div class="mcq"><div class="qq">You&rsquo;re free after 3pm weekdays and both weekend days. You say &ldquo;anytime.&rdquo; What&rsquo;s the risk?</div><button class="opt" data-ok="1">They schedule you for 8am Monday and when you don&rsquo;t show, &ldquo;anytime&rdquo; becomes the most expensive word you ever said in an interview</button><button class="opt" data-ok="0">No risk &mdash; the employer will figure out your real schedule</button><button class="opt" data-ok="0">Only a risk if they actually call you in at 8am</button><div class="fb">Week 4 and Week 12 both said this: honest availability protects the job. &ldquo;Anytime&rdquo; is the availability trap. &ldquo;After 3pm weekdays and weekends&rdquo; sets you up for shifts you can actually cover &mdash; and that&rsquo;s what reliability actually looks like.</div></div><div class="mcq"><div class="qq">The interviewer asks about limitations. You use a text-to-speech app for reading. Which response works best?</div><button class="opt" data-ok="1">&ldquo;For written instructions I sometimes use a reading support, but I follow multi-step directions accurately and I always confirm I&rsquo;ve got it right before starting.&rdquo;</button><button class="opt" data-ok="0">&ldquo;I have a learning disability, I have an IEP, and I sometimes need extra time on things.&rdquo;</button><button class="opt" data-ok="0">&ldquo;No limitations at all.&rdquo;</button><div class="fb">Option A: names the tool, leads with the outcome (accurate, confirms). Option B: over-shares medical framing the job doesn&rsquo;t require. Option C: a mismatch they&rsquo;ll discover on day one. Frame what you USE and what it produces &mdash; not the diagnosis behind it.</div></div><div class="mcq"><div class="qq">You genuinely ARE available anytime &mdash; you have no school schedule conflicts, no other commitments. What&rsquo;s the best way to say it?</div><button class="opt" data-ok="1">&ldquo;I&rsquo;m genuinely open &mdash; mornings, evenings, weekends, I can work around whatever the schedule needs.&rdquo;</button><button class="opt" data-ok="0">&ldquo;Anytime&rdquo; with a shrug</button><button class="opt" data-ok="0">List every hour of every day to prove it</button><div class="fb">If it&rsquo;s true, say it specifically &mdash; &ldquo;mornings, evenings, weekends&rdquo; is specific AND enthusiastic. A shrug reads as uninterested; a list is unnecessary. Specificity = credibility even when the answer is &ldquo;flexible.&rdquo;</div></div><div class="rev"><div class="rq">Build your real availability statement in interview language &mdash; using your actual school schedule as the starting point, just like Week 4.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Template: &ldquo;I&rsquo;m in school weekdays until [time], so I&rsquo;m available weekdays after [time + 15 min buffer]. [Weekend situation honestly.] I can confirm my schedule in advance each week.&rdquo; The buffer and the confirmation offer both make you look like someone who has THOUGHT about showing up &mdash; which is exactly the reliability signal they&rsquo;re reading for.</div></div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>Write Your Availability Statement</h1><div class="body"><p><span class="badge">Your task</span> From your real schedule: write your interview availability statement (school times locked in, real free windows, weekend situation honest). Then write your support statement if applicable &mdash; tool used + what it produces, one sentence, no diagnosis language. Both go into your answer bank. Partner checks: specific? honest? does it sound confident, not apologetic?</p>
+<div class="exit"><b>Before you leave:</b> Deliver your availability statement out loud &mdash; specific, confident, no hedging.</div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>My Interview Answer Bank</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Three weeks of answers, one document, graded. Your answer bank is the thing you study from &mdash; today you build it, practice from it, and walk out with it ready.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: compile and practice</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Career Readiness</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Name every question type we&rsquo;ve built an answer for so far. Class relay &mdash; go.</li><li>What&rsquo;s the one thing your answer bank should NOT contain?</li><li>What does &ldquo;practice from it&rdquo; mean &mdash; what&rsquo;s the goal of today?</li></ol></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>The Answer Bank</h1><div class="body"><p><span class="badge">Your task</span> Compile your full answer bank into one document: (1) Tell me about yourself &mdash; the three-part answer. (2) Greatest strength &mdash; with receipt. (3) Are you reliable &mdash; with receipt. (4) Why this job &mdash; for two postings. (5) Three scenario answers &mdash; your three strongest. (6) Availability statement. (7) Support statement if applicable. (8) Two prepared questions for &ldquo;any questions for us?&rdquo;</p>
+<div class="card flat" style="margin-top:12px"><h3>Then practice: five-question lightning round</h3>
+<p>Partner draws five cards at random from the bank. You answer without reading &mdash; they score. Swap. The goal is that none of these feel like surprises on interview day.</p></div>
+<div class="exit"><b>Check out:</b> Hand in your answer bank. Tell me which question you&rsquo;d still sweat &mdash; and what you&rsquo;re doing about it before Week 24.</div></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 22 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You have a complete answer bank: the &ldquo;why this job&rdquo; with an honest specific reason and a real detail about the employer, scenario answers in three steps (move, limit, tie back) drawn from your actual Life Skills toolbox, honest availability that protects both you and the job, and a support statement that leads with outcomes. Eight answers, one document, yours to study.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Can I deliver any answer from the bank without reading it?</li><li>Which scenario answer still sounds stiff &mdash; and what real experience can I anchor it in?</li><li>Is my &ldquo;why this job&rdquo; answer different for each posting, or is it the same generic one?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Interview Appearance and Behavior: what you wear, how you greet, waiting-room game face, and the full interview-readiness checklist. Then Week 24 is the live mock. Everything loads this week; next week you put it in the right container.</p></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Question Bank Overview Card</h1><div class="body"><table class="mini">
+<tr><th>Question</th><th>Formula</th></tr>
+<tr><td>Tell me about yourself</td><td>Who + 2 receipts + why here (specific)</td></tr>
+<tr><td>Greatest strength</td><td>Name it + 1 receipt + tie to job</td></tr>
+<tr><td>Are you reliable</td><td>Yes + 1 specific receipt</td></tr>
+<tr><td>Why this job</td><td>1 real reason + 1 detail about THIS employer</td></tr>
+<tr><td>What would you do if&hellip;</td><td>Your move + your limit + tie back (45&ndash;60 sec)</td></tr>
+<tr><td>Availability</td><td>Specific days/hours; never &ldquo;anytime&rdquo; unless true</td></tr>
+<tr><td>Any questions for us</td><td>1&ndash;2 prepared; never pay in round one</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Scenario Formula Card</h1><div class="body"><table class="mini">
+<tr><th>Scenario</th><th>Your move / limit / tie back</th></tr>
+<tr><td>Upset customer</td><td>Listen fully, calm &rarr; handle if small, get manager if money/big complaint &rarr; staying calm makes it shorter</td></tr>
+<tr><td>Made a mistake</td><td>Own fast, fix what I can, prevent repeat &rarr; I built this habit [receipt]</td></tr>
+<tr><td>Don&rsquo;t know how</td><td>Ask first (safety/money/truly lost), try once, then ask with proof &rarr; Week 15 toolbox</td></tr>
+<tr><td>Two tasks, which first</td><td>Either/or question to manager &rarr; Week 13 ordering questions</td></tr>
+<tr><td>Coworker conflict</td><td>Brakes, lower dials, sort at break &rarr; if repeats, supervisor &rarr; Week 17 playbook</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 22 • Interviewing — Answering Interview Questions</span><span>24 of 24</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

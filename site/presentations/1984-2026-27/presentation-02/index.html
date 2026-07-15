@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 2: Evidence, Inference &amp; Character Development - Truth, Language &amp; Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#9aa8bd; --accent-deep:#333d4d; --glow:rgba(154,168,189,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 3 SC • Week 2</div><h1>1984</h1><div class="body"><div class="sub">by George Orwell &mdash; audiobook listening unit</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b> (Develop)<br>This week: Part 1, Chapters III, IV, V-A + Written Response</div><div class="theme">Theme: Truth, Language &amp; Memory</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td><b>P1 Ch. III</b> (full &mdash; 18:20) &mdash; dreams, childhood memory, Physical Jerks, and the mutable past.</td><td>7</td></tr><tr><td>Day 2</td><td><b>P1 Ch. IV</b> (full &mdash; 22:47) &mdash; Winston&rsquo;s work rewriting records at the Ministry of Truth.</td><td>7</td></tr><tr><td>Day 3</td><td><b>P1 Ch. V-A</b> (0:00&ndash;15:40) &mdash; Syme explains Newspeak. <i>Stop when Syme says, &ldquo;Here comes Parsons.&rdquo;</i></td><td>7</td></tr><tr><td>Day 4</td><td>Written Response</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>2 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our skills</h3><p><b>Developing inference and character analysis.</b> This week we connect three of the Party&rsquo;s tools &mdash; controlled <b>memory</b>, rewritten <b>records</b>, and shrinking <b>language</b> &mdash; to Winston&rsquo;s changing sense of what is true and who he is.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Cite details showing how the Party attacks memory, records, and words.</li><li>Infer why each attack makes private truth harder to hold.</li><li>Connect this week&rsquo;s evidence to Winston&rsquo;s character.</li></ul></div></div>
+<p class="note">Standards this week: 11-12.RL.1.A — Evidence &amp; Inference • 11-12.RL.2.D — Text Elements • 11-12.RL.3.C — Historical Context (censorship &amp; state control) • W.2.A / W.3.A — Written Response &amp; Revision</p></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>3 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do memory, rewritten history, and Newspeak help the Party control reality?</div></div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>4 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Mutable Past</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">If no record and no other memory agrees with yours &mdash; did it happen? Today Winston discovers the Party&rsquo;s deepest weapon: a past that can be changed.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week in Oceania</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. III + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.3.C — Historical Context</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week in Oceania</h1><div class="body"><ol class="q"><li>Quick recap: name the three rings of surveillance we traced last week (screens &rarr; crowds &rarr; ?).</li><li>Winston wrote &ldquo;DOWN WITH BIG BROTHER&rdquo; and believes he is already dead. Why does he keep writing anyway?</li><li>New week&rsquo;s question: if every record and every other person disagreed with your memory, could you stay sure of it?</li></ol></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>6 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">doublethink</div><div class="pos">noun • DUH-bul-think</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> surveillance &bull; conformity &bull; denounce</div><div class="means">Holding two opposite beliefs at once &mdash; and believing both. Orwell invented this word for this book.</div>
+<div class="morph"><div><b>double</b><span>two at once</span></div><div class="plus">+</div><div><b>think</b><span>to believe, to reason &mdash; a compound coined by Orwell</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">self-deception</span><span class="pill">contradiction</span><span class="pill">two-mindedness</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">consistency</span><span class="pill anti">honesty</span><span class="pill anti">clear thinking</span></div>
+<div class="family"><b>Word family:</b> doublespeak (n, later coinage) &bull; thoughtcrime, Newspeak &mdash; Orwell&rsquo;s other coinages</div></div>
+<div><div class="quote">All that was needed was an unending series of victories over your own memory.<span class="who">&mdash; Part 1, Chapter III</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Orwell built new words from old parts &mdash; and they entered real English. Where have you heard <i>doublethink</i> or <i>Big Brother</i> used about our world?</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>7 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Explicit vs. Implicit: How Readers Know Things</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit &mdash; the text says it</h3>
+<p>Information stated directly. <i>&ldquo;Maria slammed the door.&rdquo;</i> We know the door slammed &mdash; it&rsquo;s on the page.</p></div>
+<div class="card"><h3>Implicit &mdash; the text suggests it</h3>
+<p>An <b>inference</b> = detail from the text + what you already know. Slammed door + your life experience &rarr; Maria is probably angry. The text never said &ldquo;angry.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday inference</h3>
+<p>You come home: wet umbrella by the door, muddy shoes on the mat. Nobody told you it rained &mdash; you <b>inferred</b> it. You do this skill all day already.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The one rule</h3>
+<p>Every inference must trace back to a detail you can point to. Evidence is your receipt &mdash; no receipt, no claim.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Today&rsquo;s twist: Winston&rsquo;s <b>memories</b> are his only evidence &mdash; and the Party owns every other receipt. Listen for what happens to a claim when no record can back it.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>8 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Memory vs. Record: The Party&rsquo;s Deepest Trick</h1><div class="body"><table class="mini">
+<tr><th>What Winston remembers</th><th>What the Party says</th><th>The problem</th></tr>
+<tr><td>Oceania was allied with Eurasia four years ago</td><td>&ldquo;Oceania has always been at war with Eurasia&rdquo;</td><td>No document, no witness agrees with him</td></tr>
+<tr><td>His childhood, his mother, an air raid</td><td>History books say the Party invented everything good</td><td>His memory is fading &mdash; and cannot be checked</td></tr></table>
+<div class="quote" style="margin-top:14px">Who controls the past controls the future: who controls the present controls the past.<span class="who">&mdash; Party slogan, Part 1, Chapter III</span></div>
+<p class="note">Listening focus: three columns again &mdash; time | detail | inference. Today, flag every moment memory and record collide.</p></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>9 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Memory Under Attack</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Who controls the past controls the future: who controls the present controls the past.&rdquo; This slogan is&hellip;</div><button class="opt" data-ok="1">An explicit detail we can quote &mdash; and a claim we can analyze</button><button class="opt" data-ok="0">An inference Winston makes</button><button class="opt" data-ok="0">Something the reader imagines</button><div class="fb">It&rsquo;s on the page &mdash; quotable, citable. The analysis begins when we ask what &ldquo;controlling the past&rdquo; requires.</div></div><div class="mcq"><div class="qq">Winston remembers the alliance with Eurasia, but no proof exists anywhere. Best inference?</div><button class="opt" data-ok="1">The Party destroys receipts so memory alone must carry truth &mdash; and memory can be worn down</button><button class="opt" data-ok="0">Winston has a bad memory</button><button class="opt" data-ok="0">The alliance never happened</button><div class="fb">That&rsquo;s the machine: erase the record, outlast the rememberers, and the lie stands unopposed.</div></div><div class="rev"><div class="rq">&ldquo;An unending series of victories over your own memory.&rdquo; What does a &ldquo;victory&rdquo; over your own memory look like?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Choosing the Party&rsquo;s version over what you actually remember &mdash; again and again, until you no longer notice the choosing. That practiced surrender is doublethink.</div></div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>10 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Listen</div><h1>P1 Chapter III (full &mdash; 18:20)</h1><div class="body"><p><span class="badge">Listen</span> Dreams of his mother, the Physical Jerks, a childhood in ruins &mdash; and the discovery that the past has no fixed shape here.</p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>Winston&rsquo;s <b>dream</b> of his mother and sister &mdash; what feeling survives even when details blur.</li><li>The morning <b>Physical Jerks</b>: the telescreen instructress who can see him &mdash; even his effort is monitored.</li><li>The war with Eurasia &ldquo;that has always been&rdquo; &mdash; and the phrase <i>the lie passed into history and became truth</i>.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> Turn in three listening-note rows. At least one must be a memory-vs-record collision.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>11 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Memory Hole</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Today we go to work with Winston &mdash; inside the Ministry of Truth, where the past is not studied. It is manufactured.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. III</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. IV + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The Mutable Past</h1><div class="body"><ol class="q"><li>What does Winston&rsquo;s dream of his mother suggest he has lost besides her &mdash; what quality does he say died with her generation?</li><li>The instructress singles Winston out by name during exercises. What does that moment prove about the telescreen?</li><li>&ldquo;The lie passed into history and became truth.&rdquo; Walk me through how &mdash; step by step &mdash; that can actually happen.</li></ol></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>13 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">rectify</div><div class="pos">verb • REK-tih-fy</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> surveillance &bull; conformity &bull; denounce</div><div class="means">To correct, to set right. In the Ministry of Truth it means the opposite: to falsify the record.</div>
+<div class="morph"><div><b>rect</b><span>Latin <i>rectus</i> — straight, right</span></div><div class="plus">+</div><div><b>-ify</b><span>suffix: to make</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">correct</span><span class="pill">amend</span><span class="pill">fix (their claim)</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">distort</span><span class="pill anti">falsify (the reality)</span></div>
+<div class="family"><b>Word family:</b> rectangle, correct, direct &mdash; same root &bull; rectification (n)</div></div>
+<div><div class="quote">This process of continuous alteration was applied not only to newspapers&hellip;<span class="who">&mdash; Part 1, Chapter IV</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The Party calls falsifying &ldquo;rectifying.&rdquo; That gap between a word&rsquo;s real meaning and its official use is today&rsquo;s whole lesson &mdash; listen for it.</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>14 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Author&rsquo;s Purpose &amp; Credibility</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Purpose: PIE</h3>
+<p>Authors write to <b>P</b>ersuade, <b>I</b>nform, or <b>E</b>ntertain &mdash; usually a mix. Ask: what does this author want to happen inside my head?</p></div>
+<div class="card"><h3>Credibility: can I trust this?</h3>
+<p>Check the receipts: Does the author <b>name sources</b>? Do other witnesses <b>corroborate</b> (confirm independently)? Is the author <b>transparent</b> about what they can&rsquo;t verify?</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>Two YouTubers make the same claim. One shows documents and links sources; one says &ldquo;trust me bro.&rdquo; You already run credibility checks &mdash; we&rsquo;re just making the checklist visible.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The counterintuitive rule</h3>
+<p>A source that admits the limits of its own story is usually <i>more</i> trustworthy, not less. Perfect stories should worry you.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Flip last week&rsquo;s credibility checklist: the Ministry of Truth is a machine for <b>destroying</b> receipts. When every source traces back to one source, corroboration dies. Listen for how the machine works.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>15 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Inside the Ministry: How to Manufacture a Past</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>What Winston does</th><th>What it destroys</th></tr>
+<tr><td>1</td><td>Receives a &ldquo;correction&rdquo; order for an old article</td><td>The idea that news is a record of anything</td></tr>
+<tr><td>2</td><td>Rewrites Big Brother&rsquo;s speech to fit later events</td><td>The leader is never wrong &mdash; retroactively</td></tr>
+<tr><td>3</td><td>Invents <b>Comrade Ogilvy</b>, a heroic man who never existed</td><td>The line between person and propaganda</td></tr>
+<tr><td>4</td><td>Drops the old version down the <b>memory hole</b></td><td>The last receipt. Corroboration is now impossible.</td></tr></table>
+<p class="note">Character check (RL.2.D): notice how Winston <i>feels</i> while doing this work &mdash; the craftsman&rsquo;s pride he can&rsquo;t quite suppress. What does it cost a person to be excellent at destroying the truth?</p></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>16 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>The Receipt Destroyer</h1><div class="body"><div class="mcq"><div class="qq">The &ldquo;memory hole&rdquo; is a slot where documents are&hellip;</div><button class="opt" data-ok="1">incinerated &mdash; destroying the last evidence a fact ever existed</button><button class="opt" data-ok="0">stored safely for historians</button><button class="opt" data-ok="0">mailed to other ministries</button><div class="fb">The name is doublethink itself: a &ldquo;memory hole&rdquo; is where memory goes to die.</div></div><div class="mcq"><div class="qq">Winston invents Comrade Ogilvy &mdash; a man who never lived &mdash; complete with a heroic life story. What does this prove?</div><button class="opt" data-ok="1">The past is manufactured, person by person, exactly like fiction</button><button class="opt" data-ok="0">Winston is a bad employee</button><button class="opt" data-ok="0">Ogilvy was a real hero</button><div class="fb">If a person can be written INTO history, anyone can be written OUT. Both happen in this chapter.</div></div><div class="rev"><div class="rq">Use last week&rsquo;s credibility checklist on Oceania: sources? corroboration? transparency? What&rsquo;s left?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Nothing. Every newspaper, book, and record flows from one author &mdash; the Party &mdash; which edits itself invisibly. A world with one source has no way to check anything: that is why the diary matters so much.</div></div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>17 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Listen</div><h1>P1 Chapter IV (full &mdash; 22:47)</h1><div class="body"><p><span class="badge">Listen</span> A day at Winston&rsquo;s desk: the speakwrite, the correction slips, and the invention of a man.</p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>The <b>workflow</b> of falsification &mdash; how routine and ordinary the destruction of truth feels.</li><li>The invention of <b>Comrade Ogilvy</b> &mdash; and Winston&rsquo;s flicker of creator&rsquo;s pride.</li><li>The <b>memory hole</b> &mdash; where every inconvenient fact ends.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> One sentence: name the step in the falsification machine you find most dangerous, and why.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>18 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>The Destruction of Words</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Today Syme explains the master plan: shrink the language until rebellion has no words left to think in.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. IV</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. V-A + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The Memory Hole</h1><div class="body"><ol class="q"><li>Describe Winston&rsquo;s job in one objective sentence &mdash; then describe it again in one honest sentence. Why do the two differ?</li><li>Winston feels pride inventing Comrade Ogilvy. What does that detail add to his character &mdash; is he a rebel, a craftsman, or both?</li><li>After Chapter IV, can any &ldquo;fact&rdquo; in Oceania be checked? What&rsquo;s the only evidence left &mdash; and where does Winston keep his?</li></ol></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>20 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">orthodoxy</div><div class="pos">noun • OR-thuh-dok-see</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> surveillance &bull; conformity &bull; denounce</div><div class="means">Holding the officially approved beliefs; thinking exactly what you are supposed to think.</div>
+<div class="morph"><div><b>ortho-</b><span>Greek: straight, correct</span></div><div class="plus">+</div><div><b>dox</b><span>Greek <i>doxa</i> — opinion, belief</span></div><div class="plus">+</div><div><b>-y</b><span>suffix: state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">conformity</span><span class="pill">accepted belief</span><span class="pill">party line</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">heresy</span><span class="pill anti">dissent</span><span class="pill anti">independent thought</span></div>
+<div class="family"><b>Word family:</b> orthodox (adj) &bull; unorthodox (adj) &bull; orthodontist &mdash; same <i>ortho</i> root (straight teeth!)</div></div>
+<div><div class="quote">Orthodoxy means not thinking&mdash;not needing to think.<span class="who">&mdash; Syme, Part 1, Chapter V</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Syme says orthodoxy is <i>unconsciousness</i>. Flip it: what would its antonym &mdash; real thinking &mdash; require in Oceania, and what would it cost?</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>21 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Language Power: Can Words Shape Thought?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Denotation vs. connotation</h3>
+<p><b>Denotation</b> = dictionary meaning. <b>Connotation</b> = the feeling a word carries. &ldquo;Cheap&rdquo; and &ldquo;affordable&rdquo; denote the same thing &mdash; and feel completely different.</p></div>
+<div class="card"><h3>Euphemism &amp; loaded language</h3>
+<p>A <b>euphemism</b> softens something harsh (&ldquo;let go&rdquo; for fired). <b>Loaded language</b> smuggles in judgment (&ldquo;regime&rdquo; vs. &ldquo;government&rdquo;). Both steer you before you notice.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The big question</h3>
+<p>If you have no word for an idea, is the idea harder to think? Powerful groups act like the answer is yes &mdash; that&rsquo;s why controlling words is a way of controlling people.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;Pre-owned vehicle.&rdquo; &ldquo;Budget-friendly.&rdquo; &ldquo;Content.&rdquo; Marketing renames things every day to change how you feel about them. Spot the rename, and you spot the strategy.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Newspeak is today&rsquo;s lesson weaponized: delete the word, and &mdash; the Party bets &mdash; you delete the thought. Listen to Syme test that bet out loud.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>22 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Syme&rsquo;s Master Plan: Shrink the Dictionary, Shrink the Mind</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The plan</h3>
+<p>Each edition of the Newspeak dictionary gets <b>smaller</b>. Destroy synonyms, antonyms, shades of meaning &mdash; until &ldquo;good, better, excellent&rdquo; collapse into <i>good, plusgood, doubleplusgood</i>.</p></div>
+<div class="card"><h3>The goal</h3>
+<p>Make thoughtcrime <b>literally impossible</b> &mdash; &ldquo;because there will be no words in which to express it.&rdquo; No word for freedom, no thought of freedom.</p></div></div>
+<div class="quote" style="margin-top:14px">It was a beautiful thing, the destruction of words.<span class="who">&mdash; Syme, Part 1, Chapter V</span></div>
+<p class="note">Character alert: Syme is brilliant, loyal &mdash; and too clear-eyed about what the Party is doing. Listen for Winston&rsquo;s chilling prediction about him, and ask what it implies about intelligence in Oceania.</p></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>23 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Word Deletion Lab</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Do you know that Newspeak is the only language in the world whose vocabulary gets smaller every year?&rdquo; Why smaller?</div><button class="opt" data-ok="1">Fewer words = a smaller space for thoughts to move in &mdash; rebellion loses its vocabulary</button><button class="opt" data-ok="0">To save paper in dictionaries</button><button class="opt" data-ok="0">To make the language easier for tourists</button><div class="fb">Syme says it plainly: the goal is to make unapproved thought impossible, not convenient.</div></div><div class="mcq"><div class="qq">&ldquo;Orthodoxy means not thinking &mdash; not needing to think.&rdquo; The connotation trick in the word <i>orthodoxy</i> (&ldquo;correct belief&rdquo;) is&hellip;</div><button class="opt" data-ok="1">It labels obedience as correctness &mdash; the name does the persuading</button><button class="opt" data-ok="0">It has no connotation at all</button><button class="opt" data-ok="0">It insults the Party</button><div class="fb">Same move as &ldquo;rectify&rdquo; and &ldquo;Ministry of Truth&rdquo;: name the thing its opposite, and the word argues for you.</div></div><div class="rev"><div class="rq">The portability test: name one real-world way renaming something changes how people feel about it. (Keep it school-appropriate!)</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Samples: &ldquo;pre-owned&rdquo; for used &bull; &ldquo;downsizing&rdquo; for firing people &bull; &ldquo;content&rdquo; for art. Renaming isn&rsquo;t lying exactly &mdash; it&rsquo;s steering. Orwell just imagines steering with no other words left.</div></div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>24 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Listen</div><h1>P1 Chapter V-A (0:00&ndash;15:40)</h1><div class="body"><p><span class="badge">Listen</span> Lunch in the canteen with Syme, philologist of Newspeak. <b>Stop when Syme looks up and says, &ldquo;Here comes Parsons.&rdquo;</b></p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>Syme&rsquo;s <b>joy</b> in destroying words &mdash; and exactly why the dictionary must shrink.</li><li>The claim that by 2050, conversations like this one will be <b>impossible</b>.</li><li>Winston&rsquo;s silent prediction about Syme&rsquo;s future &mdash; and what it reveals about being too smart in Oceania.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> Star your <b>two strongest pieces of evidence</b> from this week &mdash; one about memory or records, one about language.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>25 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Today you connect all three attacks &mdash; memory, records, language &mdash; into one claim about how the Party controls reality.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. V-A</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A — Revision</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: Syme</h1><div class="body"><ol class="q"><li>Syme is loyal to the Party &mdash; yet Winston is sure he will be vaporized. Why is clear understanding dangerous even in a loyal man?</li><li>Which of the three attacks &mdash; on memory, on records, on words &mdash; do you think is most powerful? Defend with evidence.</li><li>Check your starred evidence: does your pair cover two <i>different</i> attacks? The strongest responses connect at least two.</li></ol></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>27 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your response connects at least two of the Party&rsquo;s three tools. Claim about control &rarr; evidence from different chapters &rarr; explanation that links them.</div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>28 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How do memory, rewritten history, and Newspeak help the Party control reality?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>&ldquo;Who controls the past controls the future&hellip;&rdquo; &mdash; the slogan of mutable history (Ch. III)</li><li>&ldquo;The lie passed into history and became truth&rdquo; (Ch. III)</li><li>Winston&rsquo;s job: rewriting records; Comrade Ogilvy; the memory hole (Ch. IV)</li><li>Syme: &ldquo;It was a beautiful thing, the destruction of words&rdquo; (Ch. V-A)</li><li>&ldquo;Orthodoxy means not thinking &mdash; not needing to think&rdquo; (Ch. V-A)</li></ul></div></div></div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>29 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Supported <span>&mdash; one well-developed paragraph</span></h3><p>Chunked directions, guided organizer, vocabulary support, evidence bank. One clear claim + one strong piece of evidence + explanation. Revision pass with a partner (W.3.A).</p></div><div class="card"><h3>Extension <span>&mdash; 2&ndash;3 analytical paragraphs</span></h3><p>Nuanced claim connecting at least two of the three tools, multiple pieces of evidence, attention to uncertainty &mdash; e.g., can Winston&rsquo;s memory itself be trusted?</p></div></div><p class="note">Self-check: claim &rarr; evidence from more than one chapter &rarr; explanation in your own words &rarr; revised once.</p></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>30 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 2 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>The Party attacks truth on three fronts: it wears down memory, rewrites every record, and shrinks the language itself. Winston now understands the machine he serves &mdash; and Syme, who understands it best, may not survive the understanding.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Is a fact still a fact if no one can prove it?</li><li>What does Winston&rsquo;s craftsman&rsquo;s pride say about him?</li><li>If Newspeak wins, what happens to books like this one?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: P1 Ch. V-B, VI, VII-A &mdash; Parsons, Hate Week, and the proles.</p></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>31 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page during listening, discussion, and review.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Winston Smith</b></td><td>Records Department worker at Minitrue &mdash; he falsifies the past for a living, and keeps a diary to save his own.</td></tr><tr><td><b>Syme</b></td><td>Newspeak philologist; joyfully destroys words; too intelligent for his own safety.</td></tr><tr><td><b>Comrade Ogilvy</b></td><td>A &ldquo;hero&rdquo; Winston invents from nothing &mdash; proof the past is authored, not recorded.</td></tr><tr><td><b>Mrs. Winston&rsquo;s mother &amp; sister</b></td><td>Figures in Winston&rsquo;s dream &mdash; carriers of a private loyalty the Party has made extinct.</td></tr><tr><td><b>Key terms</b></td><td>memory hole &bull; rectify &bull; doublethink &bull; Newspeak &bull; orthodoxy &bull; the mutable past</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. III (18:20)</b></td><td>Dreams of his mother; the Physical Jerks and the watching instructress; the war that &ldquo;has always been&rdquo;; doublethink and victories over memory.</td></tr><tr><td><b>Ch. IV (22:47)</b></td><td>A workday of falsification: correction slips, the speakwrite, rewriting Big Brother, inventing Comrade Ogilvy, and the memory hole.</td></tr><tr><td><b>Ch. V-A (to 15:40)</b></td><td>Canteen lunch with Syme: the shrinking dictionary, the end of thoughtcrime by the end of words, and Winston&rsquo;s prediction. Stops at &ldquo;Here comes Parsons.&rdquo;</td></tr></table></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>32 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>doublethink</b></td><td>believing two opposite things at once (ant.: consistency)</td></tr><tr><td><b>rectify</b></td><td>officially &ldquo;to correct&rdquo; &mdash; in Oceania, to falsify (ant.: verify)</td></tr><tr><td><b>orthodoxy</b></td><td>thinking only approved thoughts (ant.: dissent)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">Who controls the past controls the future: who controls the present controls the past.<span class="who">&mdash; Chapter III</span></div><div class="quote" style="margin:10px 0">The lie passed into history and became truth.<span class="who">&mdash; Chapter III</span></div><div class="quote" style="margin:10px 0">It was a beautiful thing, the destruction of words.<span class="who">&mdash; Syme, Chapter V</span></div><div class="quote" style="margin:10px 0">Orthodoxy means not thinking&mdash;not needing to think.<span class="who">&mdash; Syme, Chapter V</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;The Party controls reality by ___.&rdquo;</li><li>&ldquo;For example, in Chapter ___, ___.&rdquo;</li><li>&ldquo;This connects to ___ because ___.&rdquo;</li><li>&ldquo;Together, these details show ___.&rdquo;</li></ul></div></div><div class="footer"><span>1984 • Week 2 • Truth, Language &amp; Memory</span><span>33 of 33</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

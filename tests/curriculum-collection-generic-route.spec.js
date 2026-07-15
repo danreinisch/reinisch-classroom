@@ -14,7 +14,7 @@ test.describe('Curriculum Collection Registry v2 generic route', () => {
 
     await expect(
       page.locator('[data-collection-nav="true"]')
-    ).toHaveCount(1);
+    ).toHaveCount(7);
   });
 
   test('keeps the existing legacy book route intact', async ({ page }) => {
@@ -65,7 +65,7 @@ test('resolves a new registry-only collection without a dedicated route', async 
 
   await expect(
     page.locator('[data-collection-nav="true"]')
-  ).toHaveCount(2);
+  ).toHaveCount(8);
 
   await expect(
     page.locator('[data-collection-nav="true"]').filter({
@@ -117,9 +117,12 @@ test('orders active registry collections and hides archived collections', async 
 
   const collectionLinks = page.locator('[data-collection-nav="true"]');
 
-  await expect(collectionLinks).toHaveCount(2);
+  await expect(collectionLinks).toHaveCount(8);
   await expect(collectionLinks.first()).toContainText('Prelude Unit');
   await expect(collectionLinks.nth(1)).toContainText('1984');
+  await expect(collectionLinks.nth(7)).toContainText(
+    'Return from Kragdon-Ah'
+  );
 
   await expect(
     collectionLinks.filter({ hasText: 'Retired Text Set' })

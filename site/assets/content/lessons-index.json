@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-23T13:00:32-05:00",
+  "generatedAt": "2026-07-15T17:29:46-05:00",
   "sections": [
     {
       "name": "LANGUAGE ARTS",
@@ -13,6 +13,567 @@
               "id": "presentation-01",
               "name": "Week 1: Evidence, Inference & Character Development - Surveillance & Thoughtcrime",
               "url": "/presentations/1984-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Evidence, Inference & Character Development - Truth, Language & Memory",
+              "url": "/presentations/1984-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Evidence, Inference & Character Development - Control of Personal Choice & Hope",
+              "url": "/presentations/1984-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Theme, Symbolism & Structure - Objects, Memory & Truth",
+              "url": "/presentations/1984-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Theme, Symbolism & Structure - Risk, Connection & Rebellion",
+              "url": "/presentations/1984-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Theme, Symbolism & Structure - Privacy, Love & Resistance",
+              "url": "/presentations/1984-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Perspective, Rhetoric & Political Argument - Resistance & Self-Deception",
+              "url": "/presentations/1984-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Perspective, Rhetoric & Political Argument - Manipulation & Political Reality",
+              "url": "/presentations/1984-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Perspective, Rhetoric & Political Argument - Permanent War & Social Hierarchy",
+              "url": "/presentations/1984-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Language, Tone & Psychological Control - Doublethink, Betrayal & Captivity",
+              "url": "/presentations/1984-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Language, Tone & Psychological Control - Pain & Manufactured Truth",
+              "url": "/presentations/1984-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Language, Tone & Psychological Control - Power for Power’s Sake",
+              "url": "/presentations/1984-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Theme, Transformation & Whole-Book Synthesis - Betrayal, Fear & Destruction of Self",
+              "url": "/presentations/1984-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Theme, Transformation & Whole-Book Synthesis - Erasure of Identity & Independent Thought",
+              "url": "/presentations/1984-2026-27/presentation-14/"
+            }
+          ]
+        },
+        {
+          "id": "seeker-2026-27",
+          "name": "Seeker",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Inference & Story Structure - First Contact, Terror, and Sacrifice",
+              "url": "/presentations/seeker-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Character, Coercion & Author’s Craft - Coercion, Control, and Moral Choice",
+              "url": "/presentations/seeker-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Structure, Point of View & Global Stakes - Uncertainty, Power, and Global Stakes",
+              "url": "/presentations/seeker-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Character Development & Conflict - Duty, Deception, and Purpose",
+              "url": "/presentations/seeker-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Character Development & Conflict - Trust, Survival, and First Impressions",
+              "url": "/presentations/seeker-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Character Development & Conflict - Competence, Suspicion, and Partnership",
+              "url": "/presentations/seeker-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Theme & Central Ideas - Secrets, Technology, and Identity",
+              "url": "/presentations/seeker-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Theme & Central Ideas - Rivalry, Loyalty, and Cooperation",
+              "url": "/presentations/seeker-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Theme & Central Ideas - Risk, Strategy, and the Limits of Knowledge",
+              "url": "/presentations/seeker-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Structure & Point of View - Existential Threat and the Value of Life",
+              "url": "/presentations/seeker-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Structure & Point of View - Dehumanization, Resistance, and Choice",
+              "url": "/presentations/seeker-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Structure & Point of View - Enhancement, Vulnerability, and What Makes Us Human",
+              "url": "/presentations/seeker-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Vocabulary & Author's Craft - Innovation, Problem Solving, and Persuasion",
+              "url": "/presentations/seeker-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Vocabulary & Author's Craft - Cooperation, Sacrifice, and Moral Courage",
+              "url": "/presentations/seeker-2026-27/presentation-14/"
+            },
+            {
+              "id": "presentation-15",
+              "name": "Week 15: Vocabulary & Author's Craft - Dialogue, Trust, and Agency",
+              "url": "/presentations/seeker-2026-27/presentation-15/"
+            },
+            {
+              "id": "presentation-16",
+              "name": "Week 16: Perspective, Evaluation & Synthesis - Promises, Diplomacy, and Competing Agendas",
+              "url": "/presentations/seeker-2026-27/presentation-16/"
+            },
+            {
+              "id": "presentation-17",
+              "name": "Week 17: Perspective, Evaluation & Synthesis - Bias, Manipulation, and Self-Knowledge",
+              "url": "/presentations/seeker-2026-27/presentation-17/"
+            },
+            {
+              "id": "presentation-18",
+              "name": "Week 18: Perspective, Evaluation & Synthesis - Truth, Accountability, and Reconciliation",
+              "url": "/presentations/seeker-2026-27/presentation-18/"
+            },
+            {
+              "id": "presentation-19",
+              "name": "Week 19: Whole-Book Synthesis & Final Writing - Transformation, Hope, and Human Connection",
+              "url": "/presentations/seeker-2026-27/presentation-19/"
+            }
+          ]
+        },
+        {
+          "id": "escape-camp-14-2026-27",
+          "name": "Escape from Camp 14",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Central Ideas & Objective Summary - Control, Survival, and the Destruction of Family Bonds",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Evidence, Central Ideas & Objective Summary - Indoctrination, Inherited Guilt, and the Construction of Truth",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Evidence, Central Ideas & Objective Summary - Betrayal, Torture, and the First Experience of Human Care",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Structure, Perspective & Author’s Purpose - Punishment, Guilt, and Institutional Dehumanization",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Structure, Perspective & Author’s Purpose - Hunger, Information, and the Awakening of Hope",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Structure, Perspective & Author’s Purpose - Risk, Sacrifice, and the Cost of Escape",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Claims, Credibility, Corroboration & Synthesis - Freedom, Vulnerability, and Survival Beyond the Fence",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Claims, Credibility, Corroboration & Synthesis - Trauma, Reinvention, and the Difficulty of Freedom",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Claims, Credibility, Corroboration & Synthesis - Testimony, Responsibility, and an Unfinished Recovery",
+              "url": "/presentations/escape-camp-14-2026-27/presentation-09/"
+            }
+          ]
+        },
+        {
+          "id": "lik-2026-27",
+          "name": "Lost in Kragdon-Ah",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Inference & Character Development - Commitment, Duty, and Beginning the Journey",
+              "url": "/presentations/lik-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Evidence, Inference & Character Development - Rescue, Risk, and Practical Ingenuity",
+              "url": "/presentations/lik-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Evidence, Inference & Character Development - Captivity, Courage, and Earned Trust",
+              "url": "/presentations/lik-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Structure, Information & Theme - Discovery, Communication, and Uncertain Allies",
+              "url": "/presentations/lik-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Structure, Information & Theme - Conflict, Revelation, and Expanding Alliances",
+              "url": "/presentations/lik-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Structure, Information & Theme - Knowledge, Choice, and Competing Paths",
+              "url": "/presentations/lik-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Decision, Setting & Cause and Effect - Service, Responsibility, and Urgent Decisions",
+              "url": "/presentations/lik-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Decision, Setting & Cause and Effect - Hospitality, Patience, and Adaptation",
+              "url": "/presentations/lik-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Decision, Setting & Cause and Effect - Renewal, Movement, and Opportunity",
+              "url": "/presentations/lik-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Perspective, Suspense & Problem Solving - Setbacks, Resilience, and Arrival",
+              "url": "/presentations/lik-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Perspective, Suspense & Problem Solving - Exploration, Disaster, and Shared Survival",
+              "url": "/presentations/lik-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Perspective, Suspense & Problem Solving - Rescue, Evidence, and New Understanding",
+              "url": "/presentations/lik-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Conflict, Leadership & Consequences - Strategy, Imbalance, and Courage",
+              "url": "/presentations/lik-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Conflict, Leadership & Consequences - Rescue, Sacrifice, and Consequences",
+              "url": "/presentations/lik-2026-27/presentation-14/"
+            },
+            {
+              "id": "presentation-15",
+              "name": "Week 15: Conflict, Leadership & Consequences - Grief, Justice, and Homecoming",
+              "url": "/presentations/lik-2026-27/presentation-15/"
+            },
+            {
+              "id": "presentation-16",
+              "name": "Week 16: Whole-Book Synthesis & Writing - Home, Identity, and an Uncertain Ending",
+              "url": "/presentations/lik-2026-27/presentation-16/"
+            }
+          ]
+        },
+        {
+          "id": "adit-2026-27",
+          "name": "A Door Into Time",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Inference & Character Development - Curiosity, Risk, and the Unknown",
+              "url": "/presentations/adit-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Evidence, Inference & Character Development - Captivity, Survival, and First Trust",
+              "url": "/presentations/adit-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Evidence, Inference & Character Development - Communication, Culture, and Belonging",
+              "url": "/presentations/adit-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Theme, Structure & Identity - Recovery, Commitment, and New Purpose",
+              "url": "/presentations/adit-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Theme, Structure & Identity - Perseverance, Adaptability, and Trial",
+              "url": "/presentations/adit-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Theme, Structure & Identity - Letting Go, Identity, and Community Expectations",
+              "url": "/presentations/adit-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Conflict, Setting & Cause and Effect - Discovery, Oppression, and Moral Choice",
+              "url": "/presentations/adit-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Conflict, Setting & Cause and Effect - Escape, Cooperation, and Survival",
+              "url": "/presentations/adit-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Conflict, Setting & Cause and Effect - Homecoming, Warning, and Responsibility",
+              "url": "/presentations/adit-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Perspective, Leadership & Ethical Choice - Preparation, Leadership, and Shared Purpose",
+              "url": "/presentations/adit-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Perspective, Leadership & Ethical Choice - Mission, Loss, and the Cost of Conflict",
+              "url": "/presentations/adit-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Perspective, Leadership & Ethical Choice - Resistance, Cooperation, and Liberation",
+              "url": "/presentations/adit-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Craft, Climax & Whole-Book Synthesis - Strategy, Crisis, and Leadership Under Pressure",
+              "url": "/presentations/adit-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Craft, Climax & Whole-Book Synthesis - Consequences, Justice, and Recovery",
+              "url": "/presentations/adit-2026-27/presentation-14/"
+            },
+            {
+              "id": "presentation-15",
+              "name": "Week 15: Craft, Climax & Whole-Book Synthesis - Home, Duty, and an Unfinished Journey",
+              "url": "/presentations/adit-2026-27/presentation-15/"
+            }
+          ]
+        },
+        {
+          "id": "wok-2026-27",
+          "name": "Warrior of Kragdon-Ah",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Character & Leadership - Return, Family, and Competing Responsibilities",
+              "url": "/presentations/wok-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Evidence, Character & Leadership - Protection, Strategy, and Escalating Threat",
+              "url": "/presentations/wok-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Evidence, Character & Leadership - Captivity, Resistance, and Liberation",
+              "url": "/presentations/wok-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Structure, Conflict & Consequences - Pursuit, Sacrifice, and Consequences",
+              "url": "/presentations/wok-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Structure, Conflict & Consequences - Identity, Preparation, and Renewed Leadership",
+              "url": "/presentations/wok-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Structure, Conflict & Consequences - Negotiation, Conflict, and Destruction",
+              "url": "/presentations/wok-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Setting, Community & Problem Solving - Survival, Community, and Escape",
+              "url": "/presentations/wok-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Setting, Community & Problem Solving - Refuge, Rebuilding, and Preparation",
+              "url": "/presentations/wok-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Setting, Community & Problem Solving - Alliance, Innovation, and Impossible Odds",
+              "url": "/presentations/wok-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Perspective, Culture & Ethical Leadership - Victory, Trust, and Transition",
+              "url": "/presentations/wok-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Perspective, Culture & Ethical Leadership - Challenge, Courage, and Belonging",
+              "url": "/presentations/wok-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Perspective, Culture & Ethical Leadership - Threat, Loyalty, and a Renewed Mission",
+              "url": "/presentations/wok-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Conflict, Perspective & Moral Choice - Journey, Uncertainty, and Perseverance",
+              "url": "/presentations/wok-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Conflict, Perspective & Moral Choice - Oppression, Courage, and Difficult Choice",
+              "url": "/presentations/wok-2026-27/presentation-14/"
+            },
+            {
+              "id": "presentation-15",
+              "name": "Week 15: Conflict, Perspective & Moral Choice - Freedom, Justice, and Community Recovery",
+              "url": "/presentations/wok-2026-27/presentation-15/"
+            },
+            {
+              "id": "presentation-16",
+              "name": "Week 16: Theme, Synthesis & Future Conflict - Diplomacy, Competition, and Earned Trust",
+              "url": "/presentations/wok-2026-27/presentation-16/"
+            },
+            {
+              "id": "presentation-17",
+              "name": "Week 17: Theme, Synthesis & Future Conflict - Fairness, Freedom, and Consequences",
+              "url": "/presentations/wok-2026-27/presentation-17/"
+            },
+            {
+              "id": "presentation-18",
+              "name": "Week 18: Theme, Synthesis & Future Conflict - Belonging, Responsibility, and the Next Threat",
+              "url": "/presentations/wok-2026-27/presentation-18/"
+            }
+          ]
+        },
+        {
+          "id": "rfk-2026-27",
+          "name": "Return from Kragdon-Ah",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Evidence, Character & Problem Solving - Loss, Adaptation, and Renewed Purpose",
+              "url": "/presentations/rfk-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: Evidence, Character & Problem Solving - Observation, Planning, and Responsible Leadership",
+              "url": "/presentations/rfk-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Evidence, Character & Problem Solving - Risk, Persistence, and Consequences",
+              "url": "/presentations/rfk-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Conflict, Structure & Theme - Discovery, Commitment, and Belonging",
+              "url": "/presentations/rfk-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Conflict, Structure & Theme - Uncertainty, Threat, and the Search for Information",
+              "url": "/presentations/rfk-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Conflict, Structure & Theme - Battle, Mercy, and the Meaning of Justice",
+              "url": "/presentations/rfk-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Setting, Crisis & Community - Warning Signs, Crisis, and Shared Survival",
+              "url": "/presentations/rfk-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Setting, Crisis & Community - Recovery, Responsibility, and Fragile Stability",
+              "url": "/presentations/rfk-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Setting, Crisis & Community - Hope, Evidence, and the Limits of Control",
+              "url": "/presentations/rfk-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Time, Perspective & Leadership - Loss, Legacy, and Renewed Responsibility",
+              "url": "/presentations/rfk-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Time, Perspective & Leadership - Threat, Diplomacy, and Leadership Under Pressure",
+              "url": "/presentations/rfk-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Time, Perspective & Leadership - Loyalty, Sacrifice, and Farewell",
+              "url": "/presentations/rfk-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Revelation, Home & Whole-Book Synthesis - Revelation, History, and Changing Understanding",
+              "url": "/presentations/rfk-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Revelation, Home & Whole-Book Synthesis - Choice, Home, and Competing Responsibilities",
+              "url": "/presentations/rfk-2026-27/presentation-14/"
+            },
+            {
+              "id": "presentation-15",
+              "name": "Week 15: Revelation, Home & Whole-Book Synthesis - Homecoming, Family, and Cyclical Legacy",
+              "url": "/presentations/rfk-2026-27/presentation-15/"
             }
           ]
         }
@@ -20,7 +581,256 @@
     },
     {
       "name": "LIFE SKILLS",
-      "units": []
+      "units": [
+        {
+          "id": "life-sc-2026-27",
+          "name": "Life Skills SC",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Course Orientation & Baseline - Worker Profile and Functional Baselines",
+              "url": "/life-skills/presentations-2026-27/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Week 2: What Is Work - and What Kind of Work Fits Me?",
+              "url": "/life-skills/presentations-2026-27/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Week 3: Job Search - Reading Simple Job Postings",
+              "url": "/life-skills/presentations-2026-27/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Week 4: Job Search - Job Fit, Availability, and Transportation",
+              "url": "/life-skills/presentations-2026-27/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5: Personal Information and Safety - Personal Information for Applications",
+              "url": "/life-skills/presentations-2026-27/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6: Applications and R&eacute;sum&eacute;s - Education, Skills, and Experience on an Application",
+              "url": "/life-skills/presentations-2026-27/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7: Applications and R&eacute;sum&eacute;s - Availability and References",
+              "url": "/life-skills/presentations-2026-27/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8: Applications and R&eacute;sum&eacute;s - Complete, Review, and Correct a Job Application",
+              "url": "/life-skills/presentations-2026-27/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9: Counting Money - Bills, Coins, and Exact Amounts",
+              "url": "/life-skills/presentations-2026-27/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10: Purchasing and Change - Do I Have Enough Money?",
+              "url": "/life-skills/presentations-2026-27/presentation-10/"
+            },
+            {
+              "id": "presentation-11",
+              "name": "Week 11: Workplace Behavior - First-Day and Everyday Workplace Expectations",
+              "url": "/life-skills/presentations-2026-27/presentation-11/"
+            },
+            {
+              "id": "presentation-12",
+              "name": "Week 12: Schedules and Time - Attendance, Punctuality, and Work Schedules",
+              "url": "/life-skills/presentations-2026-27/presentation-12/"
+            },
+            {
+              "id": "presentation-13",
+              "name": "Week 13: Workplace Behavior - Following Directions and Completing Tasks",
+              "url": "/life-skills/presentations-2026-27/presentation-13/"
+            },
+            {
+              "id": "presentation-14",
+              "name": "Week 14: Workplace Communication - Workplace Communication Basics",
+              "url": "/life-skills/presentations-2026-27/presentation-14/"
+            },
+            {
+              "id": "presentation-15",
+              "name": "Week 15: Workplace Communication - Asking for Help and Clarification",
+              "url": "/life-skills/presentations-2026-27/presentation-15/"
+            },
+            {
+              "id": "presentation-16",
+              "name": "Week 16: Workplace Behavior - Accepting Feedback and Fixing Mistakes",
+              "url": "/life-skills/presentations-2026-27/presentation-16/"
+            },
+            {
+              "id": "presentation-17",
+              "name": "Week 17: Workplace Behavior - Coworkers, Breaks, Cell Phones, and Boundaries",
+              "url": "/life-skills/presentations-2026-27/presentation-17/"
+            },
+            {
+              "id": "presentation-18",
+              "name": "Week 18: Independent Problem Solving - First-Semester Functional Review",
+              "url": "/life-skills/presentations-2026-27/presentation-18/"
+            },
+            {
+              "id": "presentation-19",
+              "name": "Week 19: Applications and R&eacute;sum&eacute;s - Guided Fill-In R&eacute;sum&eacute; Template",
+              "url": "/life-skills/presentations-2026-27/presentation-19/"
+            },
+            {
+              "id": "presentation-20",
+              "name": "Week 20: Workplace Communication - Phone Calls, Voicemail, and Simple Employer Messages",
+              "url": "/life-skills/presentations-2026-27/presentation-20/"
+            },
+            {
+              "id": "presentation-21",
+              "name": "Week 21: Interviewing - Interview Basics and Common Questions",
+              "url": "/life-skills/presentations-2026-27/presentation-21/"
+            },
+            {
+              "id": "presentation-22",
+              "name": "Week 22: Interviewing - Answering Interview Questions",
+              "url": "/life-skills/presentations-2026-27/presentation-22/"
+            },
+            {
+              "id": "presentation-23",
+              "name": "Week 23: Interviewing - Interview Appearance and Behavior",
+              "url": "/life-skills/presentations-2026-27/presentation-23/"
+            },
+            {
+              "id": "presentation-24",
+              "name": "Week 24: Interviewing - Practice, Feedback, and a Second Try",
+              "url": "/life-skills/presentations-2026-27/presentation-24/"
+            },
+            {
+              "id": "presentation-25",
+              "name": "Week 25: Schedules and Time - Read It, Record It, Check It",
+              "url": "/life-skills/presentations-2026-27/presentation-25/"
+            },
+            {
+              "id": "presentation-26",
+              "name": "Week 26: Wages and Paychecks - Hours Worked &times; Pay per Hour",
+              "url": "/life-skills/presentations-2026-27/presentation-26/"
+            },
+            {
+              "id": "presentation-27",
+              "name": "Week 27: Wages and Paychecks - Earned, Deducted, and Received",
+              "url": "/life-skills/presentations-2026-27/presentation-27/"
+            },
+            {
+              "id": "presentation-28",
+              "name": "Week 28: Independent Problem Solving - Notice, Decide, Report",
+              "url": "/life-skills/presentations-2026-27/presentation-28/"
+            },
+            {
+              "id": "presentation-29",
+              "name": "Week 29: Workplace Communication - Greet, Listen, Respond, Refer",
+              "url": "/life-skills/presentations-2026-27/presentation-29/"
+            },
+            {
+              "id": "presentation-30",
+              "name": "Week 30: Personal Information and Safety - Notice, Stop, Protect, Report",
+              "url": "/life-skills/presentations-2026-27/presentation-30/"
+            },
+            {
+              "id": "presentation-31",
+              "name": "Week 31: Workplace Communication - Early, Accurate, and Appropriate",
+              "url": "/life-skills/presentations-2026-27/presentation-31/"
+            },
+            {
+              "id": "presentation-32",
+              "name": "Week 32: Counting Money - Price, Available Money, Payment, Check",
+              "url": "/life-skills/presentations-2026-27/presentation-32/"
+            },
+            {
+              "id": "presentation-33",
+              "name": "Week 33: Purchasing and Change - Predict, Count, Read, Check",
+              "url": "/life-skills/presentations-2026-27/presentation-33/"
+            },
+            {
+              "id": "presentation-34",
+              "name": "Week 34: Integrated Employment and Money Simulation - One Table, Real Skills",
+              "url": "/life-skills/presentations-2026-27/presentation-34/"
+            },
+            {
+              "id": "presentation-35",
+              "name": "Week 35: Budgeting and Banking - Plan the Net Pay Before It Disappears",
+              "url": "/life-skills/presentations-2026-27/presentation-35/"
+            },
+            {
+              "id": "presentation-36",
+              "name": "Week 36: Integrated Employment and Money Simulation - Find the Better Overall Fit",
+              "url": "/life-skills/presentations-2026-27/presentation-36/"
+            },
+            {
+              "id": "presentation-37",
+              "name": "Week 37: Integrated Employment and Money Simulation - Show the Skills That Matter",
+              "url": "/life-skills/presentations-2026-27/presentation-37/"
+            }
+          ],
+          "groups": [
+            {
+              "id": "money-finance",
+              "name": "💰 Money & Finance",
+              "presentationIds": [
+                "presentation-09",
+                "presentation-10",
+                "presentation-26",
+                "presentation-27",
+                "presentation-32",
+                "presentation-34",
+                "presentation-35",
+                "presentation-36",
+                "presentation-37"
+              ]
+            },
+            {
+              "id": "employment",
+              "name": "💼 Employment",
+              "presentationIds": [
+                "presentation-03",
+                "presentation-04",
+                "presentation-08",
+                "presentation-11",
+                "presentation-13",
+                "presentation-14",
+                "presentation-15",
+                "presentation-16",
+                "presentation-17",
+                "presentation-20",
+                "presentation-21",
+                "presentation-22",
+                "presentation-23",
+                "presentation-24",
+                "presentation-29",
+                "presentation-31"
+              ]
+            },
+            {
+              "id": "other",
+              "name": "📋 Other",
+              "presentationIds": [
+                "presentation-01",
+                "presentation-02",
+                "presentation-05",
+                "presentation-06",
+                "presentation-07",
+                "presentation-12",
+                "presentation-18",
+                "presentation-19",
+                "presentation-25",
+                "presentation-28",
+                "presentation-30",
+                "presentation-33"
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

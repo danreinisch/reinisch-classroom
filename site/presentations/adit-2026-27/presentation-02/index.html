@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 2: Evidence, Inference &amp; Character Development - Captivity, Survival, and First Trust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#22b8d4; --accent-deep:#0b5e70; --glow:rgba(34,184,212,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 1 SC • Week 2</div><h1>A Door into Time</h1><div class="body"><div class="sub">by Shawn Inmon &mdash; An Alex Hawk Time Travel Adventure</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b> (Develop)<br>This week: Chapters 4&ndash;6 + Written Response</div><div class="theme">Theme: Captivity, Survival, and First Trust</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 4, &ldquo;Hobbled&rdquo; &mdash; the hand in the log belongs to someone</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 5, &ldquo;Captured&rdquo; &mdash; a rescue by his captors</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 6, &ldquo;Dire Wolves&rdquo; &mdash; the journey to the cliffside</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 4&ndash;6</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>2 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skill</h3><p><b>Developing evidence-based character analysis.</b> Last week we learned the tools; this week we use them with less scaffolding. We compare details showing how captivity, danger, and unexpected kindness begin to <b>change</b> Alex&rsquo;s understanding of Kragdon-ah.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Track how Alex&rsquo;s view of his captors shifts, chapter by chapter.</li><li>Support each shift with a specific detail.</li><li>Notice what the captors&rsquo; actions (not words &mdash; there are none Alex understands!) reveal.</li></ul></div></div>
+<p class="note">Standards this week: 9-10.RL.1.A — Evidence &amp; Inference • 9-10.RL.1.B — Word Meanings • 9-10.RL.2.D — Development of Text Elements • 9-10.W.2.A / W.3.A.a — Written Response</p></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>3 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do danger and captivity begin to change Alex&rsquo;s understanding of the people and world around him?</div></div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>4 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Hand in the Log</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">The cliffhanger resolves &mdash; into a dozen seven-foot strangers and no shared language. Today we read actions as evidence when words are useless.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week&rsquo;s cliffhanger</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 4 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week&rsquo;s Cliffhanger</h1><div class="body"><ol class="q"><li>A human hand waved at Alex from the end of the log. Whose did you predict it was &mdash; friend, threat, or something else?</li><li>Alex has two shots left, a rifle, and his training. Predict: fight, run, or talk &mdash; and what would YOU do with no shared language?</li><li>Last week&rsquo;s theme was curiosity and risk. If Alex is now trapped, what do you think this week&rsquo;s theme becomes?</li></ol></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>6 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">hobbled</div><div class="pos">verb / adjective • HAH-buld</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> curiosity &bull; preparation &bull; reconnaissance</div><div class="means">Tied or injured so you can walk but not run; slowed on purpose.</div>
+<div class="morph"><div><b>hobble</b><span>Middle English <i>hobelen</i> — to rock, to limp (some words are their own root)</span></div><div class="plus">+</div><div><b>-ed</b><span>suffix: past form / describing word</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">restrained</span><span class="pill">slowed</span><span class="pill">tethered</span><span class="pill">limping</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">free</span><span class="pill anti">unhindered</span><span class="pill anti">swift</span></div>
+<div class="family"><b>Word family:</b> hobble (v/n) &bull; a hobble &mdash; the rope itself</div></div>
+<div><div class="quote">He was effectively hobbled.<span class="who">&mdash; Chapter 4</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The captors hobble Alex instead of binding him completely &mdash; he can walk, just not escape. What might that choice tell us about their intentions?</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>7 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Tone vs. Mood: The Author&rsquo;s Voice, the Reader&rsquo;s Feeling</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Tone = the author&rsquo;s attitude</h3>
+<p>Revealed by <b>word choice</b>. &ldquo;The politician <i>slithered</i> to the podium&rdquo; vs. &ldquo;<i>strode</i> to the podium&rdquo; &mdash; same event, opposite tone.</p></div>
+<div class="card"><h3>Mood = the reader&rsquo;s feeling</h3>
+<p>The atmosphere the text creates in <i>you</i>: dread, hope, unease, excitement. Built from setting, pacing, and imagery.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The chain reaction</h3>
+<p>Author picks words (tone) &rarr; words build atmosphere &rarr; atmosphere creates feeling (mood). When a book makes you feel watched, that was engineered &mdash; find the words that did it.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;We need to talk.&rdquo; Four neutral words &mdash; and instant dread. Tiny word choices carry huge mood. Authors weaponize this on every page.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> This chapter&rsquo;s mood swings hard: menace in the log, absurd comedy in Alex&rsquo;s Kansas joke, dread at the hobbling. Track the words that move the temperature.</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>8 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Reading Actions When Words Fail</h1><div class="body"><table class="mini">
+<tr><th>What the strangers DO</th><th>What Alex could infer</th></tr>
+<tr><td>Pull him from the log &mdash; but don&rsquo;t draw their weapons</td><td>Capture, not killing, is the goal</td></tr>
+<tr><td>Swarm him &ldquo;as one&rdquo; when he resists &mdash; fast, coordinated, no hesitation</td><td>Trained fighters who work as a unit; resistance is pointless</td></tr>
+<tr><td>Someone <b>bandages his wounds</b> &mdash; and checks the bandages later</td><td>They want him alive and healthy. Why?</td></tr>
+<tr><td>Hobble his legs but leave him able to walk</td><td>He&rsquo;s coming with them &mdash; as a prisoner, or as something else?</td></tr></table>
+<p class="note">Developing skill: last week you found detail &rarr; inference pairs. This week, hold competing inferences open at once &mdash; captor or caretaker? &mdash; and let the evidence decide slowly. Good readers tolerate not knowing yet.</p></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>9 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Actions as Evidence</h1><div class="body"><div class="mcq"><div class="qq">Alex raises his hand &ldquo;in a gesture of peace&rdquo; and holsters his pistol. What does this action reveal?</div><button class="opt" data-ok="1">His training includes judgment &mdash; he won&rsquo;t shoot men who haven&rsquo;t attacked him</button><button class="opt" data-ok="0">He forgot the pistol was loaded</button><button class="opt" data-ok="0">He is too scared to move</button><div class="fb">&ldquo;They haven&rsquo;t done anything to me&rdquo; &mdash; his internal debate is the evidence: restraint is a choice, not a failure.</div></div><div class="mcq"><div class="qq">The strangers bandage Alex&rsquo;s wounds &mdash; then stop his escape and hobble him. Best reading of this contradiction?</div><button class="opt" data-ok="1">Hold both open: they protect him AND keep him &mdash; the story wants us unsure which matters more</button><button class="opt" data-ok="0">The bandaging was an accident</button><button class="opt" data-ok="0">They plan to harm him later, so kindness means nothing</button><div class="fb">Competing evidence is the point. This week&rsquo;s whole theme lives inside that contradiction.</div></div><div class="rev"><div class="rq">Mood check: find the moment in Chapter 4 where fear turns &mdash; briefly &mdash; into comedy. Why would the author allow a joke here?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Alex&rsquo;s &ldquo;Auntie Em, I&rsquo;m not in Kansas anymore&rdquo; moment. Humor inside danger keeps Alex human &mdash; and signals to readers that this is an adventure, not a horror story.</div></div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>10 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 4 &mdash; &ldquo;Hobbled&rdquo;</h1><div class="body"><p><span class="badge">Read</span> The hand belongs to one of a dozen towering strangers &mdash; and Alex&rsquo;s martial arts training meets its match.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The strangers&rsquo; <b>coordination</b>: they fight &ldquo;as one,&rdquo; unlike movie villains.</li><li>The contradiction: they <b>bandage</b> him, then <b>hobble</b> him when he runs for the door.</li><li>Alex&rsquo;s sprint for the shimmering door &mdash; and the throw that ends it.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Make a two-column chart: their actions | your inference. At least three rows, one holding two possible inferences at once.</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>11 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Saved by His Captors</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Today the karak-ta return &mdash; and the man guarding Alex risks himself to protect his prisoner. The evidence starts to tilt.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 4</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 5 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Hobbled</h1><div class="body"><ol class="q"><li>Share a row from your chart where you held two inferences open. Has anyone&rsquo;s evidence already tipped one way?</li><li>The strangers fight &ldquo;as one&rdquo; &mdash; no hesitation, no turn-taking. What does that detail tell us about their lives here?</li><li>Why hobble a man you just bandaged? Give the most generous explanation and the most suspicious one.</li></ol></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>13 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">captivity</div><div class="pos">noun • kap-TIH-vih-tee</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> curiosity &bull; preparation &bull; reconnaissance</div><div class="means">The state of being held prisoner; not free to leave.</div>
+<div class="morph"><div><b>capt</b><span>Latin <i>capere</i> — to seize, to take</span></div><div class="plus">+</div><div><b>-ivity</b><span>suffix: the state or condition of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">imprisonment</span><span class="pill">confinement</span><span class="pill">custody</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">freedom</span><span class="pill anti">liberty</span><span class="pill anti">release</span></div>
+<div class="family"><b>Word family:</b> captive (n/adj) &bull; captor (n) &bull; capture (v) &bull; captivate &mdash; same root, softer meaning!</div></div>
+<div><div class="quote">Alex&rsquo;s captors moved deeper into the woods&hellip;<span class="who">&mdash; Chapter 5</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Note the word family twist: <i>captivate</i> means to hold someone&rsquo;s attention &mdash; a pleasant kind of capture. As you read, ask: is Kragdon-ah starting to captivate its captive?</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>14 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Cause &amp; Effect: Nonfiction&rsquo;s Engine</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The pattern</h3>
+<p>Nonfiction writers constantly argue <b>because X, therefore Y</b>. Your job: separate what happened (effect) from what produced it (cause) &mdash; and notice when one effect becomes the next cause.</p></div>
+<div class="card"><h3>Signal words</h3>
+<p>because &bull; as a result &bull; therefore &bull; led to &bull; consequently &bull; so that &bull; in order to &bull; this meant that</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Chains, not pairs</h3>
+<p>Real causes come in chains: scarce food &rarr; competition &rarr; broken trust &rarr; isolation. Trace the whole chain and you understand a system, not just an event.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>Phone dies &rarr; alarm doesn&rsquo;t ring &rarr; late to school &rarr; missed quiz. One cause, cascading effects. Authors build these chains on purpose &mdash; find the first domino.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Today, danger builds a chain: the karak-ta attack &rarr; the old man defends Alex &rarr; something between them changes. Trace how shared danger becomes the first cause of trust.</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>15 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>The Turn: When Captors Become Protectors</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The moment</h3>
+<p>The karak-ta flock attacks. The older man &mdash; Alex&rsquo;s guard &mdash; <b>pushes Alex ahead to safety and turns to face the diving creature himself</b>, dropping it with one perfectly timed swing.</p></div>
+<div class="card"><h3>Why it matters</h3>
+<p>A guard protects his <i>prisoner</i> at his own risk. That single action outweighs pages of suspicion &mdash; actions are the only language these two share.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The comic mirror &mdash; the giant cockroach</h3>
+<p>That night, Doken-ak saves Alex again (never pee on the trees in Kragdon-ah). The camp <b>grins but doesn&rsquo;t mock him openly</b>. Note what laughter-without-cruelty tells us about these people &mdash; and how Alex&rsquo;s inner monologue takes it.</p></div>
+<p class="note">Character development (RL.2.D): Chapter 5 ends with Alex&rsquo;s thought: &ldquo;Home &mdash; and Amy &mdash; felt very far away.&rdquo; The adventure has weight now. Watch how the author balances wonder, fear, and homesickness.</p></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>16 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Chain of Trust</h1><div class="body"><div class="mcq"><div class="qq">Build the chain: karak-ta attack &rarr; the old man defends Alex &rarr; ?</div><button class="opt" data-ok="1">Alex&rsquo;s picture of his captors gains its first piece of real trust</button><button class="opt" data-ok="0">Alex immediately escapes in the chaos</button><button class="opt" data-ok="0">Alex decides the creatures are harmless</button><div class="fb">Effect becomes cause: his protection today changes how Alex reads every action tomorrow.</div></div><div class="mcq"><div class="qq">The men grin about the cockroach incident but &ldquo;try not to look at him.&rdquo; Best inference?</div><button class="opt" data-ok="1">They tease like companions, not tormentors &mdash; humiliation isn&rsquo;t their goal</button><button class="opt" data-ok="0">They are planning something cruel</button><button class="opt" data-ok="0">They didn&rsquo;t notice what happened</button><div class="fb">Compare: how would cruel captors have used that moment? The restraint is the evidence.</div></div><div class="rev"><div class="rq">&ldquo;Home &mdash; and Amy &mdash; felt very far away.&rdquo; Why end the chapter here, right after the comedy?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The author lets us laugh, then lands the cost. The whiplash IS the design: Kragdon-ah can be wondrous and funny, and Alex is still a father who missed the birthday party. Both true at once.</div></div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>17 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 5 &mdash; &ldquo;Captured&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Four more figures, a flock of karak-ta, a dead forest &mdash; and a guard who fights for his prisoner.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>karak-ta attack</b> &mdash; and exactly what the older man does when the creature dives.</li><li>The dead forest and the <b>giant cockroach</b>: danger and comedy in the same night.</li><li>The chapter&rsquo;s last line &mdash; and the name we finally learn: <b>Doken-ak</b>.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> One paragraph starter: &ldquo;The moment that most changed how Alex sees his captors was ___ because ___.&rdquo;</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>18 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>The Road to the Cliffside</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Today: dire wolves, a shared meal, weak ropes &mdash; and at journey&rsquo;s end, four words of English that change everything.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 5</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 6 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.2.A — Theme Development</span><span class="pill">9-10.RL.1.D — Comprehension &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Captured</h1><div class="body"><ol class="q"><li>Doken-ak turned to face a diving karak-ta to protect his prisoner. What&rsquo;s YOUR best explanation of why?</li><li>The cockroach scene: pure comedy, or doing story work too? What did we learn about these people from how they handled it?</li><li>Alex is memorizing landmarks for an escape. Is that still the right plan? Argue from evidence.</li></ol></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>20 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">observation</div><div class="pos">noun • ob-zer-VAY-shun</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> curiosity &bull; preparation &bull; reconnaissance</div><div class="means">Careful watching and noticing in order to learn.</div>
+<div class="morph"><div><b>ob-</b><span>prefix: toward</span></div><div class="plus">+</div><div><b>serv</b><span>Latin <i>servare</i> — to watch, to keep</span></div><div class="plus">+</div><div><b>-ation</b><span>suffix: the act of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">noticing</span><span class="pill">study</span><span class="pill">scrutiny</span><span class="pill">watchfulness</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">inattention</span><span class="pill anti">obliviousness</span><span class="pill anti">carelessness</span></div>
+<div class="family"><b>Word family:</b> observe (v) &bull; observant (adj) &bull; observatory (n) &bull; observer (n)</div></div>
+<div><div class="quote">Whatever exercise these people are doing, they&rsquo;ve done it before, many times.<span class="who">&mdash; Alex&rsquo;s observation, Chapter 6</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Alex can&rsquo;t ask a single question &mdash; so he observes: routines, ropes, landmarks, skills. List two things YOU would watch first in his position, and why.</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>21 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Structure: Parallel Plots, Foreshadowing &amp; Dramatic Irony</h1><div class="body"><table class="mini">
+<tr><th>Tool</th><th>What it is</th><th>What it does to the reader</th></tr>
+<tr><td><b>Parallel plots</b></td><td>Two storylines told side by side</td><td>You keep reading to see them collide</td></tr>
+<tr><td><b>Foreshadowing</b></td><td>Early hints of what&rsquo;s coming</td><td>Plants unease you can&rsquo;t explain yet</td></tr>
+<tr><td><b>Dramatic irony</b></td><td>The reader knows something the characters don&rsquo;t</td><td>Creates suspense: &ldquo;look behind you!&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>In a horror movie, the audience sees the shadow behind the door &mdash; the character doesn&rsquo;t. That gap between what <i>you</i> know and what <i>they</i> know is dramatic irony, and directors and novelists both farm it for tension.</p></div>
+<p class="note">Structure is a choice. Whenever a story is told out of order, or in two threads, ask: what does this arrangement <i>do to me</i> that straight order wouldn&rsquo;t?</p><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Count the hooks: every chapter this week ends on a turn &mdash; the hobbling, the homesick line, and today the cliffside itself&hellip; and a voice saying &ldquo;What&rsquo;s up, man?&rdquo; That rhythm is engineered. Feel it pull.</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>22 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Synthesis: The Evidence Has Been Tilting All Week</h1><div class="body"><table class="mini">
+<tr><th>Chapter</th><th>Captivity evidence</th><th>Care / trust evidence</th></tr>
+<tr><td>Ch. 4</td><td>Swarmed, hobbled, escape stopped</td><td>Wounds bandaged &mdash; twice checked</td></tr>
+<tr><td>Ch. 5</td><td>Marched away from the door</td><td>Doken-ak risks himself against the karak-ta; laughter without cruelty</td></tr>
+<tr><td>Ch. 6</td><td>Still roped, still watched</td><td>Ropes left weak; water, shared food, morning routines side by side</td></tr></table>
+<p style="margin-top:14px"><b>Synthesis frame (we build it together):</b> Alex begins the week seeing his captors as ___, but details like ___, ___, and ___ push him toward seeing them as ___. The question the book plants: is he a prisoner, a guest &mdash; or something they need?</p></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>23 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Weigh the Evidence</h1><div class="body"><div class="mcq"><div class="qq">Alex notices his ropes &ldquo;could not be expected to hold him for too long.&rdquo; Strongest inference?</div><button class="opt" data-ok="1">Real control isn&rsquo;t the rope &mdash; it&rsquo;s the land: alone and unarmed, he can&rsquo;t survive the trip back anyway</button><button class="opt" data-ok="0">The captors are careless with knots</button><button class="opt" data-ok="0">They want him to escape</button><div class="fb">Alex works this out himself at the plain: &ldquo;How can I make it across that open plain alone?&rdquo; The geography is the cage.</div></div><div class="mcq"><div class="qq">Doken-ak tears his food in half and hands half to Alex. As theme evidence, this supports&hellip;</div><button class="opt" data-ok="1">Trust is built in small, wordless acts &mdash; danger opened the door, sharing walks through it</button><button class="opt" data-ok="0">The captors have too much food</button><button class="opt" data-ok="0">Alex has earned a salary</button><div class="fb">A shared meal is the oldest trust signal there is &mdash; and it needs no translation.</div></div><div class="rev"><div class="rq">The white-haired man says: &ldquo;What&rsquo;s up, man?&rdquo; Four English words as the chapter&rsquo;s last line. Predict everything this implies.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Someone from our world is here &mdash; and has been long enough to be old. Remember Mr. Hadaller&rsquo;s letter: his son walked through the door decades ago and never came back. The letter said dead. The cliffside may say otherwise.</div></div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>24 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 6 &mdash; &ldquo;Dire Wolves&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Morning routines, a dangerous crossing, and journey&rsquo;s end at a cliffside city of caves &mdash; where someone speaks English.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>weak ropes</b> &mdash; and Alex&rsquo;s reasoning about what that means.</li><li>The crossing and the <b>dire wolves</b>: how the group protects its injured.</li><li>The cliffside: ladders, caves, a waterfall &mdash; and the white-haired man&rsquo;s greeting.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Fill in the synthesis frame from today&rsquo;s mini-lesson with your three best details, then star the <b>two strongest</b> for tomorrow.</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>25 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Today you write: one claim about how danger and captivity are changing Alex&rsquo;s understanding &mdash; supported by evidence from all three chapters.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 6</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">9-10.W.2.A — Development of Writing</span><span class="pill">9-10.W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Dire Wolves</h1><div class="body"><ol class="q"><li>&ldquo;What&rsquo;s up, man?&rdquo; &mdash; whose voice is this likely to be, and what evidence from Week 1 supports your theory?</li><li>The group slowed to protect its injured on the crossing. Add that to the evidence chart &mdash; which column does it belong in?</li><li>Check your starred evidence: does your pair show a <i>change</i> across the week, not just one moment?</li></ol></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>27 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your claim this week must show <b>change over time</b>: how Alex&rsquo;s understanding moves. Strongest responses use evidence from at least two different chapters.</div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>28 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How do danger and captivity begin to change Alex&rsquo;s understanding of the people and world around him?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>They swarm and hobble him &mdash; but bandage his wounds first (Ch. 4)</li><li>Doken-ak turns to face the diving karak-ta to protect his prisoner (Ch. 5)</li><li>Laughter without cruelty after the cockroach; &ldquo;Home &mdash; and Amy &mdash; felt very far away&rdquo; (Ch. 5)</li><li>Weak ropes, shared food, and Alex&rsquo;s realization that the land itself is the cage (Ch. 6)</li><li>A cliffside city &mdash; and a white-haired man who speaks English (Ch. 6)</li></ul></div></div></div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>29 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Foundation <span>&mdash; 4&ndash;6 sentences</span></h3><p>Use <b>one</b> detail and the frames: &ldquo;At first Alex thinks ___.&rdquo; &ldquo;But when ___, he begins to ___.&rdquo; &ldquo;This shows ___.&rdquo;</p></div><div class="card"><h3>Supported <span>&mdash; one developed paragraph</span></h3><p>Use <b>two</b> details from different chapters &mdash; one about danger or captivity, one about care or trust &mdash; and explain how together they change Alex&rsquo;s understanding.</p></div><div class="card"><h3>Extension <span>&mdash; multi-paragraph response</span></h3><p>Use <b>two or three</b> details across chapters. Also consider: is Alex&rsquo;s growing trust wisdom &mdash; or the only option a captive has? Where does the text leave it uncertain?</p></div></div><p class="note">Self-check: Does my response show change over time? Do my details come from more than one chapter? Did I explain in my own words?</p></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>30 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Captured by giants who bandage his wounds, saved twice by the man guarding him, fed from his captor&rsquo;s own hand, Alex reaches a cliffside city still planning escape &mdash; and hears four words of English that rewrite everything he thought he knew.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Prisoner, guest, or something they need &mdash; what is Alex to these people?</li><li>Who is the white-haired man &mdash; and what does his existence mean about the door?</li><li>Can trust built without words be trusted?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: Chapters 7&ndash;9 &mdash; answers about the English speaker, and Alex&rsquo;s place in Winten-ah.</p></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>31 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Alex Hawk</b></td><td>Captured on the beach; hobbled but bandaged; memorizing landmarks while learning to read his captors&rsquo; actions.</td></tr><tr><td><b>Doken-ak</b></td><td>The older, gray-streaked guard &mdash; kills a diving karak-ta to protect Alex, saves him from the cockroach, shares his food. The first bridge.</td></tr><tr><td><b>The tall strangers</b></td><td>Seven-foot, athletic, coordinated hunters gathering karak-ta eggs; strong, fast, and never needlessly cruel.</td></tr><tr><td><b>The white-haired man</b></td><td>Short, bearded, older &mdash; the only one who gawks at Alex. His greeting: &ldquo;What&rsquo;s up, man?&rdquo;</td></tr><tr><td><b>Karak-ta</b></td><td>The vulture-like winged predators from Week 1 &mdash; their eggs are what the hunting party came for.</td></tr><tr><td><b>The cliffside</b></td><td>A city of caves, ledges, and ladders behind a waterfall &mdash; the strangers&rsquo; home.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 4 &mdash; Hobbled</b></td><td>The hand belongs to a hunting party. Alex resists, is swarmed, gets bandaged &mdash; then sprints for the door and is brought down and hobbled.</td></tr><tr><td><b>Ch. 5 &mdash; Captured</b></td><td>Karak-ta attack the group; Doken-ak defends Alex at his own risk. In the dead forest: the giant cockroach, laughter without cruelty, and a homesick last line.</td></tr><tr><td><b>Ch. 6 &mdash; Dire Wolves</b></td><td>Weak ropes, shared food, a dangerous crossing protecting the injured &mdash; and arrival at the cliffside, where a white-haired man speaks English.</td></tr></table></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>32 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>hobbled</b></td><td>tied so you can walk but not run (ant.: free)</td></tr><tr><td><b>captivity</b></td><td>being held, not free to leave (ant.: liberty)</td></tr><tr><td><b>observation</b></td><td>careful watching in order to learn (ant.: inattention)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">He was effectively hobbled.<span class="who">&mdash; Chapter 4</span></div><div class="quote" style="margin:10px 0">Home &mdash; and Amy &mdash; felt very far away.<span class="who">&mdash; Chapter 5</span></div><div class="quote" style="margin:10px 0">Whatever exercise these people are doing, they&rsquo;ve done it before, many times.<span class="who">&mdash; Chapter 6</span></div><div class="quote" style="margin:10px 0">What&rsquo;s up, man?<span class="who">&mdash; the white-haired man, Chapter 6</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;At first Alex sees his captors as ___.&rdquo;</li><li>&ldquo;But in Chapter ___, when ___, his understanding shifts.&rdquo;</li><li>&ldquo;This action suggests ___ because ___.&rdquo;</li><li>&ldquo;By the end of Chapter 6, Alex ___.&rdquo;</li></ul></div></div><div class="footer"><span>A Door into Time • Week 2 • Captivity, Survival, and First Trust</span><span>33 of 33</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

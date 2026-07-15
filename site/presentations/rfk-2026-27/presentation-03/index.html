@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 3: Evidence, Character &amp; Problem Solving - Risk, Persistence, and Consequences</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#a78bfa; --accent-deep:#4c1d95; --glow:rgba(167,139,250,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills Language Arts SC • Week 3</div><h1>Return from Kragdon-ah</h1><div class="body"><div class="sub">by Shawn Inmon &mdash; An Alex Hawk Time Travel Adventure</div>
+<div class="meta">Language Arts focus: <b>Evidence, Character &amp; Problem Solving</b> (Apply)<br>This week: Chapters 7&ndash;9 + Written Response</div><div class="theme">Theme: Risk, Persistence, and Consequences</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 7, &ldquo;Alex vs. Godat-ta&rdquo; &mdash; the plan meets the bear</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 8, &ldquo;Alex vs. the Wasta-ta&rdquo; &mdash; the second plan, and its price</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 9, &ldquo;Here But Gone&rdquo; &mdash; rescue, recovery, and a new road</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 7&ndash;9</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>2 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skill</h3><p><b>Applying character and problem-solving analysis independently.</b> This week the plans finally run &mdash; and the bill comes due. You evaluate how risk, persistence, and hard consequences reveal Alex&rsquo;s <b>strengths and his limitations</b>.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Judge which of Alex&rsquo;s choices reveals the most about his leadership.</li><li>Trace each consequence back to the choice that caused it.</li><li>Weigh strengths AND limitations &mdash; leaders have both.</li></ul></div></div>
+<p class="note">Standards this week: RL.1.A — Evidence &amp; Inference • RL.1.B — Word Meanings • RL.2.D — Character / Text Elements • W.2.A / W.3.A.a (9-10 / 11-12)</p></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>3 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">Which choice best reveals Alex&rsquo;s leadership, and what consequences follow from it?</div></div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>4 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Plan Meets the Bear</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Five days of ropes, levers, and lasso practice &mdash; then godat-ta. Today we watch preparation collide with a two-ton problem, and grade the outcome honestly.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week&rsquo;s cliffhanger</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 7 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.1.A — Evidence &amp; Inference</span><span class="pill">RL.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week&rsquo;s Cliffhanger</h1><div class="body"><ol class="q"><li>&ldquo;Do you have a plan yet?&rdquo; &mdash; &ldquo;Yes.&rdquo; Based on four days of observation, what did you predict the plan would be?</li><li>Recall the two guards of the danta: godat-ta and the wasta-ta. Which would YOU solve first, and why order matters?</li><li>Alex&rsquo;s Week 2 leadership was patience. Predict what it looks like when the acting finally starts.</li></ol></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>6 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">execute</div><div class="pos">verb • EK-sih-kyoot</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> vulnerable &bull; maneuver &bull; concession</div><div class="means">To carry out a plan fully &mdash; to follow it through to the end.</div>
+<div class="morph"><div><b>ex-</b><span>prefix: out</span></div><div class="plus">+</div><div><b>secut</b><span>Latin <i>sequi</i> — to follow: &ldquo;to follow out&rdquo;</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">carry out</span><span class="pill">perform</span><span class="pill">implement</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">abandon</span><span class="pill anti">cancel</span><span class="pill anti">botch</span></div>
+<div class="family"><b>Word family:</b> execution (n) &bull; executive (n) &bull; consecutive, sequence &mdash; same <i>follow</i> root</div></div>
+<div><div class="quote">They spent the next few days preparing to execute Alex&rsquo;s plan.<span class="who">&mdash; Chapter 7</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Watch the word&rsquo;s two lives: executing a plan vs. executing a person. Same root &mdash; following something &ldquo;out&rdquo; to its end. Context decides everything; today&rsquo;s chapter uses the first meaning only.</p></div></div>
+</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>7 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Tone vs. Mood: The Author&rsquo;s Voice, the Reader&rsquo;s Feeling</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Tone = the author&rsquo;s attitude</h3>
+<p>Revealed by <b>word choice</b>. &ldquo;The politician <i>slithered</i> to the podium&rdquo; vs. &ldquo;<i>strode</i> to the podium&rdquo; &mdash; same event, opposite tone.</p></div>
+<div class="card"><h3>Mood = the reader&rsquo;s feeling</h3>
+<p>The atmosphere the text creates in <i>you</i>: dread, hope, unease, excitement. Built from setting, pacing, and imagery.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The chain reaction</h3>
+<p>Author picks words (tone) &rarr; words build atmosphere &rarr; atmosphere creates feeling (mood). When a book makes you feel watched, that was engineered &mdash; find the words that did it.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;We need to talk.&rdquo; Four neutral words &mdash; and instant dread. Tiny word choices carry huge mood. Authors weaponize this on every page.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Track two feelings today: the taut, patient mood of the preparation &mdash; and the surprising tone of <b>reverence</b> when the trap springs. Watch what the team feels about the animal they defeat.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>8 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Grade the Plan: Preparation Meets Reality</h1><div class="body"><table class="mini">
+<tr><th>Element of the plan</th><th>Leadership evidence</th></tr>
+<tr><td>Days of rope-making, boulder-arranging, a twelve-foot lever cut and carved</td><td>Persistence: unglamorous work done fully before any risk is taken</td></tr>
+<tr><td>Lasso practice for everyone &mdash; and Versa-eh proves best</td><td>Alex assumed he&rsquo;d be best; the evidence corrected him &mdash; and he let it</td></tr>
+<tr><td>The goal: drive godat-ta away &mdash; not kill him</td><td>Restraint as strategy: remove the reason to stay, not the life</td></tr>
+<tr><td>The result: wounded, limping, the bear leaves &mdash; and all three are &ldquo;glad the great bear had not been killed&rdquo;</td><td>The mood of the victory: relief and reverence &mdash; &ldquo;too magnificent for such a fate&rdquo;</td></tr></table>
+<p class="note">Apply-level question to carry: the plan worked &mdash; but Alex reads the win as conditional: the bear only leaves for good if the wasta-ta go too. One problem solved buys the harder one.</p></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>9 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Judgment Calls</h1><div class="body"><div class="mcq"><div class="qq">Versa-eh out-throws everyone with the lasso after Alex assumed he&rsquo;d be best. His response &mdash; giving her the job &mdash; reveals&hellip;</div><button class="opt" data-ok="1">A leader who follows evidence over ego: the mission outranks his pride</button><button class="opt" data-ok="0">Carelessness about the plan</button><button class="opt" data-ok="0">That he dislikes lassoing</button><div class="fb">Small moment, big pattern: Week 2&rsquo;s observation habit applied to his own team &mdash; and himself.</div></div><div class="mcq"><div class="qq">The team is &ldquo;glad the great bear had not been killed&rdquo; &mdash; the mood of their victory is relief, not triumph. This tone choice suggests&hellip;</div><button class="opt" data-ok="1">The book values solving problems over destroying them &mdash; power measured by restraint</button><button class="opt" data-ok="0">The plan failed</button><button class="opt" data-ok="0">They fear the bear&rsquo;s revenge</button><div class="fb">&ldquo;Too magnificent for such a fate&rdquo; &mdash; the author hands the theme straight to us.</div></div><div class="rev"><div class="rq">Cause-chain check: why does driving off godat-ta accomplish nothing unless the wasta-ta go too?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Godat-ta only camps there to eat what the wasta-ta make. Remove the bear and keep the wasps &rarr; he returns. Remove the wasps &rarr; his reason to stay dies. Alex solved the effect first; the cause is Chapter 8&rsquo;s problem &mdash; and it&rsquo;s the dangerous one.</div></div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>10 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 7 &mdash; &ldquo;Alex vs. Godat-ta&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Ropes, boulders, a lever cut from a sugar pine &mdash; and a plan five days in the making meets the great bear.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>preparation</b>: who builds what, and who turns out to be the best lasso in camp.</li><li>The <b>trap</b> &mdash; and the team&rsquo;s reaction when the wounded bear limps away alive.</li><li>The chapter&rsquo;s last line: &ldquo;How do we get rid of the wasta-ta?&rdquo; &mdash; &ldquo;I have a plan.&rdquo;</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Grade the plan A&ndash;F in three categories &mdash; preparation, teamwork, outcome &mdash; each grade backed by one text detail.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>11 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Price of the Plan</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Plan two: fire, smoke, and a run past a thousand stings. Today Alex assigns the worst job to himself &mdash; and the theme of the week arrives: consequences.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 7</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 8 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.1.A — Evidence &amp; Inference</span><span class="pill">RL.2.D — Character / Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Alex vs. Godat-ta</h1><div class="body"><ol class="q"><li>Compare plan grades. Where did the class disagree most &mdash; and which detail settles it?</li><li>The bear lives. Would killing godat-ta have been the easier plan? Why did Alex refuse the easy version?</li><li>Rinka-ak said a dozen stings can paralyze a full warrior. Predict how Alex plans around that number &mdash; and what happens if the plan slips.</li></ol></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>13 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">ferocity</div><div class="pos">noun • fer-AH-sih-tee</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> vulnerable &bull; maneuver &bull; concession</div><div class="means">Violent, intense fierceness.</div>
+<div class="morph"><div><b>ferox</b><span>Latin — fierce, wild</span></div><div class="plus">+</div><div><b>-ity</b><span>suffix: the state or quality of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">fierceness</span><span class="pill">savagery</span><span class="pill">intensity</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">gentleness</span><span class="pill anti">mildness</span><span class="pill anti">calm</span></div>
+<div class="family"><b>Word family:</b> ferocious (adj) &bull; ferociously (adv) &bull; feral &mdash; related wildness</div></div>
+<div><div class="quote">&hellip;the giant bees flew at Alex with unmatched ferocity.<span class="who">&mdash; Chapter 8</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The <b>-ity</b> suffix strikes again: ferocity, curiosity, responsibility &mdash; qualities turned into nouns. Today, ferocity is the force Alex&rsquo;s plan must survive, not defeat.</p></div></div>
+</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>14 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Characterization: How Authors Build People</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Direct characterization</h3>
+<p>The narrator tells you flat out: <i>&ldquo;Ben was brave.&rdquo;</i> Rare, and less interesting.</p></div>
+<div class="card"><h3>Indirect characterization</h3>
+<p>The author shows you and lets you conclude. Remember <b>STEAL</b>: what a character <b>S</b>ays, <b>T</b>hinks, their <b>E</b>ffect on others, how they <b>A</b>ct, how they <b>L</b>ook.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend says &ldquo;I&rsquo;m not mad&rdquo; &mdash; then answers every text with one word. Words say one thing; behavior says another. You believe the behavior. So do readers.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Motivation &mdash; the why</h3>
+<p>Behind every action is a <b>want</b> or a <b>fear</b>. Find what a character wants most and fears most, and their choices start making sense.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Spiral review with higher stakes: STEAL under fire. Today Alex&rsquo;s <b>Acts</b> do all the talking &mdash; especially the act of taking the most dangerous role himself. Ask what that choice reveals&hellip; and what it costs.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>15 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>The Leader Takes the Worst Job</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The plan&rsquo;s shape</h3>
+<p>Harta-ak decoys godat-ta away on horseback. Alex &mdash; wrapped in layered ropes for armor &mdash; carries fire to the wasta-ta tree, sets the blaze, and runs. His friends wait at the bowl&rsquo;s entrance with branches to beat the swarm off him.</p></div>
+<div class="card"><h3>The evidence as it unfolds</h3>
+<p>The rope armor works &mdash; until it separates. Each gap draws stings &ldquo;with ruthless efficiency.&rdquo; Neck, back, ear. The poison spreads with his own heartbeat. Three steps from safety, his legs stop being his. <b>Alex pitches face-first onto the ground</b> &mdash; and the chapter ends with the swarm still landing.</p></div></div>
+<p class="note">The week&rsquo;s question sharpens here: the plan is working &mdash; the tree burns, the wasta-ta are finished. But Alex assigned Alex the price. Strength, limitation, or both at once? Hold your answer for the essay.</p></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>16 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Strength or Limitation?</h1><div class="body"><div class="mcq"><div class="qq">Alex gives himself the fire-run and his friends the safer support roles. This choice is best read as&hellip;</div><button class="opt" data-ok="1">Both at once: courage and responsibility &mdash; and the same solo-hero habit that nearly killed him in Week 2&rsquo;s egg hunt</button><button class="opt" data-ok="0">Pure strength with no downside</button><button class="opt" data-ok="0">Cowardice disguised as bravery</button><div class="fb">The guide asks for strengths AND limitations. His best trait and his blind spot are the same trait &mdash; that&rsquo;s what makes him worth analyzing.</div></div><div class="mcq"><div class="qq">The wasta-ta find every gap in the rope armor &ldquo;with ruthless efficiency.&rdquo; As a consequence, this detail shows&hellip;</div><button class="opt" data-ok="1">Even excellent preparation has limits &mdash; risk remains risk after planning</button><button class="opt" data-ok="0">The armor idea was foolish from the start</button><button class="opt" data-ok="0">The wasta-ta are intelligent beings</button><div class="fb">Week 1 of this book asked whether preparation equals safety. Chapter 8 answers: it narrows danger; it cannot erase it.</div></div><div class="rev"><div class="rq">The chapter ends mid-catastrophe &mdash; Alex down, swarm landing. Why cut there?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Consequences need room to land. Ending inside the price &mdash; not the rescue &mdash; forces the reader to sit with what the choice cost before finding out if it&rsquo;s survivable.</div></div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>17 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 8 &mdash; &ldquo;Alex vs. the Wasta-ta&rdquo;</h1><div class="body"><p><span class="badge">Read</span> A decoy on horseback, rope armor, a bag of fire &mdash; and a run that doesn&rsquo;t quite reach the finish line.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>Harta-ak&rsquo;s <b>decoy ride</b> &mdash; and his report of the wounded bear leaving for good.</li><li>The fire-run: how the <b>rope armor</b> works, and exactly how it fails.</li><li>The final image: Alex paralyzed, three steps short, the swarm still landing.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Trace one full consequence chain: choice &rarr; risk &rarr; cost. Three arrows, each backed by a detail.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>18 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>What Friends Are For</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Alex is down. What happens next is the real answer to this week&rsquo;s question &mdash; because leadership is measured by what your people do when you can&rsquo;t lead.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 8</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 9 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.2.A — Theme Development</span><span class="pill">RL.1.D — Comprehension &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Alex vs. the Wasta-ta</h1><div class="body"><ol class="q"><li>Share your consequence chain. Which link was a surprise &mdash; and which was predictable from the plan itself?</li><li>Was there a version of this plan where nobody paid? Redesign it if you can &mdash; or defend that the price was unavoidable.</li><li>Alex is paralyzed and can&rsquo;t give a single order. Predict what each teammate does &mdash; from what you know of them.</li></ol></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>20 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">consequence</div><div class="pos">noun • KON-sih-kwens</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> vulnerable &bull; maneuver &bull; concession</div><div class="means">What follows from a choice &mdash; the result you signed up for when you chose.</div>
+<div class="morph"><div><b>con-</b><span>prefix: with, together</span></div><div class="plus">+</div><div><b>sequ</b><span>Latin <i>sequi</i> — to follow</span></div><div class="plus">+</div><div><b>-ence</b><span>suffix: the state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">result</span><span class="pill">outcome</span><span class="pill">aftermath</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">cause</span><span class="pill anti">origin</span></div>
+<div class="family"><b>Word family:</b> consequently (adv) &bull; inconsequential (adj) &bull; sequence, execute &mdash; same root family</div></div>
+<div><div class="quote">Still, he did not let go.<span class="who">&mdash; Chapter 9 (Harta-ak, taking sting after sting to drag Alex clear)</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Same root as Monday&rsquo;s word &mdash; <i>sequi</i>, to follow. An <b>execute</b>d plan produces <b>consequence</b>s: what follows out, and what follows from. Today: who chooses to share Alex&rsquo;s consequences?</p></div></div>
+</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>21 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Theme: The Idea Under the Story</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one word)</h3>
+<p>Loss. Curiosity. Duty. Survival. A topic is just a subject &mdash; it makes no point.</p></div>
+<div class="card"><h3>Theme (a complete claim)</h3>
+<p>&ldquo;Loss can push people to build new purpose.&rdquo; A theme says something <i>about</i> the topic that the story proves.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How writers plant themes</h3>
+<p>Themes are almost never stated. Trace them through <b>repeated images</b>, <b>choices characters make</b>, and <b>consequences</b> of those choices. When a pattern repeats, the author is pointing at something.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The portability test</h3>
+<p>A real theme statement works <i>outside</i> the book too. &ldquo;Alex misses Amy&rdquo; is plot. &ldquo;Keeping a promise can cost the people you love&rdquo; is theme.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Spiral review, final step: turn this week&rsquo;s pattern into a theme statement. Topic: consequences. The chapters keep showing who <i>volunteers</i> to share them &mdash; build your claim there.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>22 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>The Rescue &mdash; Leadership Reflected</h1><div class="body"><table class="mini">
+<tr><th>While Alex lies paralyzed&hellip;</th><th>What it proves</th></tr>
+<tr><td>Harta-ak drops his branch, grabs Alex&rsquo;s hand, and drags &mdash; taking sting after sting: &ldquo;Still, he did not let go&rdquo; &mdash; until he too falls paralyzed</td><td>The debt Alex honored in Week 2 is repaid without being asked &mdash; loyalty compounds</td></tr>
+<tr><td>Senta-eh doesn&rsquo;t charge the swarm &mdash; she runs the OTHER way, builds smoking green branches, and returns methodically</td><td>She fights like Alex plans: the patient move, made under maximum pressure</td></tr>
+<tr><td>Versa-eh and Monda-ak hold, then move on her command &mdash; &ldquo;Come on!&rdquo;</td><td>The team functions leaderless &mdash; because its leader built it that way</td></tr></table>
+<p class="note">Then the quiet aftermath: recovered, Alex finally tells Senta-eh what she is to him &mdash; and why he hasn&rsquo;t said it: one door remains unchecked, in Denta-ah. The chapter ends with a new destination and an old hope, side by side.</p></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>23 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Theme Assembly</h1><div class="body"><div class="mcq"><div class="qq">Senta-eh&rsquo;s rescue move is to run AWAY first &mdash; to the campfire for smoke branches. As theme evidence, this shows&hellip;</div><button class="opt" data-ok="1">Alex&rsquo;s leadership lives in his people: patience under pressure has become the team&rsquo;s instinct, not just his</button><button class="opt" data-ok="0">She panicked and fled</button><button class="opt" data-ok="0">Smoke was a lucky guess</button><div class="fb">The best measure of a leader: subtract him. The team ran his playbook while he lay in the dirt.</div></div><div class="mcq"><div class="qq">Which is a <b>theme</b> statement &mdash; not a plot point?</div><button class="opt" data-ok="1">Real leadership is proven by what followers do when the leader falls.</button><button class="opt" data-ok="0">Alex got stung by giant wasps.</button><button class="opt" data-ok="0">Smoke calms wasta-ta.</button><div class="fb">Portable, arguable, and this week is its proof. The other two are details that serve it.</div></div><div class="rev"><div class="rq">Alex won&rsquo;t commit to Senta-eh until the last door is checked. Strength, limitation, or something else? One piece of evidence.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: It&rsquo;s his honesty working like his planning &mdash; he won&rsquo;t promise what a door might unmake. Costly to them both, but consistent: Alex doesn&rsquo;t execute plans &mdash; or promises &mdash; he can&rsquo;t finish.</div></div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>24 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 9 &mdash; &ldquo;Here But Gone&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Paralysis, a hand that would not let go, smoke in a swarm &mdash; and afterward, the most honest conversation of the series.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>rescue</b>: Harta-ak&rsquo;s grip, Senta-eh&rsquo;s smoke, Versa-eh and Monda-ak&rsquo;s timing.</li><li>The recovery &mdash; and what the danta victory now means for Winten-ah and for Harta-ak&rsquo;s new start.</li><li>The conversation: what Alex finally says to Senta-eh, what holds him back, and the new destination: <b>Denta-ah</b>.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Star your <b>two strongest pieces of evidence</b> for tomorrow &mdash; one revealing a leadership choice, one showing its consequence.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>25 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">The question asks you to CHOOSE: which single choice best reveals Alex&rsquo;s leadership &mdash; and to follow its consequences honestly, costs included.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 9</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Here But Gone</h1><div class="body"><ol class="q"><li>Denta-ah: one more door, one more hope. Given everything Alex has built here, what does he risk by checking it?</li><li>Rank the week&rsquo;s three choices &mdash; sparing the bear, taking the fire-run, delaying his promise. Which reveals the MOST? Defend your ranking.</li><li>Check your starred pair: your chosen choice + its truest consequence. That&rsquo;s the whole essay.</li></ol></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>27 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Apply-level: the prompt demands a decision. Pick ONE choice, argue it&rsquo;s the most revealing, and trace its consequences &mdash; including the costs. Strong essays admit the limitation inside the strength.</div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>28 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">Which choice best reveals Alex&rsquo;s leadership, and what consequences follow from it?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Days of preparation &mdash; and handing the lasso to Versa-eh when the evidence said so (Ch. 7)</li><li>Sparing godat-ta: &ldquo;too magnificent for such a fate&rdquo; (Ch. 7)</li><li>Taking the fire-run himself &mdash; and paying for it in stings and paralysis (Ch. 8)</li><li>&ldquo;Still, he did not let go&rdquo; &mdash; the loyalty his leadership earned (Ch. 9)</li><li>Delaying his promise to Senta-eh until Denta-ah&rsquo;s door is checked (Ch. 9)</li></ul></div></div></div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>29 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Foundation <span>&mdash; 4&ndash;6 sentences</span></h3><p>One choice + frames: &ldquo;Alex&rsquo;s choice to ___ reveals ___.&rdquo; &ldquo;The consequence was ___.&rdquo; &ldquo;This shows his leadership is ___.&rdquo;</p></div><div class="card"><h3>Supported <span>&mdash; one developed paragraph</span></h3><p>One chosen choice, two details &mdash; the choice and its consequence &mdash; and an explanation that names both a strength and a limitation.</p></div><div class="card"><h3>Extension <span>&mdash; multi-paragraph response</span></h3><p>Your chosen choice defended AGAINST one alternative (&ldquo;a stronger candidate than ___ because&hellip;&rdquo;), consequences traced across chapters, limitation addressed head-on.</p></div></div><p class="note">Self-check: did I choose ONE choice and commit? &bull; consequence traced with evidence &bull; strength AND limitation named.</p></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>30 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Two plans, two victories, one bill: the bear spared and gone, the wasta-ta burned out &mdash; and Alex face-down in the dirt, saved by a hand that would not let go and smoke carried by the steadiest person he knows. Recovered, he finally speaks his heart &mdash; and points the company at one last door in Denta-ah.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What waits at Denta-ah &mdash; and what does Alex actually want to find?</li><li>Can a leader keep taking the worst job himself?</li><li>What has this quest already given Harta-ak and Versa-eh?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: Chapters 10&ndash;12 &mdash; the road to Denta-ah.</p></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>31 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Alex Hawk / Manta-ak</b></td><td>Planner of both victories; payer of the price; finally honest with Senta-eh &mdash; and bound for one last door.</td></tr><tr><td><b>Senta-eh</b></td><td>The rescue&rsquo;s cool head: smoke branches built under pressure. The person Alex&rsquo;s promise is waiting for.</td></tr><tr><td><b>Harta-ak</b></td><td>Decoy rider and the hand that would not let go &mdash; paralyzed repaying a debt no one called in.</td></tr><tr><td><b>Versa-eh</b></td><td>Best lasso in camp (to everyone&rsquo;s surprise); steady in the rescue.</td></tr><tr><td><b>Godat-ta</b></td><td>The great bear &mdash; wounded, spared, and gone; &ldquo;too magnificent&rdquo; to kill.</td></tr><tr><td><b>Wasta-ta</b></td><td>The giant paralytic wasps &mdash; burned out of the danta bowl at a heavy price.</td></tr><tr><td><b>Denta-ah</b></td><td>The ruined city where Alex once saw another door &mdash; the new destination.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 7 &mdash; Alex vs. Godat-ta</b></td><td>Five days of ropes, boulders, and lasso drills; the trap wounds the bear and drives him off alive; the team is glad he lived. &ldquo;How do we get rid of the wasta-ta?&rdquo;</td></tr><tr><td><b>Ch. 8 &mdash; Alex vs. the Wasta-ta</b></td><td>Harta-ak decoys the bear; Alex&rsquo;s fire-run works &mdash; and costs him: the rope armor gaps, the stings multiply, and he falls paralyzed three steps from safety.</td></tr><tr><td><b>Ch. 9 &mdash; Here But Gone</b></td><td>Harta-ak drags him until he too falls; Senta-eh&rsquo;s smoke wins the field; recovery &mdash; then Alex&rsquo;s confession to Senta-eh, and the decision: check the door at Denta-ah.</td></tr></table></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>32 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>execute</b></td><td>to carry a plan out fully (ant.: abandon)</td></tr><tr><td><b>ferocity</b></td><td>violent fierceness (ant.: gentleness)</td></tr><tr><td><b>consequence</b></td><td>what follows from a choice (ant.: cause)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">They spent the next few days preparing to execute Alex&rsquo;s plan.<span class="who">&mdash; Chapter 7</span></div><div class="quote" style="margin:10px 0">&hellip;the giant bees flew at Alex with unmatched ferocity.<span class="who">&mdash; Chapter 8</span></div><div class="quote" style="margin:10px 0">Still, he did not let go.<span class="who">&mdash; Chapter 9</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;Alex&rsquo;s choice to ___ reveals ___.&rdquo;</li><li>&ldquo;The consequence that followed was ___.&rdquo;</li><li>&ldquo;This shows a strength because ___ &mdash; and a limitation because ___.&rdquo;</li><li>&ldquo;Ultimately, his leadership ___.&rdquo;</li></ul></div></div><div class="footer"><span>Return from Kragdon-ah • Week 3 • Risk, Persistence, and Consequences</span><span>33 of 33</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

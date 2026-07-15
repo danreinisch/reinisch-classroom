@@ -164,8 +164,92 @@
       "baseOut": "student/resources",
       "slots": 40,
       "pagePath": "/student/resources/"
+    },
+    {
+      "id": "seeker-2026-27",
+      "title": "Seeker",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for Seeker.",
+      "status": "active",
+      "sortOrder": 60,
+      "section": "language-arts",
+      "slots": 19,
+      "baseOut": "presentations/seeker-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
+      "id": "escape-camp-14-2026-27",
+      "title": "Escape from Camp 14",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for Escape from Camp 14.",
+      "status": "active",
+      "sortOrder": 70,
+      "section": "language-arts",
+      "slots": 9,
+      "baseOut": "presentations/escape-camp-14-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
+      "id": "lik-2026-27",
+      "title": "Lost in Kragdon-Ah",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for Lost in Kragdon-Ah.",
+      "status": "active",
+      "sortOrder": 80,
+      "section": "language-arts",
+      "slots": 16,
+      "baseOut": "presentations/lik-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
+      "id": "adit-2026-27",
+      "title": "A Door Into Time",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for A Door Into Time.",
+      "status": "active",
+      "sortOrder": 90,
+      "section": "language-arts",
+      "slots": 15,
+      "baseOut": "presentations/adit-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
+      "id": "wok-2026-27",
+      "title": "Warrior of Kragdon-Ah",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for Warrior of Kragdon-Ah.",
+      "status": "active",
+      "sortOrder": 100,
+      "section": "language-arts",
+      "slots": 18,
+      "baseOut": "presentations/wok-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
+      "id": "rfk-2026-27",
+      "title": "Return from Kragdon-Ah",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for Return from Kragdon-Ah.",
+      "status": "active",
+      "sortOrder": 110,
+      "section": "language-arts",
+      "slots": 15,
+      "baseOut": "presentations/rfk-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
+      "id": "life-sc-2026-27",
+      "title": "Life Skills SC",
+      "kind": "collection",
+      "description": "2026–27 weekly presentation collection for Life Skills SC.",
+      "status": "active",
+      "sortOrder": 50,
+      "section": "life-skills",
+      "slots": 37,
+      "baseOut": "life-skills/presentations-2026-27",
+      "pagePath": "/life-skills/"
     }
   ],
-  "updated": "2026-07-15T22:17:59.831Z",
+  "updated": "2026-07-15T23:21:26.811Z",
   "version": "v1"
 }

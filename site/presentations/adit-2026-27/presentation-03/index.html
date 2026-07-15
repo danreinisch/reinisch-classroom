@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 3: Evidence, Inference &amp; Character Development - Communication, Culture, and Belonging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#22b8d4; --accent-deep:#0b5e70; --glow:rgba(34,184,212,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 1 SC • Week 3</div><h1>A Door into Time</h1><div class="body"><div class="sub">by Shawn Inmon &mdash; An Alex Hawk Time Travel Adventure</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b> (Apply)<br>This week: Chapters 7&ndash;9 + Written Response</div><div class="theme">Theme: Communication, Culture, and Belonging</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 7, &ldquo;Winten-ah&rdquo; &mdash; the English speaker has a name</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 8, &ldquo;Alex&rsquo;s Decision&rdquo; &mdash; judged by the council</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 9, &ldquo;The World Spins&rdquo; &mdash; the feast, the ritual, the welcome</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 7&ndash;9</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>2 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skill</h3><p><b>Applying character analysis independently.</b> This week you track how <b>communication</b> &mdash; translation, gestures, shared meals, ritual &mdash; and cultural experiences shape Alex&rsquo;s growing sense of <b>belonging</b>.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Collect evidence of communication working without shared words.</li><li>Explain how each cultural experience moves Alex closer to (or further from) belonging.</li><li>Build my own claim about where Alex is starting to belong &mdash; and why.</li></ul></div></div>
+<p class="note">Standards this week: 9-10.RL.1.A — Evidence &amp; Inference • 9-10.RL.1.B — Word Meanings • 9-10.RL.2.D — Development of Text Elements • 9-10.W.2.A / W.3.A.a — Written Response</p></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>3 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do communication and cultural experiences affect Alex&rsquo;s decision about where he belongs?</div></div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>4 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>&ldquo;What&rsquo;s Up, Man?&rdquo; Has a Name</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">The English speaker is Dan Hadaller &mdash; the letter-writer&rsquo;s son, alive after decades. Today: what his existence changes, and how language will decide Alex&rsquo;s future here.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week&rsquo;s cliffhanger</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 7 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week&rsquo;s Cliffhanger</h1><div class="body"><ol class="q"><li>Who did you predict the white-haired man was? Check your Week 1 notes on Mr. Hadaller&rsquo;s letter &mdash; what did the letter claim happened to his son?</li><li>If your prediction was right: what does the son being ALIVE mean about the letter&rsquo;s warning?</li><li>Alex has been reading actions for two weeks. Now words return. Predict what changes first.</li></ol></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>6 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">universal</div><div class="pos">adjective • yoo-nih-VER-sul</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> hobbled &bull; captivity &bull; observation</div><div class="means">Shared by everyone; working everywhere.</div>
+<div class="morph"><div><b>uni-</b><span>prefix: one</span></div><div class="plus">+</div><div><b>vers</b><span>Latin <i>vertere</i> — to turn: &ldquo;turned into one&rdquo;</span></div><div class="plus">+</div><div><b>-al</b><span>suffix: relating to</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">shared</span><span class="pill">common</span><span class="pill">worldwide</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">local</span><span class="pill anti">limited</span><span class="pill anti">particular</span></div>
+<div class="family"><b>Word family:</b> universe (n) &bull; university (n) &bull; universally (adv)</div></div>
+<div><div class="quote">&hellip;there&rsquo;s one simpler universal language that everyone can speak. It&rsquo;s like the Tower of Babel around here!<span class="who">&mdash; Dan Hadaller, Chapter 7</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Kragdon-ah has dozens of languages plus one universal one. What &ldquo;universal languages&rdquo; already worked for Alex before today &mdash; before a single shared word?</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>7 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Language Power: Can Words Shape Thought?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Denotation vs. connotation</h3>
+<p><b>Denotation</b> = dictionary meaning. <b>Connotation</b> = the feeling a word carries. &ldquo;Cheap&rdquo; and &ldquo;affordable&rdquo; denote the same thing &mdash; and feel completely different.</p></div>
+<div class="card"><h3>Euphemism &amp; loaded language</h3>
+<p>A <b>euphemism</b> softens something harsh (&ldquo;let go&rdquo; for fired). <b>Loaded language</b> smuggles in judgment (&ldquo;regime&rdquo; vs. &ldquo;government&rdquo;). Both steer you before you notice.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The big question</h3>
+<p>If you have no word for an idea, is the idea harder to think? Powerful groups act like the answer is yes &mdash; that&rsquo;s why controlling words is a way of controlling people.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;Pre-owned vehicle.&rdquo; &ldquo;Budget-friendly.&rdquo; &ldquo;Content.&rdquo; Marketing renames things every day to change how you feel about them. Spot the rename, and you spot the strategy.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Ganku-eh refuses to keep someone she cannot question directly &mdash; in Winten-ah, language isn&rsquo;t politeness, it&rsquo;s survival and standing. Watch what changes for Alex the moment translation exists.</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>8 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>The Translator Changes Everything</h1><div class="body"><table class="mini">
+<tr><th>Before Dan</th><th>After Dan</th></tr>
+<tr><td>Alex reads actions only &mdash; bandages, shared food, weak ropes</td><td>Names, reasons, and rules arrive: Winten-ah, Ganku-eh, the cliffside&rsquo;s hierarchy</td></tr>
+<tr><td>Alex is a curiosity &mdash; watched, guarded, unexplained</td><td>Alex becomes a <b>case</b>: someone the chief can question, judge&hellip; and maybe accept</td></tr>
+<tr><td>The letter&rsquo;s story: the son is dead</td><td>The son is standing here &mdash; the letter&rsquo;s worst &ldquo;fact&rdquo; was a grieving man&rsquo;s inference</td></tr></table>
+<p class="note">Apply-level move: Dan is also <b>evidence</b>. A man from our world survived decades here and calls it home. What does his existence suggest about Alex&rsquo;s own two possible futures?</p></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>9 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>New Evidence, Old Claims</h1><div class="body"><div class="mcq"><div class="qq">Mr. Hadaller&rsquo;s letter said his son was dead. Dan is alive. What does this teach us about the letter?</div><button class="opt" data-ok="1">It mixed facts with grief-driven inference &mdash; even written &ldquo;evidence&rdquo; carries its author&rsquo;s fear</button><button class="opt" data-ok="0">The letter was a deliberate lie</button><button class="opt" data-ok="0">Dan is a ghost</button><div class="fb">Week 1 skill, applied backwards: the father had no receipts &mdash; only silence and years. He inferred death; the truth was a life.</div></div><div class="mcq"><div class="qq">Ganku-eh insists Alex learn the language so she can question him directly. Best inference about her leadership?</div><button class="opt" data-ok="1">She judges from firsthand evidence, not secondhand reports &mdash; even with strangers</button><button class="opt" data-ok="0">She enjoys giving orders</button><button class="opt" data-ok="0">She distrusts Dan&rsquo;s loyalty</button><div class="fb">A chief who wants direct answers is running her own evidence-and-inference process &mdash; on Alex.</div></div><div class="rev"><div class="rq">Dan says he had no translator when HE arrived &mdash; and survived anyway. What does that detail quietly promise about this tribe?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">They kept a wordless stranger alive long enough to learn. Whatever tomorrow&rsquo;s council decides, these people&rsquo;s record with outsiders already leans toward patience.</div></div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>10 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 7 &mdash; &ldquo;Winten-ah&rdquo;</h1><div class="body"><p><span class="badge">Read</span> The white-haired man introduces himself &mdash; and Alex climbs the cliff toward the people who will decide his future.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The reveal: <b>Dan Hadaller</b> &mdash; called Vanda-ak &mdash; and what each man learns from the other.</li><li>The language landscape: dozens of tongues, one <b>universal</b> language, and Dan&rsquo;s new job: teach Alex.</li><li>The climb to the council cave &mdash; ladders, switchbacks, craftsmanship &mdash; and who waits at the top.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write one claim&ndash;evidence&ndash;explanation: &ldquo;Dan&rsquo;s existence changes ___ because the text says ___, which means ___.&rdquo;</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>11 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Judged by the Council</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Alex stands before Ganku-eh &mdash; with his life possibly at stake and every word passing through a translator. Today: communication under maximum pressure.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 7</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 8 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Winten-ah</h1><div class="body"><ol class="q"><li>Share your claim about Dan&rsquo;s existence. Which evidence did classmates choose?</li><li>Dan survived here for decades &mdash; and stayed. What questions would YOU ask him first?</li><li>Predict the council: what does Ganku-eh need to hear from Alex &mdash; and what could go wrong through a translator?</li></ol></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>13 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">hierarchy</div><div class="pos">noun • HY-er-ar-kee</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> hobbled &bull; captivity &bull; observation</div><div class="means">A system of ranks &mdash; who leads, who follows, and in what order.</div>
+<div class="morph"><div><b>hier</b><span>Greek <i>hieros</i> — sacred</span></div><div class="plus">+</div><div><b>archy</b><span>Greek <i>archein</i> — to rule</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">ranking</span><span class="pill">chain of command</span><span class="pill">pecking order</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">equality</span><span class="pill anti">disorder</span></div>
+<div class="family"><b>Word family:</b> hierarchical (adj) &bull; monarchy, anarchy &mdash; same <i>rule</i> root</div></div>
+<div><div class="quote">He may not have been chief, but he knew his place in the hierarchy.<span class="who">&mdash; Chapter 8 (describing Banda-ak)</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Winten-ah&rsquo;s hierarchy has surprises: the last three chiefs have been women, and the fiercest warrior sits below the chief. Map who holds what power as you read.</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>14 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Quote, Paraphrase, or Summarize?</h1><div class="body"><table class="mini">
+<tr><th>Move</th><th>What it is</th><th>When to use it</th></tr>
+<tr><td><b>Quote</b></td><td>The author&rsquo;s exact words in &ldquo;quotation marks&rdquo;</td><td>When the wording itself is powerful evidence</td></tr>
+<tr><td><b>Paraphrase</b></td><td>The same idea, your words, about the same length</td><td>When you need the idea but not the exact words</td></tr>
+<tr><td><b>Summary</b></td><td>The whole passage shrunk to its key points, your words</td><td>When the reader needs the big picture fast</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>Example &mdash; one sentence, three ways</h3>
+<p><b>Original:</b> &ldquo;His first memory is an execution.&rdquo;<br>
+<b>Quote:</b> Harden opens by revealing that Shin&rsquo;s &ldquo;first memory is an execution.&rdquo;<br>
+<b>Paraphrase:</b> Harden opens by telling us the earliest thing Shin can remember is watching someone be killed.<br>
+<b>Summary (of the whole preface):</b> The preface introduces Shin&rsquo;s childhood in Camp 14 through the executions he was forced to attend.</p></div>
+<p class="note">All three still need a citation &mdash; changing the words does not make an idea yours.</p><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Dan translating for Alex&rsquo;s life IS paraphrase with stakes: same meaning, new words, nothing added, nothing lost. Practice the skill the scene dramatizes &mdash; faithful restatement.</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>15 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>High-Stakes Communication</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The stakes</h3>
+<p>Dan warns Alex the council could &ldquo;put him out&rdquo; &mdash; exile onto the open plain, which Alex instantly reads as &ldquo;a death sentence.&rdquo; The advice: <b>tell the truth.</b> And one twist: Ganku-eh has been learning English &mdash; &ldquo;don&rsquo;t assume she won&rsquo;t understand you.&rdquo;</p></div>
+<div class="card"><h3>The cast at the fire</h3>
+<p><b>Ganku-eh</b> &mdash; chief, final word. <b>Banda-ak</b> &mdash; her mate; the scarred, one-eyed man from the log; regal in his place. And a child named <b>Lanta-eh</b> &mdash; born on the solstice with a moon birthmark, carrying an ancient prophecy: she will lead the tribe in a time of great need.</p></div></div>
+<p class="note">RL.2.D watch: Alex jokes that being &ldquo;a messiah seems like an awful gig&rdquo; &mdash; sympathy for a child under a prophecy&rsquo;s weight. Small line now; remember it later in the series.</p></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>16 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Truth Through a Translator</h1><div class="body"><div class="mcq"><div class="qq">Dan&rsquo;s advice before the council: &ldquo;Just tell them the truth and you&rsquo;ll be fine.&rdquo; Why is truth the best strategy here specifically?</div><button class="opt" data-ok="1">Ganku-eh understands more English than she shows &mdash; a caught lie would end everything</button><button class="opt" data-ok="0">Truth is always easier to remember</button><button class="opt" data-ok="0">The council can read minds</button><div class="fb">The warning &ldquo;don&rsquo;t assume she won&rsquo;t understand you&rdquo; turns honesty from a virtue into the only safe play.</div></div><div class="mcq"><div class="qq">A paraphrase of Dan&rsquo;s warning about exile: which is faithful?</div><button class="opt" data-ok="1">&ldquo;Dan explains the council might banish Alex to the plains &mdash; which Alex believes he could not survive.&rdquo;</button><button class="opt" data-ok="0">&ldquo;Dan promises Alex the council will hurt him.&rdquo;</button><button class="opt" data-ok="0">&ldquo;Dan says the council has already decided to keep Alex.&rdquo;</button><div class="fb">Faithful paraphrase: same size, same meaning, no additions. The wrong options add and invent &mdash; the translator&rsquo;s cardinal sins.</div></div><div class="rev"><div class="rq">The prophecy: a girl born on the solstice, moon birthmark, destined to lead &ldquo;in a time of great need.&rdquo; Summarize it in one sentence &mdash; then predict its role in this series.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample summary: Lanta-eh is believed to be a prophesied leader for a coming crisis. Prediction: stories don&rsquo;t introduce prophecies they don&rsquo;t intend to test &mdash; a &ldquo;time of great need&rdquo; is on its way.</div></div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>17 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 8 &mdash; &ldquo;Alex&rsquo;s Decision&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Six figures around a fire, a translator at his shoulder, and a chief who understands more than she reveals.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>stakes</b> Dan reveals &mdash; and his two pieces of advice.</li><li>The <b>council</b>: Ganku-eh&rsquo;s authority, Banda-ak&rsquo;s place, and how Alex handles questioning.</li><li><b>Lanta-eh</b> and the prophecy &mdash; and Alex&rsquo;s reaction to a child carrying it.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Map the hierarchy: who holds power at the fire, in what order, with one text detail supporting each placement.</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>18 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>The Feast</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Dancing children, torchlight, a chant that pulls the room into &ldquo;a single stomping, chanting entity&rdquo; &mdash; and Alex inside it. Today: culture as a language of its own.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 8</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 9 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.2.A — Theme Development</span><span class="pill">9-10.RL.1.D — Comprehension &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Alex&rsquo;s Decision</h1><div class="body"><ol class="q"><li>Compare hierarchy maps. Where did the class disagree &mdash; and what detail settles it?</li><li>Alex passed the council. Which moment do you think mattered most to Ganku-eh?</li><li>Tonight is a feast. Predict: what can a celebration teach an outsider that an interrogation cannot?</li></ol></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>20 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">ritual</div><div class="pos">noun • RIH-choo-ul</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> hobbled &bull; captivity &bull; observation</div><div class="means">A ceremony performed the same way each time, carrying a community&rsquo;s meaning.</div>
+<div class="morph"><div><b>ritus</b><span>Latin — a sacred custom, a rite</span></div><div class="plus">+</div><div><b>-al</b><span>suffix: relating to</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">ceremony</span><span class="pill">rite</span><span class="pill">tradition</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">improvisation</span><span class="pill anti">spontaneity</span></div>
+<div class="family"><b>Word family:</b> rite (n) &bull; ritualistic (adj) &bull; ritually (adv)</div></div>
+<div><div class="quote">The ritual brought everyone together into a single stomping, chanting entity.<span class="who">&mdash; Chapter 9</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Alex understands zero words of the chant &mdash; and is still moved &ldquo;somewhere deep inside.&rdquo; What rituals in YOUR life communicate belonging without needing words?</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>21 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Reading Visual Texts: Images Make Arguments</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Images argue</h3>
+<p>Every designed image &mdash; a poster, an ad, a thumbnail, a meme &mdash; is trying to make you feel or believe something. It just argues faster than words.</p></div>
+<div class="card"><h3>The analysis checklist</h3>
+<ul><li><b>Scale:</b> what is biggest &mdash; and therefore &ldquo;most powerful&rdquo;?</li>
+<li><b>Placement:</b> what sits at eye level, front and center?</li>
+<li><b>Color &amp; light:</b> what feels warm, cold, dangerous?</li>
+<li><b>Caption:</b> what do the words command you to feel?</li></ul></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A fast-food ad&rsquo;s burger is shot from below, glistening, huge &mdash; scale and light making an argument no sentence makes. You are analyzed by images daily; today we analyze back.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Tonight&rsquo;s ritual is a text with no words: torchlight, rhythm, synchronized dancers, food carried in procession. Read it with the visual checklist &mdash; scale, placement, light, movement &mdash; and ask what it argues.</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>22 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Reading a Ceremony Like a Text</h1><div class="body"><table class="mini">
+<tr><th>What Alex experiences</th><th>What it communicates &mdash; wordlessly</th></tr>
+<tr><td>Children dance in perfect shared rhythm; the room chants as one</td><td>This is a <b>we</b> &mdash; the tribe performs its unity to itself</td></tr>
+<tr><td>A plate appears before Alex; food is piled on it like everyone else&rsquo;s</td><td>The outsider eats what the tribe eats &mdash; inclusion, served</td></tr>
+<tr><td>The feast celebrates the expedition&rsquo;s success &mdash; the one Alex was dragged home from</td><td>Alex&rsquo;s story is already tangled into the tribe&rsquo;s story</td></tr>
+<tr><td>Afterward: the spinning room, and Malen-eh&rsquo;s bitter healing leaf</td><td>Even his recovery is handled the Winten-ah way &mdash; with medicine and laughter</td></tr></table>
+<p class="note">Synthesis frame (you complete it): Three weeks ago Alex&rsquo;s only goal was ___. After the council and the feast, the text shows him ___ &mdash; which suggests his sense of belonging is ___.</p></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>23 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Culture as Communication</h1><div class="body"><div class="mcq"><div class="qq">Alex is moved by the chant despite understanding no words. Strongest inference?</div><button class="opt" data-ok="1">Some meaning travels through rhythm, unity, and welcome &mdash; culture communicates below vocabulary</button><button class="opt" data-ok="0">He secretly speaks the language</button><button class="opt" data-ok="0">He is only being polite</button><div class="fb">&ldquo;The voices touched him somewhere deep inside&rdquo; &mdash; the chapter&rsquo;s whole theme in one line.</div></div><div class="mcq"><div class="qq">The tribe carefully limits how many karak-ta eggs they take &mdash; conservation by design. As culture evidence, this shows&hellip;</div><button class="opt" data-ok="1">The Winten-ah think in generations &mdash; a people planning to belong to this land forever</button><button class="opt" data-ok="0">They dislike the taste of eggs</button><button class="opt" data-ok="0">They fear the karak-ta will complain</button><div class="fb">Alex&rsquo;s wry note &mdash; &ldquo;I might have set their conservation plan back a few years&rdquo; &mdash; measures the gap he still has to close.</div></div><div class="rev"><div class="rq">Complete the synthesis frame from the mini-lesson with your own three details.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: Three weeks ago Alex&rsquo;s only goal was getting back through the door. After the council and the feast, the text shows him eating from the tribe&rsquo;s plates, laughing with Dan, and accepting Malen-eh&rsquo;s medicine &mdash; his belonging is beginning whether he intends it or not.</div></div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>24 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 9 &mdash; &ldquo;The World Spins&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Torches, dancers, a feast for the expedition&rsquo;s success &mdash; and a room that won&rsquo;t stop spinning.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>ritual</b>: dance, chant, and the moment the room becomes &ldquo;a single&hellip; entity.&rdquo;</li><li>The <b>feast</b> &mdash; what Alex is served, how he adapts, what Dan explains.</li><li>The morning after: <b>Malen-eh&rsquo;s</b> bitter leaf, the laughter, and the karak-ta conservation lesson.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Star your <b>two strongest pieces of evidence</b> for tomorrow &mdash; one about communication, one about a cultural experience.</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>25 of 33</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Your claim this week: how communication and culture are moving Alex &mdash; toward the door, toward Winten-ah, or into the space between.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 9</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">9-10.W.2.A — Development of Writing</span><span class="pill">9-10.W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The World Spins</h1><div class="body"><ol class="q"><li>The feast celebrated the expedition Alex was captured on. Is he a guest at that party, or part of the story it celebrates? Argue it.</li><li>Dan chose to stay decades. Based on this week, name two things that might hold a person here.</li><li>Check your starred pair: one communication detail + one culture detail = your essay&rsquo;s two pillars.</li></ol></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>27 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Apply-level: you own the claim. &ldquo;Belonging&rdquo; is the key word &mdash; your evidence must show it growing, resisted, or both. Two chapters minimum.</div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>28 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How do communication and cultural experiences affect Alex&rsquo;s decision about where he belongs?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Dan Hadaller alive &mdash; proof an outsider can build a life here (Ch. 7)</li><li>Ganku-eh&rsquo;s demand: Alex must learn to speak for himself (Ch. 7&ndash;8)</li><li>Truth through a translator &mdash; and a chief who understands more than she shows (Ch. 8)</li><li>The chant that moves Alex without a single understood word (Ch. 9)</li><li>A plate filled like everyone else&rsquo;s &mdash; and medicine given with laughter (Ch. 9)</li></ul></div></div></div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>29 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Foundation <span>&mdash; 4&ndash;6 sentences</span></h3><p>One detail + frames: &ldquo;Alex starts to belong when ___.&rdquo; &ldquo;This experience matters because ___.&rdquo; &ldquo;But he still ___.&rdquo;</p></div><div class="card"><h3>Supported <span>&mdash; one developed paragraph</span></h3><p>Two details from different chapters &mdash; one communication, one culture &mdash; explaining how each affects where Alex feels he belongs.</p></div><div class="card"><h3>Extension <span>&mdash; multi-paragraph response</span></h3><p>Two or three details plus the tension: can Alex belong here AND still plan to leave? Where does the text leave that unresolved?</p></div></div><p class="note">Self-check: claim uses the word &ldquo;belonging&rdquo; or its idea &bull; evidence spans chapters &bull; explanation in your own words.</p></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>30 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>The English speaker is Benjamin Hadaller&rsquo;s son &mdash; alive, fluent, and at home. Alex survives the council with truth and a translator, meets a prophesied child, and is swept into a feast where welcome needs no vocabulary. The door still waits &mdash; but for the first time, so does something else.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Why did Dan stay all those years &mdash; choice, necessity, or something slower?</li><li>What is the prophecy&rsquo;s &ldquo;time of great need&rdquo; &mdash; and how close is it?</li><li>Can Alex learn the language without learning to belong?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: Chapters 10&ndash;12 &mdash; Alex&rsquo;s place in Winten-ah gets a test.</p></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>31 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Alex Hawk</b></td><td>Passed the council&rsquo;s judgment; beginning the language; fed, healed, and &mdash; against his plans &mdash; beginning to belong.</td></tr><tr><td><b>Dan Hadaller / Vanda-ak</b></td><td>Benjamin&rsquo;s son, decades in Kragdon-ah, fluent and at home. Alex&rsquo;s translator, teacher, and proof of a livable future here.</td></tr><tr><td><b>Ganku-eh</b></td><td>Chief of the Winten-ah &mdash; the third woman in a row to lead; learning English; judges firsthand.</td></tr><tr><td><b>Banda-ak</b></td><td>Ganku-eh&rsquo;s mate; the scarred, one-eyed warrior from the log; regal within the hierarchy.</td></tr><tr><td><b>Lanta-eh</b></td><td>A young girl born on the solstice with a moon birthmark &mdash; prophesied to lead the tribe &ldquo;in a time of great need.&rdquo;</td></tr><tr><td><b>Malen-eh</b></td><td>Healer with a brutally bitter leaf and a good laugh.</td></tr><tr><td><b>Winten-ah</b></td><td>The cliffside nation: switchbacks, crafted ladders, council fires, and a conservation ethic generations deep.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 7 &mdash; Winten-ah</b></td><td>The white-haired man is Dan Hadaller &mdash; alive, called Vanda-ak. Dozens of languages, one universal tongue, and a climb to the council cave.</td></tr><tr><td><b>Ch. 8 &mdash; Alex&rsquo;s Decision</b></td><td>Exile is on the table; Dan translates; truth is the strategy &mdash; and Ganku-eh understands more English than she shows. Lanta-eh&rsquo;s prophecy is explained.</td></tr><tr><td><b>Ch. 9 &mdash; The World Spins</b></td><td>The feast: dancing children, a chant that unifies the room, a full plate for the outsider &mdash; and a spinning morning after, cured by Malen-eh&rsquo;s bitter leaf.</td></tr></table></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>32 of 33</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>universal</b></td><td>shared by everyone (ant.: local)</td></tr><tr><td><b>hierarchy</b></td><td>a system of ranks (ant.: equality)</td></tr><tr><td><b>ritual</b></td><td>a ceremony carrying shared meaning (ant.: improvisation)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">&hellip;there&rsquo;s one simpler universal language that everyone can speak.<span class="who">&mdash; Dan, Chapter 7</span></div><div class="quote" style="margin:10px 0">He may not have been chief, but he knew his place in the hierarchy.<span class="who">&mdash; Chapter 8</span></div><div class="quote" style="margin:10px 0">The ritual brought everyone together into a single stomping, chanting entity.<span class="who">&mdash; Chapter 9</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;Alex begins to belong when ___.&rdquo;</li><li>&ldquo;Communication changes for him when ___.&rdquo;</li><li>&ldquo;This cultural experience shows ___.&rdquo;</li><li>&ldquo;Yet the door still ___.&rdquo;</li></ul></div></div><div class="footer"><span>A Door into Time • Week 3 • Communication, Culture, and Belonging</span><span>33 of 33</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

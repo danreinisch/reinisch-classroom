@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 37: Integrated Employment and Money Simulation - Show the Skills That Matter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 37</div><h1>Final Employment Readiness Capstone</h1><div class="body"><div class="sub">Integrated Employment and Money Simulation &mdash; Show the Skills That Matter</div><div class="meta">This shortened week: complete a job-fit task, a shortened application/communication task, and one individualized schedule-paycheck-money task &mdash; 15 points</div><div class="theme">Big idea: The capstone is a short practical sample, not a memory marathon. Use the supports that show what you can do accurately.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Short Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Choose a job and complete the fit check</td><td>5</td></tr><tr><td>Day 2</td><td>Complete the shortened application and communication task</td><td>5</td></tr><tr><td>Day 3</td><td>Complete an individualized schedule, paycheck, purchase, or spending-plan task</td><td>5</td></tr><tr><td>Day 4</td><td>Open Life Skills Day: finish, retry, reteach, or collect final evidence</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>2 of 25</span></div></section>
+<section class="slide"><div class="kicker">What the Capstone Measures</div><h1>Practical Accuracy and Independence</h1><div class="body"><div class="cols2"><div class="card"><h3>Teacher records</h3><ul><li>Task accuracy</li><li>Completion</li><li>Independence level 0&ndash;5</li><li>Prompts and supports used</li><li>Correction after feedback</li></ul></div><div class="card"><h3>Student demonstrates</h3><ul><li>Finding relevant information</li><li>Making a safe decision</li><li>Communicating clearly</li><li>Checking money or records</li><li>Using support appropriately</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>3 of 25</span></div></section>
+<section class="slide"><div class="kicker">Individualized Does Not Mean Easier or Harder</div><h1>Same Purpose, Different Access</h1><div class="body"><table class="mini"><tr><th>Response level</th><th>Possible access</th></tr><tr><td>Picture / choice</td><td>Select relevant posting, schedule, paycheck, or money information from limited options</td></tr><tr><td>Word bank / model</td><td>Complete labeled fields or a practiced message frame</td></tr><tr><td>Checklist / calculator</td><td>Follow steps and verify calculations or records</td></tr><tr><td>Independent</td><td>Complete and explain the task, including one self-check</td></tr></table><div class="exit"><b>Fair evidence:</b> The support is recorded so the result shows both the skill and the current independence level.</div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>4 of 25</span></div></section>
+<section class="slide"><div class="kicker">Capstone Rules</div><h1>Use Fictional Information Safely</h1><div class="body"><div class="cols2"><div class="card"><h3>Use</h3><ul><li>Teacher-created job postings</li><li>Fictional worker information</li><li>Sample schedules/paychecks</li><li>Fake money</li><li>Approved calculator and checklists</li></ul></div><div class="card"><h3>Do not use</h3><ul><li>Real Social Security numbers</li><li>Real bank/card/account information</li><li>Unnecessary student medical details</li><li>Real cash</li><li>Unapproved employer contact</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>5 of 25</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>Choose a Job and Complete the Fit Check</h1><div class="body"><div class="dayno">1</div><div class="goal">Read a sample posting, determine whether it fits, locate wage, and compare basic costs.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read the posting</span><span>Find duties and schedule</span><span>Locate wage and costs</span><span>Choose fit / not fit / need information</span></div><div class="stdchips"><span class="pill">Job Search</span><span class="pill">Job Fit</span><span class="pill">Wage and Cost</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Posting Check</div><h1>Find the Six Essentials</h1><div class="body"><table class="mini"><tr><th>Essential</th><th>Question</th></tr><tr><td>Job title</td><td>What position is offered?</td></tr><tr><td>Duties</td><td>What work must be performed?</td></tr><tr><td>Schedule</td><td>Which days and times?</td></tr><tr><td>Location</td><td>Can the worker get there reliably?</td></tr><tr><td>Requirements/supports</td><td>What is required and what needs clarification?</td></tr><tr><td>Wage/hours</td><td>What expected gross amount is possible?</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>7 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Fit Decision</div><h1>FIT, NOT FIT, or NEED MORE INFORMATION</h1><div class="body"><div class="cols2"><div class="card"><h3>FIT</h3><p>Duties, schedule, transportation, and requirements align with the fictional worker&rsquo;s information.</p><h3 style="margin-top:14px">NOT FIT</h3><p>A confirmed factor makes the job unrealistic or unsafe.</p></div><div class="card"><h3>NEED MORE INFORMATION</h3><p>A key support, duty, schedule, or transportation question remains unanswered.</p><h3 style="margin-top:14px">Evidence</h3><p>Use at least one verified factor.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>8 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Money Check</div><h1>Wage Is One Part of Fit</h1><div class="body"><div class="eq-wrap"><div class="eq">hours &times; wage = expected gross</div></div><div class="card"><p><b>Sample:</b> 12 hours &times; $13/hour = <b>$156 expected gross</b>. If transportation costs $18, a simple gross-minus-travel comparison is $138 before deductions and other costs.</p></div><p class="note">The capstone uses only provided amounts. Do not invent deductions or exact take-home pay.</p></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>9 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Complete the Job-Fit Portion</h1><div class="body"><p><span class="badge">Your task</span> Select one teacher-created posting. Locate the six essentials, calculate or select expected gross earnings, consider one basic cost, and choose fit/not fit/need information with evidence.</p><div class="cols2"><div class="card"><h3>Support options</h3><p>Highlighted posting, picture/choice response, side-by-side chart, calculator/wage chart, sentence frame, or teacher recording.</p></div><div class="card"><h3>Evidence record</h3><p>Accuracy, completion, independence 0&ndash;5, prompts/supports, and one observed strength.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>10 of 25</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>Shortened Application and Communication Task</h1><div class="body"><div class="dayno">2</div><div class="goal">Enter required fictional information and respond to one interview question or workplace message.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read each field</span><span>Use the source information</span><span>Review for blanks/errors</span><span>Complete one communication response</span></div><div class="stdchips"><span class="pill">Application</span><span class="pill">Workplace Communication</span><span class="pill">Review</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Application</div><h1>Required, Accurate, and Safe</h1><div class="body"><table class="mini"><tr><th>Field</th><th>Capstone expectation</th></tr><tr><td>Fictional name/contact</td><td>Copy accurately from the provided worker profile</td></tr><tr><td>Job title</td><td>Match the selected posting</td></tr><tr><td>Availability</td><td>Match the fictional schedule/transportation facts</td></tr><tr><td>Education/skills/experience</td><td>Use provided evidence, not invented claims</td></tr><tr><td>Wage</td><td>Enter only when the posting or prompt provides it</td></tr><tr><td>Signature/review</td><td>Follow the teacher-created fictional procedure</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>12 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Review Routine</div><h1>FIELD &rarr; SOURCE &rarr; ENTRY &rarr; CHECK</h1><div class="body"><ol class="q"><li>Read the field label.</li><li>Find the matching information in the fictional worker profile or posting.</li><li>Enter only the requested information.</li><li>Check spelling, numbers, dates, and blank required fields.</li><li>Mark unknown information appropriately rather than guessing.</li></ol></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>13 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Communication Choice</div><h1>Interview or Workplace Message</h1><div class="body"><div class="cols2"><div class="card"><h3>Interview option</h3><p>Answer one previewed question such as &ldquo;What is one work strength?&rdquo; Use a real example from the fictional profile.</p></div><div class="card"><h3>Workplace-message option</h3><p>Respond to one call-in, clarification, customer-service, or problem-report scenario using the practiced message pattern.</p></div></div><div class="exit"><b>Communication method:</b> verbal, written, typed, pointed, communication system, or teacher-recorded response.</div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>14 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Check Understanding</div><h1>Accurate or Invented?</h1><div class="body"><div class="mcq"><div class="qq">The posting says $14/hour. The application asks expected wage.</div><button class="opt" data-ok="1">Use the provided $14/hour when the prompt directs.</button><button class="opt" data-ok="0">Invent $25/hour.</button><button class="opt" data-ok="0">Copy the weekly hours into the wage field.</button><div class="fb">Use the supplied wage information in the correct field.</div></div><div class="mcq"><div class="qq">The fictional profile does not provide a reference phone number.</div><button class="opt" data-ok="1">Mark the information as unavailable/ask according to the task directions.</button><button class="opt" data-ok="0">Use a real student phone number.</button><button class="opt" data-ok="0">Make up a random number.</button><div class="fb">Do not invent or substitute real private information.</div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>15 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete the Application and Response</h1><div class="body"><p><span class="badge">Your task</span> Complete the shortened fictional application, review the required fields, and respond to one interview question or workplace message using the assigned support level.</p><div class="card flat"><h3>Completion check</h3><p>Correct job &bull; copied profile information &bull; accurate availability &bull; no invented details &bull; required fields reviewed &bull; communication answers the prompt.</p></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>16 of 25</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Schedule, Paycheck, and Money Task</h1><div class="body"><div class="dayno">3</div><div class="goal">Complete one individualized functional task involving a schedule/timecard, paycheck, purchase/change, or spending plan.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Preview the selected task</span><span>Use the familiar routine</span><span>Check one record or amount</span><span>Report or correct</span></div><div class="stdchips"><span class="pill">Functional Performance</span><span class="pill">Individualized Task</span><span class="pill">Self-Check</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Choose the Evidence Path</div><h1>One Strong Sample Is Enough</h1><div class="body"><table class="mini"><tr><th>Path</th><th>Possible task</th></tr><tr><td>Schedule/timecard</td><td>Read a shift, compare IN/OUT entries, and report one mismatch</td></tr><tr><td>Paycheck</td><td>Locate hours, rate, gross, deductions, and net; check hours or gross</td></tr><tr><td>Purchase/change</td><td>Read price, select payment, calculate/check change, and read receipt</td></tr><tr><td>Spending plan</td><td>Allocate sample net pay, total categories, and adjust one changed cost</td></tr></table><p class="note">The teacher selects the path that best demonstrates the student&rsquo;s strongest practical skills or needed progress evidence.</p></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>18 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Use the Familiar Routine</div><h1>Do Not Invent a New Test Today</h1><div class="body"><div class="cols2"><div class="card"><h3>Schedule/paycheck</h3><p>READ &rarr; RECORD &rarr; CHECK &rarr; REPORT</p><h3 style="margin-top:14px">Purchase/change</h3><p>PRICE &rarr; HAVE &rarr; PAY &rarr; CHECK</p></div><div class="card"><h3>Spending plan</h3><p>AVAILABLE &rarr; CATEGORIES &rarr; TOTAL &rarr; ADJUST</p><h3 style="margin-top:14px">Problem solving</h3><p>STOP &rarr; NAME &rarr; CHOOSE &rarr; REPORT</p></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>19 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Report or Correct</div><h1>Make the Self-Check Visible</h1><div class="body"><div class="cols2"><div class="card"><h3>If the record agrees</h3><p>State what was checked and why it matches.</p></div><div class="card"><h3>If the record differs</h3><p>Name the exact day, line, price, hour, rate, total, or amount and request a check or make the permitted correction.</p></div></div><div class="exit"><b>Evidence sentence:</b> &ldquo;I checked _____ against _____. They [agree/do not agree] because _____.&rdquo;</div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>20 of 25</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Complete the Final Functional Sample</h1><div class="body"><p><span class="badge">Your task</span> Complete the teacher-selected schedule, paycheck, purchase/change, or spending-plan task. Use approved supports, perform one self-check, and correct or report one issue when included.</p><div class="exit"><b>Teacher evidence:</b> Task accuracy, completion, independence 0&ndash;5, supports/prompts, self-check, and one strongest practical skill.</div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>21 of 25</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">4</div><div class="goal">No new required lesson. Use today to finish the capstone, retry one skill with adjusted support, collect evidence, or close the portfolio.</div><div class="agenda"><b>Choose the useful path</b><span>Finish an incomplete section</span><span>Correct one record</span><span>Retry with changed support</span><span>Select final evidence</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Retry</span><span class="pill">Final IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Pick Your Path</div><h1>What Produces the Best Final Evidence?</h1><div class="body"><div class="cols2"><div class="card"><h3>Finish or correct</h3><ul><li>Complete job-fit evidence.</li><li>Review application fields.</li><li>Finish the communication response.</li><li>Correct the functional record.</li></ul></div><div class="card"><h3>Retry or document</h3><ul><li>Repeat one task with fewer/different prompts.</li><li>Demonstrate one strongest routine.</li><li>Compare current and earlier evidence.</li><li>Select the final performance sample.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>23 of 25</span></div></section>
+<section class="slide"><div class="kicker">Final Reflection</div><h1>Name the Skill, Evidence, and Next Step</h1><div class="body"><div class="card"><h3>Reflection frame</h3><p>&ldquo;One practical skill I can use is _____. My evidence is _____. The support that helps me is _____. My next step is _____.&rdquo;</p></div><div class="cols2"><div class="card"><h3>Supported response</h3><p>Choose/point to a skill, evidence sample, useful support, and next step.</p></div><div class="card"><h3>Independent response</h3><p>Explain growth, remaining support needs, and a realistic next environment for practice.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>24 of 25</span></div></section>
+<section class="slide"><div class="kicker">Course Wrap-Up</div><h1>The Routines You Can Carry Forward</h1><div class="body"><table class="mini"><tr><th>Situation</th><th>Routine</th></tr><tr><td>Workplace problem</td><td>STOP &rarr; NAME &rarr; CHOOSE &rarr; REPORT</td></tr><tr><td>Schedule/timecard</td><td>READ &rarr; RECORD &rarr; CHECK</td></tr><tr><td>Customer service</td><td>GREET &rarr; LISTEN &rarr; RESPOND &rarr; REFER</td></tr><tr><td>Cash purchase</td><td>PRICE &rarr; HAVE &rarr; PAY &rarr; CHECK</td></tr><tr><td>Spending plan</td><td>AVAILABLE &rarr; CATEGORIES &rarr; TOTAL &rarr; ADJUST</td></tr><tr><td>Job decision</td><td>READ &rarr; CALCULATE &rarr; CHECK FIT &rarr; CHOOSE</td></tr></table><div class="exit"><b>Final idea:</b> Independence includes knowing when to use a tool, ask a question, check a record, and get the right help.</div></div><div class="footer"><span>Life Skills SC • Week 37 • Integrated Employment and Money Simulation — Final Employment Readiness Capstone</span><span>25 of 25</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 20: Workplace Communication - Phone Calls, Voicemail, and Simple Employer Messages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 20</div><h1>Phone Calls, Voicemail &amp; Employer Messages</h1><div class="body"><div class="sub">Workplace Communication &mdash; Phone Calls, Voicemail, and Simple Employer Messages</div>
+<div class="meta">This week: answering and returning calls like a pro, leaving voicemails that get called back, and writing the short message that gets read &mdash; 20 points</div><div class="theme">Big idea: Your r&eacute;sum&eacute; opened the door &mdash; the phone call is the first thing they actually hear</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Answering and returning a call &mdash; the professional pickup</td><td>5</td></tr><tr><td>Day 2</td><td>Leaving a voicemail that gets called back</td><td>5</td></tr><tr><td>Day 3</td><td>Writing a short employer message &mdash; text or email</td><td>5</td></tr><tr><td>Day 4</td><td>Communication check &mdash; all three modes, graded</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>The R&eacute;sum&eacute; Got You the Call &mdash; Now What?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you finished&hellip;</h3>
+<p>A r&eacute;sum&eacute; with your name at the top, your best material in résumé language, swept clean through four passes. It went in a folder or out a door.</p></div>
+<div class="card"><h3>This week begins when&hellip;</h3>
+<p>A number you don&rsquo;t recognize calls. Or you need to reach them first. Or the whole thing happens over text. The voice that answers and the message that gets written are the next audition &mdash; and they happen before any interview. This week you learn all three modes.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>Answering &amp; Returning a Call</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">An unknown number calls. You pick up wrong &mdash; or you miss it. Either way the next thirty seconds set the tone for every conversation after. Today: the professional pickup and the return-call script.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: pickup and return</span><span>You try it</span><span>Do: live pickup rounds</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Career Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>When a number you don&rsquo;t recognize calls, what do you usually do &mdash; and what&rsquo;s the downside of that habit for a job search?</li><li>What does a professional phone pickup sound like? Does anyone have a real example from a job or adult in their life?</li><li>Week 14&rsquo;s three tone dials &mdash; name them. Which one changes most between a friend call and a work call?</li></ol></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The Pickup and the Return</h1><div class="body"><table class="mini">
+<tr><th>Situation</th><th>Script</th><th>Then&hellip;</th></tr>
+<tr><td><b>You answer</b></td><td>&ldquo;Hello, this is [first name].&rdquo;</td><td>Stop. Let them talk. Don&rsquo;t fill silence with &ldquo;um&rdquo; or &ldquo;who is this&rdquo;</td></tr>
+<tr><td><b>You missed it</b></td><td>Listen to the voicemail fully BEFORE calling back &mdash; every detail once, not three frantic half-listens</td><td>Call back within the hour if possible; same business day, always</td></tr>
+<tr><td><b>Return call script</b></td><td>&ldquo;Hi, this is [name] returning a call from [manager/employer name] about [position]. I&rsquo;m available to talk now, or I can call back at a better time &mdash; my number is [repeat slowly].&rdquo;</td><td>If you reach voicemail: leave the same info</td></tr>
+<tr><td><b>Take a message</b></td><td>&ldquo;They&rsquo;re not available right now. May I take a message?&rdquo; &rarr; write: name + number + reason</td><td>Deliver it immediately, don&rsquo;t trust memory</td></tr></table>
+<p class="note">Two rules that separate pros from panickers: <b>listen fully before calling back</b> (one careful listen beats three rushed ones), and <b>repeat your number slowly</b> &mdash; the person on the other end is writing it down. The Week 14 voice applies to every line: volume up, speed down, face &amp; body steady even when it&rsquo;s just your voice they can hear.</p></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Pickup and Return</h1><div class="body"><div class="mcq"><div class="qq">A number you don&rsquo;t recognize calls while you&rsquo;re at lunch. Best move?</div><button class="opt" data-ok="1">Answer with &ldquo;Hello, this is [name]&rdquo; &mdash; during job search, every unknown number is a potential offer</button><button class="opt" data-ok="0">Let it ring; if it&rsquo;s important they&rsquo;ll call back</button><button class="opt" data-ok="0">Answer mid-bite with &ldquo;Yeah?&rdquo;</button><div class="fb">Job search mode means unknown numbers get the professional pickup. Screening all calls loses opportunities on the first ring &mdash; and &ldquo;yeah?&rdquo; sets a tone you can&rsquo;t unset.</div></div><div class="mcq"><div class="qq">You missed a call and the voicemail says &ldquo;Hi, this is Jordan at Riverside Diner about your application &mdash; please call 555-0143.&rdquo; You listen once and catch &ldquo;Jordan&rdquo; and &ldquo;143.&rdquo; You&hellip;</div><button class="opt" data-ok="1">Listen again fully and write it all down before calling: name, employer, full number</button><button class="opt" data-ok="0">Call 143 and wing the rest when Jordan answers</button><button class="opt" data-ok="0">Wait until tomorrow to be sure you remember</button><div class="fb">Missing details mid-call (&ldquo;wait, who is this?&rdquo;) is a rough start. Thirty extra seconds of listen-and-write buys a confident first sentence. Same-day return is always the goal.</div></div><div class="mcq"><div class="qq">In your return-call script, you give your number. Which delivery is better?</div><button class="opt" data-ok="1">Slowly &mdash; five-five-five&hellip; pause&hellip; oh-one-four-three &mdash; the listener is writing</button><button class="opt" data-ok="0">Fast, all at once: the full number in two seconds</button><button class="opt" data-ok="0">Skip it &mdash; they have caller ID</button><div class="fb">Caller ID misses the voicemail scenario and the &ldquo;my phone didn&rsquo;t capture that&rdquo; reality. Slow numbers = callbacks. Fast ones = deleted voicemails.</div></div><div class="rev"><div class="rq">Why should your return-call script mention the POSITION by name, not just &ldquo;I&rsquo;m calling about my application&rdquo;?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Employers often hire for multiple positions at once &mdash; &ldquo;the application&rdquo; leaves them guessing which pile you&rsquo;re in. &ldquo;The part-time prep cook position&rdquo; puts them in the right folder in one second. It also shows you paid attention when you applied &mdash; which is already about the job.</div></div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Live Pickup Rounds</h1><div class="body"><p><span class="badge">Your task</span> Partner phone rounds: one &ldquo;caller&rdquo; (reads a card &mdash; employer, position, asks for a callback time), one &ldquo;worker&rdquo; runs the pickup script or return-call script depending on the card drawn. Three rounds each: one live answer, one missed-call listen-and-return, one take-a-message. Swap roles.</p>
+<div class="exit"><b>Before you leave:</b> Run your return-call script cold &mdash; include the position name and the slow number.</div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Leaving a Voicemail That Gets Called Back</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">You call the employer. It rings to voicemail. This is not a failure &mdash; it&rsquo;s a test. A good voicemail gets returned; a bad one gets deleted. Today: the five-part leave that gets the callback.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the five-part leave</span><span>You try it</span><span>Do: voicemail studio</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Career Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Honestly: do you check your voicemail? Why or why not? What does that tell you about how employers feel about unclear ones?</li><li>What&rsquo;s the worst voicemail you&rsquo;ve ever heard &mdash; or the worst thing someone could do on one?</li><li>Day 1&rsquo;s return-call script had five pieces. How many can the class recall?</li></ol></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>The Five-Part Leave</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Say exactly</th><th>Example</th></tr>
+<tr><td><b>1. Who</b></td><td>Your full name, first time slowly</td><td>&ldquo;Hi, this is Alex Rivera &mdash;&rdquo;</td></tr>
+<tr><td><b>2. Why</b></td><td>Position name, where you applied</td><td>&ldquo;&mdash; I&rsquo;m calling about the kennel assistant position at Paws &amp; Claws&mdash;&rdquo;</td></tr>
+<tr><td><b>3. When</b></td><td>Best times to reach you, specific</td><td>&ldquo;&mdash; I&rsquo;m available Monday through Friday after 3pm&mdash;&rdquo;</td></tr>
+<tr><td><b>4. Number</b></td><td>Twice: once medium, once slow</td><td>&ldquo;&mdash; my number is 555-0143, again that&rsquo;s 5&hellip;5&hellip;5&hellip; 0&hellip;1&hellip;4&hellip;3&mdash;&rdquo;</td></tr>
+<tr><td><b>5. Thanks</b></td><td>Brief, genuine close</td><td>&ldquo;&mdash; thank you for your time, I look forward to hearing from you.&rdquo;</td></tr></table>
+<p class="note">Total length: under 30 seconds. Over 30 seconds and they stop listening; under 10 and they can&rsquo;t write your number. The slow-number-twice habit is non-negotiable: imagine the manager scribbling with one hand while pouring coffee with the other. Give them two chances, not one.</p></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Build the Leave</h1><div class="body"><div class="mcq"><div class="qq">Which five-part leave is most likely to get called back?</div><button class="opt" data-ok="1">&ldquo;Hi, this is Jordan Lee calling about the cashier position at Riverside Diner. I&rsquo;m free weekdays after 3 &mdash; my number is 555-0192, again 5-5-5-0-1-9-2. Thanks, I hope to hear from you.&rdquo;</button><button class="opt" data-ok="0">&ldquo;Hey&hellip; um&hellip; I applied for a job? Can you call me back? Okay bye.&rdquo;</button><button class="opt" data-ok="0">&ldquo;This is Jordan, I just wanted to follow up on my application, I&rsquo;m very interested in the position and I think I would be a great fit and I&rsquo;m available pretty much anytime you want to call me, here&rsquo;s my number &mdash; 5550192 okay thanks bye.&rdquo;</button><div class="fb">Option A: complete, 22 seconds, number twice. Option B: zero information. Option C: over 45 seconds, number once at speed &mdash; both B and C end in the deleted folder.</div></div><div class="mcq"><div class="qq">You&rsquo;re only free Saturday mornings. You say &ldquo;I&rsquo;m available anytime&rdquo; in the voicemail. What&rsquo;s the problem?</div><button class="opt" data-ok="1">The employer calls Tuesday at 2pm &mdash; you&rsquo;re not there &mdash; and a second missed call is often a dropped applicant</button><button class="opt" data-ok="0">No problem; &ldquo;anytime&rdquo; is a confidence signal</button><button class="opt" data-ok="0">The employer will figure it out from your schedule</button><div class="fb">Week 4&rsquo;s availability lesson, wearing a phone headset. Honest and specific availability in a voicemail protects both sides from the frustrating callback dance. &ldquo;Saturday mornings, or I can call at your convenience&rdquo; is more useful than &ldquo;anytime.&rdquo;</div></div><div class="mcq"><div class="qq">You leave the perfect voicemail. The employer doesn&rsquo;t call back in 48 hours. You&hellip;</div><button class="opt" data-ok="1">Call once more with the same five-part leave &mdash; once is follow-up, twice in a week is persistence, three times in two days is a problem</button><button class="opt" data-ok="0">Call every day until they answer</button><button class="opt" data-ok="0">Assume rejection and move on forever</button><div class="fb">One good follow-up voicemail is professional. The rule is roughly: one message, wait 2-3 business days, one follow-up. After that, keep applying elsewhere. Persistence and harassment have a clear line.</div></div><div class="rev"><div class="rq">Why do you give your number TWICE &mdash; once at medium pace, once slowly &mdash; rather than just once, carefully?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The first delivery helps them hear the number; the second gives them time to write it. A manager catching a voicemail mid-task needs that second pass or they have to replay the whole message &mdash; and busy managers often don&rsquo;t. Two paces, one write-able number: that&rsquo;s the full service.</div></div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Voicemail Studio</h1><div class="body"><p><span class="badge">Your task</span> Each person records their own five-part leave (phone voice memos, a recording app, or live with a partner as the &ldquo;machine&rdquo;). Use a real job posting from your folder or the class set. Listen back and self-score: name? position? specific times? number twice, slow? under 30 seconds? Partner scores a second round.</p>
+<div class="exit"><b>Before you leave:</b> Play me your best voicemail &mdash; under 30 seconds, number twice.</div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Writing a Short Employer Message</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Sometimes the call becomes a text; sometimes the job posting says &ldquo;email only.&rdquo; A written message has one extra rule: it lives forever and can be forwarded. Today: the short message that represents you in writing.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the message formula</span><span>You try it</span><span>Do: write two messages</span></div>
+<div class="stdchips"><span class="pill">Written Communication</span><span class="pill">Career Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>How is a text to a friend different from a text to an employer &mdash; in words, in tone, in what you can&rsquo;t unsend?</li><li>What does &ldquo;it lives forever and can be forwarded&rdquo; mean for what you put in a message?</li><li>The Week 19 résumé had a style rule: doing-words first, no life story. Why would similar rules help a short employer message?</li></ol></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Message Formula</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>What it contains</th><th>Example line</th></tr>
+<tr><td><b>Greeting</b></td><td>Name if you have it; title if not; never &ldquo;hey&rdquo;</td><td>&ldquo;Hello Ms. Chen,&rdquo; &bull; &ldquo;Hello Riverside Diner Hiring Team,&rdquo;</td></tr>
+<tr><td><b>Who + why</b></td><td>Your name + the position &mdash; one sentence</td><td>&ldquo;My name is Alex Rivera and I&rsquo;m following up on my application for the cashier position.&rdquo;</td></tr>
+<tr><td><b>One useful fact</b></td><td>Availability, a quick interest line, or a question &mdash; nothing more</td><td>&ldquo;I&rsquo;m available for an interview weekdays after 3pm.&rdquo;</td></tr>
+<tr><td><b>Close</b></td><td>Thank + contact info</td><td>&ldquo;Thank you for your time &mdash; you can reach me at 555-0143. I look forward to hearing from you.&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The three message rules</h3>
+<p><b>Short:</b> four to six sentences, never a wall of text. <b>Clean:</b> no abbreviations (&ldquo;idk&rdquo;, &ldquo;ngl&rdquo;, &ldquo;omg&rdquo;), no autocorrect disasters &mdash; read it aloud before sending. <b>Week 19&rsquo;s standard:</b> nothing red-zone, nothing you wouldn&rsquo;t say to their face. Emoji: none, ever, in a first employer message.</p></div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Message Calls</h1><div class="body"><div class="mcq"><div class="qq">Which subject line works best for a follow-up email?</div><button class="opt" data-ok="1">&ldquo;Follow-Up: Cashier Application &mdash; Alex Rivera&rdquo;</button><button class="opt" data-ok="0">&ldquo;Hey :)&rdquo;</button><button class="opt" data-ok="0">&ldquo;APPLICATION FOR JOB PLEASE READ&rdquo;</button><div class="fb">The correct one is specific (they know who and what before opening it), professional (no emoji, no all-caps alarm bell). An empty-looking subject gets ignored; a shouting one gets eye-rolls.</div></div><div class="mcq"><div class="qq">A text follow-up comes back with &ldquo;are you available Tuesday at 10?&rdquo; You text back&hellip;</div><button class="opt" data-ok="1">&ldquo;Yes, Tuesday at 10am works well for me &mdash; thank you! I&rsquo;ll see you then. &mdash; Alex&rdquo;</button><button class="opt" data-ok="0">&ldquo;ya 10 is fine 👍&rdquo;</button><button class="opt" data-ok="0">&ldquo;I&rsquo;m not sure yet, let me check my schedule and I&rsquo;ll get back to you&rdquo;</button><div class="fb">The first option confirms, thanks, and keeps the professional voice from Day 1. The thumbs-up is for friends. Stalling when you&rsquo;re available is a pattern that signals you&rsquo;ll be hard to schedule.</div></div><div class="mcq"><div class="qq">You draft the message and autocorrect changed &ldquo;position&rdquo; to &ldquo;poison.&rdquo; You hit send before reading. This is a problem because&hellip;</div><button class="opt" data-ok="1">Written messages live forever and can be forwarded &mdash; that sentence is now on file at Riverside Diner</button><button class="opt" data-ok="0">Autocorrect typos are universally understood and forgiven</button><button class="opt" data-ok="0">Only if the employer is also bad at texting</button><div class="fb">Read aloud before sending. No exceptions. The autocorrect rule is permanent: one careful read costs ten seconds; one wrong-word message costs an interview.</div></div><div class="rev"><div class="rq">You want to stand out in your follow-up message. What&rsquo;s something specific, short, and professional that would do that &mdash; without being over-the-top?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Name something concrete from the posting: &ldquo;I noticed the role involves morning prep &mdash; I&rsquo;m available as early as 6am.&rdquo; Or tie a skill to the job: &ldquo;I have experience counting money and making change, which I know matters for a cashier role.&rdquo; Specific + brief + tied to the job beats generic enthusiasm every time.</div></div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>Write Two Messages</h1><div class="body"><p><span class="badge">Your task</span> Using a job posting from your folder: (1) write a follow-up email using the formula &mdash; greeting, who+why, one useful fact, close; (2) write a short text reply to a hypothetical &ldquo;Can you come in Thursday at 2pm?&rdquo; message. Read both aloud before turning in. Partner reads for abbreviations, emoji, red-zone content, and length.</p>
+<div class="exit"><b>Before you leave:</b> Read your email aloud &mdash; clean, four to six sentences.</div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Communication Check</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">All three modes in one graded session: a live pickup, a voicemail leave, and a written message &mdash; real employer cards, real pressure, real grade.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: all three modes</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Applied Communication</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Five-part voicemail leave &mdash; class relay, one part each. Fill in the whole thing.</li><li>Three message rules &mdash; who remembers them all?</li><li>Predict: which mode will be hardest under pressure today? Why?</li></ol></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>All Three Modes</h1><div class="body"><p><span class="badge">Your task</span> Three stations, rotate: <b>Station 1</b> &mdash; live pickup: I call, you answer professional and handle the message (callback time request + take the message correctly); <b>Station 2</b> &mdash; voicemail leave: you call in to the &ldquo;machine,&rdquo; leave the five-part message for a real posting, scored on all five parts + number-twice; <b>Station 3</b> &mdash; written: respond to a hiring text (&ldquo;interested in interviewing you &mdash; are you free Thursday at noon?&rdquo;) and draft a short follow-up email for a second posting.</p>
+<div class="exit"><b>Check out:</b> Three modes down. Tell me which one you&rsquo;d trust yourself on today if it were real &mdash; and which one you&rsquo;re still building.</div></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 20 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You answer unknown numbers professionally during job search, return calls same day with the position named and number slow, leave voicemails in five parts under 30 seconds with the number twice, and write clean four-to-six-sentence employer messages &mdash; read aloud before sending, no abbreviations, nothing red-zone. Three modes, one professional voice.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Does my phone voicemail greeting sound professional &mdash; have I listened to it lately?</li><li>What&rsquo;s my go-to callback window &mdash; do I have it memorized for the voicemail leave?</li><li>Will I read my messages aloud before sending, every time?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Interview Basics and Common Questions: what actually happens in an interview, how to answer &ldquo;tell me about yourself,&rdquo; and how to turn your skills bank into spoken proof. The calls this week get you in the room; next week is what you do when you&rsquo;re there.</p></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Pickup &amp; Return Card</h1><div class="body"><table class="mini">
+<tr><th>Mode</th><th>Script</th></tr>
+<tr><td>Answer</td><td>&ldquo;Hello, this is [name].&rdquo; &mdash; then stop and listen</td></tr>
+<tr><td>Missed call</td><td>Listen fully, write everything &rarr; call back same day</td></tr>
+<tr><td>Return call</td><td>&ldquo;Hi, this is [name] returning a call about the [position] at [employer]. Available now, or I can call back &mdash; number is [slow].&rdquo;</td></tr>
+<tr><td>Take a message</td><td>&ldquo;They&rsquo;re not available &mdash; may I take a message?&rdquo; Write: name + number + reason. Deliver immediately.</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Voicemail &amp; Message Card</h1><div class="body"><table class="mini">
+<tr><th>Five-part voicemail leave</th><th>Short message rules</th></tr>
+<tr><td>1. Who (full name, slow)<br>2. Why (position + employer)<br>3. When (specific availability)<br>4. Number (twice: medium + slow)<br>5. Thanks &mdash; under 30 seconds total</td><td>Greeting + who/why + one useful fact + close<br>4&ndash;6 sentences &mdash; no wall of text<br>No abbreviations, no emoji<br>Read aloud before sending &mdash; no exceptions<br>Nothing you wouldn&rsquo;t say to their face</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 20 • Workplace Communication — Phone Calls, Voicemail, and Simple Employer Messages</span><span>24 of 24</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>
