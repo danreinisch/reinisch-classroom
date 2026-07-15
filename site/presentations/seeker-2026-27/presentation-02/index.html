@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 2: Character, Coercion &amp; Author’s Craft - Coercion, Control, and Moral Choice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#60a5fa; --accent-deep:#1e3a8a; --glow:rgba(96,165,250,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 4 SC • Week 2</div><h1>Seeker</h1><div class="body"><div class="sub">by Douglas E. Richards &mdash; science-fiction thriller</div>
+<div class="meta">Language Arts focus: <b>Character, Coercion &amp; Author&rsquo;s Craft</b> (Develop)<br>This week: Chapters 4&ndash;6 + Written Response</div><div class="theme">Theme: Coercion, Control, and Moral Choice</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Reading With Care</div><h1>Before This Week&rsquo;s Chapters</h1><div class="body"><div class="card"><h3>Content note</h3>
+<p>These chapters deal with the aftermath of the attack and with a captive being pressured by his captor. We analyze the <b>author&rsquo;s craft</b> &mdash; how threat, manipulation, and resistance are written &mdash; with academic framing throughout. Alternate response formats are always available.</p></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 4 &mdash; the investigation: what the evidence tells Homeland Security</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 5 &mdash; Kagan wakes: alive, healed, and captive</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 6 &mdash; Sadiq&rsquo;s pressure, and Kagan&rsquo;s strategic response</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 4&ndash;6</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skills</h3><p><b>Developing character analysis through conflict.</b> This week we analyze how <b>coercion</b>, deception, and pressure reveal competing values &mdash; Sadiq&rsquo;s methods of control against Kagan&rsquo;s calculated resistance.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Separate explicit facts from implied conclusions in the investigation.</li><li>Analyze the language Sadiq uses to control and deceive.</li><li>Distinguish strategic compliance from surrender &mdash; with evidence.</li></ul></div></div>
+<p class="note">Standards this week: RL.1.A — Evidence &amp; Inference • RL.2.C / RL.2.D — Character &amp; Craft • SL.1.B — Discussion • W.2.A / W.3.A.a (9-10 / 11-12)</p></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do Sadiq&rsquo;s methods of coercion reveal both his character and Kagan&rsquo;s values?</div></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Investigation</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">New chapter, new point of view: Homeland Security picks through the evidence. Today we read like investigators &mdash; explicit facts first, implications second.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week&rsquo;s cliffhanger</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 4 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.1.A — Evidence &amp; Inference</span><span class="pill">SL.1.B — Discussion</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week&rsquo;s Cliffhanger</h1><div class="body"><ol class="q"><li>Kagan took a bullet shielding Amber and whispered a survival plan into her ear. Predict: did it work?</li><li>The probe is still three years out. Why do you think Richards keeps it offstage this week?</li><li>New POV incoming: what can an investigator&rsquo;s chapter show us that Kagan&rsquo;s POV cannot?</li></ol></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">investigation</div><div class="pos">noun • in-ves-tih-GAY-shun</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> parallel &bull; characterization &bull; sacrifice</div><div class="means">A careful official search for facts and their meaning.</div>
+<div class="morph"><div><b>in-</b><span>prefix: in, into</span></div><div class="plus">+</div><div><b>vestig</b><span>Latin <i>vestigium</i> — a footprint, a track</span></div><div class="plus">+</div><div><b>-ation</b><span>suffix: the act of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">inquiry</span><span class="pill">probe</span><span class="pill">examination</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">neglect</span><span class="pill anti">cover-up</span><span class="pill anti">guesswork</span></div>
+<div class="family"><b>Word family:</b> investigate (v) &bull; investigator (n) &bull; vestige (n) &mdash; a leftover trace</div></div>
+<div><div class="quote">It wasn&rsquo;t a typical suicide mission&hellip; Everything they did here was designed to send a clear message.<span class="who">&mdash; Agent Morris, Chapter 4</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p><i>Investigation</i> literally means following footprints. Today, track which conclusions the agents state as fact &mdash; and which are still inference.</p></div></div>
+</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Explicit vs. Implicit: How Readers Know Things</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit &mdash; the text says it</h3>
+<p>Information stated directly. <i>&ldquo;Maria slammed the door.&rdquo;</i> We know the door slammed &mdash; it&rsquo;s on the page.</p></div>
+<div class="card"><h3>Implicit &mdash; the text suggests it</h3>
+<p>An <b>inference</b> = detail from the text + what you already know. Slammed door + your life experience &rarr; Maria is probably angry. The text never said &ldquo;angry.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday inference</h3>
+<p>You come home: wet umbrella by the door, muddy shoes on the mat. Nobody told you it rained &mdash; you <b>inferred</b> it. You do this skill all day already.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The one rule</h3>
+<p>Every inference must trace back to a detail you can point to. Evidence is your receipt &mdash; no receipt, no claim.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Homeland Security runs on the same skill you do: explicit evidence (counts, footage, one survivor) versus inference (a &ldquo;change in tactics,&rdquo; the real target). Grade their inferences as you read.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Reading Like an Investigator</h1><div class="body"><table class="mini">
+<tr><th>Explicit fact from the scene</th><th>Inference the agents draw</th></tr>
+<tr><td>148 victims; the attackers all escaped</td><td>Not a typical mission &mdash; &ldquo;a change in tactics&rdquo;</td></tr>
+<tr><td>One survivor: a little girl found hiding in a tiny kitchen cabinet</td><td>She hid during the attack &mdash; but blood on her clothes says she was in the open at some point</td></tr>
+<tr><td>The attack was filmed and posted deliberately</td><td>The video IS the weapon &mdash; designed for recruitment and fear</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The detail that matters most to us</h3>
+<p>The survivor is <b>Amber</b>. Hidden in a tiny cabinet &mdash; exactly where Kagan told her to hide. His sacrifice <i>worked</i>. The agents don&rsquo;t know that story. We do. That gap between reader and character knowledge should feel familiar &mdash; name it.</p></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Fact or Inference?</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;The attackers escaped rather than fighting to the end.&rdquo; vs. &ldquo;This signals a change in tactics.&rdquo; Which is which?</div><button class="opt" data-ok="1">First is explicit fact; second is the agents&rsquo; inference from it</button><button class="opt" data-ok="0">Both are explicit facts</button><button class="opt" data-ok="0">Both are inferences</button><div class="fb">Investigators must know which of their sentences are receipts and which are readings. So must writers &mdash; and students.</div></div><div class="mcq"><div class="qq">Amber survived in a tiny cabinet &mdash; where Kagan told her to hide. The agents don&rsquo;t know that; we do. This is&hellip;</div><button class="opt" data-ok="1">Dramatic irony &mdash; and proof Kagan&rsquo;s sacrifice succeeded</button><button class="opt" data-ok="0">A coincidence with no meaning</button><button class="opt" data-ok="0">A mistake in the story</button><div class="fb">Week 1&rsquo;s craft term pays off: our extra knowledge charges the whole chapter with meaning the characters can&rsquo;t feel.</div></div><div class="rev"><div class="rq">Carter predicts the attack video will attract recruits &ldquo;no matter who the victims.&rdquo; Connect this to Chapter 1&rsquo;s analysis of why young men joined.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Chapter 1 said recruits need to believe they&rsquo;re joining a winning team seeking glory and purpose. The video manufactures exactly that image &mdash; the attack was staged for the camera, not the cause.</div></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 4</h1><div class="body"><p><span class="badge">Read</span> Three a.m. at Homeland Security: Secretary Carter, Agent Morris, and the evidence of a changed enemy.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>explicit facts</b>: the count, the escape, the single survivor and where she was found.</li><li>The <b>inferences</b>: what &ldquo;change in tactics&rdquo; means, and why the attack was filmed.</li><li>Who the investigators identify as the mastermind &mdash; and what his background makes him.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Two-column chart: three explicit facts | the inference each supports. Star the inference you find shakiest.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Awake and Captive</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Kagan wakes healed, comfortable &mdash; and restrained. Today we watch a scientist reason through impossibility, and a captor stage-manage everything.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 4</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 5 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.1.A — Evidence &amp; Inference</span><span class="pill">RL.2.C / RL.2.D — Character &amp; Craft</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The Investigation</h1><div class="body"><ol class="q"><li>Share your shakiest-inference star. What extra evidence would firm it up?</li><li>The agents never mention Kagan. Based on Chapter 4, what do they almost certainly believe about him?</li><li>Predict: why would the attackers want everyone &mdash; especially the government &mdash; to believe that?</li></ol></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">deduction</div><div class="pos">noun • dih-DUK-shun</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> parallel &bull; characterization &bull; sacrifice</div><div class="means">A conclusion reached by reasoning from evidence, step by step.</div>
+<div class="morph"><div><b>de-</b><span>prefix: down, from</span></div><div class="plus">+</div><div><b>duc</b><span>Latin <i>ducere</i> — to lead</span></div><div class="plus">+</div><div><b>-tion</b><span>suffix: the act of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">conclusion</span><span class="pill">reasoning</span><span class="pill">inference</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">guesswork</span><span class="pill anti">assumption</span><span class="pill anti">hunch</span></div>
+<div class="family"><b>Word family:</b> deduce (v) &bull; deductive (adj) &bull; conduct, produce &mdash; same <i>lead</i> root</div></div>
+<div><div class="quote">&hellip;he needed to explore other possibilities before he&rsquo;d believe this as the answer.<span class="who">&mdash; Chapter 5</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Watch Kagan&rsquo;s waking mind work: he generates explanations &mdash; luck? a VR stunt? &mdash; and eliminates them one by one. That&rsquo;s deduction under pressure. What does he settle on, and why?</p></div></div>
+</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Language Power: Can Words Shape Thought?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Denotation vs. connotation</h3>
+<p><b>Denotation</b> = dictionary meaning. <b>Connotation</b> = the feeling a word carries. &ldquo;Cheap&rdquo; and &ldquo;affordable&rdquo; denote the same thing &mdash; and feel completely different.</p></div>
+<div class="card"><h3>Euphemism &amp; loaded language</h3>
+<p>A <b>euphemism</b> softens something harsh (&ldquo;let go&rdquo; for fired). <b>Loaded language</b> smuggles in judgment (&ldquo;regime&rdquo; vs. &ldquo;government&rdquo;). Both steer you before you notice.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The big question</h3>
+<p>If you have no word for an idea, is the idea harder to think? Powerful groups act like the answer is yes &mdash; that&rsquo;s why controlling words is a way of controlling people.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;Pre-owned vehicle.&rdquo; &ldquo;Budget-friendly.&rdquo; &ldquo;Content.&rdquo; Marketing renames things every day to change how you feel about them. Spot the rename, and you spot the strategy.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Sadiq controls people with stories as much as restraints: to the kidnapped doctor, he&rsquo;s an &ldquo;undercover agent&rdquo; and Kagan is &ldquo;the enemy.&rdquo; Track every place language does the controlling today.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Stage-Managed Captivity</h1><div class="body"><table class="mini">
+<tr><th>Sadiq&rsquo;s move</th><th>What it controls</th></tr>
+<tr><td>Has Kagan healed by a kidnapped doctor &mdash; who is told a cover story</td><td>The doctor&rsquo;s cooperation: a false frame (&ldquo;we&rsquo;re the agents, he&rsquo;s the enemy&rdquo;) replaces force</td></tr>
+<tr><td>Keeps Kagan drugged until the exact moment he chooses</td><td>Information: Kagan wakes only when Sadiq is ready to be heard</td></tr>
+<tr><td>Comfort + care + restraints, all at once</td><td>Emotion: gratitude and fear tangled together &mdash; harder to resist than fear alone</td></tr></table>
+<p class="note">Kagan&rsquo;s deduction about the doctor&rsquo;s future &mdash; what Sadiq&rsquo;s &ldquo;kindness&rdquo; really costs &mdash; is the chapter&rsquo;s coldest inference. Find it, and notice Kagan keeps it to himself. Why?</p></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Methods of Control</h1><div class="body"><div class="mcq"><div class="qq">Sadiq tells the kidnapped doctor that HE is the undercover agent and Kagan is &ldquo;an enemy of America.&rdquo; This works because&hellip;</div><button class="opt" data-ok="1">A believable frame recruits cooperation that force would have to fight for</button><button class="opt" data-ok="0">The doctor is foolish</button><button class="opt" data-ok="0">It happens to be true</button><div class="fb">Control through story &mdash; language_power in action. The doctor treats his patient carefully inside a fiction built for him.</div></div><div class="mcq"><div class="qq">Kagan reasons the doctor has seen faces and locations &mdash; and draws a grim conclusion he never says aloud. Keeping silent shows&hellip;</div><button class="opt" data-ok="1">Strategic thinking: revealing what he knows would only spend his few advantages</button><button class="opt" data-ok="0">He doesn&rsquo;t care about the doctor</button><button class="opt" data-ok="0">He is too frightened to speak</button><div class="fb">Under coercion, information is currency. Kagan is already playing a longer game &mdash; watch it bloom in Chapter 6.</div></div><div class="rev"><div class="rq">Sadiq wants Kagan alive so badly that the man who shot him &ldquo;paid for it with his life.&rdquo; What does that tell us about the mission &mdash; and about Sadiq?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Kagan isn&rsquo;t a hostage; he&rsquo;s the objective. The entire attack orbited one scientist. And Sadiq&rsquo;s discipline is absolute &mdash; toward enemies and his own men alike.</div></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 5</h1><div class="body"><p><span class="badge">Read</span> Kagan surfaces from anesthesia into a room he can&rsquo;t see, hearing voices he knows too well.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>Kagan&rsquo;s <b>deductions</b> while paralyzed: the explanations he tries and eliminates.</li><li>The <b>doctor</b>: how he came to be there, what he believes, and what Kagan infers about his future.</li><li>Every method of <b>control</b> in the room &mdash; chemical, physical, informational.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> List three control methods from the chapter and label each: force, language, or staging.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Pressure Meets Strategy</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Today Sadiq lays out exactly why Kagan matters &mdash; and Kagan chooses his counter-game: outward calm, inward war. Compliance or surrender? The difference is everything.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 5</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 6 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.2.C / RL.2.D — Character &amp; Craft</span><span class="pill">SL.1.B — Discussion</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Awake and Captive</h1><div class="body"><ol class="q"><li>Compare control-method lists. Which method did the class rate most powerful &mdash; force, language, or staging?</li><li>Kagan hopes the &ldquo;one other survivor&rdquo; Sadiq mentioned might be Cynthia &mdash; then forces the thought away. Why must he?</li><li>Predict Sadiq&rsquo;s ask: what could a Weiser scientist have that&rsquo;s worth all this?</li></ol></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">coercion</div><div class="pos">noun • koh-ER-zhun</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> parallel &bull; characterization &bull; sacrifice</div><div class="means">Forcing someone to act through threats or pressure &mdash; not persuasion, not choice.</div>
+<div class="morph"><div><b>co-</b><span>prefix: together</span></div><div class="plus">+</div><div><b>erc</b><span>Latin <i>arcere</i> — to restrain, to enclose</span></div><div class="plus">+</div><div><b>-ion</b><span>suffix: the act of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">intimidation</span><span class="pill">pressure</span><span class="pill">duress</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">consent</span><span class="pill anti">persuasion</span><span class="pill anti">free choice</span></div>
+<div class="family"><b>Word family:</b> coerce (v) &bull; coercive (adj)</div></div>
+<div><div class="quote">Kagan raged within, but continued to maintain an outward calm.<span class="who">&mdash; Chapter 6</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Coercion removes choice &mdash; but not entirely. Kagan can&rsquo;t choose his situation; he can still choose his <i>strategy</i>. Track every choice he still owns in today&rsquo;s chapter.</p></div></div>
+</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Cause &amp; Effect: Nonfiction&rsquo;s Engine</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The pattern</h3>
+<p>Nonfiction writers constantly argue <b>because X, therefore Y</b>. Your job: separate what happened (effect) from what produced it (cause) &mdash; and notice when one effect becomes the next cause.</p></div>
+<div class="card"><h3>Signal words</h3>
+<p>because &bull; as a result &bull; therefore &bull; led to &bull; consequently &bull; so that &bull; in order to &bull; this meant that</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Chains, not pairs</h3>
+<p>Real causes come in chains: scarce food &rarr; competition &rarr; broken trust &rarr; isolation. Trace the whole chain and you understand a system, not just an event.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>Phone dies &rarr; alarm doesn&rsquo;t ring &rarr; late to school &rarr; missed quiz. One cause, cascading effects. Authors build these chains on purpose &mdash; find the first domino.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Strategic compliance is a cause-and-effect wager: appear to yield now &rarr; buy time and trust &rarr; find the moment that matters. Map Kagan&rsquo;s chain as he builds it &mdash; and where Sadiq cuts it.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Strategic Compliance vs. Surrender</h1><div class="body"><table class="mini">
+<tr><th>Kagan&rsquo;s move</th><th>Compliance or strategy?</th></tr>
+<tr><td>&ldquo;Feigning confusion&rdquo; &mdash; makes Sadiq spell out what he knows</td><td>Strategy: every explanation Sadiq gives is free intelligence</td></tr>
+<tr><td>Insists his AV security project failed &mdash; &ldquo;I&rsquo;m not close to anything&rdquo;</td><td>Strategy: deny the prize its value</td></tr>
+<tr><td>Points out the authorities will have hardened the AV fleet by now</td><td>Strategy: make the plan look already broken</td></tr>
+<tr><td>&ldquo;Agrees&rdquo; to cooperate &mdash; too quickly</td><td>Sadiq sees through it &mdash; and answers with a compliance drug and constant watch</td></tr></table>
+<p class="note">RL.2.C craft note: Richards writes the entire duel in dialogue and inner monologue &mdash; we hear Kagan&rsquo;s real thoughts under his spoken words. That double-track is HOW the author shows strategy without ever naming it.</p></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>The Duel</h1><div class="body"><div class="mcq"><div class="qq">Kagan &ldquo;raged within, but continued to maintain an outward calm.&rdquo; The craft technique here is&hellip;</div><button class="opt" data-ok="1">Inner monologue against spoken dialogue &mdash; two tracks revealing strategy under coercion</button><button class="opt" data-ok="0">An unreliable narrator lying to the reader</button><button class="opt" data-ok="0">A flashback</button><div class="fb">The gap between Kagan&rsquo;s two tracks IS his characterization this week: control of self as resistance.</div></div><div class="mcq"><div class="qq">Sadiq answers Kagan&rsquo;s quick agreement with verification &mdash; a drug that compels honesty, constant supervision. What does this reveal about Sadiq?</div><button class="opt" data-ok="1">He models his enemy&rsquo;s mind expertly &mdash; intelligence, not just brutality, makes him dangerous</button><button class="opt" data-ok="0">He is careless and impulsive</button><button class="opt" data-ok="0">He trusts Kagan completely</button><div class="fb">Richards keeps proving it: Sadiq predicted the stall, the bluff, even the hope of escape. Kagan&rsquo;s counter-game must get smarter.</div></div><div class="rev"><div class="rq">The essential question asks how coercion reveals BOTH characters. In one sentence each: what does the duel reveal about Sadiq? About Kagan?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sadiq: control is his art &mdash; stories, staging, and anticipation, with violence held in reserve. Kagan: his values survive coercion &mdash; he protects others, guards the truth, and treats his own mind as the last free territory.</div></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 6</h1><div class="body"><p><span class="badge">Read</span> Sadiq explains exactly what he wants &mdash; and why no one will ever come looking. Kagan plays the only cards he has left.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>What Sadiq reveals: why <b>Kagan</b> was the target all along, and what the attack was really for.</li><li>Kagan&rsquo;s counter-moves &mdash; the feigned confusion, the denials, the &ldquo;too ready&rdquo; agreement.</li><li>How the chapter ends: fifteen minutes to decide. What are Kagan&rsquo;s real options?</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Star your <b>two strongest pieces of evidence</b> for tomorrow &mdash; one revealing Sadiq, one revealing Kagan.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Today you write: one claim about how coercion reveals both Sadiq&rsquo;s character and Kagan&rsquo;s values &mdash; defended with evidence from the week.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 6</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Pressure Meets Strategy</h1><div class="body"><ol class="q"><li>Fifteen minutes to decide: what would you advise Kagan &mdash; and what does the text suggest he&rsquo;s actually planning?</li><li>Is Kagan&rsquo;s apparent cooperation compliance or strategy? Where exactly does the text let us see the difference?</li><li>Check your starred pair: one Sadiq detail + one Kagan detail is the strongest combination for this prompt.</li></ol></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> This prompt has two halves &mdash; Sadiq AND Kagan. Strong responses give each a claim, an evidence receipt, and an explanation, then connect them.</div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:33px">How do Sadiq&rsquo;s methods of coercion reveal both his character and Kagan&rsquo;s values?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>The attack was staged so no one would know Kagan was taken alive (Ch. 4&ndash;6)</li><li>The cover story that turned a kidnapped doctor into a willing helper (Ch. 5)</li><li>&ldquo;Kagan raged within, but continued to maintain an outward calm&rdquo; (Ch. 6)</li><li>Kagan&rsquo;s feigned confusion and &ldquo;failed project&rdquo; denials (Ch. 6)</li><li>Sadiq anticipating every bluff &mdash; and verifying instead of trusting (Ch. 6)</li></ul></div></div></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Grade 10 level <span>&mdash; one developed paragraph</span></h3><p>Clear claim + at least one quoted or paraphrased piece of evidence + explanation. Frames and organizer available.</p></div><div class="card"><h3>Grade 11 level <span>&mdash; two organized paragraphs</span></h3><p>One paragraph on Sadiq&rsquo;s methods, one on Kagan&rsquo;s values &mdash; each with evidence, connected by the theme of control.</p></div><div class="card"><h3>Grade 12 level <span>&mdash; 2&ndash;3 analytical paragraphs</span></h3><p>Nuanced claim + evidence from multiple chapters + address complexity: is strategic compliance a victory, a defeat, or something the text refuses to decide yet?</p></div></div><p class="note">Self-check: Did I address BOTH characters? Does my evidence include at least one exact moment from Chapter 6?</p></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>The investigators read a changed enemy in the wreckage &mdash; and missed the real story: the entire attack was cover for taking one scientist alive. Kagan wakes healed and restrained, watches Sadiq control everyone around him with stories and staging, and begins a duel of strategy where his mind is the only ground he still holds.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What is Kagan&rsquo;s fifteen-minute answer?</li><li>Amber survived because of him &mdash; will anyone ever know?</li><li>And the probe is still coming. How will these threads meet?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: Chapters 7&ndash;9 &mdash; the duel continues.</p></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Ben Kagan</b></td><td>The attack&rsquo;s true objective: his AV security research. Healed, restrained, and fighting back with the only weapon left &mdash; strategy.</td></tr><tr><td><b>Anwar Sadiq</b></td><td>Oxford-educated, disciplined, patient &mdash; controls through stories, staging, and anticipation.</td></tr><tr><td><b>Jesse Carter &amp; Agent Karen Morris</b></td><td>Homeland Security &mdash; reading the evidence, drawing inferences, missing the real target.</td></tr><tr><td><b>Amber Vettori</b></td><td>The one survivor &mdash; found hiding in a tiny kitchen cabinet, exactly where Kagan told her to hide.</td></tr><tr><td><b>Cynthia Shearer</b></td><td>Kagan&rsquo;s love &mdash; her fate uncertain; Sadiq&rsquo;s mention of &ldquo;one other&rdquo; survivor may be leverage.</td></tr><tr><td><b>The doctor</b></td><td>Kidnapped, deceived with a cover story, and &mdash; by Kagan&rsquo;s cold deduction &mdash; in more danger than he knows.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 4</b></td><td>The 3 a.m. investigation: 148 dead, attackers escaped, one small survivor, an attack filmed as a recruiting weapon, and a mastermind identified.</td></tr><tr><td><b>Ch. 5</b></td><td>Kagan wakes paralyzed but healed; deduces his situation; meets the stage-managed world Sadiq builds around everyone, including a deceived doctor.</td></tr><tr><td><b>Ch. 6</b></td><td>Sadiq&rsquo;s reveal: Kagan&rsquo;s AV work is the prize, and the world believes he&rsquo;s dead. Kagan counter-plays &mdash; and Sadiq sees through every move. Fifteen minutes to decide.</td></tr></table></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>investigation</b></td><td>an official search for facts (root: <i>vestigium</i>, footprint)</td></tr><tr><td><b>deduction</b></td><td>a conclusion reasoned from evidence (ant.: guesswork)</td></tr><tr><td><b>coercion</b></td><td>forcing action through threats or pressure (ant.: consent)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">Everything they did here was designed to send a clear message.<span class="who">&mdash; Agent Morris, Chapter 4</span></div><div class="quote" style="margin:10px 0">&hellip;he needed to explore other possibilities before he&rsquo;d believe this as the answer.<span class="who">&mdash; Chapter 5</span></div><div class="quote" style="margin:10px 0">Kagan raged within, but continued to maintain an outward calm.<span class="who">&mdash; Chapter 6</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;Sadiq controls others by ___.&rdquo;</li><li>&ldquo;Under pressure, Kagan chooses to ___, which reveals ___.&rdquo;</li><li>&ldquo;The difference between compliance and strategy shows when ___.&rdquo;</li><li>&ldquo;Together, these moments establish ___.&rdquo;</li></ul></div></div><div class="footer"><span>Seeker • Week 2 • Coercion, Control, and Moral Choice</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 26: Wages and Paychecks - Hours Worked &amp;times; Pay per Hour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 26</div><h1>Hourly Wages and Expected Earnings</h1><div class="body"><div class="sub">Wages and Paychecks &mdash; Hours Worked &times; Pay per Hour</div><div class="meta">This week: use a calculator, wage chart, or repeated addition to estimate gross earnings &mdash; 20 points</div><div class="theme">Big idea: Before deductions, expected earnings depend on both the hourly wage and the hours worked.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>What hourly wage means &mdash; match wage and hours information</td><td>5</td></tr><tr><td>Day 2</td><td>Hours times wage &mdash; use a calculator, chart, or repeated addition</td><td>5</td></tr><tr><td>Day 3</td><td>Compare two schedules &mdash; hours, fit, workload, and expected pay</td><td>5</td></tr><tr><td>Day 4</td><td>Estimate weekly earnings and check the expected amount</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, reteach, or collect evidence</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>2 of 29</span></div></section>
+<section class="slide"><div class="kicker">Connect to Last Week</div><h1>The Timecard Feeds the Paycheck</h1><div class="body"><div class="eq-wrap"><div class="eq">hours worked &times; hourly wage<br>= expected gross earnings</div></div><div class="cols2"><div class="card"><h3>Hours worked</h3><p>Come from accurate schedules and time records.</p></div><div class="card"><h3>Hourly wage</h3><p>The amount paid for each hour of work.</p></div></div><p class="note"><b>Gross</b> means before deductions. The amount deposited or taken home may be smaller; that is next week&rsquo;s focus.</p></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>3 of 29</span></div></section>
+<section class="slide"><div class="kicker">Use the Strategy That Fits</div><h1>Three Valid Calculation Paths</h1><div class="body"><table class="mini"><tr><th>Path</th><th>Example: 4 hours at $12/hour</th></tr><tr><td>Calculator</td><td>4 &times; 12 = 48</td></tr><tr><td>Wage chart</td><td>Find $12 row, then 4-hour column &rarr; $48</td></tr><tr><td>Repeated addition</td><td>12 + 12 + 12 + 12 = 48</td></tr></table><div class="exit"><b>Same answer:</b> Four hours at $12 per hour gives expected gross earnings of $48. The tool may change; the meaning does not.</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>4 of 29</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>What Hourly Wage Means</h1><div class="body"><div class="dayno">1</div><div class="goal">Identify wage as pay for each hour worked and match hours, wage, and expected earnings information.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Learn the words</span><span>Find the rate</span><span>Match hours and wage</span><span>Explain the relationship</span></div><div class="stdchips"><span class="pill">Wage Vocabulary</span><span class="pill">Employment Math</span><span class="pill">Matching Information</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Vocabulary</div><h1>Rate, Hours, and Gross Earnings</h1><div class="body"><table class="mini"><tr><th>Term</th><th>Meaning</th><th>Example</th></tr><tr><td><b>Hourly wage / rate</b></td><td>Pay for one hour worked</td><td>$13 per hour</td></tr><tr><td><b>Hours worked</b></td><td>Count of paid work hours</td><td>5 hours</td></tr><tr><td><b>Gross earnings</b></td><td>Pay before deductions</td><td>$65 before deductions</td></tr><tr><td><b>Expected</b></td><td>What the information predicts</td><td>About $65 if the records are correct</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>6 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Meaning</div><h1>&ldquo;$13 per Hour&rdquo; Is Not $13 Total</h1><div class="body"><div class="cols2"><div class="card"><h3>One hour</h3><p>1 hour &times; $13 = <b>$13</b></p></div><div class="card"><h3>Three hours</h3><p>3 hours &times; $13 = <b>$39</b></p></div></div><div class="rev"><div class="rq">A worker earns $13 per hour and works two hours. What gross amount is expected?</div><div class="hint">Two groups of $13</div><div class="ra"><b>$26.</b> The worker earns the $13 rate for each of the two hours.</div></div><p class="note">The hourly rate stays the same in this simplified example. The total changes when the hours change.</p></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>7 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Check Understanding</div><h1>What Does the Number Describe?</h1><div class="body"><div class="mcq"><div class="qq">A job posting says &ldquo;$15 per hour.&rdquo; What is $15?</div><button class="opt" data-ok="1">The wage for each hour worked</button><button class="opt" data-ok="0">The total weekly paycheck</button><button class="opt" data-ok="0">The number of scheduled hours</button><div class="fb">&ldquo;Per hour&rdquo; identifies a rate: $15 for each paid hour.</div></div><div class="mcq"><div class="qq">A worker earns $12 per hour. Which other fact is needed to estimate gross earnings?</div><button class="opt" data-ok="0">The worker&rsquo;s favorite task</button><button class="opt" data-ok="1">The number of paid hours worked</button><button class="opt" data-ok="0">The color of the timecard</button><div class="fb">Expected gross earnings require both the hourly rate and the hours worked.</div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>8 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Match</div><h1>Sort the Information</h1><div class="body"><table class="mini"><tr><th>Information</th><th>Label</th></tr><tr><td>$14 per hour</td><td>Hourly wage / rate</td></tr><tr><td>Monday 4 PM&ndash;7 PM</td><td>Schedule</td></tr><tr><td>3 paid hours</td><td>Hours worked</td></tr><tr><td>$42 before deductions</td><td>Expected gross earnings</td></tr></table><div class="rev"><div class="rq">Which two pieces are multiplied to predict the $42?</div><div class="hint">Find a count of hours and an amount per hour</div><div class="ra"><b>3 paid hours &times; $14 per hour = $42.</b></div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>9 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Complete Wage Vocabulary and Matching</h1><div class="body"><p><span class="badge">Your task</span> Match or label hourly wage, hours worked, and expected gross earnings. Use the information to explain what &ldquo;per hour&rdquo; means.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose from labeled examples, match identical symbols/colors, point to the wage, or complete a teacher-modeled set.</p></div><div class="card"><h3>Independent path</h3><p>Label each number, explain the relationship in words, and create one simple example with whole hours.</p></div></div><div class="exit"><b>Check out:</b> Complete: &ldquo;An hourly wage tells how much a worker earns for _____.&rdquo;</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>10 of 29</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>Hours Times Wage With Support</h1><div class="body"><div class="dayno">2</div><div class="goal">Use a calculator, chart, or repeated addition to estimate gross earnings for simple whole-hour examples.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Choose a tool</span><span>Enter hours first</span><span>Multiply by the wage</span><span>Label and check the answer</span></div><div class="stdchips"><span class="pill">Calculator Use</span><span class="pill">Repeated Addition</span><span class="pill">Gross Earnings</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Calculator Path</div><h1>Press the Meaning, Not Random Buttons</h1><div class="body"><ol class="q"><li>Find and write the <b>paid hours</b>.</li><li>Find and write the <b>hourly wage</b>.</li><li>Enter <b>hours &times; wage</b> on the calculator.</li><li>Press equals and copy the answer carefully.</li><li>Label it <b>expected gross earnings</b> or <b>gross pay</b>.</li></ol><div class="exit"><b>Example:</b> 6 hours &times; $11/hour = <b>$66 gross</b>.</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>12 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Wage Chart Path</div><h1>Use the Row and Column</h1><div class="body"><table class="mini"><tr><th>Hourly wage</th><th>1 hour</th><th>2 hours</th><th>3 hours</th><th>4 hours</th><th>5 hours</th></tr><tr><td>$10</td><td>$10</td><td>$20</td><td>$30</td><td>$40</td><td>$50</td></tr><tr><td>$12</td><td>$12</td><td>$24</td><td>$36</td><td>$48</td><td>$60</td></tr><tr><td>$14</td><td>$14</td><td>$28</td><td>$42</td><td>$56</td><td>$70</td></tr></table><div class="rev"><div class="rq">Find expected gross earnings for 4 hours at $12 per hour.</div><div class="hint">Trace the $12 row to the 4-hour column</div><div class="ra"><b>$48 gross.</b></div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>13 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Repeated Addition Path</div><h1>Add the Wage Once per Hour</h1><div class="body"><div class="eq-wrap"><div class="eq">3 hours at $14/hour<br>$14 + $14 + $14 = $42</div></div><div class="cols2"><div class="card"><h3>Count the groups</h3><p>Three paid hours means three groups of the $14 wage.</p></div><div class="card"><h3>Label the result</h3><p>$42 is expected <b>gross</b> earnings, before deductions.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>14 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Check Your Answer</div><h1>Use a Reasonable-Amount Check</h1><div class="body"><div class="mcq"><div class="qq">A worker earns $12 per hour for 4 hours. The calculator shows $3. Is that reasonable?</div><button class="opt" data-ok="0">Yes, any calculator answer is correct.</button><button class="opt" data-ok="1">No. Four hours should be more than one hour&rsquo;s $12 wage.</button><button class="opt" data-ok="0">No. The answer must be $120.</button><div class="fb">Four groups of $12 should be $48. A $3 result signals a wrong operation or entry.</div></div><div class="mcq"><div class="qq">Which label makes &ldquo;60&rdquo; a useful answer?</div><button class="opt" data-ok="0">60 hours per dollar</button><button class="opt" data-ok="1">$60 expected gross earnings</button><button class="opt" data-ok="0">60 hourly wages</button><div class="fb">Include the dollar sign and identify the amount as expected gross earnings.</div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>15 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete Individualized Earnings Problems</h1><div class="body"><p><span class="badge">Your task</span> Solve the class-provided whole-hour earnings examples with a calculator, wage chart, or repeated addition. Show or identify the hours, wage, operation, and labeled gross answer.</p><div class="card flat"><h3>Four-part self-check</h3><p><b>Hours:</b> Did I use paid hours? &bull; <b>Wage:</b> Did I use the hourly rate? &bull; <b>Operation:</b> Did I multiply or add one wage per hour? &bull; <b>Label:</b> Did I write dollars and gross?</p></div><div class="exit"><b>Teacher evidence:</b> Accuracy, completion, independence level 0&ndash;5, and supports used.</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>16 of 29</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Compare Two Schedules</h1><div class="body"><div class="dayno">3</div><div class="goal">Compare hours, schedule fit, workload, and expected gross earnings, then choose and explain.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read both schedules</span><span>Calculate expected pay</span><span>Check real-life fit</span><span>Choose with evidence</span></div><div class="stdchips"><span class="pill">Comparison</span><span class="pill">Decision Making</span><span class="pill">Schedule Fit</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Sample Choices</div><h1>Two Jobs, Different Tradeoffs</h1><div class="body"><table class="mini"><tr><th></th><th>Job A: Market Helper</th><th>Job B: Recreation Helper</th></tr><tr><td>Schedule</td><td>Mon.&ndash;Thu., 4&ndash;7 PM</td><td>Sat.&ndash;Sun., 9 AM&ndash;3 PM</td></tr><tr><td>Paid hours</td><td>12 hours</td><td>12 hours</td></tr><tr><td>Wage</td><td>$12/hour</td><td>$13/hour</td></tr><tr><td>Transportation</td><td>Reliable weekday ride</td><td>Weekend ride uncertain</td></tr><tr><td>Workload</td><td>Four shorter shifts</td><td>Two longer shifts</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>18 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Compare Pay</div><h1>Calculate Before Choosing</h1><div class="body"><div class="cols2"><div class="card"><h3>Job A</h3><p>12 hours &times; $12/hour<br>= <b>$144 expected gross</b></p></div><div class="card"><h3>Job B</h3><p>12 hours &times; $13/hour<br>= <b>$156 expected gross</b></p></div></div><div class="rev"><div class="rq">Which job has higher expected gross earnings, and by how much?</div><div class="hint">Compare $156 and $144</div><div class="ra"><b>Job B by $12.</b> But expected pay is only one part of the decision.</div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>19 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Compare Fit</div><h1>Higher Pay Is Not Automatically the Better Fit</h1><div class="body"><div class="cols2"><div class="card"><h3>Questions to ask</h3><ul><li>Can I reliably get there and home?</li><li>Do the hours conflict with school or other responsibilities?</li><li>Can I manage the shift length?</li><li>Do I understand the duties?</li></ul></div><div class="card"><h3>Evidence sentence</h3><p>&ldquo;I would choose Job __ because ____. It pays about $____ gross, and the schedule [does/does not] fit because ____.&rdquo;</p></div></div><p class="note">More hours and a higher wage can increase gross earnings, but an impossible schedule is not a dependable choice.</p></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>20 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Choose Between Two Sample Schedules</h1><div class="body"><p><span class="badge">Your task</span> Compare two class-provided work options. Identify hours and wage, estimate gross earnings, note at least one schedule-fit or workload factor, and choose with evidence.</p><div class="cols2"><div class="card"><h3>Supported response</h3><p>Complete a side-by-side chart, choose from stated reasons, and use a sentence frame or teacher-recorded explanation.</p></div><div class="card"><h3>Independent response</h3><p>Calculate both totals, compare the difference, weigh two practical factors, and explain the choice.</p></div></div><div class="exit"><b>Check out:</b> A strong answer includes pay <i>and</i> a real-life fit factor.</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>21 of 29</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Estimate Weekly Earnings</h1><div class="body"><div class="dayno">4</div><div class="goal">Calculate or select expected weekly gross pay, check the work, and state the expected amount clearly.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Total the paid hours</span><span>Use the hourly wage</span><span>Calculate gross</span><span>Check and state the amount</span></div><div class="stdchips"><span class="pill">Weekly Earnings</span><span class="pill">Self-Check</span><span class="pill">Employment Records</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Weekly Routine</div><h1>From Schedule to Expected Gross</h1><div class="body"><ol class="q"><li>Read each shift and find the paid hours.</li><li>Add the paid hours for the week.</li><li>Find the hourly wage.</li><li>Multiply total weekly hours &times; hourly wage.</li><li>Write the result as <b>$___ expected gross earnings</b>.</li></ol><p class="note">If paid hours are already provided, begin there. If breaks or partial hours make the example too complex, use the provided time chart or teacher-calculated hour total.</p></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>23 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Model</div><h1>Estimate Casey&rsquo;s Week</h1><div class="body"><table class="mini"><tr><th>Day</th><th>Paid hours</th></tr><tr><td>Monday</td><td>3</td></tr><tr><td>Wednesday</td><td>4</td></tr><tr><td>Friday</td><td>3</td></tr><tr><td><b>Total</b></td><td><b>10 hours</b></td></tr></table><div class="eq">10 hours &times; $12/hour = $120 expected gross</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>24 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Error Check</div><h1>Spot the Wrong Setup</h1><div class="body"><div class="mcq"><div class="qq">Casey worked 10 hours at $12/hour. Which setup estimates gross earnings?</div><button class="opt" data-ok="1">10 &times; 12 = 120</button><button class="opt" data-ok="0">12 &minus; 10 = 2</button><button class="opt" data-ok="0">10 + 12 = 22</button><div class="fb">Gross earnings use hours multiplied by dollars per hour.</div></div><div class="mcq"><div class="qq">Casey&rsquo;s answer says $1,200. What is the best check?</div><button class="opt" data-ok="1">Re-enter 10 &times; 12 and compare with repeated addition or a chart.</button><button class="opt" data-ok="0">Accept it because it is the largest answer.</button><button class="opt" data-ok="0">Change the hours until $1,200 works.</button><div class="fb">A second method can expose an extra zero or incorrect calculator entry.</div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>25 of 29</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Do</div><h1>Complete the Weekly Earnings Task</h1><div class="body"><p><span class="badge">Your task</span> Use the provided weekly schedule or hour total and hourly wage. Calculate or select expected gross earnings, check with a second method when directed, and state the expected amount.</p><div class="card flat"><h3>Final response frame</h3><p>&ldquo;The worker has _____ paid hours at $_____ per hour. The expected weekly gross earnings are $_____ before deductions.&rdquo;</p></div><div class="exit"><b>Remember:</b> This is an estimate from the provided records. Next week we check the actual paycheck and deductions.</div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>26 of 29</span></div></section>
+<section class="slide divider"><div class="kicker">Day 5</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">5</div><div class="goal">No new required lesson. Use today for completion, individualized practice, reteaching, evidence, or an applied wage-and-hours lab.</div><div class="agenda"><b>Choose the useful path</b><span>Finish or correct work</span><span>Repeat with a different tool</span><span>Compare another schedule</span><span>Collect a brief evidence sample</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Individualized Practice</span><span class="pill">IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 5 &bull; Pick Your Path</div><h1>What Would Help Most Today?</h1><div class="body"><div class="cols2"><div class="card"><h3>Completion or reteaching</h3><ul><li>Match wage vocabulary.</li><li>Correct an earnings calculation.</li><li>Practice a calculator sequence.</li><li>Use a simpler wage chart.</li></ul></div><div class="card"><h3>Generalization or evidence</h3><ul><li>Estimate a new whole-hour example.</li><li>Compare two realistic schedules.</li><li>Explain why an answer is unreasonable.</li><li>Complete a teacher-selected progress sample.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>28 of 29</span></div></section>
+<section class="slide"><div class="kicker">Wrap-Up</div><h1>Week 26 Quick Reference</h1><div class="body"><div class="cols2"><div class="card"><h3>The equation</h3><p><b>paid hours &times; hourly wage = expected gross earnings</b></p><p>Use a calculator, wage chart, or repeated addition.</p></div><div class="card"><h3>The decision</h3><p>Compare expected pay, schedule fit, transportation, and workload. A workable schedule matters.</p></div></div><div class="exit"><b>Always label:</b> $_____ expected gross earnings <b>before deductions</b>.</div><p class="note">Next week: locate gross pay, deductions, and net pay on a simplified paycheck and compare paid hours with the timecard.</p></div><div class="footer"><span>Life Skills SC • Week 26 • Wages and Paychecks — Hourly Wages and Expected Earnings</span><span>29 of 29</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

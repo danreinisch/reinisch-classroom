@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 14: Workplace Communication - Workplace Communication Basics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 14</div><h1>Workplace Communication Basics</h1><div class="body"><div class="sub">Workplace Communication &mdash; Workplace Communication Basics</div>
+<div class="meta">Short Thanksgiving week, one big skill: respectful workplace words and tone &mdash; 5 points</div><div class="theme">Big idea: At work, HOW you say it travels further than WHAT you say &mdash; and both are choices</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Respectful workplace words and tone &mdash; the professional voice</td><td>5</td></tr><tr><td>Day 2</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>2 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">New Unit</div><h1>The Skill Inside Every Other Skill</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Look back at your scripts&hellip;</h3>
+<p>The change-check sentence (Week 10). The late call (Week 12). The say-it-back echo (Week 13). Every unit so far ended in <b>words said out loud</b> &mdash; you&rsquo;ve been doing workplace communication for months.</p></div>
+<div class="card"><h3>This unit names it&hellip;</h3>
+<p>Workplace Communication: the words, the tone, and the timing that make everything else land. Today &mdash; the foundation: the professional voice. Coming weeks: asking for help, phone calls, feedback, customers.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>3 of 13</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>Respectful Words &amp; Tone</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Same sentence, two tones, opposite results. Today: the workplace word swap, the tone check, and the professional voice you can put on like a uniform.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: words + tone</span><span>You try it</span><span>Do: tone studio</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Workplace Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Say &ldquo;fine&rdquo; three ways: happy, annoyed, and bored. Same word &mdash; what changed?</li><li>How do you talk to your best friend vs. your grandma vs. a teacher? Who taught you to switch?</li><li>Why might a manager care about tone even MORE than a friend would?</li></ol></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>5 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The Word Swap &amp; the Tone Check</h1><div class="body"><table class="mini">
+<tr><th>Friend-voice says&hellip;</th><th>Work-voice says&hellip;</th></tr>
+<tr><td>&ldquo;Yeah, whatever&rdquo;</td><td>&ldquo;Sure, I can do that&rdquo;</td></tr>
+<tr><td>&ldquo;Huh?&rdquo;</td><td>&ldquo;Could you say that once more?&rdquo;</td></tr>
+<tr><td>&ldquo;That&rsquo;s not my job&rdquo;</td><td>&ldquo;I haven&rsquo;t been trained on that yet &mdash; want me to grab someone who has?&rdquo;</td></tr>
+<tr><td>&ldquo;My bad lol&rdquo;</td><td>&ldquo;I&rsquo;m sorry about that &mdash; I&rsquo;ll fix it&rdquo;</td></tr>
+<tr><td>(silence, walks off)</td><td>&ldquo;Excuse me &mdash; I&rsquo;m heading to break, back at 2:15&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The tone check &mdash; three dials</h3>
+<p><b>Volume</b> &mdash; indoor, steady; not a mumble, not a broadcast. <b>Speed</b> &mdash; slow enough to land; rushed words sound annoyed even when they aren&rsquo;t. <b>Face &amp; body</b> &mdash; eyes up, phone down; tone leaks through posture. Plus the four anchors that work everywhere: <b>please, thank you, excuse me, people&rsquo;s names.</b></p></div>
+<p class="note">The professional voice isn&rsquo;t fake &mdash; it&rsquo;s a uniform for your words. You already own several voices; work just gets the crisp one. And names are the cheat code: &ldquo;Thanks, Maria&rdquo; lands twice as warm as &ldquo;thanks.&rdquo;</p></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>6 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Swap It, Tone It</h1><div class="body"><div class="mcq"><div class="qq">The manager asks you to redo a display you just finished. Friend-voice wants to say &ldquo;Seriously??&rdquo; Work-voice says&hellip;</div><button class="opt" data-ok="1">&ldquo;Sure &mdash; anything I should do differently this time?&rdquo;</button><button class="opt" data-ok="0">&ldquo;Seriously??&rdquo; but with a smile</button><button class="opt" data-ok="0">Silent sigh, heavy shelf noises</button><div class="fb">The swap keeps your dignity AND gets you the info that prevents a third redo. Sighs and slammed shelves are tone too &mdash; the loudest kind.</div></div><div class="mcq"><div class="qq">A coworker mumbles &ldquo;thanks I guess&rdquo; while staring at their phone. Which dial is ruining perfectly polite WORDS?</div><button class="opt" data-ok="1">Face &amp; body &mdash; eyes-down delivery undoes the words completely</button><button class="opt" data-ok="0">Volume &mdash; too quiet is the only issue</button><button class="opt" data-ok="0">Nothing; the words were polite</button><div class="fb">&ldquo;I guess&rdquo; plus a phone-stare reads as sarcasm no matter the script. The dials can cancel the words &mdash; which is why we check all three.</div></div><div class="mcq"><div class="qq">You&rsquo;re asked to do something you truly don&rsquo;t know how to do. The respectful, honest line is&hellip;</div><button class="opt" data-ok="1">&ldquo;I haven&rsquo;t been trained on that yet &mdash; could you show me, or should I get someone who has?&rdquo;</button><button class="opt" data-ok="0">&ldquo;That&rsquo;s not my job&rdquo;</button><button class="opt" data-ok="0">&ldquo;Sure&rdquo; &mdash; then hide until the shift ends</button><div class="fb">&ldquo;Yet&rdquo; is the magic word &mdash; honest about now, open about later. (Sound like next week&rsquo;s topic? It is. Asking for help gets a whole week.)</div></div><div class="rev"><div class="rq">Take the Week 12 late call &mdash; &ldquo;name + situation + arrival + sorry for the trouble&rdquo; &mdash; and imagine it delivered with all three dials wrong. Same words. What happens?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Mumbled, rushed, annoyed &mdash; and a responsible call sounds like an excuse. The manager hears the DIALS, not the script. Every script you&rsquo;ve learned this year is only as good as the voice carrying it &mdash; which is why this short week exists.</div></div></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>7 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Tone Studio</h1><div class="body"><p><span class="badge">Your task</span> Partner rounds: draw a friend-voice card (&ldquo;huh?&rdquo;, &ldquo;whatever&rdquo;, &ldquo;my bad&rdquo;, &ldquo;not my job&rdquo;&hellip;), perform the work-voice swap with all three dials right &mdash; partner scores volume / speed / face on the rubric. Then re-run ONE of your old scripts (change check, late call, or say-it-back) in full professional voice.</p>
+<div class="exit"><b>Before you leave:</b> Perform your best swap for me &mdash; dials and all.</div></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>8 of 13</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Short week, open day: finish, practice, or take the skill lab challenge &mdash; then go enjoy the break.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Pick your path</span><span>Work the plan</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Completion</span><span class="pill">Individual Practice</span><span class="pill">Applied Skills</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Choose</div><h1>Pick Your Path</h1><div class="body"><ol class="q">
+<li><b>Completion</b> &mdash; finish tone-studio rounds or any open work from the unit.</li>
+<li><b>Individual practice</b> &mdash; new swap cards, solo: write the work-voice version of five friend-voice lines.</li>
+<li><b>Skill lab</b> &mdash; the Thanksgiving challenge: use please, thank you, excuse me, and someone&rsquo;s NAME in real conversations over break &mdash; report back Monday.</li>
+<li><b>Reteach with me</b> &mdash; the swaps or the dials, small group.</li>
+</ol>
+<div class="exit"><b>Check out:</b> One work-voice line, three dials right &mdash; and have a great break.</div></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>10 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 14 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>One day, one foundation: you can swap friend-voice for work-voice on demand, run the three tone dials &mdash; volume, speed, face &amp; body &mdash; and anchor everything with please, thank you, excuse me, and names. Every script you&rsquo;ve built this year just got an upgrade.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Which dial slips when I&rsquo;m tired or annoyed?</li><li>Whose name at school or work should I start using more?</li><li>Did I take the skill-lab challenge over break?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Asking for Help and Clarification: when to ask, the exact phrases that work, and why asking is the opposite of refusing. The professional voice gets its most important job.</p></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>11 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Word Swap Card</h1><div class="body"><table class="mini">
+<tr><th>Friend-voice</th><th>Work-voice</th></tr>
+<tr><td>&ldquo;Yeah, whatever&rdquo;</td><td>&ldquo;Sure, I can do that&rdquo;</td></tr>
+<tr><td>&ldquo;Huh?&rdquo;</td><td>&ldquo;Could you say that once more?&rdquo;</td></tr>
+<tr><td>&ldquo;That&rsquo;s not my job&rdquo;</td><td>&ldquo;I haven&rsquo;t been trained on that yet &mdash; want me to grab someone who has?&rdquo;</td></tr>
+<tr><td>&ldquo;My bad lol&rdquo;</td><td>&ldquo;I&rsquo;m sorry about that &mdash; I&rsquo;ll fix it&rdquo;</td></tr>
+<tr><td>(walks off silently)</td><td>&ldquo;Excuse me &mdash; heading to break, back at 2:15&rdquo;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>12 of 13</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Tone Dials Card</h1><div class="body"><table class="mini">
+<tr><th>Dial</th><th>Set it to</th></tr>
+<tr><td>Volume</td><td>Indoor and steady &mdash; hearable, not broadcast</td></tr>
+<tr><td>Speed</td><td>Slow enough to land &mdash; rushed sounds annoyed</td></tr>
+<tr><td>Face &amp; body</td><td>Eyes up, phone down &mdash; posture is tone too</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The four anchors</h3>
+<p><b>Please &bull; thank you &bull; excuse me &bull; names.</b> Names are the cheat code: &ldquo;Thanks, Maria&rdquo; lands twice as warm. The dials can cancel the words &mdash; check all three.</p></div></div><div class="footer"><span>Life Skills SC • Week 14 • Workplace Communication — Workplace Communication Basics</span><span>13 of 13</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

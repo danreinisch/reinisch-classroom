@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 2: Evidence, Central Ideas &amp; Objective Summary - Indoctrination, Inherited Guilt, and the Construction of Truth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#fb7185; --accent-deep:#881337; --glow:rgba(251,113,133,.12);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 2 SC • Week 2</div><h1>Escape from Camp 14</h1><div class="body"><div class="sub">by Blaine Harden &mdash; nonfiction</div>
+<div class="meta">Language Arts focus: <b>Evidence, Central Ideas &amp; Objective Summary</b> (Develop)<br>This week: Chapters 2&ndash;4 + Written Response</div><div class="theme">Theme: Indoctrination, Inherited Guilt, and the Construction of Truth</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Reading With Care</div><h1>Our Agreements, Every Week</h1><div class="body"><div class="card"><h3>This week&rsquo;s chapters are hard ones</h3>
+<p>Chapter 2 includes the death of a classmate after a punishment; Chapter 3 includes violence between children; Chapter 4 begins Shin&rsquo;s time in the underground prison. We will discuss these events analytically and respectfully &mdash; the people are real.</p></div>
+<div class="card" style="margin-top:16px"><h3>Same agreements as always</h3>
+<ul><li>Academic language, respectful tone.</li>
+<li>Take a break if you need one; alternate response formats are always available.</li>
+<li>Our goal is understanding how a system shapes people &mdash; not dwelling on details.</li></ul></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Chapter 2 &mdash; how rules, schooling, and punishment teach what is &ldquo;true&rdquo;</td><td>7</td></tr><tr><td>Day 2</td><td>Chapter 3 &mdash; caste, inherited guilt, and unequal treatment</td><td>7</td></tr><tr><td>Day 3</td><td>Chapter 4 &mdash; synthesize: how the camp constructs obedience</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 2&ndash;4 + objective summary</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our skills</h3><p><b>Developing central-idea analysis.</b> This week we trace how <b>indoctrination</b> (taught beliefs), <b>inherited guilt</b> (blame passed by blood), and institutional violence shape what Shin believes about truth and responsibility &mdash; then we summarize it objectively.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Build an evidence chart for a central idea across three chapters.</li><li>Trace cause-and-effect chains in a real system.</li><li>Write an objective summary with zero opinion words.</li></ul></div></div>
+<p class="note">Standards this week: RI.1.A — Evidence &amp; Inference • RI.1.B — Word Meanings • RI.1.D — Central Ideas &amp; Objective Summary • W.2.A / W.3.A.a (9-10 / 11-12)</p></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do indoctrination and inherited guilt shape what Shin believes about truth, responsibility, and his place in the world?</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>School as a Weapon</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">In Camp 14, school does not open minds &mdash; it closes them. Today we gather evidence for how rules and punishment teach prisoners what to believe.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: last week&rsquo;s big ideas</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 2 + assignment</span></div>
+<div class="stdchips"><span class="pill">RI.1.A — Evidence &amp; Inference</span><span class="pill">RI.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Last Week&rsquo;s Foundations</h1><div class="body"><ol class="q"><li>Quick recap: what made Shin&rsquo;s story different from every other camp-survival story we compared it to?</li><li>Recall the Ten Rules and the &ldquo;reward marriages.&rdquo; What did we say the camp controls that no prison should be able to control?</li><li>Prediction: what would <i>school</i> look like in a place designed to control minds?</li></ol></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">indoctrination</div><div class="pos">noun • in-dok-trih-NAY-shun</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> oppression &bull; credibility &bull; survival</div><div class="means">Teaching someone to accept beliefs without questioning them.</div>
+<div class="morph"><div><b>in-</b><span>prefix: in, into</span></div><div class="plus">+</div><div><b>doctrina</b><span>Latin — teaching (from <i>docere</i>, to teach)</span></div><div class="plus">+</div><div><b>-ation</b><span>suffix: the process of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">conditioning</span><span class="pill">brainwashing</span><span class="pill">programming</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">critical thinking</span><span class="pill anti">open inquiry</span><span class="pill anti">questioning</span></div>
+<div class="family"><b>Word family:</b> indoctrinate (v) &bull; doctrine (n) &bull; docile, document &mdash; same root</div></div>
+<div><div class="quote">He had been trained by guards and teachers to believe that every time he was beaten, he deserved it.<span class="who">&mdash; Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>docere</i> means to teach &mdash; indoctrination is teaching with the questions removed. As you read, ask: what has Shin never been allowed to question?</p></div></div>
+</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Central Idea: Nonfiction&rsquo;s Main Point</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one or two words)</h3>
+<p>School lunch. Prison camps. Social media. Just the subject &mdash; no point made.</p></div>
+<div class="card"><h3>Central idea (a complete point)</h3>
+<p>&ldquo;The district&rsquo;s new lunch program is failing students.&rdquo; A claim the author develops with stacked evidence.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How authors build it: evidence stacking</h3>
+<p>Nonfiction writers pile up facts, examples, statistics, and testimony that all push the same direction. Your job: notice the direction the pile is pushing.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend lists: the coach benched them twice, cut their minutes, skipped their name at awards. They never say &ldquo;the coach dislikes me&rdquo; &mdash; but that&rsquo;s the central idea of the evidence.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Today&rsquo;s evidence pile: a surprise search, a classmate&rsquo;s death, and boys ordered to punish each other. Name the direction the pile pushes &mdash; that&rsquo;s Chapter 2&rsquo;s central idea.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Reading the Hardest Page Analytically</h1><div class="body"><div class="cols2">
+<div class="card"><h3>What happens in Chapter 2</h3>
+<p>A teacher&rsquo;s surprise search finds five kernels of corn in a classmate&rsquo;s pocket. The punishment kills her. School continues the next day as if nothing happened.</p></div>
+<div class="card"><h3>The detail that matters most</h3>
+<p>Not the violence &mdash; Shin&rsquo;s <b>reaction</b>: he believed &ldquo;her punishment was just and fair.&rdquo; A child watched an injustice and had no category for it. That is what indoctrination <i>is</i>.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Evidence chart &mdash; we start it together</h3>
+<p>Central idea: <i>The camp&rsquo;s school teaches prisoners that whatever the system does to them is deserved.</i><br>
+Evidence 1: Shin&rsquo;s belief the punishment was fair &bull; Evidence 2: &ldquo;every time he was beaten, he deserved it&rdquo; &bull; Evidence 3: you find it in today&rsquo;s reading (watch for Ryu).</p></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Central Idea Check</h1><div class="body"><div class="mcq"><div class="qq">Which is the strongest central idea for Chapter 2?</div><button class="opt" data-ok="1">The camp&rsquo;s school system trains children to accept punishment as justice</button><button class="opt" data-ok="0">Shin attended school for five years</button><button class="opt" data-ok="0">Corn is valuable in Camp 14</button><div class="fb">The other two are details. The central idea is the claim all the details push toward.</div></div><div class="mcq"><div class="qq">Shin &ldquo;never became angry with his teacher.&rdquo; What does this detail support?</div><button class="opt" data-ok="1">Indoctrination worked: the system&rsquo;s cruelty was invisible to those raised inside it</button><button class="opt" data-ok="0">Shin was a calm student</button><button class="opt" data-ok="0">The teacher was fair</button><div class="fb">The absence of anger is the evidence &mdash; outrage requires knowing something better is possible.</div></div><div class="rev"><div class="rq">Practice a one-sentence <b>objective summary</b> of Chapter 2. No opinion words.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: Chapter 2 describes schooling in Camp 14, where a classmate died after a punishment for taking food and students were trained to see such discipline as deserved.</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 2</h1><div class="body"><p><span class="badge">Read</span> School in Camp 14: the surprise search, the rules, and what children learn to believe.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The rules posted and memorized &mdash; and what happens when rule three is enforced.</li><li>Shin&rsquo;s <b>reaction</b> to his classmate&rsquo;s death &mdash; the sentence that shows indoctrination working.</li><li><b>Ryu Hak Chul</b>: the boy who talked back &mdash; and what the class, including Shin, was ordered to do.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Add one more piece of evidence to our central-idea chart &mdash; the Ryu incident is a strong candidate. Quote or paraphrase it precisely.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Born Guilty</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Today: the caste system &mdash; guilt inherited through blood, enforced from above, and absorbed by the children it lands on.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 2</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 3 + assignment</span></div>
+<div class="stdchips"><span class="pill">RI.1.A — Evidence &amp; Inference</span><span class="pill">RI.1.D — Central Ideas</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: School as a Weapon</h1><div class="body"><ol class="q"><li>What did Shin believe about his classmate&rsquo;s punishment &mdash; and why is that belief the chapter&rsquo;s most important detail?</li><li>&ldquo;Without a thought, Shin joined his classmates.&rdquo; What does the phrase <i>without a thought</i> tell us about how obedience is built?</li><li>Share the evidence you added to the chart. Does the class agree it supports our central idea?</li></ol></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">caste</div><div class="pos">noun • KAST</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> oppression &bull; credibility &bull; survival</div><div class="means">A social class you are born into and cannot leave, which decides how you are treated.</div>
+<div class="morph"><div><b>casta</b><span>Portuguese — lineage, breed (from Latin <i>castus</i>, pure)</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">hereditary class</span><span class="pill">rank</span><span class="pill">social tier</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">equality</span><span class="pill anti">social mobility</span></div>
+<div class="family"><b>Word family:</b> caste system (n) &bull; outcast &mdash; related idea: one pushed outside every class</div></div>
+<div><div class="quote">Shin was nine years old when the North Korean caste system knocked him on the head.<span class="who">&mdash; Chapter 3</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>In a caste system, treatment follows <i>birth</i>, not behavior. As you read, collect evidence: what did Shin inherit that he never chose?</p></div></div>
+</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Cause &amp; Effect: Nonfiction&rsquo;s Engine</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The pattern</h3>
+<p>Nonfiction writers constantly argue <b>because X, therefore Y</b>. Your job: separate what happened (effect) from what produced it (cause) &mdash; and notice when one effect becomes the next cause.</p></div>
+<div class="card"><h3>Signal words</h3>
+<p>because &bull; as a result &bull; therefore &bull; led to &bull; consequently &bull; so that &bull; in order to &bull; this meant that</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Chains, not pairs</h3>
+<p>Real causes come in chains: scarce food &rarr; competition &rarr; broken trust &rarr; isolation. Trace the whole chain and you understand a system, not just an event.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>Phone dies &rarr; alarm doesn&rsquo;t ring &rarr; late to school &rarr; missed quiz. One cause, cascading effects. Authors build these chains on purpose &mdash; find the first domino.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Chapter 3 is a cause-and-effect chain: born to the wrong blood &rarr; treated as guilty &rarr; taught the treatment is justice. Trace every link &mdash; and notice which link the boys themselves cannot see.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>The Chain of Inherited Guilt</h1><div class="body"><table class="mini">
+<tr><th>Cause</th><th>Effect &mdash; which becomes the next cause</th></tr>
+<tr><td>Relatives were labeled political enemies</td><td>Shin is born a prisoner &mdash; guilt inherited through &ldquo;treasonous blood&rdquo;</td></tr>
+<tr><td>Guilt inherited by blood</td><td>Guards&rsquo; children treat prisoner children as a lower caste &mdash; the stoning on the road</td></tr>
+<tr><td>The attack from above</td><td>The teacher blames the <i>victims</i>: &ldquo;What are you doing not getting yourselves to work?&rdquo;</td></tr>
+<tr><td>Adults enforce the hierarchy</td><td>Children absorb it: Shin believes he deserves what happens to him</td></tr></table>
+<p class="note">Harden also cuts away to the Kim family &mdash; privilege inherited by blood at the very top. Same rule, opposite ends: in this system, birth is destiny in both directions.</p></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Chain Reaction</h1><div class="body"><div class="mcq"><div class="qq">The teacher finds his students bloodied on the road &mdash; and yells at them for not working. Best inference?</div><button class="opt" data-ok="1">The caste system is enforced by adults at every level; victims are blamed by default</button><button class="opt" data-ok="0">The teacher didn&rsquo;t see the injuries</button><button class="opt" data-ok="0">The students were actually at fault</button><div class="fb">His anger points down, not up &mdash; the system&rsquo;s direction in one moment.</div></div><div class="mcq"><div class="qq">Harden contrasts Shin&rsquo;s inherited guilt with Kim Jong Eun&rsquo;s inherited privilege. Why include the contrast?</div><button class="opt" data-ok="1">It shows the whole country runs on the same rule: blood decides everything</button><button class="opt" data-ok="0">To add celebrity interest</button><button class="opt" data-ok="0">To make the book longer</button><div class="fb">Two boys, same era: one born above the law, one born beneath it. The contrast IS the central idea of the caste chapter.</div></div><div class="rev"><div class="rq">Build the chain: start with &ldquo;relatives labeled enemies&rdquo; and end with &ldquo;Shin believes he deserves it.&rdquo; Say every link out loud.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Labeled enemies &rarr; guilt passed to children &rarr; lower caste from birth &rarr; violence and blame from above &rarr; no other truth available &rarr; the treatment feels like justice. Systems don&rsquo;t need to convince adults if they can raise children inside the logic.</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 3</h1><div class="body"><p><span class="badge">Read</span> The road below the Bowiwon compound &mdash; and the machinery of caste, from the guards&rsquo; children down to the newest prisoner born.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The <b>stoning</b> and, more importantly, every adult&rsquo;s <b>response</b> to it.</li><li>&ldquo;Treasonous blood&rdquo; &mdash; how inherited guilt is explained to the children who carry it.</li><li>The cutaway to the <b>Kim dynasty</b> &mdash; inherited power at the top of the same system.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write your own three-link cause-and-effect chain from this chapter &mdash; each link must come from the text.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>The Machine Completed</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Today the week&rsquo;s threads meet: a knock at the dormitory, an underground interrogation, and the question of what Shin&rsquo;s obedience has been built to do.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 3</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 4 + assignment</span></div>
+<div class="stdchips"><span class="pill">RI.1.A — Evidence &amp; Inference</span><span class="pill">RI.1.D — Central Ideas &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Born Guilty</h1><div class="body"><ol class="q"><li>Share your cause-and-effect chain. Where do our chains agree on the first domino?</li><li>Why is the teacher&rsquo;s reaction on the road stronger evidence of caste than the stoning itself?</li><li>Synthesis preview: school teaches obedience (Ch. 2), caste teaches place (Ch. 3). Predict what the system produces when those lessons meet a family secret.</li></ol></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">obedience</div><div class="pos">noun • oh-BEE-dee-ens</div>
+<div class="family" style="margin:0 0 12px">&#9889; <b>Flashback &mdash; last week:</b> oppression &bull; credibility &bull; survival</div><div class="means">Doing what authority tells you &mdash; trained until it happens without thought.</div>
+<div class="morph"><div><b>ob-</b><span>prefix: toward</span></div><div class="plus">+</div><div><b>audire</b><span>Latin — to hear, to listen</span></div><div class="plus">+</div><div><b>-ence</b><span>suffix: the state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">compliance</span><span class="pill">submission</span><span class="pill">conformity</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">defiance</span><span class="pill anti">resistance</span><span class="pill anti">questioning</span></div>
+<div class="family"><b>Word family:</b> obey (v) &bull; obedient (adj) &bull; audio, audience &mdash; same <i>listen</i> root</div></div>
+<div><div class="quote">Without a thought, Shin joined his classmates in thrashing Ryu.<span class="who">&mdash; Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Obedience literally means &ldquo;listening toward&rdquo; power. The camp&rsquo;s version removes the pause between order and action &mdash; <i>without a thought</i>. Watch what that training produces in today&rsquo;s chapter.</p></div></div>
+</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Language Power: Can Words Shape Thought?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Denotation vs. connotation</h3>
+<p><b>Denotation</b> = dictionary meaning. <b>Connotation</b> = the feeling a word carries. &ldquo;Cheap&rdquo; and &ldquo;affordable&rdquo; denote the same thing &mdash; and feel completely different.</p></div>
+<div class="card"><h3>Euphemism &amp; loaded language</h3>
+<p>A <b>euphemism</b> softens something harsh (&ldquo;let go&rdquo; for fired). <b>Loaded language</b> smuggles in judgment (&ldquo;regime&rdquo; vs. &ldquo;government&rdquo;). Both steer you before you notice.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The big question</h3>
+<p>If you have no word for an idea, is the idea harder to think? Powerful groups act like the answer is yes &mdash; that&rsquo;s why controlling words is a way of controlling people.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;Pre-owned vehicle.&rdquo; &ldquo;Budget-friendly.&rdquo; &ldquo;Content.&rdquo; Marketing renames things every day to change how you feel about them. Spot the rename, and you spot the strategy.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Notice the camp&rsquo;s vocabulary: betrayal of family is called <b>loyalty</b>; informing is a <b>duty</b>; a killing is a <b>teachable moment</b>. When a system renames its cruelty, the renaming is part of the machine.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Synthesis: What the System Built</h1><div class="body"><div class="cols2">
+<div class="card"><h3>What Chapter 4 shows</h3>
+<p>Guards arrive at the schoolyard. Shin is handcuffed, blindfolded, and driven to an <b>underground prison</b>. The interrogator&rsquo;s news: his mother and brother were caught planning an escape.</p></div>
+<div class="card"><h3>What Harden adds &mdash; years later</h3>
+<p>Shin eventually told the world the part he first hid: <i>&ldquo;I was more faithful to the guards than to my family. We were each other&rsquo;s spies.&rdquo;</i> The system&rsquo;s finished product was a boy whose loyalty pointed at his keepers.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The credibility thread (from last week)</h3>
+<p>Shin says telling this truth would &ldquo;damage his credibility as a witness&rdquo; &mdash; and tells it anyway, so outsiders can understand what the camps do to children. Weigh that choice: what does it cost him, and what does it buy the truth?</p></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Synthesis Check</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;I was more faithful to the guards than to my family. We were each other&rsquo;s spies.&rdquo; This confession shows&hellip;</div><button class="opt" data-ok="1">The system&rsquo;s goal achieved: loyalty redirected from family to the camp</button><button class="opt" data-ok="0">Shin was an unusually disloyal child</button><button class="opt" data-ok="0">Families in the camp were unusually distant</button><div class="fb">It&rsquo;s the week&rsquo;s three threads tied off: taught truth + inherited guilt + trained obedience = a child aimed at his own family.</div></div><div class="mcq"><div class="qq">Shin admits the confession could damage his credibility &mdash; and makes it anyway. Applying last week&rsquo;s checklist, this&hellip;</div><button class="opt" data-ok="1">Strengthens the testimony: transparency against self-interest is the strongest receipt there is</button><button class="opt" data-ok="0">Proves the whole story is false</button><button class="opt" data-ok="0">Changes nothing</button><div class="fb">Witnesses who volunteer the worst thing about themselves are not decorating their story.</div></div><div class="rev"><div class="rq">The chapter ends with Shin descending into the underground prison. Using this week&rsquo;s evidence, what does the system believe about him &mdash; before asking him a single question?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">That he is guilty &mdash; by blood, by proximity, by caste. The interrogation starts from inherited guilt, not from facts. Which is exactly what Chapters 2&ndash;3 trained us to expect.</div></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 4</h1><div class="body"><p><span class="badge">Read</span> Saturday morning, April 6, 1996: three uniformed men, a jeep, and an elevator going down.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The arrest: what Shin is told, and what he is <b>not</b> told.</li><li>The four-star officer&rsquo;s questions &mdash; and the news about Shin&rsquo;s mother and brother.</li><li>Harden&rsquo;s later revelation: what Shin first hid, why he hid it, and why he finally told it.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Star your <b>two strongest pieces of evidence</b> for tomorrow &mdash; they must come from two different chapters.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Today you write: one claim about how indoctrination and inherited guilt shaped Shin&rsquo;s beliefs &mdash; supported across chapters, summarized objectively.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 4</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft + self-check</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The Machine Completed</h1><div class="body"><ol class="q"><li>The officer&rsquo;s first real question is whether Shin <i>knew</i>. Why does the system assume a 13-year-old must be guilty?</li><li>Does Shin&rsquo;s confession &mdash; made years later, at real cost &mdash; change how you read Chapters 2 and 3? How?</li><li>Check your starred evidence: do your two pieces come from different chapters and support one claim?</li></ol></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Nonfiction edition: your claim answers the essential question, your evidence spans at least two chapters, your tone stays objective, and your response includes a brief objective summary of the key events.</div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:33px">How do indoctrination and inherited guilt shape what Shin believes about truth, responsibility, and his place in the world?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Shin believed his classmate&rsquo;s punishment &ldquo;was just and fair&rdquo; (Ch. 2)</li><li>&ldquo;Every time he was beaten, he deserved it&rdquo; &mdash; the lesson of &ldquo;treasonous blood&rdquo; (Ch. 2&ndash;3)</li><li>&ldquo;Without a thought, Shin joined his classmates&rdquo; &mdash; trained obedience (Ch. 2)</li><li>The stoning &mdash; and the teacher blaming the victims (Ch. 3)</li><li>&ldquo;I was more faithful to the guards than to my family. We were each other&rsquo;s spies.&rdquo; (Ch. 4)</li></ul></div></div></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Language Arts 2 SC <span>&mdash; one developed paragraph</span></h3><p>Chunked directions, organizer, evidence bank. Clear claim + at least one strong piece of evidence + explanation + a one-sentence objective summary of the events you used.</p></div><div class="card"><h3>Challenge / Extension <span>&mdash; 2&ndash;3 analytical paragraphs</span></h3><p>Nuanced claim using evidence from at least two chapters. Address complexity &mdash; for example, how Shin&rsquo;s late confession changes (or protects) his credibility.</p></div></div><p class="note">Objective-summary check: zero opinion words, zero &ldquo;I think.&rdquo; Facts, central idea, done.</p></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>School taught Shin that punishment equals justice. Caste taught him his guilt arrived at birth. By Chapter 4, the system&rsquo;s product is complete: a boy more loyal to guards than to family, descending into an underground prison &mdash; and, years later, a man brave enough to tell that truth at his own expense.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Can a person be responsible for beliefs they were built to hold?</li><li>What finally lets someone see outside a system they were born into?</li><li>Why does Shin&rsquo;s hardest confession make his testimony stronger?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day. Next week: Chapters 5&ndash;7 &mdash; the underground prison, and a man called Uncle.</p></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Shin In Geun (Shin Dong-hyuk)</b></td><td>13 at this point in the story; taken to the camp&rsquo;s underground prison after his mother and brother are caught planning an escape.</td></tr><tr><td><b>Shin&rsquo;s teacher</b></td><td>Armed, uniformed, never named. Runs the school where obedience is the real curriculum.</td></tr><tr><td><b>Ryu Hak Chul</b></td><td>The bold classmate who talked back &mdash; and was punished by his own classmates on the teacher&rsquo;s order.</td></tr><tr><td><b>The Bowiwon children</b></td><td>Guards&rsquo; children raised above the prisoners &mdash; the caste system&rsquo;s next generation.</td></tr><tr><td><b>Shin&rsquo;s mother &amp; brother</b></td><td>Jang Hye Gyung and Shin He Geun &mdash; caught planning an escape on April 6, 1996.</td></tr><tr><td><b>Key terms</b></td><td>indoctrination &bull; caste &bull; inherited guilt &bull; &ldquo;treasonous blood&rdquo; &bull; obedience</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 2</b></td><td>The surprise search; a classmate&rsquo;s death after punishment for five kernels of corn; Shin believes it was &ldquo;just and fair&rdquo;; the class punishes Ryu &ldquo;without a thought.&rdquo;</td></tr><tr><td><b>Ch. 3</b></td><td>The caste system &ldquo;knocks Shin on the head&rdquo;: guards&rsquo; children stone the prisoner children; the teacher blames the victims; the Kim dynasty inherits power as prisoners inherit guilt.</td></tr><tr><td><b>Ch. 4</b></td><td>Shin is handcuffed and taken to the underground prison; the interrogator reveals the escape plan; Harden shares Shin&rsquo;s later confession about his own role and why he finally told the truth.</td></tr></table><p class="note">We discuss these real events with respect and academic language.</p></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>indoctrination</b></td><td>teaching beliefs with the questions removed (ant.: critical thinking)</td></tr><tr><td><b>caste</b></td><td>a class you are born into and cannot leave (ant.: social mobility)</td></tr><tr><td><b>obedience</b></td><td>trained compliance &mdash; action without the pause (ant.: defiance)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">He had been trained by guards and teachers to believe that every time he was beaten, he deserved it.<span class="who">&mdash; Chapter 2</span></div><div class="quote" style="margin:10px 0">Without a thought, Shin joined his classmates in thrashing Ryu.<span class="who">&mdash; Chapter 2</span></div><div class="quote" style="margin:10px 0">Shin was nine years old when the North Korean caste system knocked him on the head.<span class="who">&mdash; Chapter 3</span></div><div class="quote" style="margin:10px 0">I was more faithful to the guards than to my family. We were each other&rsquo;s spies.<span class="who">&mdash; Shin, quoted in Chapter 4</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;Harden shows that ___ shapes Shin&rsquo;s beliefs when ___.&rdquo;</li><li>&ldquo;According to the text, ___.&rdquo;</li><li>&ldquo;This cause leads to ___ because ___.&rdquo;</li><li>&ldquo;Objectively summarized: ___.&rdquo;</li></ul></div></div><div class="footer"><span>Escape from Camp 14 • Week 2 • Indoctrination, Inherited Guilt, and the Construction of Truth</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

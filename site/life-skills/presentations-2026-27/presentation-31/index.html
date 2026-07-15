@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 31: Workplace Communication - Early, Accurate, and Appropriate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 31</div><h1>Calling In Sick and Requesting a Schedule Change</h1><div class="body"><div class="sub">Workplace Communication &mdash; Early, Accurate, and Appropriate</div><div class="meta">This week: contact the correct person, provide needed information, avoid oversharing, and recognize the possible effect on hours &mdash; 20 points</div><div class="theme">Big idea: A worker cannot prevent every absence or conflict. The responsibility is communicating early and following the workplace procedure.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>When and whom to contact</td><td>5</td></tr><tr><td>Day 2</td><td>What to say when sick</td><td>5</td></tr><tr><td>Day 3</td><td>Requesting a schedule change</td><td>5</td></tr><tr><td>Day 4</td><td>Practice and review: absence, lateness, or schedule request</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>2 of 26</span></div></section>
+<section class="slide"><div class="kicker">The Communication Routine</div><h1>WHO + SHIFT + SITUATION + NEXT STEP</h1><div class="body"><table class="mini"><tr><th>Part</th><th>Information</th></tr><tr><td><b>WHO</b></td><td>Your name and the correct supervisor/workplace contact</td></tr><tr><td><b>SHIFT</b></td><td>Date and scheduled start/end time</td></tr><tr><td><b>SITUATION</b></td><td>Absent, late, or requesting a future change&mdash;briefly and honestly</td></tr><tr><td><b>NEXT STEP</b></td><td>What you need to know or what follow-up you will provide</td></tr></table><div class="exit"><b>Use the employer&rsquo;s actual call-in method.</b> A message to a coworker or social-media post usually does not replace contacting the designated person.</div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>3 of 26</span></div></section>
+<section class="slide"><div class="kicker">Three Different Messages</div><h1>Absence, Lateness, or Request?</h1><div class="body"><div class="cols2"><div class="card"><h3>Absence</h3><p>You cannot attend the scheduled shift.</p><h3 style="margin-top:14px">Lateness</h3><p>You expect to attend but cannot arrive on time.</p></div><div class="card"><h3>Schedule-change request</h3><p>You ask in advance to change a future shift. The request may be approved or denied.</p><h3 style="margin-top:14px">Emergency</h3><p>Safety and urgent help come first; communicate with work as soon as reasonably possible.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>4 of 26</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>When and Whom to Contact</h1><div class="body"><div class="dayno">1</div><div class="goal">Identify the correct workplace contact, communicate as early as possible, and recognize possible missed hours.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read the procedure</span><span>Choose the contact</span><span>Decide when to act</span><span>Complete contact scenarios</span></div><div class="stdchips"><span class="pill">Call-In Procedure</span><span class="pill">Advance Notice</span><span class="pill">Attendance</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Find the Procedure</div><h1>Know Before You Need It</h1><div class="body"><table class="mini"><tr><th>Question</th><th>What to locate</th></tr><tr><td>Who?</td><td>Supervisor, manager, attendance line, scheduling system, or designated contact</td></tr><tr><td>How?</td><td>Phone call, approved app, online form, text to a designated number, or another stated method</td></tr><tr><td>When?</td><td>Required notice time or &ldquo;as soon as possible&rdquo;</td></tr><tr><td>What information?</td><td>Name, shift, absence/lateness/request, and required follow-up</td></tr><tr><td>Proof?</td><td>Confirmation number, sent message, call log, or supervisor response when appropriate</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>6 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Act Early</div><h1>Do Not Wait for the Shift to Start</h1><div class="body"><div class="cols2"><div class="card"><h3>If you know now</h3><p>Contact the correct person now. Early notice gives the workplace more time to respond.</p></div><div class="card"><h3>If the situation changes</h3><p>Give an updated arrival estimate or confirm that you cannot attend. Do not disappear after the first message.</p></div></div><div class="rev"><div class="rq">Your shift begins at 4:00 PM. At 2:30 you learn your approved ride is unavailable. When should you begin the backup and contact process?</div><div class="hint">Use the earliest useful time</div><div class="ra"><b>At 2:30 PM.</b> Do not wait until 4:00 to begin responding.</div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>7 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Hours</div><h1>Missed Time May Affect Earnings</h1><div class="body"><div class="eq-wrap"><div class="eq">missed paid hours &times; hourly wage<br>= possible missed gross earnings</div></div><div class="rev"><div class="rq">A worker misses a 4-hour shift at $13 per hour. What gross earnings may be missed?</div><div class="hint">4 &times; 13</div><div class="ra"><b>$52 gross.</b> Actual pay depends on recorded hours and workplace leave policies.</div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>8 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Check Understanding</div><h1>Who Needs the Message?</h1><div class="body"><div class="mcq"><div class="qq">The procedure says to call the attendance line and then notify the shift supervisor. What should the worker do?</div><button class="opt" data-ok="1">Complete both stated steps.</button><button class="opt" data-ok="0">Tell only a friend at work.</button><button class="opt" data-ok="0">Post in a group chat and assume someone sees it.</button><div class="fb">Follow the actual procedure and complete every required contact step.</div></div><div class="mcq"><div class="qq">The worker becomes ill the night before a morning shift.</div><button class="opt" data-ok="1">Use the procedure as early as it allows; do not wait until after the shift.</button><button class="opt" data-ok="0">Wait to see whether the employer notices.</button><button class="opt" data-ok="0">Change the schedule without permission.</button><div class="fb">Early, direct communication is the responsible response.</div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>9 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Complete Contact-Decision Scenarios</h1><div class="body"><p><span class="badge">Your task</span> For each absence, lateness, or schedule-conflict scenario, identify who should be contacted, how, and when. Note possible missed hours when relevant.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose the correct contact from pictures/names, sequence call-in steps, or use a procedure checklist.</p></div><div class="card"><h3>Independent path</h3><p>Explain why the contact and timing fit the situation and identify how to document the communication.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>10 of 26</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>What to Say When Sick</h1><div class="body"><div class="dayno">2</div><div class="goal">State name, shift, inability to attend, and follow-up plan without unnecessary medical detail.</div><div class="agenda"><b>Today&rsquo;s path</b><span>State the required facts</span><span>Protect private information</span><span>Give a clear next step</span><span>Complete a call-in script</span></div><div class="stdchips"><span class="pill">Professional Message</span><span class="pill">Privacy</span><span class="pill">Follow-Up</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; The Script</div><h1>Brief and Complete</h1><div class="body"><div class="card"><h3>Sample call-in</h3><p>&ldquo;Hello, this is Maya Chen. I am scheduled today from 3:00 to 7:00 PM. I am ill and cannot safely attend my shift. I am following the call-in procedure now. Please let me know whether I need to complete another step before my next scheduled shift.&rdquo;</p></div><div class="exit"><b>Included:</b> name, shift, inability to attend, reason category, and follow-up. No detailed medical story is needed for this practice.</div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>12 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Privacy</div><h1>Needed Information vs. Oversharing</h1><div class="body"><table class="mini"><tr><th>Usually useful</th><th>Usually unnecessary in the first message</th></tr><tr><td>&ldquo;I am ill and cannot attend safely.&rdquo;</td><td>A long description of symptoms</td></tr><tr><td>&ldquo;My shift is 3:00&ndash;7:00 PM today.&rdquo;</td><td>Unrelated family information</td></tr><tr><td>&ldquo;I will update you tomorrow if required.&rdquo;</td><td>Photos or private medical documents sent through an unofficial channel</td></tr><tr><td>Information required by the actual policy</td><td>Anything not requested or relevant</td></tr></table><p class="note">Follow the employer&rsquo;s legitimate documentation policy with appropriate adult support when needed.</p></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>13 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Check Understanding</div><h1>Which Message Is Ready to Send?</h1><div class="body"><div class="mcq"><div class="qq">Choose the strongest call-in message.</div><button class="opt" data-ok="0">&ldquo;I don&rsquo;t feel good. Maybe see you later.&rdquo;</button><button class="opt" data-ok="1">&ldquo;This is Luis. I am scheduled 4:00&ndash;8:00 tonight. I am ill and cannot attend. I am calling the supervisor as required. Is another follow-up needed?&rdquo;</button><button class="opt" data-ok="0">A detailed description of every symptom with no shift information</button><div class="fb">The second message is specific, brief, and actionable.</div></div><div class="mcq"><div class="qq">A worker is unsure whether a doctor&rsquo;s note is required.</div><button class="opt" data-ok="1">Ask the supervisor or check the official policy.</button><button class="opt" data-ok="0">Invent a note.</button><button class="opt" data-ok="0">Send medical information to a coworker.</button><div class="fb">Verify requirements through the official route and protect private information.</div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>14 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete a Call-In Script</h1><div class="body"><p><span class="badge">Your task</span> Fill in or deliver a message with your fictional worker name, shift, inability to attend, brief reason category, and follow-up question.</p><div class="card flat"><h3>Communication options</h3><p>Speak, read a prepared script, type, point to a completed message, use a communication system, or dictate for teacher recording.</p></div><div class="exit"><b>Check out:</b> Remove one unnecessary detail without removing information the employer needs.</div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>15 of 26</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Requesting a Schedule Change</h1><div class="body"><div class="dayno">3</div><div class="goal">Ask in advance, explain the conflict briefly, compare hours before and after, and accept that the request may be denied.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Check the current shift</span><span>Ask before the conflict</span><span>Offer accurate options</span><span>Wait for approval</span></div><div class="stdchips"><span class="pill">Schedule Request</span><span class="pill">Advance Notice</span><span class="pill">Hours Comparison</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; A Request Is Not Approval</div><h1>Keep the Original Schedule Until Confirmed</h1><div class="body"><div class="cols2"><div class="card"><h3>Request</h3><p>&ldquo;May I move my Thursday 4:00&ndash;8:00 shift to Friday 4:00&ndash;8:00 because of an appointment?&rdquo;</p></div><div class="card"><h3>Approval</h3><p>The supervisor or scheduling system confirms the change. Until then, the original Thursday shift still applies.</p></div></div><div class="exit"><b>Do not:</b> trade shifts informally, assume silence means yes, or skip the original shift without confirmation.</div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>17 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Compare Hours</div><h1>Will the Change Affect Paid Time?</h1><div class="body"><table class="mini"><tr><th>Option</th><th>Hours</th><th>Effect</th></tr><tr><td>Original Thursday 4&ndash;8</td><td>4 hours</td><td>Current schedule</td></tr><tr><td>Requested Friday 4&ndash;8</td><td>4 hours</td><td>No hour change if approved</td></tr><tr><td>Requested Friday 5&ndash;8</td><td>3 hours</td><td>One fewer scheduled hour if approved</td></tr></table><div class="rev"><div class="rq">At $13/hour, what is the gross difference between four hours and three hours?</div><div class="hint">One hour &times; $13</div><div class="ra"><b>$13 less expected gross earnings.</b></div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>18 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Message Pattern</div><h1>Current Shift + Conflict + Request</h1><div class="body"><div class="card"><h3>Sample request</h3><p>&ldquo;This is Jordan. I am scheduled Thursday from 4:00 to 8:00 PM. I have an appointment that cannot be moved. May I request Friday from 4:00 to 8:00 PM instead? I understand the change needs approval, and I will follow the current schedule unless I receive confirmation.&rdquo;</p></div><p class="note">Offer only times and transportation you can actually manage.</p></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>19 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Complete a Schedule-Change Message</h1><div class="body"><p><span class="badge">Your task</span> Use the fictional schedule conflict. State the current shift, brief conflict, requested change, hour difference, and need for approval.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose from proposed times, use a fill-in message, compare provided hour totals, or complete with teacher recording.</p></div><div class="card"><h3>Independent path</h3><p>Propose a realistic alternative, calculate the hour/pay effect, and explain what happens if the request is denied.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>20 of 26</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Practice and Review</h1><div class="body"><div class="dayno">4</div><div class="goal">Choose the correct message for absence, lateness, or schedule request and identify the possible effect on hours.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Classify the situation</span><span>Choose the correct contact</span><span>Build the message</span><span>Check hours and privacy</span></div><div class="stdchips"><span class="pill">Mixed Communication</span><span class="pill">Attendance</span><span class="pill">Self-Check</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Decision Check</div><h1>What Kind of Message?</h1><div class="body"><div class="mcq"><div class="qq">You wake up ill and cannot attend today&rsquo;s shift.</div><button class="opt" data-ok="1">Absence/call-in message now</button><button class="opt" data-ok="0">Future schedule-change request next week</button><button class="opt" data-ok="0">No message</button><div class="fb">This is a current absence and needs prompt call-in communication.</div></div><div class="mcq"><div class="qq">Two weeks from now, a required appointment overlaps a shift.</div><button class="opt" data-ok="0">Wait until the shift begins.</button><button class="opt" data-ok="1">Submit an advance schedule-change request.</button><button class="opt" data-ok="0">Tell only a coworker.</button><div class="fb">Advance notice creates the best chance for an approved solution.</div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>22 of 26</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Do</div><h1>Complete Mixed Communication Scenarios</h1><div class="body"><p><span class="badge">Your task</span> For each scenario, identify absence, lateness, or schedule request; select the correct contact and timing; complete the message; and identify possible missed hours.</p><div class="card flat"><h3>Final checklist</h3><p>WHO &bull; SHIFT &bull; SITUATION &bull; NEXT STEP &bull; early contact &bull; privacy &bull; approval when required.</p></div><div class="exit"><b>Teacher evidence:</b> Accuracy, completion, independence level 0&ndash;5, and supports used.</div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>23 of 26</span></div></section>
+<section class="slide divider"><div class="kicker">Day 5</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">5</div><div class="goal">No new required lesson. Use today for completion, individualized practice, reteaching, progress evidence, or a brief attendance-communication lab.</div><div class="agenda"><b>Choose the useful path</b><span>Finish or correct a message</span><span>Practice a phone script</span><span>Compare schedule hours</span><span>Collect evidence</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Individualized Practice</span><span class="pill">IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 5 &bull; Pick Your Path</div><h1>What Would Help Most Today?</h1><div class="body"><div class="cols2"><div class="card"><h3>Completion or reteaching</h3><ul><li>Identify the correct contact.</li><li>Complete a call-in script.</li><li>Remove oversharing.</li><li>Correct a schedule request.</li></ul></div><div class="card"><h3>Generalization or evidence</h3><ul><li>Practice a voicemail.</li><li>Respond to a changed arrival estimate.</li><li>Compare before/after hours.</li><li>Complete a teacher-selected sample.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>25 of 26</span></div></section>
+<section class="slide"><div class="kicker">Wrap-Up</div><h1>Week 31 Quick Reference</h1><div class="body"><div class="cols2"><div class="card"><h3>Message</h3><p><b>WHO + SHIFT + SITUATION + NEXT STEP</b></p><p>Contact the designated person through the official method as early as possible.</p></div><div class="card"><h3>Boundaries</h3><p>Be honest but brief. A request is not approval. Missed paid hours may reduce earnings.</p></div></div><p class="note">Next week: return to in-person money practice by reading prices, checking whether enough money is available, and making exact or efficient cash payments.</p></div><div class="footer"><span>Life Skills SC • Week 31 • Workplace Communication — Calling In Sick and Requesting a Schedule Change</span><span>26 of 26</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

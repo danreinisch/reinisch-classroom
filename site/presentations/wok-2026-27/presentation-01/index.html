@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1: Evidence, Character &amp; Leadership - Return, Family, and Competing Responsibilities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#f59e0b; --accent-deep:#92400e; --glow:rgba(245,158,11,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts SC • Week 1</div><h1>Warrior of Kragdon-ah</h1><div class="body"><div class="sub">by Shawn Inmon &mdash; Book Four of the Alex Hawk Time Travel Adventure Series</div>
+<div class="meta">Language Arts focus: <b>Evidence, Character &amp; Leadership</b><br>This week: Chapters 1&ndash;3 + Written Response</div><div class="theme">Theme: Return, Family, and Competing Responsibilities</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 1, &ldquo;Oregon&rdquo; &mdash; identify details and annotate</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 2, &ldquo;The Horns of a Dilemma&rdquo; &mdash; build analysis</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 3, &ldquo;Kragdon-ah&rdquo; &mdash; synthesize across chapters</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 1&ndash;3</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skill</h3><p><b>Evidence-based character analysis.</b> We find <b>explicit details</b> and make <b>inferences</b> about how Alex&rsquo;s family, age, past experiences, and competing responsibilities shape his decision to return.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Identify the <b>two responsibilities</b> pulling Alex in opposite directions.</li><li>Track how his decision <b>changes</b> across three chapters.</li><li>Support my ideas with evidence from the text.</li></ul></div></div>
+<p class="note">Standards this week: RL.1.A — Evidence &amp; Inference • RL.1.B — Word Meanings • RL.2.D — Character and Text Elements • W.2.A / W.3.A.a — Written Response (9-10 / 11-12)</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do Alex&rsquo;s family and competing responsibilities shape his decision to return to Kragdon-ah?</div></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Before We Begin</div><h1>Twenty Years Later</h1><div class="body"><div class="cols2"><div class="card"><h3>Alex Hawk (Manta-ak)</h3><p>Now 47. Twenty years ago he came home from Kragdon-ah, rebuilt the brick wall, and kept the door sealed. He raised his daughters and never went back.</p></div><div class="card"><h3>Amy &amp; Sanda</h3><p>His daughters, both 24 &mdash; one born in Oregon, one born in Kragdon-ah. Trained survivalists and fighters who have always begged to see the world behind the wall.</p></div><div class="card"><h3>Mondak (Monda-ak)</h3><p>Alex&rsquo;s enormous, long-lived dog &mdash; a Kragdon-ah original living quietly in Oregon.</p></div><div class="card"><h3>The Winten-ah</h3><p>Alex&rsquo;s tribe beyond the door: <b>Sekun-ak</b>, his sworn brother, and <b>Wenta-eh</b>, who is about to come through the wall with terrible news.</p></div></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Wall Breaks</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Today we learn to read <b>exposition</b> like detectives: the details an author picks about ordinary life always set up the choice to come.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 1 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.1.A — Evidence &amp; Inference</span><span class="pill">RL.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Before We Open the Book</h1><div class="body"><ol class="q"><li>Twenty years of peace. What would it take to make <i>you</i> reopen a door you sealed shut on purpose?</li><li>What do parents owe their children &mdash; and what do they owe their oldest friends? Can those debts collide?</li><li>Predict: what is the hardest part of returning somewhere after twenty years away?</li></ol><p class="note">Keep your answers in mind &mdash; Alex faces all three of these questions this week.</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">responsibility</div><div class="pos">noun • rih-spahn-suh-BIH-lih-tee</div>
+<div class="means">A duty you are expected to carry &mdash; something or someone you must take care of.</div>
+<div class="morph"><div><b>re-</b><span>prefix: back, again</span></div><div class="plus">+</div><div><b>spons</b><span>Latin <i>spondere</i> — to pledge, to promise</span></div><div class="plus">+</div><div><b>-ibility</b><span>suffix: able to be; the quality of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">duty</span><span class="pill">obligation</span><span class="pill">charge</span><span class="pill">burden</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">freedom</span><span class="pill anti">neglect</span><span class="pill anti">irresponsibility</span></div>
+<div class="family"><b>Word family:</b> responsible (adj) &bull; responsibly (adv) &bull; respond (v)</div></div>
+<div><div class="quote">I want to go more than anything. But my life is here with you now&hellip; my responsibilities are with you.<span class="who">&mdash; Alex, Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>spons/spond</i> means promise: re<b>spond</b>, <b>spons</b>or, re<b>spons</b>ibility. What has Alex promised &mdash; and to whom?</p></div></div>
+</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Explicit vs. Implicit: How Readers Know Things</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit &mdash; the text says it</h3>
+<p>Information stated directly. <i>&ldquo;Maria slammed the door.&rdquo;</i> We know the door slammed &mdash; it&rsquo;s on the page.</p></div>
+<div class="card"><h3>Implicit &mdash; the text suggests it</h3>
+<p>An <b>inference</b> = detail from the text + what you already know. Slammed door + your life experience &rarr; Maria is probably angry. The text never said &ldquo;angry.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday inference</h3>
+<p>You come home: wet umbrella by the door, muddy shoes on the mat. Nobody told you it rained &mdash; you <b>inferred</b> it. You do this skill all day already.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The one rule</h3>
+<p>Every inference must trace back to a detail you can point to. Evidence is your receipt &mdash; no receipt, no claim.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Twenty quiet years are described in Chapter 1 &mdash; and every &ldquo;quiet&rdquo; detail is loaded. Underline the ordinary; infer what it has been guarding.</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Exposition Is Evidence: What Ordinary Life Reveals</h1><div class="body"><table class="mini">
+<tr><th>Detail from twenty quiet years</th><th>What it lets us infer</th></tr>
+<tr><td>Alex still lives in the same house and never sold it.</td><td>He is standing guard over the door &mdash; the past never released him.</td></tr>
+<tr><td>He trained Amy and Sanda as fighters and survivalists from childhood.</td><td>He has been preparing them for a world he swears they will never enter.</td></tr>
+<tr><td>Every time the girls beg to see Kragdon-ah: &ldquo;no means no.&rdquo;</td><td>He knows exactly what it costs &mdash; he paid it once.</td></tr></table>
+<p class="note">Watch for the contradiction as you read: everything Alex <i>does</i> points toward Kragdon-ah, while everything he <i>says</i> points away from it. Great analysis lives in that gap.</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Exposition Detective</h1><div class="body"><div class="mcq"><div class="qq">Which one is an <b>explicit detail</b>?</div><button class="opt" data-ok="0">Alex secretly hopes the door will open again.</button><button class="opt" data-ok="1">Alex still lives in the same house and never sold it.</button><button class="opt" data-ok="0">The invaders have been planning for years.</button><div class="fb">It&rsquo;s stated on the page. The others are inferences &mdash; maybe good ones, but they need receipts.</div></div><div class="mcq"><div class="qq">Alex trained both daughters as fighters and survivalists from childhood. Best inference?</div><button class="opt" data-ok="0">He wanted them to win trophies.</button><button class="opt" data-ok="1">Part of him has always expected the door &mdash; or its dangers &mdash; to return.</button><button class="opt" data-ok="0">He had no other hobbies to share.</button><div class="fb">Training + never selling the house + rebuilt wall: the pile of details all points one direction.</div></div><div class="rev"><div class="rq">Mondak &ldquo;hadn&rsquo;t crushed a single skull since he had left Kragdon-ah.&rdquo; What does this one funny line quietly remind us?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">A living piece of Kragdon-ah has been sleeping in the living room for twenty years. The wild world never actually left the house.</div></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 1 &mdash; &ldquo;Oregon&rdquo;</h1><div class="body"><p><span class="badge">Read</span> A quiet family life &mdash; until something starts pounding on the basement wall <i>from the other side</i>.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>Details showing the life Alex <b>built</b>: his daughters, their training, their survival trips.</li><li>How Alex answers every time the girls beg to visit Kragdon-ah &mdash; and why.</li><li>Who breaks through the wall, and the message she brings: <i>&ldquo;Come quickly. We need you.&rdquo;</i></li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write one detail of Alex&rsquo;s ordinary life and the inference it supports about the door.</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Two Families, One Choice</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">We talk through the break-in, then learn to map an <b>internal conflict</b>: the evidence for staying, the evidence for going, and the gap between words and actions.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 1</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 2 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.1.A — Evidence &amp; Inference</span><span class="pill">RL.2.D — Character / Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Oregon</h1><div class="body"><ol class="q"><li>What details showed that Alex never really left Kragdon-ah behind, even after twenty years?</li><li>Why did Alex train his daughters as fighters and survivalists &mdash; what does that suggest he fears or expects?</li><li>Wenta-eh broke through two brick walls to find Alex. What does that tell us about how much the Winten-ah need him?</li></ol></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">dilemma</div><div class="pos">noun • dih-LEM-uh</div>
+<div class="means">A situation forcing a choice between two options &mdash; where both cost you something.</div>
+<div class="morph"><div><b>di-</b><span>Greek prefix: two, twice</span></div><div class="plus">+</div><div><b>lemma</b><span>Greek: a premise, something taken or assumed</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">predicament</span><span class="pill">quandary</span><span class="pill">bind</span><span class="pill">no-win choice</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">easy call</span><span class="pill anti">no-brainer</span><span class="pill anti">clear choice</span></div>
+<div class="family"><b>Word family:</b> plural: dilemmas &bull; idiom: <i>on the horns of a dilemma</i></div></div>
+<div><div class="quote">Alex Hawk looked pained. He was obviously on the horns of a dilemma.<span class="who">&mdash; Chapter 2 (the chapter title!)</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The idiom pictures a charging bull: dodge one horn and the other catches you. Name Alex&rsquo;s two &ldquo;horns.&rdquo;</p></div></div>
+</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Characterization: How Authors Build People</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Direct characterization</h3>
+<p>The narrator tells you flat out: <i>&ldquo;Ben was brave.&rdquo;</i> Rare, and less interesting.</p></div>
+<div class="card"><h3>Indirect characterization</h3>
+<p>The author shows you and lets you conclude. Remember <b>STEAL</b>: what a character <b>S</b>ays, <b>T</b>hinks, their <b>E</b>ffect on others, how they <b>A</b>ct, how they <b>L</b>ook.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend says &ldquo;I&rsquo;m not mad&rdquo; &mdash; then answers every text with one word. Words say one thing; behavior says another. You believe the behavior. So do readers.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Motivation &mdash; the why</h3>
+<p>Behind every action is a <b>want</b> or a <b>fear</b>. Find what a character wants most and fears most, and their choices start making sense.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Today the gap between what Alex <b>says</b> and what Alex <b>does</b> blows wide open. STEAL his Acts &mdash; especially what his hands do while his mouth says no.</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Map the Conflict: Stay or Go?</h1><div class="body"><table class="mini">
+<tr><th>Evidence for staying</th><th>Evidence for going</th></tr>
+<tr><td>&ldquo;What if I step through this door and never return. Where does that leave you girls?&rdquo;</td><td>Sekun-ak is &ldquo;his brother in every way that bond could be formed.&rdquo;</td></tr>
+<tr><td>He was &ldquo;chewed up&rdquo; by Kragdon-ah once &mdash; ten years, nearly killed.</td><td>Wenta-eh&rsquo;s words are &ldquo;a dagger to Alex&rsquo;s heart.&rdquo;</td></tr>
+<tr><td>He tells Wenta-eh: &ldquo;My life is here, now.&rdquo;</td><td>He secretly kept a battle ax and sword he made &ldquo;years earlier&rdquo; &mdash; ready.</td></tr></table>
+<p class="note">Author&rsquo;s craft: when a character can&rsquo;t choose, writers often make the world choose for them &mdash; then we learn what the character <i>wanted</i> all along. Watch for how this chapter ends.</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Words vs. Actions</h1><div class="body"><div class="mcq"><div class="qq">Alex says &ldquo;I cannot come.&rdquo; Which <b>action</b> argues against his words?</div><button class="opt" data-ok="0">He goes to the hardware store for bricks.</button><button class="opt" data-ok="1">He pulls out the battle ax and sword he secretly made years ago.</button><button class="opt" data-ok="0">He asks the girls to watch Mondak.</button><div class="fb">You don&rsquo;t forge and keep weapons for a world you plan never to see again.</div></div><div class="mcq"><div class="qq">The idiom &ldquo;on the horns of a dilemma&rdquo; means&hellip;</div><button class="opt" data-ok="0">an easy decision between good options</button><button class="opt" data-ok="1">being trapped between two choices that both cost you something</button><button class="opt" data-ok="0">a physical fight with an animal</button><div class="fb">Picture a charging bull: dodge one horn and the other catches you. Alex&rsquo;s horns: his daughters&rsquo; safety vs. his brother&rsquo;s life.</div></div><div class="rev"><div class="rq">Build the explanation: <b>Claim:</b> Alex wants to go. <b>Evidence:</b> the kept weapons. Your one-sentence explanation?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: His hands spent years preparing for the trip his mouth kept refusing &mdash; the weapons prove the wish his words denied.</div></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 2 &mdash; &ldquo;The Horns of a Dilemma&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Invaders with guns have captured the Winten-ah. Alex must choose between two families.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The news: strangers with <b>new weapons</b> (<i>stama</i>) captured Sekun-ak and the tribe.</li><li>Alex&rsquo;s answer &mdash; <b>&ldquo;I cannot come&rdquo;</b> &mdash; and every reason he gives.</li><li>The note his daughters leave behind &mdash; and how it destroys his plan to stay.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Fill the frame: &ldquo;Alex says ___, but he does ___. This gap shows ___.&rdquo;</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Back Through the Door</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">We talk through the dilemma and the note, then learn how <b>actions reveal values</b> &mdash; and follow Alex back into Kragdon-ah.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 2</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 3 + assignment</span></div>
+<div class="stdchips"><span class="pill">RL.2.A — Theme Development</span><span class="pill">RL.1.D — Comprehension &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The Horns of a Dilemma</h1><div class="body"><ol class="q"><li>Amy told her father, &ldquo;This is your family, too.&rdquo; Is she right? What makes the Winten-ah family?</li><li>Alex said no &mdash; but then took out the ax and sword he made years ago. What does that action reveal that his words hide?</li><li>Were Amy and Sanda right to go through the door without permission? Argue your side with evidence.</li></ol><div class="quote">I want to go more than anything. But my life is here with you now.<span class="who">&mdash; Alex, Chapter 2</span></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">intractable</div><div class="pos">adjective • in-TRAK-tuh-bul</div>
+<div class="means">Refusing to change your mind or be managed; impossible to move.</div>
+<div class="morph"><div><b>in-</b><span>prefix: not</span></div><div class="plus">+</div><div><b>tract</b><span>Latin <i>tractare</i> — to handle, to drag</span></div><div class="plus">+</div><div><b>-able</b><span>suffix: able to be</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">stubborn</span><span class="pill">unyielding</span><span class="pill">immovable</span><span class="pill">inflexible</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">flexible</span><span class="pill anti">cooperative</span><span class="pill anti">manageable</span></div>
+<div class="family"><b>Word family:</b> tractable (adj) &bull; traction (n) &bull; tractor (n) &mdash; same root</div></div>
+<div><div class="quote">They knew their father was intractable, or at least appeared as such.<span class="who">&mdash; Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>tract</i> means pull or drag: <b>tract</b>or, at<b>tract</b>, in<b>tract</b>able. The girls think Alex only <i>appeared</i> intractable &mdash; why is that word choice important?</p></div></div>
+</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Theme: The Idea Under the Story</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one word)</h3>
+<p>Loss. Curiosity. Duty. Survival. A topic is just a subject &mdash; it makes no point.</p></div>
+<div class="card"><h3>Theme (a complete claim)</h3>
+<p>&ldquo;Loss can push people to build new purpose.&rdquo; A theme says something <i>about</i> the topic that the story proves.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How writers plant themes</h3>
+<p>Themes are almost never stated. Trace them through <b>repeated images</b>, <b>choices characters make</b>, and <b>consequences</b> of those choices. When a pattern repeats, the author is pointing at something.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The portability test</h3>
+<p>A real theme statement works <i>outside</i> the book too. &ldquo;Alex misses Amy&rdquo; is plot. &ldquo;Keeping a promise can cost the people you love&rdquo; is theme.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Our topic is <b>family</b>. Today Alex&rsquo;s two families finally occupy the same world &mdash; watch which loyalties his actions serve first.</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Actions Reveal Values: Read the Choices</h1><div class="body"><table class="mini">
+<tr><th>Alex&rsquo;s action in Chapter 3</th><th>The value it reveals</th></tr>
+<tr><td>Leaves his guns behind; brings only the ax and sword.</td><td>Respect for the Winten-ah&rsquo;s law against <i>stama</i> &mdash; their world, their rules.</td></tr>
+<tr><td>Smashes the invader&rsquo;s strange rifle on a rock.</td><td>He knows what gunpowder will do to this world &mdash; and refuses to help it spread.</td></tr>
+<tr><td>Refuses to kill the captured guard.</td><td>His own code travels with him &mdash; a captured soldier is not executed.</td></tr></table>
+<p style="margin-top:14px"><b>Synthesis frame (we build it together):</b> Alex returns because ___ and ___. His first actions there show that he values ___ over ___.</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Values on Display</h1><div class="body"><div class="mcq"><div class="qq">Alex smashes the invader&rsquo;s rifle on a rock. The <b>value</b> this action reveals:</div><button class="opt" data-ok="0">He hates all technology.</button><button class="opt" data-ok="1">He protects this world from the spread of gunpowder &mdash; even mid-crisis.</button><button class="opt" data-ok="0">He wanted a souvenir of the fight.</button><div class="fb">He knows exactly what firearms did to his own world&rsquo;s history &mdash; and refuses to help it happen here.</div></div><div class="mcq"><div class="qq">Which one is a <b>theme</b> this book is building?</div><button class="opt" data-ok="0">Family.</button><button class="opt" data-ok="1">A person can owe loyalty to more than one family at a time.</button><button class="opt" data-ok="0">Doors are dangerous.</button><div class="fb">It&rsquo;s a portable claim &mdash; and every chapter so far is evidence for it.</div></div><div class="rev"><div class="rq">Did Alex decide to return &mdash; or was it decided for him? Give the best evidence for <i>each</i> side.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">For &ldquo;decided for him&rdquo;: the note &mdash; &ldquo;Now you&rsquo;ll have to come after us.&rdquo; For &ldquo;he wanted it&rdquo;: the kept weapons, the hidden pride at the cliffside. Strong essays admit both.</div></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 3 &mdash; &ldquo;Kragdon-ah&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Alex gears up the old way and steps through the door for the first time in twenty years.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>What Alex chooses to bring &mdash; and why he leaves the <b>guns</b> at home.</li><li>What his daughters have already done by the time he arrives.</li><li>The clues that the invaders are <b>not from Kragdon-ah</b>: the strange gun, the unknown language, the different clothes.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Star the <b>two strongest pieces of evidence</b> for tomorrow &mdash; one from each side of Alex&rsquo;s dilemma.</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">We talk through the return, review the evidence bank, then you write: how family and competing responsibilities shaped Alex&rsquo;s decision.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 3</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft with frames</span><span>Self-check and turn in</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Kragdon-ah</h1><div class="body"><ol class="q"><li>Alex smashed the captured gun on a rock. Why? What does he understand about gunpowder and this world?</li><li>Amy asked if they should kill the prisoner; Alex refused. What rules does Alex carry with him from our world?</li><li>The note said: &ldquo;Now you&rsquo;ll have to come after us.&rdquo; Did Alex really decide to return &mdash; or was the decision made for him?</li></ol><p class="note">Check your starred evidence as we talk &mdash; still your strongest two? Swap if better ones come up.</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your written response today is exactly this structure: a claim about Alex&rsquo;s competing responsibilities, evidence from Chapters 1&ndash;3, explanation in your own words.</div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How do Alex&rsquo;s family and competing responsibilities shape his decision to return to Kragdon-ah?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Alex refuses Wenta-eh: &ldquo;My responsibilities are with you&rdquo; (Ch. 2)</li><li>He secretly keeps and inspects the ax and sword he made (Ch. 2)</li><li>Amy and Sanda&rsquo;s note forces his hand (Ch. 2&ndash;3)</li><li>He arms himself the Winten-ah way and follows them through (Ch. 3)</li></ul></div></div></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Foundation <span>&mdash; 4&ndash;6 sentences</span></h3><p>Use <b>one</b> detail and the frames: &ldquo;Alex&rsquo;s two responsibilities are ___ and ___.&rdquo; &ldquo;He decides to ___ because ___.&rdquo;</p></div><div class="card"><h3>Supported <span>&mdash; one developed paragraph</span></h3><p>Use <b>two</b> details &mdash; one showing why Alex stays, one showing why he goes &mdash; and explain what finally tips the balance.</p></div><div class="card"><h3>Extension <span>&mdash; multi-paragraph response</span></h3><p>Use <b>two or three</b> details. Also consider: did the daughters&rsquo; note free Alex to do what he already wanted? Where does the text leave this uncertain?</p></div></div><p class="note">Self-check: Did I state a claim? Did I use real moments from the text? Did I explain the connection in my own words?</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Alex Hawk / Manta-ak</b></td><td>47 now. Sealed the door for twenty years; raised his daughters; kept his weapons.</td></tr><tr><td><b>Amy &amp; Sanda</b></td><td>Both 24 &mdash; katana master and bow master, trained survivalists. They go through the door first.</td></tr><tr><td><b>Mondak / Monda-ak</b></td><td>The giant, long-lived Kragdon-ah dog. Refused to leave with the girls.</td></tr><tr><td><b>Wenta-eh</b></td><td>Winten-ah messenger who breaks through the wall: the tribe has been captured.</td></tr><tr><td><b>Sekun-ak</b></td><td>Alex&rsquo;s sworn brother; chieftain; taken by the invaders.</td></tr><tr><td><b>The invaders</b></td><td>Short, pale strangers with unknown guns (<i>stama</i>), unknown language, wrapped cotton clothes &mdash; not from Kragdon-ah.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 1 &mdash; Oregon</b></td><td>Twenty years of quiet family life &mdash; then booming from inside the basement wall. Wenta-eh breaks through: &ldquo;Come quickly. We need you.&rdquo;</td></tr><tr><td><b>Ch. 2 &mdash; The Horns of a Dilemma</b></td><td>Invaders with guns captured the tribe. Alex refuses &mdash; &ldquo;my responsibilities are with you&rdquo; &mdash; but his daughters leave a note and go through without him.</td></tr><tr><td><b>Ch. 3 &mdash; Kragdon-ah</b></td><td>Alex follows with Mondak, armed the Winten-ah way. The girls have already taken a guard prisoner. Alex destroys the strange gun; the prisoner speaks no known language.</td></tr></table></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>responsibility</b></td><td>a duty you are expected to carry (ant.: neglect)</td></tr><tr><td><b>dilemma</b></td><td>a choice where both options cost you (ant.: easy call)</td></tr><tr><td><b>intractable</b></td><td>refusing to change your mind (ant.: flexible)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">I want to go more than anything. But my life is here with you now.<span class="who">&mdash; Alex, Chapter 2</span></div><div class="quote" style="margin:10px 0">This is your family, too. If they are in danger, you have to go and help them.<span class="who">&mdash; Amy, Chapter 2</span></div><div class="quote" style="margin:10px 0">We know you only stayed here because of us&hellip; Now you&rsquo;ll have to come after us.<span class="who">&mdash; the note, Chapter 2</span></div><div class="quote" style="margin:10px 0">What am I going to do? This is my tribe&hellip; If I cannot, I will die with them.<span class="who">&mdash; Wenta-eh, Chapter 2</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;In Chapter ___, the text says ___.&rdquo;</li><li>&ldquo;This detail shows / suggests ___.&rdquo;</li><li>&ldquo;For example, when ___, it reveals ___.&rdquo;</li><li>&ldquo;This matters because ___.&rdquo;</li><li>&ldquo;Ultimately, ___.&rdquo;</li></ul></div></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Twenty years of peace end when Wenta-eh smashes through the wall: invaders with guns have taken the Winten-ah. Alex refuses to go &mdash; until his daughters go first. Now all three Hawks (and Mondak) are back in Kragdon-ah.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Can Alex protect both of his families?</li><li>Who are the invaders &mdash; and where did their technology come from?</li><li>What do Amy and Sanda still not understand about this world?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day: finish your response, get support, or choose a reading activity. Next week: Chapters 4&ndash;6.</p></div><div class="footer"><span>Warrior of Kragdon-ah • Week 1 • Evidence, Character &amp; Leadership</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

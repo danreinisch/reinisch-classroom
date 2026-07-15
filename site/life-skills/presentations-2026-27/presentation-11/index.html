@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 11: Workplace Behavior - First-Day and Everyday Workplace Expectations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 11</div><h1>First-Day &amp; Everyday Expectations</h1><div class="body"><div class="sub">Workplace Behavior &mdash; First-Day and Everyday Workplace Expectations</div>
+<div class="meta">New unit! This week: the first-day checklist, dress and hygiene, phones and breaks and staying on task &mdash; 20 points</div><div class="theme">Big idea: Getting hired opens the door &mdash; workplace behavior is what keeps you inside</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>The first-day checklist &mdash; walk in ready</td><td>5</td></tr><tr><td>Day 2</td><td>Dress, hygiene, and uniforms &mdash; looking like the job</td><td>5</td></tr><tr><td>Day 3</td><td>Cell phones, breaks, and staying on task &mdash; the everyday rules</td><td>5</td></tr><tr><td>Day 4</td><td>Workplace behavior review &mdash; show what you know</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">New Unit</div><h1>The Story So Far &mdash; and What&rsquo;s Next</h1><div class="body"><div class="cols2">
+<div class="card"><h3>You&rsquo;ve already&hellip;</h3>
+<p>Found your fit (Weeks 2&ndash;4), mastered the application (Weeks 5&ndash;8), and locked down money skills (Weeks 9&ndash;10). In our story, you just got the call: <b>&ldquo;You&rsquo;re hired &mdash; can you start Monday?&rdquo;</b></p></div>
+<div class="card"><h3>This unit answers&hellip;</h3>
+<p>Now what? Workplace Behavior is everything after the handshake: showing up ready, looking the part, following the everyday rules that every job shares. This week is your first week on the job &mdash; practiced here first, where mistakes are free.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The First-Day Checklist</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">First days are won the night before. Today you build the checklist that gets you through the door early, equipped, and calm.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the checklist</span><span>You try it</span><span>Do: my first-day plan</span></div>
+<div class="stdchips"><span class="pill">Workplace Readiness</span><span class="pill">Planning</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Think of a first day you&rsquo;ve had &mdash; new school, new team, new class. What made it easier? What made it scarier?</li><li>What do you think a boss watches for on a new worker&rsquo;s FIRST day?</li><li>Week 4 flashback: what time do you arrive for an 8:00 shift, and why?</li></ol></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The Night Before + The Morning Of</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The night before</h3>
+<ul><li>Clothes or uniform laid out &mdash; clean, ready, no morning hunt</li><li>Ride plan confirmed OUT LOUD with your ride &mdash; and backup named</li><li>Know your start time, your supervisor&rsquo;s name, and where to enter</li><li>Pack: ID, any paperwork they asked for, water, phone CHARGED (and silenced &mdash; Day 3 explains)</li><li>Sleep &mdash; a real bedtime; tired workers make expensive mistakes</li></ul></div>
+<div class="card"><h3>The morning of</h3>
+<ul><li>Leave at your ride-plan time &mdash; not &ldquo;around then&rdquo;</li><li>Arrive 10&ndash;15 minutes early</li><li>Walk in, find your supervisor, introduce yourself: name + &ldquo;It&rsquo;s my first day &mdash; where would you like me?&rdquo;</li><li>Then the two magic behaviors: <b>listen hard</b> and <b>ask when unsure</b></li></ul></div></div>
+<p class="note">Nobody expects a new worker to know the job &mdash; they expect them to be on time, prepared, and coachable. All three are decided before you ever clock in.</p></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>First-Day Calls</h1><div class="body"><div class="mcq"><div class="qq">Sam&rsquo;s first shift starts at 9:00. The bus gets him there at 8:58. Good plan?</div><button class="opt" data-ok="1">No &mdash; one slow light and he&rsquo;s late on day one; take the earlier bus and arrive by 8:45</button><button class="opt" data-ok="0">Perfect &mdash; two minutes to spare</button><button class="opt" data-ok="0">Fine if he runs from the stop</button><div class="fb">First-day timing gets ZERO cushion in that plan. Early bus costs fifteen minutes of waiting; the late arrival costs a first impression that never fully comes back.</div></div><div class="mcq"><div class="qq">You walk in on day one and don&rsquo;t see your supervisor. Best move?</div><button class="opt" data-ok="1">Ask any worker: &ldquo;Hi, I&rsquo;m ___, it&rsquo;s my first day &mdash; could you point me to [supervisor&rsquo;s name]?&rdquo;</button><button class="opt" data-ok="0">Stand silently by the door until noticed</button><button class="opt" data-ok="0">Go home; clearly it wasn&rsquo;t meant to be</button><div class="fb">Knowing the supervisor&rsquo;s NAME (night-before checklist) turns a scary moment into one easy sentence. Asking is what confident new workers do.</div></div><div class="mcq"><div class="qq">The trainer explains the closing routine fast, and you catch about half. You&hellip;</div><button class="opt" data-ok="1">&ldquo;Could you show me that middle part once more? I want to get it right.&rdquo;</button><button class="opt" data-ok="0">Nod and wing it later</button><button class="opt" data-ok="0">Hope a coworker does it for you forever</button><div class="fb">&ldquo;I want to get it right&rdquo; is music to a trainer&rsquo;s ears. Asking on day one is free; guessing on day three costs someone real cleanup.</div></div><div class="rev"><div class="rq">Why do you think most first-day disasters trace back to the NIGHT BEFORE, not the day itself?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Morning-of has no slack: no time to find clothes, charge a phone, or invent a ride. Every night-before item is a morning problem pre-solved. Calm mornings are built, not lucky.</div></div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>My First-Day Plan</h1><div class="body"><p><span class="badge">Your task</span> Using your best-fit job from Week 4: write your personal first-day plan &mdash; night-before list (all five items, specific to you), morning timeline from your real ride plan, and your walk-in introduction sentence, word for word.</p>
+<div class="exit"><b>Before you leave:</b> Perform your introduction sentence like it&rsquo;s Monday morning.</div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Dress, Hygiene &amp; Uniforms</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Before you say a word, your appearance speaks. Today: dressing for the job you have, the hygiene basics that are non-negotiable, and treating a uniform right.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: look like the job</span><span>You try it</span><span>Do: dress-code decoder</span></div>
+<div class="stdchips"><span class="pill">Workplace Readiness</span><span class="pill">Self-Care</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Picture a worker at a vet clinic, a fast-food counter, and a grocery store. What&rsquo;s each one wearing? Why different things?</li><li>Why would a manager send someone home over clothes &mdash; even a good worker?</li><li>What&rsquo;s the difference between style rules at school and dress rules at work?</li></ol></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>Look Like the Job</h1><div class="body"><table class="mini">
+<tr><th>Layer</th><th>The rule</th><th>Why it&rsquo;s a rule</th></tr>
+<tr><td><b>Hygiene &mdash; every job, every day</b></td><td>Showered, deodorant, clean teeth, clean hair, trimmed nails</td><td>Coworkers and customers share your air all shift &mdash; this one is about respect</td></tr>
+<tr><td><b>Clothes &mdash; no uniform given</b></td><td>Clean, no rips or stains, no offensive words/images, closed-toe shoes for active jobs</td><td>You represent the business the second you clock in</td></tr>
+<tr><td><b>Uniform &mdash; if provided</b></td><td>Worn COMPLETE and as issued; washed on your schedule; ready the night before</td><td>The uniform is company property and the company&rsquo;s face &mdash; on you</td></tr>
+<tr><td><b>Safety gear &mdash; if required</b></td><td>Non-slip shoes, gloves, hairnets, vests &mdash; worn every time, no exceptions</td><td>These rules are written in someone&rsquo;s old injury</td></tr></table>
+<p class="note">Unsure what to wear before day one? ASK when they hire you: &ldquo;What should I wear for my first shift?&rdquo; One question &mdash; zero guessing, zero getting sent home.</p></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Dressed Right?</h1><div class="body"><div class="mcq"><div class="qq">Kennel assistant job, no uniform. Best outfit?</div><button class="opt" data-ok="1">Clean t-shirt, sturdy pants, closed-toe shoes that can get dirty</button><button class="opt" data-ok="0">Brand-new white sneakers and your favorite going-out clothes</button><button class="opt" data-ok="0">Sandals &mdash; dogs love toes</button><div class="fb">Dress for the DUTIES: active, messy work wants sturdy and washable. &ldquo;Nice&rdquo; isn&rsquo;t the target &mdash; RIGHT is.</div></div><div class="mcq"><div class="qq">Your uniform shirt is dirty and your shift is in an hour. You&hellip;</div><button class="opt" data-ok="1">Wear the cleanest option you have, tell your supervisor honestly, and fix your wash schedule tonight</button><button class="opt" data-ok="0">Wear it dirty and stand far from everyone</button><button class="opt" data-ok="0">Skip the shift &mdash; no shirt, no work</button><div class="fb">Honest beats hidden, and no-showing over laundry turns a small problem into a firing-sized one. Then: night-before checklist gets a &ldquo;uniform washed&rdquo; line, permanently.</div></div><div class="mcq"><div class="qq">The non-slip shoes are ugly and your coworker skips them. You&hellip;</div><button class="opt" data-ok="1">Wear them every shift anyway &mdash; safety gear isn&rsquo;t a style vote</button><button class="opt" data-ok="0">Skip them; fashion first</button><button class="opt" data-ok="0">Wear one, compromise</button><div class="fb">A kitchen floor doesn&rsquo;t care about looks. The coworker skipping them is one wet tile from proving why the rule exists.</div></div><div class="rev"><div class="rq">&ldquo;Dress for the job&rdquo; is really about trust. What does a clean, complete, correct appearance tell a boss before you&rsquo;ve done a single task?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">It says: I take this seriously, I follow standards without being chased, and you can put me in front of customers. Appearance is the first task every shift &mdash; and it&rsquo;s one you can ace every single day.</div></div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Dress-Code Decoder</h1><div class="body"><p><span class="badge">Your task</span> Three job cards (kennel assistant, counter server, grocery stocker). For each: list the right outfit head to toe, mark the safety items, and write the one hygiene item YOU most need a reminder system for &mdash; plus the reminder (alarm, note, night-before spot).</p>
+<div class="exit"><b>Before you leave:</b> Tell me one job&rsquo;s head-to-toe and your personal reminder plan.</div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Phones, Breaks &amp; Staying on Task</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">The three everyday rules that end more first jobs than anything else &mdash; and the habits that make them easy: phone away, breaks by the clock, task list always moving.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the everyday three</span><span>You try it</span><span>Do: scenario sort</span></div>
+<div class="stdchips"><span class="pill">Workplace Readiness</span><span class="pill">Self-Management</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Honestly: how long can you go without checking your phone? What&rsquo;s the record?</li><li>Why do you think phone rules exist at work &mdash; what actually goes wrong?</li><li>You finish your assigned task and there&rsquo;s an hour left. What does a great worker do next?</li></ol></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Everyday Three</h1><div class="body"><table class="mini">
+<tr><th>Rule</th><th>The standard</th><th>The habit that makes it easy</th></tr>
+<tr><td><b>Phones</b></td><td>Silenced and PUT AWAY during work &mdash; pocket, locker, or bag; out only on breaks</td><td>Tell family/friends your shift hours: &ldquo;I&rsquo;ll answer at my break at 6.&rdquo; Emergencies call the workplace phone</td></tr>
+<tr><td><b>Breaks</b></td><td>Take them when scheduled, come back ON TIME &mdash; a 15 is 15, not 25</td><td>Note your return time when the break STARTS; set a quiet alarm two minutes early</td></tr>
+<tr><td><b>Staying on task</b></td><td>Finished? Don&rsquo;t stand there &mdash; next task, or the golden question: &ldquo;What would you like me to do next?&rdquo;</td><td>Learn the &ldquo;always list&rdquo; of your job: the tasks that are never done (wiping, restocking, sweeping)</td></tr></table>
+<p class="note">Here&rsquo;s the secret: these three rules are how bosses TELL WORKERS APART. Most people are decent at their tasks &mdash; the phone-away, back-on-time, what&rsquo;s-next worker is the one who gets more hours, better shifts, and the first raise.</p></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>You Make the Call</h1><div class="body"><div class="mcq"><div class="qq">Mid-shift, your phone buzzes in your pocket &mdash; probably the group chat. You&hellip;</div><button class="opt" data-ok="1">Leave it &mdash; it waits for break; that&rsquo;s why everyone knows your shift hours</button><button class="opt" data-ok="0">Quick peek &mdash; three seconds can&rsquo;t hurt</button><button class="opt" data-ok="0">Answer it while working one-handed</button><div class="fb">&ldquo;Quick peeks&rdquo; are never one &mdash; and managers clock every single glance. The buzz-proof worker is rarer, and more valuable, than you&rsquo;d think.</div></div><div class="mcq"><div class="qq">Your 15-minute break started at 2:00. You&rsquo;re back at&hellip;</div><button class="opt" data-ok="1">2:15 or a touch before &mdash; noted the return time at 2:00, alarm at 2:13</button><button class="opt" data-ok="0">2:25 &mdash; close enough</button><button class="opt" data-ok="0">Whenever the conversation ends</button><div class="fb">Ten extra minutes leaves a coworker covering your station &mdash; they notice, and so does the schedule-maker. On-time returns are silent reputation builders.</div></div><div class="mcq"><div class="qq">You finish stocking early. The floor by register two is dusty and nobody assigned it. You&hellip;</div><button class="opt" data-ok="1">Grab the broom &mdash; or ask the golden question if you&rsquo;re unsure what&rsquo;s allowed</button><button class="opt" data-ok="0">Lean on the counter and wait to be told</button><button class="opt" data-ok="0">Start your break early as a reward</button><div class="fb">&ldquo;Finds work without being asked&rdquo; is the single line managers rave about. The always-list means there IS no &ldquo;nothing to do.&rdquo;</div></div><div class="rev"><div class="rq">A coworker says: &ldquo;Relax &mdash; nobody works the WHOLE shift.&rdquo; They&rsquo;re on their phone by the freezer. What do you do &mdash; and what do you NOT do?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Do: keep your own standard &mdash; your habits are your paycheck and your reputation, not theirs. Don&rsquo;t: lecture them or report every little thing &mdash; you&rsquo;re a coworker, not a boss. Their choices become their problem; yours become your raise.</div></div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>Scenario Sort</h1><div class="body"><p><span class="badge">Your task</span> Ten workplace scenario cards &mdash; phones, breaks, and slow moments. Sort each into GREAT MOVE / RISKY / JOB-ENDER, and for every risky or job-ender card, write the one-line fix that turns it into a great move.</p>
+<div class="exit"><b>Before you leave:</b> Read me your favorite fix &mdash; the before and the after.</div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Workplace Behavior Review</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Show what you know: the first-day plan, the appearance standards, and the everyday three &mdash; one graded review that plays like a first week on the job.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: the first-week gauntlet</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Workplace Readiness</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Night-before checklist: how many of the five items can the class name from memory?</li><li>Say the golden question &mdash; the one that fills every slow moment.</li><li>Which of the everyday three is YOUR danger zone &mdash; phones, break clock, or slow moments? Own it.</li></ol></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>The First-Week Gauntlet</h1><div class="body"><p><span class="badge">Your task</span> The review packet walks one worker through a first week &mdash; Monday to Friday &mdash; full of decision points: what to pack, what to wear, a buzzing phone, a long break temptation, a slow Thursday. At each point, choose the move and JUSTIFY it in one sentence using this week&rsquo;s language.</p>
+<div class="card flat" style="margin-top:12px"><h3>Full credit sounds like</h3>
+<p>&ldquo;Arrive 8:45 for the 9:00 shift &mdash; ten to fifteen early, per the ride plan&rdquo; &bull; &ldquo;Phone stays in the locker; group chat gets me at break&rdquo; &bull; &ldquo;Floor&rsquo;s clear, so: what would you like me to do next?&rdquo;</p></div>
+<div class="exit"><b>Check out:</b> Hand in the gauntlet and tell me the decision you&rsquo;re most confident about &mdash; and the one you&rsquo;ll have to work at for real.</div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 11 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You can walk into a first day early, equipped, and introduced &mdash; because the night before did the work. You dress and groom for the job, wear every piece of safety gear without a vote, keep the phone away, return from breaks on the clock, and fill slow moments with the golden question. That&rsquo;s not just first-day behavior &mdash; that&rsquo;s the worker who gets kept.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Which night-before item would I actually forget &mdash; and where&rsquo;s my reminder?</li><li>Can I say my walk-in introduction without rehearsing?</li><li>What&rsquo;s on the &ldquo;always list&rdquo; for MY best-fit job?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Schedules and Time: reading a weekly work schedule, planning backward from start times, and what to do when you&rsquo;re running late or absent. The clock becomes your teammate.</p></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>First-Day Card</h1><div class="body"><table class="mini">
+<tr><th>Night before</th><th>Morning of</th></tr>
+<tr><td>Clothes/uniform laid out<br>Ride confirmed + backup named<br>Start time, supervisor&rsquo;s name, entrance<br>Pack: ID, paperwork, water, charged phone<br>Real bedtime</td><td>Leave at ride-plan time<br>Arrive 10&ndash;15 early<br>&ldquo;Hi, I&rsquo;m ___ &mdash; it&rsquo;s my first day. Where would you like me?&rdquo;<br>Listen hard &bull; ask when unsure</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The standard</h3>
+<p>Nobody expects you to know the job on day one. They expect on time, prepared, coachable &mdash; all three are decided the night before.</p></div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Everyday Three Card</h1><div class="body"><table class="mini">
+<tr><th>Rule</th><th>Standard</th><th>Habit</th></tr>
+<tr><td>Phones</td><td>Silenced, put away; breaks only</td><td>Everyone knows your shift hours</td></tr>
+<tr><td>Breaks</td><td>A 15 is 15 &mdash; back on time</td><td>Note return time at the START; alarm 2 minutes early</td></tr>
+<tr><td>On task</td><td>Never just standing</td><td>The always-list + the golden question: &ldquo;What would you like me to do next?&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Dress &amp; hygiene floor</h3>
+<p>Showered &bull; deodorant &bull; clean clothes, no rips/offensive prints &bull; uniform complete &bull; safety gear every time. Unsure? Ask: &ldquo;What should I wear for my first shift?&rdquo;</p></div></div><div class="footer"><span>Life Skills SC • Week 11 • Workplace Behavior — First-Day and Everyday Workplace Expectations</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

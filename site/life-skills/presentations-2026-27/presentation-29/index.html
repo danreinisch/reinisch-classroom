@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 29: Workplace Communication - Greet, Listen, Respond, Refer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 29</div><h1>Customer Service Basics</h1><div class="body"><div class="sub">Workplace Communication &mdash; Greet, Listen, Respond, Refer</div><div class="meta">This week: complete a basic customer interaction without guessing, arguing, or promising money decisions outside your authority &mdash; 20 points</div><div class="theme">Big idea: Good customer service does not mean knowing every answer. It means listening, being accurate, and getting the right help.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Greeting and listening &mdash; identify what the customer needs</td><td>5</td></tr><tr><td>Day 2</td><td>Find help instead of guessing &mdash; know when to get a supervisor</td><td>5</td></tr><tr><td>Day 3</td><td>Upset customer basics &mdash; stay calm, avoid arguing, and refer</td><td>5</td></tr><tr><td>Day 4</td><td>Customer-service review &mdash; use the full routine and verify a simple price or total</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, reteach, or collect evidence</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>2 of 30</span></div></section>
+<section class="slide"><div class="kicker">The Customer-Service Routine</div><h1>GREET &rarr; LISTEN &rarr; RESPOND &rarr; REFER</h1><div class="body"><table class="mini"><tr><th>Step</th><th>Worker action</th></tr><tr><td><b>GREET</b></td><td>Use a simple professional welcome.</td></tr><tr><td><b>LISTEN</b></td><td>Let the customer finish and identify the actual need.</td></tr><tr><td><b>RESPOND</b></td><td>Answer only what you know and are authorized to do.</td></tr><tr><td><b>REFER</b></td><td>Get a supervisor or correct employee when the answer or decision is outside your role.</td></tr></table><div class="exit"><b>Success target:</b> Help accurately without inventing prices, change, refund promises, or policies.</div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>3 of 30</span></div></section>
+<section class="slide"><div class="kicker">Professional Does Not Mean Robotic</div><h1>Clear, Calm, and Respectful</h1><div class="body"><div class="cols2"><div class="card"><h3>Useful behaviors</h3><ul><li>Face or orient toward the interaction as appropriate.</li><li>Use a clear greeting or agreed communication method.</li><li>Allow the customer to finish.</li><li>Repeat key details.</li><li>Ask for help when needed.</li></ul></div><div class="card"><h3>Not required</h3><ul><li>Forced eye contact</li><li>A perfect smile or scripted personality</li><li>Knowing every store policy</li><li>Accepting insults or threats</li><li>Making decisions without authority</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>4 of 30</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>Greeting and Listening</h1><div class="body"><div class="dayno">1</div><div class="goal">Use a simple greeting, let the customer explain, and identify what the customer needs&mdash;including price or payment questions.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Choose a greeting</span><span>Listen to the whole request</span><span>Repeat the need</span><span>Select the next response</span></div><div class="stdchips"><span class="pill">Greeting</span><span class="pill">Active Listening</span><span class="pill">Need Identification</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Greeting</div><h1>Open the Interaction Simply</h1><div class="body"><div class="cols2"><div class="card"><h3>Useful greetings</h3><p>&ldquo;Hello. How can I help you?&rdquo;<br>&ldquo;Hi. What can I help you find?&rdquo;<br>&ldquo;Good afternoon. Are you ready to check out?&rdquo;</p></div><div class="card"><h3>If communication support is used</h3><p>A student may use a prepared phrase, choice board, typed response, communication device, gesture paired with a staff-approved routine, or another reliable method.</p></div></div><p class="note">The greeting should fit the workplace and lead to the customer&rsquo;s need.</p></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>6 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Listen</div><h1>Do Not Answer the First Few Words</h1><div class="body"><ol class="q"><li>Let the customer finish the request.</li><li>Listen for the item, location, price, payment, or problem.</li><li>Repeat the key detail: &ldquo;You are asking whether this is $8.50, correct?&rdquo;</li><li>Answer if you know and are authorized&mdash;or explain that you will find help.</li></ol><p class="note">Repeating important numbers reduces price and payment mistakes.</p></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>7 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Identify the Need</div><h1>What Is the Customer Asking For?</h1><div class="body"><table class="mini"><tr><th>Customer says</th><th>Need</th></tr><tr><td>&ldquo;Where are the batteries?&rdquo;</td><td>Location</td></tr><tr><td>&ldquo;Is this sign saying two for $6?&rdquo;</td><td>Price verification</td></tr><tr><td>&ldquo;Can I pay with this card?&rdquo;</td><td>Payment method information</td></tr><tr><td>&ldquo;This item is damaged.&rdquo;</td><td>Problem/refund or replacement help</td></tr></table><div class="rev"><div class="rq">Why identify the need before responding?</div><div class="hint">Think about accuracy</div><div class="ra"><b>The correct response depends on the request.</b> A location question, price check, and refund decision need different actions.</div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>8 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Check Understanding</div><h1>Which Response Shows Listening?</h1><div class="body"><div class="mcq"><div class="qq">Customer: &ldquo;The shelf tag says $5, but the register shows $7.&rdquo;</div><button class="opt" data-ok="0">&ldquo;The register is always right.&rdquo;</button><button class="opt" data-ok="1">&ldquo;You are seeing $5 on the shelf and $7 at the register. Let me help verify the price.&rdquo;</button><button class="opt" data-ok="0">&ldquo;Do you still want it?&rdquo;</button><div class="fb">The second response repeats the mismatch and moves toward accurate help.</div></div><div class="mcq"><div class="qq">Customer: &ldquo;Where can I return this?&rdquo; What is the need?</div><button class="opt" data-ok="1">The correct return location or person</button><button class="opt" data-ok="0">A new sales price</button><button class="opt" data-ok="0">The worker&rsquo;s schedule</button><div class="fb">Identify the request before choosing the response.</div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>9 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Choose Greeting and Listening Responses</h1><div class="body"><p><span class="badge">Your task</span> Respond to class-provided customer requests. Choose or use an appropriate greeting, identify the need, and repeat one key detail before answering or finding help.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Select from greeting choices, match request to need, use a repeat-back frame, or respond with teacher-recorded communication.</p></div><div class="card"><h3>Independent path</h3><p>Complete the greeting, paraphrase the need, verify an important number, and explain the next action.</p></div></div><div class="exit"><b>Check out:</b> Complete: &ldquo;The customer needs help with _____.&rdquo;</div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>10 of 30</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>Find Help Instead of Guessing</h1><div class="body"><div class="dayno">2</div><div class="goal">Tell the customer what you can do, avoid inventing prices or change, and contact a supervisor when needed.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Know your role</span><span>Answer verified facts</span><span>Use a help phrase</span><span>Connect the customer to the right person</span></div><div class="stdchips"><span class="pill">Accuracy</span><span class="pill">Supervisor Referral</span><span class="pill">Money Safety</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Answer or Refer?</div><h1>Use the Boundary Check</h1><div class="body"><table class="mini"><tr><th>If...</th><th>Then...</th></tr><tr><td>The answer is verified and within your role</td><td>Answer clearly.</td></tr><tr><td>You know where to find verified information</td><td>Check it with the customer or follow workplace procedure.</td></tr><tr><td>You are unsure, records conflict, or money is involved</td><td>Pause and get the authorized person.</td></tr><tr><td>The customer requests a refund, exception, or policy decision</td><td>Refer to the supervisor or designated employee.</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>12 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Money Accuracy</div><h1>Never Invent a Price, Total, or Change</h1><div class="body"><div class="cols2"><div class="card"><h3>Verify</h3><p>Repeat the amount, check the label/system, and compare the information.</p></div><div class="card"><h3>Pause</h3><p>If amounts conflict or the system behaves unexpectedly, stop the affected transaction step.</p></div></div><div class="cols2"><div class="card"><h3>Refer</h3><p>Ask the cashier lead, supervisor, or authorized employee to verify.</p></div><div class="card"><h3>Do not promise</h3><p>A refund, discount, free item, or specific outcome unless your role allows it.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>13 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Useful Phrases</div><h1>Say What You Can Do</h1><div class="body"><table class="mini"><tr><th>Situation</th><th>Professional response</th></tr><tr><td>You do not know</td><td>&ldquo;I want to give you accurate information. Let me ask someone who can confirm that.&rdquo;</td></tr><tr><td>Prices conflict</td><td>&ldquo;I see the two amounts. I will ask my supervisor to verify the correct price.&rdquo;</td></tr><tr><td>Decision is outside your role</td><td>&ldquo;A manager handles that request. I can contact them for you.&rdquo;</td></tr><tr><td>Help will take a moment</td><td>&ldquo;Thank you for waiting. I have contacted the appropriate person.&rdquo;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>14 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Scenario</div><h1>Help or Answer?</h1><div class="body"><div class="mcq"><div class="qq">A customer asks whether an expired coupon can still be used. You are not authorized to decide.</div><button class="opt" data-ok="0">Say yes to keep the customer happy.</button><button class="opt" data-ok="1">Explain that a supervisor can verify the coupon and contact them.</button><button class="opt" data-ok="0">Say no without checking.</button><div class="fb">Do not invent a policy decision. Refer it to the authorized person.</div></div><div class="mcq"><div class="qq">The posted aisle sign clearly says batteries are in aisle 6, and giving locations is part of your role.</div><button class="opt" data-ok="1">Tell the customer aisle 6 and point or direct clearly.</button><button class="opt" data-ok="0">Call the manager for every location question.</button><button class="opt" data-ok="0">Guess aisle 9.</button><div class="fb">Answer verified information that is within your role.</div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>15 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete Help-or-Answer Scenarios</h1><div class="body"><p><span class="badge">Your task</span> Decide whether each customer request can be answered with verified information or needs a supervisor. Use a clear response and avoid inventing prices, change, discounts, or policies.</p><div class="card flat"><h3>Response frame</h3><p>&ldquo;I can help by _____.&rdquo; or &ldquo;I want to make sure that is accurate. I will contact _____ to verify _____.&rdquo;</p></div><div class="exit"><b>Teacher evidence:</b> Accuracy, completion, independence level 0&ndash;5, and supports used.</div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>16 of 30</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Upset Customer Basics</h1><div class="body"><div class="dayno">3</div><div class="goal">Stay calm, avoid arguing, get the appropriate person, and do not promise refunds or money decisions without authority.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Lower the temperature</span><span>Repeat the concern</span><span>Hold role boundaries</span><span>Refer or seek safety help</span></div><div class="stdchips"><span class="pill">Calm Communication</span><span class="pill">Boundaries</span><span class="pill">Escalation</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Calm Response</div><h1>Do Not Match the Customer&rsquo;s Volume</h1><div class="body"><ol class="q"><li>Keep your own voice and body calm; use your communication support if needed.</li><li>Let the customer state the concern without interrupting when it is safe.</li><li>Repeat the problem briefly: &ldquo;You expected $10, but the receipt shows $12.&rdquo;</li><li>State what you can do: verify information or get the supervisor.</li><li>Step away and use the safety procedure if there are threats, harassment, or danger.</li></ol></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>18 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Acknowledge Without Promising</div><h1>Recognize the Problem, Not an Unverified Outcome</h1><div class="body"><div class="cols2"><div class="card"><h3>Useful</h3><p>&ldquo;I understand that the two prices are different. I will ask my supervisor to verify the correct price.&rdquo;</p><p>&ldquo;I can see that this has been frustrating. A manager handles refunds, and I will contact them.&rdquo;</p></div><div class="card"><h3>Avoid</h3><p>&ldquo;You are definitely right.&rdquo;<br>&ldquo;I promise you will get a refund.&rdquo;<br>&ldquo;Calm down.&rdquo;<br>&ldquo;That is not my problem.&rdquo;</p></div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>19 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Safety Boundary</div><h1>Customer Service Does Not Require Accepting Abuse</h1><div class="body"><table class="mini"><tr><th>Situation</th><th>Response</th></tr><tr><td>Customer is frustrated but communicating safely</td><td>Listen, repeat the concern, and refer appropriately.</td></tr><tr><td>Customer insults or harasses the worker</td><td>Use the workplace boundary/referral procedure and get the supervisor.</td></tr><tr><td>Customer threatens harm or creates immediate danger</td><td>Move to safety when possible and use the workplace emergency procedure.</td></tr></table><p class="note">Students should know the actual site-specific signal, safe location, and contact route before working independently.</p></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>20 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Scenario</div><h1>Choose the Calm, Accurate Response</h1><div class="body"><div class="mcq"><div class="qq">A customer angrily demands a refund. Refunds require a manager.</div><button class="opt" data-ok="0">Argue that the policy is fair.</button><button class="opt" data-ok="1">&ldquo;A manager handles refunds. I will contact them to help with your request.&rdquo;</button><button class="opt" data-ok="0">Promise a full refund.</button><div class="fb">Hold the role boundary and connect the customer with the authorized person.</div></div><div class="mcq"><div class="qq">The customer threatens the worker. What matters first?</div><button class="opt" data-ok="1">Safety and the workplace emergency procedure</button><button class="opt" data-ok="0">Finishing the sale</button><button class="opt" data-ok="0">Proving the worker is right</button><div class="fb">Disengage and seek safety help according to the workplace plan.</div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>21 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Complete Customer-Service Scenarios</h1><div class="body"><p><span class="badge">Your task</span> Choose responses or complete a brief role-play involving an upset customer. Show calm communication, accurate repetition, role boundaries, and supervisor referral.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose between two responses, sequence the four steps, use cue cards, or complete with teacher/partner acting as the customer.</p></div><div class="card"><h3>Independent path</h3><p>Respond, explain why a refund or money promise is inappropriate, and identify when the interaction becomes a safety concern.</p></div></div><div class="exit"><b>Check out:</b> State one sentence that acknowledges frustration without promising an outcome.</div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>22 of 30</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Customer-Service Review</h1><div class="body"><div class="dayno">4</div><div class="goal">Use greeting, listening, response, and referral steps while verifying a simple price or total.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Use the full routine</span><span>Verify the need</span><span>Check one amount</span><span>Refer when needed</span></div><div class="stdchips"><span class="pill">Integrated Practice</span><span class="pill">Price Verification</span><span class="pill">Professional Response</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Full Routine</div><h1>From Hello to Help</h1><div class="body"><ol class="q"><li><b>Greet:</b> open the interaction.</li><li><b>Listen:</b> let the customer explain.</li><li><b>Verify:</b> repeat the item, location, price, total, or concern.</li><li><b>Respond:</b> answer verified information within your role.</li><li><b>Refer:</b> get the authorized person when needed.</li><li><b>Close:</b> explain what happens next and thank the customer for waiting.</li></ol></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>24 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Verify the Amount</div><h1>Repeat Numbers Clearly</h1><div class="body"><div class="card"><h3>Sample interaction</h3><p><b>Customer:</b> &ldquo;This should be two for $8, but the screen shows $10.&rdquo;<br><b>Worker:</b> &ldquo;You expected a total of $8, and the screen shows $10. I will pause and ask my supervisor to verify the offer.&rdquo;</p></div><div class="rev"><div class="rq">What two amounts should the worker report?</div><div class="hint">Repeat the customer&rsquo;s expected total and the screen total</div><div class="ra"><b>$8 expected and $10 displayed.</b> Exact amounts help the supervisor check the issue.</div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>25 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Mixed Scenario</div><h1>What Comes Next?</h1><div class="body"><div class="mcq"><div class="qq">You greet the customer. They explain that a coupon is not working. You repeat the coupon and total accurately. You cannot approve exceptions. What comes next?</div><button class="opt" data-ok="1">Refer the decision to the authorized employee.</button><button class="opt" data-ok="0">Invent a discount.</button><button class="opt" data-ok="0">Start the greeting again.</button><div class="fb">The verified concern is ready for an authorized decision.</div></div><div class="mcq"><div class="qq">After contacting the supervisor, what can the worker say?</div><button class="opt" data-ok="1">&ldquo;I have contacted my supervisor. Thank you for waiting.&rdquo;</button><button class="opt" data-ok="0">&ldquo;They will definitely give you the coupon.&rdquo;</button><button class="opt" data-ok="0">&ldquo;This is taking forever.&rdquo;</button><div class="fb">Explain the next step without promising the supervisor&rsquo;s decision.</div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>26 of 30</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Do</div><h1>Complete the Customer-Service Review</h1><div class="body"><p><span class="badge">Your task</span> Complete the short mixed practice. Use an appropriate greeting, identify and repeat the need, verify a simple price or total, answer what you know, and refer decisions outside your role.</p><div class="card flat"><h3>Customer-service checklist</h3><p>Greeting &bull; listening &bull; accurate repeat-back &bull; no guessing &bull; correct referral &bull; calm closing.</p></div><div class="exit"><b>Teacher evidence:</b> Accuracy, completion, independence level 0&ndash;5, and prompts or supports required.</div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>27 of 30</span></div></section>
+<section class="slide divider"><div class="kicker">Day 5</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">5</div><div class="goal">No new required lesson. Use today for completion, individualized practice, reteaching, progress evidence, or a brief customer-service lab.</div><div class="agenda"><b>Choose the useful path</b><span>Finish or correct work</span><span>Practice one interaction</span><span>Repeat price information</span><span>Collect a brief evidence sample</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Individualized Practice</span><span class="pill">IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 5 &bull; Pick Your Path</div><h1>What Would Help Most Today?</h1><div class="body"><div class="cols2"><div class="card"><h3>Completion or reteaching</h3><ul><li>Match request to customer need.</li><li>Practice a help phrase.</li><li>Correct a guessed response.</li><li>Use the four-step routine with cues.</li></ul></div><div class="card"><h3>Generalization or evidence</h3><ul><li>Practice a new scenario.</li><li>Verify a price mismatch.</li><li>Refer an upset customer.</li><li>Complete a teacher-selected progress sample.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>29 of 30</span></div></section>
+<section class="slide"><div class="kicker">Wrap-Up</div><h1>Week 29 Quick Reference</h1><div class="body"><div class="cols2"><div class="card"><h3>The routine</h3><p><b>GREET &rarr; LISTEN &rarr; RESPOND &rarr; REFER</b></p><p>Repeat important item, price, total, and payment information accurately.</p></div><div class="card"><h3>The boundary</h3><p>Answer verified information within your role. Do not guess or promise discounts, refunds, or policy exceptions.</p></div></div><div class="exit"><b>If unsafe:</b> Disengage and use the workplace safety procedure. Customer service never outranks personal safety.</div><p class="note">Next week: identify workplace hazards, use safety signs and protective equipment, and report injuries or emergencies.</p></div><div class="footer"><span>Life Skills SC • Week 29 • Workplace Communication — Customer Service Basics</span><span>30 of 30</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 23: Interviewing - Interview Appearance and Behavior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 23</div><h1>Interview Appearance &amp; Behavior</h1><div class="body"><div class="sub">Interviewing &mdash; Interview Appearance and Behavior</div>
+<div class="meta">This week: what you wear, how you greet, waiting and phone behavior, and the full interview-readiness checklist &mdash; 20 points</div><div class="theme">Big idea: The interview starts before they ask the first question &mdash; and it ends after you leave the building</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Clothing and hygiene choices &mdash; the appearance decision</td><td>5</td></tr><tr><td>Day 2</td><td>Greeting, voice, and body language &mdash; the first impression</td><td>5</td></tr><tr><td>Day 3</td><td>Waiting and phone behavior &mdash; before the questions start</td><td>5</td></tr><tr><td>Day 4</td><td>Interview-readiness checklist &mdash; everything, verified</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>The Answers Are Loaded &mdash; Now the Container</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you finished&hellip;</h3>
+<p>A complete answer bank: eight answers, from &ldquo;tell me about yourself&rdquo; through scenarios, availability, and two prepared questions. Ready to deliver.</p></div>
+<div class="card"><h3>This week you prep&hellip;</h3>
+<p>The container those answers arrive in: what the interviewer sees before you speak, how you enter and sit, what your body says when you&rsquo;re waiting. Week 24 is the live mock. This is the last thing to load. On Friday you have a completed readiness checklist you can literally use for a real interview.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>Clothing &amp; Hygiene Choices</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">You don&rsquo;t need to look expensive. You need to look intentional. Today: the appearance decision for interviews &mdash; how to figure out what fits the workplace before you walk in.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the appearance decision</span><span>You try it</span><span>Do: plan my interview look</span></div>
+<div class="stdchips"><span class="pill">Workplace Readiness</span><span class="pill">Self-Management</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Week 11&rsquo;s dress-and-hygiene lesson: what were the four appearance categories? (Dress code, hygiene, uniforms, safety gear.)</li><li>What&rsquo;s the difference between how you dress for the INTERVIEW and how you dress once you have the JOB?</li><li>If you can&rsquo;t afford interview clothes, what are your options &mdash; brainstorm without judging?</li></ol></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The Appearance Decision</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>How</th><th>Example</th></tr>
+<tr><td><b>1. Read the workplace</b></td><td>Look at their website, walk by, notice employees &mdash; before the interview</td><td>Paws &amp; Claws employees wear polos and jeans; Riverside Diner wears black uniforms</td></tr>
+<tr><td><b>2. Go one level up</b></td><td>Interview dress = one step more polished than the daily uniform</td><td>Casual workplace &rarr; neat jeans + solid shirt; business casual &rarr; slacks + button-down</td></tr>
+<tr><td><b>3. The hygiene non-negotiables</b></td><td>Clean, no heavy scent, hair controlled, nails clean &mdash; always; these override everything else</td><td>The cleanest version of what you own beats expensive clothes with body odor every time</td></tr>
+<tr><td><b>4. Check before you leave</b></td><td>Mirror check: stain? wrinkle? lint? tag sticking out?</td><td>The tag-out fix takes ten seconds; missing it takes the whole interview to shake</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>What you can&rsquo;t control vs. what you can</h3>
+<p>Expensive clothes, a car, a haircut at a salon &mdash; not always possible. Clean, ironed or lint-rolled, matching, and smell-neutral &mdash; always possible. Interviewers hired in clean thrift-store clothes who showed up five minutes early and said the right things. They didn&rsquo;t get the job because of the clothes &mdash; and they didn&rsquo;t lose it because of them either.</p></div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Appearance Decisions</h1><div class="body"><div class="mcq"><div class="qq">You&rsquo;re interviewing at a fast-casual restaurant where employees wear black pants and branded t-shirts. Your interview look should be&hellip;</div><button class="opt" data-ok="1">One step up: neat dark pants + clean solid shirt or blouse &mdash; casual but intentional</button><button class="opt" data-ok="0">A suit and tie &mdash; show them you mean business</button><button class="opt" data-ok="0">Black pants and a branded t-shirt you already own &mdash; match the uniform exactly</button><div class="fb">One level up says &ldquo;I took this seriously&rdquo; without overdoing it. A suit at a fast-casual interview reads as out of touch; showing up in the uniform you guessed at reads as presumptuous. The step-up is always the right calibration.</div></div><div class="mcq"><div class="qq">Your nicest outfit has a wrinkle across the front. You notice it when you put it on. You have 30 minutes before you need to leave. You&hellip;</div><button class="opt" data-ok="1">Damp towel + hang in the bathroom steam, or iron it &mdash; 30 minutes is enough; a wrinkle is fixable, not inevitable</button><button class="opt" data-ok="0">Wear it &mdash; they won&rsquo;t notice</button><button class="opt" data-ok="0">Change the interview to another day</button><div class="fb">This is exactly why the Week 11 night-before checklist exists: lay it out the night before, catch the wrinkle then. But 30 minutes is real fix time &mdash; the steam trick takes five, ironing takes ten. The interview notices things you think they won&rsquo;t.</div></div><div class="mcq"><div class="qq">Which hygiene choice matters most, even above the outfit?</div><button class="opt" data-ok="1">Smell-neutral &mdash; body odor or overpowering cologne/perfume is noticed before anything else and can&rsquo;t be unseen once the interviewer is aware of it</button><button class="opt" data-ok="0">Matching shoes &mdash; interviewers look down first</button><button class="opt" data-ok="0">A fresh haircut from a professional stylist</button><div class="fb">You can overcome a casual outfit; you cannot overcome an overwhelming smell. Smell-neutral is the absolute floor &mdash; clean skin, clean clothes, no heavy spray. Everything else is a grace note on top of that foundation.</div></div><div class="rev"><div class="rq">You genuinely can&rsquo;t afford interview clothes right now. Build a realistic plan using what you DO have access to &mdash; no invented resources.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Most people have or can borrow: one clean solid-color shirt or blouse, one pair of dark pants or jeans with no holes, clean shoes. Add: lint roller (dollar store), iron or steam option, nail clean-up. Other options: school counselor (often has a clothes closet), thrift store ($5&ndash;10), a family member&rsquo;s one-day borrow. The goal is clean + intentional, not expensive &mdash; and that goal is almost always reachable.</div></div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Plan My Interview Look</h1><div class="body"><p><span class="badge">Your task</span> For a real or class-provided job posting: research or observe the workplace (website, photos, or class discussion), decide your one-level-up look, and write your appearance plan card (specific clothing, hygiene check items, night-before prep). If you have gaps, name them and name ONE realistic way to fill each.</p>
+<div class="exit"><b>Before you leave:</b> Read me your appearance plan &mdash; specific outfit, hygiene check, when you&rsquo;re doing the mirror check.</div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Greeting, Voice &amp; Body Language</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">The first impression is formed before the first answer. Today: the handshake, the introduction, where you sit, what your body says when you&rsquo;re not talking &mdash; all of it is communication.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the greeting sequence</span><span>You try it</span><span>Do: greeting practice</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Workplace Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Week 14&rsquo;s three tone dials &mdash; volume, speed, face &amp; body &mdash; and four anchors. How do those apply specifically to walking into an interview room?</li><li>What does a bad handshake communicate &mdash; even if everything else is perfect?</li><li>Where do your hands and your eyes go when you&rsquo;re nervous? Is that what you want them doing?</li></ol></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>The Greeting Sequence</h1><div class="body"><table class="mini">
+<tr><th>Moment</th><th>What you do</th><th>The detail that counts</th></tr>
+<tr><td><b>They extend the hand</b></td><td>Firm, dry, two pumps, release &mdash; mirror their strength</td><td>Limp = unconfident; bone-crushing = aggressive; both are remembered</td></tr>
+<tr><td><b>They introduce themselves</b></td><td>&ldquo;Nice to meet you, [their name].&rdquo; Use the name once, right away</td><td>Names from Week 14 &mdash; saying it once cements it in YOUR memory too</td></tr>
+<tr><td><b>They offer you a seat</b></td><td>Sit upright, slightly forward &mdash; feet on floor, hands visible</td><td>Slouch = bored; crossed arms = closed; hands under the table = hiding</td></tr>
+<tr><td><b>During the interview</b></td><td>Eye contact 60&ndash;70% &mdash; enough to be engaged, not a stare-down; nod when they finish</td><td>Looking away = distracted; looking down = unconfident; looking at your notes = the notes run the interview</td></tr>
+<tr><td><b>They say something</b></td><td>Wait one beat before answering &mdash; pause is thinking, not emptiness</td><td>Rushing = nervous; pausing = confident. One beat is all it takes.</td></tr></table>
+<p class="note">The handshake rule: match-then-steady. If they&rsquo;re formal, go formal; if they&rsquo;re relaxed, relax slightly &mdash; but always firm enough to feel like a real handshake. The one-beat pause before answering is the most underrated interview skill: it separates the person who prepared from the person who&rsquo;s panicking through their answers.</p></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>First Impression Calls</h1><div class="body"><div class="mcq"><div class="qq">You sit down and immediately cross your arms because the chair is cold. What does the interviewer read?</div><button class="opt" data-ok="1">Defensiveness or discomfort &mdash; even if you&rsquo;re just cold, body language is read before intent is known</button><button class="opt" data-ok="0">Nothing &mdash; body language is a myth</button><button class="opt" data-ok="0">Professionalism &mdash; crossed arms look composed</button><div class="fb">The interviewer can&rsquo;t see inside your head &mdash; they see the signal. Slightly forward, hands on the table or lap, is the default that reads engaged and open. Cold? uncross slowly after the first minute when you&rsquo;re warmed up.</div></div><div class="mcq"><div class="qq">The interviewer asks a question you weren&rsquo;t expecting. You pause for two seconds before answering. What does that communicate?</div><button class="opt" data-ok="1">Thought &mdash; a two-second pause reads as &ldquo;I&rsquo;m taking this seriously,&rdquo; not as emptiness</button><button class="opt" data-ok="0">That you don&rsquo;t know the answer</button><button class="opt" data-ok="0">Rudeness &mdash; they asked, you should answer instantly</button><div class="fb">The one-beat pause is one of the most powerful interview moves, and almost no one uses it. Instant answers sound rehearsed or panicked; a brief pause sounds like someone who thinks before speaking &mdash; which is exactly who they want to hire.</div></div><div class="mcq"><div class="qq">You don&rsquo;t know their name because you missed it when they introduced themselves. You&hellip;</div><button class="opt" data-ok="1">&ldquo;I&rsquo;m sorry &mdash; I want to make sure I have your name right. Could you repeat it?&rdquo; &mdash; asking once is professional; guessing wrong is not</button><button class="opt" data-ok="0">Avoid using their name for the whole interview</button><button class="opt" data-ok="0">Guess something close and hope it&rsquo;s right</button><div class="fb">Asking once, politely, is professional. Avoiding names the whole interview is obvious. Guessing wrong &mdash; &ldquo;so as I was saying, Rachel&mdash;&rdquo; when it&rsquo;s Rebecca &mdash; is the worst option. Asking shows you care about getting it right.</div></div><div class="rev"><div class="rq">How does the Week 14 tone-dial framework apply specifically to the moment the interviewer says &ldquo;tell me about yourself&rdquo; and you begin your answer?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Volume: indoor, steady &mdash; nerves tend to push it either too quiet (mumble) or too loud (nervous projection). Speed: slow down 10% from your normal pace &mdash; rushed answers sound panicked. Face &amp; body: eyes up, slight lean forward, hands visible and still. The three dials are pre-set from Day 2 of this unit &mdash; today you aim them at the specific moment they matter most.</div></div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Greeting Practice</h1><div class="body"><p><span class="badge">Your task</span> Partner rounds: one interviewer, one candidate. The candidate enters from the hall (or the room corner), walks to the seat, executes the full greeting sequence &mdash; handshake, name use, sit, posture. Interviewer scores each element; candidate delivers the full &ldquo;tell me about yourself&rdquo; from the answer bank, with dials set. Swap. Then a two-minute debrief: what changed between take one and take two?</p>
+<div class="exit"><b>Before you leave:</b> Walk in, greet me, sit, and start your TMAY &mdash; beginning to end, all five greeting elements.</div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Waiting &amp; Phone Behavior</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">The interview starts in the parking lot. The waiting room IS part of the interview. Today: phone rules, waiting game face, and the close that leaves the right last impression.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the full interview window</span><span>You try it</span><span>Do: the full run-through</span></div>
+<div class="stdchips"><span class="pill">Self-Management</span><span class="pill">Workplace Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Week 17 said &ldquo;the interview starts before they ask the first question.&rdquo; What did that mean there &mdash; and how is it even more true for an interview than for a regular shift?</li><li>Why would a receptionist&rsquo;s opinion of you matter in a job interview?</li><li>What&rsquo;s the LAST thing you do before you leave the building after an interview?</li></ol></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Full Interview Window</h1><div class="body"><table class="mini">
+<tr><th>When</th><th>What you do</th><th>What it signals</th></tr>
+<tr><td><b>Parking lot / entrance</b></td><td>Phone away and silent; walk in calmly</td><td>Someone may see you. Your face during the walk is your resting state.</td></tr>
+<tr><td><b>Reception</b></td><td>&ldquo;Hello, I&rsquo;m [name] &mdash; I have an interview with [contact] at [time].&rdquo; Warm, clear.</td><td>Receptionists report back. Always.</td></tr>
+<tr><td><b>Waiting</b></td><td>Phone away, seated upright, light look around &mdash; observe the environment</td><td>Phone-out while waiting = the visual the interviewer sees first when they come out</td></tr>
+<tr><td><b>After the interview</b></td><td>Thank by name, firm close: &ldquo;Thank you, [name] &mdash; I&rsquo;m looking forward to hearing from you.&rdquo; Handshake if offered.</td><td>The close is often what they write down in the notes</td></tr>
+<tr><td><b>After you leave</b></td><td>Optional thank-you text or email within 24 hours: Week 20&rsquo;s message formula</td><td>Almost nobody does this. The ones who do are remembered.</td></tr></table>
+<p class="note">The full window runs from the moment you pull into the parking lot to the moment the thank-you message arrives. Most candidates only think about the questions in the middle. You now own both ends &mdash; which is where the decision often actually gets made.</p></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Full Window Checks</h1><div class="body"><div class="mcq"><div class="qq">You arrive 5 minutes early and sit in the waiting area. While waiting, you&hellip;</div><button class="opt" data-ok="1">Phone away and silent, seated upright, take one slow breath and observe the environment quietly</button><button class="opt" data-ok="0">Scroll through your phone to calm the nerves</button><button class="opt" data-ok="0">Review your answer bank on your phone one more time so you&rsquo;re ready</button><div class="fb">Even reviewing your notes on your phone looks the same as scrolling to the person walking out to get you. The answer bank is in your head now &mdash; that&rsquo;s why Week 22&rsquo;s Day 4 was a practice day. The waiting room is for breathing, not reviewing.</div></div><div class="mcq"><div class="qq">The interview ends. The interviewer shakes your hand. Your close is&hellip;</div><button class="opt" data-ok="1">&ldquo;Thank you, [their name] &mdash; I appreciate your time and I&rsquo;m looking forward to hearing from you.&rdquo; Then release the hand and leave professionally.</button><button class="opt" data-ok="0">&ldquo;So&hellip; do I have the job?&rdquo;</button><button class="opt" data-ok="0">Wave and head out quickly so you don&rsquo;t take more of their time.</button><div class="fb">The close with the name is the move. Asking for the offer directly puts them on the spot (not good). Rushing out undersells the whole interview. One sentence, their name, a genuine look &mdash; it&rsquo;s the last frame and it has to hold.</div></div><div class="mcq"><div class="qq">Why does sending a thank-you message within 24 hours help you &mdash; even for a simple entry-level job?</div><button class="opt" data-ok="1">Almost no one does it &mdash; so the candidates who do are immediately in a smaller group that the employer remembers</button><button class="opt" data-ok="0">It&rsquo;s required &mdash; employers will call you if you don&rsquo;t</button><button class="opt" data-ok="0">It doesn&rsquo;t; it can seem desperate</button><div class="fb">Brief, professional, specific to the interview: &ldquo;Thank you for your time today &mdash; the kennel assistant role sounds like exactly the kind of work I&rsquo;ve been building toward. I hope to hear from you soon.&rdquo; Four sentences, Week 20&rsquo;s formula, sent within 24 hours. Rare. Remembered.</div></div><div class="rev"><div class="rq">Map the full interview window for a real interview this week &mdash; when does it start for you, what are the pressure points, and what&rsquo;s your close line?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Start time = when you leave home (appearance check done, phone silenced). Pressure points: walking in, waiting (phone away), TMAY first answer. Close line: &ldquo;Thank you, [name] &mdash; I&rsquo;m looking forward to hearing from you.&rdquo; Post-interview: thank-you message within 24 hours. The window you control is wider than most people realize &mdash; and now you have a plan for all of it.</div></div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>The Full Run-Through</h1><div class="body"><p><span class="badge">Your task</span> Full interview simulation: enter from the hall, check in with the &ldquo;receptionist&rdquo; (classmate), wait properly, get called in, full greeting sequence, three-question live interview from the answer bank, close with name, and leave. Then 24-hour thank-you message drafted. Scored on: appearance readiness, greeting, body language, three answers, and the close.</p>
+<div class="exit"><b>Before you leave:</b> Tell me your close line &mdash; word for word, their name in it.</div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Interview-Readiness Checklist</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Everything you&rsquo;ve built across four weeks, in one checklist. This is the artifact you print and use. Graded on completion &mdash; and on running it out loud with me as the last check.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up relay</span><span>Do: build and run the checklist</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Applied Skills</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Relay</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Interview window relay: name every distinct moment from &ldquo;leaving home&rdquo; to &ldquo;thank-you message sent.&rdquo; Class builds the list together.</li><li>Which week&rsquo;s skill appears the most times across the whole interviewing unit? (Hint: it&rsquo;s a communication framework.)</li><li>What&rsquo;s the one thing that can undo a perfect interview in the last 30 seconds?</li></ol></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>The Readiness Checklist</h1><div class="body"><p><span class="badge">Your task</span> Complete the full interview-readiness checklist for a real posting: Appearance (outfit planned, hygiene checklist, mirror check time). Logistics (arrive time, address confirmed, contact name). Answer bank (TMAY ready, strength+receipt, reliability+receipt, why this job, three scenarios, availability, two prepared questions). Behavior (greeting rehearsed, close line memorized, phone plan for waiting). Follow-up (thank-you message drafted). Check every box &mdash; then walk through it with me out loud.</p>
+<div class="exit"><b>Check out:</b> Hand me your completed checklist. Then: what&rsquo;s the one thing on it you still need to lock in before a real interview?</div></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 23 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You arrive one level up, smell-neutral, and ironed. You check in warmly, wait with the phone away, enter with a firm greeting and their name, sit upright with eye contact at 60-70%, pause one beat before answering, close with their name and a confident line, and send a four-sentence thank-you within 24 hours. The interview is now a window you control from end to end.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Does my readiness checklist live somewhere I&rsquo;ll actually find it before a real interview?</li><li>Have I practiced my close line out loud until it doesn&rsquo;t feel formal?</li><li>What&rsquo;s my answer bank weak spot &mdash; and when am I drilling it?</li></ul></div></div>
+<p class="note">Coming next week &mdash; the Low-Pressure Mock Interview. Real questions, real role, real feedback, and a second chance to apply it. Everything from Weeks 20&ndash;23 gets its live test.</p></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Appearance &amp; Greeting Card</h1><div class="body"><table class="mini">
+<tr><th>Appearance checklist</th><th>Greeting sequence</th></tr>
+<tr><td>Research workplace &rarr; one level up<br>Clean + smell-neutral (non-negotiable)<br>No wrinkles, no stain, tag in<br>Mirror check before leaving<br>Night-before lay-out: no morning surprises</td><td>Handshake: firm, two pumps, dry<br>Name: use theirs once immediately<br>Sit: upright, slightly forward, hands visible<br>Eye contact: 60&ndash;70%, nod at end<br>Pause: one beat before answering &mdash; always</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Full Interview Window Card</h1><div class="body"><table class="mini">
+<tr><th>When</th><th>What</th></tr>
+<tr><td>Parking lot / entrance</td><td>Phone silent and away; calm walk</td></tr>
+<tr><td>Reception</td><td>&ldquo;I&rsquo;m [name] &mdash; interview with [contact] at [time].&rdquo; Warm, clear.</td></tr>
+<tr><td>Waiting</td><td>Seated upright, phone away, observe quietly</td></tr>
+<tr><td>Close</td><td>&ldquo;Thank you, [name] &mdash; I&rsquo;m looking forward to hearing from you.&rdquo;</td></tr>
+<tr><td>Within 24 hours</td><td>Short thank-you message (Week 20 formula) &mdash; almost nobody does this</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 23 • Interviewing — Interview Appearance and Behavior</span><span>24 of 24</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

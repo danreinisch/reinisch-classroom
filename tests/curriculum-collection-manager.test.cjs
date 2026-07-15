@@ -100,8 +100,19 @@ assert.ok(
 );
 
 assert.ok(
-  generator.includes("(lifeUnit.status || 'active') !== 'active'"),
-  'Generated lessons index must omit archived Life Skills presentations'
+  generator.includes("unit.section === 'life-skills'") &&
+    generator.includes("(unit.status || 'active') === 'active'"),
+  'Generated lessons index must include only active registered Life Skills collections'
+);
+
+assert.ok(
+  generator.includes("const baseOut = String(unitMeta.baseOut || '')"),
+  'Life Skills discovery must resolve presentation folders from registry baseOut'
+);
+
+assert.ok(
+  !generator.includes("find(u => u.id === 'life')"),
+  'Life Skills discovery must not depend on the legacy life collection ID'
 );
 
 assert.ok(

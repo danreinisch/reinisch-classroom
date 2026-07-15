@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 16: Workplace Behavior - Accepting Feedback and Fixing Mistakes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 16</div><h1>Accepting Feedback &amp; Fixing Mistakes</h1><div class="body"><div class="sub">Workplace Behavior &mdash; Accepting Feedback and Fixing Mistakes</div>
+<div class="meta">This week: correction vs. personal attack, the professional response, the find-and-fix routine, and live feedback rounds &mdash; 20 points</div><div class="theme">Big idea: Everyone makes mistakes at work &mdash; careers are built on what happens in the next sixty seconds</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Correction versus personal attack &mdash; hearing feedback for what it is</td><td>5</td></tr><tr><td>Day 2</td><td>Professional responses to feedback &mdash; the sixty-second script</td><td>5</td></tr><tr><td>Day 3</td><td>Find and fix the mistake &mdash; own it, repair it, prevent it</td><td>5</td></tr><tr><td>Day 4</td><td>Feedback scenario practice &mdash; live rounds, graded</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>You Can Ask &mdash; Now Learn to Hear</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you&hellip;</h3>
+<p>Mastered asking &mdash; the signals, the phrases, the worker&rsquo;s shape. Communication going OUT is handled.</p></div>
+<div class="card"><h3>This week you&hellip;</h3>
+<p>Handle communication coming IN &mdash; the kind that stings a little: <b>&ldquo;Hey, that&rsquo;s not how we do that.&rdquo;</b> Every worker on Earth hears it. The ones who hear it well get trained, trusted, and promoted. The ones who hear it badly get&hellip; scheduled less. This week you join the first group, on purpose.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>Correction vs. Personal Attack</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">&ldquo;The cups go label-out&rdquo; is about the CUPS &mdash; not about you. Today: telling correction apart from criticism, and why your brain mixes them up under stress.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the task test</span><span>You try it</span><span>Do: sort the feedback</span></div>
+<div class="stdchips"><span class="pill">Emotional Regulation</span><span class="pill">Workplace Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Think of the last time someone corrected you &mdash; anywhere. What did your body do in the first three seconds?</li><li>Coaches correct players constantly &mdash; and players thank them. Why doesn&rsquo;t it feel like insult there?</li><li>What&rsquo;s the difference between &ldquo;this shelf is wrong&rdquo; and &ldquo;you&rsquo;re bad at shelves&rdquo;?</li></ol></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The Task Test</h1><div class="body"><table class="mini">
+<tr><th>They say&hellip;</th><th>It&rsquo;s about&hellip;</th><th>Because&hellip;</th></tr>
+<tr><td>&ldquo;Cups face label-out &mdash; redo that row&rdquo;</td><td><b>The task</b></td><td>Names the thing and the fix &mdash; correction</td></tr>
+<tr><td>&ldquo;Next time, sweep BEFORE you mop&rdquo;</td><td><b>The task</b></td><td>It&rsquo;s Week 13&rsquo;s ordering lesson, free of charge</td></tr>
+<tr><td>&ldquo;Watch the clock on breaks, okay?&rdquo;</td><td><b>The task</b></td><td>A behavior, a standard, a reset &mdash; still correction</td></tr>
+<tr><td>Name-calling, mocking, yelling at YOU as a person</td><td><b>Not okay</b></td><td>That&rsquo;s not feedback &mdash; that&rsquo;s a problem for a supervisor (next week covers exactly this)</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Why your brain mixes them up</h3>
+<p>Correction arrives fast, sometimes blunt, often mid-rush &mdash; and the body reads FAST + BLUNT as attack. The task test is the three-second fix: <b>&ldquo;Is this about a TASK I can change?&rdquo;</b> If yes &mdash; it&rsquo;s free coaching wearing a gruff voice. Busy managers correct in seven words; the shortness is the schedule talking, not anger.</p></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Run the Task Test</h1><div class="body"><div class="mcq"><div class="qq">Mid-rush, the manager says fast and flat: &ldquo;Wrong bags &mdash; green for cold items.&rdquo; The task test says&hellip;</div><button class="opt" data-ok="1">Correction &mdash; it names a task (bags) and a fix (green for cold); the speed is the rush, not rage</button><button class="opt" data-ok="0">Attack &mdash; no smile, no &ldquo;please&rdquo;</button><button class="opt" data-ok="0">Impossible to tell without a mood ring</button><div class="fb">Seven words, one task, one fix &mdash; textbook correction in a busy voice. Waiting for corrections to arrive gift-wrapped means missing most of your training.</div></div><div class="mcq"><div class="qq">A coworker rolls their eyes and mutters &ldquo;of course YOU messed it up again&rdquo; in front of customers. Task test?</div><button class="opt" data-ok="1">Not correction &mdash; it names YOU, not a task, and offers no fix; that&rsquo;s a next-week problem, not a feedback problem</button><button class="opt" data-ok="0">Correction &mdash; &ldquo;messed up&rdquo; mentions a mistake</button><button class="opt" data-ok="0">Attack &mdash; so eye-roll back, harder</button><div class="fb">No task, no fix, plus an audience = not feedback. You don&rsquo;t owe that a professional feedback response &mdash; and you don&rsquo;t match it either. (Week 17: gossip, arguments, and getting a supervisor.)</div></div><div class="mcq"><div class="qq">You did the shelf EXACTLY how the trainer showed you &mdash; and the manager corrects it anyway. First move?</div><button class="opt" data-ok="1">Take the correction now, do it the manager&rsquo;s way &mdash; and later, calmly: &ldquo;Just to check, I was shown it the other way &mdash; which should I use going forward?&rdquo;</button><button class="opt" data-ok="0">&ldquo;That&rsquo;s not what I was told!&rdquo; on the spot, volume rising</button><button class="opt" data-ok="0">Do it your way when nobody&rsquo;s looking</button><div class="fb">Being corrected while &ldquo;right&rdquo; is the hardest one &mdash; and the calm later-question (hello, Week 15 toolbox) sorts it without a standoff. Two bosses, two methods happens everywhere; you just need the tiebreaker.</div></div><div class="rev"><div class="rq">Why do the workers who get corrected the MOST in their first month often turn out to be the best workers by month six?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Corrections flow toward workers people bother to train &mdash; silence is what managers give workers they&rsquo;ve given up on. Every correction is a deposit: someone spent their time making you better. Month six is when the deposits pay out.</div></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Sort the Feedback</h1><div class="body"><p><span class="badge">Your task</span> Twelve feedback cards &mdash; blunt corrections, kind corrections, mid-rush seven-worders, and two that fail the task test. Sort: CORRECTION / NOT FEEDBACK. For every correction, underline the task and circle the fix. For the failures, write what makes them fail.</p>
+<div class="exit"><b>Before you leave:</b> Show me the card that was hardest to sort and defend your call.</div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Professional Response</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Feedback lands &mdash; and the next sixty seconds are yours. Today: the three-part response that turns every correction into a reputation boost, and the faces and phrases that ruin it.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the sixty-second script</span><span>You try it</span><span>Do: response rounds</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Self-Management</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>The three tone dials from Week 14 &mdash; name them. Which one betrays people when they&rsquo;re embarrassed?</li><li>What do these all have in common: &ldquo;whatever,&rdquo; a sigh, &ldquo;I KNOW,&rdquo; the silent glare?</li><li>What&rsquo;s the best response to a correction you&rsquo;ve ever seen someone give &mdash; in sports, class, anywhere?</li></ol></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>Accept &bull; Confirm &bull; Apply</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Say / do</th><th>Example: &ldquo;Cups face label-out&rdquo;</th></tr>
+<tr><td><b>1. Accept</b> &mdash; five words, no armor</td><td>&ldquo;Got it&rdquo; &bull; &ldquo;Thanks for catching that&rdquo; &bull; &ldquo;My mistake&rdquo;</td><td>&ldquo;Oh &mdash; got it, thanks.&rdquo;</td></tr>
+<tr><td><b>2. Confirm</b> &mdash; prove it landed</td><td>Week 13&rsquo;s echo, feedback edition: say the fix back</td><td>&ldquo;Label-out on every row?&rdquo;</td></tr>
+<tr><td><b>3. Apply</b> &mdash; visibly, soon</td><td>Fix it now or name when: the response managers actually remember</td><td>Turns the cups. Right then.</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The response killers</h3>
+<p><b>Excuse-first</b> (&ldquo;well NOBODY told me&mdash;&rdquo;) &mdash; even when true, it&rsquo;s step four, never step one. <b>The armor words</b> &mdash; &ldquo;whatever,&rdquo; &ldquo;I KNOW,&rdquo; &ldquo;fine.&rdquo; <b>The silent version</b> &mdash; face says everything the mouth didn&rsquo;t. <b>Over-apologizing</b> &mdash; a five-minute sorry spiral makes it weird; one clean &ldquo;my mistake&rdquo; and MOVE. The fix is the apology.</p></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Sixty-Second Drills</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;This mop water needed changing two tables ago.&rdquo; Best full response?</div><button class="opt" data-ok="1">&ldquo;My mistake &mdash; fresh water every few tables? On it.&rdquo; &rarr; changes it now</button><button class="opt" data-ok="0">&ldquo;The last shift left it like that&rdquo; &mdash; accurate and instant</button><button class="opt" data-ok="0">&ldquo;Okay.&rdquo; &rarr; keeps mopping with the same water</button><div class="fb">Accept, confirm, apply &mdash; nine words and a bucket. The last-shift fact might even be true; it can come up LATER, calmly, after the fix. Excuse-first erases everything said after it.</div></div><div class="mcq"><div class="qq">You say &ldquo;got it, thanks&rdquo; perfectly &mdash; while sighing, eyes to the ceiling. What did the manager hear?</div><button class="opt" data-ok="1">&ldquo;Whatever&rdquo; &mdash; the face &amp; body dial overrode the script completely</button><button class="opt" data-ok="0">&ldquo;Got it, thanks&rdquo; &mdash; words are words</button><button class="opt" data-ok="0">Nothing; managers don&rsquo;t notice faces</button><div class="fb">Week 14&rsquo;s rule, sharpest edge: the dials can cancel the words. Under embarrassment, the face dial slips first &mdash; which is why we drill the whole delivery, not the sentence.</div></div><div class="mcq"><div class="qq">The correction is about something you can&rsquo;t fix RIGHT now (mid-task, hands full). Apply looks like&hellip;</div><button class="opt" data-ok="1">Naming the when: &ldquo;Got it &mdash; I&rsquo;ll redo that row the second I finish this order&rdquo; &mdash; then actually doing it</button><button class="opt" data-ok="0">Dropping everything, letting the current task crash</button><button class="opt" data-ok="0">Nodding and quietly hoping it&rsquo;s forgotten</button><div class="fb">Apply isn&rsquo;t always instant &mdash; but it&rsquo;s always SCHEDULED, out loud. The named when plus the follow-through is what separates &ldquo;heard you&rdquo; from &ldquo;handled it.&rdquo;</div></div><div class="rev"><div class="rq">&ldquo;Thanks for catching that&rdquo; &mdash; thanking someone for pointing out YOUR error. Why does that strange little sentence work so well on managers?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">It flips the moment: instead of two people in an awkward standoff, it&rsquo;s two people on the same team against the mistake. Managers correct all day and mostly get armor back &mdash; the worker who says thanks becomes the one they WANT to train. It&rsquo;s Day 1&rsquo;s deposit theory, activated by you.</div></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Response Rounds</h1><div class="body"><p><span class="badge">Your task</span> Partner rounds: one delivers correction cards (some blunt, some kind, some mid-rush), the other runs accept-confirm-apply with all three dials right &mdash; scorer marks each part on the rubric. Special round: respond to the SAME card twice, once with a response killer on purpose, once clean. Feel the difference.</p>
+<div class="exit"><b>Before you leave:</b> Give me your cleanest sixty-second response, cold.</div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Find &amp; Fix the Mistake</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Sometimes nobody corrects you &mdash; YOU spot the mistake. Yours, or just&hellip; there. Today: the find-and-fix routine that handles both, and why hiding a mistake is the only version that ends badly.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: own, fix, prevent</span><span>You try it</span><span>Do: the mistake hunt</span></div>
+<div class="stdchips"><span class="pill">Problem Solving</span><span class="pill">Integrity</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>You realize an hour later that you probably bagged someone&rsquo;s cold stuff wrong. Nobody saw. What are the options &mdash; all of them?</li><li>Why do small hidden mistakes tend to grow &mdash; give an example from anywhere in life.</li><li>Week 12 ended with &ldquo;fix the leak.&rdquo; What did that mean &mdash; and how does it apply to mistakes?</li></ol></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>Own It &bull; Fix It &bull; Prevent It</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>What it looks like</th><th>Example: you priced a whole shelf wrong</th></tr>
+<tr><td><b>1. Own it</b> &mdash; fast, plainly</td><td>Tell who needs to know, before it&rsquo;s found: &ldquo;I made a mistake on ___ &mdash; wanted you to know&rdquo;</td><td>&ldquo;I think I tagged the sauces at the old price &mdash; wanted to flag it.&rdquo;</td></tr>
+<tr><td><b>2. Fix it</b> &mdash; or help fix it</td><td>What CAN you repair right now? Offer it: &ldquo;I can retag them now if that works&rdquo;</td><td>Retags the shelf &mdash; fifteen minutes.</td></tr>
+<tr><td><b>3. Prevent it</b> &mdash; fix the leak</td><td>What let it happen? Checklist line, double-check habit, a question you should&rsquo;ve asked</td><td>New habit: check one tag against the sheet before doing the row.</td></tr></table>
+<p class="note">Here&rsquo;s the math managers know: a mistake owned early is a fifteen-minute story; the SAME mistake discovered later is a trust story &mdash; and trust stories are the expensive kind. Nobody was ever fired for &ldquo;I made a mistake and here&rsquo;s my fix.&rdquo; Plenty have been for the hiding. And when the mistake isn&rsquo;t yours? Same routine minus the owning: flag it, help fix it, no detective work about whose it was.</p></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Handle It</h1><div class="body"><div class="mcq"><div class="qq">You spot YOUR mistake from an hour ago &mdash; wrong bags, cold items, customer long gone. Nothing to physically fix. Own-fix-prevent looks like&hellip;</div><button class="opt" data-ok="1">Own it anyway (&ldquo;I bagged an order wrong earlier &mdash; wanted you to know in case they call&rdquo;), then prevent: green-bag check added to your routine</button><button class="opt" data-ok="0">Unfixable = unmentionable; the routine doesn&rsquo;t apply</button><button class="opt" data-ok="0">Wait by the phone in dread all shift</button><div class="fb">The heads-up IS the fix here &mdash; now the manager can handle a call smoothly instead of blindsided. Prevention still applies. Unfixable mistakes still get owned; they just skip step two.</div></div><div class="mcq"><div class="qq">You find a spill in aisle 3. Not yours. Nobody around. You&hellip;</div><button class="opt" data-ok="1">Flag it and guard it &mdash; found mistakes are everyone&rsquo;s: get it handled, skip the whodunit</button><button class="opt" data-ok="0">Not your spill, not your problem &mdash; walk on</button><button class="opt" data-ok="0">Launch an investigation to find the spiller first</button><div class="fb">A spill is a safety signal (Week 15!) wearing a mistake costume. Handle first; blame never. &ldquo;Whose was it&rdquo; fixes exactly nothing.</div></div><div class="mcq"><div class="qq">Same small mistake, third time this month &mdash; you keep forgetting to relock the stockroom. The step you&rsquo;re skipping is&hellip;</div><button class="opt" data-ok="1">Prevent &mdash; owning and fixing three times without a new habit means the leak is still open; put &ldquo;lock check&rdquo; on your closing checklist tonight</button><button class="opt" data-ok="0">Own &mdash; you should apologize harder each time</button><button class="opt" data-ok="0">Nothing; three is barely a pattern</button><div class="fb">Repeat mistakes are prevention failures wearing new dates. Sorry number three sounds exactly like sorry number one &mdash; the checklist line is what changes the story.</div></div><div class="rev"><div class="rq">Owning a mistake nobody would ever discover &mdash; why do it? Build the honest case, both sides.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The case against: awkward, maybe unnecessary. The case for: if it surfaces later you&rsquo;re protected; your manager gets to trust your reports completely; and you get to be someone whose word covers ALL of it, not just the visible parts. One awkward minute buys a reputation that pays for years &mdash; it&rsquo;s the signature promise from Week 5, kept when no one&rsquo;s checking.</div></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>The Mistake Hunt</h1><div class="body"><p><span class="badge">Your task</span> Your station has five planted mistakes (mislabeled, misordered, unsafe, unfinished, one subtle). Find them, and for each write the full routine: the owning sentence you&rsquo;d say (or flag, if it&rsquo;s &ldquo;found&rdquo;), the fix, and the prevention line. One mistake is unfixable &mdash; handle it anyway.</p>
+<div class="exit"><b>Before you leave:</b> Read me your best prevention line &mdash; the leak, actually fixed.</div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Feedback Scenario Practice</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Live rounds: corrections arriving blunt, kind, fast, and mid-task &mdash; plus one mistake you&rsquo;ll have to own unprompted. The whole week, on your feet, graded.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: live rounds</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Communication</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>The task test, the sixty-second script, own-fix-prevent &mdash; one sentence each, class relay.</li><li>Which response killer is YOUR killer &mdash; excuse-first, armor words, the face, or the sorry spiral?</li><li>Predict: which will be harder live &mdash; taking the blunt correction, or owning the unprompted mistake?</li></ol></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>Live Rounds</h1><div class="body"><p><span class="badge">Your task</span> Three rounds with me as the manager: (1) a blunt mid-rush correction &mdash; run the task test and the sixty-second script; (2) a correction that&rsquo;s WRONG or conflicts with your training &mdash; take it clean, then the calm tiebreaker question; (3) the station mistake &mdash; you &ldquo;discover&rdquo; it and come to me unprompted with own-fix-prevent. Dials on, the whole time.</p>
+<div class="card flat" style="margin-top:12px"><h3>Full credit sounds like</h3>
+<p>&ldquo;Got it &mdash; label-out every row? Fixing it now.&rdquo; &bull; &ldquo;Just to check &mdash; I was shown the other way; which one going forward?&rdquo; &bull; &ldquo;I made a mistake on the sauce tags &mdash; I can retag now, and I&rsquo;ve added a check so it won&rsquo;t repeat.&rdquo;</p></div>
+<div class="exit"><b>Check out:</b> Three rounds, three skills &mdash; tell me which one you&rsquo;d bet on under real pressure now.</div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 16 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You run the task test in three seconds and hear blunt corrections as busy coaching, respond with accept-confirm-apply in under a minute with the dials holding, and handle mistakes nobody caught with own-fix-prevent &mdash; including the unfixable ones and the ones that were never yours. Feedback stopped being a threat and became your fastest training channel.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Which response killer needs a personal alarm on it?</li><li>What&rsquo;s one leak I&rsquo;ve owned twice but never actually prevented?</li><li>Who gave me good coaching this month &mdash; and did I thank them?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Coworkers, Breaks, Cell Phones, and Boundaries: friendly without drama, what to do about gossip and arguments, and when getting a supervisor is exactly right.</p></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Feedback Response Card</h1><div class="body"><table class="mini">
+<tr><th>The task test</th><th>The sixty-second script</th></tr>
+<tr><td>&ldquo;Is this about a TASK I can change?&rdquo;<br>Yes &rarr; correction: find the task, find the fix<br>Names YOU, no task, no fix &rarr; not feedback &mdash; supervisor territory<br>Fast + blunt = busy, not angry</td><td><b>Accept</b>: &ldquo;Got it&rdquo; / &ldquo;Thanks for catching that&rdquo; / &ldquo;My mistake&rdquo;<br><b>Confirm</b>: echo the fix &mdash; &ldquo;label-out every row?&rdquo;<br><b>Apply</b>: fix now, or name the when &mdash; out loud</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Response killers</h3>
+<p>Excuse-first &bull; armor words (&ldquo;whatever,&rdquo; &ldquo;I KNOW&rdquo;) &bull; the face &bull; the sorry spiral. One clean &ldquo;my mistake,&rdquo; then the fix IS the apology.</p></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Own &bull; Fix &bull; Prevent Card</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>Line</th></tr>
+<tr><td>Own it &mdash; fast, before it&rsquo;s found</td><td>&ldquo;I made a mistake on ___ &mdash; wanted you to know.&rdquo;</td></tr>
+<tr><td>Fix it &mdash; or help</td><td>&ldquo;I can ___ right now if that works.&rdquo;</td></tr>
+<tr><td>Prevent it &mdash; fix the leak</td><td>New checklist line &bull; double-check habit &bull; the question to ask next time</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Remember</h3>
+<p>Owned early = a fifteen-minute story; hidden = a trust story. Found a mistake that isn&rsquo;t yours? Flag and help &mdash; skip the whodunit. Unfixable still gets owned; it just skips step two.</p></div></div><div class="footer"><span>Life Skills SC • Week 16 • Workplace Behavior — Accepting Feedback and Fixing Mistakes</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

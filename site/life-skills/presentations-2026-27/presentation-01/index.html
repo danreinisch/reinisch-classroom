@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1: Course Orientation &amp; Baseline - Worker Profile and Functional Baselines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC • Week 1</div><h1>Welcome to Life Skills!</h1><div class="body"><div class="sub">Course Orientation &amp; Baseline &mdash; Worker Profile and Functional Baselines</div>
+<div class="meta">This week: getting to know the class, ourselves, and our skills &mdash; 15 points</div><div class="theme">Big idea: This class builds real skills for work and independent life</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>What is this class for? + Worker-interest survey</td><td>5</td></tr><tr><td>Day 2</td><td>Personal-information baseline &mdash; know your own info</td><td>5</td></tr><tr><td>Day 3</td><td>Money baseline &mdash; counting with practice currency</td><td>5</td></tr><tr><td>Day 4</td><td>Open Life Skills Day &mdash; finish work, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>2 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Why This Class Matters</div><h1>What Will We Do in Life Skills?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Work skills</h3><p>Learning about jobs, reading job postings, applying, interviewing, and being a good worker.</p></div>
+<div class="card"><h3>Money skills</h3><p>Counting money, making change, budgeting, paying for things, and staying safe with your money.</p></div>
+<div class="card"><h3>Everyday skills</h3><p>Personal information, schedules, transportation, communication, and asking for help the right way.</p></div>
+<div class="card"><h3>Your goals</h3><p>We practice the skills <b>you</b> need for <b>your</b> future &mdash; at your pace, with support.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>3 of 23</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>What Is Work &mdash; and What Fits Me?</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Today we learn what this class is for, how points work, and we start building your <b>worker profile</b> with an interest survey.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: worker profiles</span><span>Examples + you try it</span><span>Do: interest survey</span><span>Share one interest</span></div>
+<div class="stdchips"><span class="pill">Career Awareness</span><span class="pill">Self-Knowledge</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Learn</div><h1>What Is a Worker Profile?</h1><div class="body"><div class="cols2">
+<div class="card"><h3>A worker profile is&hellip;</h3>
+<p>A picture of you as a future worker: your <b>interests</b> (what you like), your <b>strengths</b> (what you do well), and your <b>needs</b> (what support helps you succeed).</p></div>
+<div class="card"><h3>Why it matters</h3>
+<p>People do their best work at jobs that fit them. A cook who loves quiet might not enjoy a loud kitchen. A talker might love a front counter. <b>Fit comes first.</b></p></div></div>
+<div class="card flat" style="margin-top:16px"><h3>Warm-up &mdash; talk with a partner</h3>
+<ul><li>What jobs do people in your life have?</li>
+<li>What is something you are <b>good</b> at?</li>
+<li>What do you <b>like doing</b> so much you lose track of time?</li></ul></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>5 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Examples</div><h1>Real Interests &rarr; Real Jobs</h1><div class="body"><table class="mini">
+<tr><th>If you like&hellip;</th><th>Jobs that use it</th></tr>
+<tr><td>Animals</td><td>Kennel assistant, groomer&rsquo;s helper, shelter aide</td></tr>
+<tr><td>Order &amp; organizing</td><td>Stocker, library aide, warehouse associate</td></tr>
+<tr><td>Talking with people</td><td>Front counter, greeter, host, customer service</td></tr>
+<tr><td>Being outdoors</td><td>Landscaping crew, parks &amp; rec aide, nursery worker</td></tr>
+<tr><td>Cooking &amp; kitchens</td><td>Prep cook, dishwasher &rarr; line cook path</td></tr>
+<tr><td>Building &amp; fixing</td><td>Shop helper, maintenance assistant, hardware store</td></tr></table>
+<p class="note">Notice: every interest on the left maps to real, get-hireable jobs. Your survey is a map, not a quiz.</p></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>6 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Match the Worker to the Work</h1><div class="body"><div class="mcq"><div class="qq">Jordan loves quiet and putting things in order. Better fit?</div><button class="opt" data-ok="0">Cashier at a loud food court</button><button class="opt" data-ok="1">Shelving and organizing books at the library</button><button class="opt" data-ok="0">DJ at school dances</button><div class="fb">Quiet + order = environments where those strengths are the whole job.</div></div><div class="mcq"><div class="qq">DeShawn loses track of time playing with his dog. Which job uses that interest?</div><button class="opt" data-ok="1">Kennel assistant at a vet clinic</button><button class="opt" data-ok="0">Overnight stocker</button><button class="opt" data-ok="0">Toll booth attendant</button><div class="fb">The thing you do for free that feels like no time passed &mdash; that&rsquo;s an interest worth following.</div></div><div class="rev"><div class="rq">Your turn: name one thing YOU like doing + one real job that could use it.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Examples: drawing &rarr; sign shop helper &bull; music &rarr; stagehand or AV aide &bull; helping grandma cook &rarr; prep cook &bull; video games &rarr; electronics section associate.</div></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>7 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Do</div><h1>Worker-Interest Survey</h1><div class="body"><p><span class="badge">Your task</span> Complete the worker-interest survey. There are no wrong answers &mdash; honest answers help us find work that fits <b>you</b>.</p>
+<div class="cols2">
+<div class="card"><h3>Tips</h3>
+<ul><li>Go with your first instinct.</li>
+<li>Think about real days you enjoyed &mdash; what were you doing?</li>
+<li>It&rsquo;s okay to like things that seem small. Small likes point to real jobs.</li></ul></div>
+<div class="card"><h3>When you finish</h3>
+<p>Circle your <b>top three</b> interests. We will use them all year as we explore careers.</p></div></div>
+<div class="exit"><b>Before you leave:</b> Tell me one interest from your survey and one job that might use it.</div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>8 of 23</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Your Personal Information</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Today we practice the information every job application, doctor&rsquo;s office, and form will ask you for &mdash; and we learn who should (and should not) get it.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Learn: the Big Five</span><span>Watch me fill a form</span><span>Examples + you try it</span><span>Do: baseline form</span><span>Safety check</span></div>
+<div class="stdchips"><span class="pill">Personal Information</span><span class="pill">Safety &amp; Privacy</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Learn</div><h1>The Big Five &mdash; Know Them Cold</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Every form asks for&hellip;</h3>
+<ol><li>Full legal name</li>
+<li>Address (street, city, state, ZIP)</li>
+<li>Phone number</li>
+<li>Date of birth</li>
+<li>Emergency contact (name + number)</li></ol></div>
+<div class="card"><h3>Watch me (I do &rarr; we do)</h3>
+<p>I&rsquo;ll fill out a sample form on the board and make <b>two common mistakes</b> &mdash; watch for them: skipping a box, and writing a nickname where it says <i>legal name</i>. Catch me!</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Who gets your information?</h3>
+<p><b>Yes:</b> employers, doctors, school, trusted family. &nbsp;<b>No:</b> strangers, unknown callers, websites you don&rsquo;t know, anyone who pressures you to hurry.</p></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>10 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Examples</div><h1>A Filled-Out Form, Done Right</h1><div class="body"><table class="mini">
+<tr><th>Form asks</th><th>Example answer</th><th>Watch out</th></tr>
+<tr><td>Full legal name</td><td>Alexander James Rivera</td><td>Not &ldquo;AJ&rdquo; &mdash; nicknames go in a different box, if any</td></tr>
+<tr><td>Address</td><td>412 Oak St, Apt 3, Springfield, MO 65806</td><td>Include apartment number AND ZIP code</td></tr>
+<tr><td>Phone</td><td>(417) 555-0142</td><td>Area code always</td></tr>
+<tr><td>Date of birth</td><td>03/14/2009</td><td>Month/day/year order in the US</td></tr>
+<tr><td>Emergency contact</td><td>Maria Rivera (mother) &mdash; (417) 555-0143</td><td>Name, relationship, AND number</td></tr></table>
+<p class="note">Print neatly, fill every box, and if a box doesn&rsquo;t apply write &ldquo;N/A&rdquo; &mdash; never leave it blank on a job application.</p></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>11 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Share It or Protect It?</h1><div class="body"><div class="mcq"><div class="qq">The form says <b>legal name</b>. You write&hellip;</div><button class="opt" data-ok="0">AJ</button><button class="opt" data-ok="1">Alexander James Rivera</button><button class="opt" data-ok="0">Alex R.</button><div class="fb">Legal name = the name on your ID and birth certificate. Nicknames confuse payroll, records, and paychecks.</div></div><div class="mcq"><div class="qq">A caller says: &ldquo;I&rsquo;m from the bank &mdash; hurry, I need your address and birthday RIGHT NOW.&rdquo; You&hellip;</div><button class="opt" data-ok="0">Give it &mdash; banks are safe</button><button class="opt" data-ok="1">Hang up and tell a trusted adult &mdash; pressure + personal info = scam</button><button class="opt" data-ok="0">Give just the birthday, not the address</button><div class="fb">Real banks never rush you for personal info by phone. Pressure to hurry is the #1 scam signal.</div></div><div class="mcq"><div class="qq">Who should get your personal information?</div><button class="opt" data-ok="1">An employer, a doctor, or a trusted family member</button><button class="opt" data-ok="0">A website you&rsquo;ve never heard of offering free prizes</button><button class="opt" data-ok="0">Someone you just met online</button><div class="fb">Trusted people and places with a real reason to need it &mdash; that&rsquo;s the whole rule.</div></div><div class="rev"><div class="rq">Which of the Big Five protects you in an emergency &mdash; and why should someone besides you know it?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Emergency contact. If you&rsquo;re hurt, sick, or stranded, it connects helpers to your trusted person fast &mdash; even if you can&rsquo;t speak for yourself.</div></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>12 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Do</div><h1>Personal-Information Baseline</h1><div class="body"><p><span class="badge">Your task</span> Fill out the baseline form with as much as you know &mdash; from memory first.</p>
+<div class="cols2">
+<div class="card"><h3>How it works</h3>
+<ul><li>Pencil first, from memory.</li>
+<li>Then we check together and fix anything missing.</li>
+<li>Anything you don&rsquo;t know becomes a goal &mdash; not a failure.</li></ul></div>
+<div class="card"><h3>Remember</h3>
+<p>This is a <b>baseline</b> &mdash; a starting photo. We take it now so we can see how much you grow by June.</p></div></div>
+<div class="exit"><b>Before you leave:</b> Name one piece of the Big Five you know cold &mdash; and one you will practice this week.</div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>13 of 23</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Money Baseline</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Today we find out what you already know about money &mdash; naming it, counting it, and comparing amounts &mdash; using practice currency.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Learn: count-up strategy</span><span>Watch me count</span><span>Examples + you try it</span><span>Do: money baseline</span><span>Exit check</span></div>
+<div class="stdchips"><span class="pill">Money Skills</span><span class="pill">Functional Math</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Learn</div><h1>The Count-Up Strategy</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Start big, count up</h3>
+<p>Sort your money <b>largest first</b>: bills, then quarters, dimes, nickels, pennies. Count up as you go: &ldquo;10&hellip; 15&hellip; 16 dollars&hellip; 16.25&hellip; 16.35.&rdquo;</p></div>
+<div class="card"><h3>Watch me (I do &rarr; we do)</h3>
+<p>I&rsquo;ll count a handful of practice money out loud on the document camera. Then we count one together as a class &mdash; you call out the running total.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Quick reference</h3>
+<p>Quarter = 25&cent; &nbsp;•&nbsp; Dime = 10&cent; &nbsp;•&nbsp; Nickel = 5&cent; &nbsp;•&nbsp; Penny = 1&cent; &nbsp;•&nbsp; 4 quarters = $1</p></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>15 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Examples</div><h1>Watch the Count-Up Work</h1><div class="body"><div class="card"><h3>Example A &mdash; mixed bills and coins</h3>
+<p>1 five + 2 ones + 1 quarter + 1 dime &rarr; count big first: <b>5&hellip; 6&hellip; 7&hellip; 7.25&hellip; 7.35</b> &rarr; <b>$7.35</b></p></div>
+<div class="card" style="margin-top:14px"><h3>Example B &mdash; coins only</h3>
+<p>3 quarters + 2 dimes + 4 pennies &rarr; <b>.25 .50 .75&hellip; .85 .95&hellip; .96 .97 .98 .99</b> &rarr; <b>99&cent;</b></p></div>
+<div class="card" style="margin-top:14px"><h3>Example C &mdash; two price tags</h3>
+<p>Sandwich $3.50 + drink $1.25 &rarr; dollars first: 3 + 1 = 4 &rarr; cents: .50 + .25 = .75 &rarr; <b>$4.75</b></p></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>16 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Count It Out</h1><div class="body"><div class="mcq"><div class="qq">2 quarters + 1 dime + 3 pennies =</div><button class="opt" data-ok="1">63&cent;</button><button class="opt" data-ok="0">58&cent;</button><button class="opt" data-ok="0">68&cent;</button><div class="fb">Count up: 25 &rarr; 50 &rarr; 60 &rarr; 61, 62, 63.</div></div><div class="mcq"><div class="qq">Which pile is worth <b>more</b>?</div><button class="opt" data-ok="1">5 dimes</button><button class="opt" data-ok="0">9 nickels</button><button class="opt" data-ok="0">They&rsquo;re equal</button><div class="fb">Dimes: 10-20-30-40-50 = 50&cent;. Nickels: 5-10-15-20-25-30-35-40-45 = 45&cent;.</div></div><div class="mcq"><div class="qq">Sandwich $4.25 + water $1.50. Total?</div><button class="opt" data-ok="0">$5.25</button><button class="opt" data-ok="1">$5.75</button><button class="opt" data-ok="0">$6.00</button><div class="fb">Dollars: 4+1=5. Cents: .25+.50=.75. Together: $5.75.</div></div><div class="rev"><div class="rq">You have $6.00. Can you buy both items ($5.75)? How much is left over?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Yes &mdash; with 25&cent; left. Count up from $5.75 to $6.00: one quarter. That count-up move is exactly how cashiers make change.</div></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>17 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Do</div><h1>Money Baseline with Practice Currency</h1><div class="body"><p><span class="badge">Your task</span> Work through the baseline stations with your practice money.</p>
+<div class="cols2">
+<div class="card"><h3>Stations</h3>
+<ol><li><b>Name it:</b> identify each coin and bill.</li>
+<li><b>Count it:</b> count three mixed sets.</li>
+<li><b>Compare it:</b> which pile is worth more?</li>
+<li><b>Total it:</b> two price tags &mdash; what do they cost together?</li></ol></div>
+<div class="card"><h3>Remember</h3>
+<p>Not a test you can fail &mdash; a starting photo. Money skills grow with practice, and we practice all year.</p></div></div>
+<div class="exit"><b>Before you leave:</b> Count the exit pile at the door and tell me the total on your way out.</div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>18 of 23</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Choice day: finish this week&rsquo;s work, get extra practice, or apply your skills in the lab. Everyone leaves with the week complete.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Pick your path</span><span>Work the plan</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Completion</span><span class="pill">Individual Practice</span><span class="pill">Applied Skills</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Choose</div><h1>Pick Your Path</h1><div class="body"><ol class="q">
+<li><b>Completion</b> &mdash; finish the interest survey, personal-info form, or money baseline.</li>
+<li><b>Individual practice</b> &mdash; extra reps on the skill that felt hardest this week.</li>
+<li><b>Applied skill lab</b> &mdash; use your skills on a real-life task (fill a real form, count a shopping total).</li>
+<li><b>Reteach with me</b> &mdash; a second look at anything from this week, small group or one-on-one.</li>
+</ol>
+<div class="exit"><b>Check out:</b> Before you leave, show me one thing you finished or improved today.</div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>20 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Money Card &mdash; Keep This Handy</h1><div class="body"><table class="mini">
+<tr><th>Money</th><th>Worth</th><th>Quick fact</th></tr>
+<tr><td>Penny</td><td>1&cent;</td><td>100 pennies = $1</td></tr>
+<tr><td>Nickel</td><td>5&cent;</td><td>20 nickels = $1</td></tr>
+<tr><td>Dime</td><td>10&cent;</td><td>10 dimes = $1 (smallest coin, big value!)</td></tr>
+<tr><td>Quarter</td><td>25&cent;</td><td>4 quarters = $1</td></tr>
+<tr><td>Bills</td><td>$1, $5, $10, $20</td><td>Most paychecks and prices use these</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>Count-up steps</h3>
+<ol><li>Sort largest to smallest.</li><li>Count bills first, then quarters, dimes, nickels, pennies.</li><li>Say the running total out loud.</li><li>To make change: count UP from the price to the money given.</li></ol></div></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>21 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>My Info + Job Words</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The Big Five (memorize!)</h3>
+<ol><li>Full legal name</li><li>Address with ZIP</li><li>Phone with area code</li><li>Date of birth</li><li>Emergency contact + number</li></ol></div>
+<div class="card"><h3>Share it? Quick check</h3>
+<p><b>YES:</b> employer, doctor, school, trusted family.<br><b>NO:</b> strangers, unknown callers, prize websites, anyone rushing you.<br><b>Rule:</b> pressure = stop and ask a trusted adult.</p></div></div>
+<table class="mini" style="margin-top:14px">
+<tr><th>Job word</th><th>Means</th></tr>
+<tr><td>Application</td><td>The form you fill out to ask for a job</td></tr>
+<tr><td>Interview</td><td>A meeting where they decide if you fit the job</td></tr>
+<tr><td>Employer / employee</td><td>The company that hires / the person who works</td></tr>
+<tr><td>Schedule</td><td>The days and hours you work</td></tr>
+<tr><td>Wage</td><td>The money you earn per hour</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>22 of 23</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You learned what Life Skills class is for, shared your interests and strengths, showed what you know about your personal information, and showed what you know about money. That&rsquo;s your starting photo &mdash; everything from here is growth.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What kind of work might fit me?</li><li>Which of the Big Five do I need to practice?</li><li>Which money skill will help me most right now?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Career Awareness: jobs, chores, volunteering, and hobbies; common entry-level jobs; your strengths and three possible jobs for you.</p></div><div class="footer"><span>Life Skills SC • Week 1 • Course Orientation &amp; Baseline — Worker Profile and Functional Baselines</span><span>23 of 23</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

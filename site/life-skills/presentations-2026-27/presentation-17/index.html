@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 17: Workplace Behavior - Coworkers, Breaks, Cell Phones, and Boundaries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 17</div><h1>Coworkers, Breaks &amp; Boundaries</h1><div class="body"><div class="sub">Workplace Behavior &mdash; Coworkers, Breaks, Cell Phones, and Boundaries</div>
+<div class="meta">This week: friendly-not-drama coworker skills, the gossip and argument playbook, break and phone rules for real, and the teamwork review &mdash; 20 points</div><div class="theme">Big idea: The work is half the job &mdash; the other half is the people, and that half has rules too</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Coworker conversation and boundaries &mdash; friendly, not tangled</td><td>5</td></tr><tr><td>Day 2</td><td>Gossip, arguments, and getting a supervisor &mdash; the drama playbook</td><td>5</td></tr><tr><td>Day 3</td><td>Breaks and cell-phone rules &mdash; the full picture</td><td>5</td></tr><tr><td>Day 4</td><td>Teamwork review &mdash; scenarios across the whole unit, graded</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>Managers Handled &mdash; Now, Everyone Else</h1><div class="body"><div class="cols2">
+<div class="card"><h3>So far you can&hellip;</h3>
+<p>Talk to MANAGERS like a pro: ask, clarify, take feedback, own mistakes. But most of a shift isn&rsquo;t spent with the manager &mdash; it&rsquo;s spent shoulder-to-shoulder with <b>coworkers</b>.</p></div>
+<div class="card"><h3>This week you&hellip;</h3>
+<p>Learn the coworker half: easy small talk with clean boundaries, what to do when gossip or an argument finds you (it will), the real rules of breaks and phones &mdash; Week 11&rsquo;s &ldquo;everyday three&rdquo; grown up &mdash; and one graded gauntlet across the whole Workplace Behavior unit. Three weeks of people skills, cashed in.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>Coworker Talk &amp; Boundaries</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Coworkers aren&rsquo;t quite friends and aren&rsquo;t strangers &mdash; they&rsquo;re a third thing with its own rules. Today: easy topics, clean exits, and the boundary lines that keep work friendly.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: green topics, clean exits</span><span>You try it</span><span>Do: small-talk rounds</span></div>
+<div class="stdchips"><span class="pill">Social Skills</span><span class="pill">Boundaries</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>What makes someone easy to work next to for four hours? Get specific.</li><li>Week 5 gave you three info zones &mdash; green, yellow, red. Who remembers what lived in each?</li><li>Why might sharing TOO much personal stuff at work cause problems later?</li></ol></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>Green Topics &amp; Clean Exits</h1><div class="body"><table class="mini">
+<tr><th>Green &mdash; always safe</th><th>Careful &mdash; know them first</th><th>Off the clock-floor</th></tr>
+<tr><td>The task at hand &bull; food &bull; weather &bull; shows, games, music &bull; weekend-in-general &bull; &ldquo;how&rsquo;s your shift going&rdquo;</td><td>Family details &bull; health stuff &bull; how you REALLY feel about the schedule</td><td>Your Week 5 red zone (money numbers, passwords, address) &bull; romance at work &bull; complaints about coworkers &mdash; that&rsquo;s Day 2&rsquo;s whole topic</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The two skills that make it work</h3>
+<p><b>The clean exit</b> &mdash; chat happens WHILE working; when it&rsquo;s pulling you off task: &ldquo;Ha &mdash; okay, I&rsquo;ve gotta knock this shelf out. Tell me the rest at break.&rdquo; Friendly, honest, done. <b>The boundary line</b> &mdash; when a question goes past your green zone: &ldquo;Eh, I keep that stuff off the clock &mdash; anyway, did you see the game?&rdquo; No apology, no lecture, just a redirect. Boundaries said casually get respected casually.</p></div>
+<p class="note">Notice what BOTH skills share: nobody gets scolded, nobody gets ghosted. You stay the friendly one AND the working one &mdash; that combination is rarer than either alone, and every manager notices it.</p></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Friendly, Not Tangled</h1><div class="body"><div class="mcq"><div class="qq">A coworker you just met asks how much you make. Best move?</div><button class="opt" data-ok="1">Casual boundary + redirect: &ldquo;Eh, I keep money stuff private &mdash; hey, did they fix the ice machine?&rdquo;</button><button class="opt" data-ok="0">Tell them; refusing seems rude</button><button class="opt" data-ok="0">&ldquo;HOW DARE YOU&rdquo; and report it immediately</button><div class="fb">Red-zone question, casual answer. The redirect does the heavy lifting &mdash; ninety percent of boundary-pushers just follow you to the new topic. No drama needed.</div></div><div class="mcq"><div class="qq">Mid-task, a chatty coworker is fifteen minutes into a story and your station&rsquo;s falling behind. You&hellip;</div><button class="opt" data-ok="1">Clean exit: &ldquo;Okay, I&rsquo;ve gotta focus and knock this out &mdash; finish it at break?&rdquo;</button><button class="opt" data-ok="0">Keep nodding for the rest of the shift; friendship first</button><button class="opt" data-ok="0">Walk away mid-sentence, silently</button><div class="fb">The exit keeps BOTH halves of the job &mdash; the work and the person. Notice it books a return time (&ldquo;at break&rdquo;) &mdash; that&rsquo;s what makes it friendly instead of a brush-off.</div></div><div class="mcq"><div class="qq">Which of these is genuinely a green topic with someone brand-new?</div><button class="opt" data-ok="1">&ldquo;You watch anything good lately?&rdquo;</button><button class="opt" data-ok="0">&ldquo;So what&rsquo;s your rent like?&rdquo;</button><button class="opt" data-ok="0">&ldquo;Don&rsquo;t you think the manager plays favorites?&rdquo;</button><div class="fb">Shows are the universal green. Rent is a money number (red), and the manager question is gossip bait wearing a friendly costume &mdash; tomorrow covers exactly why that one&rsquo;s a trap.</div></div><div class="rev"><div class="rq">&ldquo;Coworkers aren&rsquo;t quite friends and aren&rsquo;t strangers.&rdquo; Some become real friends &mdash; great! What&rsquo;s the smart SPEED for that, and why?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Slow. Friendship at work is earned across weeks of small green-zone chats, not unlocked in one big overshare on day two. Slow means you learn who&rsquo;s trustworthy BEFORE they hold your personal stuff &mdash; and the ones worth it will still be there in a month. Fast trust is the raw material of Day 2&rsquo;s drama.</div></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Small-Talk Rounds</h1><div class="body"><p><span class="badge">Your task</span> Partner rotation while doing a real sorting task: three-minute rounds of green-zone small talk that KEEPS THE HANDS WORKING. Each round includes one planted curveball card (a red-zone question or a story that won&rsquo;t end) &mdash; handle it with a boundary or a clean exit. Rotate partners.</p>
+<div class="exit"><b>Before you leave:</b> Deliver your smoothest boundary-plus-redirect for me.</div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Gossip, Arguments &amp; Getting Help</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Drama will find you &mdash; the only question is what it finds you DOING. Today: the gossip pass, the argument brakes, and the difference between tattling and getting a supervisor (there is one, and it matters).</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the drama playbook</span><span>You try it</span><span>Do: drama drills</span></div>
+<div class="stdchips"><span class="pill">Conflict Management</span><span class="pill">Judgment</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Why does gossip feel good to hear &mdash; and what&rsquo;s the catch nobody mentions?</li><li>What&rsquo;s the difference between venting, gossiping, and reporting? Try to draw the lines.</li><li>Yesterday&rsquo;s trap question: &ldquo;Don&rsquo;t you think the manager plays favorites?&rdquo; What happens to your answer after you give it?</li></ol></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>The Drama Playbook</h1><div class="body"><table class="mini">
+<tr><th>Situation</th><th>The move</th><th>The line</th></tr>
+<tr><td><b>Gossip arrives</b> &mdash; &ldquo;did you HEAR about Sam&hellip;&rdquo;</td><td>The pass: don&rsquo;t add, don&rsquo;t carry, redirect</td><td>&ldquo;Ha, I stay out of that stuff &mdash; hey, did the truck come in?&rdquo;</td></tr>
+<tr><td><b>Someone&rsquo;s heating up</b> at you</td><td>The brakes: lower YOUR dials, name the pause</td><td>&ldquo;Let&rsquo;s figure it out &mdash; I&rsquo;ll finish this and we can sort it at break.&rdquo;</td></tr>
+<tr><td><b>It&rsquo;s past talking</b> &mdash; yelling, threats, slurs, or it keeps happening</td><td>Get the supervisor &mdash; this is THEIR job</td><td>&ldquo;I need you to step in on something between me and ___.&rdquo;</td></tr>
+<tr><td><b>You saw something serious</b> &mdash; theft, safety, harassment of anyone</td><td>Report it &mdash; not gossip, a duty</td><td>Facts, privately, to the supervisor. Done.</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Tattling vs. reporting &mdash; the one-question test</h3>
+<p><b>&ldquo;Am I trying to get someone IN trouble, or get someone OUT of it?&rdquo;</b> Reporting protects a person, the customers, or the workplace (safety, theft, harassment, a problem that keeps repeating after you&rsquo;ve tried). Tattling scores points (&ldquo;Jordan took eleven extra seconds of break&rdquo;). Supervisors can tell the difference in one sentence &mdash; and they respect reporters while tuning out scorekeepers. Remember Week 16&rsquo;s line: name-calling and mocking aren&rsquo;t feedback. THIS is where they go.</p></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Run the Playbook</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Did you hear Sam got written up? SO satisfying, right?&rdquo; Your move?</div><button class="opt" data-ok="1">The pass &mdash; &ldquo;eh, I stay out of that stuff &mdash; did the truck come in?&rdquo; &mdash; no adding, no carrying</button><button class="opt" data-ok="0">Add one small detail you heard; it&rsquo;s basically public</button><button class="opt" data-ok="0">Immediately tell Sam who&rsquo;s talking</button><div class="fb">Adding makes you a source; carrying it to Sam makes you the messenger in someone else&rsquo;s war. The pass keeps you the person BOTH sides can still work with &mdash; which, in a small crew, is gold.</div></div><div class="mcq"><div class="qq">A coworker snaps at you, loud, over whose turn the dishes are. Wrong order or not &mdash; first move?</div><button class="opt" data-ok="1">Brakes: drop your volume and speed, &ldquo;let&rsquo;s sort it at break &mdash; I&rsquo;ll take dishes for now&rdquo; &mdash; being loudly RIGHT can wait</button><button class="opt" data-ok="0">Match the volume and win the point now</button><button class="opt" data-ok="0">Cry over the sink quietly</button><div class="fb">Two loud people is a scene; one calm person is a de-escalation. Taking the dishes NOW costs ten minutes &mdash; and settles who&rsquo;s the professional in front of everyone. The turn-order gets fixed at break.</div></div><div class="mcq"><div class="qq">The same coworker has &ldquo;jokingly&rdquo; mocked how you talk, four shifts in a row. You&rsquo;ve asked them to stop. Getting the supervisor now is&hellip;</div><button class="opt" data-ok="1">Reporting &mdash; you tried, it repeats, it targets YOU as a person; the one-question test says protect, and this protects</button><button class="opt" data-ok="0">Tattling &mdash; jokes are legally jokes</button><button class="opt" data-ok="0">Weak &mdash; real workers suffer silently</button><div class="fb">Repeating + targets-you + you-already-tried = exactly what supervisors are FOR. Week 16 flagged this: mocking isn&rsquo;t feedback. Suffering silently isn&rsquo;t strength; it&rsquo;s just suffering with extra steps.</div></div><div class="rev"><div class="rq">The gossip pass has a hidden long game. In a workplace where everyone eventually argues with everyone &mdash; what does the person who never carried gossip end up holding?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Everyone&rsquo;s trust. When drama burns through a crew, the one person who never added or carried becomes the one everybody can still talk to &mdash; and often the one who gets the shift-lead job, because the manager needs exactly that person. Staying out of it isn&rsquo;t missing out; it&rsquo;s investing.</div></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Drama Drills</h1><div class="body"><p><span class="badge">Your task</span> Scenario rounds in trios &mdash; one instigator (card-guided), one worker, one observer scoring the playbook. Rotate through: a juicy gossip offer, a heating argument, and one serious-report situation. Worker must pick the RIGHT play (pass / brakes / supervisor) and say the line. Observer: did the tattle-test get applied correctly?</p>
+<div class="exit"><b>Before you leave:</b> One situation from the drills &mdash; tell me the play you chose and why the OTHER plays were wrong.</div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Breaks &amp; Cell-Phone Rules</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Week 11 gave you two lines: &ldquo;phones away&rdquo; and &ldquo;a 15 is 15.&rdquo; Today the full picture &mdash; why the rules exist, the gray areas (emergencies, waiting on a ride text), and how break time actually works.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the full rules</span><span>You try it</span><span>Do: the rules, applied</span></div>
+<div class="stdchips"><span class="pill">Self-Management</span><span class="pill">Workplace Readiness</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Honestly: how long can you go without checking your phone? What&rsquo;s the record?</li><li>Why would a five-minute-late-from-break habit bother a manager more than one big mistake?</li><li>What legitimate reasons might someone NEED their phone reachable during a shift?</li></ol></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Full Rules &mdash; and the Gray Areas</h1><div class="body"><table class="mini">
+<tr><th>Rule</th><th>The why</th><th>The gray area &mdash; handled right</th></tr>
+<tr><td><b>Phone away on the floor</b> &mdash; pocket or locker, silent</td><td>One glance = a missed customer, a wrong bag, a hazard unseen</td><td>Expecting something real (ride confirmation, family situation)? Tell the manager FIRST: &ldquo;My ride texts at 8 &mdash; okay if I check then?&rdquo; Asked-first is almost always yes</td></tr>
+<tr><td><b>A 15 is 15</b> &mdash; leave on time, back on time</td><td>Coworkers COVER your station while you&rsquo;re gone &mdash; late back steals from them, not the company</td><td>Break ran over for a real reason? Same as Week 12: say it, don&rsquo;t hide it &mdash; &ldquo;line at the restroom, sorry &mdash; I&rsquo;m back&rdquo;</td></tr>
+<tr><td><b>Breaks are yours</b> &mdash; phone, food, feet up</td><td>Rest is the POINT; a real break makes the second half better</td><td>The trap: a 15 spent doom-scrolling isn&rsquo;t rest &mdash; eat first, scroll second</td></tr>
+<tr><td><b>Know YOUR job&rsquo;s rules</b> &mdash; they vary</td><td>Some jobs: no phone in the building; others: music okay in back</td><td>First week question (Week 11!): &ldquo;What are the break and phone rules here?&rdquo; Asking early beats guessing wrong</td></tr></table>
+<p class="note">The pattern under every rule: break time is YOURS, floor time is THEIRS, and the phone crosses that line louder than anything else you carry. Workers who keep the line clean get the benefit of the doubt forever &mdash; and the asked-first exception whenever they need it.</p></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Gray Areas, Clean Calls</h1><div class="body"><div class="mcq"><div class="qq">Your mom might text about picking you up. Best handling?</div><button class="opt" data-ok="1">Tell the manager at shift start: &ldquo;My ride texts around 8 &mdash; okay if I check quick then?&rdquo; &mdash; then check ONCE, at 8</button><button class="opt" data-ok="0">Keep the phone in hand all shift, just in case</button><button class="opt" data-ok="0">Sneak glances whenever the manager turns around</button><div class="fb">Asked-first turns a violation into an arrangement. Sneaking gets seen &mdash; it always gets seen &mdash; and one caught sneak costs more trust than ten honest asks.</div></div><div class="mcq"><div class="qq">Your 15 ends at 2:15. At 2:14 a friend&rsquo;s text needs &ldquo;just one more minute.&rdquo; You&hellip;</div><button class="opt" data-ok="1">Pocket it mid-sentence and walk &mdash; the reply survives until your next break; your coworker&rsquo;s coverage ends at 2:15 sharp</button><button class="opt" data-ok="0">Take the minute; texts outrank clocks</button><button class="opt" data-ok="0">Take five minutes but walk back apologizing</button><div class="fb">&ldquo;A 15 is 15&rdquo; is really about the coworker holding your station &mdash; they&rsquo;re watching the clock even if the manager isn&rsquo;t. On time, every time, is how you become the one people WANT to cover for.</div></div><div class="mcq"><div class="qq">New job, day one, nobody mentioned phone rules. You&hellip;</div><button class="opt" data-ok="1">Ask before your first shift settles in: &ldquo;What are the break and phone rules here?&rdquo; &mdash; then follow what THEY say, not what your last job did</button><button class="opt" data-ok="0">Assume your last job&rsquo;s rules travel with you</button><button class="opt" data-ok="0">Do whatever the most relaxed coworker does</button><div class="fb">Rules vary wildly &mdash; kitchen vs. retail vs. warehouse. The most-relaxed coworker might be on their last warning. One question, day one, and you&rsquo;re never guessing.</div></div><div class="rev"><div class="rq">A manager says: &ldquo;I don&rsquo;t actually care about phones &mdash; I care what phones tell me.&rdquo; What do they mean?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The phone itself is plastic &mdash; what it SHOWS is where a worker&rsquo;s attention lives and whether they can hold a small promise (fifteen minutes) without supervision. A clean phone-and-break record quietly answers the biggest question managers have: can I trust this person when I&rsquo;m not looking? That&rsquo;s why such a small rule carries such big weight.</div></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>The Rules, Applied</h1><div class="body"><p><span class="badge">Your task</span> Write YOUR one-card phone-and-break plan for a real or imagined job: where the phone lives during floor time, your asked-first line for the situations that genuinely need reachability, your break clock habit (leave/return times), and the day-one question you&rsquo;d ask. Then run one timed &ldquo;15&rdquo; simulation &mdash; leave, break station, back on the dot.</p>
+<div class="exit"><b>Before you leave:</b> Show me your asked-first line &mdash; the one that makes the gray area clean.</div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Teamwork Review</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Three weeks of Workplace Behavior &mdash; feedback, mistakes, coworkers, drama, breaks &mdash; in one graded scenario gauntlet. Every situation is one you&rsquo;ll actually meet.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: the gauntlet</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Applied Skills</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Lightning relay &mdash; one line each: the task test, the sixty-second script, the gossip pass, the tattle-test, the asked-first move.</li><li>Which skill from this unit have you already used in real life &mdash; even once?</li><li>Predict your hardest gauntlet station and say why.</li></ol></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>The Gauntlet</h1><div class="body"><p><span class="badge">Your task</span> Six stations, live, with me and trained classmates playing roles: (1) a blunt correction mid-task, (2) a mistake you discover and must own, (3) a gossip offer with a twist, (4) an argument that starts heating, (5) a repeating problem where the right answer is the supervisor &mdash; said properly, (6) a break-and-phone gray area to handle asked-first. Scored per station on the playbook, the lines, and the dials.</p>
+<div class="card flat" style="margin-top:12px"><h3>Full credit sounds like</h3>
+<p>The right PLAY chosen fast, the line said clean, and the tone dials holding even when the instigator pushes twice. This is the whole unit &mdash; on your feet.</p></div>
+<div class="exit"><b>Check out:</b> Which station would have gotten you two months ago &mdash; and what did you do today instead?</div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 17 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You can chat green-zone with hands working and exit clean, hold casual boundaries without drama, pass on gossip without carrying it, brake arguments by staying the calm one, tell reporting from tattling with one question, and run breaks and phones so cleanly that the gray areas come pre-approved. The people-half of the job: handled.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Which play is my weakest under real pressure &mdash; pass, brakes, or supervisor?</li><li>Where does my phone LIVE during focused work, starting now?</li><li>Who at school could I practice the clean exit with this week?</li></ul></div></div>
+<p class="note">Coming next week &mdash; a two-day week before break: the First-Semester Functional Review. Everything from job hunting to money to workplace skills, one victory lap &mdash; then vacation.</p></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Coworker &amp; Drama Card</h1><div class="body"><table class="mini">
+<tr><th>Situation</th><th>Play + line</th></tr>
+<tr><td>Small talk pulling you off task</td><td>Clean exit: &ldquo;Gotta knock this out &mdash; tell me at break.&rdquo;</td></tr>
+<tr><td>Question past your green zone</td><td>Casual boundary + redirect: &ldquo;I keep that off the clock &mdash; you see the game?&rdquo;</td></tr>
+<tr><td>Gossip arrives</td><td>The pass: don&rsquo;t add, don&rsquo;t carry, redirect</td></tr>
+<tr><td>Argument heating up</td><td>Brakes: lower your dials &mdash; &ldquo;let&rsquo;s sort it at break&rdquo;</td></tr>
+<tr><td>Yelling, slurs, threats, or it repeats</td><td>Supervisor: &ldquo;I need you to step in on something.&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The tattle-test</h3>
+<p>&ldquo;Am I getting someone IN trouble &mdash; or OUT of it?&rdquo; Protecting a person, customers, or the workplace = reporting. Scorekeeping = tattling.</p></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Breaks &amp; Phone Card</h1><div class="body"><table class="mini">
+<tr><th>Rule</th><th>Remember</th></tr>
+<tr><td>Phone away on the floor</td><td>Pocket or locker, silent &mdash; one glance costs more than it pays</td></tr>
+<tr><td>A 15 is 15</td><td>A coworker is covering YOU &mdash; back on the dot, every time</td></tr>
+<tr><td>Breaks are yours</td><td>Eat first, scroll second &mdash; rest is the point</td></tr>
+<tr><td>Rules vary by job</td><td>Day-one question: &ldquo;What are the break and phone rules here?&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The gray-area key</h3>
+<p>Need reachability for something real? ASK FIRST: &ldquo;My ride texts at 8 &mdash; okay if I check then?&rdquo; Asked-first is an arrangement; sneaking is a violation. It always gets seen.</p></div></div><div class="footer"><span>Life Skills SC • Week 17 • Workplace Behavior — Coworkers, Breaks, Cell Phones, and Boundaries</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

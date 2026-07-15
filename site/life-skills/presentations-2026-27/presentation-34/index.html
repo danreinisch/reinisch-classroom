@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 34: Integrated Employment and Money Simulation - One Table, Real Skills</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 34</div><h1>Low-Setup Cashier and Customer Practice</h1><div class="body"><div class="sub">Integrated Employment and Money Simulation &mdash; One Table, Real Skills</div><div class="meta">This week: complete a simple printed-item transaction as customer or cashier using communication, prices, payment, totals, change, and checking &mdash; 20 points</div><div class="theme">Big idea: A useful simulation does not need a pretend supermarket. It needs clear roles, accurate records, and one short transaction at a time.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Cashier steps: greet, identify items, state total, accept payment, check</td><td>5</td></tr><tr><td>Day 2</td><td>Customer steps: choose, listen, pay, check change</td><td>5</td></tr><tr><td>Day 3</td><td>Printed mini-store practice: one-table or paired transactions</td><td>5</td></tr><tr><td>Day 4</td><td>Accuracy check and reflection: correct one record and choose one next step</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>2 of 27</span></div></section>
+<section class="slide"><div class="kicker">Low-Setup Materials</div><h1>Everything Fits on One Table</h1><div class="body"><div class="cols2"><div class="card"><h3>Needed</h3><ul><li>Printed item/price cards</li><li>Fake money</li><li>Calculator when appropriate</li><li>Simple receipt slips</li><li>Cashier and customer role cards</li></ul></div><div class="card"><h3>Not needed</h3><ul><li>Real products or food</li><li>Multiple stations</li><li>Real cash or cards</li><li>Elaborate decorations</li><li>A loud whole-class role-play</li></ul></div></div><div class="exit"><b>Run one transaction at a time.</b> Students may practice with the teacher, a trusted partner, or independently using role cards.</div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>3 of 27</span></div></section>
+<section class="slide"><div class="kicker">The Shared Transaction</div><h1>Same Numbers, Two Responsibilities</h1><div class="body"><table class="mini"><tr><th>Cashier</th><th>Customer</th></tr><tr><td>Greet and identify items</td><td>Choose items and listen</td></tr><tr><td>Read/add prices and state total</td><td>Verify total and select payment</td></tr><tr><td>Accept/count payment</td><td>State amount handed over</td></tr><tr><td>Return/count change and receipt</td><td>Check change and receipt</td></tr><tr><td>Correct or get help when needed</td><td>Report a mismatch respectfully</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>4 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>Cashier Steps</h1><div class="body"><div class="dayno">1</div><div class="goal">Greet, identify items, state a small total, accept payment, provide expected change, and check the record.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Use the cashier sequence</span><span>Total printed items</span><span>Accept and count payment</span><span>Check change and receipt</span></div><div class="stdchips"><span class="pill">Cashier Sequence</span><span class="pill">Customer Service</span><span class="pill">Transaction Accuracy</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Cashier Card</div><h1>GREET &rarr; ITEMS &rarr; TOTAL &rarr; PAYMENT &rarr; CHANGE &rarr; CHECK</h1><div class="body"><ol class="q"><li>Greet the customer.</li><li>Name or confirm the printed item cards.</li><li>Read/add prices and state the total.</li><li>Listen to and count the payment.</li><li>Give/count expected change when needed.</li><li>Provide the receipt and check the transaction.</li></ol></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>6 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; State the Total</div><h1>Item Prices Become One Amount</h1><div class="body"><table class="mini"><tr><th>Item</th><th>Price</th></tr><tr><td>Notebook</td><td>$3.25</td></tr><tr><td>Pen</td><td>$1.50</td></tr><tr><td><b>Total</b></td><td><b>$4.75</b></td></tr></table><div class="card flat"><p><b>Cashier:</b> &ldquo;Your total is four dollars and seventy-five cents.&rdquo;</p></div><div class="rev"><div class="rq">What should the cashier do if the calculator and price-card sum do not agree?</div><div class="hint">Use the problem-solving routine</div><div class="ra"><b>Pause and recheck the item prices and entries.</b> Ask the teacher/supervisor instead of inventing a total.</div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>7 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Accept Payment</div><h1>Repeat What the Customer Hands Over</h1><div class="body"><div class="cols2"><div class="card"><h3>Customer</h3><p>&ldquo;I am paying with ten dollars.&rdquo;</p></div><div class="card"><h3>Cashier</h3><p>&ldquo;Out of ten dollars.&rdquo;</p></div></div><div class="eq">$10.00 payment &minus; $4.75 total = $5.25 change</div><p class="note">Keep the fake payment visible until the transaction is checked. In a real workplace, follow the register and cash-handling procedure.</p></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>8 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Check Understanding</div><h1>What Comes Next?</h1><div class="body"><div class="mcq"><div class="qq">The cashier greets, identifies items, and states a $6 total. What is the next step?</div><button class="opt" data-ok="1">Listen to and count the customer&rsquo;s payment.</button><button class="opt" data-ok="0">Guess the customer&rsquo;s payment.</button><button class="opt" data-ok="0">End the transaction.</button><div class="fb">Payment comes after the stated total.</div></div><div class="mcq"><div class="qq">The cashier is unsure of the change.</div><button class="opt" data-ok="1">Pause, use the approved tool, and ask for help if needed.</button><button class="opt" data-ok="0">Hand over random fake money.</button><button class="opt" data-ok="0">Hide the payment.</button><div class="fb">Accuracy matters more than speed during practice.</div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>9 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Complete the Cashier Sequence</h1><div class="body"><p><span class="badge">Your task</span> Use printed item cards to complete the cashier sequence digitally or in a short practice. Read the prices, state a small total, accept payment, and check the result.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Use a visual checklist, pre-totaled cards, calculator, modeled first transaction, or teacher as customer.</p></div><div class="card"><h3>Independent path</h3><p>Total multiple items, choose the change strategy, complete a receipt, and explain one self-check.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>10 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>Customer Steps</h1><div class="body"><div class="dayno">2</div><div class="goal">Choose items, listen to the total, select and state payment, then verify change and receipt.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Choose within available money</span><span>Listen and repeat total</span><span>Select payment</span><span>Check change</span></div><div class="stdchips"><span class="pill">Customer Sequence</span><span class="pill">Payment Selection</span><span class="pill">Self-Advocacy</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Customer Card</div><h1>CHOOSE &rarr; LISTEN &rarr; PAY &rarr; CHECK</h1><div class="body"><ol class="q"><li>Choose item cards and estimate whether available money is enough.</li><li>Listen to the cashier&rsquo;s total and repeat it when needed.</li><li>Select exact or appropriate payment and state the amount.</li><li>Check the receipt and expected change before finishing.</li></ol><div class="exit"><b>If numbers differ:</b> Name the total, payment, and expected change, then ask to check the transaction.</div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>12 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Choose Within the Limit</div><h1>Available Money Sets a Boundary</h1><div class="body"><p><b>Available fake money:</b> $8.00</p><table class="mini"><tr><th>Choice</th><th>Total</th><th>Enough?</th></tr><tr><td>Notebook + pen</td><td>$4.75</td><td>Yes</td></tr><tr><td>Folder + markers</td><td>$7.50</td><td>Yes</td></tr><tr><td>Notebook + folder + markers</td><td>$10.25</td><td>No</td></tr></table><p class="note">The student may remove an item or choose a different combination. Do not pretend the available amount is larger.</p></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>13 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Check the Change</div><h1>Know What Should Come Back</h1><div class="body"><div class="card"><p><b>Total:</b> $7.50 &bull; <b>Payment:</b> $8.00 &bull; <b>Expected change:</b> $0.50</p></div><div class="mcq"><div class="qq">The cashier returns one quarter. What should the customer do?</div><button class="opt" data-ok="0">Leave without checking.</button><button class="opt" data-ok="1">State that 50 cents was expected but 25 cents was returned and ask to check.</button><button class="opt" data-ok="0">Take extra money from the table.</button><div class="fb">Use exact amounts and request a transaction check.</div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>14 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete Customer-Role Scenarios</h1><div class="body"><p><span class="badge">Your task</span> Choose printed items within available fake money, listen to and repeat the total, select payment, and verify expected change.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose from two item sets, use pre-counted payment options, match receipt lines, or complete with teacher as cashier.</p></div><div class="card"><h3>Independent path</h3><p>Plan items, estimate total, choose efficient payment, calculate change, and report one mismatch.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>15 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Printed Mini-Store Practice</h1><div class="body"><div class="dayno">3</div><div class="goal">Complete one short customer or cashier transaction using fake money and simplified receipts.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Set one table</span><span>Assign roles</span><span>Complete one transaction</span><span>Switch only when useful</span></div><div class="stdchips"><span class="pill">Applied Practice</span><span class="pill">Role Performance</span><span class="pill">Low Setup</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Setup</div><h1>One Table, Five Small Stacks</h1><div class="body"><table class="mini"><tr><th>Stack</th><th>Contents</th></tr><tr><td>1</td><td>Five to eight printed item/price cards</td></tr><tr><td>2</td><td>Fake bills and coins</td></tr><tr><td>3</td><td>Calculator or money supports</td></tr><tr><td>4</td><td>Blank/simplified receipt slips</td></tr><tr><td>5</td><td>Cashier and customer checklists</td></tr></table><p class="note">Keep unused materials out of the workspace. Fewer visible choices may improve accuracy and independence.</p></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>17 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Practice Rules</div><h1>Accuracy Before Theater</h1><div class="body"><div class="cols2"><div class="card"><h3>Do</h3><ul><li>Preview the role card.</li><li>Use fake money only.</li><li>Pause for calculator or checklist use.</li><li>Ask for help instead of guessing.</li><li>Complete one transaction fully.</li></ul></div><div class="card"><h3>Avoid</h3><ul><li>Surprise complicated totals.</li><li>Speed contests.</li><li>Real personal payment information.</li><li>Adding upset-customer conflict unless selected.</li><li>Correcting every step during performance.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>18 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Observer/Teacher</div><h1>Record the Transaction, Not a Personality</h1><div class="body"><table class="mini"><tr><th>Look for</th><th>Record</th></tr><tr><td>Sequence</td><td>Completed role steps / step omitted</td></tr><tr><td>Communication</td><td>Total/payment stated accurately</td></tr><tr><td>Money</td><td>Payment/change correct or corrected</td></tr><tr><td>Checking</td><td>Used receipt, calculator, or self-check</td></tr><tr><td>Support</td><td>Independence 0&ndash;5 and prompts used</td></tr></table><p class="note">Choose one retry target. Do not turn a short simulation into a list of every possible weakness.</p></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>19 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Run One Complete Transaction</h1><div class="body"><p><span class="badge">Your task</span> Complete the assigned customer or cashier role from beginning to end. Use the checklist and supports. When helpful, switch roles for a second short transaction.</p><div class="exit"><b>Success:</b> The student completes the sequence, uses accurate money information, and corrects or reports a mismatch with the appropriate support.</div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>20 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Accuracy Check and Reflection</h1><div class="body"><div class="dayno">4</div><div class="goal">Check total, payment, and change; correct the record; identify one success and one skill to improve.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Review the receipt</span><span>Recalculate one amount</span><span>Correct the record</span><span>Choose one next step</span></div><div class="stdchips"><span class="pill">Reflection</span><span class="pill">Correction</span><span class="pill">Next Step</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Check the Record</div><h1>Three Numbers Tell the Story</h1><div class="body"><div class="eq-wrap"><div class="eq">total + change = payment</div></div><div class="card"><p><b>Recorded:</b> Total $6.50 &bull; Payment $10.00 &bull; Change $2.50</p></div><div class="rev"><div class="rq">What should the corrected change be?</div><div class="hint">$10.00 &minus; $6.50</div><div class="ra"><b>$3.50.</b> The record is $1 short.</div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>22 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Reflection</div><h1>One Strength, One Next Step</h1><div class="body"><div class="cols2"><div class="card"><h3>Strength</h3><p>&ldquo;I repeated the $10 payment before counting change.&rdquo;</p><p>&ldquo;I checked the receipt before finishing.&rdquo;</p></div><div class="card"><h3>Next step</h3><p>&ldquo;I will use the count-up card before handing over change.&rdquo;</p><p>&ldquo;I will say the total more slowly and point to it.&rdquo;</p></div></div><p class="note">Choose an observable behavior, not &ldquo;be better&rdquo; or &ldquo;try harder.&rdquo;</p></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>23 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Do</div><h1>Complete Reflection and Correction</h1><div class="body"><p><span class="badge">Your task</span> Review the transaction record, verify total/payment/change, make one correction if needed, name one successful behavior, and choose one specific next step.</p><div class="card flat"><h3>Response levels</h3><p>Choice/pointing &bull; sentence frame &bull; teacher-recorded oral response &bull; independent explanation with evidence.</p></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>24 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 5</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">5</div><div class="goal">No new required lesson. Use today for completion, individualized practice, reteaching, evidence, or another brief transaction.</div><div class="agenda"><b>Choose the useful path</b><span>Finish or correct work</span><span>Repeat one role</span><span>Retry one target</span><span>Collect evidence</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Individualized Practice</span><span class="pill">IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 5 &bull; Pick Your Path</div><h1>What Would Help Most Today?</h1><div class="body"><div class="cols2"><div class="card"><h3>Completion or reteaching</h3><ul><li>Sequence cashier/customer steps.</li><li>Correct the receipt.</li><li>Practice stating payment.</li><li>Use a simpler transaction.</li></ul></div><div class="card"><h3>Generalization or evidence</h3><ul><li>Switch roles.</li><li>Use a new item set.</li><li>Retry one accuracy target.</li><li>Collect a teacher-selected sample.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>26 of 27</span></div></section>
+<section class="slide"><div class="kicker">Wrap-Up</div><h1>Week 34 Quick Reference</h1><div class="body"><div class="cols2"><div class="card"><h3>Cashier</h3><p><b>GREET &rarr; ITEMS &rarr; TOTAL &rarr; PAYMENT &rarr; CHANGE &rarr; CHECK</b></p></div><div class="card"><h3>Customer</h3><p><b>CHOOSE &rarr; LISTEN &rarr; PAY &rarr; CHECK</b></p></div></div><div class="exit"><b>Shared check:</b> Total + change should equal payment. Pause and report when records do not agree.</div><p class="note">Next week: connect the paycheck to personal financial responsibility by dividing sample net pay among needs, savings, and personal spending.</p></div><div class="footer"><span>Life Skills SC • Week 34 • Integrated Employment and Money Simulation — Low-Setup Cashier and Customer Practice</span><span>27 of 27</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

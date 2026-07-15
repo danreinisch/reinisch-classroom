@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 13: Workplace Behavior - Following Directions and Completing Tasks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 13</div><h1>Following Directions &amp; Completing Tasks</h1><div class="body"><div class="sub">Workplace Behavior &mdash; Following Directions and Completing Tasks</div>
+<div class="meta">This week: one-step vs. multistep directions, the checklist superpower, putting steps in order, and a real task done start to finish &mdash; 20 points</div><div class="theme">Big idea: &ldquo;Can follow directions&rdquo; is the most-wanted skill on Earth &mdash; and it&rsquo;s a system, not a talent</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>One-step vs. multistep directions &mdash; hear it, hold it, do it</td><td>5</td></tr><tr><td>Day 2</td><td>Use a checklist &mdash; the tool that never forgets</td><td>5</td></tr><tr><td>Day 3</td><td>Put task steps in order &mdash; sequence is half the task</td><td>5</td></tr><tr><td>Day 4</td><td>The practice task &mdash; real directions, real work, graded</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>You&rsquo;re There On Time &mdash; Now Do the Work</h1><div class="body"><div class="cols2">
+<div class="card"><h3>So far in this unit&hellip;</h3>
+<p>You show up ready (Week 11) and on schedule, every week, with backups (Week 12). In our story you&rsquo;re the most RELIABLE new hire they&rsquo;ve seen. Then the manager hands you a list and says, <b>&ldquo;Here&rsquo;s what needs doing.&rdquo;</b></p></div>
+<div class="card"><h3>This week you&hellip;</h3>
+<p>Master the doing: catching directions the first time, holding multistep instructions without dropping steps, using checklists like a pro, and sequencing a task so it works. You&rsquo;ve been secretly training all year &mdash; the skills bank called it &ldquo;follows multi-step directions.&rdquo; Time to earn the receipt.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>One-Step vs. Multistep</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">&ldquo;Take out the trash&rdquo; is one step. &ldquo;Empty the bins, reline them, break down the boxes, then sweep the back&rdquo; is four &mdash; and dropping step three gets noticed. Today: how to catch and hold them all.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: catch and hold</span><span>You try it</span><span>Do: direction drills</span></div>
+<div class="stdchips"><span class="pill">Listening Skills</span><span class="pill">Task Completion</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Someone gives you four instructions in a row. Honestly &mdash; how many survive the walk across the room?</li><li>What&rsquo;s the difference between HEARING directions and CATCHING them?</li><li>Week 11 gave you a sentence for when the trainer went too fast. Who remembers it?</li></ol></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>Catch It, Count It, Say It Back</h1><div class="body"><table class="mini">
+<tr><th>Move</th><th>How</th><th>Example</th></tr>
+<tr><td><b>1. Catch</b> &mdash; full stop, eyes up</td><td>Stop your hands, face the speaker; directions given to your back bounce off</td><td>Put the broom down for ten seconds</td></tr>
+<tr><td><b>2. Count</b> &mdash; how many steps?</td><td>Listen for the joints: &ldquo;then,&rdquo; &ldquo;after that,&rdquo; &ldquo;next,&rdquo; &ldquo;when you&rsquo;re done&rdquo;</td><td>&ldquo;Empty, reline, THEN boxes, THEN sweep&rdquo; = 4</td></tr>
+<tr><td><b>3. Say it back</b> &mdash; ten seconds</td><td>&ldquo;Got it &mdash; empty and reline the bins, break down boxes, sweep the back?&rdquo;</td><td>Wrong? They fix it NOW, free of charge</td></tr>
+<tr><td><b>4. Anchor</b> &mdash; if it&rsquo;s 3+ steps</td><td>Fingers, a pocket note, or ask for it written &mdash; all professional moves</td><td>Four steps = four fingers; drop none</td></tr></table>
+<p class="note">Say-it-back feels awkward for exactly one week &mdash; then it becomes the thing trainers praise you for. Ten seconds of echo saves twenty minutes of redoing, and NOBODY was ever fired for confirming directions.</p></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Count the Steps</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Wipe the tables, then flip the chairs up, and when you&rsquo;re done, grab me from the office.&rdquo; How many steps?</div><button class="opt" data-ok="1">Three &mdash; wipe, flip, get the manager; &ldquo;then&rdquo; and &ldquo;when you&rsquo;re done&rdquo; are the joints</button><button class="opt" data-ok="0">One &mdash; it&rsquo;s all cleaning</button><button class="opt" data-ok="0">Five</button><div class="fb">The joints give it away. Miss the count and the last step (&ldquo;grab me&rdquo;) is the one that quietly vanishes &mdash; and it&rsquo;s the one the manager is waiting on.</div></div><div class="mcq"><div class="qq">Mid-task, you realize you remember steps 1 and 2 but step 3 is&hellip; gone. Best move?</div><button class="opt" data-ok="1">Finish the step you&rsquo;re on, then ask: &ldquo;I&rsquo;ve done the bins and boxes &mdash; what was the last part?&rdquo;</button><button class="opt" data-ok="0">Invent a step three that seems likely</button><button class="opt" data-ok="0">Stop everything and stand very still</button><div class="fb">Naming what you HAVE done shows the directions mostly landed &mdash; asking for the missing piece is recovery, not failure. Guessing is how the wrong shelf gets reorganized.</div></div><div class="mcq"><div class="qq">The manager rattles off five steps while you&rsquo;re elbow-deep in a task. What&rsquo;s the FIRST move?</div><button class="opt" data-ok="1">Catch &mdash; stop your hands, eyes up: &ldquo;One second &mdash; okay, go ahead&rdquo;</button><button class="opt" data-ok="0">Keep working; multitasking is impressive</button><button class="opt" data-ok="0">Nod rhythmically without listening</button><div class="fb">Directions delivered to a working back have a survival rate near zero. Ten seconds of full attention is cheaper than one redone task &mdash; managers know this and respect the pause.</div></div><div class="rev"><div class="rq">Why is say-it-back BETTER than just saying &ldquo;got it&rdquo; &mdash; from the MANAGER&rsquo;S side of the conversation?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">&ldquo;Got it&rdquo; tells the manager nothing &mdash; everyone says it, including people who got nothing. The echo PROVES what landed, lets them fix errors in ten seconds, and marks you as someone they can hand bigger jobs to. It&rsquo;s a two-way receipt.</div></div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Direction Drills</h1><div class="body"><p><span class="badge">Your task</span> Partner drills: one partner reads direction cards (mixed one-step through five-step), the other runs the four moves &mdash; catch, count out loud, say it back, anchor when 3+. Perform the steps with classroom objects where possible. Swap after five cards.</p>
+<div class="exit"><b>Before you leave:</b> What&rsquo;s the longest direction you caught and completed perfectly &mdash; how many steps?</div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Checklist Superpower</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">Nobody&rsquo;s memory is perfect at 5pm on a Friday &mdash; and the best workers don&rsquo;t rely on it. Today: reading a workplace checklist, checking as you GO, and writing one of your own.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: checklist rules</span><span>You try it</span><span>Do: run one, write one</span></div>
+<div class="stdchips"><span class="pill">Task Completion</span><span class="pill">Self-Management</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Count the checklists you already use: night-before list, review sweep, Sunday routine&hellip; what else?</li><li>Why do pilots &mdash; who fly every day &mdash; still read the checklist every single flight?</li><li>What&rsquo;s the danger of checking boxes at the END instead of as you go?</li></ol></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>Checklist Rules &mdash; and a Real One</h1><div class="body"><div class="cols2">
+<div class="card"><h3>CLOSING CHECKLIST &mdash; Snack Counter</h3>
+<ul><li>&#9744; Wipe all counters with sanitizer</li><li>&#9744; Restock cups, lids, napkins</li><li>&#9744; Empty both trash bins &amp; reline</li><li>&#9744; Sweep behind the counter</li><li>&#9744; Lock the register drawer</li><li>&#9744; Lights off, sign flipped</li></ul></div>
+<div class="card"><h3>The four rules</h3>
+<p><b>1. Read it ALL first</b> &mdash; thirty seconds of preview beats surprises at step five.</p>
+<p><b>2. Check as you GO</b> &mdash; the mark happens when the task finishes, not in a batch at the end. Batch-checking is how &ldquo;done&rdquo; lies.</p>
+<p><b>3. In doubt? It&rsquo;s unchecked</b> &mdash; &ldquo;pretty sure I restocked&rdquo; means go look.</p>
+<p><b>4. Done = every box + a last look</b> &mdash; sweep the list top to bottom once more before you call it.</p></div></div>
+<p class="note">A checklist isn&rsquo;t training wheels &mdash; it&rsquo;s professional equipment. The worker WITH the list closes perfectly on their worst day; the worker without it closes perfectly only on their best.</p></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Checklist Calls</h1><div class="body"><div class="mcq"><div class="qq">You&rsquo;re on step 4 (sweep) and can&rsquo;t remember if you checked step 2 (restock) or just meant to. Rule?</div><button class="opt" data-ok="1">In doubt = unchecked &mdash; walk back and look at the cups</button><button class="opt" data-ok="0">Check it now; you probably did it</button><button class="opt" data-ok="0">Ask the checklist to trust you</button><div class="fb">Thirty seconds of walking beats a morning shift finding zero cups. The rule exists precisely for the &ldquo;pretty sure&rdquo; feeling.</div></div><div class="mcq"><div class="qq">A coworker finishes closing, then sits down and checks all six boxes at once from memory. What&rsquo;s the problem?</div><button class="opt" data-ok="1">Batch-checking turns the list into a decoration &mdash; memory fills the boxes, not the work</button><button class="opt" data-ok="0">Nothing &mdash; the boxes got checked</button><button class="opt" data-ok="0">They used the wrong pen</button><div class="fb">The whole power of a checklist is that the mark and the task happen together. Six checks from the couch is just a memory test &mdash; the thing checklists exist to replace.</div></div><div class="mcq"><div class="qq">The closing list says &ldquo;lock the register drawer,&rdquo; but the manager already took the drawer to the office. You&hellip;</div><button class="opt" data-ok="1">Note it &mdash; &ldquo;drawer w/ manager&rdquo; &mdash; instead of checking or skipping silently</button><button class="opt" data-ok="0">Check the box; close enough</button><button class="opt" data-ok="0">Search the building for the drawer</button><div class="fb">A checklist can be TRUE without every box checked &mdash; the note says exactly why. That&rsquo;s N/A&rsquo;s cousin from Week 5: never a silent skip.</div></div><div class="rev"><div class="rq">Day 1 taught catching SPOKEN directions; today is WRITTEN ones. When would you convert one into the other &mdash; and how?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Any spoken direction with 3+ steps deserves to become a pocket checklist &mdash; that&rsquo;s the &ldquo;anchor&rdquo; move graduating. &ldquo;Empty, reline, boxes, sweep&rdquo; scribbled on a pad IS a checklist. The best workers are constantly turning air into paper.</div></div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Run One, Write One</h1><div class="body"><p><span class="badge">Your task</span> Part 1: run the classroom closing checklist (six real stations) checking as you go &mdash; one station has a &ldquo;drawer problem&rdquo; planted; handle it with a note. Part 2: write your OWN checklist (5&ndash;6 boxes) for a task you actually do &mdash; getting ready for school, feeding pets, your job&rsquo;s always-list.</p>
+<div class="exit"><b>Before you leave:</b> Show me your written checklist and tell me which box people would skip without it.</div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Put the Steps in Order</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Right steps, wrong order, ruined task: you can&rsquo;t sweep before you empty the bins onto the floor. Today: spotting the order that&rsquo;s hiding inside every task &mdash; and the two questions that reveal it.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the two questions</span><span>You try it</span><span>Do: sequence scramble</span></div>
+<div class="stdchips"><span class="pill">Sequencing</span><span class="pill">Problem Solving</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Describe making a sandwich &mdash; with the steps in the WORST possible order. What goes wrong first?</li><li>Think of a task where the order truly doesn&rsquo;t matter. Harder than it sounds?</li><li>When a checklist is written top to bottom, is that always the order to DO it in?</li></ol></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Two Ordering Questions</h1><div class="body"><table class="mini">
+<tr><th>Question</th><th>What it catches</th><th>Example</th></tr>
+<tr><td><b>&ldquo;What does this step NEED?&rdquo;</b></td><td>Steps that depend on earlier steps</td><td>Relining bins NEEDS empty bins &rarr; empty first</td></tr>
+<tr><td><b>&ldquo;What does this step RUIN?&rdquo;</b></td><td>Steps that undo later work if done early</td><td>Sweeping before box breakdown = cardboard bits on a clean floor &rarr; sweep LAST</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>The dish-room proof</h3>
+<p>Task: &ldquo;Wash the dishes, clear the tables, wipe the tables, take out the trash.&rdquo; Run the questions: washing NEEDS the dishes &rarr; clear first. Wiping RUINS nothing but needs cleared tables &rarr; after clearing. Trash collects everything &rarr; last. True order: <b>clear &rarr; wash &rarr; wipe &rarr; trash</b> &mdash; not the order it was said in. Spoken order is often just the order someone THOUGHT of the steps.</p></div>
+<p class="note">Messy-to-clean is the master pattern: do the messy steps first, the cleaning steps last, and the &ldquo;lock up&rdquo; steps very last. When in doubt, ask yourself which step would be ruined &mdash; or ask the manager: &ldquo;Do you want A or B first?&rdquo; (Week 15 will make that question famous.)</p></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Order Up</h1><div class="body"><div class="mcq"><div class="qq">Task steps: mop the floor &bull; stack the chairs on tables &bull; sweep. Correct order?</div><button class="opt" data-ok="1">Chairs up &rarr; sweep &rarr; mop &mdash; each step needs the one before it</button><button class="opt" data-ok="0">Mop &rarr; sweep &rarr; chairs &mdash; wet floors love footprints</button><button class="opt" data-ok="0">Any order; floors are floors</button><div class="fb">Sweeping NEEDS a clear floor (chairs up); mopping RUINS nothing but is ruined by sweeping after it. The two questions solve it in seconds.</div></div><div class="mcq"><div class="qq">The manager says: &ldquo;Restock the shelf and break down the delivery boxes.&rdquo; Which first &mdash; and why?</div><button class="opt" data-ok="1">Restock first &mdash; breaking down boxes that still have product in them ruins step one</button><button class="opt" data-ok="0">Boxes first &mdash; they were mentioned last so save the best</button><button class="opt" data-ok="0">Both at once, one hand each</button><div class="fb">&ldquo;What does breakdown ruin?&rdquo; &mdash; full boxes. The stock comes OUT, then the cardboard goes flat. Spoken order &ne; task order, again.</div></div><div class="mcq"><div class="qq">You genuinely can&rsquo;t tell whether the display should be built before or after the floor gets waxed. Best move?</div><button class="opt" data-ok="1">Ask: &ldquo;Do you want the display up before or after the waxing?&rdquo; &mdash; ten seconds, zero ruined work</button><button class="opt" data-ok="0">Build it first; confidence beats correctness</button><button class="opt" data-ok="0">Do neither and hide in the stockroom</button><div class="fb">The two questions solve MOST orders &mdash; and the ask solves the rest. A specific either/or question makes you look sharp, not lost.</div></div><div class="rev"><div class="rq">Why does &ldquo;messy first, clean last, lock-up very last&rdquo; work as a master pattern for almost every closing routine?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Because cleaning is the step everything else RUINS &mdash; every messy task after it undoes it. Putting all mess-makers first protects the cleaners, and lock-up last means nothing needs reopening. One pattern, a hundred tasks.</div></div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>Sequence Scramble</h1><div class="body"><p><span class="badge">Your task</span> Four scrambled task-card sets (closing a snack counter, stocking a shelf, cleaning a kennel run, setting up a register). For each: lay the steps in true order, and label WHY at the two trickiest spots &mdash; &ldquo;needs ___&rdquo; or &ldquo;would ruin ___.&rdquo;</p>
+<div class="exit"><b>Before you leave:</b> Defend one ordering choice where the spoken order and the true order disagreed.</div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>The Practice Task</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Everything at once, for real: multistep directions delivered once, a checklist to run, an order to figure out, and a finished result to show. This is the job, in miniature &mdash; graded.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: the task, start to finish</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Task Completion</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>The four catching moves from Day 1 &mdash; name them in order.</li><li>Which checklist rule saves you when you&rsquo;re &ldquo;pretty sure&rdquo;?</li><li>Say the two ordering questions. Which one do YOU forget to ask?</li></ol></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>Start to Finish</h1><div class="body"><p><span class="badge">Your task</span> I&rsquo;ll give your station&rsquo;s directions OUT LOUD, once &mdash; five steps, deliberately out of true order. You: catch, count, say it back, anchor it into a written checklist, re-order it with the two questions, then DO the task checking as you go. Stations are real classroom work (sorting, assembling, organizing, resetting).</p>
+<div class="card flat" style="margin-top:12px"><h3>Full credit looks like</h3>
+<p>An echo that matched &bull; a written checklist in true order (not spoken order!) &bull; boxes checked as-you-went &bull; a finished station &bull; and the Week 11 closer: &ldquo;Done &mdash; what would you like me to do next?&rdquo;</p></div>
+<div class="exit"><b>Check out:</b> Walk me through your checklist &mdash; where did your order differ from the order I said it in, and why?</div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 13 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You catch directions with stopped hands and an echo, anchor anything three-plus steps into writing, run checklists by the four rules (checking as you go, never batch-faking), and re-order any task with two questions &mdash; what does this step need, what does it ruin. &ldquo;Follows multi-step directions&rdquo; now has a graded receipt behind it.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Where&rsquo;s my pocket pad or note app for anchoring &mdash; on me, always?</li><li>Which checklist rule do I bend when I&rsquo;m tired?</li><li>What&rsquo;s a task at home I could sequence better starting today?</li></ul></div></div>
+<p class="note">Coming next week &mdash; a short Thanksgiving week and a new unit: Workplace Communication. One big day on respectful words and tone &mdash; the words that make every other skill land better.</p></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Catching Directions Card</h1><div class="body"><table class="mini">
+<tr><th>Move</th><th>Do</th></tr>
+<tr><td>1. Catch</td><td>Stop hands, eyes up &mdash; ten seconds of full attention</td></tr>
+<tr><td>2. Count</td><td>Listen for joints: &ldquo;then,&rdquo; &ldquo;next,&rdquo; &ldquo;after that,&rdquo; &ldquo;when you&rsquo;re done&rdquo;</td></tr>
+<tr><td>3. Say it back</td><td>&ldquo;Got it &mdash; ___, ___, then ___?&rdquo; &mdash; the ten-second receipt</td></tr>
+<tr><td>4. Anchor</td><td>3+ steps &rarr; fingers, pocket note, or ask for it written</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Lost a step mid-task?</h3>
+<p>Name what&rsquo;s done, ask for the missing piece: &ldquo;Bins and boxes are done &mdash; what was the last part?&rdquo; Recovery, not failure.</p></div></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Checklist + Ordering Card</h1><div class="body"><table class="mini">
+<tr><th>Checklist rules</th><th>Ordering questions</th></tr>
+<tr><td>1. Read it ALL first<br>2. Check as you GO<br>3. In doubt = unchecked &mdash; go look<br>4. Done = every box + one last sweep<br>Can&rsquo;t do a box? NOTE it &mdash; never silent-skip</td><td>&ldquo;What does this step NEED?&rdquo; &rarr; dependencies first<br>&ldquo;What does this step RUIN?&rdquo; &rarr; fragile steps last<br>Master pattern: messy &rarr; clean &rarr; lock-up<br>Still stuck? &ldquo;Do you want A or B first?&rdquo;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 13 • Workplace Behavior — Following Directions and Completing Tasks</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

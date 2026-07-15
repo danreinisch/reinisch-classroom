@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 25: Schedules and Time - Read It, Record It, Check It</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 25</div><h1>Work Schedules, Timecards, and Hours</h1><div class="body"><div class="sub">Schedules and Time &mdash; Read It, Record It, Check It</div><div class="meta">This week: read a work schedule, record clock-in, clock-out, and break times, then correct a simple timecard &mdash; 15 points</div><div class="theme">Big idea: Your schedule says what should happen. Your timecard records what did happen. Check that they agree.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Short Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read the schedule &mdash; shifts, start and end times, days off</td><td>5</td></tr><tr><td>Day 2</td><td>Clock in, clock out, and record a provided break</td><td>5</td></tr><tr><td>Day 3</td><td>Check a timecard &mdash; find and correct simple errors</td><td>5</td></tr><tr><td>Day 4</td><td>Open Life Skills Day &mdash; finish, practice, reteach, or collect evidence</td><td>&mdash;</td></tr></table><p class="note">The examples use fictional workers and simplified records. Students may use a time chart or calculator when appropriate.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>2 of 24</span></div></section>
+<section class="slide"><div class="kicker">The Weekly Routine</div><h1>Read &rarr; Record &rarr; Check</h1><div class="body"><div class="cols2"><div class="card"><h3>READ the schedule</h3><p>Find the correct worker, day, start time, end time, and any scheduled break.</p><h3>RECORD the time</h3><p>Put clock-in, clock-out, and provided break times in the correct boxes.</p></div><div class="card"><h3>CHECK the record</h3><p>Compare the schedule and timecard. Look for missing, switched, or incorrect entries.</p><h3>ASK when unsure</h3><p>Do not invent a time. Ask the supervisor how to correct the record.</p></div></div><div class="exit"><b>Success target:</b> Answer schedule questions, complete a simple timecard, and correct an obvious mismatch using the support level that fits.</div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>3 of 24</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>Read the Schedule</h1><div class="body"><div class="dayno">1</div><div class="goal">Identify shifts, start and end times, days off, and scheduled hours at your level.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Find the worker</span><span>Trace the row</span><span>Read start and end</span><span>Answer schedule questions</span></div><div class="stdchips"><span class="pill">Schedule Reading</span><span class="pill">Time</span><span class="pill">Work Readiness</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Learn</div><h1>Read the Labels Before the Numbers</h1><div class="body"><table class="mini"><tr><th>Question</th><th>Where to look</th></tr><tr><td>Whose schedule is this?</td><td>Worker name or employee row</td></tr><tr><td>Which day?</td><td>Day/date column</td></tr><tr><td>When does work begin?</td><td>Start or IN time</td></tr><tr><td>When does work end?</td><td>End or OUT time</td></tr><tr><td>Is the worker off?</td><td>OFF, blank with a key, or another schedule code</td></tr></table><p class="note">Use a finger, ruler, index card, or screen highlight to keep your place across a row.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>5 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Sample Schedule</div><h1>Jordan&rsquo;s Week</h1><div class="body"><table class="mini"><tr><th>Day</th><th>Start</th><th>End</th><th>Note</th></tr><tr><td>Monday</td><td>4:00 PM</td><td>7:00 PM</td><td>Stock shelves</td></tr><tr><td>Tuesday</td><td>OFF</td><td>&mdash;</td><td>&mdash;</td></tr><tr><td>Wednesday</td><td>4:30 PM</td><td>7:30 PM</td><td>Front display</td></tr><tr><td>Thursday</td><td>4:00 PM</td><td>8:00 PM</td><td>Stock shelves</td></tr><tr><td>Friday</td><td>OFF</td><td>&mdash;</td><td>&mdash;</td></tr></table><div class="rev"><div class="rq">When does Jordan begin work on Wednesday? When is Jordan off?</div><div class="hint">Trace the correct row &mdash; then reveal</div><div class="ra"><b>Wednesday begins at 4:30 PM.</b> Jordan is off Tuesday and Friday.</div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>6 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Check Understanding</div><h1>Which Answer Matches the Schedule?</h1><div class="body"><div class="mcq"><div class="qq">Jordan is asked to arrive Thursday at the scheduled time. When should Jordan arrive?</div><button class="opt" data-ok="0">4:30 PM</button><button class="opt" data-ok="1">4:00 PM</button><button class="opt" data-ok="0">8:00 PM</button><div class="fb">Thursday&rsquo;s row shows a 4:00 PM start and an 8:00 PM end.</div></div><div class="mcq"><div class="qq">A friend asks Jordan to make plans Tuesday at 5:00 PM. What does the schedule show?</div><button class="opt" data-ok="1">Jordan is off Tuesday.</button><button class="opt" data-ok="0">Jordan starts at 4:00 PM.</button><button class="opt" data-ok="0">The schedule does not list Tuesday.</button><div class="fb">OFF is schedule information. Read the day and its code before answering.</div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>7 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Answer Schedule Questions</h1><div class="body"><p><span class="badge">Your task</span> Use the class-provided work schedule. Identify the worker and answer questions about shifts, start times, end times, and days off.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Point to or choose the correct day/time; use a highlighted row, picture/choice response, word bank, or teacher model.</p></div><div class="card"><h3>Independent path</h3><p>Read the schedule, answer in complete time statements, and determine scheduled hours for simple whole-hour shifts when asked.</p></div></div><div class="exit"><b>Check out:</b> Show the teacher one shift and say or indicate its day, start time, and end time.</div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>8 of 24</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>Clock In, Clock Out, and Breaks</h1><div class="body"><div class="dayno">2</div><div class="goal">Record provided times in the correct places and distinguish working time from an unpaid break when one is listed.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read the headings</span><span>Enter IN and OUT</span><span>Record the break</span><span>Check the row</span></div><div class="stdchips"><span class="pill">Timecard Entry</span><span class="pill">Accuracy</span><span class="pill">Self-Check</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Learn</div><h1>A Timecard Is a Work Record</h1><div class="body"><table class="mini"><tr><th>Box</th><th>What belongs there</th><th>Example</th></tr><tr><td>Date / day</td><td>The day worked</td><td>Wed. 2/17</td></tr><tr><td>IN</td><td>Time work began</td><td>4:00 PM</td></tr><tr><td>Break OUT</td><td>Time an unpaid break began</td><td>6:00 PM</td></tr><tr><td>Break IN</td><td>Time work resumed</td><td>6:30 PM</td></tr><tr><td>OUT</td><td>Time work ended</td><td>8:00 PM</td></tr></table><p class="note">Different workplaces use different systems. Follow the labels on the actual record; never assume every timecard looks the same.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>10 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Model</div><h1>Put Each Time in Its Own Box</h1><div class="body"><p><b>Situation:</b> Sam begins at 3:30 PM, starts an unpaid break at 5:30 PM, returns at 6:00 PM, and leaves at 8:00 PM.</p><table class="mini"><tr><th>Day</th><th>IN</th><th>Break OUT</th><th>Break IN</th><th>OUT</th></tr><tr><td>Wednesday</td><td>3:30 PM</td><td>5:30 PM</td><td>6:00 PM</td><td>8:00 PM</td></tr></table><div class="rev"><div class="rq">Which two entries show the unpaid break?</div><div class="hint">Think about when work stopped and restarted</div><div class="ra"><b>Break OUT 5:30 PM and Break IN 6:00 PM.</b> The labels show the beginning and end of the break.</div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>11 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Understand the Break</div><h1>Elapsed Time Is Not Always Work Time</h1><div class="body"><div class="eq-wrap"><div class="eq">Time from first IN to final OUT<br>&minus; unpaid break<br>= recorded work time</div></div><div class="card flat"><p><b>Example:</b> 4:00 PM to 8:00 PM is four elapsed hours. If the provided record includes a 30-minute unpaid break, recorded work time is 3 hours 30 minutes.</p></div><p class="note">Use a time chart or calculator when directed. Today&rsquo;s main skill is placing provided times correctly, not doing difficult time arithmetic.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>12 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Check Understanding</div><h1>What Should the Worker Record?</h1><div class="body"><div class="mcq"><div class="qq">Lee arrives at the scheduled 4:00 PM start but forgets to clock in until 4:12 PM. What is the best action?</div><button class="opt" data-ok="0">Enter 4:00 PM without telling anyone.</button><button class="opt" data-ok="1">Tell the supervisor and follow the correction procedure.</button><button class="opt" data-ok="0">Leave the entire day blank.</button><div class="fb">A timecard is an official work record. Report the mistake and use the workplace correction process.</div></div><div class="mcq"><div class="qq">Which box receives the time work ends for the day?</div><button class="opt" data-ok="0">IN</button><button class="opt" data-ok="0">Break IN</button><button class="opt" data-ok="1">OUT</button><div class="fb">The final OUT time records when the shift ended.</div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>13 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete a Simple Timecard</h1><div class="body"><p><span class="badge">Your task</span> Use the provided shift information to enter the date/day, clock-in, clock-out, and any provided break times in the correct boxes.</p><div class="cols2"><div class="card"><h3>Ready check</h3><ul><li>I used the correct worker and day.</li><li>IN and OUT are not switched.</li><li>I recorded the break only when provided.</li><li>I checked every entry against the source.</li></ul></div><div class="card"><h3>Support choices</h3><p>Color-coded headings, modeled first row, time chart, word bank, calculator, verbal response with teacher recording, or independent completion.</p></div></div><div class="exit"><b>Before you leave:</b> Point to or explain one IN/OUT pair and tell what each time means.</div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>14 of 24</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Check the Timecard</h1><div class="body"><div class="dayno">3</div><div class="goal">Compare the source information and timecard, identify missing or incorrect entries, and make a clear correction.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Match worker and day</span><span>Compare one box at a time</span><span>Circle the mismatch</span><span>Correct or report it</span></div><div class="stdchips"><span class="pill">Record Checking</span><span class="pill">Error Detection</span><span class="pill">Self-Advocacy</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; The Check Routine</div><h1>One Row, One Box at a Time</h1><div class="body"><ol class="q"><li>Confirm the worker and date. A perfect time on the wrong row is still wrong.</li><li>Compare the scheduled or provided start with the timecard IN entry.</li><li>Compare break entries only when a break is provided.</li><li>Compare the provided end with the final OUT entry.</li><li>Mark the exact mismatch. Correct it using the workplace procedure.</li></ol><p class="note">Do not stare at the whole page and hope the error glows. A fixed sequence reduces missed details.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>16 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Model</div><h1>Find the Mismatch</h1><div class="body"><p><b>Provided shift:</b> Thursday, IN 4:00 PM, OUT 8:00 PM. No break is listed.</p><table class="mini"><tr><th>Day</th><th>IN</th><th>Break OUT</th><th>Break IN</th><th>OUT</th></tr><tr><td>Thursday</td><td>4:00 PM</td><td>&mdash;</td><td>&mdash;</td><td>7:00 PM</td></tr></table><div class="rev"><div class="rq">What does not match, and what should the corrected entry show?</div><div class="hint">Compare the OUT time</div><div class="ra"><b>The final OUT time is incorrect.</b> It should show 8:00 PM, following the correct correction procedure.</div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>17 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Error Hunt</div><h1>What Kind of Error Is It?</h1><div class="body"><div class="mcq"><div class="qq">The source says Monday IN 4:00 PM. The timecard&rsquo;s Monday IN box is empty.</div><button class="opt" data-ok="1">Missing entry</button><button class="opt" data-ok="0">Switched worker</button><button class="opt" data-ok="0">Correct record</button><div class="fb">The expected information is absent, so this is a missing entry.</div></div><div class="mcq"><div class="qq">The source says Tuesday is OFF, but the timecard shows Tuesday IN 4:00 PM.</div><button class="opt" data-ok="0">The timecard must be right.</button><button class="opt" data-ok="1">The records do not agree; ask for clarification.</button><button class="opt" data-ok="0">Copy Monday&rsquo;s OUT time too.</button><div class="fb">Do not guess which record is correct. Identify the mismatch and ask the appropriate person.</div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>18 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Report It</div><h1>Use a Professional Error Statement</h1><div class="body"><div class="cols2"><div class="card"><h3>Clear pattern</h3><p>&ldquo;I was checking my timecard for [day]. The [box] shows [recorded time], but my provided shift information shows [other time]. Could you help me check and correct it?&rdquo;</p></div><div class="card"><h3>Useful details</h3><ul><li>Correct day/date</li><li>Exact box or entry</li><li>What each record shows</li><li>A request to check or correct</li></ul></div></div><div class="rev"><div class="rq">Complete the statement: &ldquo;My Thursday OUT box shows 7:00 PM, but the shift record shows _____.&rdquo;</div><div class="hint">Use the model from the previous slide</div><div class="ra"><b>8:00 PM. Could you help me check and correct it?</b></div></div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>19 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Correct the Timecard</h1><div class="body"><p><span class="badge">Your task</span> Compare the class-provided schedule/shift information with a simple timecard. Mark each mismatch, enter or select the corrected information, and use a professional statement for one error.</p><div class="cols2"><div class="card"><h3>Supported response</h3><p>Match identical times, choose between two corrections, use color coding or a checklist, and read/point to an error-reporting frame.</p></div><div class="card"><h3>Independent response</h3><p>Find all obvious errors, correct them, explain the evidence, and state what should happen if the true time is uncertain.</p></div></div><div class="exit"><b>Teacher evidence:</b> Record accuracy, completion, independence level 0&ndash;5, and prompts or supports required.</div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>20 of 24</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">4</div><div class="goal">No new required lesson. Use today for completion, individualized practice, reteaching, progress evidence, or an applied schedule-and-timecard lab.</div><div class="agenda"><b>Choose the useful path</b><span>Finish or correct work</span><span>Repeat with new support</span><span>Practice reporting an error</span><span>Collect a brief evidence sample</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Individualized Practice</span><span class="pill">IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Pick Your Path</div><h1>What Would Help Most Today?</h1><div class="body"><div class="cols2"><div class="card"><h3>Completion or reteaching</h3><ul><li>Finish schedule questions.</li><li>Correct a timecard row.</li><li>Practice IN versus OUT.</li><li>Use a simpler or more visual schedule.</li></ul></div><div class="card"><h3>Generalization or evidence</h3><ul><li>Read a different schedule format.</li><li>Enter times from a short scenario.</li><li>Explain one mismatch.</li><li>Complete a teacher-selected progress sample.</li></ul></div></div><p class="note">Use the simplest useful materials: an existing schedule, sample timecard, marker, time chart, calculator, or teacher-led oral practice.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>22 of 24</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Applied Skill Lab</div><h1>Choose One Practical Challenge</h1><div class="body"><table class="mini"><tr><th>Challenge</th><th>Student action</th></tr><tr><td>Shift check</td><td>Find today&rsquo;s fictional shift and state the arrival and leaving times.</td></tr><tr><td>Timecard entry</td><td>Record one provided IN/OUT pair in the correct boxes.</td></tr><tr><td>Error check</td><td>Compare one source row and timecard row; mark match or mismatch.</td></tr><tr><td>Communication</td><td>Use the professional error statement verbally, in writing, by pointing, or with a communication system.</td></tr></table><div class="exit"><b>Keep it brief:</b> One clearly demonstrated skill can be better evidence than a long page completed with heavy prompting.</div></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>23 of 24</span></div></section>
+<section class="slide"><div class="kicker">Wrap-Up</div><h1>Week 25 Quick Reference</h1><div class="body"><div class="cols2"><div class="card"><h3>Read</h3><p>Worker &rarr; day &rarr; start &rarr; end &rarr; break/off code.</p><h3 style="margin-top:14px">Record</h3><p>Put each provided time under the correct heading. Never invent a missing time.</p></div><div class="card"><h3>Check</h3><p>Worker/date &rarr; IN &rarr; break &rarr; OUT. Circle the exact mismatch.</p><h3 style="margin-top:14px">Report</h3><p>Name the day, box, recorded time, source time, and request help correcting it.</p></div></div><p class="note">Next week: connect recorded hours to hourly wages and estimate expected gross earnings before deductions.</p></div><div class="footer"><span>Life Skills SC • Week 25 • Schedules and Time — Work Schedules, Timecards, and Hours</span><span>24 of 24</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

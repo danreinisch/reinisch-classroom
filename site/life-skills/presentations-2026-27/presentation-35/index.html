@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 35: Budgeting and Banking - Plan the Net Pay Before It Disappears</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage">
+<section class="slide title"><div class="kicker">Life Skills SC &bull; Week 35</div><h1>Using a Paycheck: Needs, Wants, and a Simple Spending Plan</h1><div class="body"><div class="sub">Budgeting and Banking &mdash; Plan the Net Pay Before It Disappears</div><div class="meta">This week: divide a fictional take-home paycheck among needs, savings, and personal spending, then adjust when a cost changes &mdash; 20 points</div><div class="theme">Big idea: A spending plan gives every available dollar a purpose. It can change, but it cannot spend more money than is available.</div></div></section>
+<section class="slide"><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Needs, wants, and savings: classify common expenses</td><td>5</td></tr><tr><td>Day 2</td><td>Build a simple spending plan from sample net pay</td><td>5</td></tr><tr><td>Day 3</td><td>Check the total and correct an over-budget plan</td><td>5</td></tr><tr><td>Day 4</td><td>Unexpected expense: reallocate without exceeding the paycheck</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>2 of 27</span></div></section>
+<section class="slide"><div class="kicker">Connect to the Paycheck</div><h1>Plan From Net Pay</h1><div class="body"><div class="eq-wrap"><div class="eq">net pay<br>= money available after deductions</div></div><div class="cols2"><div class="card"><h3>Use the provided sample</h3><p>This week uses fictional worker information and a teacher-created net-pay amount.</p></div><div class="card"><h3>No account required</h3><p>Students do not need a real bank account, pay stub, balance, or family financial information.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>3 of 27</span></div></section>
+<section class="slide"><div class="kicker">The Spending-Plan Routine</div><h1>AVAILABLE &rarr; CATEGORIES &rarr; TOTAL &rarr; ADJUST</h1><div class="body"><table class="mini"><tr><th>Step</th><th>Question</th></tr><tr><td><b>AVAILABLE</b></td><td>What sample net-pay amount can be planned?</td></tr><tr><td><b>CATEGORIES</b></td><td>What needs, savings, and personal spending amounts are included?</td></tr><tr><td><b>TOTAL</b></td><td>Does planned spending equal or stay below available money?</td></tr><tr><td><b>ADJUST</b></td><td>If a cost changes, which category can change without creating a negative balance?</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>4 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 1</div><h1>Needs, Wants, and Savings</h1><div class="body"><div class="dayno">1</div><div class="goal">Identify common spending categories, classify sample expenses, and recognize savings as a planned category.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Define the categories</span><span>Consider the situation</span><span>Sort expenses</span><span>Explain one choice</span></div><div class="stdchips"><span class="pill">Expense Categories</span><span class="pill">Needs vs. Wants</span><span class="pill">Saving</span></div></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Categories</div><h1>Three Places Money Can Go</h1><div class="body"><table class="mini"><tr><th>Category</th><th>Meaning</th><th>Sample</th></tr><tr><td><b>Need</b></td><td>Required for health, safety, work, housing, or basic daily functioning in the scenario</td><td>Transportation to work</td></tr><tr><td><b>Want / personal spending</b></td><td>Desired and enjoyable but adjustable in the scenario</td><td>Entertainment purchase</td></tr><tr><td><b>Savings</b></td><td>Money intentionally kept for a future goal or emergency</td><td>Emergency transportation fund</td></tr></table><p class="note">The same item may be a need in one situation and a want in another. Use the fictional worker&rsquo;s circumstances, not a moral judgment about the person.</p></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>6 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Context Matters</div><h1>Ask What the Expense Does</h1><div class="body"><div class="cols2"><div class="card"><h3>Phone service</h3><p>May be a need when required for transportation, work schedules, safety, or support communication. Optional upgrades may be wants.</p></div><div class="card"><h3>Clothing</h3><p>Required work shoes may be a need. An additional style purchase may be personal spending.</p></div></div><div class="exit"><b>Useful question:</b> What happens in this scenario if the expense is not paid or purchased now?</div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>7 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Check Understanding</div><h1>Classify the Sample Expense</h1><div class="body"><div class="mcq"><div class="qq">The fictional worker needs a bus pass to attend scheduled shifts.</div><button class="opt" data-ok="1">Need in this scenario</button><button class="opt" data-ok="0">Always a want</button><button class="opt" data-ok="0">Savings</button><div class="fb">Transportation required to reach work is treated as a need in this plan.</div></div><div class="mcq"><div class="qq">The worker plans $20 for a future emergency instead of spending it now.</div><button class="opt" data-ok="0">Current need</button><button class="opt" data-ok="0">Random leftover</button><button class="opt" data-ok="1">Savings</button><div class="fb">Savings is an intentional category, not merely whatever remains by accident.</div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>8 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 1 &bull; Do</div><h1>Complete a Needs/Wants/Savings Sort</h1><div class="body"><p><span class="badge">Your task</span> Sort the fictional worker&rsquo;s expenses into needs, personal spending/wants, or savings. Explain one choice using the scenario.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Use picture cards, color-coded categories, limited choices, or teacher-read scenarios.</p></div><div class="card"><h3>Independent path</h3><p>Classify, explain context, and identify one expense that could change categories in a different situation.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>9 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 2</div><h1>Build a Simple Spending Plan</h1><div class="body"><div class="dayno">2</div><div class="goal">Choose realistic categories for a sample worker and allocate a provided net paycheck using supported amounts.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read net pay</span><span>Fund needs</span><span>Choose savings</span><span>Plan personal spending</span></div><div class="stdchips"><span class="pill">Net Pay</span><span class="pill">Budget Categories</span><span class="pill">Allocation</span></div></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Sample Worker</div><h1>Riley&rsquo;s Fictional Paycheck</h1><div class="body"><div class="card"><h3>Available net pay: $300</h3><p>Riley needs transportation to work, contributes to household groceries, needs phone service, wants personal spending, and wants to save for unexpected transportation costs.</p></div><table class="mini"><tr><th>Category</th><th>Starting information</th></tr><tr><td>Transportation</td><td>$60 required</td></tr><tr><td>Groceries contribution</td><td>$80 required</td></tr><tr><td>Phone</td><td>$40 required</td></tr><tr><td>Savings</td><td>Choose a realistic amount</td></tr><tr><td>Personal spending</td><td>Use what remains within the plan</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>11 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Build in Order</div><h1>Start With Known Amounts</h1><div class="body"><table class="mini"><tr><th>Category</th><th>Planned</th></tr><tr><td>Transportation</td><td>$60</td></tr><tr><td>Groceries</td><td>$80</td></tr><tr><td>Phone</td><td>$40</td></tr><tr><td>Savings</td><td>$50</td></tr><tr><td>Personal spending</td><td>$70</td></tr><tr><td><b>Total</b></td><td><b>$300</b></td></tr></table><div class="exit"><b>Balanced:</b> The categories use the $300 available net pay without exceeding it.</div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>12 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; More Than One Valid Plan</div><h1>Choices Can Differ and Still Balance</h1><div class="body"><div class="cols2"><div class="card"><h3>Plan A</h3><p>Save $50<br>Personal spending $70<br><b>Total plan $300</b></p></div><div class="card"><h3>Plan B</h3><p>Save $70<br>Personal spending $50<br><b>Total plan $300</b></p></div></div><p class="note">Both plans fund the same stated needs and stay within available money. The difference reflects a choice between current personal spending and future savings.</p></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>13 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 2 &bull; Do</div><h1>Complete a Draft Spending Plan</h1><div class="body"><p><span class="badge">Your task</span> Use the provided fictional net paycheck and categories. Enter or select amounts for needs, savings, and personal spending without knowingly exceeding the available money.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose among pre-set category amounts, use a calculator, match remaining-money cards, or complete a partially filled plan.</p></div><div class="card"><h3>Independent path</h3><p>Choose realistic amounts, explain priorities, and leave a small unassigned buffer if desired.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>14 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 3</div><h1>Check the Total</h1><div class="body"><div class="dayno">3</div><div class="goal">Add planned categories, compare with net pay, and correct any plan that exceeds available money.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Add categories</span><span>Compare with net pay</span><span>Find over/under amount</span><span>Correct the plan</span></div><div class="stdchips"><span class="pill">Budget Check</span><span class="pill">Available Money</span><span class="pill">Correction</span></div></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; The Balance Test</div><h1>Planned Spending Must Fit Available Money</h1><div class="body"><div class="eq-wrap"><div class="eq">total planned &le; available net pay</div></div><div class="cols2"><div class="card"><h3>Balanced</h3><p>$300 planned<br>$300 available</p></div><div class="card"><h3>Over budget</h3><p>$325 planned<br>$300 available<br><b>$25 must change</b></p></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>16 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Find the Problem</div><h1>Riley&rsquo;s Plan Is $25 Over</h1><div class="body"><table class="mini"><tr><th>Category</th><th>Planned</th></tr><tr><td>Transportation</td><td>$60</td></tr><tr><td>Groceries</td><td>$80</td></tr><tr><td>Phone</td><td>$40</td></tr><tr><td>Savings</td><td>$60</td></tr><tr><td>Personal spending</td><td>$85</td></tr><tr><td><b>Total</b></td><td><b>$325</b></td></tr></table><div class="rev"><div class="rq">How much must the plan decrease to fit $300?</div><div class="hint">$325 &minus; $300</div><div class="ra"><b>$25.</b></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>17 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Correct the Plan</div><h1>Change a Category, Not the Paycheck</h1><div class="body"><div class="cols2"><div class="card"><h3>Possible correction A</h3><p>Reduce personal spending from $85 to $60.<br>New total: <b>$300</b></p></div><div class="card"><h3>Possible correction B</h3><p>Reduce personal spending by $15 and savings by $10.<br>New total: <b>$300</b></p></div></div><p class="note">A student may choose a different valid correction based on the fictional scenario. Do not erase a required need without explaining how it will be met.</p></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>18 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Check Understanding</div><h1>Does the Plan Fit?</h1><div class="body"><div class="mcq"><div class="qq">Net pay $250; planned categories total $240.</div><button class="opt" data-ok="1">The plan fits and leaves $10 unassigned.</button><button class="opt" data-ok="0">The plan is $10 over.</button><button class="opt" data-ok="0">The plan must spend all $250 immediately.</button><div class="fb">Planned spending is below available money. The remaining $10 can be assigned or kept as a buffer.</div></div><div class="mcq"><div class="qq">Net pay $250; planned categories total $270.</div><button class="opt" data-ok="0">The plan fits.</button><button class="opt" data-ok="1">The plan is $20 over and must be adjusted.</button><button class="opt" data-ok="0">Increase the paycheck on paper.</button><div class="fb">The plan cannot spend more than the $250 available.</div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>19 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 3 &bull; Do</div><h1>Review and Correct the Plan</h1><div class="body"><p><span class="badge">Your task</span> Add the draft categories, compare the total with sample net pay, identify over/under amount, and correct the plan if needed.</p><div class="card flat"><h3>Self-check</h3><p>Net pay copied correctly &bull; every category included once &bull; addition checked &bull; total compared &bull; correction explained.</p></div><div class="exit"><b>Teacher evidence:</b> Accuracy, completion, independence level 0&ndash;5, and supports used.</div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>20 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 4</div><h1>Unexpected Expense</h1><div class="body"><div class="dayno">4</div><div class="goal">Adjust a plan when transportation, clothing, or another cost changes without exceeding available net pay.</div><div class="agenda"><b>Today&rsquo;s path</b><span>Read the new expense</span><span>Find the difference</span><span>Choose categories to adjust</span><span>Recheck the total</span></div><div class="stdchips"><span class="pill">Reallocation</span><span class="pill">Unexpected Cost</span><span class="pill">Problem Solving</span></div></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Scenario</div><h1>Transportation Increases by $20</h1><div class="body"><div class="cols2"><div class="card"><h3>Original plan</h3><p>Transportation: $60<br>Savings: $50<br>Personal spending: $70<br>Total plan: $300</p></div><div class="card"><h3>New information</h3><p>Transportation now costs <b>$80</b>.<br>The plan needs <b>$20</b> from another category or buffer.</p></div></div><div class="exit"><b>Constraint:</b> Net pay is still $300. A higher expense does not create more available money.</div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>22 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Adjust</div><h1>Protect Needs and Make a Choice</h1><div class="body"><table class="mini"><tr><th>Option</th><th>Change</th><th>Result</th></tr><tr><td>A</td><td>Personal spending $70 &rarr; $50</td><td>Transportation increase covered</td></tr><tr><td>B</td><td>Savings $50 &rarr; $40; personal $70 &rarr; $60</td><td>Increase covered across two categories</td></tr><tr><td>C</td><td>Ignore the $20 increase</td><td>Plan becomes inaccurate</td></tr><tr><td>D</td><td>Spend $20 more than net pay</td><td>Plan becomes over budget</td></tr></table><p class="note">The best adjustment depends on the scenario and available choices. The mathematical requirement is that the revised plan still fits.</p></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>23 of 27</span></div></section>
+<section class="slide"><div class="kicker">Day 4 &bull; Do</div><h1>Complete a Change-the-Budget Scenario</h1><div class="body"><p><span class="badge">Your task</span> Read the changed expense, calculate the difference, move money from one or more adjustable categories, and verify that the revised plan does not exceed net pay.</p><div class="cols2"><div class="card"><h3>Supported path</h3><p>Choose between prepared adjustments, use moveable amount cards, or complete a partially filled revised plan.</p></div><div class="card"><h3>Independent path</h3><p>Create two valid revisions, compare tradeoffs, and defend the preferred plan.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>24 of 27</span></div></section>
+<section class="slide divider"><div class="kicker">Day 5</div><h1>Open Life Skills Day</h1><div class="body"><div class="dayno">5</div><div class="goal">No new required lesson. Use today for completion, individualized practice, reteaching, progress evidence, or an applied spending-plan lab.</div><div class="agenda"><b>Choose the useful path</b><span>Finish or correct work</span><span>Repeat a category sort</span><span>Rebalance a plan</span><span>Collect evidence</span></div><div class="stdchips"><span class="pill">Completion</span><span class="pill">Individualized Practice</span><span class="pill">IEP Evidence</span></div></div></section>
+<section class="slide"><div class="kicker">Day 5 &bull; Pick Your Path</div><h1>What Would Help Most Today?</h1><div class="body"><div class="cols2"><div class="card"><h3>Completion or reteaching</h3><ul><li>Sort needs/wants/savings.</li><li>Add a category total.</li><li>Correct an over-budget plan.</li><li>Use a simpler net-pay amount.</li></ul></div><div class="card"><h3>Generalization or evidence</h3><ul><li>Try a new fictional worker.</li><li>Adjust for a changed cost.</li><li>Compare two valid plans.</li><li>Collect a teacher-selected sample.</li></ul></div></div></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>26 of 27</span></div></section>
+<section class="slide"><div class="kicker">Wrap-Up</div><h1>Week 35 Quick Reference</h1><div class="body"><div class="cols2"><div class="card"><h3>Planning routine</h3><p><b>AVAILABLE &rarr; CATEGORIES &rarr; TOTAL &rarr; ADJUST</b></p><p>Start with sample net pay and include needs, savings, and personal spending.</p></div><div class="card"><h3>Balance rule</h3><p><b>Total planned &le; net pay.</b></p><p>When a cost rises, move money from another category or buffer and recheck.</p></div></div><p class="note">Next week: compare two job offers using duties, schedule, transportation, support needs, wages, hours, and overall fit.</p></div><div class="footer"><span>Life Skills SC • Week 35 • Budgeting and Banking — Using a Paycheck: Needs, Wants, and a Simple Spending Plan</span><span>27 of 27</span></div></section>
+</div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

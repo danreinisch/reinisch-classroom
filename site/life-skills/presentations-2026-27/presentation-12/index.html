@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 12: Schedules and Time - Attendance, Punctuality, and Work Schedules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 12</div><h1>Attendance, Punctuality &amp; Schedules</h1><div class="body"><div class="sub">Schedules and Time &mdash; Attendance, Punctuality, and Work Schedules</div>
+<div class="meta">This week: reading the posted schedule, backward planning as a habit, weatherproof ride plans, and the late-or-absent protocol &mdash; 20 points</div><div class="theme">Big idea: The schedule is a promise between you and the job &mdash; and you can keep it every single week</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read a weekly work schedule &mdash; find YOUR row, decode the shifts</td><td>5</td></tr><tr><td>Day 2</td><td>Plan backward from start time &mdash; from one-time trick to weekly habit</td><td>5</td></tr><tr><td>Day 3</td><td>Transportation and backup plans &mdash; weatherproof, week-proof</td><td>5</td></tr><tr><td>Day 4</td><td>Late or absent: what now? &mdash; the protocol that saves jobs</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>You Survived Day One &mdash; Now Comes Every Week</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you&hellip;</h3>
+<p>Nailed the <b>first day</b>: checklist, appearance, and the everyday three. In our story, week one at work went great &mdash; and then the manager pointed at the wall and said, <b>&ldquo;Next week&rsquo;s schedule is posted.&rdquo;</b></p></div>
+<div class="card"><h3>This week you&hellip;</h3>
+<p>Master the wall: reading a real posted schedule, turning Week 4&rsquo;s backward planning into a Sunday-night habit, making your ride plan survive weather and surprises &mdash; and knowing EXACTLY what to do the day something goes wrong.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>Read the Posted Schedule</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">A work schedule is a grid: names down the side, days across the top, shifts in the boxes. Today you learn to find your row, decode every code, and copy YOUR week without a single mistake.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the grid + the codes</span><span>You try it</span><span>Do: copy my week</span></div>
+<div class="stdchips"><span class="pill">Functional Reading</span><span class="pill">Time Management</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Where have you seen schedules posted &mdash; school, practice, work, TV? What did they all have in common?</li><li>What could go wrong if a worker reads the WRONG row of the schedule?</li><li>Your class schedule changes by the hour. How is a work schedule different &mdash; and how is it the same?</li></ol></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The Grid and the Codes</h1><div class="body"><table class="mini">
+<tr><th>WEEK OF NOV 9</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
+<tr><td><b>Alex R.</b></td><td>OFF</td><td>4&ndash;8</td><td>OFF</td><td>4&ndash;8</td><td>5&ndash;9</td><td>8&ndash;2</td><td>OFF</td></tr>
+<tr><td><b>Jordan T.</b></td><td>4&ndash;9</td><td>OFF</td><td>4&ndash;9</td><td>OFF</td><td>4&ndash;9</td><td>OFF</td><td>10&ndash;4</td></tr>
+<tr><td><b>Sam W.</b></td><td>OFF</td><td>OFF</td><td>4&ndash;8</td><td>4&ndash;8</td><td>OFF</td><td>8&ndash;2</td><td>10&ndash;2</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>How to read it &mdash; every time</h3>
+<p><b>1</b> Find YOUR name &mdash; finger on your row, and stay in your lane. <b>2</b> Read across, day by day: &ldquo;4&ndash;8&rdquo; means start at 4:00, done at 8:00; afternoon shifts are usually PM. <b>3</b> OFF means off &mdash; a gift, not a suggestion to wander in. <b>4</b> COPY your week somewhere you&rsquo;ll see it &mdash; phone or pocket card &mdash; the moment it&rsquo;s posted. <b>5</b> Schedules CHANGE: check the board every week, even if &ldquo;it&rsquo;s always the same.&rdquo;</p></div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Read Alex&rsquo;s Week</h1><div class="body"><div class="mcq"><div class="qq">Look at the grid: when does Alex work on Friday?</div><button class="opt" data-ok="1">5&ndash;9 &mdash; start at 5:00, done at 9:00</button><button class="opt" data-ok="0">4&ndash;8 &mdash; same as Tuesday</button><button class="opt" data-ok="0">Alex is off Friday</button><div class="fb">Finger on Alex&rsquo;s row, slide to Friday: 5&ndash;9. One box over from Thursday&rsquo;s 4&ndash;8 &mdash; and one hour later. This is exactly how mix-ups happen without the finger.</div></div><div class="mcq"><div class="qq">How many total shifts does Alex work this week?</div><button class="opt" data-ok="1">Four &mdash; Tue, Thu, Fri, Sat</button><button class="opt" data-ok="0">Seven &mdash; one per day</button><button class="opt" data-ok="0">Three</button><div class="fb">Count the boxes with times, skip the OFFs: Tue 4&ndash;8, Thu 4&ndash;8, Fri 5&ndash;9, Sat 8&ndash;2. Four shifts &mdash; and Saturday starts in the MORNING. Same week, different rhythms.</div></div><div class="mcq"><div class="qq">Jordan glances at the schedule Monday, sees &ldquo;4-something,&rdquo; and shows up Tuesday at 4. The grid says Jordan is OFF Tuesday. What went wrong?</div><button class="opt" data-ok="1">Jordan read fast instead of copying the week &mdash; a glance is not a read</button><button class="opt" data-ok="0">The schedule&rsquo;s fault for being confusing</button><button class="opt" data-ok="0">Nothing &mdash; showing up extra is always great</button><div class="fb">Showing up on an OFF day sounds harmless &mdash; until it&rsquo;s the reverse mistake and a shift gets missed. The copy-it-down habit kills both errors at once.</div></div><div class="rev"><div class="rq">Sam wants to know: &ldquo;Do I work with Alex at all this week?&rdquo; Read the grid and settle it.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Saturday &mdash; both work 8&ndash;2. (Thursday they overlap too: Alex 4&ndash;8, Sam 4&ndash;8.) Reading ACROSS rows answers &ldquo;when do I work,&rdquo; reading DOWN columns answers &ldquo;who works with me.&rdquo; Both directions are useful.</div></div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>Copy My Week</h1><div class="body"><p><span class="badge">Your task</span> You&rsquo;ll get a full posted schedule with your name on it (eight workers, codes and all). Find your row, copy your complete week onto your pocket schedule card &mdash; every shift, every OFF &mdash; then answer three questions about it (total shifts, earliest start, who you work with most).</p>
+<div class="exit"><b>Before you leave:</b> Show me your pocket card and name your earliest start of the week.</div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Backward Planning &mdash; the Habit</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">You learned backward planning in Week 4 for ONE shift. A real schedule has four or five different start times &mdash; today the trick becomes a Sunday-night routine that plans the whole week in ten minutes.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the Sunday-night routine</span><span>You try it</span><span>Do: plan the whole week</span></div>
+<div class="stdchips"><span class="pill">Time Management</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>From memory: the five steps of the Week 4 ride plan. Class effort &mdash; build the list together.</li><li>Alex works Tue 4&ndash;8 and Sat 8&ndash;2. Why can&rsquo;t ONE leave-home time cover both shifts?</li><li>What do you already do every Sunday (or wish you did) to get ready for the week?</li></ol></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>The Sunday-Night Routine</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>Ten minutes, once a week</th><th>Alex&rsquo;s example</th></tr>
+<tr><td>1</td><td>Pocket card out &mdash; list every shift</td><td>Tue 4&ndash;8, Thu 4&ndash;8, Fri 5&ndash;9, Sat 8&ndash;2</td></tr>
+<tr><td>2</td><td>Arrive-by time for each (start &minus; 15)</td><td>3:45 &bull; 3:45 &bull; 4:45 &bull; 7:45</td></tr>
+<tr><td>3</td><td>Leave-home time for each (arrive-by &minus; trip)</td><td>Trip = 25 min &rarr; 3:20 &bull; 3:20 &bull; 4:20 &bull; 7:20</td></tr>
+<tr><td>4</td><td>Flag the ODD one out</td><td>Saturday MORNING &mdash; alarm needed, night-before prep Friday</td></tr>
+<tr><td>5</td><td>Check collisions with life</td><td>Fri 5&ndash;9 vs. the game? Solve it NOW, not Friday at 4:50</td></tr></table>
+<p class="note">The whole routine is Week 4&rsquo;s subtraction, four times over &mdash; plus one new skill: <b>spotting the odd shift</b>. Late workers are almost never late to their USUAL shift; it&rsquo;s the weird Saturday morning that gets them. Flag it Sunday and it can&rsquo;t sneak up.</p></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Plan Like Alex</h1><div class="body"><div class="mcq"><div class="qq">Alex&rsquo;s trip takes 25 minutes. For the Saturday 8&ndash;2 shift, leave-home time is&hellip;</div><button class="opt" data-ok="1">7:20 &mdash; arrive by 7:45, minus 25 minutes</button><button class="opt" data-ok="0">7:45 &mdash; arriving is leaving</button><button class="opt" data-ok="0">8:00 sharp</button><div class="fb">Two subtractions, same as always: 8:00 &minus; 15 = 7:45 arrive-by; 7:45 &minus; 25 = 7:20 leave. The habit is the same math on repeat.</div></div><div class="mcq"><div class="qq">Which of Alex&rsquo;s shifts is the &ldquo;odd one out&rdquo; &mdash; the one to flag Sunday night?</div><button class="opt" data-ok="1">Saturday 8&ndash;2 &mdash; the only morning; different alarm, different prep night</button><button class="opt" data-ok="0">Tuesday 4&ndash;8 &mdash; Tuesdays are cursed</button><button class="opt" data-ok="0">None; all shifts are identical</button><div class="fb">Three afternoon starts and one early morning &mdash; the morning is where autopilot fails. Flagged Sunday = alarm set, clothes out Friday, no 7:40 panic.</div></div><div class="mcq"><div class="qq">Step 5 finds a collision: Alex&rsquo;s Friday 5&ndash;9 shift overlaps a family event at 6. Best move &mdash; on SUNDAY?</div><button class="opt" data-ok="1">Talk to the manager early in the week &mdash; days of notice make swaps possible; Friday afternoon makes them impossible</button><button class="opt" data-ok="0">Decide Friday at 4:50, coin flip</button><button class="opt" data-ok="0">Just don&rsquo;t show up; events are events</button><div class="fb">Early notice is the entire game. Managers can fix almost anything given days &mdash; and almost nothing given minutes. (No-showing? Day 4 covers why that&rsquo;s the one unforgivable.)</div></div><div class="rev"><div class="rq">Why does the routine live on SUNDAY NIGHT &mdash; why not plan each shift the morning of?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Morning-of planning meets problems with zero time to solve them &mdash; Sunday planning meets them with days. Ten calm minutes once beats five panicked minutes daily. It&rsquo;s the night-before checklist idea, scaled up to a whole week.</div></div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>Plan the Whole Week</h1><div class="body"><p><span class="badge">Your task</span> Take your pocket card from yesterday and run the full Sunday-night routine: arrive-by and leave-home times for EVERY shift (use your real trip time), the odd one flagged and prepped, and any collision found and solved in writing.</p>
+<div class="exit"><b>Before you leave:</b> Tell me your odd-one-out shift and what makes it different.</div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Transportation &amp; Backup Plans</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Your Week 4 ride plan worked on a sunny day. Real weeks have rain, ice, dead batteries, and sick drivers. Today your plan gets a plan B and a plan C &mdash; for every shift.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the backup ladder</span><span>You try it</span><span>Do: weatherproof my week</span></div>
+<div class="stdchips"><span class="pill">Independent Living</span><span class="pill">Problem Solving</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>What&rsquo;s the worst weather you&rsquo;ve traveled in around here? What did it do to the trip time?</li><li>Your one ride is sick. Brainstorm: how many OTHER ways could you get somewhere five miles away?</li><li>Why does a backup plan need to be made BEFORE the day you need it?</li></ol></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>The Backup Ladder</h1><div class="body"><table class="mini">
+<tr><th>Rung</th><th>The plan</th><th>Write it down as&hellip;</th></tr>
+<tr><td><b>Plan A</b></td><td>Your normal ride &mdash; from the Week 4 plan</td><td>Name + leave time (&ldquo;Mom, leave 3:20&rdquo;)</td></tr>
+<tr><td><b>Plan B</b></td><td>A different PERSON or route, asked in advance</td><td>&ldquo;Uncle Ray &mdash; said yes, needs 30 min notice&rdquo;</td></tr>
+<tr><td><b>Plan C</b></td><td>The slow-but-sure way: bus, walk, bike</td><td>&ldquo;Bus at 3:05 from Oak St &mdash; 40 min&rdquo;</td></tr>
+<tr><td><b>Weather rule</b></td><td>Rain/snow/ice = add time to EVERY rung</td><td>&ldquo;Bad weather: leave 15 min earlier, minimum&rdquo;</td></tr>
+<tr><td><b>The trigger</b></td><td>Plan A wobbles &rarr; jump rungs EARLY</td><td>&ldquo;No confirmation by 2:45 &rarr; call Plan B&rdquo;</td></tr></table>
+<p class="note">The ladder&rsquo;s secret is the TRIGGER TIME: decide in advance the exact moment you switch plans. Waiting-and-hoping eats the minutes Plan B and C need. Workers with trigger times are never stranded &mdash; they&rsquo;re just occasionally early on the bus.</p></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Climb the Ladder</h1><div class="body"><div class="mcq"><div class="qq">It&rsquo;s 2:45. Plan A (your ride at 3:20) hasn&rsquo;t answered two texts. Your trigger time is 2:45. You&hellip;</div><button class="opt" data-ok="1">Call Plan B now &mdash; the trigger fired; if A shows up too, cancel B with a thank-you</button><button class="opt" data-ok="0">Text a third time and wait until 3:15</button><button class="opt" data-ok="0">Give up and stay home</button><div class="fb">Triggers exist so you don&rsquo;t negotiate with hope. Calling B &ldquo;too early&rdquo; costs an apology; calling too late costs the shift.</div></div><div class="mcq"><div class="qq">Ice storm tonight; tomorrow&rsquo;s shift starts at 8. Your normal leave time is 7:20. Tonight you&hellip;</div><button class="opt" data-ok="1">Set the alarm for a 7:00 departure or earlier &mdash; weather rule adds time to every rung &mdash; and lay everything out</button><button class="opt" data-ok="0">Keep 7:20; ice respects schedules</button><button class="opt" data-ok="0">Decide at 7:20 based on vibes</button><div class="fb">Weather steals minutes from every plan on the ladder. Adding them the NIGHT BEFORE is free; finding them on ice at 7:25 is impossible.</div></div><div class="mcq"><div class="qq">Why does Plan B need to be someone you&rsquo;ve ALREADY asked &mdash; not just someone you could ask?</div><button class="opt" data-ok="1">An unasked backup is a hope, not a plan &mdash; the yes, the notice they need, and their number all have to exist BEFORE the emergency</button><button class="opt" data-ok="0">Because asking twice is rude</button><button class="opt" data-ok="0">It doesn&rsquo;t; anyone with a car counts</button><div class="fb">Sound familiar? It&rsquo;s the reference rule from Week 7 wearing a seatbelt: real plans are pre-asked, pre-confirmed, written down.</div></div><div class="rev"><div class="rq">Alex&rsquo;s Saturday shift starts at 8am &mdash; and Plan C&rsquo;s first bus doesn&rsquo;t run until 8:30 on weekends. What does that hole mean for Alex&rsquo;s ladder, and what would you do about it?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Saturday has NO Plan C &mdash; which makes Plan B twice as important that day: confirm Uncle Ray Friday night, not Saturday morning. Every shift&rsquo;s ladder is a little different; checking each rung against each shift is exactly what today&rsquo;s Do is for.</div></div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>Weatherproof My Week</h1><div class="body"><p><span class="badge">Your task</span> Build your full backup ladder: Plan A, B, and C with real names, numbers, and times &mdash; then check every rung against every shift on your pocket card (any holes like Alex&rsquo;s Saturday?). Add your weather rule and your trigger time, in writing.</p>
+<div class="exit"><b>Before you leave:</b> Tell me your trigger time and your Plan B&rsquo;s name.</div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Late or Absent: What Now?</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Someday, despite every plan, you WILL run late or wake up sick. What you do in the next ten minutes decides everything. Today: the protocol &mdash; graded, practiced, yours.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: the protocol + scenarios</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Workplace Readiness</span><span class="pill">Communication</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Rank these from best to worst: calling ahead late, showing up late silently, not showing up at all. Defend your ranking.</li><li>Why do you think managers say &ldquo;I can forgive late &mdash; I can&rsquo;t forgive a no-show&rdquo;?</li><li>Week 10 gave you a polite script for wrong change. What makes a good script work under pressure?</li></ol></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>The Protocol &mdash; Then Prove It</h1><div class="body"><div class="card flat"><h3>The late-or-absent protocol</h3>
+<p><b>1. Decide fast</b> &mdash; running late or truly can&rsquo;t come? (Sick enough to stay home is a real answer &mdash; and so is &ldquo;late but coming.&rdquo;) <b>2. Call THE WORKPLACE, immediately</b> &mdash; a call, not a text to a coworker; the moment you know, not the moment the shift starts. <b>3. Say the script:</b> who you are, what&rsquo;s happening, when you&rsquo;ll arrive (or that you can&rsquo;t today), and &ldquo;I&rsquo;m sorry for the trouble.&rdquo; <b>4. Follow through</b> &mdash; arrive when you said; on return, ask what you missed. <b>5. Fix the leak</b> &mdash; late because a rung broke? Repair the ladder that night.</p></div>
+<p style="margin-top:12px"><span class="badge">Your task</span> Graded scenario set: four situations (overslept for a 4:00 shift and it&rsquo;s 3:50 &bull; woke up sick at 6am for an 8am shift &bull; bus broke down mid-route &bull; family emergency mid-week). For each, write the protocol response &mdash; including the exact phone script, word for word. Then perform ONE of them with me as the manager on the line.</p>
+<div class="exit"><b>Check out:</b> Your performed call is the exit ticket. Calm, clear, complete &mdash; you&rsquo;ve got this.</div></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 12 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You read a posted schedule finger-on-your-row and copy it before you leave the board, run the Sunday-night routine so every shift has its own leave time and the odd one is flagged, keep a three-rung backup ladder with a trigger time and a weather rule &mdash; and when the day still goes sideways, you call first, script ready, and fix the leak that night.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Where does my pocket schedule card LIVE so I never lose it?</li><li>Is my trigger time realistic &mdash; or wishful?</li><li>Can I say the late call script from memory, under stress?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Following Directions and Completing Tasks: one-step vs. multistep directions, the checklist superpower, and putting task steps in order. The doing part of the job.</p></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Schedule + Sunday Routine Card</h1><div class="body"><table class="mini">
+<tr><th>Reading the board</th><th>Sunday-night routine</th></tr>
+<tr><td>1. Finger on YOUR row<br>2. Read across, day by day<br>3. OFF means off<br>4. COPY your week immediately<br>5. Check the board weekly &mdash; schedules change</td><td>1. List every shift<br>2. Arrive-by = start &minus; 15<br>3. Leave-home = arrive-by &minus; trip<br>4. Flag the odd one out<br>5. Solve collisions EARLY</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Backup Ladder + Late Call Card</h1><div class="body"><table class="mini">
+<tr><th>The ladder</th><th>The late/absent call</th></tr>
+<tr><td>Plan A: normal ride + leave time<br>Plan B: pre-asked person + notice needed<br>Plan C: bus/walk/bike + times<br>Weather rule: add minutes to every rung<br>Trigger time: the moment you switch</td><td>1. Decide fast &mdash; late or can&rsquo;t come<br>2. CALL the workplace immediately<br>3. Script: name + situation + when you&rsquo;ll arrive + &ldquo;sorry for the trouble&rdquo;<br>4. Follow through; ask what you missed<br>5. Fix the leak that night</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 12 • Schedules and Time — Attendance, Punctuality, and Work Schedules</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

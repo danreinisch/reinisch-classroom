@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1: Evidence, Inference &amp; Character Development - Curiosity, Risk, and the Unknown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#22b8d4; --accent-deep:#0b5e70; --glow:rgba(34,184,212,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 1 SC • Week 1</div><h1>A Door into Time</h1><div class="body"><div class="sub">by Shawn Inmon &mdash; An Alex Hawk Time Travel Adventure</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b><br>This week: Chapters 1&ndash;3 + Written Response</div><div class="theme">Theme: Curiosity, Risk, and the Unknown</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>Read Chapter 1, &ldquo;The Door&rdquo; &mdash; identify explicit details and annotate</td><td>7</td></tr><tr><td>Day 2</td><td>Read Chapter 2, &ldquo;The Letter&rdquo; &mdash; build evidence-based analysis</td><td>7</td></tr><tr><td>Day 3</td><td>Read Chapter 3, &ldquo;Kragdon-ah&rdquo; &mdash; synthesize across chapters</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response: Chapters 1&ndash;3</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our reading skill</h3><p><b>Evidence-based character analysis.</b> We find <b>explicit details</b> (what the text says directly) and make <b>inferences</b> (what the details suggest) about why Alex makes his choices.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Point to details that show Alex&rsquo;s <b>curiosity</b> and <b>preparation</b>.</li><li>Explain what those details tell me about him.</li><li>Support every idea with evidence from the chapters.</li></ul></div></div>
+<p class="note">Standards this week: 9-10.RL.1.A — Evidence &amp; Inference • 9-10.RL.1.B — Word Meanings • 9-10.RL.2.D — Development of Text Elements • 9-10.W.2.A / W.3.A.a — Written Response</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How do Alex&rsquo;s curiosity and preparation influence his decision to cross the door?</div></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Before We Begin</div><h1>Meet the Story</h1><div class="body"><div class="cols2"><div class="card"><h3>Alex Hawk</h3><p>An Army veteran who now works in construction. Divorced, living alone, fixing up an old house in central Oregon. Curious his whole life &mdash; sometimes to a fault.</p></div><div class="card"><h3>Amy &amp; Mandy</h3><p>Amy is Alex&rsquo;s young daughter &mdash; her birthday party is <b>today</b>. Mandy is his ex-wife, who reminds him of everything he has already missed.</p></div><div class="card"><h3>The house</h3><p>An old craftsman house Alex bought cheap from an elderly owner. It holds a strange secret in the basement.</p></div><div class="card"><h3>Kragdon-ah</h3><p>The wild, dangerous world waiting on the other side of a mysterious door.</p></div></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Mystery in the Basement</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Today we learn the difference between what a text <b>says</b> and what it <b>suggests</b> &mdash; then we open the book and start collecting evidence about Alex Hawk.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 1 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.1.B — Word Meanings</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Before We Open the Book</h1><div class="body"><ol class="q"><li>The title promises <i>a door into time</i>. Where &mdash; or <i>when</i> &mdash; do you predict it leads?</li><li>Is curiosity a strength, a danger, or both? Give one real-life example from your own week.</li><li>Alex is a trained soldier and a careful builder. Predict: what could make a careful person take a foolish risk?</li></ol><p class="note">No wrong answers here &mdash; we check these predictions against the text all week.</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">curiosity</div><div class="pos">noun • cure-ee-AH-sih-tee</div>
+<div class="means">A strong desire to know, learn, or investigate something.</div>
+<div class="morph"><div><b>curios-</b><span>Latin <i>curiosus</i> — careful, eager to know (from <i>cura</i>, care)</span></div><div class="plus">+</div><div><b>-ity</b><span>suffix: the state or quality of being</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">interest</span><span class="pill">inquisitiveness</span><span class="pill">wonder</span><span class="pill">nosiness</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">indifference</span><span class="pill anti">apathy</span><span class="pill anti">disinterest</span></div>
+<div class="family"><b>Word family:</b> curious (adj) &bull; curiously (adv) &bull; curiosity (n)</div></div>
+<div><div class="quote">When he had been a small boy, Alex&rsquo;s mother had told him that someday his strong streak of curiosity would get him hurt.<span class="who">&mdash; Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Words ending in <b>-ity</b> name a <i>quality</i>: curios<b>ity</b>, secur<b>ity</b>, abil<b>ity</b>. Say one more <b>-ity</b> word and use it in a sentence about Alex.</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Explicit vs. Implicit: How Readers Know Things</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit &mdash; the text says it</h3>
+<p>Information stated directly. <i>&ldquo;Maria slammed the door.&rdquo;</i> We know the door slammed &mdash; it&rsquo;s on the page.</p></div>
+<div class="card"><h3>Implicit &mdash; the text suggests it</h3>
+<p>An <b>inference</b> = detail from the text + what you already know. Slammed door + your life experience &rarr; Maria is probably angry. The text never said &ldquo;angry.&rdquo;</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday inference</h3>
+<p>You come home: wet umbrella by the door, muddy shoes on the mat. Nobody told you it rained &mdash; you <b>inferred</b> it. You do this skill all day already.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The one rule</h3>
+<p>Every inference must trace back to a detail you can point to. Evidence is your receipt &mdash; no receipt, no claim.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Chapter 1 hands you a measurement that does not add up. Underline the explicit details; write your inferences in the margin. Every strange detail is an invitation.</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Detail or Inference? Learn to Tell Them Apart</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Explicit detail (the text says it)</h3>
+<p>Outside, the house measures <b>30 feet</b>. Inside, only <b>27 feet 2 inches</b>. Alex measures both &mdash; twice.</p></div>
+<div class="card"><h3>Inference (the details suggest it)</h3>
+<p>Alex <b>cannot leave a mystery alone</b>. A different person would shrug. He gets tools.</p></div></div>
+<div class="card flat" style="margin-top:16px"><h3>Annotation code for this book</h3>
+<p><b>Underline</b> = a detail worth keeping &nbsp;•&nbsp; <b>C</b> in the margin = shows curiosity &nbsp;•&nbsp; <b>R</b> = shows responsibility &nbsp;•&nbsp; <b>?</b> = a question the author wants us to ask</p></div>
+<p class="note">We do together: when you hit the phone call with Mandy, decide &mdash; is it a C moment, an R moment, or both?</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Detail or Inference?</h1><div class="body"><div class="mcq"><div class="qq">Which one is an <b>explicit detail</b>?</div><button class="opt" data-ok="0">Alex can never resist a mystery.</button><button class="opt" data-ok="1">The house measures 30 feet outside but only 27 feet 2 inches inside.</button><button class="opt" data-ok="0">Opening the wall will turn out to be a mistake.</button><div class="fb">You can point to it on the page &mdash; measurements are stated directly. The other two are inferences and predictions.</div></div><div class="mcq"><div class="qq">Alex keeps demolishing the wall with Amy&rsquo;s party only hours away. Best <b>inference</b>?</div><button class="opt" data-ok="0">He forgot about the party.</button><button class="opt" data-ok="1">His curiosity is competing with his responsibilities &mdash; and winning.</button><button class="opt" data-ok="0">He dislikes his house.</button><div class="fb">The text shows both the party pressure and the digging. Holding those details together is the inference.</div></div><div class="rev"><div class="rq">Alex jokes out loud, then notes &ldquo;there was no one to laugh at his joke.&rdquo; What can you infer &mdash; and what is your receipt?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">He lives alone and feels it. <b>Receipt:</b> the text says no one is there to laugh. <b>Inference:</b> loneliness is part of what makes the mystery so magnetic.</div></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Read</div><h1>Chapter 1 &mdash; &ldquo;The Door&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Alex discovers his basement is almost three feet shorter <i>inside</i> than the house is <i>outside</i>.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>Details that show Alex is <b>curious</b>: measuring, tearing down paneling, two brick walls.</li><li>Details about his <b>responsibilities</b>: the call with Mandy, Amy&rsquo;s party at 4:00.</li><li>The strange finds: the ocean smell 150 miles inland, the shimmering black door, the envelope pinned by a knife.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Annotate with the C / R / ? code, then write one <b>detail</b> and one <b>inference</b> it supports &mdash; labeled.</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Warning</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">We start by talking through yesterday&rsquo;s chapter, then learn to build a full piece of analysis: claim, evidence, explanation.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 1</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 2 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.1.A — Evidence &amp; Inference</span><span class="pill">9-10.RL.2.D — Text Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The Door</h1><div class="body"><ol class="q"><li>What was the first clue that something was wrong with the house? What did Alex <i>do</i> about it &mdash; and what does that action tell us?</li><li>The phone call with Mandy: give one explicit detail, then make one inference about Alex&rsquo;s past.</li><li>Alex jokes to himself and keeps working, alone. What is the author showing us about his life?</li></ol><div class="quote">A hundred and fifty miles inland, Alex Hawk could smell the ocean.<span class="who">&mdash; Chapter 1</span></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">preparation</div><div class="pos">noun • prep-uh-RAY-shun</div>
+<div class="means">The work of getting ready before something happens.</div>
+<div class="morph"><div><b>pre-</b><span>prefix: before</span></div><div class="plus">+</div><div><b>para</b><span>Latin <i>parare</i> — to make ready</span></div><div class="plus">+</div><div><b>-tion</b><span>suffix: the act or process of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">readiness</span><span class="pill">planning</span><span class="pill">groundwork</span><span class="pill">precaution</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">neglect</span><span class="pill anti">carelessness</span><span class="pill anti">improvisation</span></div>
+<div class="family"><b>Word family:</b> prepare (v) &bull; prepared (adj) &bull; preparatory (adj)</div></div>
+<div><div class="quote">Most people might have felt a little over-prepared and foolish, but Alex had been trained to be prepared for any eventuality.<span class="who">&mdash; Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p><b>Pre-</b> means <i>before</i>: <b>pre</b>view, <b>pre</b>dict, <b>pre</b>caution. What is Alex trying to do <i>before</i> he steps through the door?</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Characterization: How Authors Build People</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Direct characterization</h3>
+<p>The narrator tells you flat out: <i>&ldquo;Ben was brave.&rdquo;</i> Rare, and less interesting.</p></div>
+<div class="card"><h3>Indirect characterization</h3>
+<p>The author shows you and lets you conclude. Remember <b>STEAL</b>: what a character <b>S</b>ays, <b>T</b>hinks, their <b>E</b>ffect on others, how they <b>A</b>ct, how they <b>L</b>ook.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A friend says &ldquo;I&rsquo;m not mad&rdquo; &mdash; then answers every text with one word. Words say one thing; behavior says another. You believe the behavior. So do readers.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Motivation &mdash; the why</h3>
+<p>Behind every action is a <b>want</b> or a <b>fear</b>. Find what a character wants most and fears most, and their choices start making sense.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Watch Alex through STEAL today &mdash; especially his <b>Acts</b>: what he packs, checks, and repeats tells you more than anything he says.</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Build an Analysis: Claim &rarr; Evidence &rarr; Explanation</h1><div class="body"><table class="mini">
+<tr><th>Step</th><th>Example (watch me build it)</th></tr>
+<tr><td><b>Claim</b> &mdash; an idea you believe about a character</td><td>Alex prepares like a soldier, even for a &ldquo;one-minute&rdquo; look.</td></tr>
+<tr><td><b>Evidence</b> &mdash; a detail or quote that supports it</td><td>He loads four magazines for each weapon and packs tape, a flashlight, and a canteen &mdash; for a peek through a door in his own basement.</td></tr>
+<tr><td><b>Explanation</b> &mdash; connect evidence to claim</td><td>Packing this much for a &ldquo;quick recon&rdquo; shows his Army training controls how he faces the unknown &mdash; preparation is his answer to fear.</td></tr></table>
+<p class="note">Your job while reading today: collect one piece of evidence for the claim &ldquo;Alex is careful&rdquo; and one for &ldquo;Alex is reckless.&rdquo; Both are in this chapter.</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Claim, Evidence, or Explanation?</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;Alex prepares like a soldier, even for a one-minute look.&rdquo; This sentence is a&hellip;</div><button class="opt" data-ok="1">Claim &mdash; an arguable idea that needs support</button><button class="opt" data-ok="0">Evidence &mdash; a specific moment from the text</button><button class="opt" data-ok="0">Explanation &mdash; connecting evidence to an idea</button><div class="fb">It argues something about Alex &mdash; now it needs a receipt from the text.</div></div><div class="mcq"><div class="qq">Which piece of <b>evidence</b> best supports that claim?</div><button class="opt" data-ok="0">Alex is brave and smart.</button><button class="opt" data-ok="1">He loads four magazines for each weapon &mdash; for a &ldquo;quick recon&rdquo; in his own basement.</button><button class="opt" data-ok="0">Most people would be scared of the door.</button><div class="fb">Specific and pointable. &ldquo;Brave and smart&rdquo; is another claim, not evidence.</div></div><div class="rev"><div class="rq">Now finish the paragraph: connect the loaded magazines to the claim in one <b>explanation</b> sentence.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: Packing combat gear for a peek in his own basement shows that his training &mdash; not the situation &mdash; decides how Alex faces the unknown.</div></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Read</div><h1>Chapter 2 &mdash; &ldquo;The Letter&rdquo;</h1><div class="body"><p><span class="badge">Read</span> A hidden letter warns Alex to brick the door back up. He prepares to look anyway.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>The old owner&rsquo;s <b>warning</b>: his son went through the door and never came back.</li><li>The <b>claw marks</b> on the bricks &mdash; made by something with three claws, bigger than any bear.</li><li>Every step of Alex&rsquo;s <b>preparation</b> &mdash; and every excuse he makes: &ldquo;One minute. In and out.&rdquo;</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Write one full claim &ndash; evidence &ndash; explanation: is Alex being smart, reckless, or both?</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Through the Door</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">We talk through the letter and the claw marks, then learn to synthesize &mdash; connecting evidence across chapters to trace one trait through the whole story.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 2</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Read Ch. 3 + assignment</span></div>
+<div class="stdchips"><span class="pill">9-10.RL.2.A — Theme Development</span><span class="pill">9-10.RL.1.D — Comprehension &amp; Synthesis</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: The Letter</h1><div class="body"><ol class="q"><li>The letter said: <i>&ldquo;Curiosity didn&rsquo;t just kill the cat. It killed my son.&rdquo;</i> Why didn&rsquo;t this warning stop Alex?</li><li>Was Alex being smart, reckless, or both? Share the claim&ndash;evidence&ndash;explanation you wrote yesterday.</li><li>Alex told himself, <i>&ldquo;One minute. In and out.&rdquo;</i> Did you believe him? What evidence supports your answer?</li></ol><div class="quote">I&rsquo;d rather have it and not need it than need it and not have it.<span class="who">&mdash; Alex, Chapter 2</span></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">reconnaissance</div><div class="pos">noun • rih-KAH-nuh-sense</div>
+<div class="means">A quick look at an area to gather information before acting. Soldiers shorten it to <b>recon</b>.</div>
+<div class="morph"><div><b>re-</b><span>prefix: again</span></div><div class="plus">+</div><div><b>connaiss</b><span>French <i>conna&icirc;tre</i> — to know</span></div><div class="plus">+</div><div><b>-ance</b><span>suffix: the act of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">scouting</span><span class="pill">survey</span><span class="pill">exploration</span><span class="pill">look-around</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">going in blind</span><span class="pill anti">guesswork</span></div>
+<div class="family"><b>Word family:</b> reconnoiter (v) &bull; recon (n, informal)</div></div>
+<div><div class="quote">Gonna be a quick recon. Poke my head in, then right back home.<span class="who">&mdash; Alex, Chapter 2</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Alex calls his trip a <i>recon</i> &mdash; a military word. What does his word choice tell us about how he sees the door?</p></div></div>
+</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Theme: The Idea Under the Story</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one word)</h3>
+<p>Loss. Curiosity. Duty. Survival. A topic is just a subject &mdash; it makes no point.</p></div>
+<div class="card"><h3>Theme (a complete claim)</h3>
+<p>&ldquo;Loss can push people to build new purpose.&rdquo; A theme says something <i>about</i> the topic that the story proves.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How writers plant themes</h3>
+<p>Themes are almost never stated. Trace them through <b>repeated images</b>, <b>choices characters make</b>, and <b>consequences</b> of those choices. When a pattern repeats, the author is pointing at something.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The portability test</h3>
+<p>A real theme statement works <i>outside</i> the book too. &ldquo;Alex misses Amy&rdquo; is plot. &ldquo;Keeping a promise can cost the people you love&rdquo; is theme.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Our topic is <b>curiosity</b>. By the end of today&rsquo;s chapter you will have enough of a pattern to turn that topic into a theme statement.</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Synthesize: Trace One Trait Across Three Chapters</h1><div class="body"><table class="mini">
+<tr><th>Chapter</th><th>Curiosity in action</th><th>What it costs / risks</th></tr>
+<tr><td>Ch. 1</td><td>Measures the house, tears down two brick walls</td><td>Hours before Amy&rsquo;s party</td></tr>
+<tr><td>Ch. 2</td><td>Reads a warning that curiosity killed a man&rsquo;s son &mdash; and packs gear anyway</td><td>Ignores a direct, written warning</td></tr>
+<tr><td>Ch. 3</td><td>Steps through the door &ldquo;for one minute&rdquo;</td><td>Today&rsquo;s reading &mdash; you fill this box</td></tr></table>
+<p style="margin-top:14px"><b>Synthesis statement (we build it together):</b> Across Chapters 1&ndash;3, Alex&rsquo;s ___ keeps overpowering his ___, even though his preparation ___.</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Topic or Theme?</h1><div class="body"><div class="mcq"><div class="qq">Which one is a <b>theme</b> &mdash; not just a topic?</div><button class="opt" data-ok="0">Curiosity.</button><button class="opt" data-ok="0">Doors.</button><button class="opt" data-ok="1">Curiosity can pull a person past every warning meant to protect them.</button><div class="fb">A theme is a complete claim &mdash; and it works outside this book too.</div></div><div class="mcq"><div class="qq">Which <b>pattern</b> from Chapters 1&ndash;3 best supports that theme?</div><button class="opt" data-ok="1">Alex measures the walls, ignores the letter, then steps through anyway.</button><button class="opt" data-ok="0">Alex owns several guns.</button><button class="opt" data-ok="0">The house was sold cheap.</button><div class="fb">Three choices across three chapters, all pushed by the same force &mdash; that&rsquo;s a pattern, and patterns point at theme.</div></div><div class="rev"><div class="rq">Portability test: does our theme statement work <i>outside</i> the book? Give one real-life example.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: people ignore warning labels, chase storms for videos, or text the person they swore off &mdash; curiosity and desire regularly outvote warnings.</div></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Read</div><h1>Chapter 3 &mdash; &ldquo;Kragdon-ah&rdquo;</h1><div class="body"><p><span class="badge">Read</span> Alex steps through the door and finds a black-sand beach, a strange yellow sky &mdash; and creatures that hunt him.</p><div class="card"><h3>While you read, look for&hellip;</h3><ul><li>How the new world is <b>different</b> from Oregon: the sky, the black sand, the silence.</li><li>How Alex&rsquo;s <b>training</b> keeps him alive: the pistol draw, reading the creatures&rsquo; attack patterns, the hollow log.</li><li>The <b>cliffhanger</b>: a human hand waving from inside the log.</li></ul></div><div class="exit"><b>Then knock out today&rsquo;s assignment.</b> Fill the Chapter 3 box of your synthesis chart, then star the <b>two strongest pieces of evidence</b> you&rsquo;ll use in tomorrow&rsquo;s written response.</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">We talk through the trip to Kragdon-ah, review the evidence bank together, then you write: one clear claim about Alex, supported and explained.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. 3</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft with frames</span><span>Self-check and turn in</span></div>
+<div class="stdchips"><span class="pill">9-10.W.2.A — Development of Writing</span><span class="pill">9-10.W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Chapter: Kragdon-ah</h1><div class="body"><ol class="q"><li>Alex planned a one-minute look. What went out of his control first &mdash; and what does that teach us about the unknown?</li><li>Which of Alex&rsquo;s preparations from Chapter 2 actually saved his life? Point to the exact moments.</li><li>Whose hand do you think is waving from the log &mdash; and is Alex&rsquo;s curiosity about to cost him?</li></ol><p class="note">As we talk, check the two pieces of evidence you starred yesterday &mdash; still your strongest? Swap if better ones come up.</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your written response today is exactly this structure: a claim about Alex, evidence from Chapters 1&ndash;3, and explanation in your own words.</div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How do Alex&rsquo;s curiosity and preparation influence his decision to cross the door?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>Measuring the basement and tearing down two brick walls (Ch. 1)</li><li>Reading Mr. Hadaller&rsquo;s warning letter &mdash; and going anyway (Ch. 2)</li><li>Packing weapons, gear, and a plan before stepping through (Ch. 2)</li><li>Surviving the creature attack because of his training (Ch. 3)</li></ul></div></div></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Foundation <span>&mdash; 4&ndash;6 sentences</span></h3><p>Use <b>one</b> detail and the frames: &ldquo;Alex is curious because the text says ___.&rdquo; &ldquo;He prepares by ___.&rdquo; &ldquo;These details show he decides to cross because ___.&rdquo;</p></div><div class="card"><h3>Supported <span>&mdash; one developed paragraph</span></h3><p>Use <b>two</b> details &mdash; one about curiosity, one about preparation &mdash; and explain how each one pushed Alex toward the door.</p></div><div class="card"><h3>Extension <span>&mdash; multi-paragraph response</span></h3><p>Use <b>two or three</b> details. Also consider: does Alex&rsquo;s preparation make his choice wise &mdash; or just make a risky choice feel safer?</p></div></div><p class="note">Self-check before turning in: Did I state a claim? Did I quote or describe real moments from the text? Did I explain the connection in my own words?</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page for any assignment this week.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Alex Hawk</b></td><td>Army veteran, construction worker, divorced. Curious his whole life. Steps through the door.</td></tr><tr><td><b>Amy</b></td><td>Alex&rsquo;s young daughter &mdash; her birthday party is the afternoon he finds the door.</td></tr><tr><td><b>Mandy</b></td><td>Alex&rsquo;s ex-wife; their calls are tense and guilt-loaded.</td></tr><tr><td><b>Benjamin Hadaller</b></td><td>The house&rsquo;s old owner. Bricked up the door and left the warning letter &mdash; his son went through and never returned.</td></tr><tr><td><b>The winged creatures</b></td><td>Vulture-like predators with three-toed claws and 7&ndash;8 foot wingspans; hunt in flocks; eat their own dead.</td></tr><tr><td><b>Kragdon-ah</b></td><td>The world beyond the door: black-sand beach, gray ocean, strange yellow sky.</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. 1 &mdash; The Door</b></td><td>The house is 2&rsquo;10&rdquo; shorter inside than outside. Behind paneling: two brick walls, ocean air, a shimmering black doorway, and an envelope pinned by a hunting knife.</td></tr><tr><td><b>Ch. 2 &mdash; The Letter</b></td><td>Hadaller&rsquo;s warning: &ldquo;Curiosity didn&rsquo;t just kill the cat. It killed my son.&rdquo; Alex finds three-clawed marks on the bricks &mdash; and packs weapons for a &ldquo;one-minute&rdquo; look.</td></tr><tr><td><b>Ch. 3 &mdash; Kragdon-ah</b></td><td>Through smothering darkness to a black-sand beach. Winged predators attack; Alex&rsquo;s training saves him; he shelters in a hollow log &mdash; where a human hand waves.</td></tr></table></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>curiosity</b></td><td>a strong desire to know or investigate (ant.: indifference)</td></tr><tr><td><b>preparation</b></td><td>getting ready before something happens (ant.: carelessness)</td></tr><tr><td><b>reconnaissance</b></td><td>a scouting look before acting; &ldquo;recon&rdquo; (ant.: going in blind)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">A hundred and fifty miles inland, Alex Hawk could smell the ocean.<span class="who">&mdash; Chapter 1</span></div><div class="quote" style="margin:10px 0">Curiosity didn&rsquo;t just kill the cat. It killed my son.<span class="who">&mdash; the letter, Chapter 2</span></div><div class="quote" style="margin:10px 0">I&rsquo;d rather have it and not need it than need it and not have it.<span class="who">&mdash; Alex, Chapter 2</span></div><div class="quote" style="margin:10px 0">He had spent his whole life looking for adventure. If one was waiting for him in his own house, he was going to explore it.<span class="who">&mdash; Chapter 2</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;In Chapter ___, the text says ___.&rdquo;</li><li>&ldquo;This detail shows / suggests ___.&rdquo;</li><li>&ldquo;For example, when ___, it reveals ___.&rdquo;</li><li>&ldquo;This matters because ___.&rdquo;</li><li>&ldquo;Ultimately, ___.&rdquo;</li></ul></div></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Alex found a hidden door behind two brick walls, ignored a written warning, prepared carefully, stepped into a wild world called Kragdon-ah, survived an attack &mdash; and someone is in that log with him.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What drives Alex more &mdash; curiosity or duty to Amy?</li><li>Does preparation equal safety?</li><li>What will crossing the door cost him?</li></ul></div></div>
+<p class="note">Day 5 is a Flex Day: finish your response, get support, or choose a reading activity. Next week: Chapters 4&ndash;6.</p></div><div class="footer"><span>A Door into Time • Week 1 • Evidence, Inference &amp; Character Development</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

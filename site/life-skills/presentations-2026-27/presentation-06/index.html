@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 6: Applications and R&amp;eacute;sum&amp;eacute;s - Education, Skills, and Experience on an Application</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#2dd4bf; --accent-deep:#115e59; --glow:rgba(45,212,191,.13);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Life Skills SC &bull; Week 6</div><h1>Education, Skills &amp; Experience</h1><div class="body"><div class="sub">Applications and R&eacute;sum&eacute;s &mdash; Education, Skills, and Experience on an Application</div>
+<div class="meta">This week: your school section, experience beyond paychecks, your skills bank, and the middle of the application &mdash; done &mdash; 20 points</div><div class="theme">Big idea: You already have education, experience, and skills &mdash; this week you learn to put them on paper</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td>The education section &mdash; your school story, form-style</td><td>5</td></tr><tr><td>Day 2</td><td>Experience is more than paid work &mdash; and you have some</td><td>5</td></tr><tr><td>Day 3</td><td>Skills employers can use &mdash; building your skills bank</td><td>5</td></tr><tr><td>Day 4</td><td>Complete the experience section &mdash; education, experience, skills, on paper</td><td>5</td></tr><tr><td>Day 5</td><td>Open Life Skills Day &mdash; finish, practice, or skill lab</td><td>&mdash;</td></tr></table></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>2 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Building on Last Week</div><h1>The Top of the Form Is Done &mdash; Now the Middle</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Last week you&hellip;</h3>
+<p>Mastered the top of the application: form vocabulary, a contact block that&rsquo;s <b>neat, complete, and exact</b>, and the share / pause / protect zones keeping your information safe.</p></div>
+<div class="card"><h3>This week you&hellip;</h3>
+<p>Fill the middle &mdash; the part that makes applicants freeze: <b>education, experience, and skills</b>. Spoiler from Day 1 of Week 4: you have more of all three than you think. This week we prove it on paper.</p></div></div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>3 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Education Section</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">School is the education section &mdash; and you&rsquo;re living it right now. Today: exactly what the form wants, box by box, including what &ldquo;currently attending&rdquo; means for you.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: the school boxes</span><span>You try it</span><span>Do: my education section</span></div>
+<div class="stdchips"><span class="pill">Application Skills</span><span class="pill">Functional Writing</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Fast facts: your school&rsquo;s full name, city, and state. Can you say all three smoothly?</li><li>What do you think an employer learns about you from the education section &mdash; besides where you go to school?</li><li>Why would an employer LIKE hiring someone who&rsquo;s still in school?</li></ol></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>5 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Learn</div><h1>The School Boxes, Decoded</h1><div class="body"><table class="mini">
+<tr><th>The form asks&hellip;</th><th>You write&hellip;</th></tr>
+<tr><td><b>School name</b></td><td>Winfield High School &mdash; the full, official name</td></tr>
+<tr><td><b>City / State</b></td><td>Winfield, MO</td></tr>
+<tr><td><b>Dates attended</b></td><td>Start year &ndash; Present (&ldquo;Present&rdquo; means you&rsquo;re still there)</td></tr>
+<tr><td><b>Currently attending?</b></td><td>Yes &mdash; and it&rsquo;s a GOOD answer, not a weak one</td></tr>
+<tr><td><b>Graduated? / Diploma?</b></td><td>&ldquo;Expected 20__&rdquo; &mdash; your expected graduation year</td></tr>
+<tr><td><b>Highest grade completed</b></td><td>The last grade you FINISHED &mdash; not the one you&rsquo;re in now</td></tr></table>
+<p class="note">&ldquo;Currently attending&rdquo; tells an employer you show up somewhere every single weekday and answer to a schedule &mdash; that&rsquo;s reliability with a paper trail. Still in school is a plus, not an apology.</p></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>6 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; You Try It</div><h1>Box by Box</h1><div class="body"><div class="mcq"><div class="qq">Maya is a junior right now. &ldquo;Highest grade completed&rdquo; gets&hellip;</div><button class="opt" data-ok="1">10 &mdash; the last grade she finished</button><button class="opt" data-ok="0">11 &mdash; the grade she&rsquo;s in</button><button class="opt" data-ok="0">12 &mdash; the grade she&rsquo;s aiming for</button><div class="fb">Completed means finished. A junior has completed 10th. Read that box slowly &mdash; it trips up adults too.</div></div><div class="mcq"><div class="qq">The form asks &ldquo;Did you graduate?&rdquo; You&rsquo;re on track to finish but not there yet. Best answer?</div><button class="opt" data-ok="1">&ldquo;Expected 2028&rdquo; (your real year) &mdash; honest AND forward-looking</button><button class="opt" data-ok="0">&ldquo;Yes&rdquo; &mdash; close enough</button><button class="opt" data-ok="0">Leave it blank</button><div class="fb">&ldquo;Expected&rdquo; plus the year is the standard, truthful move &mdash; and remember the golden rule: no blanks, ever.</div></div><div class="mcq"><div class="qq">The education section has three school rows. You&rsquo;ve attended one high school. The extra rows get&hellip;</div><button class="opt" data-ok="1">N/A &mdash; last week&rsquo;s move, working again</button><button class="opt" data-ok="0">Made-up schools to fill space</button><button class="opt" data-ok="0">Nothing &mdash; blanks are fine here</button><div class="fb">One real school beats three invented ones. N/A shows you read every row on purpose.</div></div><div class="rev"><div class="rq">An employer reads two education sections: one neat and complete with &ldquo;Expected 2028,&rdquo; one half-filled with blanks. Same student ability. Who gets the interview &mdash; and what did the section really measure?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The complete one &mdash; every time. The section didn&rsquo;t measure smarts; it measured care. A finished form is your first work sample: proof you complete what you start.</div></div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>7 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 &bull; Do</div><h1>My Education Section</h1><div class="body"><p><span class="badge">Your task</span> Fill the education section of the practice application: full school name, city and state, dates attended with &ldquo;Present,&rdquo; expected graduation year, highest grade completed, and N/A on unused rows. Every box, no blanks.</p>
+<div class="exit"><b>Before you leave:</b> Point to your &ldquo;highest grade completed&rdquo; box and prove it&rsquo;s the FINISHED grade, not the current one.</div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>8 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>Experience Is More Than Paid Work</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">&ldquo;No experience&rdquo; is almost never true. Chores, babysitting, volunteering, helping at events &mdash; today you find YOUR experience and write it the way forms want it.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: what counts + the formula</span><span>You try it</span><span>Do: my experience list</span></div>
+<div class="stdchips"><span class="pill">Application Skills</span><span class="pill">Self-Knowledge</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Have you ever been paid for work &mdash; even once, even by a neighbor or family friend? What was it?</li><li>Name something you&rsquo;re trusted to do regularly at home, at school, or for someone else.</li><li>Why would watching a younger sibling every Saturday be interesting to the manager at a busy store?</li></ol></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>10 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Learn</div><h1>What Counts &mdash; and the Formula</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Experience that counts</h3>
+<ul><li>Chores you own: mowing, dishes, laundry, trash routes</li><li>Babysitting or caring for family members</li><li>Pet care &mdash; yours or the neighbors&rsquo;</li><li>Volunteering: church, school events, food drives</li><li>School jobs: library helper, office aide, team manager</li><li>Helping a family business or a neighbor &mdash; paid or not</li></ul></div>
+<div class="card"><h3>The experience formula</h3>
+<p><b>WHAT</b> I did + <b>WHERE</b> + <b>WHEN</b> + <b>ONE duty</b></p>
+<p style="margin-top:10px">&ldquo;Babysitter &mdash; for a neighbor family, Winfield &mdash; 2025&ndash;Present &mdash; cared for two children, including meals and bedtime routine.&rdquo;</p>
+<p style="margin-top:10px">&ldquo;Volunteer helper &mdash; school food drive &mdash; Fall 2025 &mdash; sorted and boxed donations for delivery.&rdquo;</p></div></div>
+<p class="note">Unpaid does not mean unreal. The form is asking &ldquo;have you ever been responsible for something?&rdquo; &mdash; and you have. Write it with the formula and it reads like experience, because it IS.</p></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>11 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; You Try It</div><h1>Does It Count?</h1><div class="body"><div class="mcq"><div class="qq">Marcus has mowed three neighbors&rsquo; lawns every week, two summers running, for cash. Application experience?</div><button class="opt" data-ok="1">Absolutely &mdash; regular work, real customers, real responsibility; formula it</button><button class="opt" data-ok="0">No &mdash; it wasn&rsquo;t a &ldquo;real company&rdquo;</button><button class="opt" data-ok="0">Only if he made a certain amount</button><div class="fb">&ldquo;Lawn care &mdash; neighborhood customers &mdash; Summers 2024&ndash;2025 &mdash; mowed and trimmed three yards weekly, on schedule.&rdquo; A manager reads that and sees a worker.</div></div><div class="mcq"><div class="qq">Which is the strongest experience line?</div><button class="opt" data-ok="1">&ldquo;Pet care &mdash; for neighbors, Winfield &mdash; 2024&ndash;Present &mdash; fed, walked, and gave medicine to two dogs daily&rdquo;</button><button class="opt" data-ok="0">&ldquo;I like dogs&rdquo;</button><button class="opt" data-ok="0">&ldquo;Did stuff for people sometimes&rdquo;</button><div class="fb">All four formula parts, one concrete duty. &ldquo;Gave medicine&rdquo; is a trust detail &mdash; those are gold.</div></div><div class="mcq"><div class="qq">Jade truly has no chores, no volunteering, nothing yet &mdash; she checked honestly. The experience section gets&hellip;</div><button class="opt" data-ok="1">N/A for now &mdash; plus a plan: one school volunteer shift makes next month&rsquo;s answer different</button><button class="opt" data-ok="0">An invented job &mdash; everyone does it</button><button class="opt" data-ok="0">Tears</button><div class="fb">Honest N/A today, and experience is buildable THIS month &mdash; one food drive, one office-aide gig. The section isn&rsquo;t a wall; it&rsquo;s a to-do list.</div></div><div class="rev"><div class="rq">Think of the most responsible thing you do in a normal week. Run it through the formula out loud: WHAT + WHERE + WHEN + ONE duty.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">If you got all four parts out, you just wrote an application line. If one part was fuzzy (&ldquo;when&rdquo; usually is), pin it down &mdash; &ldquo;2025&ndash;Present&rdquo; or &ldquo;every weekend&rdquo; both work.</div></div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>12 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 &bull; Do</div><h1>My Experience List</h1><div class="body"><p><span class="badge">Your task</span> Brainstorm everything you&rsquo;ve done that shows responsibility &mdash; aim for five candidates, then formula your best two or three: WHAT + WHERE + WHEN + ONE duty. These lines go on Friday&rsquo;s application.</p>
+<div class="exit"><b>Before you leave:</b> Read me your single best line, all four parts.</div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>13 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>Skills Employers Can Use</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">Week 4 taught you to match skills to one posting. Today you build the master list &mdash; your skills bank &mdash; in words any employer recognizes, ready to copy onto any application.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Learn: employer words</span><span>You try it</span><span>Do: my skills bank</span></div>
+<div class="stdchips"><span class="pill">Application Skills</span><span class="pill">Self-Advocacy</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>From yesterday: what duty did you write in your best experience line? What SKILL is hiding inside it?</li><li>Week 4 flashback: &ldquo;shows up to class on time every day&rdquo; translates to which two employer words?</li><li>Why do employer words matter &mdash; why not just describe yourself your own way?</li></ol></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>15 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Learn</div><h1>Your Skills, in Employer Words</h1><div class="body"><table class="mini">
+<tr><th>Skill family</th><th>Employer words for your bank</th></tr>
+<tr><td><b>Showing up</b></td><td>Punctual &bull; reliable &bull; consistent attendance</td></tr>
+<tr><td><b>Following through</b></td><td>Follows multi-step directions &bull; completes tasks &bull; uses checklists</td></tr>
+<tr><td><b>People</b></td><td>Team player &bull; friendly with customers &bull; respectful communication</td></tr>
+<tr><td><b>Hands &amp; body</b></td><td>Able to lift/carry &bull; stays active full shift &bull; safe equipment habits</td></tr>
+<tr><td><b>Money &amp; counting</b></td><td>Cash-handling basics &bull; counts change accurately</td></tr>
+<tr><td><b>Care &amp; order</b></td><td>Cleans and organizes &bull; careful with property &bull; patient with people and animals</td></tr></table>
+<p class="note">Bank rule: every skill you claim needs a receipt &mdash; one real example you could say out loud. &ldquo;Reliable&rdquo; + &ldquo;haven&rsquo;t missed first hour all semester&rdquo; is a skill with proof. Claims without receipts stay out of the bank.</p></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>16 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; You Try It</div><h1>Bank It or Not?</h1><div class="body"><div class="mcq"><div class="qq">Ty wants to bank &ldquo;team player.&rdquo; His receipt: works with a lab partner all year without drama, shares the work evenly. Bank it?</div><button class="opt" data-ok="1">Bank it &mdash; real skill, real receipt he can say out loud</button><button class="opt" data-ok="0">No &mdash; school doesn&rsquo;t count</button><button class="opt" data-ok="0">Only sports count as teamwork</button><div class="fb">A year of drama-free shared work is exactly what &ldquo;team player&rdquo; means. School receipts are real receipts.</div></div><div class="mcq"><div class="qq">Which skill line is application-ready?</div><button class="opt" data-ok="1">&ldquo;Counts change accurately &mdash; practiced cash handling weekly in class&rdquo;</button><button class="opt" data-ok="0">&ldquo;Good at stuff&rdquo;</button><button class="opt" data-ok="0">&ldquo;Best worker you&rsquo;ll ever meet, trust me&rdquo;</button><div class="fb">Specific skill + receipt. &ldquo;Good at stuff&rdquo; says nothing; big talk with no receipt says worse.</div></div><div class="mcq"><div class="qq">Lena&rsquo;s dream posting wants &ldquo;experience with cash registers.&rdquo; She&rsquo;s never touched one. Her bank has &ldquo;counts change accurately&rdquo; and &ldquo;follows multi-step directions.&rdquo; Move?</div><button class="opt" data-ok="1">List her real skills &mdash; they&rsquo;re the honest foundation a manager can train register skills onto</button><button class="opt" data-ok="0">Write &ldquo;register expert&rdquo; and wing it</button><button class="opt" data-ok="0">Skip the skills section entirely</button><div class="fb">Registers are taught in a day &mdash; to people who can count change and follow steps. Lead with the true foundation; the signature at the bottom still promises honesty.</div></div><div class="rev"><div class="rq">Pick the ONE skill from today&rsquo;s table you&rsquo;d put first on every application. What&rsquo;s your receipt?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Any answer with a receipt wins. Managers hire &ldquo;reliable + proof&rdquo; over a long list of maybes every single time &mdash; one bankable skill is a foundation, not a limit.</div></div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>17 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 &bull; Do</div><h1>My Skills Bank</h1><div class="body"><p><span class="badge">Your task</span> Build your bank: at least five skills in employer words, each with a one-line receipt. Star the two you&rsquo;d put on every application. Keep this page forever &mdash; it feeds every application, r&eacute;sum&eacute;, and interview this year.</p>
+<div class="exit"><b>Before you leave:</b> Tell me one starred skill and its receipt.</div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>18 of 24</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Complete the Experience Section</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">Assembly day: education section, experience lines, and skills bank all go onto the application &mdash; the whole middle of the form, finished and proud.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Do: fill the middle</span><span>Check out with me</span></div>
+<div class="stdchips"><span class="pill">Application Skills</span><span class="pill">Independence</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Warm-Up Talk</div><h1>Warm-Up</h1><div class="body"><ol class="q"><li>Gather your three pages: education section, experience lines, skills bank. Anything missing a piece?</li><li>Recite the experience formula. Which part do people forget most?</li><li>What&rsquo;s the golden rule when a box doesn&rsquo;t apply to you?</li></ol></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>20 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 &bull; Do</div><h1>Fill the Middle</h1><div class="body"><p><span class="badge">Your task</span> Complete the education, experience, and skills sections of the practice application: your school boxes from Day 1, your best two formula lines from Day 2, and your starred skills from Day 3. Neat, complete, honest &mdash; N/A where it belongs.</p>
+<div class="card flat" style="margin-top:12px"><h3>Before you turn it in</h3>
+<p><b>1</b> Every experience line has all four formula parts &bull; <b>2</b> Every skill listed has a receipt you could say out loud &bull; <b>3</b> Zero blanks anywhere on the page</p></div>
+<div class="exit"><b>Check out:</b> Hand it over and tell me which section you&rsquo;re proudest of &mdash; top, middle, or skills.</div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>21 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 6 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>You can fill every school box correctly (including the sneaky &ldquo;highest grade completed&rdquo;), turn unpaid responsibility into formula-perfect experience lines, and keep a skills bank where every claim carries a receipt. The middle of the application &mdash; the part that scares people &mdash; is yours now.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>What experience could I ADD this month &mdash; one volunteer shift, one school job?</li><li>Which skills-bank receipt gets stronger every week I keep it up?</li><li>Is my expected graduation year on the tip of my tongue?</li></ul></div></div>
+<p class="note">Coming next week &mdash; Availability and References: putting your Week 4 grid onto the form, choosing people who&rsquo;ll vouch for you, and asking them the right way.</p></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>22 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Education + Experience Card</h1><div class="body"><table class="mini">
+<tr><th>School box</th><th>Your answer</th></tr>
+<tr><td>School name / City / State</td><td>Winfield High School &mdash; Winfield, MO</td></tr>
+<tr><td>Dates attended</td><td>Start year &ndash; Present</td></tr>
+<tr><td>Graduated?</td><td>&ldquo;Expected 20__&rdquo;</td></tr>
+<tr><td>Highest grade completed</td><td>The last grade you FINISHED</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Experience formula</h3>
+<p><b>WHAT</b> I did + <b>WHERE</b> + <b>WHEN</b> + <b>ONE duty</b>. Chores, babysitting, pet care, volunteering, school jobs &mdash; unpaid still counts. No experience yet? Honest N/A + a plan to build one line this month.</p></div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>23 of 24</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>My Skills Bank Card</h1><div class="body"><table class="mini">
+<tr><th>Skill family</th><th>Employer words</th></tr>
+<tr><td>Showing up</td><td>Punctual &bull; reliable</td></tr>
+<tr><td>Following through</td><td>Follows multi-step directions &bull; completes tasks</td></tr>
+<tr><td>People</td><td>Team player &bull; friendly with customers</td></tr>
+<tr><td>Hands &amp; body</td><td>Able to lift/carry &bull; stays active</td></tr>
+<tr><td>Money</td><td>Counts change accurately</td></tr>
+<tr><td>Care &amp; order</td><td>Cleans and organizes &bull; patient</td></tr></table>
+<div class="card flat" style="margin-top:12px"><h3>Bank rule</h3>
+<p>Every skill needs a <b>receipt</b> &mdash; one real example you could say out loud. Claim + receipt = bankable. Star your top two and lead with them everywhere.</p></div></div><div class="footer"><span>Life Skills SC • Week 6 • Applications and Résumés — Education, Skills, and Experience on an Application</span><span>24 of 24</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>
