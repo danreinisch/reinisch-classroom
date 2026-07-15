@@ -42,7 +42,7 @@ for (const [id, expected] of Object.entries(expectedBooks)) {
   assert.strictEqual(unit.section, 'language-arts', id + ' must remain Language Arts');
   assert.strictEqual(unit.kind, 'book', id + ' must be marked as a book');
   assert.strictEqual(unit.description, '', id + ' must retain an empty optional description');
-  assert.strictEqual(unit.status, 'active', id + ' must remain active');
+  assert.strictEqual(unit.status, 'archived', id + ' must be retired from active discovery');
   assert.strictEqual(unit.sortOrder, expected.sortOrder, id + ' has an unexpected display order');
   assert.strictEqual(unit.slots, 16, id + ' must retain 16 presentation slots');
   assert.strictEqual(unit.baseOut, expected.baseOut, id + ' baseOut changed unexpectedly');
@@ -50,6 +50,22 @@ for (const [id, expected] of Object.entries(expectedBooks)) {
 
   sortOrders.push(unit.sortOrder);
 }
+
+const toolkit = registry.units.find(unit => unit && unit.id === 'toolkit');
+assert.ok(toolkit, 'Language Arts Toolkit must remain registered');
+assert.notStrictEqual(
+  toolkit.status,
+  'archived',
+  'Language Arts Toolkit must remain active'
+);
+
+const lifeSkills = registry.units.find(unit => unit && unit.id === 'life');
+assert.ok(lifeSkills, 'Life Skills must remain registered');
+assert.strictEqual(
+  lifeSkills.status,
+  'archived',
+  'Legacy Life Skills presentations must be retired from active discovery'
+);
 
 assert.strictEqual(
   new Set(sortOrders).size,

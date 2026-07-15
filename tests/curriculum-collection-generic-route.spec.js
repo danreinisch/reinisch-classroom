@@ -1,18 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Curriculum Collection Registry v2 generic route', () => {
-  test('resolves an active legacy collection through the reusable route', async ({ page }) => {
+  test('does not resolve an archived legacy collection through the reusable route', async ({ page }) => {
     await page.goto('/language-arts/collection/?collection=adit');
 
     await expect(page.locator('[data-collection-title]')).toHaveText(
-      'A Door Into Time'
+      'Curriculum Collection'
     );
 
-    await expect(page).toHaveTitle('A Door Into Time – Reinisch Classroom');
+    await expect(page).toHaveTitle(
+      'Curriculum Collection – Reinisch Classroom'
+    );
 
     await expect(
       page.locator('[data-collection-nav="true"]')
-    ).toHaveCount(4);
+    ).toHaveCount(0);
   });
 
   test('keeps the existing legacy book route intact', async ({ page }) => {
@@ -63,7 +65,7 @@ test('resolves a new registry-only collection without a dedicated route', async 
 
   await expect(
     page.locator('[data-collection-nav="true"]')
-  ).toHaveCount(5);
+  ).toHaveCount(1);
 
   await expect(
     page.locator('[data-collection-nav="true"]').filter({
@@ -115,7 +117,7 @@ test('orders active registry collections and hides archived collections', async 
 
   const collectionLinks = page.locator('[data-collection-nav="true"]');
 
-  await expect(collectionLinks).toHaveCount(5);
+  await expect(collectionLinks).toHaveCount(1);
   await expect(collectionLinks.first()).toContainText('Prelude Unit');
 
   await expect(
