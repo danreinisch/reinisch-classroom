@@ -95,6 +95,16 @@ assert.ok(
 );
 
 assert.ok(
+  generator.includes('if (!unitMeta) continue;'),
+  'Filesystem scanning must not re-add archived Language Arts collections'
+);
+
+assert.ok(
+  generator.includes("(lifeUnit.status || 'active') !== 'active'"),
+  'Generated lessons index must omit archived Life Skills presentations'
+);
+
+assert.ok(
   generator.includes('units.sort((a, b) => {'),
   'Generated lessons index must respect registry ordering'
 );

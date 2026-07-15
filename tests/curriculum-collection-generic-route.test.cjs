@@ -36,6 +36,12 @@ assert.ok(
 );
 
 assert.ok(
+  unitGrid.includes('const inferredUnit = units.find') &&
+    unitGrid.includes("return inferredUnit ? inferredUnit.id : '';"),
+  'legacy collection grids must not actively resolve archived collections'
+);
+
+assert.ok(
   unitGrid.includes('applyGenericCollectionLabels(unit)'),
   'generic route must receive its registry title and description'
 );

@@ -67,7 +67,14 @@
       return requestedCollection ? requestedCollection.id : '';
     }
 
-    return inferUnitId(units, location.pathname);
+    const inferredId = inferUnitId(units, location.pathname);
+    const inferredUnit = units.find(function(unit){
+      return unit &&
+        unit.id === inferredId &&
+        (unit.status || 'active') === 'active';
+    });
+
+    return inferredUnit ? inferredUnit.id : '';
   }
 
   function applyGenericCollectionLabels(unit){

@@ -17,7 +17,7 @@
       "pagePath": "/language-arts/a-door-into-time/",
       "kind": "book",
       "description": "",
-      "status": "active",
+      "status": "archived",
       "sortOrder": 10
     },
     {
@@ -29,7 +29,7 @@
       "pagePath": "/language-arts/lost-in-kragdon-ah/",
       "kind": "book",
       "description": "",
-      "status": "active",
+      "status": "archived",
       "sortOrder": 20
     },
     {
@@ -41,7 +41,7 @@
       "pagePath": "/language-arts/return-from-kragdon-ah/",
       "kind": "book",
       "description": "",
-      "status": "active",
+      "status": "archived",
       "sortOrder": 30
     },
     {
@@ -53,7 +53,7 @@
       "pagePath": "/language-arts/warrior-of-kragdon-ah/",
       "kind": "book",
       "description": "",
-      "status": "active",
+      "status": "archived",
       "sortOrder": 40
     },
     {
@@ -62,7 +62,8 @@
       "section": "life-skills",
       "baseOut": "life-skills/presentations",
       "slots": 32,
-      "pagePath": "/life-skills/"
+      "pagePath": "/life-skills/",
+      "status": "archived"
     },
     {
       "id": "math_geo",

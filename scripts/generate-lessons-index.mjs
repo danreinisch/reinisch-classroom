@@ -315,12 +315,15 @@ async function scanLanguageArts(maps, unitsData, siteState) {
     // Skip toolkit - it's handled separately in the sidebar
     if (unitId === 'language-arts-toolkit') continue;
 
+    // Only active, registered collections belong in current discovery.
+    const unitMeta = unitByFolderName.get(unitId);
+    if (!unitMeta) continue;
+
     const abs = path.join(LANG_DIR, unitId);
     const u = await scanUnit(unitId, abs, '/presentations', maps);
     
-    // Try to get canonical name from units.json
-    const unitMeta = unitByFolderName.get(unitId);
-    if (unitMeta && unitMeta.title) {
+    // Apply the canonical registry title.
+    if (unitMeta.title) {
       u.name = unitMeta.title;
     }
 
@@ -372,6 +375,12 @@ async function scanLanguageArts(maps, unitsData, siteState) {
 }
 
 async function scanLifeSkills(maps, unitsData, siteState) {
+  const lifeUnit = unitsData?.units?.find(u => u.id === 'life');
+
+  if (lifeUnit && (lifeUnit.status || 'active') !== 'active') {
+    return { name: 'LIFE SKILLS', units: [] };
+  }
+
   // Life Skills is a single unit, presentations live directly under /life-skills/presentations/presentation-XX/
   const dirs = (await listDirs(LIFE_DIR)).filter(isPresentationDirName);
   dirs.sort((a, b) => presNum(a) - presNum(b));
@@ -406,11 +415,8 @@ async function scanLifeSkills(maps, unitsData, siteState) {
 
   // Get canonical name from units.json
   let unitName = maps.unitNameById.get('life-skills') || 'Life Skills';
-  if (unitsData?.units) {
-    const lifeUnit = unitsData.units.find(u => u.id === 'life');
-    if (lifeUnit && lifeUnit.title) {
-      unitName = lifeUnit.title;
-    }
+  if (lifeUnit && lifeUnit.title) {
+    unitName = lifeUnit.title;
   }
 
   // Generate groups for Life Skills presentations
