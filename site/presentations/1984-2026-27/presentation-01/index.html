@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1: Evidence, Inference &amp; Character Development - Surveillance &amp; Thoughtcrime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#9aa8bd; --accent-deep:#333d4d; --glow:rgba(154,168,189,.14);
+  --bg:#12141c; --surface:#1b1f2b; --surface2:#232837; --line:#2e3547;
+  --ink:#eceef4; --muted:#9aa4ba; --good:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0d12;color:var(--ink);overflow:hidden;
+  font-family:'Source Sans 3','Segoe UI',Verdana,system-ui,sans-serif}
+h1,h2,.dispfont{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;
+  padding:56px 84px 74px;overflow:hidden}
+.slide::before{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;
+  border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--glow),transparent 68%);
+  opacity:.95;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.slide::after{content:'';position:absolute;left:-220px;bottom:-260px;width:560px;height:560px;
+  border-radius:50%;background:radial-gradient(circle at 60% 40%,var(--glow),transparent 70%);
+  opacity:.7;pointer-events:none;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,70px) scale(1.18)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,-60px) scale(1.12)}}
+.dot{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;
+  animation:bob ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(0,0)}to{transform:translate(18px,-34px)}}
+.ring{position:absolute;border:1.5px solid var(--accent);opacity:.12;border-radius:50%;
+  pointer-events:none;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.06)}to{transform:rotate(360deg) scale(1)}}
+.slide.active{display:flex;animation:slidein .45s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.active .body>*{animation:fadeup .5s ease backwards}
+.active .body>*:nth-child(1){animation-delay:.08s}
+.active .body>*:nth-child(2){animation-delay:.18s}
+.active .body>*:nth-child(3){animation-delay:.28s}
+.active .body>*:nth-child(4){animation-delay:.38s}
+.active .cols2>*:nth-child(1){animation:fadeup .5s .12s ease backwards}
+.active .cols2>*:nth-child(2){animation:fadeup .5s .22s ease backwards}
+.active .cols2>*:nth-child(3){animation:fadeup .5s .32s ease backwards}
+.active .cols2>*:nth-child(4){animation:fadeup .5s .42s ease backwards}
+.active ol.q>li:nth-child(1),.active .mcq:nth-child(1){animation:fadeup .45s .12s ease backwards}
+.active ol.q>li:nth-child(2),.active .mcq:nth-child(2){animation:fadeup .45s .26s ease backwards}
+.active ol.q>li:nth-child(3),.active .mcq:nth-child(3){animation:fadeup .45s .40s ease backwards}
+.active ol.q>li:nth-child(4),.active .mcq:nth-child(4){animation:fadeup .45s .54s ease backwards}
+.kicker{font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.kicker::before{content:'';width:34px;height:4px;border-radius:2px;background:var(--accent)}
+h1{font-size:42px;line-height:1.12;margin-bottom:22px;font-weight:600;position:relative;z-index:1}
+.body{flex:1;font-size:25px;line-height:1.45;overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:1;padding-right:10px;scrollbar-width:thin;
+  scrollbar-color:var(--accent-deep) transparent}
+.body::-webkit-scrollbar{width:9px}
+.body::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb{background:var(--accent-deep);border-radius:5px}
+.body::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.body p{margin-bottom:14px}
+.body ul,.body ol{margin:0 0 14px 32px}
+.body li{margin-bottom:10px}
+.footer{position:absolute;left:84px;right:84px;bottom:22px;display:flex;
+  justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.bar{position:absolute;top:0;left:0;height:6px;z-index:20;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent),var(--accent-deep));
+  background-size:200% 100%;animation:shimmer 4s linear infinite;transition:width .25s}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+/* ------- title slide ------- */
+.slide.title{justify-content:center;
+  background:linear-gradient(140deg,#0d1017 0%,#141927 45%,var(--accent-deep) 145%)}
+.slide.title h1{font-size:72px;margin-bottom:10px;font-weight:600}
+.slide.title .sub{font-size:29px;color:#c3cbdb;margin-bottom:30px;font-style:italic}
+.slide.title .meta{font-size:23px;color:#8d99b0;line-height:1.6}
+.slide.title .theme{display:inline-block;margin-top:30px;padding:14px 28px;border-radius:999px;
+  font-size:25px;color:#fff;background:rgba(255,255,255,.07);border:1px solid var(--accent);
+  box-shadow:0 0 24px -6px var(--accent)}
+/* ------- day divider ------- */
+.slide.divider{justify-content:center;
+  background:linear-gradient(120deg,#10131c 0%,var(--accent-deep) 160%)}
+.slide.divider .dayno{font-family:'Fraunces',Georgia,serif;font-size:170px;font-weight:700;
+  line-height:1;color:var(--accent);opacity:.28;position:absolute;right:90px;top:50px;
+  animation:floaty 6s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.slide.divider h1{font-size:58px}
+.slide.divider .goal{font-size:27px;max-width:880px;color:#ccd4e3;margin-bottom:26px;line-height:1.5}
+.slide.divider .agenda{max-width:880px;background:rgba(255,255,255,.05);border:1px solid var(--line);
+  border-radius:16px;padding:18px 26px;font-size:23px}
+.slide.divider .agenda b{display:block;font-size:18px;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:8px;color:var(--accent)}
+.slide.divider .agenda span{display:inline-block;margin:4px 18px 4px 0}
+.slide.divider .agenda span::before{content:'\2192  ';color:var(--accent);opacity:.85}
+.stdchips{margin-top:22px}
+/* ------- components ------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 24px;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.7);border-top:3px solid var(--accent)}
+.card.flat{border-top:1px solid var(--line)}
+.card h3{font-size:23px;color:var(--accent);margin-bottom:8px}
+.badge{display:inline-block;background:var(--accent);color:#0d1017;font-size:19px;font-weight:700;
+  padding:5px 18px;border-radius:999px;margin-right:10px}
+.pill{display:inline-block;background:rgba(255,255,255,.07);color:var(--ink);font-size:18px;
+  font-weight:600;padding:4px 14px;border-radius:999px;margin:0 8px 8px 0;border:1px solid var(--accent)}
+.pill.anti{border-color:var(--muted);color:var(--muted)}
+table.week{width:100%;border-collapse:collapse;background:var(--surface);border-radius:16px;
+  overflow:hidden;font-size:23px}
+table.week th{background:var(--accent-deep);color:#fff;text-align:left;padding:12px 18px;font-size:20px}
+table.week td{padding:12px 18px;border-top:1px solid var(--line);vertical-align:top}
+table.week td:first-child{white-space:nowrap;font-weight:700;color:var(--accent)}
+table.mini{width:100%;border-collapse:collapse;background:var(--surface);border-radius:14px;overflow:hidden;font-size:22px}
+table.mini th{background:var(--surface2);color:var(--accent);text-align:left;padding:10px 16px;font-size:20px}
+table.mini td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top}
+ol.q{counter-reset:q;list-style:none;margin-left:0!important}
+ol.q>li{counter-increment:q;position:relative;padding:13px 18px 13px 62px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:11px}
+ol.q>li::before{content:counter(q);position:absolute;left:15px;top:11px;width:34px;height:34px;
+  border-radius:50%;background:var(--accent);color:#0d1017;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.quote{position:relative;border-left:5px solid var(--accent);background:var(--surface);
+  padding:16px 22px 16px 56px;border-radius:0 14px 14px 0;font-style:italic;margin:14px 0}
+.quote::before{content:'\201C';position:absolute;left:14px;top:2px;font-family:Georgia,serif;
+  font-size:56px;color:var(--accent);opacity:.6}
+.quote .who{display:block;font-style:normal;font-size:19px;color:var(--muted);margin-top:6px}
+.eq-wrap{display:flex;flex:1;align-items:center;justify-content:center}
+.eq{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:1.3;font-weight:600;
+  text-align:center;max-width:1020px;margin:auto}
+.levels .card{margin-bottom:13px}
+.levels h3 span{color:var(--muted);font-weight:400;font-size:19px}
+.note{font-size:19px;color:var(--muted);margin-top:10px}
+.exit{margin-top:14px;background:var(--surface2);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 20px;font-size:22px;box-shadow:0 0 20px -10px var(--accent)}
+.exit b{color:var(--accent)}
+/* ------- vocabulary ------- */
+.vday .word{font-family:'Fraunces',Georgia,serif;font-size:58px;font-weight:700;color:var(--accent);line-height:1.05}
+.vday .pos{font-size:22px;color:var(--muted);font-style:italic;margin:4px 0 12px}
+.vday .means{font-size:25px;margin-bottom:12px}
+.morph{display:flex;margin:10px 0 14px;flex-wrap:wrap}.morph>*{margin:0 12px 12px 0}
+.morph div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;text-align:center}
+.morph b{display:block;font-size:24px;color:var(--accent)}
+.morph span{font-size:17px;color:var(--muted)}
+.morph .plus{background:none;border:none;font-size:28px;color:var(--muted);padding:8px 0}
+.syn{margin:4px 0 6px;font-size:21px}
+.syn>b{color:var(--muted);font-size:18px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.family{font-size:20px;color:var(--muted);margin-top:8px}
+.family b{color:var(--ink)}
+/* ------- interactive practice ------- */
+.mcq{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;border-top:3px solid var(--accent)}
+.mcq .qq{font-size:24px;font-weight:600;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface2);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:22px;margin-bottom:9px;
+  cursor:pointer;font-family:inherit;transition:transform .12s, border-color .15s}
+.opt:hover{border-color:var(--accent);transform:translateX(4px)}
+.opt.right{border-color:var(--good);background:rgba(74,222,128,.12)}
+.opt.right::after{content:'  \2713 correct';color:var(--good);font-weight:700}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.10)}
+.opt.wrong::after{content:'  \2717 try again';color:var(--bad);font-weight:700}
+.fb{display:none;font-size:20px;color:var(--muted);border-left:3px solid var(--good);
+  padding:8px 14px;margin-top:6px;background:rgba(74,222,128,.06);border-radius:0 10px 10px 0}
+.rev{background:var(--surface);border:1px dashed var(--accent);border-radius:16px;padding:16px 22px;
+  margin-bottom:14px;cursor:pointer;transition:box-shadow .2s}
+.rev:hover{box-shadow:0 0 22px -10px var(--accent)}
+.rev .rq{font-size:23px;font-weight:600}
+.rev .ra{display:none;margin-top:10px;font-size:22px;color:var(--ink);border-top:1px solid var(--line);padding-top:10px}
+.rev .hint{font-size:17px;color:var(--muted);margin-top:8px;letter-spacing:.08em;text-transform:uppercase}
+.rev.open .ra{display:block}
+.rev.open .hint{display:none}
+/* ------- nav ------- */
+#nav{position:fixed;bottom:14px;right:18px;display:flex;z-index:30}#nav button+button{margin-left:8px}
+#nav button{background:#232837;color:#eceef4;border:1px solid #2e3547;border-radius:10px;font-size:17px;
+  padding:8px 16px;cursor:pointer;opacity:.85;font-family:inherit}
+#nav button:hover{opacity:1;border-color:var(--accent)}
+#count{position:fixed;bottom:20px;left:20px;color:#66718a;font-size:15px;z-index:30}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  body{overflow:visible;background:#fff}
+  :root{--bg:#ffffff;--surface:#ffffff;--surface2:#f1f3f6;--line:#c9ced9;--ink:#1d2330;--muted:#5f6a7d}
+  #stage{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1280px;height:720px;page-break-after:always;
+    margin:0 auto;animation:none;color:#1d2330}
+  .body{overflow:visible}
+  .slide::before,.slide::after,.dot,.ring{display:none}
+  .slide.title,.slide.divider{background:#eef1f5;color:#1d2330}
+  .slide.title .sub,.slide.title .meta,.slide.divider .goal{color:#3d4759}
+  #nav,#count,.bar{display:none}
+}
+</style></head>
+<body>
+<div class="bar"></div>
+<div id="stage"><section class="slide title"><div class="kicker">Language Arts 3 SC • Week 1</div><h1>1984</h1><div class="body"><div class="sub">by George Orwell &mdash; audiobook listening unit</div>
+<div class="meta">Language Arts focus: <b>Evidence, Inference &amp; Character Development</b><br>This week: Part 1, Chapter I (segments A &amp; B) + Chapter II + Written Response</div><div class="theme">Theme: Surveillance &amp; Thoughtcrime</div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">The Plan</div><h1>This Week at a Glance</h1><div class="body"><table class="week"><tr><th>Day</th><th>What we do</th><th>Points</th></tr><tr><td>Day 1</td><td><b>P1 Ch. I-A</b> (0:00&ndash;22:45) &mdash; Winston&rsquo;s world and the diary. <i>Stop just before the Two Minutes Hate.</i></td><td>7</td></tr><tr><td>Day 2</td><td><b>P1 Ch. I-B</b> (22:45&ndash;end) &mdash; Two Minutes Hate, O&rsquo;Brien, the diary. <i>Stop at the knock at the door.</i></td><td>7</td></tr><tr><td>Day 3</td><td><b>P1 Ch. II</b> (full, 19:17) &mdash; Mrs. Parsons, the children, fear of denunciation.</td><td>7</td></tr><tr><td>Day 4</td><td>Written Response</td><td>5</td></tr><tr><td>Day 5</td><td>Flex Day: completion, support, or choice</td><td>&mdash;</td></tr></table></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>2 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Skill Focus</div><h1>What We Are Learning</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Our skills</h3><p><b>Evidence-based inference and character analysis.</b> We identify explicit details and infer how <b>surveillance</b> shapes Winston&rsquo;s thoughts, behavior, and relationships. We also read the story&rsquo;s <b>visual world</b> &mdash; posters, telescreens, propaganda.</p></div>
+<div class="card"><h3>I can&hellip;</h3><ul><li>Cite details that show how the Party watches people.</li><li>Infer how being watched changes what Winston does and thinks.</li><li>Discuss my ideas using evidence from the audio text.</li></ul></div></div>
+<p class="note">Standards this week: 11-12.RL.1.A — Evidence &amp; Inference • 11-12.RL.2.D — Text Elements • 11-12.RL.1.C — Visual Elements • SL.1 — Discussion • W.2.A / W.3.A.a</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>3 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Essential Question</div><div class="body"><div class="eq-wrap"><div class="eq">How does Orwell establish a society in which private thought becomes dangerous?</div></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>4 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Before We Begin</div><h1>Winston&rsquo;s World</h1><div class="body"><div class="cols2"><div class="card"><h3>Winston Smith</h3><p>A thin, 39-year-old Party worker in London, in the superstate of <b>Oceania</b>. Outwardly obedient. Inwardly &mdash; something else.</p></div><div class="card"><h3>Big Brother</h3><p>The face of the Party, on posters everywhere: <i>BIG BROTHER IS WATCHING YOU.</i></p></div><div class="card"><h3>The telescreen</h3><p>A screen in every room that broadcasts propaganda <b>and watches you back</b>. It can never be turned off.</p></div><div class="card"><h3>The four Ministries</h3><p>Truth (propaganda), Peace (war), Love (law and order), Plenty (rationing). Notice: each name means its opposite.</p></div></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>5 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 1</div><h1>The Diary</h1><div class="body"><div class="dayno">1</div>
+<div class="goal">Today we set up <b>listening notes</b>, learn to read a propaganda poster the way the Party hopes we won&rsquo;t &mdash; then we enter Oceania.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up talk</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. I-A + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.1.C — Visual Elements</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Warm-Up Talk</div><h1>Before We Press Play</h1><div class="body"><ol class="q"><li>Where are you watched in daily life &mdash; cameras, phones, school? Does being watched change how people act?</li><li>Can a <i>thought</i> be a crime? Should it ever be?</li><li>This novel was published in 1949, imagining a future. Predict: what will it get right about our world?</li></ol><p class="note">Keep your answers &mdash; Orwell will test every one of them this week.</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>7 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">surveillance</div><div class="pos">noun • ser-VAY-lens</div>
+<div class="means">Close, constant watching of people &mdash; especially by a government or authority.</div>
+<div class="morph"><div><b>sur-</b><span>French prefix: over, above</span></div><div class="plus">+</div><div><b>veill</b><span>Latin <i>vigilare</i> — to keep watch, stay awake</span></div><div class="plus">+</div><div><b>-ance</b><span>suffix: the act or state of</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">monitoring</span><span class="pill">observation</span><span class="pill">scrutiny</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">privacy</span><span class="pill anti">seclusion</span><span class="pill anti">freedom from watching</span></div>
+<div class="family"><b>Word family:</b> surveil (v) &bull; vigilant (adj) &bull; vigil (n) &mdash; same root</div></div>
+<div><div class="quote">There was of course no way of knowing whether you were being watched at any given moment.<span class="who">&mdash; Part 1, Chapter I</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>Why is <i>not knowing</i> when you are watched more powerful than being watched all the time? (This is the whole trick of the telescreen.)</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>8 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • ELA Concept</div><h1>Reading Visual Texts: Images Make Arguments</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Images argue</h3>
+<p>Every designed image &mdash; a poster, an ad, a thumbnail, a meme &mdash; is trying to make you feel or believe something. It just argues faster than words.</p></div>
+<div class="card"><h3>The analysis checklist</h3>
+<ul><li><b>Scale:</b> what is biggest &mdash; and therefore &ldquo;most powerful&rdquo;?</li>
+<li><b>Placement:</b> what sits at eye level, front and center?</li>
+<li><b>Color &amp; light:</b> what feels warm, cold, dangerous?</li>
+<li><b>Caption:</b> what do the words command you to feel?</li></ul></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>A fast-food ad&rsquo;s burger is shot from below, glistening, huge &mdash; scale and light making an argument no sentence makes. You are analyzed by images daily; today we analyze back.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Oceania&rsquo;s most powerful weapon in Chapter I isn&rsquo;t a gun &mdash; it&rsquo;s a poster. Run the checklist on Big Brother&rsquo;s face as you listen.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>9 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Mini-Lesson</div><h1>Two Skills at Once: Listening Notes + Propaganda Analysis</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Listening note format</h3>
+<p>Three columns: <b>time</b> | <b>detail I heard</b> | <b>what it suggests</b>.</p>
+<p class="note">Example: &ldquo;~2 min | poster&rsquo;s eyes follow you | you should <i>feel</i> watched even when no one is there.&rdquo;</p></div>
+<div class="card"><h3>Reading a propaganda poster (RL.1.C)</h3>
+<ul><li><b>Scale:</b> the face is &ldquo;more than a metre wide&rdquo; &mdash; power through size.</li>
+<li><b>Eyes:</b> designed to follow the viewer &mdash; surveillance you carry with you.</li>
+<li><b>Caption:</b> a direct threat disguised as a slogan.</li></ul></div></div>
+<p class="note">When you hear the telescreen described, add one row to your notes &mdash; detail, then inference.</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>10 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • You Try It</div><h1>Propaganda Decoder</h1><div class="body"><div class="mcq"><div class="qq">The Big Brother poster&rsquo;s eyes &ldquo;follow you about when you move.&rdquo; Which checklist item is doing the work?</div><button class="opt" data-ok="0">Color &mdash; the poster is warm and inviting</button><button class="opt" data-ok="1">Design &mdash; eyes that follow make surveillance portable; you carry the watcher with you</button><button class="opt" data-ok="0">Font choice &mdash; the letters are large</button><div class="fb">The design turns every viewer into their own guard &mdash; the poster watches even when no one does.</div></div><div class="mcq"><div class="qq">Which is the strongest <b>listening-note</b> row?</div><button class="opt" data-ok="1">&ldquo;~2 min | the telescreen can never be fully shut off | privacy simply doesn&rsquo;t exist here&rdquo;</button><button class="opt" data-ok="0">&ldquo;The book is good so far&rdquo;</button><button class="opt" data-ok="0">&ldquo;Winston talks to himself a lot&rdquo;</button><div class="fb">Time + detail + inference. The other two are opinions and vague observations &mdash; nothing you could cite.</div></div><div class="rev"><div class="rq">Caption analysis: why &ldquo;BIG BROTHER IS WATCHING YOU&rdquo; instead of &ldquo;CAMERAS IN USE&rdquo;?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">&ldquo;Big Brother&rdquo; fakes family warmth; &ldquo;YOU&rdquo; makes it personal; present tense makes it constant. Every word is doing propaganda work.</div></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>11 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 1 • Now You Listen</div><h1>P1 Chapter I-A (0:00&ndash;22:45)</h1><div class="body"><p><span class="badge">Listen</span> From &ldquo;a bright cold day in April&rdquo; through Winston&rsquo;s first diary entry. <b>Stop just before the Two Minutes Hate begins.</b></p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>Every way Winston is <b>watched</b>: telescreen, posters, patrols, the Thought Police.</li><li>The one corner of his apartment the telescreen cannot see &mdash; and what he does there.</li><li>Why starting a <b>diary</b> is an act of rebellion that carries a death sentence.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> Turn in three rows of listening notes: time, detail, inference.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>12 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 2</div><h1>The Two Minutes Hate</h1><div class="body"><div class="dayno">2</div>
+<div class="goal">We talk through Winston&rsquo;s world, then analyze <b>engineered emotion</b>: how the Party manufactures rage on a schedule &mdash; and what it does to a man who knows better.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. I-A</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. I-B + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.2.D — Text Elements</span><span class="pill">SL.1 — Discussion</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The Diary</h1><div class="body"><ol class="q"><li>Give three explicit details showing surveillance is everywhere in Winston&rsquo;s world.</li><li>Winston&rsquo;s diary may never be read by anyone &mdash; so why is writing it still so dangerous? What is the real crime?</li><li>Why does Orwell open with small physical details &mdash; boiled cabbage, a broken elevator, gritty dust &mdash; before explaining the politics?</li></ol></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>14 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">conformity</div><div class="pos">noun • kun-FOR-mih-tee</div>
+<div class="means">Matching your behavior, appearance, or beliefs to the group&rsquo;s &mdash; whether you agree or not.</div>
+<div class="morph"><div><b>con-</b><span>prefix: together, with</span></div><div class="plus">+</div><div><b>form</b><span>Latin <i>formare</i> — to shape</span></div><div class="plus">+</div><div><b>-ity</b><span>suffix: the state of being</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">compliance</span><span class="pill">obedience</span><span class="pill">uniformity</span><span class="pill">groupthink</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">individuality</span><span class="pill anti">rebellion</span><span class="pill anti">dissent</span></div>
+<div class="family"><b>Word family:</b> conform (v) &bull; conformist (n) &bull; nonconformist (n)</div></div>
+<div><div class="quote">To dissemble your feelings, to control your face, to do what everyone else was doing, was an instinctive reaction.<span class="who">&mdash; Part 1, Chapter I</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>The root <i>form</i> means shape: uni<b>form</b>, trans<b>form</b>, con<b>form</b>. In Oceania, who does the shaping &mdash; and what happens to people who keep their own shape?</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>15 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • ELA Concept</div><h1>Tone vs. Mood: The Author&rsquo;s Voice, the Reader&rsquo;s Feeling</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Tone = the author&rsquo;s attitude</h3>
+<p>Revealed by <b>word choice</b>. &ldquo;The politician <i>slithered</i> to the podium&rdquo; vs. &ldquo;<i>strode</i> to the podium&rdquo; &mdash; same event, opposite tone.</p></div>
+<div class="card"><h3>Mood = the reader&rsquo;s feeling</h3>
+<p>The atmosphere the text creates in <i>you</i>: dread, hope, unease, excitement. Built from setting, pacing, and imagery.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>The chain reaction</h3>
+<p>Author picks words (tone) &rarr; words build atmosphere &rarr; atmosphere creates feeling (mood). When a book makes you feel watched, that was engineered &mdash; find the words that did it.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Everyday version</h3>
+<p>&ldquo;We need to talk.&rdquo; Four neutral words &mdash; and instant dread. Tiny word choices carry huge mood. Authors weaponize this on every page.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> The Two Minutes Hate is a mood machine. Listen for the words that build frenzy &mdash; and the tone of a man describing his own helplessness.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>16 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Mini-Lesson</div><h1>Engineered Emotion: How the Hate Works</h1><div class="body"><table class="mini">
+<tr><th>The Party&rsquo;s move</th><th>The effect on the crowd</th></tr>
+<tr><td>One enemy face on every screen: Goldstein, the traitor</td><td>Rage gets a single, safe target &mdash; never the Party itself.</td></tr>
+<tr><td>The whole room participates, on a schedule, together</td><td>Emotion becomes contagious; standing still becomes visible &mdash; and dangerous.</td></tr>
+<tr><td>The Hate ends with Big Brother&rsquo;s calm face</td><td>Fear is released, then redirected into gratitude and loyalty.</td></tr></table>
+<p class="note">Listen for Winston inside the machine: he despises the Hate &mdash; and joins anyway, redirecting his rage in secret. The Party can force his face. Can it force his mind? That is the question of the whole novel.</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>17 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • You Try It</div><h1>Tone Lab</h1><div class="body"><div class="mcq"><div class="qq">&ldquo;It was impossible to avoid joining in.&rdquo; The tone of this line toward the Hate is&hellip;</div><button class="opt" data-ok="0">joyful and proud</button><button class="opt" data-ok="1">helpless &mdash; swept along against his own will</button><button class="opt" data-ok="0">bored and dismissive</button><div class="fb">&ldquo;Impossible to avoid&rdquo; frames participation as something done <i>to</i> Winston, not by him.</div></div><div class="mcq"><div class="qq">Mood check: boiled cabbage, gritty dust, a broken lift. The opening&rsquo;s mood is&hellip;</div><button class="opt" data-ok="0">cozy comfort</button><button class="opt" data-ok="1">grim exhaustion &mdash; a world worn down to the threads</button><button class="opt" data-ok="0">thrilling adventure</button><div class="fb">Orwell builds the mood from smells and textures before a single political word appears.</div></div><div class="rev"><div class="rq">Same event, two tones. Write &ldquo;The crowd shouted at the screen&rdquo; with (a) a proud tone, then (b) a horrified tone.</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">Sample: (a) &ldquo;The hall thundered as one loyal voice.&rdquo; (b) &ldquo;The room dissolved into a shrieking, thoughtless animal.&rdquo; Word choice <i>is</i> tone.</div></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>18 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 2 • Now You Listen</div><h1>P1 Chapter I-B (22:45&ndash;end)</h1><div class="body"><p><span class="badge">Listen</span> From the start of the Two Minutes Hate to the end of Chapter I. <b>Stop at the knock at Winston&rsquo;s door.</b></p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>How the Hate works on the crowd &mdash; and on Winston, even against his will.</li><li>The two people Winston notices: the <b>dark-haired girl</b> and <b>O&rsquo;Brien</b> &mdash; and what he imagines about each.</li><li>What Winston finds he has written in the diary &mdash; almost without deciding to.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> One sentence: name one technique of the Hate and the emotion it manufactures.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>19 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 3</div><h1>The Children</h1><div class="body"><div class="dayno">3</div>
+<div class="goal">We talk through the Hate, then synthesize: when the Party turns children into informers, private life dies at its root.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. I-B</span><span>Vocab + ELA concept</span><span>Mini-lesson</span><span>You try it</span><span>Listen: Ch. II + respond</span></div>
+<div class="stdchips"><span class="pill">11-12.RL.1.A — Evidence &amp; Inference</span><span class="pill">11-12.RL.2.A — Theme Development</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The Two Minutes Hate</h1><div class="body"><ol class="q"><li>Winston could not help joining in. What does that suggest about the Party&rsquo;s power over emotion?</li><li>Winston believes O&rsquo;Brien&rsquo;s glance said &ldquo;I am with you.&rdquo; Is that evidence &mdash; or hope? How could we tell the difference?</li><li>&ldquo;DOWN WITH BIG BROTHER,&rdquo; written over and over. What has Winston already accepted about his own future?</li></ol></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>21 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Vocabulary of the Day</div><div class="body"><div class="vday cols2" style="grid-template-columns:1.08fr 1fr;align-items:start">
+<div><div class="word">denounce</div><div class="pos">verb • dih-NOWNS</div>
+<div class="means">To publicly accuse someone or report them to the authorities.</div>
+<div class="morph"><div><b>de-</b><span>prefix: down, against</span></div><div class="plus">+</div><div><b>nounce</b><span>Latin <i>nuntiare</i> — to announce, to report</span></div></div>
+<div class="syn"><b>Synonyms</b><span class="pill">report</span><span class="pill">accuse</span><span class="pill">inform on</span><span class="pill">betray</span></div>
+<div class="syn"><b>Antonyms</b><span class="pill anti">defend</span><span class="pill anti">protect</span><span class="pill anti">praise</span></div>
+<div class="family"><b>Word family:</b> denunciation (n) &bull; announce / pronounce (v) &mdash; same root</div></div>
+<div><div class="quote">It was almost normal for people over thirty to be frightened of their own children.<span class="who">&mdash; Part 1, Chapter II</span></div>
+<div class="card" style="margin-top:14px"><h3>Your turn</h3><p>In Oceania, children are praised for denouncing their parents. What does that do to the idea of &ldquo;home&rdquo;? Listen for the Parsons family today.</p></div></div>
+</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>22 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • ELA Concept</div><h1>Theme: The Idea Under the Story</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Topic (one word)</h3>
+<p>Loss. Curiosity. Duty. Survival. A topic is just a subject &mdash; it makes no point.</p></div>
+<div class="card"><h3>Theme (a complete claim)</h3>
+<p>&ldquo;Loss can push people to build new purpose.&rdquo; A theme says something <i>about</i> the topic that the story proves.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>How writers plant themes</h3>
+<p>Themes are almost never stated. Trace them through <b>repeated images</b>, <b>choices characters make</b>, and <b>consequences</b> of those choices. When a pattern repeats, the author is pointing at something.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>The portability test</h3>
+<p>A real theme statement works <i>outside</i> the book too. &ldquo;Alex misses Amy&rdquo; is plot. &ldquo;Keeping a promise can cost the people you love&rdquo; is theme.</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Our topic is <b>surveillance</b>. Today it moves inside the family &mdash; finish the pattern and you have Orwell&rsquo;s theme.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>23 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Mini-Lesson</div><h1>Theme Through Family: The Last Private Space Falls</h1><div class="body"><div class="cols2">
+<div class="card"><h3>Surveillance from outside (Ch. I)</h3>
+<p>Telescreens, posters, patrols, the Thought Police. You guard your face in public and breathe at home.</p></div>
+<div class="card"><h3>Surveillance from inside (Ch. II)</h3>
+<p>The Parsons children &mdash; junior Spies &mdash; scream &ldquo;traitor&rdquo; and &ldquo;thought-criminal,&rdquo; and parents are proud <i>and terrified</i>. Home is no longer safe.</p></div></div>
+<div class="card flat" style="margin-top:14px"><h3>Synthesis frame (we build it together)</h3>
+<p>Orwell makes private thought dangerous by first ___, then ___, so that by the end of Chapter II even ___ is a place of fear.</p></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>24 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • You Try It</div><h1>Theme Assembly</h1><div class="body"><div class="mcq"><div class="qq">Which one is a <b>theme</b> &mdash; not a topic or plot point?</div><button class="opt" data-ok="0">Children.</button><button class="opt" data-ok="1">When the watchers live inside your own home, private life stops existing.</button><button class="opt" data-ok="0">London is gloomy in April.</button><div class="fb">Portable and arguable &mdash; and Chapters I&ndash;II spend every page proving it.</div></div><div class="mcq"><div class="qq">Which pattern across Chapters I&ndash;II supports it?</div><button class="opt" data-ok="1">Telescreen &rarr; Two Minutes Hate &rarr; child informers: the watching moves closer each step</button><button class="opt" data-ok="0">Winston drinks Victory Gin</button><button class="opt" data-ok="0">The Ministry of Truth is a large building</button><div class="fb">Outside &rarr; the crowd &rarr; the family: surveillance closes in ring by ring. That tightening IS the theme developing.</div></div><div class="rev"><div class="rq">Logic check: &ldquo;Thoughtcrime does not entail death: thoughtcrime IS death.&rdquo; What does Winston mean?</div><div class="hint">Think first &mdash; then click to reveal</div><div class="ra">The moment the forbidden thought exists, the ending is fixed &mdash; arrest is just paperwork. He treats his own future as already decided, which explains why he keeps writing.</div></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>25 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 3 • Now You Listen</div><h1>P1 Chapter II (full &mdash; 19:17)</h1><div class="body"><p><span class="badge">Listen</span> The knock turns out to be Mrs. Parsons, Winston&rsquo;s neighbor, whose children are junior Spies.</p><div class="card"><h3>While you listen, look for&hellip;</h3><ul><li>How the Parsons children behave &mdash; and what they call Winston.</li><li>Why parents in Oceania have become <b>afraid of their own children</b>.</li><li>Winston&rsquo;s dream voice &mdash; &ldquo;We shall meet in the place where there is no darkness&rdquo; &mdash; and who he believes said it.</li></ul></div><div class="exit"><b>Capture today&rsquo;s thinking:</b> Star the <b>two strongest pieces of evidence</b> from this week for tomorrow&rsquo;s written response.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>26 of 34</span></div></section><section class="slide divider"><div class="kicker">Day 4</div><h1>Written Response</h1><div class="body"><div class="dayno">4</div>
+<div class="goal">We talk through the Parsons family, review the evidence bank, then you write: how Orwell makes private thought dangerous.</div>
+<div class="agenda"><b>Today&rsquo;s path</b><span>Warm-up: talk about Ch. II</span><span>Paragraph anatomy</span><span>Review the prompt + evidence</span><span>Draft with frames</span><span>Self-check and turn in</span></div>
+<div class="stdchips"><span class="pill">W.2.A — Development of Writing</span><span class="pill">W.3.A.a — Revise &amp; Strengthen</span></div></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Warm-Up Talk</div><h1>Yesterday&rsquo;s Listening: The Children</h1><div class="body"><ol class="q"><li>The Party turns children into informers against their own parents. How does this destroy private life at its root?</li><li>Winston wrote: &ldquo;Thoughtcrime does not entail death: thoughtcrime IS death.&rdquo; What does he mean &mdash; and do you agree with his logic?</li><li>Winston addresses his diary &ldquo;to a time when thought is free.&rdquo; Based on this week, does he believe that time will come?</li></ol><div class="quote">Thoughtcrime does not entail death: thoughtcrime IS death.<span class="who">&mdash; Winston&rsquo;s diary, Part 1, Chapter II</span></div><p class="note">Check your starred evidence as we talk &mdash; still your strongest two? Swap if better ones come up.</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>28 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • ELA Concept</div><h1>Anatomy of an Analytical Paragraph</h1><div class="body"><table class="mini">
+<tr><th>Part</th><th>Job</th><th>Sounds like</th></tr>
+<tr><td><b>Claim</b></td><td>An arguable idea &mdash; not a fact, not a summary</td><td>&ldquo;Alex&rsquo;s preparation makes his risk feel safer than it is.&rdquo;</td></tr>
+<tr><td><b>Evidence</b></td><td>A quote or specific moment that supports the claim</td><td>&ldquo;For example, when he&hellip;&rdquo; / &ldquo;The text says&hellip;&rdquo;</td></tr>
+<tr><td><b>Explanation</b></td><td>Connect evidence to claim &mdash; the part that shows YOUR thinking</td><td>&ldquo;This shows&hellip;&rdquo; / &ldquo;This matters because&hellip;&rdquo;</td></tr></table>
+<div class="card flat" style="margin-top:14px"><h3>The most common mistake</h3>
+<p>Stopping after evidence. A quote never explains itself &mdash; the <b>explanation</b> is where the points live. Aim for at least as many explanation sentences as evidence sentences.</p></div>
+<div class="card flat" style="margin-top:14px"><h3>Transitions that glue it together</h3>
+<p>For example &bull; This shows &bull; In addition &bull; However &bull; As a result &bull; Ultimately</p></div><div class="exit" style="margin-top:16px"><b>Today&rsquo;s bridge:</b> Your written response today is exactly this structure: a claim about how Orwell makes private thought dangerous, evidence from Chapters I&ndash;II, explanation in your own words.</div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>29 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Your Turn to Write</h1><div class="body"><div class="eq-wrap"><div>
+<div class="eq" style="font-size:36px">How does Orwell establish a society in which private thought becomes dangerous?</div>
+<div class="card" style="margin-top:26px"><h3>Evidence bank &mdash; you may use these moments</h3>
+<ul><li>The telescreen that can never be turned off; the alcove just out of its sight (Ch. I-A)</li><li>Winston&rsquo;s diary &mdash; a capital crime committed with a pen (Ch. I-A)</li><li>The Two Minutes Hate pulling even Winston into the frenzy (Ch. I-B)</li><li>&ldquo;DOWN WITH BIG BROTHER&rdquo; and Winston&rsquo;s certainty of arrest (Ch. I-B)</li><li>The Parsons children &mdash; and parents who fear their own kids (Ch. II)</li></ul></div></div></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>30 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Day 4 • Written Response</div><h1>Choose Your Level</h1><div class="body"><div class="levels"><div class="card"><h3>Supported <span>&mdash; one well-developed paragraph</span></h3><p>Use chunked directions, the guided organizer, vocabulary support, and the evidence bank. One clear claim + one strong piece of evidence + explanation.</p></div><div class="card"><h3>Extension <span>&mdash; 2&ndash;3 analytical paragraphs</span></h3><p>Reduce scaffolds. Make a nuanced claim, use <b>multiple pieces of evidence</b>, and address uncertainty or complexity &mdash; for example, whether any private thought in Oceania can stay private.</p></div></div><p class="note">Sentence starters: &ldquo;Orwell makes private thought dangerous by ___.&rdquo; &nbsp;&ldquo;For example, ___.&rdquo; &nbsp;&ldquo;This shows ___.&rdquo;</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>31 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Story Guide &mdash; People, Places &amp; Chapters</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Use this page during listening, discussion, and review.</p><table class="mini"><tr><th colspan="2">Who&rsquo;s who</th></tr><tr><td><b>Winston Smith</b></td><td>39, Party worker at the Ministry of Truth; varicose ulcer; secret diarist; already certain he is a dead man.</td></tr><tr><td><b>Big Brother</b></td><td>The Party&rsquo;s face &mdash; a poster, a screen, an idea. &ldquo;BIG BROTHER IS WATCHING YOU.&rdquo;</td></tr><tr><td><b>O&rsquo;Brien</b></td><td>Inner Party official; Winston reads one glance during the Hate as &ldquo;I am with you.&rdquo; Evidence &mdash; or hope.</td></tr><tr><td><b>The dark-haired girl</b></td><td>A young Fiction Department worker Winston hates and suspects &mdash; watch her.</td></tr><tr><td><b>Mrs. Parsons &amp; children</b></td><td>The neighbors: a worn mother and two junior Spies who play &ldquo;denounce the traitor.&rdquo;</td></tr><tr><td><b>Emmanuel Goldstein</b></td><td>The Party&rsquo;s designated traitor &mdash; the face of the Two Minutes Hate.</td></tr><tr><td><b>Key terms</b></td><td>Telescreen &bull; Thought Police &bull; Newspeak &bull; thoughtcrime &bull; the four Ministries (each named for its opposite)</td></tr></table><table class="mini" style="margin-top:16px"><tr><th colspan="2">Chapter recaps</th></tr><tr><td><b>Ch. I-A (0:00&ndash;22:45)</b></td><td>Victory Mansions, the telescreen, the posters, the Ministries. In the one alcove the screen can&rsquo;t see, Winston opens a diary &mdash; a capital crime.</td></tr><tr><td><b>Ch. I-B (22:45&ndash;end)</b></td><td>The Two Minutes Hate; Winston&rsquo;s helpless participation; the girl he distrusts; O&rsquo;Brien&rsquo;s glance; &ldquo;DOWN WITH BIG BROTHER&rdquo; five times &mdash; then a knock at the door.</td></tr><tr><td><b>Ch. II (full)</b></td><td>Only Mrs. Parsons. Her children accuse and threaten; parents fear their own kids. Winston recalls the dream voice &mdash; &ldquo;the place where there is no darkness&rdquo; &mdash; and writes that thoughtcrime IS death.</td></tr></table></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>32 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Student Reference</div><h1>Writing Toolkit &mdash; Vocab, Quotes &amp; Frames</h1><div class="body"><p class="note" style="margin-top:0">Scroll for more. Pull from this page for the written response.</p><table class="mini"><tr><th colspan="2">This week&rsquo;s vocabulary</th></tr><tr><td><b>surveillance</b></td><td>constant watching by authority (ant.: privacy)</td></tr><tr><td><b>conformity</b></td><td>matching the group whether you agree or not (ant.: dissent)</td></tr><tr><td><b>denounce</b></td><td>to report someone to the authorities (ant.: defend)</td></tr></table><div style="margin-top:16px"><b>Quote bank</b><div class="quote" style="margin:10px 0">BIG BROTHER IS WATCHING YOU.<span class="who">&mdash; the poster, Chapter I</span></div><div class="quote" style="margin:10px 0">There was of course no way of knowing whether you were being watched at any given moment.<span class="who">&mdash; Chapter I</span></div><div class="quote" style="margin:10px 0">It was almost normal for people over thirty to be frightened of their own children.<span class="who">&mdash; Chapter II</span></div><div class="quote" style="margin:10px 0">Thoughtcrime does not entail death: thoughtcrime IS death.<span class="who">&mdash; Winston&rsquo;s diary, Chapter II</span></div></div><div class="card flat" style="margin-top:8px"><h3>Sentence frames</h3><ul><li>&ldquo;Orwell makes private thought dangerous by ___.&rdquo;</li><li>&ldquo;For example, in Chapter ___, ___.&rdquo;</li><li>&ldquo;This detail suggests ___.&rdquo;</li><li>&ldquo;The pattern of ___ shows ___.&rdquo;</li><li>&ldquo;Ultimately, Oceania ___.&rdquo;</li></ul></div></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>33 of 34</span></div></section><section class="slide "><i class="dot" style="left:8%;top:76%;width:10px;height:10px;opacity:.25;animation-duration:9s"></i>
+<i class="dot" style="left:88%;top:60%;width:14px;height:14px;opacity:.16;animation-duration:13s"></i>
+<i class="dot" style="left:55%;top:88%;width:8px;height:8px;opacity:.22;animation-duration:11s"></i>
+<i class="ring" style="left:-90px;top:40%;width:260px;height:260px"></i><div class="kicker">Wrap-Up</div><h1>Week 1 Quick Reference</h1><div class="body"><div class="cols2">
+<div class="card"><h3>The story so far</h3><p>Oceania watches everything: telescreens, posters, patrols, even children. Winston&rsquo;s only rebellion so far is a diary &mdash; and he already believes it will cost him his life.</p></div>
+<div class="card"><h3>Keep asking</h3><ul><li>Can a thought be a crime?</li><li>Who is O&rsquo;Brien really?</li><li>Why does the Party need everyone to <i>feel</i> the same, not just act the same?</li></ul></div></div>
+<p class="note">Content note: this novel includes authoritarian violence and psychological control; we use academic framing throughout. Day 5 is a Flex Day. Next week: P1 Ch. III&ndash;V-A.</p></div><div class="footer"><span>1984 • Week 1 • Evidence, Inference &amp; Character Development</span><span>34 of 34</span></div></section></div>
+<div id="nav"><button id="prev">&#8592; Back</button><button id="next">Next &#8594;</button></div>
+<div id="count"></div>
+<script>
+var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));var i=0;
+var bar=document.querySelector('.bar'),count=document.getElementById('count');
+function matchesSel(el,sel){var m=el.matches||el.msMatchesSelector||el.webkitMatchesSelector;return m?m.call(el,sel):false;}
+function closestSel(el,sel){while(el&&el.nodeType===1){if(matchesSel(el,sel))return el;el=el.parentNode;}return null;}
+function show(n){i=Math.max(0,Math.min(slides.length-1,n));
+ for(var k=0;k<slides.length;k++){if(k===i){slides[k].classList.add('active');}else{slides[k].classList.remove('active');}}
+ bar.style.width=((i+1)/slides.length*100)+'%';
+ count.textContent=(i+1)+' / '+slides.length;
+ var b=slides[i].querySelector('.body'); if(b) b.scrollTop=0;}
+function fit(){var s=document.getElementById('stage');
+ var sc=Math.min(window.innerWidth/1280,window.innerHeight/720)*0.98;
+ s.style.transform='translate(-50%,-50%) scale('+sc+')';}
+window.addEventListener('resize',fit);
+window.addEventListener('keydown',function(e){
+ if(matchesSel(e.target,'input,textarea'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){show(i+1);e.preventDefault();}
+ if(e.key==='ArrowLeft'||e.key==='PageUp'){show(i-1);e.preventDefault();}
+ if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);});
+document.getElementById('prev').onclick=function(){show(i-1);};
+document.getElementById('next').onclick=function(){show(i+1);};
+document.addEventListener('click',function(e){
+ if(closestSel(e.target,'#nav,.opt,.rev,input,textarea,button,a,.mcq'))return;
+ if(window.getSelection().toString())return;
+ if(e.clientX>window.innerWidth*0.7)show(i+1);else if(e.clientX<window.innerWidth*0.12)show(i-1);});
+(function(){
+ var opts=document.querySelectorAll('.opt');
+ for(var a=0;a<opts.length;a++){(function(b){
+  b.addEventListener('click',function(e){
+   e.stopPropagation();
+   var m=closestSel(b,'.mcq');
+   var os=m.querySelectorAll('.opt');
+   for(var c=0;c<os.length;c++){os[c].classList.remove('right');os[c].classList.remove('wrong');}
+   var ok=b.getAttribute('data-ok')==='1';
+   b.classList.add(ok?'right':'wrong');
+   var fb=m.querySelector('.fb');
+   if(fb){fb.style.display=ok?'block':'none';}
+  });})(opts[a]);}
+ var revs=document.querySelectorAll('.rev');
+ for(var d=0;d<revs.length;d++){(function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   if(c.classList.contains('open')){c.classList.remove('open');}else{c.classList.add('open');}
+  });})(revs[d]);}
+})();
+fit();show(0);
+</script>
+</body></html>

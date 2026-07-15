@@ -9,6 +9,18 @@
       "pagePath": "/language-arts/toolkit/"
     },
     {
+      "id": "1984-2026-27",
+      "title": "1984",
+      "kind": "book",
+      "description": "2026–27 weekly presentation collection for 1984.",
+      "status": "active",
+      "sortOrder": 50,
+      "section": "language-arts",
+      "slots": 14,
+      "baseOut": "presentations/1984-2026-27",
+      "pagePath": "/language-arts/collection/"
+    },
+    {
       "id": "adit",
       "title": "A Door Into Time",
       "section": "language-arts",
@@ -154,6 +166,6 @@
       "pagePath": "/student/resources/"
     }
   ],
-  "updated": "2026-03-02T16:19:09Z",
+  "updated": "2026-07-15T22:17:59.831Z",
   "version": "v1"
 }
