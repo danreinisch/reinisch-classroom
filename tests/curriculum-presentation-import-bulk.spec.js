@@ -62,3 +62,23 @@ test('retains continuous Life Skills animation and interaction', async ({ page }
     spin: getComputedStyle(document.querySelector('.slide.active .ring')).animationName
   }))).toEqual({ bob: 'bob', spin: 'spin' });
 });
+
+test('renders all 37 presentations on the Life Skills landing page', async ({ page }) => {
+  await page.goto('/life-skills/');
+
+  const cards = page.locator('#grid .card');
+
+  await expect(cards).toHaveCount(37);
+
+  await expect(cards.first()).toContainText(
+    'Week 1: Course Orientation & Baseline - Worker Profile and Functional Baselines'
+  );
+
+  await expect(cards.last()).toContainText(
+    'Week 37: Integrated Employment and Money Simulation - Show the Skills That Matter'
+  );
+
+  await expect(
+    page.locator('#grid .card.disabled')
+  ).toHaveCount(0);
+});
