@@ -58,6 +58,8 @@ const OTHER_GROUP = {
 function decodeEntities(s) {
   return String(s || '')
     .replace(/&amp;/g, '&')
+    .replace(/&eacute;/gi, 'é')
+    .replace(/&times;/gi, '×')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -202,7 +204,7 @@ function extractPresentationsFromSiteState(siteState, categoryId) {
   const presentations = [];
 
   for (let i = 0; i < Math.min(titles.length, links.length); i++) {
-    const title = String(titles[i] || '').trim();
+    const title = decodeEntities(String(titles[i] || '').trim());
     const link = String(links[i] || '').trim();
     
     // Skip empty entries
@@ -233,11 +235,10 @@ function mergePresentationsFromSiteState(existingPresentations, siteStatePresent
     if (!existingByUrl.has(p.url)) {
       existingPresentations.push(p);
     } else {
-      // Update name if site-state has a better title
+      // Site-state is the canonical source for clean display titles.
       const existing = existingByUrl.get(p.url);
-      const oldGeneric = /^presentation\s+\d+$/i.test(existing.name || '') || existing.name.toLowerCase() === 'open';
-      if (oldGeneric && p.name) {
-        existing.name = p.name;
+      if (p.name) {
+        existing.name = decodeEntities(p.name);
       }
     }
   }
