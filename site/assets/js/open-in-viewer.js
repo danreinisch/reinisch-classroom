@@ -135,7 +135,7 @@
         '<div class="pv-clock" id="pvInlineClock"></div>' +
       '</div>' +
       '<div class="pv-frame">' +
-        '<iframe class="pv-iframe" id="pvInlineIframe" ' +
+        '<iframe class="pv-iframe" id="pvInlineIframe" tabindex="0" ' +
           'sandbox="allow-scripts allow-same-origin allow-forms" ' +
           'allow="fullscreen" allowfullscreen ' +
           'title="Presentation content"></iframe>' +
@@ -215,6 +215,22 @@
     var iframe = el.querySelector('#pvInlineIframe');
     var titleEl = el.querySelector('#pvInlineTitle');
 
+    function focusPresentationFrame() {
+      window.requestAnimationFrame(function () {
+        try {
+          iframe.focus({ preventScroll: true });
+        } catch {
+          iframe.focus();
+        }
+      });
+    }
+
+    iframe.addEventListener(
+      'load',
+      focusPresentationFrame,
+      { once: true }
+    );
+
     // Normalise directory URLs
     var src = srcPath.endsWith('/') ? srcPath + 'index.html' : srcPath;
     iframe.src = src;
@@ -227,6 +243,7 @@
     el.classList.remove('presentation-mode');
     el.classList.add('open');
     document.body.style.overflow = 'hidden';
+    focusPresentationFrame();
 
     // Start clock — use class clock if available, otherwise fall back to simple time
     if (!_classClockCtrl && window.RCClassClock) {

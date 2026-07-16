@@ -98,6 +98,23 @@ test('loads Life Skills through the real inline viewer and preserves Language Ar
       .evaluate(stage => stage.style.transform)
   )).toMatch(/scale\(/);
 
+  // keyboard works immediately for Life Skills without clicking inside
+  await expect.poll(() => (
+    page.evaluate(() => document.activeElement?.id || '')
+  )).toBe('pvInlineIframe');
+
+  await page.keyboard.press('ArrowRight');
+
+  await expect(
+    lifeSkillsFrame.locator('#count')
+  ).toHaveText('2 / 23');
+
+  await page.keyboard.press('ArrowLeft');
+
+  await expect(
+    lifeSkillsFrame.locator('#count')
+  ).toHaveText('1 / 23');
+
   await page.goto(
     '/language-arts/collection/?collection=1984-2026-27'
   );
@@ -122,6 +139,23 @@ test('loads Life Skills through the real inline viewer and preserves Language Ar
       .locator('#stage')
       .evaluate(stage => stage.style.transform)
   )).toMatch(/scale\(/);
+
+  // keyboard works immediately for Language Arts without clicking inside
+  await expect.poll(() => (
+    page.evaluate(() => document.activeElement?.id || '')
+  )).toBe('pvInlineIframe');
+
+  await page.keyboard.press('ArrowRight');
+
+  await expect(
+    languageArtsFrame.locator('#count')
+  ).toHaveText('2 / 33');
+
+  await page.keyboard.press('ArrowLeft');
+
+  await expect(
+    languageArtsFrame.locator('#count')
+  ).toHaveText('1 / 33');
 
   expect(inlineScriptCspErrors).toEqual([]);
 });
