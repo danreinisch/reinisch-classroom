@@ -36,6 +36,13 @@ assert.ok(
 );
 
 assert.ok(
+  unitGrid.includes('const activeUnits = units.filter') &&
+    unitGrid.includes('for (const u of activeUnits)') &&
+    unitGrid.includes("(unit.status || 'active') === 'active'"),
+  'path-based unit resolution must skip archived records before matching duplicate page paths'
+);
+
+assert.ok(
   unitGrid.includes('const inferredUnit = units.find') &&
     unitGrid.includes("return inferredUnit ? inferredUnit.id : '';"),
   'legacy collection grids must not actively resolve archived collections'

@@ -24,11 +24,16 @@
 
   function inferUnitId(units, pathname){
     const clean = pathname.replace(/index\.html$/,'').replace(/\/+$/,'/') || '/';
-    for (const u of units){
+    const activeUnits = units.filter(function(unit){
+      return unit &&
+        (unit.status || 'active') === 'active';
+    });
+
+    for (const u of activeUnits){
       const pp = String(u.pagePath||'').replace(/\/+$/,'/') || '/';
       if (pp && clean === pp) return u.id;
     }
-    for (const u of units){
+    for (const u of activeUnits){
       const pp = String(u.pagePath||'').replace(/\/+$/,'/');
       if (pp && clean.startsWith(pp)) return u.id;
     }
