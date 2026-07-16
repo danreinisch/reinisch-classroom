@@ -228,6 +228,12 @@
   [headers.values]
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.io https://*.netlify.app; media-src 'self' blob: data: https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
 
+# Route-specific CSP for /life-skills/presentations-2026-27/* - allows inline scripts for current Life Skills presentation pages
+[[headers]]
+  for = "/life-skills/presentations-2026-27/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.io https://*.netlify.app; media-src 'self' blob: data: https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
+
 # Route-specific CSP for /language-arts/presentations/* - allows inline scripts for presentation pages
 [[headers]]
   for = "/language-arts/presentations/*"
