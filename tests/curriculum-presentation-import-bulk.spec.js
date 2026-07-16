@@ -63,6 +63,69 @@ test('retains continuous Life Skills animation and interaction', async ({ page }
   }))).toEqual({ bob: 'bob', spin: 'spin' });
 });
 
+test('loads Life Skills through the real inline viewer and preserves Language Arts', async ({ page }) => {
+  const inlineScriptCspErrors = [];
+
+  page.on('console', message => {
+    if (
+      message.type() === 'error' &&
+      /Refused to execute inline script/i.test(message.text())
+    ) {
+      inlineScriptCspErrors.push(message.text());
+    }
+  });
+
+  await page.goto('/life-skills/');
+
+  const lifeSkillsCards = page.locator('#grid .card');
+  await expect(lifeSkillsCards).toHaveCount(37);
+
+  await lifeSkillsCards.first().click();
+
+  const lifeSkillsFrame = page.frameLocator('#pvInlineIframe');
+
+  await expect(
+    lifeSkillsFrame.locator('.slide.active')
+  ).toHaveCount(1);
+
+  await expect(
+    lifeSkillsFrame.locator('#count')
+  ).toHaveText('1 / 23');
+
+  await expect.poll(async () => (
+    lifeSkillsFrame
+      .locator('#stage')
+      .evaluate(stage => stage.style.transform)
+  )).toMatch(/scale\(/);
+
+  await page.goto(
+    '/language-arts/collection/?collection=1984-2026-27'
+  );
+
+  const languageArtsCards = page.locator('#grid .card');
+  await expect(languageArtsCards).toHaveCount(14);
+
+  await languageArtsCards.nth(1).click();
+
+  const languageArtsFrame = page.frameLocator('#pvInlineIframe');
+
+  await expect(
+    languageArtsFrame.locator('.slide.active')
+  ).toHaveCount(1);
+
+  await expect(
+    languageArtsFrame.locator('#count')
+  ).toHaveText('1 / 33');
+
+  await expect.poll(async () => (
+    languageArtsFrame
+      .locator('#stage')
+      .evaluate(stage => stage.style.transform)
+  )).toMatch(/scale\(/);
+
+  expect(inlineScriptCspErrors).toEqual([]);
+});
+
 test('renders all 37 presentations on the Life Skills landing page', async ({ page }) => {
   await page.goto('/life-skills/');
 
