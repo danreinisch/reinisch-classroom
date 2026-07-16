@@ -30,6 +30,109 @@
     });
   }
 
+  function normalizePath(pathname){
+    const normalized = (pathname || '/')
+      .replace(/index\.html$/i, '')
+      .replace(/\/+$/, '');
+
+    return normalized || '/';
+  }
+
+  function getContextualParent(){
+    const path = normalizePath(location.pathname);
+
+    if (
+      path === '/language-arts' ||
+      path === '/life-skills' ||
+      path === '/toolkits'
+    ) {
+      return { label: 'Home', href: '/' };
+    }
+
+    if (
+      path === '/language-arts/toolkit' ||
+      path === '/math-toolkit'
+    ) {
+      return { label: 'Toolkits', href: '/toolkits/' };
+    }
+
+    if (path.startsWith('/language-arts/')) {
+      return {
+        label: 'Language Arts',
+        href: '/language-arts/'
+      };
+    }
+
+    if (path.startsWith('/life-skills/')) {
+      return {
+        label: 'Life Skills',
+        href: '/life-skills/'
+      };
+    }
+
+    if (path === '/math-toolkit/algebra') {
+      return {
+        label: 'Math Toolkit',
+        href: '/math-toolkit/'
+      };
+    }
+
+    if (path.startsWith('/math-toolkit/algebra/')) {
+      return {
+        label: 'Algebra',
+        href: '/math-toolkit/algebra/'
+      };
+    }
+
+    if (path.startsWith('/math-toolkit/')) {
+      return {
+        label: 'Math Toolkit',
+        href: '/math-toolkit/'
+      };
+    }
+
+    return null;
+  }
+
+  function insertContextualBackNavigation(){
+    const parent = getContextualParent();
+    if (!parent) return;
+
+    if (document.querySelector('.tc-context-nav')) return;
+
+    const main = document.querySelector('.tc-main');
+    if (!main) return;
+
+    const container =
+      main.querySelector('.content-wrapper, .wrap') || main;
+
+    const nav = document.createElement('nav');
+    nav.className = 'tc-context-nav';
+    nav.setAttribute('aria-label', 'Contextual navigation');
+
+    let link = document.querySelector('.back-link');
+
+    if (link) {
+      link.remove();
+      link.classList.remove('back-link');
+    } else {
+      link = document.createElement('a');
+    }
+
+    link.classList.add('tc-context-back');
+    link.href = parent.href;
+    link.setAttribute(
+      'aria-label',
+      'Back to ' + parent.label
+    );
+    link.innerHTML =
+      '<span aria-hidden="true">←</span>' +
+      '<span>Back to ' + parent.label + '</span>';
+
+    nav.appendChild(link);
+    container.insertBefore(nav, container.firstChild);
+  }
+
   function init(){
     // Public pages - no authentication required
 
@@ -78,6 +181,7 @@
       }
     });
 
+    insertContextualBackNavigation();
     wireNavActive();
   }
 
