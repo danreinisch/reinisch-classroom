@@ -26,6 +26,8 @@ const expected = [
 function decodeEntities(value) {
   return String(value)
     .replaceAll('&amp;', '&')
+    .replaceAll('&eacute;', 'é')
+    .replaceAll('&times;', '×')
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
     .replaceAll('&quot;', '"')
@@ -51,6 +53,25 @@ for (const [id, title, kind, section, slots, sortOrder, baseOut, pagePath] of ex
     [category.slots, category.titles.length, category.links.length, indexedUnit.presentations.length],
     [slots, slots, slots, slots]
   );
+
+  const encodedEntityPattern =
+    /&(?:#\d+|#x[0-9a-f]+|[a-z][a-z0-9]+);/i;
+
+  for (const displayTitle of category.titles) {
+    assert.doesNotMatch(
+      displayTitle,
+      encodedEntityPattern,
+      `${id} site-state title must use decoded display text`
+    );
+  }
+
+  for (const presentation of indexedUnit.presentations) {
+    assert.doesNotMatch(
+      presentation.name,
+      encodedEntityPattern,
+      `${id} discovery title must use decoded display text`
+    );
+  }
 
   for (let slot = 1; slot <= slots; slot += 1) {
     const slotName = `presentation-${String(slot).padStart(2, '0')}`;

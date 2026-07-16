@@ -78,6 +78,26 @@ test('renders all 37 presentations on the Life Skills landing page', async ({ pa
     'Week 37: Integrated Employment and Money Simulation - Show the Skills That Matter'
   );
 
+  await expect(cards.nth(5)).toContainText(
+    'Week 6: Applications and Résumés - Education, Skills, and Experience on an Application'
+  );
+
+  await expect(cards.nth(18)).toContainText(
+    'Week 19: Applications and Résumés - Guided Fill-In Résumé Template'
+  );
+
+  await expect(cards.nth(25)).toContainText(
+    'Week 26: Wages and Paychecks - Hours Worked × Pay per Hour'
+  );
+
+  const displayedTitles = await page.locator('#grid .t').allTextContents();
+
+  for (const title of displayedTitles) {
+    expect(title).not.toMatch(
+      /&(?:#\d+|#x[0-9a-f]+|[a-z][a-z0-9]+);/i
+    );
+  }
+
   await expect(
     page.locator('#grid .card.disabled')
   ).toHaveCount(0);
