@@ -527,7 +527,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         }
 
         // Check for Correct Answer:, ANSWER:, Answer:, or Correct: (single-letter MCQ)
-        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])\b/i);
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer)(?:\s*:\s*|\s+)([A-Z])\b/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
