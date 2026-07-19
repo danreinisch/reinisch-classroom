@@ -96,7 +96,7 @@ const migrationFiles = fs.readdirSync(
 ).filter(
   name =>
     name.endsWith(
-      '_restore_goal_progress_assignment_provenance.sql'
+      '_restore_goal_progress_assignment_provenance_schema_only.sql'
     )
 );
 
