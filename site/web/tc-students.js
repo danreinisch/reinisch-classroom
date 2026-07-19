@@ -7930,12 +7930,50 @@
     const password = formData.get('password');
 
     try {
-      await db.upsertStudent({ code: studentCode, password_hash: password });
-      console.log('[tc-students] Reset password');
-      showToast('Password reset successfully');
+      const response = await fetch(
+        '/.netlify/functions/student-reset-password',
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code: studentCode,
+            password,
+          }),
+        }
+      );
+
+      const data =
+        await response
+          .json()
+          .catch(() => ({}));
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error ||
+          `Reset failed: ${response.status}`
+        );
+      }
+
+      console.log(
+        '[tc-students] Reset password'
+      );
+
+      showToast(
+        'Password reset successfully'
+      );
     } catch (error) {
-      console.error('[tc-students] Error resetting password:', error);
-      await rcAlert('Error', 'Failed to reset password');
+      console.error(
+        '[tc-students] Error resetting password:',
+        error
+      );
+
+      await rcAlert(
+        'Error',
+        'Failed to reset password'
+      );
     }
   }
 

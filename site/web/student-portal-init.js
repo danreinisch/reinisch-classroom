@@ -8341,31 +8341,66 @@
    * Handle logout (PR 315)
    * PR-student-portal-fallback: Also clear localStorage rc_auth and legacy keys
    */
-  function handleLogout() {
-    console.log(LOG_PREFIX, 'Logout requested');
-    
-    // Clear watchdog timer if active
+  async function handleLogout() {
+    console.log(
+      LOG_PREFIX,
+      'Logout requested'
+    );
+
     if (state.bootWatchdogTimer) {
-      clearTimeout(state.bootWatchdogTimer);
-      state.bootWatchdogTimer = null;
+      clearTimeout(
+        state.bootWatchdogTimer
+      );
+
+      state.bootWatchdogTimer =
+        null;
     }
-    
-    // Clear session storage (student portal uses sessionStorage)
-    sessionStorage.removeItem('rc_user_code');
-    sessionStorage.removeItem('rc_user_role');
-    
-    // PR-student-portal-fallback: Clear localStorage rc_auth (prevents role bleed from teacher/admin)
-    localStorage.removeItem('rc_auth');
-    
-    // Clear any legacy role keys that might exist
-    localStorage.removeItem('rc_user_code');
-    localStorage.removeItem('rc_user_role');
-    
-    // Reset state flags for next login
-    state.dashboardHandlersAttached = false;
-    
-    // Redirect to home page as specified in requirements
-    window.location.href = '/';
+
+    try {
+      await fetch(
+        '/.netlify/functions/student-logout',
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
+    } catch (err) {
+      console.warn(
+        LOG_PREFIX,
+        'Server logout request failed:',
+        err
+      );
+    }
+
+    sessionStorage.removeItem(
+      'rc_user_code'
+    );
+
+    sessionStorage.removeItem(
+      'rc_user_role'
+    );
+
+    sessionStorage.removeItem(
+      'rc_student_login_hint'
+    );
+
+    localStorage.removeItem(
+      'rc_auth'
+    );
+
+    localStorage.removeItem(
+      'rc_user_code'
+    );
+
+    localStorage.removeItem(
+      'rc_user_role'
+    );
+
+    state.dashboardHandlersAttached =
+      false;
+
+    window.location.href =
+      '/';
   }
 
   /**
@@ -8561,50 +8596,22 @@
    * Handle "Reset Password" button click
    */
   async function handleResetPassword() {
-    const codeInput = document.getElementById('resetStudentCode');
-    const btnReset = document.getElementById('btnResetPassword');
-    const resetMsg = document.getElementById('resetPasswordMsg');
+    const resetMsg =
+      document.getElementById(
+        'resetPasswordMsg'
+      );
 
-    if (!codeInput || !resetMsg) return;
+    if (!resetMsg) return;
 
-    const code = codeInput.value.trim();
-    if (!code) {
-      resetMsg.textContent = 'Please enter your student code.';
-      resetMsg.className = 'st-reset-msg error';
-      resetMsg.style.display = 'block';
-      return;
-    }
+    resetMsg.textContent =
+      'Password resets are handled by your teacher. ' +
+      'Please ask your teacher to reset your password.';
 
-    if (btnReset) { btnReset.disabled = true; btnReset.textContent = 'Resetting...'; }
-    resetMsg.style.display = 'none';
+    resetMsg.className =
+      'st-reset-msg info';
 
-    try {
-      const res = await fetch('/.netlify/functions/student-reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.ok) {
-        resetMsg.textContent = 'Your password has been reset to your default password (your student code + "!"). Please log in with that password and then change it in Settings.';
-        resetMsg.className = 'st-reset-msg success';
-        resetMsg.style.display = 'block';
-        // Auto-return to login after 3 seconds
-        setTimeout(() => showResetPasswordSection(false), 3000);
-      } else {
-        resetMsg.textContent = data.error || 'Could not reset your password. Please ask your teacher for help.';
-        resetMsg.className = 'st-reset-msg error';
-        resetMsg.style.display = 'block';
-      }
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Reset password error:', err);
-      resetMsg.textContent = 'Unable to reach the server. Please check your connection and try again.';
-      resetMsg.className = 'st-reset-msg error';
-      resetMsg.style.display = 'block';
-    } finally {
-      if (btnReset) { btnReset.disabled = false; btnReset.textContent = 'Reset Password'; }
-    }
+    resetMsg.style.display =
+      'block';
   }
 
   /**
@@ -8788,38 +8795,33 @@
    */
   function isAuthenticated() {
     try {
-      // Check sessionStorage for active session (primary method)
-      const sessionRole = sessionStorage.getItem('rc_user_role');
-      const sessionCode = sessionStorage.getItem('rc_user_code');
+      // Client storage controls only portal UI state.
+      // Server access is authorized independently by the
+      // signed HttpOnly sc session cookie.
+      const sessionRole =
+        sessionStorage.getItem(
+          'rc_user_role'
+        );
 
-      if (sessionRole === 'student' && sessionCode && sessionCode.trim().length > 0) {
-        return true;
-      }
+      const sessionCode =
+        sessionStorage.getItem(
+          'rc_user_code'
+        );
 
-      // Fallback: Check localStorage.rc_auth for 24-hour auth handoff
-      // This is used by hub auto-login and test scenarios
-      try {
-        const rcAuth = localStorage.getItem('rc_auth');
-        if (rcAuth) {
-          const auth = JSON.parse(rcAuth);
-          if (auth.role === 'student' && auth.code && auth.code.trim().length > 0) {
-            // Check if not expired
-            if (auth.expiresAt && auth.expiresAt > Date.now()) {
-              // Upgrade to sessionStorage for current session
-              sessionStorage.setItem('rc_user_code', auth.code);
-              sessionStorage.setItem('rc_user_role', 'student');
-              return true;
-            }
-          }
-        }
-      } catch (parseErr) {
-        // Invalid rc_auth JSON - ignore
-        console.warn(LOG_PREFIX, 'Failed to parse rc_auth:', parseErr);
-      }
-
-      return false;
+      return (
+        sessionRole === 'student' &&
+        Boolean(
+          sessionCode &&
+          sessionCode.trim().length > 0
+        )
+      );
     } catch (err) {
-      console.error(LOG_PREFIX, 'Error checking auth:', err);
+      console.error(
+        LOG_PREFIX,
+        'Error checking auth:',
+        err
+      );
+
       return false;
     }
   }

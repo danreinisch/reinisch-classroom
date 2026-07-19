@@ -4,6 +4,11 @@
 
 const assert = require('assert');
 
+// Successful login now creates a signed student session cookie.
+// Set a test-only signing secret before student-login.js is required.
+process.env.SESSION_SECRET =
+  'test-only-student-login-session-secret';
+
 // Mock the _lib modules before requiring the handler
 const mockSupabaseConfig = {
   url: 'https://test.supabase.co',
@@ -29,6 +34,10 @@ const mockHttpLib = {
       'Access-Control-Allow-Headers': headers.join(', ')
     },
     body: ''
+  }),
+  getSecurityHeaders: () => ({}),
+  getCorsHeaders: () => ({
+    'Access-Control-Allow-Origin': '*'
   })
 };
 
@@ -197,6 +206,15 @@ test('returns 200 with valid credentials', async () => {
   
   const response = await handler(event);
   assert.strictEqual(response.statusCode, 200, 'Should return 200 for valid credentials');
+  assert(
+    response.headers &&
+      response.headers['Set-Cookie'],
+    'Successful login should return a signed student session cookie'
+  );
+  assert(
+    response.headers['Set-Cookie'].includes('sc='),
+    'Successful login should set the sc student-session cookie'
+  );
   
   const body = JSON.parse(response.body);
   assert.strictEqual(body.ok, true, 'Should have ok: true');

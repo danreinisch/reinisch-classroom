@@ -721,7 +721,7 @@ const local = {
     return result;
   },
 
-  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null }) {
+  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null, assignment_instance_id = null }) {
     console.log('[goal-progress] upsertGoalProgress (local mode)', { goal_code, student_code, date, value, source });
     const arr = store.get('goalProgress', []);
     
@@ -735,6 +735,7 @@ const local = {
       value: parseFloat(value),
       source,
       collected_by,
+      assignment_instance_id,
       school_year: getCurrentSchoolYear(),
       created_at: new Date().toISOString()
     };
@@ -2229,7 +2230,7 @@ const remote = {
     return data || [];
   },
 
-  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null }) {
+  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null, assignment_instance_id = null }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     
@@ -2290,6 +2291,7 @@ const remote = {
         value: safeValue,
         source,
         collected_by,
+        assignment_instance_id,
         school_year: getCurrentSchoolYear()
       })
       .select()

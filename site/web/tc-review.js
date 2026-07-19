@@ -42,6 +42,31 @@
 
   const $ = (id) => document.getElementById(id);
 
+  // Canonical date-only formatter for instructional evidence.
+  // Keeps goal progress aligned to the America/Chicago school calendar.
+  function getSchoolLocalDate(dateLike = new Date()) {
+    const date = dateLike instanceof Date
+      ? dateLike
+      : new Date(dateLike);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new Error('Invalid date for school-local formatting');
+    }
+
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(date);
+
+    const values = Object.fromEntries(
+      parts.map(part => [part.type, part.value])
+    );
+
+    return `${values.year}-${values.month}-${values.day}`;
+  }
+
   // Helper to format date as readable string
   function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -2920,7 +2945,9 @@
     
     const studentCode = instance.student_code;
     const classCode = instance.class_code || null;
-    const date = submission.submitted_at ? submission.submitted_at.split('T')[0] : new Date().toISOString().split('T')[0];
+    const date = getSchoolLocalDate(
+      submission.submitted_at || new Date()
+    );
 
     // Fetch the submitting student's own goal codes so we can filter out codes
     // that belong to other students (avoids 406 errors from upsertGoalProgress).
@@ -3021,7 +3048,8 @@
           date,
           value,
           source: 'assignment',
-          collected_by: 'teacher'
+          collected_by: 'teacher',
+          assignment_instance_id: instance.id
         });
         
         console.log('[tc-review] Created goal progress:', { goalCode, studentCode, value });
