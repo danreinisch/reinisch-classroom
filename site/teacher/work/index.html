@@ -596,7 +596,7 @@
                     id="mappingFile"
                     name="mappingFile"
                     type="file"
-                    accept=".json,application/json,.csv,text/csv"
+                    accept=".json,application/json"
                   />
                   <div class="tc-subtle" id="mappingFileName">No file selected</div>
                   <div class="tc-subtle">
@@ -604,18 +604,13 @@
                     assignment TXT.
                   </div>
                   <div class="work-subtle" style="font-size: 12px; margin-top: 8px">
-                    Accepts CSV or JSON format for question-to-standard tag mapping.
+                    Accepts JSON format for question-to-standard tag mapping.
                   </div>
                   <details style="margin-top: 10px">
                     <summary class="work-subtle" style="cursor: pointer">
                       Show mapping examples
                     </summary>
                     <pre style="margin-top: 10px">
-CSV (recommended):
-question_id,dese,iep
-q1,RL.9-10.1,IG:D.H.12.1
-q2,RI.9-10.2,OBJ:S.J.12.3
-
 JSON:
 [
   {"question_id":"q1","dese":["RL.9-10.1"],"iep":["IG:D.H.12.1"]},

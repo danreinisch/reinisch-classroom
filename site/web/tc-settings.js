@@ -688,16 +688,55 @@
     if (!await rcConfirm('Reset Password', `Reset password for ${studentCode} to default ("${defaultPw}")?`, 'Reset')) return;
 
     try {
-      await db.setStudentPassword(studentCode, defaultPw);
-      console.log("[tc-settings] Student password reset for:", studentCode);
+      const response = await fetch(
+        '/.netlify/functions/student-reset-password',
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code: studentCode,
+          }),
+        }
+      );
 
-      // Refresh table
+      const data =
+        await response
+          .json()
+          .catch(() => ({}));
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error ||
+          `Reset failed: ${response.status}`
+        );
+      }
+
+      console.log(
+        "[tc-settings] Student password reset for:",
+        studentCode
+      );
+
       await loadStudentPasswords();
 
-      showToast(`Password for ${studentCode} reset to default.`, "#22c55e", "#0b1220");
+      showToast(
+        `Password for ${studentCode} reset to default.`,
+        "#22c55e",
+        "#0b1220"
+      );
     } catch (error) {
-      console.error("[tc-settings] Error resetting student password:", error);
-      showToast("Error resetting password. Check console for details.", "#ef4444", "#fff");
+      console.error(
+        "[tc-settings] Error resetting student password:",
+        error
+      );
+
+      showToast(
+        "Error resetting password. Check console for details.",
+        "#ef4444",
+        "#fff"
+      );
     }
   }
 

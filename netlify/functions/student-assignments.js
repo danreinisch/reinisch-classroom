@@ -11,14 +11,17 @@ const {
   getSupabaseConfig,
 } = require('./_lib/supa');
 
+const {
+  requireStudent,
+} = require('./_lib/student-auth');
+
+const {
+  getStudentVisibleSchoolYears,
+} = require('./_lib/student-visible-school-years');
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
-
-function getCurrentSchoolYear() {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-}
+const { SESSION_SECRET } = process.env;
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
@@ -65,6 +68,28 @@ exports.handler = async (event) => {
   // Normalize student code to uppercase
   const codeNorm = code.trim().toUpperCase();
 
+  const studentAuth =
+    requireStudent(
+      event,
+      SESSION_SECRET,
+      codeNorm
+    );
+
+  if (!studentAuth.ok) {
+    return jsonResponse(
+      event,
+      studentAuth.statusCode,
+      {
+        ok: false,
+        error: studentAuth.error,
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
+  }
+
   try {
     // First, get student ID from code
     const studentUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&code=eq.${encodeURIComponent(codeNorm)}&limit=1`;
@@ -101,8 +126,20 @@ exports.handler = async (event) => {
     const studentId = student.id;
 
     // Fetch assignment instances for this student with joined assignment data
-    const schoolYear = getCurrentSchoolYear();
-    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,resubmission_count,school_year,assignments!inner(id,title,type,series,page,hero,meta)&student_id=eq.${studentId}&or=(school_year.eq.${schoolYear},school_year.is.null)&order=assigned_at.desc`;
+    const visibleSchoolYears =
+      getStudentVisibleSchoolYears();
+
+    const schoolYearFilters = visibleSchoolYears
+      .map(year => `school_year.eq.${year}`)
+      .concat('school_year.is.null')
+      .join(',');
+
+    const instancesUrl =
+      `${SUPABASE_URL}/rest/v1/assignment_instances` +
+      `?select=id,assignment_id,student_id,assigned_at,due_at,status,settings,resubmission_count,school_year,assignments!inner(id,title,type,series,page,hero,meta)` +
+      `&student_id=eq.${studentId}` +
+      `&or=(${schoolYearFilters})` +
+      `&order=assigned_at.desc`;
     
     console.log(`[student-assignments] [${requestId}] Fetching assignment instances for student ID:`, studentId);
     

@@ -1,7 +1,7 @@
 // Student change password endpoint
 // POST body: { studentCode, currentPassword, newPassword }
-// No session required — student authenticates by supplying their current password
-// Changes the student's password via Supabase RPC
+// Auth: Requires signed student session matching studentCode
+// Current password is still verified before the password update
 
 console.log('[student-change-password] Module loaded');
 
@@ -16,6 +16,12 @@ const {
   getSecurityHeaders,
   getCorsHeaders,
 } = require('./_lib/http');
+
+const {
+  requireStudent,
+} = require('./_lib/student-auth');
+
+const { SESSION_SECRET } = process.env;
 
 const INVALID_CREDS_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300ms
 
@@ -79,7 +85,37 @@ async function handleChangePassword(event) {
     return jsonResponse(event, 400, { error: 'New password must be different from current password' }, {}, requestId);
   }
 
-  const username = String(studentCode).trim().toUpperCase();
+  const requestedCode =
+    String(studentCode)
+      .trim()
+      .toUpperCase();
+
+  // The signed student session is the authoritative identity.
+  // The studentCode supplied by the client must match that session.
+  const studentAuth =
+    requireStudent(
+      event,
+      SESSION_SECRET,
+      requestedCode
+    );
+
+  if (!studentAuth.ok) {
+    return jsonResponse(
+      event,
+      studentAuth.statusCode,
+      {
+        ok: false,
+        error: studentAuth.error,
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
+  }
+
+  const username =
+    studentAuth.student.code;
 
   try {
     // Verify current password
@@ -116,9 +152,19 @@ async function handleChangePassword(event) {
     }
 
     // Also update student_passwords table for cross-system compatibility
-    const codeUpper = String(studentCode).trim().toUpperCase();
-    await rpc('set_student_password', { p_code: codeUpper, p_password: newPassword })
-      .catch(e => console.warn(`[student-change-password] [${requestId}] set_student_password sync failed for ${codeUpper}:`, e?.message));
+    await rpc(
+      'set_student_password',
+      {
+        p_code: username,
+        p_password: newPassword,
+      }
+    ).catch(e =>
+      console.warn(
+        `[student-change-password] [${requestId}] ` +
+        `set_student_password sync failed for ${username}:`,
+        e?.message
+      )
+    );
 
     console.log(`[student-change-password] [${requestId}] Password changed for student:`, username);
 

@@ -6,6 +6,8 @@ const {
   generateRequestId,
   jsonResponse,
   handleCorsPreFlight,
+  getSecurityHeaders,
+  getCorsHeaders,
 } = require('./_lib/http');
 
 const {
@@ -13,8 +15,68 @@ const {
   parseBooleanRpcResponse,
 } = require('./_lib/supa');
 
+const {
+  createStudentSessionCookie,
+} = require('./_lib/student-auth');
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
+const { SESSION_SECRET } = process.env;
+
+function studentLoginSuccess(event, requestId, code) {
+  if (!SESSION_SECRET) {
+    return jsonResponse(
+      event,
+      500,
+      {
+        ok: false,
+        error: 'Server not configured',
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
+  }
+
+  const host =
+    event.headers?.host ||
+    event.headers?.Host ||
+    '';
+
+  const isLocalhost =
+    host.startsWith('localhost') ||
+    host.startsWith('127.0.0.1');
+
+  const sessionCookie =
+    createStudentSessionCookie(
+      code,
+      SESSION_SECRET,
+      {
+        secure: !isLocalhost,
+      }
+    );
+
+  return {
+    statusCode: 200,
+    headers: {
+      ...getSecurityHeaders(requestId),
+      ...getCorsHeaders(
+        event,
+        ['POST', 'OPTIONS'],
+        ['Content-Type']
+      ),
+      'Set-Cookie': sessionCookie,
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+    },
+    body: JSON.stringify({
+      ok: true,
+      code,
+      name: code,
+    }),
+  };
+}
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
@@ -151,12 +213,10 @@ exports.handler = async (event) => {
       console.log(`[student-login] [${requestId}] Login successful`);
       
       // Return code as name (post-PII removal, students only have code)
-      return jsonResponse(
+      return studentLoginSuccess(
         event,
-        200,
-        { ok: true, code: codeNorm, name: codeNorm },
-        { 'Cache-Control': 'no-store' },
-        requestId
+        requestId,
+        codeNorm
       );
     }
 
@@ -180,12 +240,10 @@ exports.handler = async (event) => {
       if (Array.isArray(fallbackResult) && fallbackResult.length > 0 &&
           typeof fallbackResult[0] === 'object' && fallbackResult[0] !== null) {
         console.log(`[student-login] [${requestId}] Login successful via fallback`);
-        return jsonResponse(
+        return studentLoginSuccess(
           event,
-          200,
-          { ok: true, code: codeNorm, name: codeNorm },
-          { 'Cache-Control': 'no-store' },
-          requestId
+          requestId,
+          codeNorm
         );
       }
     }

@@ -6,6 +6,15 @@
 
 const assert = require('assert');
 
+// student-submit-answer now treats the signed student session as the
+// authoritative identity. Configure a deterministic test-only secret
+// before requiring the handler so positive-path tests can authenticate.
+process.env.SESSION_SECRET = 'student-submit-answer-unit-test-secret';
+
+const {
+  createStudentSessionCookie,
+} = require('../netlify/functions/_lib/student-auth');
+
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockSupabaseConfig = {
@@ -230,10 +239,32 @@ function makeInstance(overrides = {}) {
   };
 }
 
-function makePostEvent(body, headers = {}) {
+function makeStudentCookie(code = 'S001') {
+  return createStudentSessionCookie(
+    code,
+    process.env.SESSION_SECRET,
+    {
+      secure: false,
+      maxAge: 3600,
+    }
+  ).split(';')[0];
+}
+
+function makePostEvent(body, headers = {}, options = {}) {
+  const includeAuth = options.includeAuth !== false;
+  const authenticatedCode = options.studentCode || 'S001';
+
+  const authHeaders = includeAuth
+    ? { cookie: makeStudentCookie(authenticatedCode) }
+    : {};
+
   return {
     httpMethod: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
+    headers: {
+      'content-type': 'application/json',
+      ...authHeaders,
+      ...headers,
+    },
     body: JSON.stringify(body)
   };
 }
@@ -288,23 +319,72 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert(body.error.includes('instance_id'), 'Error should mention instance_id');
   })();
 
-  await test('rejects missing student_code with 400', async () => {
-    const event = makePostEvent({ instance_id: 'instance-1' });
+  await test('returns 401 when signed student session is missing', async () => {
+    const event = makePostEvent(
+      { instance_id: 'instance-1' },
+      {},
+      { includeAuth: false }
+    );
     const response = await handler(event);
-    assert.strictEqual(response.statusCode, 400, 'Should return 400 for missing student_code');
+    assert.strictEqual(
+      response.statusCode,
+      401,
+      'Should return 401 when signed student session is missing'
+    );
     const body = JSON.parse(response.body);
-    assert(body.error.includes('student_code'), 'Error should mention student_code');
+    assert.strictEqual(body.ok, false);
+  })();
+
+  await test('signed student session supplies identity when student_code is omitted', async () => {
+    reset();
+    setupBasicMocks();
+
+    const event = makePostEvent({
+      instance_id: 'instance-uuid-1',
+      answers: { q1: 'A' },
+      submit: false
+    });
+
+    const response = await handler(event);
+
+    assert.strictEqual(
+      response.statusCode,
+      200,
+      'Signed session should supply authoritative S001 identity'
+    );
+
+    assert(
+      capturedInstancePatch,
+      'Authenticated request should reach normal submission path'
+    );
+
+    assert.strictEqual(
+      capturedInstancePatch.status,
+      'In Progress'
+    );
   })();
 
   // ── Group: Authentication ──────────────────────────────────────────────────
   console.log('\n--- Authentication ---');
 
-  await test('returns 401 when student code not found', async () => {
+  await test('returns 401 when authenticated student code is not found', async () => {
     reset();
-    fetchHandlers.students = () => makeOkResponse([]); // empty — student not found
-    const event = makePostEvent({ instance_id: 'i1', student_code: 'UNKNOWN' });
+    fetchHandlers.students = () => makeOkResponse([]);
+
+    const event = makePostEvent(
+      { instance_id: 'i1' },
+      {},
+      { studentCode: 'UNKNOWN' }
+    );
+
     const response = await handler(event);
-    assert.strictEqual(response.statusCode, 401, 'Should return 401 for unknown student');
+
+    assert.strictEqual(
+      response.statusCode,
+      401,
+      'Should return 401 when authenticated student is not found'
+    );
+
     const body = JSON.parse(response.body);
     assert.strictEqual(body.ok, false);
   })();
@@ -658,7 +738,11 @@ console.log('Running student-submit-answer function unit tests...\n');
     assert.strictEqual(gp.value, 100, 'value should be 100% when all correct');
     assert.strictEqual(gp.source, 'assignment', 'source should be assignment');
     assert.strictEqual(gp.collected_by, 'auto', 'collected_by should be auto');
-    assert.strictEqual(gp.assignment_instance_id, 'instance-uuid-1', 'assignment_instance_id should be set');
+    assert.strictEqual(
+      gp.assignment_instance_id,
+      'instance-uuid-1',
+      'goal_progress should retain assignment-instance provenance'
+    );
   })();
 
   await test('partial score → goal_progress value reflects percentage', async () => {

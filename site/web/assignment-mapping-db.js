@@ -264,6 +264,34 @@ export async function saveSubmissionAnswers(supabase, submissionId, scoredResult
 }
 
 /**
+ * Return the canonical ReinischClassroom school-calendar date.
+ * Date-only instructional evidence must use America/Chicago,
+ * not UTC truncation.
+ */
+function getSchoolLocalDate(dateLike = new Date()) {
+  const date = dateLike instanceof Date
+    ? dateLike
+    : new Date(dateLike);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('Invalid date for school-local formatting');
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts.map(part => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+/**
  * Insert goal_progress entries for mapped goals
  * One entry per goal_code with the goal's percent_correct
  * 
@@ -281,7 +309,8 @@ export async function insertGoalProgress(supabase, submissionId, studentId, assi
     // Build progress records
     const progressRecords = goalRollups.map(rollup => ({
       student_id: studentId,
-      date: new Date().toISOString().split('T')[0],  // Today's date
+      assignment_instance_id: assignmentInstanceId,
+      date: getSchoolLocalDate(),
       value: rollup.percent_correct,
       source: 'assignment',
       collected_by: 'system',
@@ -321,6 +350,7 @@ export async function insertGoalProgress(supabase, submissionId, studentId, assi
         return {
           goal_id: goalId,
           student_id: rec.student_id,
+          assignment_instance_id: rec.assignment_instance_id,
           date: rec.date,
           value: rec.value,
           source: rec.source,

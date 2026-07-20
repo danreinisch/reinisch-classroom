@@ -14,8 +14,13 @@ const {
 
 const { getSupabaseConfig } = require('./_lib/supa');
 
+const {
+  requireStudent,
+} = require('./_lib/student-auth');
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
+const { SESSION_SECRET } = process.env;
 
 function getCurrentSchoolYear() {
   const now = new Date();
@@ -34,6 +39,8 @@ function normalizeMonetaryAnswer(str) {
   const n = parseFloat(s);
   return isNaN(n) ? null : n;
 }
+
+const { getSchoolLocalDate } = require('./_lib/school-date');
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
@@ -90,16 +97,46 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'instance_id is required and must be a string' }, {}, requestId);
   }
 
-  // Get student_code from query param or body
+  // The signed student session is the authoritative identity.
+  // A supplied student code is optional, but if present it must match
+  // the authenticated student.
   const queryParams = event.queryStringParameters || {};
-  const code = student_code || queryParams.student_code || queryParams.code;
+  const suppliedCode =
+    student_code ||
+    queryParams.student_code ||
+    queryParams.code ||
+    null;
 
-  if (!code || typeof code !== 'string') {
-    console.log(`[student-submit-answer] [${requestId}] Missing student_code`);
-    return jsonResponse(event, 400, { ok: false, error: 'student_code is required' }, {}, requestId);
+  const studentAuth =
+    requireStudent(
+      event,
+      SESSION_SECRET,
+      suppliedCode
+    );
+
+  if (!studentAuth.ok) {
+    return jsonResponse(
+      event,
+      studentAuth.statusCode,
+      {
+        ok: false,
+        error: studentAuth.error,
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
   }
 
-  console.log(`[student-submit-answer] [${requestId}] Submitting answers for instance ${instance_id}, student code: ${code}`);
+  const code =
+    studentAuth.student.code;
+
+  console.log(
+    `[student-submit-answer] [${requestId}] ` +
+    `Submitting answers for instance ${instance_id}, ` +
+    `authenticated student code: ${code}`
+  );
 
   try {
     // Step 1: Verify student exists and get student ID
@@ -128,7 +165,7 @@ exports.handler = async (event) => {
     const student = students[0];
 
     // Step 2: Verify assignment instance exists and belongs to this student
-    const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,assignment_id,settings,status,resubmission_count&id=eq.${encodeURIComponent(instance_id)}`;
+    const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,assignment_id,settings,status,resubmission_count,school_year&id=eq.${encodeURIComponent(instance_id)}`;
     
     const instanceResponse = await fetch(instanceUrl, {
       method: 'GET',
@@ -151,6 +188,22 @@ exports.handler = async (event) => {
     }
 
     const instance = instances[0];
+
+    // Assignment-instance school_year is authoritative for all downstream
+    // submission and evidence records. Fall back only for legacy instances
+    // that predate explicit school-year stamping.
+    const parsedInstanceSchoolYear =
+      Number.parseInt(
+        String(instance.school_year ?? ''),
+        10
+      );
+
+    const schoolYear =
+      Number.isInteger(parsedInstanceSchoolYear) &&
+      parsedInstanceSchoolYear >= 2000 &&
+      parsedInstanceSchoolYear <= 2100
+        ? parsedInstanceSchoolYear
+        : getCurrentSchoolYear();
 
     // Verify instance belongs to this student
     if (instance.student_id !== student.id) {
@@ -300,7 +353,7 @@ exports.handler = async (event) => {
             instance_id: instance_id,
             answers: updatedSettings.answers || answers || {},
             submitted_at: new Date().toISOString(),
-            school_year: getCurrentSchoolYear()
+            school_year: schoolYear
           })
         });
 
@@ -631,8 +684,7 @@ exports.handler = async (event) => {
                       if (uniqueGoalCodes.length > 0) {
                         console.log(`[student-submit-answer] [${requestId}] Auto-upserting goal progress for ${uniqueGoalCodes.length} goal(s)`);
 
-                        const today = new Date().toISOString().split('T')[0];
-                        const schoolYear = getCurrentSchoolYear();
+                        const today = getSchoolLocalDate();
 
                         // Look up goal IDs for all unique goal codes in one query
                         const goalCodesParam = uniqueGoalCodes.map(c => encodeURIComponent(c)).join(',');

@@ -898,7 +898,7 @@
         </div>
       `;
     } catch (_) {
-      // Not JSON (CSV or other): just show raw
+      // Not valid JSON: show raw content for diagnosis
       return `
         <div>
           <div style="opacity:.7; font-size:13px; margin-bottom:10px; padding:10px 14px; border-radius:var(--rc-radius); border:1px solid var(--rc-glass-border); background:rgba(0,0,0,.2);">Mapping (raw \u2014 not JSON)</div>

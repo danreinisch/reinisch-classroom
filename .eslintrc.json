@@ -14,21 +14,59 @@
     "rcParseStudentSections": "readonly"
   },
   "rules": {
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
     "no-console": "off",
-    "no-restricted-globals": ["warn",
-      { "name": "alert", "message": "Use a styled modal component instead of window.alert()" },
-      { "name": "confirm", "message": "Use a styled confirmation dialog instead of window.confirm()" }
+    "no-restricted-globals": [
+      "warn",
+      {
+        "name": "alert",
+        "message": "Use a styled modal component instead of window.alert()"
+      },
+      {
+        "name": "confirm",
+        "message": "Use a styled confirmation dialog instead of window.confirm()"
+      }
     ]
   },
   "overrides": [
     {
-      "files": ["site/web/*.js", "site/admin/*.js", "site/teacher/admin/*.js", "site/language-arts/**/*.js", "site/presentations/**/*.js"],
+      "files": [
+        "site/web/*.js",
+        "site/admin/*.js",
+        "site/teacher/admin/*.js",
+        "site/language-arts/**/*.js",
+        "site/presentations/**/*.js"
+      ],
       "rules": {
-        "no-restricted-globals": ["error",
-          { "name": "alert", "message": "Use rcAlert() from rc-modal.js instead of window.alert()" },
-          { "name": "confirm", "message": "Use rcConfirm() from rc-modal.js instead of window.confirm()" }
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "alert",
+            "message": "Use rcAlert() from rc-modal.js instead of window.alert()"
+          },
+          {
+            "name": "confirm",
+            "message": "Use rcConfirm() from rc-modal.js instead of window.confirm()"
+          }
         ]
+      }
+    },
+    {
+      "files": [
+        "tests/**/*.cjs"
+      ],
+      "env": {
+        "node": true,
+        "es2021": true
+      },
+      "parserOptions": {
+        "sourceType": "script"
       }
     }
   ]

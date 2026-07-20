@@ -14,6 +14,9 @@ const {
 const { requireTeacher } = require('./_lib/auth');
 const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
 const { buildItemsFromMeta } = require('./_lib/build-items');
+const { applyExplicitMapping } = require('./_lib/apply-explicit-mapping');
+const { resolveSchoolYear } = require('./_lib/school-year');
+const { getSchoolLocalDate } = require('./_lib/school-date');
 const { parseHtmlAssignment } = require('./_lib/parse-html-assignment');
 
 // Class name aliases for backward compatibility with old drafts
@@ -51,17 +54,6 @@ function hasValidAssignmentMeta(meta) {
   if (Array.isArray(meta.days) && meta.days.length > 0) return true;
   if (typeof meta.html_src === 'string' && meta.html_src.length > 0) return true;
   return false;
-}
-
-/**
- * Returns the starting calendar year of the current school year.
- * Aug–Dec → current year; Jan–Jul → current year - 1.
- * @returns {number}
- */
-function getCurrentSchoolYear() {
-  const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
-  return month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
 /**
@@ -535,7 +527,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         }
 
         // Check for Correct Answer:, ANSWER:, Answer:, or Correct: (single-letter MCQ)
-        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer):\s*([A-Z])\b/i);
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|Correct|Answer)(?:\s*:\s*|\s+)([A-Z])\b/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
@@ -1101,6 +1093,47 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
     }
   }
 
+  // Apply explicit Work mapping JSON after assignment parsing and before
+  // assignment_items are built. Explicit mapping is authoritative for matched
+  // items and supports both Work's sections/items schema and flat qN mappings.
+  if (
+    parsedMeta &&
+    draft.mapping &&
+    typeof draft.mapping.text === 'string' &&
+    draft.mapping.text.trim()
+  ) {
+    try {
+      const mappingResult = applyExplicitMapping(
+        parsedMeta,
+        draft.mapping.text
+      );
+
+      console.log(
+        `[teacher-issue-draft] [${requestId}] Explicit mapping applied to ` +
+        `${mappingResult.applied} item(s)`
+      );
+
+      if (mappingResult.unmatched.length > 0) {
+        console.warn(
+          `[teacher-issue-draft] [${requestId}] Explicit mapping contained ` +
+          `${mappingResult.unmatched.length} unmatched key(s): ` +
+          mappingResult.unmatched.join(', ')
+        );
+      }
+    } catch (err) {
+      console.error(
+        `[teacher-issue-draft] [${requestId}] Explicit mapping failed:`,
+        err.message
+      );
+
+      return {
+        ok: false,
+        error: err.message,
+        statusCode: 422
+      };
+    }
+  }
+
   // Step 4: Check for duplicate assignment (same title + class_id)
   // If found, reuse that assignment ID instead of creating a new one
   let assignmentId = null;
@@ -1171,7 +1204,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
       class_id: targetClass.id,
       active: true,
       meta: parsedMeta || {},
-      school_year: getCurrentSchoolYear()
+      school_year: resolveSchoolYear(draft)
     };
 
     console.log(`[teacher-issue-draft] [${requestId}] Creating new assignment record`);
@@ -1620,7 +1653,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
       // Separate students into those needing INSERT vs UPDATE
       const studentsToInsert = [];
       const instancesToUpdate = [];
-      const todayDate = new Date().toISOString().substring(0, 10);
+      const todayDate = getSchoolLocalDate();
 
       for (const student of targetStudents) {
         const existingInst = existingByStudentId[student.id];
@@ -1640,7 +1673,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
             status: 'Assigned',
             settings: updatedSettings,
             resubmission_count: 0,
-            school_year: getCurrentSchoolYear(),
+            school_year: resolveSchoolYear(draft),
           });
         } else {
           studentsToInsert.push({
@@ -1650,7 +1683,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
             due_at: dueAt || null,
             status: 'Assigned',
             settings: instanceSettings,
-            school_year: getCurrentSchoolYear(),
+            school_year: resolveSchoolYear(draft),
           });
         }
       }

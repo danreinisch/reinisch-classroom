@@ -11,7 +11,12 @@ const {
   getSupabaseConfig,
 } = require('./_lib/supa');
 
+const {
+  requireStudent,
+} = require('./_lib/student-auth');
+
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
+const { SESSION_SECRET } = process.env;
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
@@ -50,6 +55,28 @@ exports.handler = async (event) => {
   }
 
   const codeNorm = code.trim().toUpperCase();
+
+  const studentAuth =
+    requireStudent(
+      event,
+      SESSION_SECRET,
+      codeNorm
+    );
+
+  if (!studentAuth.ok) {
+    return jsonResponse(
+      event,
+      studentAuth.statusCode,
+      {
+        ok: false,
+        error: studentAuth.error,
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
+  }
 
   try {
     // Resolve student ID from code
