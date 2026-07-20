@@ -341,9 +341,6 @@ deno_version = 2
 enabled = true
 verify_jwt = false
 
-[functions.daily-digest.schedule]
-cron = "0 6 * * 1-5"
-
 [analytics]
 enabled = true
 port = 54327
