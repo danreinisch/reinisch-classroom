@@ -298,7 +298,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName, studentCo
         const codesStr = trimmed.substring(colonIdx + 1).trim();
         if (codesStr) {
           // Skip the DESE-only sentinel — it is not an IEP goal code
-          if (/^\(DESE\s+only\s*[—–\-]+\s*no\s+IEP\s+goal\s+targeted\)/i.test(codesStr)) {
+          if (/^\(DESE\s+only\s*[—–-]+\s*no\s+IEP\s+goal\s+targeted\)/i.test(codesStr)) {
             continue;
           }
           const codes = codesStr.split(',').map(c => c.trim()).filter(Boolean);
