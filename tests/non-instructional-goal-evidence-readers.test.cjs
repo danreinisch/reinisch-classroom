@@ -62,12 +62,41 @@ assert.ok(
   'student goal-data-points must exclude marked evidence'
 );
 
-const adapterFilters =
-  adapter.match(/filterInstructionalEvidenceRows/g) || [];
+const adapterHelperDefinitions =
+  adapter.match(
+    /async function filterInstructionalEvidenceRows\(supabase, rows\)/g
+  ) || [];
+
+assert.strictEqual(
+  adapterHelperDefinitions.length,
+  1,
+  'adapter must define one shared instructional-evidence filter'
+);
+
+const adapterFilterCalls =
+  adapter.match(
+    /await filterInstructionalEvidenceRows\(supabase,/g
+  ) || [];
+
+assert.strictEqual(
+  adapterFilterCalls.length,
+  3,
+  'shared adapter filter must cover goal-progress primary/fallback and goal-data-points'
+);
 
 assert.ok(
-  adapterFilters.length >= 5,
-  'adapter must cover goal-progress primary/fallback and goal-data-points'
+  adapter.includes('if (instanceError) throw instanceError;'),
+  'adapter marker lookup must fail closed rather than expose unverified evidence'
+);
+
+assert.ok(
+  goalProgress.includes('Assignment-instance marker lookup failed:'),
+  'student goal-progress marker lookup must fail closed'
+);
+
+assert.ok(
+  goalDataPoints.includes('Assignment-instance marker lookup failed:'),
+  'student goal-data-points marker lookup must fail closed'
 );
 
 const teacherFilters =

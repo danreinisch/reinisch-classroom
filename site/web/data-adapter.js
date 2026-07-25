@@ -142,6 +142,40 @@ function deduplicateSubmissions(submissions) {
   return Array.from(byInstance.values());
 }
 
+async function filterInstructionalEvidenceRows(supabase, rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const instanceIds = [
+    ...new Set(
+      safeRows
+        .map(row => row?.assignment_instance_id)
+        .filter(Boolean)
+    )
+  ];
+
+  if (instanceIds.length === 0) return safeRows;
+
+  const { data: instances, error: instanceError } = await supabase
+    .from('assignment_instances')
+    .select('id, settings')
+    .in('id', instanceIds);
+
+  // Deliberately fail closed: if marker state cannot be verified,
+  // callers must not expose potentially non-instructional evidence.
+  if (instanceError) throw instanceError;
+
+  const nonInstructionalIds = new Set(
+    (instances || [])
+      .filter(instance => instance?.settings?.non_instructional === true)
+      .map(instance => instance.id)
+  );
+
+  return safeRows.filter(
+    row =>
+      !row.assignment_instance_id ||
+      !nonInstructionalIds.has(row.assignment_instance_id)
+  );
+}
+
 const local = {
   // Students
   async listStudents() { return store.get('students', []); },
@@ -2105,37 +2139,6 @@ const remote = {
     console.log('[goal-progress] listGoalProgress (remote)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
     const schoolYear = getCurrentSchoolYear();
 
-    async function filterInstructionalEvidenceRows(rows) {
-      const safeRows = Array.isArray(rows) ? rows : [];
-      const instanceIds = [
-        ...new Set(
-          safeRows
-            .map(row => row?.assignment_instance_id)
-            .filter(Boolean)
-        )
-      ];
-
-      if (instanceIds.length === 0) return safeRows;
-
-      const { data: instances, error: instanceError } = await supabase
-        .from('assignment_instances')
-        .select('id, settings')
-        .in('id', instanceIds);
-
-      if (instanceError) throw instanceError;
-
-      const nonInstructionalIds = new Set(
-        (instances || [])
-          .filter(instance => instance?.settings?.non_instructional === true)
-          .map(instance => instance.id)
-      );
-
-      return safeRows.filter(
-        row =>
-          !row.assignment_instance_id ||
-          !nonInstructionalIds.has(row.assignment_instance_id)
-      );
-    }
     
     let query = supabase
       .from('goal_progress')
@@ -2189,7 +2192,7 @@ const remote = {
     const { data, error } = await query;
     if (!error) {
       const instructionalData =
-        await filterInstructionalEvidenceRows(data || []);
+        await filterInstructionalEvidenceRows(supabase, data || []);
 
       // Transform to flattened structure with defensive null checks
       return instructionalData.map(row => ({
@@ -2221,7 +2224,7 @@ const remote = {
     if (flatError) throw flatError;
 
     const instructionalFlatData =
-      await filterInstructionalEvidenceRows(flatData || []);
+      await filterInstructionalEvidenceRows(supabase, flatData || []);
 
     // Fetch goals and students to enrich the flat rows; if either lookup fails, proceed with empty maps.
     const [goalsResult, studentsResult] = await Promise.all([
@@ -2371,37 +2374,6 @@ const remote = {
 
     console.log('[goal-data-points] listGoalDataPoints (remote)', { studentId, goalId });
 
-    async function filterInstructionalEvidenceRows(rows) {
-      const safeRows = Array.isArray(rows) ? rows : [];
-      const instanceIds = [
-        ...new Set(
-          safeRows
-            .map(row => row?.assignment_instance_id)
-            .filter(Boolean)
-        )
-      ];
-
-      if (instanceIds.length === 0) return safeRows;
-
-      const { data: instances, error: instanceError } = await supabase
-        .from('assignment_instances')
-        .select('id, settings')
-        .in('id', instanceIds);
-
-      if (instanceError) throw instanceError;
-
-      const nonInstructionalIds = new Set(
-        (instances || [])
-          .filter(instance => instance?.settings?.non_instructional === true)
-          .map(instance => instance.id)
-      );
-
-      return safeRows.filter(
-        row =>
-          !row.assignment_instance_id ||
-          !nonInstructionalIds.has(row.assignment_instance_id)
-      );
-    }
 
     let query = supabase
       .from('goal_data_points')
@@ -2429,7 +2401,7 @@ const remote = {
       throw error;
     }
 
-    return await filterInstructionalEvidenceRows(data || []);
+    return await filterInstructionalEvidenceRows(supabase, data || []);
   },
 
   // ============================================================================
