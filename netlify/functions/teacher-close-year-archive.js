@@ -384,11 +384,6 @@ exports.handler = async (event) => {
     return jsonResponse(event, 500, { ok: false, error: 'Server not configured' }, {}, requestId);
   }
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error(`[teacher-close-year-archive] [${requestId}] Supabase not configured`);
-    return jsonResponse(event, 503, { ok: false, error: 'Service unavailable' }, { 'Cache-Control': 'no-store' }, requestId);
-  }
-
   const sizeCheck = validateBodySize(event.body, 50);
   if (!sizeCheck.valid) {
     return jsonResponse(event, 413, { ok: false, error: 'Request body too large' }, {}, requestId);
@@ -420,27 +415,36 @@ exports.handler = async (event) => {
 
   console.log(`[teacher-close-year-archive] [${requestId}] action=${action} school_year=${year} user=${authResult.user.username}`);
 
+  if (action === 'clear-assignments') {
+    console.warn(
+      `[teacher-close-year-archive] [${requestId}] BLOCKED clear-assignments school_year=${year}`
+    );
+    return jsonResponse(
+      event,
+      409,
+      {
+        ok: false,
+        action,
+        school_year: year,
+        error: 'Close Year clearing is disabled to preserve historical assignment, submission, and progress-evidence provenance.',
+      },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  // Only actions that actually access Supabase require database configuration.
+  // The destructive clear action above must remain fail-closed independently.
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error(`[teacher-close-year-archive] [${requestId}] Supabase not configured`);
+    return jsonResponse(event, 503, { ok: false, error: 'Service unavailable' }, { 'Cache-Control': 'no-store' }, requestId);
+  }
+
   try {
     let result;
 
     if (action === 'archive-submissions') {
       result = await archiveSubmissions(year, requestId);
-    } else if (action === 'clear-assignments') {
-      console.warn(
-        `[teacher-close-year-archive] [${requestId}] BLOCKED clear-assignments school_year=${year}`
-      );
-      return jsonResponse(
-        event,
-        409,
-        {
-          ok: false,
-          action,
-          school_year: year,
-          error: 'Close Year clearing is disabled to preserve historical assignment, submission, and progress-evidence provenance.',
-        },
-        { 'Cache-Control': 'no-store' },
-        requestId
-      );
     } else if (action === 'archive-students') {
       if (!Array.isArray(student_codes)) {
         return jsonResponse(event, 400, { ok: false, error: 'student_codes must be an array' }, {}, requestId);
