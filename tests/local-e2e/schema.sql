@@ -26,6 +26,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 -- Safe only after the rc.local_e2e guard above succeeds.
 -- ---------------------------------------------------------------------------
 
+DROP TABLE IF EXISTS public.submission_archives CASCADE;
 DROP TABLE IF EXISTS public.goal_data_points CASCADE;
 DROP TABLE IF EXISTS public.goal_progress CASCADE;
 DROP TABLE IF EXISTS public.submission_answers CASCADE;
@@ -390,6 +391,45 @@ CREATE INDEX idx_submission_answers_submission_id
 
 CREATE INDEX idx_submission_answers_item_id
   ON public.submission_answers(assignment_item_id);
+
+-- ---------------------------------------------------------------------------
+-- Submission archive
+-- ---------------------------------------------------------------------------
+
+-- Mirrors the current repository contract used by the production runtime.
+-- LOCAL TEST USE ONLY.
+CREATE TABLE public.submission_archives (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  submission_id uuid,
+  student_id uuid,
+  student_code text NOT NULL,
+  assignment_id text NOT NULL,
+  title text NOT NULL,
+  class_name text,
+  answers jsonb,
+  score_auto numeric,
+  score_manual numeric,
+  score_total numeric,
+  feedback text,
+  iep_goal_codes jsonb DEFAULT '[]'::jsonb,
+  dese_standard_codes jsonb DEFAULT '[]'::jsonb,
+  submitted_at timestamptz,
+  reviewed_at timestamptz,
+  archived_at timestamptz NOT NULL DEFAULT now(),
+  school_year integer
+);
+
+CREATE INDEX idx_submission_archives_submission_id
+  ON public.submission_archives(submission_id);
+
+CREATE INDEX idx_submission_archives_student_id
+  ON public.submission_archives(student_id);
+
+CREATE INDEX idx_submission_archives_assignment_id
+  ON public.submission_archives(assignment_id);
+
+CREATE INDEX idx_submission_archives_school_year
+  ON public.submission_archives(school_year);
 
 -- ---------------------------------------------------------------------------
 -- Goals / progress evidence
