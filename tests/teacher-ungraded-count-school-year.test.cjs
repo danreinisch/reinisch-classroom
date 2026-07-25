@@ -63,19 +63,7 @@ async function run() {
         },
       },
       async json() {
-        return [
-          {
-            id: 'instructional-instance',
-            settings: {}
-          },
-          {
-            id: 'test-instance',
-            settings: {
-              non_instructional: true,
-              non_instructional_reason: 'pre_instructional_system_test'
-            }
-          }
-        ];
+        return [{ id: 'instructional-instance' }];
       },
     };
   };
@@ -102,8 +90,15 @@ async function run() {
     );
 
     assert.ok(
-      capturedUrl.includes('select=id,settings'),
-      'query must fetch settings so non-instructional rows can be excluded'
+      capturedUrl.includes('select=id'),
+      'count query should return only ids'
+    );
+
+    assert.ok(
+      capturedUrl.includes(
+        'or=(settings->>non_instructional.is.null,settings->>non_instructional.neq.true)'
+      ),
+      'query must exclude explicit non_instructional=true while preserving missing keys'
     );
 
     assert.ok(

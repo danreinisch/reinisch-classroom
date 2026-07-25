@@ -64,16 +64,27 @@ const ungraded =
   read('netlify/functions/teacher-ungraded-count.js');
 
 assert.ok(
-  ungraded.includes('select=id,settings'),
-  'ungraded reader must retrieve settings'
+  ungraded.includes('select=id'),
+  'ungraded reader should use a lightweight count query'
 );
 
 assert.ok(
   ungraded.includes(
-    'inst?.settings?.non_instructional !== true'
+    'or=(settings->>non_instructional.is.null,settings->>non_instructional.neq.true)'
   ),
-  'ungraded reader must exclude non-instructional instances'
+  'ungraded reader must exclude explicit non-instructional=true at query time'
 );
-console.log('✓ ungraded reader excludes non-instructional instances');
+
+assert.ok(
+  ungraded.includes("'Prefer': 'count=exact'"),
+  'ungraded reader must retain exact server-side counting'
+);
+
+assert.ok(
+  ungraded.includes("'Range': '0-0'"),
+  'ungraded reader must not fetch every matching row'
+);
+
+console.log('✓ ungraded reader excludes non-instructional instances server-side');
 
 console.log('\nNON-INSTRUCTIONAL CORE READERS: PASS');
