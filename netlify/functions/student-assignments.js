@@ -157,9 +157,15 @@ exports.handler = async (event) => {
     }
 
     const instances = await instancesResponse.json();
+
+    // Preserve non-instructional instances in storage, but never expose them
+    // as active student work.
+    const instructionalInstances = (instances || []).filter(
+      inst => inst?.settings?.non_instructional !== true
+    );
     
     // Flatten the response to include assignment data at top level
-    const flattened = (instances || []).map(inst => ({
+    const flattened = instructionalInstances.map(inst => ({
       id: inst.id,
       assignment_id: inst.assignment_id,
       student_id: inst.student_id,

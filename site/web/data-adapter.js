@@ -1582,7 +1582,11 @@ const remote = {
     
     // Flatten to include student_code and student_name at top level
     // Client-side sort by student code since we can't order on joined columns
-    const flattened = (data || []).map(inst => ({
+    const instructionalInstances = (data || []).filter(
+      inst => inst?.settings?.non_instructional !== true
+    );
+
+    const flattened = instructionalInstances.map(inst => ({
       id: inst.id,
       assignment_id: inst.assignment_id,
       student_id: inst.student_id,
@@ -1696,7 +1700,7 @@ const remote = {
     // This allows filtering by student_code even though it's not directly in submissions table
     let query = supabase
       .from('submissions')
-      .select('*, assignment_instances!inner(id, assignment_id, student_id, students!inner(code))')
+      .select('*, assignment_instances!inner(id, assignment_id, student_id, settings, students!inner(code))')
       .or(`school_year.eq.${schoolYear},school_year.is.null`)
       .limit(MAX_SUBMISSIONS_QUERY_LIMIT)
       .order('submitted_at', { ascending: false });
@@ -1715,8 +1719,17 @@ const remote = {
     
     const { data, error } = await query;
     if (error) throw error;
+
+    // Test/non-instructional evidence is retained in Supabase but excluded
+    // from every Teacher Center surface that consumes this shared reader.
+    const instructionalSubmissions = (data || []).filter(sub => {
+      const instance = Array.isArray(sub.assignment_instances)
+        ? sub.assignment_instances[0]
+        : sub.assignment_instances;
+      return instance?.settings?.non_instructional !== true;
+    });
     
-    return deduplicateSubmissions(data || []);
+    return deduplicateSubmissions(instructionalSubmissions);
   },
   
   // Portal B: Get latest submission for an instance

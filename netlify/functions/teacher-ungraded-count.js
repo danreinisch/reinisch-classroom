@@ -44,29 +44,36 @@ exports.handler = async (event) => {
     // Historical and legacy NULL-year records remain preserved but do not
     // inflate the active Teacher Center count.
     const operationalYear = getOperationalSchoolYear();
-    const url = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&status=eq.Submitted&school_year=eq.${operationalYear}`;
-    const resp = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'count=exact',
-        'Range': '0-0',
-      },
-    });
+    const url = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,settings&status=eq.Submitted&school_year=eq.${operationalYear}`;
 
+    const pageSize = 1000;
+    let offset = 0;
     let count = 0;
-    if (resp.ok) {
-      // PostgREST returns Content-Range: 0-0/N where N is the total count
-      const range = resp.headers.get('Content-Range') || '';
-      const match = range.match(/\/(\d+)$/);
-      if (match) {
-        count = parseInt(match[1], 10);
-      } else {
-        const body = await resp.json();
-        count = Array.isArray(body) ? body.length : 0;
+
+    while (true) {
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Range': `${offset}-${offset + pageSize - 1}`,
+        },
+      });
+
+      if (!resp.ok) {
+        throw new Error(`Ungraded instances query failed: ${resp.status}`);
       }
+
+      const rows = await resp.json();
+      const page = Array.isArray(rows) ? rows : [];
+
+      count += page.filter(
+        inst => inst?.settings?.non_instructional !== true
+      ).length;
+
+      if (page.length < pageSize) break;
+      offset += pageSize;
     }
 
     return jsonResponse(
