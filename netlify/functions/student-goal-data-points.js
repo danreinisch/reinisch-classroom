@@ -18,6 +18,52 @@ const {
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
+async function filterInstructionalEvidenceRows(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const instanceIds = [
+    ...new Set(
+      safeRows
+        .map(row => row?.assignment_instance_id)
+        .filter(Boolean)
+    )
+  ];
+
+  if (instanceIds.length === 0) return safeRows;
+
+  const instancesUrl =
+    `${SUPABASE_URL}/rest/v1/assignment_instances` +
+    `?select=id,settings` +
+    `&id=in.(${instanceIds.map(encodeURIComponent).join(',')})`;
+
+  const instancesResponse = await fetch(instancesUrl, {
+    method: 'GET',
+    headers: {
+      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!instancesResponse.ok) {
+    throw new Error(
+      `Assignment-instance marker lookup failed: ${instancesResponse.status}`
+    );
+  }
+
+  const instances = await instancesResponse.json();
+  const nonInstructionalIds = new Set(
+    (instances || [])
+      .filter(instance => instance?.settings?.non_instructional === true)
+      .map(instance => instance.id)
+  );
+
+  return safeRows.filter(
+    row =>
+      !row.assignment_instance_id ||
+      !nonInstructionalIds.has(row.assignment_instance_id)
+  );
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[student-goal-data-points] [${requestId}] Request received`);
@@ -138,7 +184,9 @@ exports.handler = async (event) => {
       throw new Error(`Data points query failed: ${dpResponse.status} - ${errBody}`);
     }
 
-    const rows = await dpResponse.json();
+    const rowsRaw = await dpResponse.json();
+    const rows =
+      await filterInstructionalEvidenceRows(rowsRaw);
 
     console.log(`[student-goal-data-points] [${requestId}] Fetched ${(rows || []).length} data point(s) for student ${codeNorm}`);
 

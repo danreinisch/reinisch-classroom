@@ -1738,6 +1738,38 @@
   // Progress tracking functions
   // goalsList and studentsList are passed in when available so the join-less
   // fallback path can enrich rows with goal_code/student_code from local data.
+  async function filterInstructionalProgressRows(supabase, rows) {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const instanceIds = [
+      ...new Set(
+        safeRows
+          .map(row => row?.assignment_instance_id)
+          .filter(Boolean)
+      )
+    ];
+
+    if (instanceIds.length === 0) return safeRows;
+
+    const { data: instances, error } = await supabase
+      .from('assignment_instances')
+      .select('id, settings')
+      .in('id', instanceIds);
+
+    if (error) throw error;
+
+    const nonInstructionalIds = new Set(
+      (instances || [])
+        .filter(instance => instance?.settings?.non_instructional === true)
+        .map(instance => instance.id)
+    );
+
+    return safeRows.filter(
+      row =>
+        !row.assignment_instance_id ||
+        !nonInstructionalIds.has(row.assignment_instance_id)
+    );
+  }
+
   async function loadProgressEntries(goalsList = [], studentsList = []) {
     try {
       const supabase = await getSupabase();
@@ -1747,7 +1779,10 @@
           .from('goal_progress')
           .select('*, goals!inner(code), students!inner(code)');
         if (!error) {
-          return (data || []).map(row => ({
+          const instructionalData =
+            await filterInstructionalProgressRows(supabase, data || []);
+
+          return instructionalData.map(row => ({
             ...row,
             student_code: row.students?.code || '',
             goal_code: row.goals?.code || '',
@@ -1759,10 +1794,13 @@
           .from('goal_progress')
           .select('*');
         if (!flatError && flatData) {
+          const instructionalFlatData =
+            await filterInstructionalProgressRows(supabase, flatData);
+
           // Build fast lookup maps from the arrays passed in by loadData.
           const goalById = new Map(goalsList.map(g => [g.id, g]));
           const studentById = new Map(studentsList.map(s => [s.id, s]));
-          return flatData.map(row => ({
+          return instructionalFlatData.map(row => ({
             ...row,
             goal_code: goalById.get(row.goal_id)?.code || '',
             student_code: studentById.get(row.student_id)?.code || '',
