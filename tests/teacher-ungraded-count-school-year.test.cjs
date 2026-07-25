@@ -63,7 +63,7 @@ async function run() {
         },
       },
       async json() {
-        return [{ id: 'synthetic-instance' }];
+        return [{ id: 'instructional-instance' }];
       },
     };
   };
@@ -83,7 +83,23 @@ async function run() {
 
     const body = JSON.parse(response.body);
     assert.strictEqual(body.ok, true);
-    assert.strictEqual(body.count, 1);
+    assert.strictEqual(
+      body.count,
+      1,
+      'non-instructional Submitted instance must not inflate active count'
+    );
+
+    assert.ok(
+      capturedUrl.includes('select=id'),
+      'count query should return only ids'
+    );
+
+    assert.ok(
+      capturedUrl.includes(
+        'or=(settings->>non_instructional.is.null,settings->>non_instructional.neq.true)'
+      ),
+      'query must exclude explicit non_instructional=true while preserving missing keys'
+    );
 
     assert.ok(
       capturedUrl.includes('status=eq.Submitted'),
@@ -108,6 +124,7 @@ async function run() {
     console.log('✓ July 2026 operational ungraded query targets school_year=2026');
     console.log('✓ 2025-26 records are excluded from the active count');
     console.log('✓ NULL-year legacy records are excluded from the active count');
+    console.log('✓ non-instructional Submitted instances are excluded from the active count');
     console.log('\n✓ Focused ungraded school-year isolation test passed!');
   } finally {
     auth.requireTeacher = originalRequireTeacher;

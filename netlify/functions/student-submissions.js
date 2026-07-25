@@ -131,7 +131,7 @@ exports.handler = async (event) => {
     // to this student (via student_id), and the nested assignments+classes joins provide
     // the title/class_name needed by renderGradeRow() in student-portal-init.js.
     const schoolYear = getCurrentSchoolYear();
-    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id,assignments(id,title,section,classes(name)))&assignment_instances.student_id=eq.${studentId}&or=(school_year.eq.${schoolYear},school_year.is.null)&order=submitted_at.desc`;
+    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id,settings,assignments(id,title,section,classes(name)))&assignment_instances.student_id=eq.${studentId}&or=(school_year.eq.${schoolYear},school_year.is.null)&order=submitted_at.desc`;
     
     console.log(`[student-submissions] [${requestId}] Fetching submissions for student ID:`, studentId);
     
@@ -149,7 +149,16 @@ exports.handler = async (event) => {
       throw new Error(`Submissions query failed: ${submissionsResponse.status}`);
     }
 
-    const rawSubmissions = await submissionsResponse.json();
+    const allSubmissions = await submissionsResponse.json();
+
+    // Non-instructional instances remain preserved for provenance but must
+    // never enter student grade/history surfaces.
+    const rawSubmissions = (allSubmissions || []).filter(sub => {
+      const instance = Array.isArray(sub.assignment_instances)
+        ? sub.assignment_instances[0]
+        : sub.assignment_instances;
+      return instance?.settings?.non_instructional !== true;
+    });
     
     // Enrich each submission with flat assignment_title and class_name fields
     // so student-portal-init.js renderGradeRow() can use them directly.

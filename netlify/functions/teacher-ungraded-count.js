@@ -44,7 +44,16 @@ exports.handler = async (event) => {
     // Historical and legacy NULL-year records remain preserved but do not
     // inflate the active Teacher Center count.
     const operationalYear = getOperationalSchoolYear();
-    const url = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&status=eq.Submitted&school_year=eq.${operationalYear}`;
+
+    // Count only instructional Submitted instances in the active operational year.
+    // Missing non_instructional keys remain instructional; explicit true is excluded.
+    const url =
+      `${SUPABASE_URL}/rest/v1/assignment_instances` +
+      `?select=id` +
+      `&status=eq.Submitted` +
+      `&school_year=eq.${operationalYear}` +
+      `&or=(settings->>non_instructional.is.null,settings->>non_instructional.neq.true)`;
+
     const resp = await fetch(url, {
       method: 'GET',
       headers: {
@@ -56,17 +65,19 @@ exports.handler = async (event) => {
       },
     });
 
+    if (resp.ok === false) {
+      throw new Error(`Ungraded instances query failed: ${resp.status}`);
+    }
+
     let count = 0;
-    if (resp.ok) {
-      // PostgREST returns Content-Range: 0-0/N where N is the total count
-      const range = resp.headers.get('Content-Range') || '';
-      const match = range.match(/\/(\d+)$/);
-      if (match) {
-        count = parseInt(match[1], 10);
-      } else {
-        const body = await resp.json();
-        count = Array.isArray(body) ? body.length : 0;
-      }
+    const range = resp.headers.get('Content-Range') || '';
+    const match = range.match(/\/(\d+)$/);
+
+    if (match) {
+      count = parseInt(match[1], 10);
+    } else {
+      const body = await resp.json();
+      count = Array.isArray(body) ? body.length : 0;
     }
 
     return jsonResponse(
