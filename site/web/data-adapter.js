@@ -2104,6 +2104,38 @@ const remote = {
     
     console.log('[goal-progress] listGoalProgress (remote)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
     const schoolYear = getCurrentSchoolYear();
+
+    async function filterInstructionalEvidenceRows(rows) {
+      const safeRows = Array.isArray(rows) ? rows : [];
+      const instanceIds = [
+        ...new Set(
+          safeRows
+            .map(row => row?.assignment_instance_id)
+            .filter(Boolean)
+        )
+      ];
+
+      if (instanceIds.length === 0) return safeRows;
+
+      const { data: instances, error: instanceError } = await supabase
+        .from('assignment_instances')
+        .select('id, settings')
+        .in('id', instanceIds);
+
+      if (instanceError) throw instanceError;
+
+      const nonInstructionalIds = new Set(
+        (instances || [])
+          .filter(instance => instance?.settings?.non_instructional === true)
+          .map(instance => instance.id)
+      );
+
+      return safeRows.filter(
+        row =>
+          !row.assignment_instance_id ||
+          !nonInstructionalIds.has(row.assignment_instance_id)
+      );
+    }
     
     let query = supabase
       .from('goal_progress')
@@ -2114,6 +2146,7 @@ const remote = {
         source,
         collected_by,
         created_at,
+        assignment_instance_id,
         goal_id,
         student_id,
         class_id,
@@ -2155,8 +2188,11 @@ const remote = {
     
     const { data, error } = await query;
     if (!error) {
+      const instructionalData =
+        await filterInstructionalEvidenceRows(data || []);
+
       // Transform to flattened structure with defensive null checks
-      return (data || []).map(row => ({
+      return instructionalData.map(row => ({
         id: row.id,
         date: row.date,
         value: row.value,
@@ -2180,9 +2216,12 @@ const remote = {
     console.warn('[goal-progress] listGoalProgress join query failed (possible PostgREST relationship config issue), trying flat fallback:', error);
     const { data: flatData, error: flatError } = await supabase
       .from('goal_progress')
-      .select('id, date, value, source, collected_by, created_at, goal_id, student_id, class_id')
+      .select('id, date, value, source, collected_by, created_at, assignment_instance_id, goal_id, student_id, class_id')
       .order('date', { ascending: true });
     if (flatError) throw flatError;
+
+    const instructionalFlatData =
+      await filterInstructionalEvidenceRows(flatData || []);
 
     // Fetch goals and students to enrich the flat rows; if either lookup fails, proceed with empty maps.
     const [goalsResult, studentsResult] = await Promise.all([
@@ -2192,7 +2231,7 @@ const remote = {
     const goalById = new Map((!goalsResult.error && goalsResult.data ? goalsResult.data : []).map(g => [g.id, g]));
     const studentById = new Map((!studentsResult.error && studentsResult.data ? studentsResult.data : []).map(s => [s.id, s]));
 
-    return (flatData || []).map(row => {
+    return instructionalFlatData.map(row => {
       const goal = goalById.get(row.goal_id);
       const student = studentById.get(row.student_id);
       return {
@@ -2332,6 +2371,38 @@ const remote = {
 
     console.log('[goal-data-points] listGoalDataPoints (remote)', { studentId, goalId });
 
+    async function filterInstructionalEvidenceRows(rows) {
+      const safeRows = Array.isArray(rows) ? rows : [];
+      const instanceIds = [
+        ...new Set(
+          safeRows
+            .map(row => row?.assignment_instance_id)
+            .filter(Boolean)
+        )
+      ];
+
+      if (instanceIds.length === 0) return safeRows;
+
+      const { data: instances, error: instanceError } = await supabase
+        .from('assignment_instances')
+        .select('id, settings')
+        .in('id', instanceIds);
+
+      if (instanceError) throw instanceError;
+
+      const nonInstructionalIds = new Set(
+        (instances || [])
+          .filter(instance => instance?.settings?.non_instructional === true)
+          .map(instance => instance.id)
+      );
+
+      return safeRows.filter(
+        row =>
+          !row.assignment_instance_id ||
+          !nonInstructionalIds.has(row.assignment_instance_id)
+      );
+    }
+
     let query = supabase
       .from('goal_data_points')
       .select('*')
@@ -2358,7 +2429,7 @@ const remote = {
       throw error;
     }
 
-    return data || [];
+    return await filterInstructionalEvidenceRows(data || []);
   },
 
   // ============================================================================
