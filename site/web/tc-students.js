@@ -10030,6 +10030,7 @@
         .from('assignment_instances')
         .select(`
           assignment_id,
+          settings,
           assignments!assignment_id ( id, title ),
           submissions (
             submitted_at,
@@ -10057,6 +10058,8 @@
       const buckets = new Map(); // deseCode → Item[]
 
       for (const instance of data || []) {
+        if (instance?.settings?.non_instructional === true) continue;
+
         const assignment = instance.assignments;
         const assignmentTitle = assignment?.title || '';
         const assignmentId = instance.assignment_id;
@@ -10306,6 +10309,7 @@
     const { data, error } = await supabase
       .from('assignment_instances')
       .select(`
+        settings,
         submissions (
           submission_answers (
             earned_points,
@@ -10328,6 +10332,8 @@
 
     const rollupMap = new Map(); // dese_code → { earnedSum, maxSum, count }
     for (const instance of data || []) {
+      if (instance?.settings?.non_instructional === true) continue;
+
       for (const sub of instance.submissions || []) {
         for (const sa of sub.submission_answers || []) {
           const earned = typeof sa.earned_points === 'number' ? sa.earned_points : 0;
