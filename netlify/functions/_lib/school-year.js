@@ -25,6 +25,36 @@ function getCurrentSchoolYear(now = new Date()) {
 }
 
 /**
+ * Returns the active operational school year used for current teacher work.
+ *
+ * Unlike getCurrentSchoolYear(), July is treated as preparation for the
+ * upcoming school year:
+ *
+ *   Jan-Jun -> previous calendar year
+ *   Jul-Dec -> current calendar year
+ *
+ * Example:
+ *   June 30, 2026 -> 2025
+ *   July 1, 2026  -> 2026
+ *   July 25, 2026 -> 2026
+ *   August 1, 2026 -> 2026
+ *
+ * This does not change how historical dates are classified.
+ */
+function getOperationalSchoolYear(now = new Date()) {
+  const date = now instanceof Date ? now : new Date(now);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('Invalid date supplied to getOperationalSchoolYear');
+  }
+
+  const month = date.getMonth() + 1;
+  return month >= 7
+    ? date.getFullYear()
+    : date.getFullYear() - 1;
+}
+
+/**
  * Allows an assignment draft to explicitly target a school year.
  *
  * Supported:
@@ -59,5 +89,6 @@ function resolveSchoolYear(draft, now = new Date()) {
 
 module.exports = {
   getCurrentSchoolYear,
+  getOperationalSchoolYear,
   resolveSchoolYear,
 };
