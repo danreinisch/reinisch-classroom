@@ -10,6 +10,7 @@ const {
 
 const { requireTeacher } = require('./_lib/auth');
 const { getSupabaseConfig } = require('./_lib/supa');
+const { getOperationalSchoolYear } = require('./_lib/school-year');
 
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
@@ -39,8 +40,11 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Count assignment_instances with status 'Submitted' (not yet graded)
-    const url = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&status=eq.Submitted`;
+    // Count only current operational-year instances awaiting grading.
+    // Historical and legacy NULL-year records remain preserved but do not
+    // inflate the active Teacher Center count.
+    const operationalYear = getOperationalSchoolYear();
+    const url = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id&status=eq.Submitted&school_year=eq.${operationalYear}`;
     const resp = await fetch(url, {
       method: 'GET',
       headers: {

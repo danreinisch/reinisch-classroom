@@ -4,6 +4,7 @@ const assert = require('assert');
 
 const {
   getCurrentSchoolYear,
+  getOperationalSchoolYear,
   resolveSchoolYear,
 } = require('../netlify/functions/_lib/school-year');
 
@@ -20,6 +21,30 @@ assert.strictEqual(
   2026
 );
 console.log('✓ existing August behavior remains 2026');
+
+assert.strictEqual(
+  getOperationalSchoolYear(new Date('2026-06-30T12:00:00')),
+  2025
+);
+console.log('✓ operational year remains 2025 through June 30');
+
+assert.strictEqual(
+  getOperationalSchoolYear(new Date('2026-07-01T12:00:00')),
+  2026
+);
+console.log('✓ operational year rolls to 2026 on July 1');
+
+assert.strictEqual(
+  getOperationalSchoolYear(new Date('2026-07-25T12:00:00')),
+  2026
+);
+console.log('✓ July 25 teacher operations target 2026');
+
+assert.strictEqual(
+  getCurrentSchoolYear(new Date('2026-07-25T12:00:00')),
+  2025
+);
+console.log('✓ July historical/calendar classification still remains 2025');
 
 assert.strictEqual(
   resolveSchoolYear(
