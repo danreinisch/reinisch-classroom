@@ -317,58 +317,12 @@ async function archiveSubmissions(school_year, requestId) {
 }
 
 // ── Action: clear-assignments ─────────────────────────────────────────────────
-// Deletes submissions and assignment_instances for the given school_year.
-// Does NOT delete assignments (templates in the Library).
-
-async function clearAssignments(school_year, requestId) {
-  console.log(`[close-year-archive] [${requestId}] clearAssignments school_year=${school_year}`);
-
-  // Fetch all assignment_instances for this school_year to get their IDs
-  const instRes = await supaFetch(
-    `/rest/v1/assignment_instances?select=id&school_year=eq.${school_year}`
-  );
-  if (!instRes.ok) {
-    throw new Error(`Failed to fetch assignment_instances: ${instRes.status}`);
-  }
-  const instances = Array.isArray(instRes.data) ? instRes.data : [];
-
-  let deleted_submissions = 0;
-
-  if (instances.length > 0) {
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const validIds = instances
-      .map(i => i.id)
-      .filter(id => typeof id === 'string' && uuidPattern.test(id));
-
-    if (validIds.length > 0) {
-      const quotedIds = validIds.map(id => `"${id}"`).join(',');
-      const delSubRes = await supaFetch(
-        `/rest/v1/submissions?instance_id=in.(${quotedIds})`,
-        { method: 'DELETE', headers: { Prefer: 'return=representation' } }
-      );
-      if (!delSubRes.ok) {
-        throw new Error(`Failed to delete submissions: ${delSubRes.status}`);
-      }
-      const deleted = delSubRes.data;
-      deleted_submissions = Array.isArray(deleted) ? deleted.length : 0;
-      console.log(`[close-year-archive] [${requestId}] Deleted ${deleted_submissions} submissions`);
-    }
-  }
-
-  // Delete assignment_instances for this school_year
-  const delInstRes = await supaFetch(
-    `/rest/v1/assignment_instances?school_year=eq.${school_year}`,
-    { method: 'DELETE', headers: { Prefer: 'return=representation' } }
-  );
-  if (!delInstRes.ok) {
-    throw new Error(`Failed to delete assignment_instances: ${delInstRes.status}`);
-  }
-  const deletedInst = delInstRes.data;
-  const deleted_instances = Array.isArray(deletedInst) ? deletedInst.length : 0;
-  console.log(`[close-year-archive] [${requestId}] Deleted ${deleted_instances} instances`);
-
-  return { deleted_instances, deleted_submissions };
-}
+// Intentionally disabled.
+//
+// Historical assignment_instances are part of the provenance chain connecting
+// issued work, submissions, grading, goal_progress, and goal_data_points.
+// Deleting them severs that chain. Close Year must therefore fail closed until
+// historical-year retirement is designed and certified end-to-end.
 
 // ── Action: archive-students ──────────────────────────────────────────────────
 // Sets active=false and archived_at=now() for the given student_codes.
@@ -430,11 +384,6 @@ exports.handler = async (event) => {
     return jsonResponse(event, 500, { ok: false, error: 'Server not configured' }, {}, requestId);
   }
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error(`[teacher-close-year-archive] [${requestId}] Supabase not configured`);
-    return jsonResponse(event, 503, { ok: false, error: 'Service unavailable' }, { 'Cache-Control': 'no-store' }, requestId);
-  }
-
   const sizeCheck = validateBodySize(event.body, 50);
   if (!sizeCheck.valid) {
     return jsonResponse(event, 413, { ok: false, error: 'Request body too large' }, {}, requestId);
@@ -466,13 +415,36 @@ exports.handler = async (event) => {
 
   console.log(`[teacher-close-year-archive] [${requestId}] action=${action} school_year=${year} user=${authResult.user.username}`);
 
+  if (action === 'clear-assignments') {
+    console.warn(
+      `[teacher-close-year-archive] [${requestId}] BLOCKED clear-assignments school_year=${year}`
+    );
+    return jsonResponse(
+      event,
+      409,
+      {
+        ok: false,
+        action,
+        school_year: year,
+        error: 'Close Year clearing is disabled to preserve historical assignment, submission, and progress-evidence provenance.',
+      },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  // Only actions that actually access Supabase require database configuration.
+  // The destructive clear action above must remain fail-closed independently.
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error(`[teacher-close-year-archive] [${requestId}] Supabase not configured`);
+    return jsonResponse(event, 503, { ok: false, error: 'Service unavailable' }, { 'Cache-Control': 'no-store' }, requestId);
+  }
+
   try {
     let result;
 
     if (action === 'archive-submissions') {
       result = await archiveSubmissions(year, requestId);
-    } else if (action === 'clear-assignments') {
-      result = await clearAssignments(year, requestId);
     } else if (action === 'archive-students') {
       if (!Array.isArray(student_codes)) {
         return jsonResponse(event, 400, { ok: false, error: 'student_codes must be an array' }, {}, requestId);
