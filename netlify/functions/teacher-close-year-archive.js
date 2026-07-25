@@ -114,7 +114,7 @@ async function archiveSubmissions(school_year, requestId) {
 
   const quotedIds = validIds.map(id => `"${id}"`).join(',');
   const subRes = await supaFetch(
-    `/rest/v1/submissions?select=id,instance_id,answers,score_auto,score_manual,score_total,feedback,submitted_at,review_status,school_year&instance_id=in.(${quotedIds})`
+    `/rest/v1/submissions?select=id,instance_id,answers,score_auto,score_manual,score_total,detail,notes,feedback,submitted_at,review_status,graded_at,graded_by,school_year&instance_id=in.(${quotedIds})`
   );
   if (!subRes.ok) {
     throw new Error(`Failed to fetch submissions: ${subRes.status}`);
@@ -141,26 +141,156 @@ async function archiveSubmissions(school_year, requestId) {
     return { archived_submissions: 0 };
   }
 
-  // Build archive records
+  // Fetch structured per-question answer evidence for the submissions being archived.
+  const archiveSubIds = toArchive.map(s => `"${s.id}"`).join(',');
+  const ansRes = await supaFetch(
+    `/rest/v1/submission_answers?select=submission_id,assignment_item_id,raw_answer,is_correct,earned_points,max_points,teacher_note,rationale&submission_id=in.(${archiveSubIds})`
+  );
+  if (!ansRes.ok) {
+    throw new Error(`Failed to fetch submission_answers: ${ansRes.status}`);
+  }
+  const submissionAnswers = Array.isArray(ansRes.data) ? ansRes.data : [];
+
+  // Fetch assignment item metadata so the archive remains meaningful even if
+  // active assignment structures are later retired.
+  const itemIds = [
+    ...new Set(
+      submissionAnswers
+        .map(answer => answer.assignment_item_id)
+        .filter(Boolean)
+    ),
+  ];
+
+  const itemMap = {};
+  const mappingMap = {};
+
+  if (itemIds.length > 0) {
+    const itemIdsParam = itemIds
+      .map(id => encodeURIComponent(id))
+      .join(',');
+
+    const itemRes = await supaFetch(
+      `/rest/v1/assignment_items?select=id,item_ref,answer_type,points,meta,goal_codes,dese_codes&id=in.(${itemIdsParam})`
+    );
+    if (!itemRes.ok) {
+      throw new Error(`Failed to fetch assignment_items: ${itemRes.status}`);
+    }
+    if (Array.isArray(itemRes.data)) {
+      itemRes.data.forEach(item => {
+        itemMap[item.id] = item;
+      });
+    }
+
+    const mapRes = await supaFetch(
+      `/rest/v1/assignment_item_mappings?select=item_id,goal_codes,dese_codes&item_id=in.(${itemIdsParam})`
+    );
+    if (!mapRes.ok) {
+      throw new Error(`Failed to fetch assignment_item_mappings: ${mapRes.status}`);
+    }
+    if (Array.isArray(mapRes.data)) {
+      mapRes.data.forEach(mapping => {
+        mappingMap[mapping.item_id] = mapping;
+      });
+    }
+  }
+
+  const answersBySubmission = {};
+  submissionAnswers.forEach(answer => {
+    const item = itemMap[answer.assignment_item_id] || {};
+    const mapping = mappingMap[answer.assignment_item_id] || {};
+
+    // Goal mappings are authoritative in assignment_item_mappings.
+    // Fall back to assignment_items for older records.
+    const goalCodes =
+      Array.isArray(mapping.goal_codes) && mapping.goal_codes.length > 0
+        ? mapping.goal_codes
+        : (Array.isArray(item.goal_codes) ? item.goal_codes : []);
+
+    // DESE mappings are authoritative on assignment_items in current runtime.
+    // Fall back to assignment_item_mappings for older records.
+    const deseCodes =
+      Array.isArray(item.dese_codes) && item.dese_codes.length > 0
+        ? item.dese_codes
+        : (Array.isArray(mapping.dese_codes) ? mapping.dese_codes : []);
+
+    const snapshot = {
+      assignment_item_id: answer.assignment_item_id,
+      item_ref: item.item_ref || null,
+      answer_type: item.answer_type || null,
+      points: item.points ?? null,
+      item_meta: item.meta || {},
+      raw_answer: answer.raw_answer ?? null,
+      is_correct: answer.is_correct ?? null,
+      earned_points: answer.earned_points ?? null,
+      max_points: answer.max_points ?? null,
+      teacher_note: answer.teacher_note || null,
+      rationale: answer.rationale || null,
+      goal_codes: goalCodes,
+      dese_codes: deseCodes,
+    };
+
+    if (!answersBySubmission[answer.submission_id]) {
+      answersBySubmission[answer.submission_id] = [];
+    }
+    answersBySubmission[answer.submission_id].push(snapshot);
+  });
+
+  // Build self-contained archive records.
   const archiveRecords = toArchive.map(sub => {
     const inst = instanceIdMap[sub.instance_id] || {};
     const asg = assignmentMap[inst.assignment_id] || {};
     const stu = studentMap[inst.student_id] || {};
+    const structuredAnswers = answersBySubmission[sub.id] || [];
+
+    if (!inst.assignment_id || !inst.student_id || !asg.title || !stu.code) {
+      throw new Error(
+        `Cannot archive submission ${sub.id}: required assignment/student metadata is missing`
+      );
+    }
+
+    const goalSet = new Set();
+    const deseSet = new Set();
+
+    structuredAnswers.forEach(answer => {
+      (answer.goal_codes || []).forEach(code => goalSet.add(code));
+      (answer.dese_codes || []).forEach(code => deseSet.add(code));
+    });
+
     return {
       submission_id: sub.id,
-      student_id: inst.student_id || null,
-      student_code: stu.code || null,
-      assignment_id: inst.assignment_id || null,
-      assignment_title: asg.title || null,
+      student_id: inst.student_id,
+      student_code: stu.code,
+      assignment_id: String(inst.assignment_id),
+      title: asg.title,
       class_name: asg.section || null,
-      answers: sub.answers || null,
-      score_auto: sub.score_auto || null,
-      score_manual: sub.score_manual || null,
-      score_total: sub.score_total || null,
+
+      // JSONB preservation envelope:
+      // - raw_submission_answers keeps the original submission payload;
+      // - items keeps structured, reconstructable per-question evidence;
+      // - grading_metadata preserves review/grading context that has no
+      //   dedicated submission_archives columns.
+      answers: {
+        format_version: 2,
+        raw_submission_answers: sub.answers ?? null,
+        items: structuredAnswers,
+        grading_metadata: {
+          review_status: sub.review_status || null,
+          detail: sub.detail ?? null,
+          notes: sub.notes || null,
+          graded_at: sub.graded_at || null,
+          graded_by: sub.graded_by || null,
+        },
+      },
+
+      score_auto: sub.score_auto ?? null,
+      score_manual: sub.score_manual ?? null,
+      score_total: sub.score_total ?? null,
       feedback: sub.feedback || null,
+      iep_goal_codes: Array.from(goalSet),
+      dese_standard_codes: Array.from(deseSet),
       submitted_at: sub.submitted_at || null,
-      review_status: sub.review_status || null,
-      school_year: sub.school_year || school_year,
+      reviewed_at: sub.graded_at || new Date().toISOString(),
+      school_year: sub.school_year ?? school_year,
       archived_at: new Date().toISOString(),
     };
   });
