@@ -87,8 +87,42 @@ function resolveSchoolYear(draft, now = new Date()) {
   return getCurrentSchoolYear(now);
 }
 
+/**
+ * Resolves the school year for active teacher assignment issuance.
+ *
+ * Explicit draft values remain authoritative:
+ *   draft.schoolYear
+ *   draft.school_year
+ *
+ * Without an explicit valid year, teacher work uses the operational
+ * school year, where July belongs to the upcoming school year.
+ */
+function resolveOperationalSchoolYear(draft, now = new Date()) {
+  const raw =
+    draft && draft.schoolYear !== undefined
+      ? draft.schoolYear
+      : draft && draft.school_year !== undefined
+        ? draft.school_year
+        : undefined;
+
+  if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+    const parsed = Number.parseInt(String(raw), 10);
+
+    if (
+      Number.isInteger(parsed) &&
+      parsed >= 2000 &&
+      parsed <= 2100
+    ) {
+      return parsed;
+    }
+  }
+
+  return getOperationalSchoolYear(now);
+}
+
 module.exports = {
   getCurrentSchoolYear,
   getOperationalSchoolYear,
   resolveSchoolYear,
+  resolveOperationalSchoolYear,
 };

@@ -6,6 +6,7 @@ const {
   getCurrentSchoolYear,
   getOperationalSchoolYear,
   resolveSchoolYear,
+  resolveOperationalSchoolYear,
 } = require('../netlify/functions/_lib/school-year');
 
 console.log('Running school-year tests...\n');
@@ -81,5 +82,42 @@ assert.strictEqual(
   2025
 );
 console.log('✓ invalid override safely falls back');
+
+
+assert.strictEqual(
+  resolveOperationalSchoolYear(
+    {},
+    new Date('2026-07-25T12:00:00')
+  ),
+  2026
+);
+console.log('✓ July teacher issuance defaults to operational year 2026');
+
+assert.strictEqual(
+  resolveOperationalSchoolYear(
+    { schoolYear: 2025 },
+    new Date('2026-07-25T12:00:00')
+  ),
+  2025
+);
+console.log('✓ explicit teacher issuance schoolYear remains authoritative');
+
+assert.strictEqual(
+  resolveOperationalSchoolYear(
+    { school_year: '2026' },
+    new Date('2026-06-30T12:00:00')
+  ),
+  2026
+);
+console.log('✓ explicit school_year overrides operational fallback');
+
+assert.strictEqual(
+  resolveOperationalSchoolYear(
+    { schoolYear: 'banana' },
+    new Date('2026-07-25T12:00:00')
+  ),
+  2026
+);
+console.log('✓ invalid issuance override safely falls back to operational year');
 
 console.log('\n✓ All school-year tests passed!');

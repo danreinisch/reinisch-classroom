@@ -15,7 +15,7 @@ const { requireTeacher } = require('./_lib/auth');
 const { getSupabaseConfig, lookupActiveTeacherId } = require('./_lib/supa');
 const { buildItemsFromMeta } = require('./_lib/build-items');
 const { applyExplicitMapping } = require('./_lib/apply-explicit-mapping');
-const { resolveSchoolYear } = require('./_lib/school-year');
+const { resolveOperationalSchoolYear } = require('./_lib/school-year');
 const { getSchoolLocalDate } = require('./_lib/school-date');
 const { parseHtmlAssignment } = require('./_lib/parse-html-assignment');
 
@@ -1134,12 +1134,18 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
     }
   }
 
-  // Step 4: Check for duplicate assignment (same title + class_id)
-  // If found, reuse that assignment ID instead of creating a new one
+  // Resolve one authoritative year for the entire issuance.
+  // Explicit draft year wins; otherwise July teacher preparation targets
+  // the upcoming operational school year.
+  const issueSchoolYear = resolveOperationalSchoolYear(draft);
+
+  // Step 4: Check for duplicate assignment within the SAME school year.
+  // Historical assignments with the same title/class remain preserved and
+  // must never be reused as the parent of a new-year assignment instance.
   let assignmentId = null;
   let isDuplicate = false;
 
-  const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,meta&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+  const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,meta&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}&school_year=eq.${issueSchoolYear}`;
   
   console.log(`[teacher-issue-draft] [${requestId}] Checking for duplicate assignment`);
   
@@ -1204,7 +1210,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
       class_id: targetClass.id,
       active: true,
       meta: parsedMeta || {},
-      school_year: resolveSchoolYear(draft)
+      school_year: issueSchoolYear
     };
 
     console.log(`[teacher-issue-draft] [${requestId}] Creating new assignment record`);
@@ -1673,7 +1679,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
             status: 'Assigned',
             settings: updatedSettings,
             resubmission_count: 0,
-            school_year: resolveSchoolYear(draft),
+            school_year: issueSchoolYear,
           });
         } else {
           studentsToInsert.push({
@@ -1683,7 +1689,7 @@ async function issueDraftCore({ draft, teacherUsername, teacherUUID, requestId }
             due_at: dueAt || null,
             status: 'Assigned',
             settings: instanceSettings,
-            school_year: resolveSchoolYear(draft),
+            school_year: issueSchoolYear,
           });
         }
       }
