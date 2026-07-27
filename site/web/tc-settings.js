@@ -578,11 +578,31 @@
         return;
       }
 
-      // Fetch password statuses to determine default vs custom (graceful fallback)
+      // Fetch password statuses through the authenticated Teacher Center boundary.
       const pwStatusMap = {};
       try {
-        const statuses = await db.getStudentPasswordStatuses();
-        (statuses || []).forEach((ps) => {
+        const response = await fetch(
+          '/.netlify/functions/teacher-student-password-statuses',
+          {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store',
+          }
+        );
+
+        const data =
+          await response
+            .json()
+            .catch(() => ({}));
+
+        if (!response.ok || !data.ok) {
+          throw new Error(
+            data.error ||
+            `Password status request failed: ${response.status}`
+          );
+        }
+
+        (data.statuses || []).forEach((ps) => {
           pwStatusMap[ps.student_code] = ps.is_default_password;
         });
       } catch (e) {
