@@ -1781,19 +1781,40 @@ const remote = {
   
   // Portal B: Create resubmission
   async createResubmission({ instance_id, original_submission_id, answers = {} }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    const { data, error } = await supabase
-      .rpc('create_resubmission', {
-        p_instance_id: instance_id,
-        p_original_submission_id: original_submission_id,
-        p_answers: answers
-      });
-    
-    if (error) throw error;
-    
-    return { submission_id: data };
+    const response = await fetch(
+      '/.netlify/functions/student-create-resubmission',
+      {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          instance_id,
+          original_submission_id,
+          answers
+        })
+      }
+    );
+
+    let result = {};
+    try {
+      result = await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        'Failed to create resubmission'
+      );
+    }
+
+    return {
+      submission_id: result.submission_id
+    };
   },
   
   // Phase B: Classes and Enrollments
