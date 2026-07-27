@@ -175,6 +175,19 @@
   path = "/student/*"
   function = "student-entry-redirect"
 
+# Teacher Center access guard
+# Requires a valid RC teacher session before ordinary /teacher/* pages are served.
+# Login remains public; admin remains governed by admin-auth-guard below.
+[[edge_functions]]
+  path = "/teacher/*"
+  excludedPath = [
+    "/teacher/login",
+    "/teacher/login/*",
+    "/teacher/admin",
+    "/teacher/admin/*"
+  ]
+  function = "teacher-auth-guard"
+
 # Admin access guard - enforce server-side authentication for admin areas (PR 308, updated PR 335)
 # PR 335: Admin SSO via Teacher Center - requires Teacher Center session
 # Protects /admin and /admin/* from unauthenticated access
