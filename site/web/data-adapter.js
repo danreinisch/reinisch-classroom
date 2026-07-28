@@ -2435,63 +2435,38 @@ const remote = {
    * @returns {Array} Submission answers with item details and mappings
    */
   async listSubmissionAnswers(submissionId) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    const { data, error } = await supabase
-      .from('submission_answers')
-      .select(`
-        *,
-        assignment_items!assignment_item_id(
-          id,
-          item_ref,
-          answer_type,
-          points,
-          meta
-        )
-      `)
-      .eq('submission_id', submissionId);
-    
-    if (error) throw error;
-    
-    // Fetch mappings separately for items that have them
-    const itemIds = (data || []).map(a => a.assignment_item_id).filter(Boolean);
-    let mappingsByItemId = {};
-    if (itemIds.length > 0) {
-      const { data: mappings } = await supabase
-        .from('assignment_item_mappings')
-        .select('*')
-        .in('item_id', itemIds);
-      (mappings || []).forEach(m => {
-        mappingsByItemId[m.item_id] = m;
-      });
+    const response = await fetch(
+      '/.netlify/functions/teacher-review-submission-answers' +
+      `?submission_id=${encodeURIComponent(submissionId)}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response
+        .json()
+        .catch(() => ({
+          error: 'Unknown error'
+        }));
+
+      throw new Error(
+        err.error ||
+        `Load submission answers failed: ${response.status}`
+      );
     }
-    
-    // Flatten the nested structure
-    return (data || []).map(answer => {
-      const item = answer.assignment_items || {};
-      const mapping = mappingsByItemId[answer.assignment_item_id] || {};
-      
-      return {
-        id: answer.id,
-        submission_id: answer.submission_id,
-        item_id: answer.assignment_item_id,
-        raw_answer: answer.raw_answer,
-        is_correct: answer.is_correct,
-        earned_points: answer.earned_points,
-        max_points: answer.max_points,
-        teacher_note: answer.teacher_note,
-        scored_at: answer.scored_at,
-        item_ref: item.item_ref,
-        answer_type: item.answer_type,
-        points: item.points,
-        meta: item.meta,
-        dese_codes: mapping.dese_codes || [],
-        goal_codes: mapping.goal_codes || [],
-        weight: mapping.weight || 1.0
-      };
-    });
+
+    const result = await response.json();
+
+    return Array.isArray(result.answers)
+      ? result.answers
+      : [];
   },
+
 
   /**
    * Update or create a submission answer with teacher scoring
