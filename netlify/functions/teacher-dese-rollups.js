@@ -57,6 +57,21 @@ function normalizeStudentCode(value) {
   return code;
 }
 
+function normalizeDetailMode(value) {
+  const mode =
+    String(value || '')
+      .trim()
+      .toLowerCase();
+
+  if (!mode) {
+    return '';
+  }
+
+  return mode === 'evidence'
+    ? mode
+    : null;
+}
+
 async function readJson(response, label) {
   if (!response || response.ok !== true) {
     const status =
@@ -190,6 +205,129 @@ async function fetchStudentRollups(
     total_possible: row.total_possible,
     item_count: row.item_count,
   }));
+}
+
+
+async function fetchStudentEvidence(
+  student,
+  schoolYear
+) {
+  const select =
+    'assignment_id,settings,' +
+    'assignments!assignment_id(title),' +
+    'submissions(' +
+      'submitted_at,' +
+      'submission_answers(' +
+        'earned_points,' +
+        'max_points,' +
+        'is_correct,' +
+        'teacher_note,' +
+        'assignment_items!assignment_item_id(' +
+          'item_ref,' +
+          'dese_codes,' +
+          'meta' +
+        ')' +
+      ')' +
+    ')';
+
+  const response =
+    await rest(
+      '/rest/v1/assignment_instances' +
+      `?select=${select}` +
+      `&student_id=eq.${encodeURIComponent(student.id)}` +
+      `&school_year=eq.${encodeURIComponent(schoolYear)}` +
+      '&limit=1000'
+    );
+
+  const instances =
+    await readJson(
+      response,
+      'Student DESE evidence query'
+    );
+
+  const rows = [];
+
+  const asArray =
+    (value) => {
+      if (!value) return [];
+      return Array.isArray(value)
+        ? value
+        : [value];
+    };
+
+  for (const instance of instances) {
+    if (
+      instance?.settings?.non_instructional === true
+    ) {
+      continue;
+    }
+
+    const assignment =
+      Array.isArray(instance?.assignments)
+        ? instance.assignments[0]
+        : instance?.assignments;
+
+    const assignmentTitle =
+      assignment?.title || '';
+
+    for (const submission of asArray(instance?.submissions)) {
+      for (
+        const answer of
+        asArray(submission?.submission_answers)
+      ) {
+        const item =
+          Array.isArray(answer?.assignment_items)
+            ? answer.assignment_items[0]
+            : answer?.assignment_items;
+
+        if (
+          !item ||
+          !Array.isArray(item.dese_codes) ||
+          item.dese_codes.length === 0
+        ) {
+          continue;
+        }
+
+        if (
+          typeof answer.max_points !== 'number' ||
+          answer.max_points <= 0
+        ) {
+          continue;
+        }
+
+        const questionText =
+          item.meta?.question ||
+          item.item_ref ||
+          null;
+
+        for (const code of item.dese_codes) {
+          if (!code) continue;
+
+          rows.push({
+            dese_code: String(code),
+            question_text: questionText,
+            assignment_title: assignmentTitle,
+            assignment_id: instance.assignment_id,
+            submitted_at:
+              submission?.submitted_at || null,
+            earned_points:
+              typeof answer.earned_points === 'number'
+                ? answer.earned_points
+                : null,
+            max_points: answer.max_points,
+            is_correct:
+              typeof answer.is_correct === 'boolean'
+                ? answer.is_correct
+                : null,
+            teacher_note:
+              answer.teacher_note || null,
+          });
+        }
+      }
+    }
+  }
+
+  return rows;
 }
 
 async function mapWithConcurrency(
@@ -367,6 +505,42 @@ exports.handler = async (event) => {
     );
   }
 
+
+  const detailMode =
+    normalizeDetailMode(
+      params.detail
+    );
+
+  if (detailMode === null) {
+    return jsonResponse(
+      event,
+      400,
+      {
+        ok: false,
+        error: 'Invalid detail mode',
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
+  }
+
+  if (detailMode && !studentCode) {
+    return jsonResponse(
+      event,
+      400,
+      {
+        ok: false,
+        error: 'student_code is required for detail mode',
+      },
+      {
+        'Cache-Control': 'no-store',
+      },
+      requestId
+    );
+  }
+
   try {
     const schoolYear =
       getOperationalSchoolYear();
@@ -390,6 +564,28 @@ exports.handler = async (event) => {
           {
             ok: false,
             error: 'Student not available',
+          },
+          {
+            'Cache-Control': 'no-store',
+          },
+          requestId
+        );
+      }
+
+      if (detailMode === 'evidence') {
+        const rows =
+          await fetchStudentEvidence(
+            student,
+            schoolYear
+          );
+
+        return jsonResponse(
+          event,
+          200,
+          {
+            ok: true,
+            school_year: schoolYear,
+            rows,
           },
           {
             'Cache-Control': 'no-store',
