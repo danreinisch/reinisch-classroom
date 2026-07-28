@@ -63,26 +63,26 @@ assert.ok(
   'DESE evidence-card reader must exclude explicit non-instructional instances'
 );
 
-const fallback = section(
-  students,
-  '  async function fetchDeseRollupsFallback(supabase, studentId, schoolYear) {',
-  '  function initSkillsTabButton(contentDiv, student, signal) {'
+assert.ok(
+  !students.includes('fetchDeseRollupsFallback'),
+  'obsolete browser DESE rollup fallback must remain removed'
 );
 
 assert.ok(
-  fallback.includes('settings,'),
-  'DESE fallback query must fetch assignment-instance settings'
+  !students.includes("supabase.rpc('student_dese_rollups'"),
+  'Teacher Center must not call student_dese_rollups directly from the browser'
 );
 
 assert.ok(
-  fallback.includes(
-    'if (instance?.settings?.non_instructional === true) continue;'
+  students.includes(
+    '/.netlify/functions/teacher-dese-rollups'
   ),
-  'DESE fallback rollup must exclude explicit non-instructional instances'
+  'Teacher Center DESE rollups must use the authenticated server boundary'
 );
 
-console.log('✓ student_dese_rollups excludes explicit non-instructional instances');
-console.log('✓ all_students_dese_rollups excludes explicit non-instructional instances');
+console.log('✓ student_dese_rollups migration excludes explicit non-instructional instances');
+console.log('✓ historical all_students_dese_rollups migration excludes explicit non-instructional instances');
 console.log('✓ Teacher Center DESE evidence cards exclude marked instances');
-console.log('✓ Teacher Center DESE fallback rollups exclude marked instances');
+console.log('✓ obsolete browser DESE rollup fallback remains removed');
+console.log('✓ Teacher Center DESE rollups use the authenticated server boundary');
 console.log('\nNON-INSTRUCTIONAL DESE EVIDENCE: PASS');

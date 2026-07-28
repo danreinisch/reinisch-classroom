@@ -10251,120 +10251,57 @@
   }
 
   /**
-   * Fetch DESE standard rollups for a student from the `student_dese_rollups` RPC.
-   * Results are cached in `deseRollupCache` to avoid redundant round-trips when the
-   * teacher switches tabs and back within the same data-load cycle.
+   * Fetch DESE standard rollups for a student through the signed
+   * Teacher Center server boundary.
    *
-   * Returns an array of raw rollup rows:
-   *   { dese_code, percent_correct, total_earned, total_possible, item_count }
+   * Teacher ownership and school-year selection are enforced server-side.
    */
   async function fetchDeseRollups(student) {
-    if (!student?.id) return [];
+    if (!student?.code) return [];
 
     const cached = deseRollupCache.get(student.code);
     if (cached) return cached;
 
-    const now = new Date();
-    const m = now.getMonth() + 1; // 1-based month
-    const schoolYear = m >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-
     try {
-      const supabase = await getSupabase();
-      if (!supabase) return [];
+      const url =
+        '/.netlify/functions/teacher-dese-rollups' +
+        '?student_code=' +
+        encodeURIComponent(student.code);
 
-      const { data, error } = await supabase.rpc('student_dese_rollups', {
-        p_student_id: student.id,
-        p_school_year: schoolYear,
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
       });
 
-      let rows;
-      if (!error && Array.isArray(data)) {
-        rows = data;
-      } else {
-        if (error) {
-          console.warn('[tc-students] fetchDeseRollups: RPC error:', error.message, '— trying client-side fallback');
-        }
-        rows = await fetchDeseRollupsFallback(supabase, student.id, schoolYear);
+      if (!response.ok) {
+        console.warn(
+          '[tc-students] fetchDeseRollups: HTTP',
+          response.status
+        );
+        deseRollupCache.set(student.code, []);
+        return [];
       }
+
+      const payload = await response.json();
+
+      const rows =
+        payload &&
+        payload.ok &&
+        Array.isArray(payload.rows)
+          ? payload.rows
+          : [];
 
       deseRollupCache.set(student.code, rows);
+
       return rows;
     } catch (err) {
-      console.warn('[tc-students] fetchDeseRollups: failed:', err);
+      console.warn(
+        '[tc-students] fetchDeseRollups failed:',
+        err
+      );
       return [];
     }
-  }
-
-  /**
-   * Client-side fallback for DESE rollups when the RPC function is not deployed.
-   * Queries assignment_instances → submissions → submission_answers → assignment_items
-   * and aggregates earned/max points by dese_code.
-   *
-   * Reads dese_codes directly from assignment_items (always populated by the
-   * parser) rather than from assignment_item_mappings, which was previously
-   * only populated for items that also had IEP goal_codes.  This ensures that
-   * DESE-only students (no IEP goals) see their skills data.
-   */
-  async function fetchDeseRollupsFallback(supabase, studentId, schoolYear) {
-    const { data, error } = await supabase
-      .from('assignment_instances')
-      .select(`
-        settings,
-        submissions (
-          submission_answers (
-            earned_points,
-            max_points,
-            assignment_items!assignment_item_id (
-              dese_codes
-            )
-          )
-        )
-      `)
-      // !assignment_item_id disambiguates the FK from submission_answers → assignment_items
-      .eq('student_id', studentId)
-      .eq('school_year', schoolYear)
-      .limit(500);
-
-    if (error) throw error;
-    if ((data || []).length >= 500) {
-      console.warn('[tc-students] fetchDeseRollupsFallback: hit 500-row limit — DESE rollups may be incomplete. Deploy the student_dese_rollups RPC for accurate data.');
-    }
-
-    const rollupMap = new Map(); // dese_code → { earnedSum, maxSum, count }
-    for (const instance of data || []) {
-      if (instance?.settings?.non_instructional === true) continue;
-
-      for (const sub of instance.submissions || []) {
-        for (const sa of sub.submission_answers || []) {
-          const earned = typeof sa.earned_points === 'number' ? sa.earned_points : 0;
-          const max = typeof sa.max_points === 'number' ? sa.max_points : 0;
-          if (max <= 0) continue;
-
-          const item = sa.assignment_items;
-          if (!item || !Array.isArray(item.dese_codes)) continue;
-
-          for (const code of item.dese_codes) {
-            if (!code) continue;
-            const existing = rollupMap.get(code) || { earnedSum: 0, maxSum: 0, count: 0 };
-            existing.earnedSum += earned;
-            existing.maxSum += max;
-            existing.count += 1;
-            rollupMap.set(code, existing);
-          }
-        }
-      }
-    }
-
-    return Array.from(rollupMap.entries())
-      .filter(([, s]) => s.maxSum > 0)
-      .map(([dese_code, s]) => ({
-        dese_code,
-        percent_correct: Math.round(s.earnedSum / s.maxSum * 1000) / 10,
-        total_earned: s.earnedSum,
-        total_possible: s.maxSum,
-        item_count: s.count,
-      }))
-      .sort((a, b) => b.percent_correct - a.percent_correct);
   }
 
   /**

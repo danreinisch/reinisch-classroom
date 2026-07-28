@@ -1662,42 +1662,47 @@
   let spRollupCache = null;
 
   /**
-   * Derive the current school year (August 1 is the boundary).
-   */
-  function spCurrentSchoolYear() {
-    const now = new Date();
-    return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-  }
-
-  /**
-   * Fetch all-student DESE rollups via Supabase RPC.
-   * Falls back gracefully when the RPC isn't deployed yet.
+   * Fetch all-student DESE rollups through the signed Teacher Center boundary.
+   * School-year selection and teacher/student scoping are server-owned.
    */
   async function spFetchRollups() {
     if (spRollupCache !== null) return spRollupCache;
 
-    const { getSupabase } = await import('/web/supabase-client.js');
-    const supabase = await getSupabase();
-    if (!supabase) {
+    try {
+      const response = await fetch(
+        '/.netlify/functions/teacher-dese-rollups',
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(
+          '[tc-overview] teacher-dese-rollups HTTP error:',
+          response.status
+        );
+        spRollupCache = [];
+        return spRollupCache;
+      }
+
+      const payload = await response.json();
+
+      spRollupCache =
+        payload &&
+        payload.ok &&
+        Array.isArray(payload.rows)
+          ? payload.rows
+          : [];
+    } catch (err) {
+      console.warn(
+        '[tc-overview] teacher-dese-rollups failed:',
+        err
+      );
       spRollupCache = [];
-      return spRollupCache;
     }
 
-    const schoolYear = spCurrentSchoolYear();
-    try {
-      const { data, error } = await supabase.rpc('all_students_dese_rollups', {
-        p_school_year: schoolYear,
-      });
-      if (error) {
-        console.warn('[tc-overview] all_students_dese_rollups RPC error:', error.message);
-        spRollupCache = [];
-      } else {
-        spRollupCache = Array.isArray(data) ? data : [];
-      }
-    } catch (err) {
-      console.warn('[tc-overview] all_students_dese_rollups failed:', err);
-      spRollupCache = [];
-    }
     return spRollupCache;
   }
 
