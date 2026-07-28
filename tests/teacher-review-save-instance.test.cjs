@@ -1,202 +1,357 @@
-// Unit tests for teacher-review-save.js instance status update logic
-// Verifies that assignment_instances.status is always updated when a submission
-// is graded or reviewed, even when instanceId is not provided by the caller.
-// Run with: node tests/teacher-review-save-instance.test.cjs
-
 'use strict';
 
 const assert = require('assert');
-const crypto = require('crypto');
 
-// ── Env setup ────────────────────────────────────────────────────────────────
+process.env.SESSION_SECRET =
+  'test-session-secret-32-chars-long!!';
 
-const SESSION_SECRET = 'test-session-secret-32-chars-long!!';
-process.env.SESSION_SECRET = SESSION_SECRET;
+const TEACHER_ID =
+  '11111111-1111-4111-8111-111111111111';
 
-// ── Minimal JWT helpers ──────────────────────────────────────────────────────
+const SUBMISSION_ID =
+  '22222222-2222-4222-8222-222222222222';
 
-function makeTeacherToken(secret) {
-  const b64url = (buf) =>
-    Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const jsonb64 = (obj) => b64url(JSON.stringify(obj));
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const body = { role: 'teacher', iat: now, exp: now + 3600 };
-  const data = `${jsonb64(header)}.${jsonb64(body)}`;
-  const sig = crypto.createHmac('sha256', secret).update(data).digest();
-  return `${data}.${b64url(sig)}`;
-}
+const INSTANCE_ID =
+  '33333333-3333-4333-8333-333333333333';
 
-const validToken = makeTeacherToken(SESSION_SECRET);
+const WRONG_INSTANCE_ID =
+  '44444444-4444-4444-8444-444444444444';
 
-// ── Mock setup ────────────────────────────────────────────────────────────────
+const STUDENT_ID =
+  '55555555-5555-4555-8555-555555555555';
+
+const CLASS_ID =
+  '66666666-6666-4666-8666-666666666666';
+
+const ASSIGNMENT_ID = 101;
+
+let fetchCalls = [];
 
 const mockHttpLib = {
-  generateRequestId: () => 'test-req-id',
+  generateRequestId: () => 'instance-test',
   jsonResponse: (_event, status, body) => ({
     statusCode: status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   }),
-  handleCorsPreFlight: () => ({ statusCode: 200, headers: {}, body: '' }),
-  validateBodySize: () => ({ valid: true }),
-  safeJsonParse: (str) => {
-    if (!str) return { ok: false, error: 'Empty request body' };
-    try { return { ok: true, data: JSON.parse(str) }; } catch (_) { return { ok: false, error: 'Invalid JSON' }; }
+  handleCorsPreFlight: () => ({
+    statusCode: 200,
+    headers: {},
+    body: '',
+  }),
+  validateBodySize: () => ({
+    valid: true,
+  }),
+  safeJsonParse: (text) => {
+    try {
+      return {
+        ok: true,
+        data: JSON.parse(text),
+      };
+    } catch (_) {
+      return {
+        ok: false,
+        error: 'Invalid JSON',
+      };
+    }
   },
 };
 
 const mockAuthLib = {
-  requireTeacher: (event) => {
-    const cookie = event.headers && event.headers.cookie || '';
-    if (cookie.includes('tc=')) return { ok: true };
-    return { ok: false };
-  },
+  requireTeacher: () => ({
+    ok: true,
+    user: {
+      role: 'teacher',
+      teacherId: TEACHER_ID,
+    },
+  }),
 };
 
 const mockSupaLib = {
-  getSupabaseConfig: () => ({ url: 'https://test.supabase.co', key: 'test-service-key' }),
+  getSupabaseConfig: () => ({
+    url: 'https://test.supabase.co',
+    key: 'test-service-key',
+  }),
 };
 
-// Inject mocks into require cache before loading handler
-require.cache[require.resolve('../netlify/functions/_lib/http')] = { exports: mockHttpLib };
-require.cache[require.resolve('../netlify/functions/_lib/supa')] = { exports: mockSupaLib };
-require.cache[require.resolve('../netlify/functions/_lib/auth')] = { exports: mockAuthLib };
+require.cache[
+  require.resolve('../netlify/functions/_lib/http')
+] = {
+  exports: mockHttpLib,
+};
 
-// Configurable fetch mock
-let fetchResponses = [];
-let fetchCalls = [];
-global.fetch = async (url, opts) => {
-  opts = opts || {};
-  const body = opts.body ? JSON.parse(opts.body) : undefined;
-  fetchCalls.push({ url, method: opts.method || 'GET', body });
-  const next = fetchResponses.shift();
-  if (!next) throw new Error(`Unexpected fetch call to ${url}`);
+require.cache[
+  require.resolve('../netlify/functions/_lib/auth')
+] = {
+  exports: mockAuthLib,
+};
+
+require.cache[
+  require.resolve('../netlify/functions/_lib/supa')
+] = {
+  exports: mockSupaLib,
+};
+
+function response(body, status = 200) {
   return {
-    ok: next.ok !== false,
-    status: next.status || 200,
-    text: async () => next.body || '{}',
-    headers: { get: () => null },
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(body),
+    headers: {
+      get: () => null,
+    },
   };
+}
+
+global.fetch = async (url, options = {}) => {
+  const method = options.method || 'GET';
+
+  fetchCalls.push({
+    url,
+    method,
+    body: options.body
+      ? JSON.parse(options.body)
+      : null,
+  });
+
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/submissions') &&
+    url.includes('select=id,instance_id')
+  ) {
+    return response([{
+      id: SUBMISSION_ID,
+      instance_id: INSTANCE_ID,
+    }]);
+  }
+
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/assignment_instances') &&
+    url.includes('select=id,student_id,assignment_id')
+  ) {
+    return response([{
+      id: INSTANCE_ID,
+      student_id: STUDENT_ID,
+      assignment_id: ASSIGNMENT_ID,
+    }]);
+  }
+
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/assignments') &&
+    url.includes('select=id,class_id')
+  ) {
+    return response([{
+      id: ASSIGNMENT_ID,
+      class_id: CLASS_ID,
+    }]);
+  }
+
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/classes') &&
+    url.includes('teacher_id=eq.')
+  ) {
+    return response([{
+      id: CLASS_ID,
+    }]);
+  }
+
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/class_enrollments')
+  ) {
+    return response([{
+      class_id: CLASS_ID,
+      student_id: STUDENT_ID,
+      active: true,
+    }]);
+  }
+
+  if (
+    method === 'GET' &&
+    url.includes('/rest/v1/submissions') &&
+    url.includes('select=instance_id')
+  ) {
+    return response([{
+      instance_id: INSTANCE_ID,
+    }]);
+  }
+
+  if (
+    method === 'PATCH' &&
+    url.includes('/rest/v1/submissions')
+  ) {
+    return response([{
+      id: SUBMISSION_ID,
+      review_status: 'reviewed',
+    }]);
+  }
+
+  if (
+    method === 'PATCH' &&
+    url.includes('/rest/v1/assignment_instances')
+  ) {
+    return response([{
+      id: INSTANCE_ID,
+    }]);
+  }
+
+  throw new Error(
+    `Unexpected fetch: ${method} ${url}`
+  );
 };
 
-const { handler } = require('../netlify/functions/teacher-review-save');
-
-// ── Test runner ──────────────────────────────────────────────────────────────
-
-const tests = [];
-function test(name, fn) { tests.push({ name, fn }); }
-
-async function runAll() {
-  console.log('--- teacher-review-save: instance status update tests ---\n');
-  let failed = 0;
-  for (const { name, fn } of tests) {
-    fetchResponses = [];
-    fetchCalls = [];
-    try {
-      await fn();
-      console.log('OK ' + name);
-    } catch (e) {
-      console.error('FAIL ' + name);
-      console.error('  Error:', e.message);
-      failed++;
-    }
-  }
-  if (failed > 0) {
-    console.error('\n' + failed + ' test(s) failed.');
-    process.exit(1);
-  }
-  console.log('\nAll teacher-review-save instance status tests passed!');
-}
+const {
+  handler,
+} = require(
+  '../netlify/functions/teacher-review-save'
+);
 
 function makeEvent(body) {
   return {
     httpMethod: 'POST',
-    headers: { cookie: 'tc=' + validToken, 'Content-Type': 'application/json' },
+    headers: {
+      cookie: 'tc=test-cookie',
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   };
 }
 
-function ok(body) { return { ok: true, status: 200, body: body || '{}' }; }
+function instanceMutation() {
+  return fetchCalls.find(
+    (call) =>
+      call.method === 'PATCH' &&
+      call.url.includes(
+        '/rest/v1/assignment_instances'
+      )
+  );
+}
 
-// ── Tests ────────────────────────────────────────────────────────────────────
+async function runCase({
+  action,
+  callerInstanceId,
+  expectedStatus,
+}) {
+  fetchCalls = [];
 
-// Test 1: save_grade with instanceId → updates instance directly (no extra lookup)
-test('save_grade with instanceId: updates instance directly (no extra DB lookup)', async () => {
-  fetchResponses = [
-    ok('[{"id":"sub-1","review_status":"reviewed"}]'),   // submissions PATCH
-    ok('[{"id":"inst-1","status":"Graded"}]'),           // instances PATCH
+  const body = {
+    action,
+    submissionId: SUBMISSION_ID,
+  };
+
+  if (action === 'save_grade') {
+    Object.assign(body, {
+      scoreAuto: 5,
+      scoreManual: 0,
+      scoreTotal: 100,
+      status: 'Graded',
+    });
+  }
+
+  if (callerInstanceId !== undefined) {
+    body.instanceId = callerInstanceId;
+  }
+
+  const result =
+    await handler(
+      makeEvent(body)
+    );
+
+  assert.strictEqual(
+    result.statusCode,
+    200
+  );
+
+  const mutation =
+    instanceMutation();
+
+  assert.ok(
+    mutation,
+    'expected assignment instance mutation'
+  );
+
+  assert.ok(
+    mutation.url.includes(INSTANCE_ID),
+    'instance mutation must use canonical instance'
+  );
+
+  assert.ok(
+    !mutation.url.includes(WRONG_INSTANCE_ID),
+    'instance mutation must not use caller-controlled instance'
+  );
+
+  assert.strictEqual(
+    mutation.body.status,
+    expectedStatus
+  );
+}
+
+(async () => {
+  console.log(
+    '--- teacher-review-save: canonical instance tests ---\n'
+  );
+
+  const cases = [
+    {
+      name:
+        'save_grade ignores wrong caller instanceId',
+      action: 'save_grade',
+      callerInstanceId: WRONG_INSTANCE_ID,
+      expectedStatus: 'Graded',
+    },
+    {
+      name:
+        'save_grade without caller instanceId uses canonical instance',
+      action: 'save_grade',
+      expectedStatus: 'Graded',
+    },
+    {
+      name:
+        'reopen ignores wrong caller instanceId',
+      action: 'reopen',
+      callerInstanceId: WRONG_INSTANCE_ID,
+      expectedStatus: 'In Progress',
+    },
+    {
+      name:
+        'reopen without caller instanceId uses canonical instance',
+      action: 'reopen',
+      expectedStatus: 'In Progress',
+    },
   ];
-  const result = await handler(makeEvent({
-    action: 'save_grade', submissionId: 'sub-1',
-    scoreAuto: 5, scoreManual: 0, scoreTotal: 100, status: 'Graded',
-    instanceId: 'inst-1',
-  }));
-  assert.strictEqual(result.statusCode, 200, 'should return 200');
-  assert.strictEqual(fetchCalls.length, 2, 'should make exactly 2 fetch calls (no DB lookup)');
-  const instCall = fetchCalls[1];
-  assert.ok(instCall.url.includes('assignment_instances'), 'second call should target assignment_instances');
-  assert.ok(instCall.url.includes('inst-1'), 'should use the provided instanceId');
-  assert.strictEqual(instCall.body && instCall.body.status, 'Graded', 'instance status should be Graded');
-});
 
-// Test 2: save_grade without instanceId → falls back to DB lookup then updates instance
-test('save_grade without instanceId: falls back to DB lookup and still updates instance', async () => {
-  fetchResponses = [
-    ok('[{"id":"sub-2","review_status":"reviewed"}]'),   // submissions PATCH
-    ok('[{"instance_id":"inst-2"}]'),                    // lookup: SELECT instance_id
-    ok('[{"id":"inst-2","status":"Graded"}]'),           // instances PATCH
-  ];
-  const result = await handler(makeEvent({
-    action: 'save_grade', submissionId: 'sub-2',
-    scoreAuto: 5, scoreManual: 0, scoreTotal: 100, status: 'Graded',
-    // no instanceId
-  }));
-  assert.strictEqual(result.statusCode, 200, 'should return 200 even without instanceId');
-  assert.strictEqual(fetchCalls.length, 3, 'should make 3 fetch calls (includes DB lookup)');
-  const lookupCall = fetchCalls[1];
-  assert.ok(lookupCall.url.includes('submissions'), 'second call should be the submission lookup');
-  assert.ok(lookupCall.url.includes('instance_id'), 'lookup should select instance_id');
-  const instCall = fetchCalls[2];
-  assert.ok(instCall.url.includes('assignment_instances'), 'third call should target assignment_instances');
-  assert.ok(instCall.url.includes('inst-2'), 'should use the looked-up instanceId');
-  assert.strictEqual(instCall.body && instCall.body.status, 'Graded', 'instance status should be Graded');
-});
+  let failed = 0;
 
-// Test 3: reopen with instanceId → updates instance directly (no extra lookup)
-test('reopen with instanceId: updates instance directly (no extra DB lookup)', async () => {
-  fetchResponses = [
-    ok('[{"id":"sub-3","review_status":"pending"}]'),   // submissions PATCH
-    ok(''),                                              // instances PATCH
-  ];
-  const result = await handler(makeEvent({
-    action: 'reopen', submissionId: 'sub-3', instanceId: 'inst-3',
-  }));
-  assert.strictEqual(result.statusCode, 200, 'should return 200');
-  assert.strictEqual(fetchCalls.length, 2, 'should make exactly 2 fetch calls');
-  const instCall = fetchCalls[1];
-  assert.ok(instCall.url.includes('assignment_instances'), 'second call should target assignment_instances');
-  assert.ok(instCall.url.includes('inst-3'), 'should use the provided instanceId');
-  assert.strictEqual(instCall.body && instCall.body.status, 'In Progress', 'instance status should be In Progress');
-});
+  for (const testCase of cases) {
+    try {
+      await runCase(testCase);
+      console.log(
+        `OK ${testCase.name}`
+      );
+    } catch (error) {
+      failed += 1;
+      console.error(
+        `FAIL ${testCase.name}`
+      );
+      console.error(
+        `  ${error.message}`
+      );
+    }
+  }
 
-// Test 4: reopen without instanceId → falls back to DB lookup then updates instance
-test('reopen without instanceId: falls back to DB lookup and still updates instance', async () => {
-  fetchResponses = [
-    ok('[{"id":"sub-4","review_status":"pending"}]'),   // submissions PATCH
-    ok('[{"instance_id":"inst-4"}]'),                   // lookup: SELECT instance_id
-    ok(''),                                              // instances PATCH
-  ];
-  const result = await handler(makeEvent({
-    action: 'reopen', submissionId: 'sub-4',
-    // no instanceId
-  }));
-  assert.strictEqual(result.statusCode, 200, 'should return 200 even without instanceId');
-  assert.strictEqual(fetchCalls.length, 3, 'should make 3 fetch calls (includes DB lookup)');
-  const instCall = fetchCalls[2];
-  assert.ok(instCall.url.includes('assignment_instances'), 'third call should target assignment_instances');
-  assert.ok(instCall.url.includes('inst-4'), 'should use the looked-up instanceId');
-  assert.strictEqual(instCall.body && instCall.body.status, 'In Progress', 'instance status should be In Progress');
-});
+  if (failed > 0) {
+    console.error(
+      `\n${failed} canonical instance test(s) failed.`
+    );
+    process.exit(1);
+  }
 
-runAll();
+  console.log(
+    '\nAll teacher-review-save canonical instance tests passed!'
+  );
+})();

@@ -34,6 +34,207 @@ async function supaFetch(path, init = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+function isUuid(value) {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
+}
+
+async function readAuthorizationRows(path, label, requestId) {
+  const result = await supaFetch(path);
+
+  if (!result.ok) {
+    console.error(
+      `[teacher-review-save] [${requestId}] ${label} failed:`,
+      result.status,
+      result.data
+    );
+
+    return {
+      ok: false,
+      statusCode: 500,
+      error: 'Authorization check failed',
+      rows: [],
+    };
+  }
+
+  return {
+    ok: true,
+    rows: Array.isArray(result.data) ? result.data : [],
+  };
+}
+
+async function authorizeReviewMutation(body, teacherId, requestId) {
+  const submissionId = body && body.submissionId;
+
+  if (!isUuid(submissionId)) {
+    return {
+      ok: false,
+      statusCode: 400,
+      error: 'Invalid submissionId',
+    };
+  }
+
+  const submissionResult = await readAuthorizationRows(
+    '/rest/v1/submissions' +
+      '?select=id,instance_id' +
+      `&id=eq.${encodeURIComponent(submissionId)}` +
+      '&limit=1',
+    'Submission authorization query',
+    requestId
+  );
+
+  if (!submissionResult.ok) return submissionResult;
+
+  const submission = submissionResult.rows[0];
+
+  if (!submission || !isUuid(submission.instance_id)) {
+    return {
+      ok: false,
+      statusCode: 404,
+      error: 'Submission not found',
+    };
+  }
+
+  const instanceId = submission.instance_id;
+
+  const instanceResult = await readAuthorizationRows(
+    '/rest/v1/assignment_instances' +
+      '?select=id,student_id,assignment_id' +
+      `&id=eq.${encodeURIComponent(instanceId)}` +
+      '&limit=1',
+    'Assignment instance authorization query',
+    requestId
+  );
+
+  if (!instanceResult.ok) return instanceResult;
+
+  const instance = instanceResult.rows[0];
+
+  if (
+    !instance ||
+    !isUuid(instance.id) ||
+    !isUuid(instance.student_id) ||
+    instance.assignment_id === null ||
+    instance.assignment_id === undefined
+  ) {
+    return {
+      ok: false,
+      statusCode: 404,
+      error: 'Submission not found',
+    };
+  }
+
+  const studentId = instance.student_id;
+  const assignmentId = String(instance.assignment_id);
+
+  const assignmentResult = await readAuthorizationRows(
+    '/rest/v1/assignments' +
+      '?select=id,class_id' +
+      `&id=eq.${encodeURIComponent(assignmentId)}` +
+      '&limit=1',
+    'Assignment authorization query',
+    requestId
+  );
+
+  if (!assignmentResult.ok) return assignmentResult;
+
+  const assignment = assignmentResult.rows[0];
+
+  if (!assignment || !isUuid(assignment.class_id)) {
+    return {
+      ok: false,
+      statusCode: 404,
+      error: 'Submission not found',
+    };
+  }
+
+  const classId = assignment.class_id;
+
+  const classResult = await readAuthorizationRows(
+    '/rest/v1/classes' +
+      '?select=id' +
+      `&id=eq.${encodeURIComponent(classId)}` +
+      `&teacher_id=eq.${encodeURIComponent(teacherId)}` +
+      '&limit=1',
+    'Class ownership authorization query',
+    requestId
+  );
+
+  if (!classResult.ok) return classResult;
+
+  if (classResult.rows.length === 0) {
+    return {
+      ok: false,
+      statusCode: 404,
+      error: 'Submission not found',
+    };
+  }
+
+  const enrollmentResult = await readAuthorizationRows(
+    '/rest/v1/class_enrollments' +
+      '?select=class_id,student_id,active' +
+      `&class_id=eq.${encodeURIComponent(classId)}` +
+      `&student_id=eq.${encodeURIComponent(studentId)}` +
+      '&active=eq.true' +
+      '&limit=1',
+    'Class enrollment authorization query',
+    requestId
+  );
+
+  if (!enrollmentResult.ok) return enrollmentResult;
+
+  if (enrollmentResult.rows.length === 0) {
+    return {
+      ok: false,
+      statusCode: 404,
+      error: 'Submission not found',
+    };
+  }
+
+  if (body.action === 'save_score') {
+    if (!body.itemId || typeof body.itemId !== 'string') {
+      return {
+        ok: false,
+        statusCode: 400,
+        error: 'itemId is required',
+      };
+    }
+
+    const itemResult = await readAuthorizationRows(
+      '/rest/v1/assignment_items' +
+        '?select=id,assignment_id' +
+        `&id=eq.${encodeURIComponent(body.itemId)}` +
+        `&assignment_id=eq.${encodeURIComponent(assignmentId)}` +
+        '&limit=1',
+      'Assignment item authorization query',
+      requestId
+    );
+
+    if (!itemResult.ok) return itemResult;
+
+    if (itemResult.rows.length === 0) {
+      return {
+        ok: false,
+        statusCode: 404,
+        error: 'Submission not found',
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    context: {
+      submissionId,
+      instanceId,
+      studentId,
+      assignmentId,
+      classId,
+    },
+  };
+}
+
 // Action: save_score
 // Upsert a submission_answer row with earned_points / teacher_note
 async function handleSaveScore(body, requestId) {
@@ -495,6 +696,12 @@ exports.handler = async (event) => {
     return jsonResponse(event, 401, { error: 'Unauthorized' }, {}, requestId);
   }
 
+  const teacherId = authResult.user && authResult.user.teacherId;
+  if (!isUuid(teacherId)) {
+    console.log(`[teacher-review-save] [${requestId}] Missing signed teacherId`);
+    return jsonResponse(event, 403, { error: 'Forbidden' }, {}, requestId);
+  }
+
   const sizeCheck = validateBodySize(event.body, 50);
   if (!sizeCheck.valid) {
     return jsonResponse(event, 413, { error: sizeCheck.error }, {}, requestId);
@@ -512,32 +719,71 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { error: 'action is required' }, {}, requestId);
   }
 
+  const allowedActions = new Set([
+    'save_score',
+    'save_grade',
+    'finalize',
+    'reopen',
+    'mark_reviewed',
+    'return_for_revision',
+    'set_in_progress',
+  ]);
+
+  if (!allowedActions.has(action)) {
+    console.log(`[teacher-review-save] [${requestId}] Unknown action: ${action}`);
+    return jsonResponse(event, 400, { error: `Unknown action: ${action}` }, {}, requestId);
+  }
+
+  const authorization = await authorizeReviewMutation(
+    body,
+    teacherId,
+    requestId
+  );
+
+  if (!authorization.ok) {
+    return jsonResponse(
+      event,
+      authorization.statusCode || 500,
+      { error: authorization.error || 'Authorization failed' },
+      {},
+      requestId
+    );
+  }
+
+  // Caller-provided instanceId is intentionally non-authoritative.
+  // Every instance mutation receives the canonical instance derived from
+  // the authorized submission.
+  const authorizedBody = {
+    ...body,
+    submissionId: authorization.context.submissionId,
+    instanceId: authorization.context.instanceId,
+  };
+
   let result;
   switch (action) {
     case 'save_score':
-      result = await handleSaveScore(body, requestId);
+      result = await handleSaveScore(authorizedBody, requestId);
       break;
     case 'save_grade':
-      result = await handleSaveGrade(body, requestId);
+      result = await handleSaveGrade(authorizedBody, requestId);
       break;
     case 'finalize':
-      result = await handleFinalize(body, requestId);
+      result = await handleFinalize(authorizedBody, requestId);
       break;
     case 'reopen':
-      result = await handleReopen(body, requestId);
+      result = await handleReopen(authorizedBody, requestId);
       break;
     case 'mark_reviewed':
-      result = await handleMarkReviewed(body, requestId);
+      result = await handleMarkReviewed(authorizedBody, requestId);
       break;
     case 'return_for_revision':
-      result = await handleReturnForRevision(body, requestId);
+      result = await handleReturnForRevision(authorizedBody, requestId);
       break;
     case 'set_in_progress':
-      result = await handleSetInProgress(body, requestId);
+      result = await handleSetInProgress(authorizedBody, requestId);
       break;
     default:
-      console.log(`[teacher-review-save] [${requestId}] Unknown action: ${action}`);
-      return jsonResponse(event, 400, { error: `Unknown action: ${action}` }, {}, requestId);
+      return jsonResponse(event, 400, { error: 'Unknown action' }, {}, requestId);
   }
 
   if (result.error) {
