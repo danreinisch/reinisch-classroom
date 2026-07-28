@@ -331,7 +331,7 @@ window.addEventListener('resize', function() {
 // ── Standards Focus Card ──────────────────────────────────────────────────────
 // Fetches DESE rollup data and renders a compact "Standards Focus" card on the
 // home dashboard when there are critical or needs-support standards.
-// Only fires when the user has a Supabase (teacher) session.
+// Loads only through the authenticated Teacher Center server boundary.
 
 function hdGetTier(pct) {
   if (pct >= 80) return 'excellent';
@@ -340,26 +340,23 @@ function hdGetTier(pct) {
   return 'critical';
 }
 
-function hdCurrentSchoolYear() {
-  var now = new Date();
-  return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-}
-
 function renderStandardsFocusCard() {
   var cardEl = document.getElementById('focus-standards');
   if (!cardEl) return;
 
-  import('/web/supabase-client.js').then(function(mod) {
-    return mod.getSupabase();
-  }).then(function(supabase) {
-    if (!supabase) return; // Not a teacher session — leave card hidden
+  Promise.resolve().then(function() {
+    return fetch('/.netlify/functions/teacher-dese-rollups', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' },
+    });
+  }).then(function(response) {
+    if (!response.ok) return;
 
-    return supabase.rpc('all_students_dese_rollups', {
-      p_school_year: hdCurrentSchoolYear(),
-    }).then(function(result) {
-      if (result.error || !Array.isArray(result.data) || result.data.length === 0) return;
+    return response.json().then(function(result) {
+      if (!result || !result.ok || !Array.isArray(result.rows) || result.rows.length === 0) return;
 
-      var rows = result.data;
+      var rows = result.rows;
 
       // Aggregate per-standard: average percent_correct across all students
       var stdAccum = {};

@@ -1394,29 +1394,47 @@
     return 'critical';
   }
 
-  function aibSpCurrentSchoolYear() {
-    const now = new Date();
-    return (now.getMonth() + 1) >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-  }
-
   /** Session-level cache: null = not fetched yet */
   let aibRollupCache = null;
 
   async function aibFetchRollups() {
     if (aibRollupCache !== null) return aibRollupCache;
+
     try {
-      const { getSupabase } = await import('/web/supabase-client.js');
-      const supabase = await getSupabase();
-      if (!supabase) { aibRollupCache = []; return aibRollupCache; }
-      const { data, error } = await supabase.rpc('all_students_dese_rollups', {
-        p_school_year: aibSpCurrentSchoolYear(),
-      });
-      aibRollupCache = error || !Array.isArray(data) ? [] : data;
-      if (error) console.warn('[tc-ai-builder] all_students_dese_rollups error:', error.message);
+      const response = await fetch(
+        '/.netlify/functions/teacher-dese-rollups',
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(
+          '[tc-ai-builder] teacher-dese-rollups HTTP error:',
+          response.status
+        );
+        aibRollupCache = [];
+        return aibRollupCache;
+      }
+
+      const payload = await response.json();
+
+      aibRollupCache =
+        payload &&
+        payload.ok &&
+        Array.isArray(payload.rows)
+          ? payload.rows
+          : [];
     } catch (err) {
-      console.warn('[tc-ai-builder] all_students_dese_rollups failed:', err);
+      console.warn(
+        '[tc-ai-builder] teacher-dese-rollups failed:',
+        err
+      );
       aibRollupCache = [];
     }
+
     return aibRollupCache;
   }
 
