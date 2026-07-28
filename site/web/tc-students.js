@@ -10012,98 +10012,86 @@
    * so opening multiple standards never fires duplicate round-trips.
    */
   async function fetchAllEvidenceForStudent(student) {
-    if (!student?.id) return new Map();
+    if (!student?.code) return new Map();
     if (deseEvidenceCache.has(student.code)) return deseEvidenceCache.get(student.code);
 
     try {
-      const supabase = await getSupabase();
-      if (!supabase) return new Map();
+      const params = new URLSearchParams({
+        student_code: student.code,
+        detail: 'evidence',
+      });
 
-      const now = new Date();
-      const m = now.getMonth() + 1;
-      const schoolYear = m >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-
-      // Query: assignment_instances → assignments + submissions → submission_answers → assignment_items
-      // Filter by student_id + school_year; bucket items by dese_code client-side.
-      // Limit is 1000 to cover essentially all real students without multiple round-trips.
-      const { data, error } = await supabase
-        .from('assignment_instances')
-        .select(`
-          assignment_id,
-          settings,
-          assignments!assignment_id ( id, title ),
-          submissions (
-            submitted_at,
-            submission_answers (
-              earned_points,
-              max_points,
-              is_correct,
-              scored_at,
-              teacher_note,
-              assignment_items!assignment_item_id (
-                id,
-                item_ref,
-                dese_codes,
-                meta
-              )
-            )
-          )
-        `)
-        .eq('student_id', student.id)
-        .eq('school_year', schoolYear)
-        .limit(1000);
-
-      if (error) throw error;
-
-      const buckets = new Map(); // deseCode → Item[]
-
-      for (const instance of data || []) {
-        if (instance?.settings?.non_instructional === true) continue;
-
-        const assignment = instance.assignments;
-        const assignmentTitle = assignment?.title || '';
-        const assignmentId = instance.assignment_id;
-
-        for (const sub of instance.submissions || []) {
-          const dateStr = sub.submitted_at
-            ? new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            : null;
-
-          for (const sa of sub.submission_answers || []) {
-            const ai = sa.assignment_items;
-            if (!ai || !Array.isArray(ai.dese_codes) || ai.dese_codes.length === 0) continue;
-            // Exclude ungraded prompts — max_points > 0 is intentional here.
-            // Note: this filter may cause counts to diverge slightly from the student_dese_rollups
-            // RPC, which may count zero-point items differently.  The UI surfaces any divergence.
-            if (typeof sa.max_points !== 'number' || sa.max_points <= 0) continue;
-
-            const earned = typeof sa.earned_points === 'number' ? sa.earned_points : null;
-            const max = typeof sa.max_points === 'number' ? sa.max_points : null;
-            const scorePct = earned !== null && max ? Math.round(earned / max * 100) : null;
-            const questionText = ai.meta?.question || ai.item_ref || null;
-
-            const item = {
-              question_text: questionText,
-              assignment_title: assignmentTitle,
-              assignment_id: assignmentId,
-              date: dateStr,
-              earned_points: earned,
-              max_points: max,
-              is_correct: sa.is_correct,
-              score_pct: scorePct,
-              teacher_note: sa.teacher_note || null,
-            };
-
-            // A single submission_answer can match multiple dese_codes; add to every bucket.
-            for (const code of ai.dese_codes) {
-              if (!buckets.has(code)) buckets.set(code, []);
-              buckets.get(code).push(item);
-            }
-          }
+      const res = await fetch(
+        `/.netlify/functions/teacher-dese-rollups?${params.toString()}`,
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: {
+            Accept: 'application/json',
+          },
         }
+      );
+
+      if (!res.ok) {
+        throw new Error(`DESE evidence request failed: ${res.status}`);
       }
 
-      // Sort each bucket by date descending (most recent first)
+      const payload = await res.json();
+      const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+      const buckets = new Map();
+
+      for (const row of rows) {
+        if (!row?.dese_code) continue;
+
+        const earned =
+          typeof row.earned_points === 'number'
+            ? row.earned_points
+            : null;
+
+        const max =
+          typeof row.max_points === 'number'
+            ? row.max_points
+            : null;
+
+        const scorePct =
+          earned !== null && max
+            ? Math.round(earned / max * 100)
+            : null;
+
+        const dateStr =
+          row.submitted_at
+            ? new Date(row.submitted_at).toLocaleDateString(
+                'en-US',
+                {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                }
+              )
+            : null;
+
+        const item = {
+          question_text: row.question_text || null,
+          assignment_title: row.assignment_title || '',
+          assignment_id: row.assignment_id || null,
+          date: dateStr,
+          earned_points: earned,
+          max_points: max,
+          is_correct:
+            typeof row.is_correct === 'boolean'
+              ? row.is_correct
+              : null,
+          score_pct: scorePct,
+          teacher_note: row.teacher_note || null,
+        };
+
+        if (!buckets.has(row.dese_code)) {
+          buckets.set(row.dese_code, []);
+        }
+
+        buckets.get(row.dese_code).push(item);
+      }
+
       for (const items of buckets.values()) {
         items.sort((a, b) => {
           if (!a.date && !b.date) return 0;
@@ -10121,11 +10109,6 @@
     }
   }
 
-  /**
-   * Return the evidence items for a single student + DESE standard code.
-   * Delegates to fetchAllEvidenceForStudent so at most one Supabase query
-   * fires per student per data refresh.
-   */
   async function fetchDeseEvidenceItems(student, deseCode) {
     if (!student?.id || !deseCode) return [];
     const buckets = await fetchAllEvidenceForStudent(student);

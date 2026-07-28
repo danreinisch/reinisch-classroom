@@ -21,6 +21,7 @@ const migration = read(
   'supabase/migrations/20260725233500_exclude_non_instructional_dese_evidence.sql'
 );
 const students = read('site/web/tc-students.js');
+const endpoint = read('netlify/functions/teacher-dese-rollups.js');
 
 const sqlPredicate =
   "ai.settings->'non_instructional' IS DISTINCT FROM 'true'::jsonb";
@@ -46,21 +47,48 @@ assert.strictEqual(
 );
 
 const evidence = section(
+  endpoint,
+  'async function fetchStudentEvidence(',
+  'async function mapWithConcurrency('
+);
+
+assert.ok(
+  evidence.includes('settings,'),
+  'server DESE evidence query must fetch assignment-instance settings'
+);
+
+assert.ok(
+  evidence.includes(
+    'instance?.settings?.non_instructional === true'
+  ),
+  'server DESE evidence reader must exclude explicit non-instructional instances'
+);
+
+assert.ok(
+  evidence.includes(
+    "typeof answer.max_points !== 'number'"
+  ),
+  'server DESE evidence reader must preserve the graded-item filter'
+);
+
+const browserEvidence = section(
   students,
   '  async function fetchAllEvidenceForStudent(student) {',
   '  async function fetchDeseEvidenceItems(student, deseCode) {'
 );
 
 assert.ok(
-  evidence.includes('settings,'),
-  'DESE evidence-card query must fetch assignment-instance settings'
+  !browserEvidence.includes(
+    ".from('assignment_instances')"
+  ),
+  'browser DESE evidence reader must not query assignment_instances directly'
 );
 
 assert.ok(
-  evidence.includes(
-    'if (instance?.settings?.non_instructional === true) continue;'
+  browserEvidence.includes(
+    "detail: 'evidence'"
   ),
-  'DESE evidence-card reader must exclude explicit non-instructional instances'
+  'browser DESE evidence reader must use authenticated evidence mode'
 );
 
 assert.ok(
@@ -82,7 +110,7 @@ assert.ok(
 
 console.log('✓ student_dese_rollups migration excludes explicit non-instructional instances');
 console.log('✓ historical all_students_dese_rollups migration excludes explicit non-instructional instances');
-console.log('✓ Teacher Center DESE evidence cards exclude marked instances');
+console.log('✓ server-side Teacher Center DESE evidence excludes marked instances');
 console.log('✓ obsolete browser DESE rollup fallback remains removed');
 console.log('✓ Teacher Center DESE rollups use the authenticated server boundary');
 console.log('\nNON-INSTRUCTIONAL DESE EVIDENCE: PASS');

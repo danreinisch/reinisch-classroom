@@ -112,10 +112,24 @@ const evidenceBlock =
   );
 
 assert.ok(
-  evidenceBlock.includes(
+  !evidenceBlock.includes(
     ".from('assignment_instances')"
   ),
-  'T1 must not alter detailed DESE evidence transport'
+  'detailed DESE evidence must not query assignment_instances directly from the browser'
+);
+
+assert.ok(
+  evidenceBlock.includes(
+    '/.netlify/functions/teacher-dese-rollups'
+  ),
+  'detailed DESE evidence must use the authenticated teacher boundary'
+);
+
+assert.ok(
+  evidenceBlock.includes(
+    "detail: 'evidence'"
+  ),
+  'detailed DESE evidence must explicitly request evidence mode'
 );
 
 console.log(
@@ -139,7 +153,7 @@ console.log(
 );
 
 console.log(
-  '✓ detailed evidence path intentionally unchanged for T2'
+  '✓ detailed evidence path uses authenticated server boundary'
 );
 
 console.log();

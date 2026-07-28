@@ -130,6 +130,98 @@ function installMocks() {
         );
       }
 
+      if (
+        url.startsWith(
+          '/rest/v1/assignment_instances?'
+        )
+      ) {
+        return response(
+          200,
+          [
+            {
+              assignment_id: 701,
+              settings: {},
+              assignments: {
+                title: 'Instructional Evidence',
+              },
+              submissions: [
+                {
+                  submitted_at:
+                    '2026-09-01T15:30:00.000Z',
+                  submission_answers: [
+                    {
+                      earned_points: 1,
+                      max_points: 2,
+                      is_correct: false,
+                      teacher_note: 'Keep going',
+                      assignment_items: {
+                        item_ref: 'Q1',
+                        dese_codes: [
+                          '9-10.RL.1.A',
+                        ],
+                        meta: {
+                          question:
+                            'What evidence supports the claim?',
+                        },
+                      },
+                    },
+                    {
+                      earned_points: 0,
+                      max_points: 0,
+                      is_correct: null,
+                      teacher_note: null,
+                      assignment_items: {
+                        item_ref: 'Q2',
+                        dese_codes: [
+                          '9-10.RL.1.A',
+                        ],
+                        meta: {
+                          question:
+                            'Ungraded prompt',
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              assignment_id: 702,
+              settings: {
+                non_instructional: true,
+              },
+              assignments: {
+                title: 'System Test',
+              },
+              submissions: [
+                {
+                  submitted_at:
+                    '2026-09-02T15:30:00.000Z',
+                  submission_answers: [
+                    {
+                      earned_points: 1,
+                      max_points: 1,
+                      is_correct: true,
+                      teacher_note: null,
+                      assignment_items: {
+                        item_ref: 'Q1',
+                        dese_codes: [
+                          '9-10.RL.1.A',
+                        ],
+                        meta: {
+                          question:
+                            'Synthetic system-test item',
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ]
+        );
+      }
+
       throw new Error(
         `Unexpected REST URL: ${url}`
       );
@@ -498,6 +590,92 @@ async function run() {
         assert.strictEqual(
           rpcCalls[0].args.p_student_id,
           student1Id
+        );
+      }
+    );
+
+    await test(
+      'evidence mode uses teacher-owned student and operational year without RPC',
+      async () => {
+        restCalls.length = 0;
+        rpcCalls.length = 0;
+
+        const result =
+          await handler(
+            event({
+              student_code: 'S001',
+              detail: 'evidence',
+            })
+          );
+
+        assert.strictEqual(
+          result.statusCode,
+          200
+        );
+
+        const body =
+          JSON.parse(result.body);
+
+        assert.strictEqual(
+          body.school_year,
+          2026
+        );
+
+        assert.strictEqual(
+          body.rows.length,
+          1,
+          'non-instructional and zero-point evidence must be excluded'
+        );
+
+        assert.deepStrictEqual(
+          body.rows[0],
+          {
+            dese_code: '9-10.RL.1.A',
+            question_text:
+              'What evidence supports the claim?',
+            assignment_title:
+              'Instructional Evidence',
+            assignment_id: 701,
+            submitted_at:
+              '2026-09-01T15:30:00.000Z',
+            earned_points: 1,
+            max_points: 2,
+            is_correct: false,
+            teacher_note: 'Keep going',
+          }
+        );
+
+        assert.strictEqual(
+          rpcCalls.length,
+          0,
+          'evidence mode must not call a DESE RPC'
+        );
+
+        const evidenceCall =
+          restCalls.find(
+            (call) =>
+              call.url.startsWith(
+                '/rest/v1/assignment_instances?'
+              )
+          );
+
+        assert.ok(
+          evidenceCall,
+          'evidence mode must query assignment_instances server-side'
+        );
+
+        assert.ok(
+          evidenceCall.url.includes(
+            `student_id=eq.${student1Id}`
+          ),
+          'evidence query must scope to teacher-owned student id'
+        );
+
+        assert.ok(
+          evidenceCall.url.includes(
+            'school_year=eq.2026'
+          ),
+          'evidence query must use operational school year'
         );
       }
     );
