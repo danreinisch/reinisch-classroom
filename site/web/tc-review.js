@@ -5,7 +5,7 @@
   if (!location.pathname.startsWith("/teacher/review")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
-  const { db, isRemote } = await import('/web/data-adapter.js');
+  const { db, isRemote } = await import('/web/data-adapter.js?v=2026072901');
   const { getSupabase, getSupabaseConfig } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
   const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');
@@ -264,13 +264,11 @@
       const supabase = await getSupabase();
       if (!supabase) return;
 
-      // Subscribe to submission_answers changes (for manual scoring)
+      // Submission changes are used only as a debounced reload signal.
+      // submission_answers is intentionally not subscribed here; Review reads
+      // those rows through the signed teacher endpoint.
       realtimeChannel = supabase
         .channel('review-tab-updates')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'submission_answers' },
-          handleRealtimeUpdate
-        )
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'submissions' },
           handleRealtimeUpdate
