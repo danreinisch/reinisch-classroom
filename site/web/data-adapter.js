@@ -56,25 +56,6 @@ function getCurrentSchoolYear() {
 }
 
 /**
- * One-level deep merge for settings objects.
- * For each key in patch: if both existing and patch values are plain objects, merge them.
- * Otherwise, the patch value wins outright.
- * This preserves nested properties like writing_config.other_prop that are not in the patch.
- */
-function mergeSettingsObjects(existing, patch) {
-  const result = { ...(existing || {}) };
-  for (const [key, val] of Object.entries(patch || {})) {
-    if (val !== null && typeof val === 'object' && !Array.isArray(val) &&
-        typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])) {
-      result[key] = { ...result[key], ...val };
-    } else {
-      result[key] = val;
-    }
-  }
-  return result;
-}
-
-/**
  * Mapping from DB class codes to UI canonical class names
  * Some classes have multiple sections (SC/S1) which are represented as separate UI tabs
  */
@@ -373,14 +354,6 @@ const local = {
     store.set('assignmentInstances', arr);
     return instance;
   },
-  async patchAssignmentInstance(instanceId, settingsPatch) {
-    const arr = store.get('assignmentInstances', []);
-    const i = arr.findIndex(ai => ai.id === instanceId);
-    if (i < 0) throw new Error('Instance not found');
-    arr[i].settings = mergeSettingsObjects(arr[i].settings || {}, settingsPatch);
-    store.set('assignmentInstances', arr);
-    return arr[i];
-  },
   async addSubmission(payload) {
     const submissions = store.get('submissions', []);
     const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
@@ -603,10 +576,6 @@ const local = {
   },
   
   // Phase B: Import responses from CSV (local stub)
-  async importResponsesFromCSV(_assignmentId, _file, _mapping) {
-    // Local mode doesn't support full CSV import, return stub
-    throw new Error('CSV import not supported in local mode. Please enable Supabase.');
-  },
 
   // ============================================================================
   // Phase 1: Goal Progress (Local fallback)
@@ -1664,26 +1633,6 @@ const remote = {
     if (error) throw error;
     return instanceRow;
   },
-  async patchAssignmentInstance(instanceId, settingsPatch) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    // Fetch existing settings, merge, then update
-    const { data: existing, error: e1 } = await supabase
-      .from('assignment_instances')
-      .select('id,settings')
-      .eq('id', instanceId)
-      .single();
-    if (e1) throw e1;
-    const merged = mergeSettingsObjects(existing.settings || {}, settingsPatch);
-    const { data: updated, error: e2 } = await supabase
-      .from('assignment_instances')
-      .update({ settings: merged })
-      .eq('id', instanceId)
-      .select()
-      .single();
-    if (e2) throw e2;
-    return updated;
-  },
   
   async addSubmission(payload) {
     const supabase = await getSupabase();
@@ -2055,111 +2004,6 @@ const remote = {
   },
   
   // Phase B: Import Google Form responses from CSV
-  async importResponsesFromCSV(assignmentId, csvData, _answerKey) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    // This is a complex operation that should be done in a transaction
-    // For now, we'll implement a basic version
-    
-    // 1. Parse CSV data (caller should provide parsed rows)
-    // 2. For each row:
-    //    - Match student by code
-    //    - Auto-grade if answer key exists
-    //    - Build per_goal detail from iep_goal_codes
-    //    - Create submission
-    //    - Call process_submission
-    
-    const results = {
-      processed: 0,
-      failed: 0,
-      errors: []
-    };
-    
-    for (const row of csvData) {
-      try {
-        const studentCode = row.student_code || row['Student Code'];
-        if (!studentCode) {
-          results.errors.push('Missing student code in row');
-          results.failed++;
-          continue;
-        }
-        
-        // Get student
-        const { data: students, error: studentErr } = await supabase
-          .from('students')
-          .select('id')
-          .eq('code', studentCode)
-          .single();
-        
-        if (studentErr || !students) {
-          results.errors.push(`Student ${studentCode} not found`);
-          results.failed++;
-          continue;
-        }
-        
-        // Get or create instance
-        const { data: instances, error: _instErr } = await supabase
-          .from('assignment_instances')
-          .select('id')
-          .eq('assignment_id', assignmentId)
-          .eq('student_id', students.id)
-          .maybeSingle();
-        
-        let instanceId = instances?.id;
-        
-        if (!instanceId) {
-          // Create instance
-          const { data: newInst, error: newInstErr } = await supabase
-            .from('assignment_instances')
-            .insert({
-              assignment_id: assignmentId,
-              student_id: students.id,
-              status: 'Assigned'
-            })
-            .select('id')
-            .single();
-          
-          if (newInstErr) throw newInstErr;
-          instanceId = newInst.id;
-        }
-        
-        // Build submission (simplified - caller should provide formatted data)
-        const { data: submission, error: subErr } = await supabase
-          .from('submissions')
-          .insert({
-            instance_id: instanceId,
-            answers: row.answers || {},
-            score_auto: row.score_auto || null,
-            score_total: row.score_total || null,
-            detail: row.detail || {}
-          })
-          .select('id')
-          .single();
-        
-        if (subErr) throw subErr;
-        
-        // Call process_submission
-        const { error: processErr } = await supabase.rpc('process_submission', {
-          submission_id: submission.id
-        });
-        
-        if (processErr) throw processErr;
-        
-        // Update instance status
-        await supabase
-          .from('assignment_instances')
-          .update({ status: 'Submitted' })
-          .eq('id', instanceId);
-        
-        results.processed++;
-      } catch (err) {
-        results.failed++;
-        results.errors.push(err.message);
-      }
-    }
-    
-    return results;
-  },
 
   // ============================================================================
   // Phase 1: Goal Progress (Remote via Supabase)
