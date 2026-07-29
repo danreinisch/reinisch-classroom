@@ -6,7 +6,6 @@ import { withRetry } from './supabase-util.js';
 // Supabase PostgREST imposes a default row limit (often 1000) that can silently
 // drop rows; using an explicit high limit ensures all school-year data is
 // retrieved for the gradebook and review page.
-const MAX_SUBMISSIONS_QUERY_LIMIT = 5000;
 const MAX_ASSIGNMENTS_QUERY_LIMIT = 5000;
 const MAX_INSTANCES_QUERY_LIMIT = 5000;
 
@@ -1724,46 +1723,60 @@ const remote = {
     return { submission_id: submission.id };
   },
 
-  // Portal B: List submissions (filtered by student if provided)
+  // Teacher Center: list submissions through the signed server boundary.
   async listSubmissions(filters = {}) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    const schoolYear = getCurrentSchoolYear();
-    // Query submissions with nested joins: submissions -> assignment_instances -> students
-    // This allows filtering by student_code even though it's not directly in submissions table
-    let query = supabase
-      .from('submissions')
-      .select('*, assignment_instances!inner(id, assignment_id, student_id, settings, students!inner(code))')
-      .or(`school_year.eq.${schoolYear},school_year.is.null`)
-      .limit(MAX_SUBMISSIONS_QUERY_LIMIT)
-      .order('submitted_at', { ascending: false });
-    
-    if (filters.excludeFinalized) {
-      query = query.neq('review_status', 'finalized');
-    }
-    
-    if (filters.student_code) {
-      query = query.eq('assignment_instances.students.code', filters.student_code);
-    }
-    
-    if (filters.instance_id) {
-      query = query.eq('instance_id', filters.instance_id);
-    }
-    
-    const { data, error } = await query;
-    if (error) throw error;
+    const params = new URLSearchParams();
 
-    // Test/non-instructional evidence is retained in Supabase but excluded
-    // from every Teacher Center surface that consumes this shared reader.
-    const instructionalSubmissions = (data || []).filter(sub => {
-      const instance = Array.isArray(sub.assignment_instances)
-        ? sub.assignment_instances[0]
-        : sub.assignment_instances;
-      return instance?.settings?.non_instructional !== true;
+    if (filters.excludeFinalized) {
+      params.set('exclude_finalized', 'true');
+    }
+
+    const studentCode =
+      filters.student_code || filters.studentCode;
+
+    if (studentCode) {
+      params.set('student_code', studentCode);
+    }
+
+    if (filters.instance_id) {
+      params.set('instance_id', filters.instance_id);
+    }
+
+    const queryString = params.toString();
+    const endpoint =
+      '/.netlify/functions/teacher-submissions' +
+      (queryString ? `?${queryString}` : '');
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json'
+      }
     });
-    
-    return deduplicateSubmissions(instructionalSubmissions);
+
+    let result = {};
+
+    try {
+      result = await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (!response.ok || result.ok !== true) {
+      throw new Error(
+        result.error ||
+        `teacher-submissions-${response.status}`
+      );
+    }
+
+    const submissions =
+      Array.isArray(result.submissions)
+        ? result.submissions
+        : [];
+
+    return deduplicateSubmissions(submissions);
   },
   
   // Portal B: Get latest submission for an instance
