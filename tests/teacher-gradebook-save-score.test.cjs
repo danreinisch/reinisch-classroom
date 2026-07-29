@@ -330,17 +330,6 @@ async function restMock(
     );
   }
 
-  if (
-    url ===
-      '/rest/v1/rpc/process_submission' &&
-    method === 'POST'
-  ) {
-    return response(
-      204,
-      null
-    );
-  }
-
   throw new Error(
     `Unexpected REST call: ${method} ${url}`
   );
@@ -432,6 +421,20 @@ delete require.cache[endpointPath];
 const {
   handler,
 } = require(endpointPath);
+
+const endpointSource =
+  require('node:fs').readFileSync(
+    endpointPath,
+    'utf8'
+  );
+
+assert.equal(
+  endpointSource.includes(
+    '/rest/v1/rpc/process_submission'
+  ),
+  false,
+  'signed Gradebook writer must not contain stale process_submission RPC'
+);
 
 Module._load =
   originalLoad;
@@ -742,8 +745,8 @@ async function run() {
         call.url ===
           '/rest/v1/rpc/process_submission'
     ).length,
-    1,
-    'legacy processing side effect remains server-side'
+    0,
+    'Gradebook save must never invoke stale process_submission RPC'
   );
 
   assert.equal(

@@ -773,22 +773,7 @@ exports.handler =
         );
       }
 
-      // 7. Preserve the legacy process_submission side effect server-side.
-      await requireOk(
-        await rest(
-          '/rest/v1/rpc/process_submission',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              submission_id:
-                submission.id,
-            }),
-          }
-        ),
-        'process_submission'
-      );
-
-      // 8. Preserve the legacy final instance state.
+      // 7. Preserve the legacy final instance state.
       const updatedInstances =
         await readRows(
           await rest(
