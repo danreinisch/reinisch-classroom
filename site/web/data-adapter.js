@@ -1529,6 +1529,39 @@ const remote = {
     });
   },
 
+  // Create a paper assignment through the signed Teacher Center boundary.
+  async createPaperAssignment({ title, class_name, page, meta }) {
+    const response = await fetch('/.netlify/functions/teacher-paper-assignment-create', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title,
+        className: class_name,
+        page,
+        meta
+      })
+    });
+
+    const result = await response
+      .json()
+      .catch(() => ({
+        ok: false,
+        error: 'Invalid server response'
+      }));
+
+    if (!response.ok || !result.ok || !result.assignment) {
+      throw new Error(
+        result.error ||
+        `Paper assignment create failed: ${response.status}`
+      );
+    }
+
+    return result.assignment;
+  },
+
   // Upload a paper assignment file to Supabase Storage (bucket: assignments)
   // Returns the public URL on success, throws on failure
   async uploadPaperFile(file, storagePath) {
