@@ -1738,7 +1738,7 @@
   // Progress tracking functions
   // goalsList and studentsList are passed in when available so the join-less
   // fallback path can enrich rows with goal_code/student_code from local data.
-  async function filterInstructionalProgressRows(supabase, rows) {
+  async function filterInstructionalProgressRows(rows) {
     const safeRows = Array.isArray(rows) ? rows : [];
     const instanceIds = [
       ...new Set(
@@ -1750,17 +1750,51 @@
 
     if (instanceIds.length === 0) return safeRows;
 
-    const { data: instances, error } = await supabase
-      .from('assignment_instances')
-      .select('id, settings')
-      .in('id', instanceIds);
+    const response = await fetch(
+      '/.netlify/functions/teacher-assignment-instance-markers',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          instance_ids: instanceIds
+        })
+      }
+    );
 
-    if (error) throw error;
+    if (!response.ok) {
+      throw new Error(
+        `Assignment-instance marker lookup failed: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    const markers = Array.isArray(result?.markers)
+      ? result.markers
+      : [];
+
+    const markerById = new Map(
+      markers
+        .filter(marker => marker && marker.id)
+        .map(marker => [marker.id, marker])
+    );
+
+    if (
+      markerById.size !== instanceIds.length ||
+      instanceIds.some(id => !markerById.has(id))
+    ) {
+      throw new Error(
+        'Assignment-instance marker lookup returned an incomplete result'
+      );
+    }
 
     const nonInstructionalIds = new Set(
-      (instances || [])
-        .filter(instance => instance?.settings?.non_instructional === true)
-        .map(instance => instance.id)
+      markers
+        .filter(marker => marker.non_instructional === true)
+        .map(marker => marker.id)
     );
 
     return safeRows.filter(
@@ -1780,7 +1814,7 @@
           .select('*, goals!inner(code), students!inner(code)');
         if (!error) {
           const instructionalData =
-            await filterInstructionalProgressRows(supabase, data || []);
+            await filterInstructionalProgressRows(data || []);
 
           return instructionalData.map(row => ({
             ...row,
@@ -1795,7 +1829,7 @@
           .select('*');
         if (!flatError && flatData) {
           const instructionalFlatData =
-            await filterInstructionalProgressRows(supabase, flatData);
+            await filterInstructionalProgressRows(flatData);
 
           // Build fast lookup maps from the arrays passed in by loadData.
           const goalById = new Map(goalsList.map(g => [g.id, g]));

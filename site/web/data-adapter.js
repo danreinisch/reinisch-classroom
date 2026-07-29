@@ -121,7 +121,7 @@ function deduplicateSubmissions(submissions) {
   return Array.from(byInstance.values());
 }
 
-async function filterInstructionalEvidenceRows(supabase, rows) {
+async function filterInstructionalEvidenceRows(rows) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const instanceIds = [
     ...new Set(
@@ -133,19 +133,51 @@ async function filterInstructionalEvidenceRows(supabase, rows) {
 
   if (instanceIds.length === 0) return safeRows;
 
-  const { data: instances, error: instanceError } = await supabase
-    .from('assignment_instances')
-    .select('id, settings')
-    .in('id', instanceIds);
+  const response = await fetch(
+    '/.netlify/functions/teacher-assignment-instance-markers',
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        instance_ids: instanceIds
+      })
+    }
+  );
 
-  // Deliberately fail closed: if marker state cannot be verified,
-  // callers must not expose potentially non-instructional evidence.
-  if (instanceError) throw instanceError;
+  if (!response.ok) {
+    throw new Error(
+      `Assignment-instance marker lookup failed: ${response.status}`
+    );
+  }
+
+  const result = await response.json();
+  const markers = Array.isArray(result?.markers)
+    ? result.markers
+    : [];
+
+  const markerById = new Map(
+    markers
+      .filter(marker => marker && marker.id)
+      .map(marker => [marker.id, marker])
+  );
+
+  if (
+    markerById.size !== instanceIds.length ||
+    instanceIds.some(id => !markerById.has(id))
+  ) {
+    throw new Error(
+      'Assignment-instance marker lookup returned an incomplete result'
+    );
+  }
 
   const nonInstructionalIds = new Set(
-    (instances || [])
-      .filter(instance => instance?.settings?.non_instructional === true)
-      .map(instance => instance.id)
+    markers
+      .filter(marker => marker.non_instructional === true)
+      .map(marker => marker.id)
   );
 
   return safeRows.filter(
@@ -2068,7 +2100,7 @@ const remote = {
     const { data, error } = await query;
     if (!error) {
       const instructionalData =
-        await filterInstructionalEvidenceRows(supabase, data || []);
+        await filterInstructionalEvidenceRows(data || []);
 
       // Transform to flattened structure with defensive null checks
       return instructionalData.map(row => ({
@@ -2100,7 +2132,7 @@ const remote = {
     if (flatError) throw flatError;
 
     const instructionalFlatData =
-      await filterInstructionalEvidenceRows(supabase, flatData || []);
+      await filterInstructionalEvidenceRows(flatData || []);
 
     // Fetch goals and students to enrich the flat rows; if either lookup fails, proceed with empty maps.
     const [goalsResult, studentsResult] = await Promise.all([
@@ -2277,7 +2309,7 @@ const remote = {
       throw error;
     }
 
-    return await filterInstructionalEvidenceRows(supabase, data || []);
+    return await filterInstructionalEvidenceRows(data || []);
   },
 
   // ============================================================================

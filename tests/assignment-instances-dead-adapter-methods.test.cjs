@@ -81,20 +81,20 @@ const studentsHits =
 
 assert.strictEqual(
   adapterHits,
-  3,
-  'canonical adapter must contain only the three known surviving direct assignment_instances accesses'
+  2,
+  'canonical adapter must contain only the two live mutation assignment_instances accesses'
 );
 
 assert.strictEqual(
   studentsHits,
-  1,
-  'tc-students must contain only its one known surviving direct assignment_instances access'
+  0,
+  'tc-students must contain no direct assignment_instances access'
 );
 
 assert.strictEqual(
   adapterHits + studentsHits,
-  4,
-  'browser assignment_instances dependency count must remain reduced from nine to four'
+  2,
+  'browser assignment_instances dependency count must remain reduced from nine to two'
 );
 
 console.log(
@@ -114,7 +114,7 @@ console.log(
 );
 
 console.log(
-  '✓ direct browser assignment_instances hits reduced from 9 to 4'
+  '✓ direct browser assignment_instances hits reduced from 9 to 2'
 );
 
 console.log();
