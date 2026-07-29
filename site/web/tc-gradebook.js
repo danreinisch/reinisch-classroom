@@ -652,50 +652,43 @@
   async function saveScore(studentCode, draftId, score) {
     try {
       if (usingSupabase) {
-        // Use Supabase via data adapter
-        console.log('[gradebook] Saving score to Supabase:', { studentCode, draftId, score });
-        
-        // Find or create assignment instance
-        let instance = assignmentInstancesData.find(
-          (inst) => inst.assignment_id === draftId && inst.student_code === studentCode
-        );
-        
-        if (!instance) {
-          // Create new instance via data adapter
-          const newInstance = await db.upsertAssignmentInstance({
-            id: draftId + "-" + studentCode,
-            assignment_id: draftId,
-            student_code: studentCode,
-            assigned_at: formatDateYYYYMMDD(),
-            status: "Assigned"
-          });
-          instance = newInstance;
-          assignmentInstancesData.push(instance);
+        console.log('[gradebook] Saving score through signed teacher boundary:', {
+          studentCode,
+          draftId,
+          score
+        });
+
+        const saved = await db.saveGradebookScore({
+          assignment_id: draftId,
+          student_code: studentCode,
+          score
+        });
+
+        if (saved.instance) {
+          const instanceIndex = assignmentInstancesData.findIndex(
+            (item) => item.id === saved.instance.id
+          );
+
+          if (instanceIndex >= 0) {
+            assignmentInstancesData[instanceIndex] = saved.instance;
+          } else {
+            assignmentInstancesData.push(saved.instance);
+          }
         }
-        
-        // Find existing submission or create new one
-        const existingSubmission = submissionsData.find((sub) => sub.instance_id === instance.id);
-        
-        if (existingSubmission) {
-          // Update existing submission (addSubmission acts as upsert when id is provided)
-          await db.addSubmission({
-            id: existingSubmission.id,
-            instance_id: instance.id,
-            score_total: score,
-            submitted_at: new Date().toISOString()
-          });
-          existingSubmission.score_total = score;
-        } else {
-          // Create new submission
-          const newSubmission = await db.addSubmission({
-            instance_id: instance.id,
-            score_total: score,
-            submitted_at: new Date().toISOString()
-          });
-          submissionsData.push(newSubmission);
+
+        if (saved.submission) {
+          const submissionIndex = submissionsData.findIndex(
+            (item) => item.id === saved.submission.id
+          );
+
+          if (submissionIndex >= 0) {
+            submissionsData[submissionIndex] = saved.submission;
+          } else {
+            submissionsData.push(saved.submission);
+          }
         }
-        
-        console.log('[gradebook] Score saved to Supabase');
+
+        console.log('[gradebook] Score saved through signed teacher boundary');
       } else {
         // Use localStorage
         console.log('[gradebook] Saving score to localStorage:', { studentCode, draftId, score });
