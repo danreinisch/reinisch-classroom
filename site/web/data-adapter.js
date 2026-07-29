@@ -1636,6 +1636,37 @@ const remote = {
     return instances;
   },
   
+  async saveGradebookScore({ assignment_id, student_code, score }) {
+    const response = await fetch('/.netlify/functions/teacher-gradebook-save-score', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        assignmentId: assignment_id,
+        studentCode: student_code,
+        score
+      })
+    });
+
+    const result = await response
+      .json()
+      .catch(() => ({
+        ok: false,
+        error: 'Invalid server response'
+      }));
+
+    if (!response.ok || !result.ok) {
+      throw new Error(
+        result.error ||
+        `Gradebook score save failed: ${response.status}`
+      );
+    }
+
+    return result;
+  },
+
   async upsertAssignmentInstance(x) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
