@@ -7,7 +7,6 @@ import { withRetry } from './supabase-util.js';
 // drop rows; using an explicit high limit ensures all school-year data is
 // retrieved for the gradebook and review page.
 const MAX_ASSIGNMENTS_QUERY_LIMIT = 5000;
-const MAX_INSTANCES_QUERY_LIMIT = 5000;
 
 const NS = 'rc_unified_';
 const store = {
@@ -1592,49 +1591,48 @@ const remote = {
   },
   
   async listAssignmentInstances() {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const schoolYear = getCurrentSchoolYear();
-    // Join assignment_instances with students to get student code/name
-    const { data, error } = await supabase
-      .from('assignment_instances')
-      .select(`
-        id,
-        assignment_id,
-        student_id,
-        assigned_at,
-        due_at,
-        status,
-        settings,
-        school_year,
-        students!inner(code, name)
-      `)
-      .or(`school_year.eq.${schoolYear},school_year.is.null`)
-      .limit(MAX_INSTANCES_QUERY_LIMIT);
-    if (error) throw error;
-    
-    // Flatten to include student_code and student_name at top level
-    // Client-side sort by student code since we can't order on joined columns
-    const instructionalInstances = (data || []).filter(
-      inst => inst?.settings?.non_instructional !== true
+    const response = await fetch(
+      '/.netlify/functions/teacher-assignment-instances-list',
+      {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json'
+        }
+      }
     );
 
-    const flattened = instructionalInstances.map(inst => ({
-      id: inst.id,
-      assignment_id: inst.assignment_id,
-      student_id: inst.student_id,
-      student_code: inst.students.code,
-      student_name: inst.students.name,
-      assigned_at: inst.assigned_at,
-      due_at: inst.due_at,
-      status: inst.status,
-      settings: inst.settings,
-      school_year: inst.school_year
-    }));
-    
-    // Sort by student code
-    flattened.sort((a, b) => (a.student_code || '').localeCompare(b.student_code || ''));
-    return flattened;
+    let result = {};
+
+    try {
+      result = await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (!response.ok || result.ok !== true) {
+      throw new Error(
+        result.error ||
+        `teacher-assignment-instances-list-${response.status}`
+      );
+    }
+
+    const instances =
+      Array.isArray(result.instances)
+        ? result.instances
+        : [];
+
+    // Preserve the existing shared-reader student-code ordering contract.
+    instances.sort(
+      (a, b) =>
+        (a.student_code || '')
+          .localeCompare(
+            b.student_code || ''
+          )
+    );
+
+    return instances;
   },
   
   async upsertAssignmentInstance(x) {

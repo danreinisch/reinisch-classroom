@@ -46,9 +46,19 @@ const adapter = read('site/web/data-adapter.js');
 
 assert.ok(
   adapter.includes(
-    'inst => inst?.settings?.non_instructional !== true'
+    "'/.netlify/functions/teacher-assignment-instances-list'"
   ),
-  'Teacher Center instance reader must exclude explicitly non-instructional instances'
+  'Teacher Center instance reader must use the signed server boundary'
+);
+
+const teacherInstances =
+  read('netlify/functions/teacher-assignment-instances-list.js');
+
+assert.ok(
+  teacherInstances.includes(
+    'row.settings.non_instructional === true'
+  ),
+  'Teacher instance boundary must exclude explicitly non-instructional instances'
 );
 
 assert.ok(
@@ -75,7 +85,7 @@ assert.ok(
   'Teacher submission boundary must exclude explicitly non-instructional instances'
 );
 
-console.log('✓ Teacher Center instance reader excludes non-instructional instances');
+console.log('✓ Teacher instance boundary excludes non-instructional instances server-side');
 console.log('✓ Teacher submission boundary excludes non-instructional instances server-side');
 
 const ungraded =
