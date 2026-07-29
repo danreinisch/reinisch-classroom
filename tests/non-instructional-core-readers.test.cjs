@@ -44,21 +44,39 @@ console.log('✓ student submission/grade reader excludes non-instructional inst
 
 const adapter = read('site/web/data-adapter.js');
 
-const markerMatches =
-  adapter.match(/non_instructional !== true/g) || [];
-
 assert.ok(
-  markerMatches.length >= 2,
-  'shared Teacher Center instance and submission readers must both exclude the marker'
+  adapter.includes(
+    'inst => inst?.settings?.non_instructional !== true'
+  ),
+  'Teacher Center instance reader must exclude explicitly non-instructional instances'
 );
 
 assert.ok(
   adapter.includes(
-    'student_id, settings, students!inner(code)'
+    "'/.netlify/functions/teacher-submissions'"
   ),
-  'Teacher Center submission join must retrieve instance settings'
+  'Teacher Center submission reader must use the signed server boundary'
 );
-console.log('✓ Teacher Center shared readers exclude non-instructional instances');
+
+const teacherSubmissions =
+  read('netlify/functions/teacher-submissions.js');
+
+assert.ok(
+  teacherSubmissions.includes(
+    '?select=id,assignment_id,student_id,settings,students!inner(code,active)'
+  ),
+  'Teacher submission boundary must retrieve assignment-instance marker state'
+);
+
+assert.ok(
+  teacherSubmissions.includes(
+    'row.settings.non_instructional === true'
+  ),
+  'Teacher submission boundary must exclude explicitly non-instructional instances'
+);
+
+console.log('✓ Teacher Center instance reader excludes non-instructional instances');
+console.log('✓ Teacher submission boundary excludes non-instructional instances server-side');
 
 const ungraded =
   read('netlify/functions/teacher-ungraded-count.js');
