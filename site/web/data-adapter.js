@@ -2386,20 +2386,10 @@ const remote = {
    * @returns {boolean} Success
    */
   async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal, instanceId: callerInstanceId }) {
-    // Use caller-provided instanceId when available to avoid a redundant anon SELECT
-    // (which may fail due to RLS). Fall back to a Supabase SELECT only when needed.
-    let instanceId = callerInstanceId || null;
-    if (!instanceId) {
-      const supabase = await getSupabase();
-      if (supabase) {
-        const { data } = await supabase
-          .from('submissions')
-          .select('instance_id')
-          .eq('id', submissionId)
-          .maybeSingle();
-        instanceId = data?.instance_id;
-      }
-    }
+    // All live Teacher Review callers provide instanceId.
+    // The signed teacher-review-save boundary independently authorizes
+    // submission -> assignment instance -> assignment -> owned class.
+    const instanceId = callerInstanceId || null;
 
     const response = await fetch('/.netlify/functions/teacher-review-save', {
       method: 'POST',
