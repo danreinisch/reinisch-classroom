@@ -9287,10 +9287,13 @@
     // Class
     const classSelect = document.createElement('select');
     classSelect.id = 'up_class';
+    classSelect.required = Boolean(isRemote);
     classSelect.style.cssText = fieldStyle;
     const defaultClassOpt = document.createElement('option');
     defaultClassOpt.value = '';
-    defaultClassOpt.textContent = '\u2014 Select class (optional) \u2014';
+    defaultClassOpt.textContent = isRemote
+      ? '\u2014 Select class \u2014'
+      : '\u2014 Select class (optional) \u2014';
     classSelect.appendChild(defaultClassOpt);
     CANON_CLASSES.forEach(cls => {
       const opt = document.createElement('option');
@@ -9298,7 +9301,7 @@
       opt.textContent = cls;
       classSelect.appendChild(opt);
     });
-    form.appendChild(makeField('Class', false, classSelect));
+    form.appendChild(makeField('Class', Boolean(isRemote), classSelect));
 
     // Student Code
     const studentInput = document.createElement('input');
@@ -9487,6 +9490,12 @@
       return;
     }
 
+    if (isRemote && !className) {
+      showInlineError('Class is required for paper assignments.');
+      overlay.querySelector('#up_class').focus();
+      return;
+    }
+
     if (scoreEarned !== null) {
       if (!studentCode) {
         showInlineError('Student Code is required when entering a grade.');
@@ -9578,10 +9587,9 @@
 
         let newAssignment;
         try {
-          newAssignment = await db.createAssignment({
+          newAssignment = await db.createPaperAssignment({
             title,
-            type: 'paper',
-            series: className || null,
+            class_name: className,
             page: paperUploadUrl,
             meta: assignmentMeta,
           });
