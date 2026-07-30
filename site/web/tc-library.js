@@ -9606,40 +9606,24 @@
 
         if (studentCode && newAssignment) {
           try {
-            await db.createSubmissionArchive({
-              student_code: studentCode,
+            const paperResult = await db.savePaperResult({
               assignment_id: newAssignment.id,
-              title,
-              class_name: className || null,
-              feedback: notes || null,
-              submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString(),
-              archived_at: new Date().toISOString(),
-              paper_upload_url: paperUploadUrl,
+              student_code: studentCode,
             });
-            console.log('[tc-library] Submission archive record created for student:', studentCode);
-          } catch (archiveErr) {
-            console.warn('[tc-library] Could not create submission archive record (non-critical):', archiveErr.message);
-          }
-        }
 
-        if (scoreEarned !== null && studentCode && newAssignment) {
-          try {
-            const instance = await db.upsertAssignmentInstance({
-              id: instanceId(newAssignment.id),
-              assignment_id: newAssignment.id,
-              student_code: studentCode,
-              assigned_at: dateCompleted || new Date().toISOString().split('T')[0],
-              status: 'Graded'
-            });
-            await db.addSubmission({
-              instance_id: instance.id,
-              score_total: scorePercent,
-              submitted_at: dateCompleted ? new Date(dateCompleted).toISOString() : new Date().toISOString()
-            });
-            gradeRecorded = true;
-            console.log('[tc-library] Gradebook entry created:', scorePercent + '%');
-          } catch (gradeErr) {
-            console.warn('[tc-library] Could not create gradebook entry (non-critical):', gradeErr.message);
+            gradeRecorded =
+              scoreEarned !== null &&
+              paperResult?.submission?.score_total != null;
+
+            console.log(
+              '[tc-library] Canonical PAPER result/archive saved:',
+              paperResult?.submission?.id || '(unknown)'
+            );
+          } catch (resultErr) {
+            console.warn(
+              '[tc-library] Could not save canonical PAPER result/archive (non-critical):',
+              resultErr.message
+            );
           }
         }
 

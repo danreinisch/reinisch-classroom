@@ -1700,6 +1700,40 @@ const remote = {
     return result;
   },
 
+
+  async savePaperResult({ assignment_id, student_code }) {
+    const response = await fetch(
+      '/.netlify/functions/teacher-paper-result-save',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          assignmentId: assignment_id,
+          studentCode: student_code
+        })
+      }
+    );
+
+    const result = await response
+      .json()
+      .catch(() => ({
+        ok: false,
+        error: 'Invalid server response'
+      }));
+
+    if (!response.ok || !result.ok) {
+      throw new Error(
+        result.error ||
+        `Paper result save failed: ${response.status}`
+      );
+    }
+
+    return result;
+  },
+
   async upsertAssignmentInstance(x) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');

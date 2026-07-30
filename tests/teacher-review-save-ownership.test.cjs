@@ -125,6 +125,7 @@ function currentScenario(overrides = {}) {
     teacherOwnsClass: true,
     activeExactEnrollment: true,
     assignmentId: ASSIGNMENT_ID,
+    assignmentType: 'html',
     classId: CLASS_ID,
     instanceId: INSTANCE_ID,
     studentId: STUDENT_ID,
@@ -181,6 +182,7 @@ global.fetch = async (url, options = {}) => {
     return jsonResponse([{
       id: Number(s.assignmentId),
       class_id: s.classId,
+      type: s.assignmentType,
     }]);
   }
 
@@ -498,6 +500,48 @@ test(
       mutations().length,
       0
     );
+  }
+);
+
+
+test(
+  'PAPER evidence rejects every digital Review mutation before write',
+  async () => {
+    const actions = [
+      'save_score',
+      'save_grade',
+      'finalize',
+      'reopen',
+      'mark_reviewed',
+      'return_for_revision',
+      'set_in_progress',
+    ];
+
+    for (const action of actions) {
+      reset({
+        assignmentType: 'paper',
+      });
+
+      const result =
+        await handler(
+          event({
+            action,
+            submissionId: SUBMISSION_ID,
+          })
+        );
+
+      assert.strictEqual(
+        result.statusCode,
+        409,
+        `${action} should reject PAPER evidence`
+      );
+
+      assert.strictEqual(
+        mutations().length,
+        0,
+        `${action} must not mutate PAPER evidence`
+      );
+    }
   }
 );
 

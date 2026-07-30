@@ -765,6 +765,20 @@
     return submission.assignment_id || null;
   }
 
+  // PAPER records are teacher-entered evidence, not digital submissions
+  // that should re-enter grading/finalization workflows.
+  function isPaperSubmission(submission) {
+    const assignmentId = resolveAssignmentId(submission);
+    if (!assignmentId) return false;
+
+    const assignment = assignmentsData.find(
+      item => String(item.id) === String(assignmentId)
+    );
+
+    return assignment?.type === 'paper';
+  }
+
+
   // Render batch action bar
   async function renderBatchBar() {
     const barEl = $('rvBatchBar');
@@ -809,7 +823,9 @@
     const markableCount = unreviewed.length;
 
     // Count reviewed submissions for the Finalize All Reviewed button
-    const reviewedSubmissions = submissionsData.filter(s => s.review_status === 'reviewed');
+    const reviewedSubmissions = submissionsData.filter(
+      s => s.review_status === 'reviewed' && !isPaperSubmission(s)
+    );
     const reviewedCount = reviewedSubmissions.length;
 
     // Show bar if there are unreviewed submissions OR reviewed submissions
@@ -1383,7 +1399,19 @@
       ? `<span class="${scoreColorClass(totalPercent)}" style="font-size:18px;font-weight:700;">${totalEarned}/${totalMax} — ${totalPercent}%</span>`
       : `<span style="font-size:18px;font-weight:700;font-family:monospace;">___/${totalMax} — ___%</span>`;
     const currentFeedback = submission.feedback || '';
-    const gradingSection = `
+    const paperEvidenceReadOnly = isPaperSubmission(submission);
+    const gradingSection = paperEvidenceReadOnly
+      ? `
+      <div class="rv-section rv-grade-section">
+        <div class="rv-section-header">
+          <span>Paper Evidence</span>
+        </div>
+        <div style="padding:12px;background:rgba(255,255,255,0.04);border-radius:var(--rc-radius);border:1px solid var(--rc-glass-border);">
+          This scanned paper record is read-only here. Its recorded score, if any, is preserved from the Library upload.
+        </div>
+      </div>
+    `
+      : `
       <div class="rv-section rv-grade-section">
         <div class="rv-section-header">
           <span>Grade</span>
@@ -1413,7 +1441,13 @@
     const finalizeDisabled = constructedItems.length > 0 && !allConstructedScored;
 
     let actionsSection;
-    if (submission.review_status === 'finalized') {
+    if (paperEvidenceReadOnly) {
+      actionsSection = `
+        <div class="rv-actions">
+          <span class="rv-hint">Scanned paper evidence is read-only in Teacher Review.</span>
+        </div>
+      `;
+    } else if (submission.review_status === 'finalized') {
       actionsSection = `
         <div class="rv-actions">
           <button class="rv-btn rv-btn-warning rv-btn-reopen"
@@ -1888,7 +1922,9 @@
   // Handle "Finalize All Reviewed" batch action
   async function handleFinalizeAllReviewed() {
     if (finalizingInProgress) return;
-    const reviewed = submissionsData.filter(s => s.review_status === 'reviewed');
+    const reviewed = submissionsData.filter(
+      s => s.review_status === 'reviewed' && !isPaperSubmission(s)
+    );
     if (reviewed.length === 0) return;
 
     if (!await rcConfirm('Finalize All Reviewed', `Finalize ${reviewed.length} reviewed submission${reviewed.length !== 1 ? 's' : ''}? This will lock grades and trigger IEP goal progress updates.`, 'Finalize')) return;
@@ -1975,7 +2011,9 @@
   // Handle "Revert All Reviewed" batch action — sends all reviewed submissions back to Needs Review
   async function handleRevertAllReviewed() {
     if (finalizingInProgress) return;
-    const reviewed = submissionsData.filter(s => s.review_status === 'reviewed');
+    const reviewed = submissionsData.filter(
+      s => s.review_status === 'reviewed' && !isPaperSubmission(s)
+    );
     if (reviewed.length === 0) return;
 
     if (!await rcConfirm('Revert All Reviewed', `Revert ${reviewed.length} reviewed submission${reviewed.length !== 1 ? 's' : ''} back to Needs Review? Scores will be preserved but submissions will be reopened for re-grading.`, 'Revert')) return;

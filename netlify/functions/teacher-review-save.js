@@ -131,7 +131,7 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
 
   const assignmentResult = await readAuthorizationRows(
     '/rest/v1/assignments' +
-      '?select=id,class_id' +
+      '?select=id,class_id,type' +
       `&id=eq.${encodeURIComponent(assignmentId)}` +
       '&limit=1',
     'Assignment authorization query',
@@ -190,6 +190,18 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
       ok: false,
       statusCode: 404,
       error: 'Submission not found',
+    };
+  }
+
+
+  // PAPER records are teacher-entered evidence. Once the full canonical
+  // teacher/class/student authorization chain succeeds, keep them read-only
+  // inside the digital Review mutation workflow.
+  if (assignment.type === 'paper') {
+    return {
+      ok: false,
+      statusCode: 409,
+      error: 'Paper evidence is read-only in Teacher Review',
     };
   }
 
