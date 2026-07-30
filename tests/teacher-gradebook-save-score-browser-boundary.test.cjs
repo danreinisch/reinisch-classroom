@@ -65,6 +65,13 @@ assert.ok(
   'remote Gradebook save must use signed boundary adapter'
 );
 
+assert.ok(
+  saveScore.includes(
+    'score_earned: scoreEarned'
+  ),
+  'MANUAL score edits must send exact earned points through the signed boundary'
+);
+
 assert.equal(
   saveScore.includes(
     'db.upsertAssignmentInstance('
@@ -106,23 +113,53 @@ const manualRegion =
 
 assert.ok(
   manualRegion.includes(
-    "const assignmentId = 'MANUAL_' + uid;"
+    'db.saveManualGrade({'
   ),
-  'D1C2 must not rewrite MANUAL_* workflow'
+  'synced MANUAL grades must use the signed canonical boundary'
 );
 
 assert.ok(
+  manualRegion.includes(
+    "const assignmentId = 'MANUAL_' + uid;"
+  ),
+  'local/offline MANUAL_* workflow must remain available'
+);
+
+assert.equal(
   manualRegion.includes(
     'db.upsertAssignmentInstance({'
   ),
-  'MANUAL_* instance writer must remain untouched'
+  false,
+  'synced MANUAL workflow must not use the generic instance writer'
 );
 
-assert.ok(
+assert.equal(
   manualRegion.includes(
     'db.addSubmission({'
   ),
-  'MANUAL_* submission writer must remain untouched'
+  false,
+  'synced MANUAL workflow must not use the generic submission writer'
+);
+
+assert.ok(
+  gradebook.includes(
+    'draft.meta.manual === true'
+  ),
+  'MANUAL behavior must use metadata rather than assignment type'
+);
+
+assert.ok(
+  gradebook.includes(
+    'resolveEarnedInfo('
+  ),
+  'Gradebook must preserve exact score_manual values'
+);
+
+assert.ok(
+  gradebook.includes(
+    'draft.meta.category'
+  ),
+  'category weighting must prefer assignment metadata'
 );
 
 const remoteStart =
@@ -170,6 +207,13 @@ assert.ok(
   'remote adapter must POST to signed Gradebook endpoint'
 );
 
+assert.ok(
+  gradebookMethod.includes(
+    'scoreEarned: score_earned'
+  ),
+  'remote adapter must pass exact MANUAL earned points'
+);
+
 assert.equal(
   gradebookMethod.includes(
     ".from('submissions')"
@@ -203,5 +247,9 @@ console.log(
 );
 
 console.log(
-  'PASS: MANUAL_*, Library/Hub generic mutation bridge remains outside D1C2'
+  'PASS: synced MANUAL Gradebook writes use canonical signed boundaries'
+);
+
+console.log(
+  'PASS: local/offline MANUAL_* workflow remains isolated'
 );

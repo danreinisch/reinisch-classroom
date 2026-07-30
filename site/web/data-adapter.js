@@ -1669,7 +1669,7 @@ const remote = {
     return instances;
   },
   
-  async saveGradebookScore({ assignment_id, student_code, score }) {
+  async saveGradebookScore({ assignment_id, student_code, score, score_earned }) {
     const response = await fetch('/.netlify/functions/teacher-gradebook-save-score', {
       method: 'POST',
       credentials: 'include',
@@ -1679,7 +1679,8 @@ const remote = {
       body: JSON.stringify({
         assignmentId: assignment_id,
         studentCode: student_code,
-        score
+        score,
+        scoreEarned: score_earned
       })
     });
 
@@ -1700,6 +1701,48 @@ const remote = {
     return result;
   },
 
+
+  async saveManualGrade({
+    title,
+    class_name,
+    student_codes,
+    total_possible,
+    score_earned,
+    date,
+    category,
+    notes
+  }) {
+    const response = await fetch('/.netlify/functions/teacher-manual-grade-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title,
+        className: class_name,
+        studentCodes: student_codes,
+        totalPossible: total_possible,
+        scoreEarned: score_earned,
+        date,
+        category,
+        notes
+      })
+    });
+
+    const data = await response.json().catch(() => ({
+      ok: false,
+      error: `Manual grade save failed: ${response.status}`
+    }));
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || `Manual grade save failed: ${response.status}`
+      );
+    }
+
+    return data;
+  },
 
   async savePaperResult({ assignment_id, student_code }) {
     const response = await fetch(

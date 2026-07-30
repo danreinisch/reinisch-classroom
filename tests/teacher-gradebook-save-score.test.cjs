@@ -69,6 +69,8 @@ function resetFixtures() {
 
   fixtures = {
     assignmentExists: true,
+    assignmentType: 'html',
+    assignmentMeta: {},
     teacherOwnsClass: true,
     studentExists: true,
     enrollmentActive: true,
@@ -124,6 +126,10 @@ async function restMock(
             {
               id: 101,
               class_id: CLASS_ID,
+              type:
+                fixtures.assignmentType,
+              meta:
+                fixtures.assignmentMeta,
               school_year: 2025,
             },
           ]
@@ -756,6 +762,159 @@ async function run() {
 
   console.log(
     'OK existing answered submission is updated without duplicate or timestamp rewrite'
+  );
+
+  passed++;
+
+  resetFixtures();
+
+  fixtures.assignmentType =
+    'html';
+
+  fixtures.assignmentMeta = {
+    manual: true,
+    total_possible: 50,
+    category: 'quiz',
+  };
+
+  fixtures.instance.status =
+    'Graded';
+
+  fixtures.submissions = [
+    {
+      id: EMPTY_SUBMISSION_ID,
+      instance_id: INSTANCE_ID,
+      answers: {},
+      score_manual: 35,
+      score_total: 70,
+      submitted_at:
+        '2026-07-29T20:00:00.000Z',
+      review_status: 'reviewed',
+      school_year: 2025,
+    },
+  ];
+
+  result =
+    await handler(
+      event({
+        assignmentId: 101,
+        studentCode: 'S001',
+        score: 80,
+        scoreEarned: 40,
+      })
+    );
+
+  assert.equal(
+    result.statusCode,
+    200
+  );
+
+  const manualPayload =
+    payload(result);
+
+  assert.equal(
+    manualPayload.submission.score_total,
+    80
+  );
+
+  assert.equal(
+    manualPayload.submission.score_manual,
+    40
+  );
+
+  assert.equal(
+    manualPayload.submission.review_status,
+    'reviewed'
+  );
+
+  assert.equal(
+    manualPayload.instance.status,
+    'Graded'
+  );
+
+  const manualSubmissionPatch =
+    calls.find(
+      (call) =>
+        call.method === 'PATCH' &&
+        call.url.startsWith(
+          '/rest/v1/submissions?id=eq.'
+        )
+    );
+
+  assert.ok(
+    manualSubmissionPatch
+  );
+
+  assert.deepEqual(
+    manualSubmissionPatch.body,
+    {
+      score_total: 80,
+      score_manual: 40,
+      review_status: 'reviewed',
+    }
+  );
+
+  const manualInstancePatch =
+    calls.find(
+      (call) =>
+        call.method === 'PATCH' &&
+        call.url.startsWith(
+          '/rest/v1/assignment_instances?id=eq.'
+        )
+    );
+
+  assert.ok(
+    manualInstancePatch
+  );
+
+  assert.deepEqual(
+    manualInstancePatch.body,
+    {
+      status: 'Graded',
+    }
+  );
+
+  console.log(
+    'OK MANUAL 40/50 edit preserves 80%, 40 earned, reviewed, and Graded'
+  );
+
+  passed++;
+
+  resetFixtures();
+
+  fixtures.assignmentType =
+    'html';
+
+  fixtures.assignmentMeta = {
+    manual: true,
+    total_possible: 50,
+  };
+
+  result =
+    await handler(
+      event({
+        assignmentId: 101,
+        studentCode: 'S001',
+        score: 80,
+      })
+    );
+
+  assert.equal(
+    result.statusCode,
+    400
+  );
+
+  assert.equal(
+    calls.some(
+      (call) =>
+        call.method !== 'GET'
+    ),
+    false,
+    'MANUAL score without exact earned points must fail before mutation'
+  );
+
+  console.log(
+    'OK MANUAL score without scoreEarned fails before mutation'
   );
 
   passed++;
