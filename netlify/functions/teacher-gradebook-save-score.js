@@ -35,7 +35,7 @@ const {
 } = require('./_lib/supa');
 
 const {
-  getCurrentSchoolYear,
+  getOperationalSchoolYear,
 } = require('./_lib/school-year');
 
 const {
@@ -96,6 +96,22 @@ function normalizeScore(value) {
     !Number.isFinite(value) ||
     value < 0 ||
     value > 100
+  ) {
+    return null;
+  }
+
+  return value;
+}
+
+function normalizeOptionalScoreEarned(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < 0
   ) {
     return null;
   }
@@ -407,6 +423,11 @@ exports.handler =
         body.score
       );
 
+    const scoreEarned =
+      normalizeOptionalScoreEarned(
+        body.scoreEarned
+      );
+
     if (assignmentId === null) {
       return fail(
         event,
@@ -434,8 +455,17 @@ exports.handler =
       );
     }
 
+    if (scoreEarned === null) {
+      return fail(
+        event,
+        requestId,
+        400,
+        'Invalid scoreEarned'
+      );
+    }
+
     const schoolYear =
-      getCurrentSchoolYear();
+      getOperationalSchoolYear();
 
     try {
       // 1. Resolve the exact canonical assignment.
@@ -443,7 +473,7 @@ exports.handler =
         await readRows(
           await rest(
             '/rest/v1/assignments' +
-            '?select=id,class_id,school_year' +
+            '?select=id,class_id,type,meta,school_year' +
             `&id=eq.${encodeURIComponent(assignmentId)}` +
             '&limit=1'
           ),
@@ -479,6 +509,70 @@ exports.handler =
           'Assignment not found'
         );
       }
+
+      const assignmentMeta =
+        assignment.meta &&
+        typeof assignment.meta === 'object' &&
+        !Array.isArray(assignment.meta)
+          ? assignment.meta
+          : {};
+
+      const isManualAssignment =
+        assignmentMeta.manual === true;
+
+      if (isManualAssignment) {
+        const totalPossible =
+          Number(
+            assignmentMeta.total_possible
+          );
+
+        const expectedScore =
+          Number.isFinite(totalPossible) &&
+          totalPossible > 0 &&
+          scoreEarned !== undefined
+            ? Math.round(
+                (
+                  scoreEarned /
+                  totalPossible
+                ) * 100
+              )
+            : null;
+
+        if (
+          scoreEarned === undefined ||
+          !Number.isFinite(totalPossible) ||
+          totalPossible < 1 ||
+          scoreEarned > totalPossible ||
+          score !== expectedScore
+        ) {
+          return fail(
+            event,
+            requestId,
+            400,
+            'Invalid manual score'
+          );
+        }
+      }
+
+      const submissionScoreFields =
+        isManualAssignment
+          ? {
+              score_total:
+                score,
+              score_manual:
+                scoreEarned,
+              review_status:
+                'reviewed',
+            }
+          : {
+              score_total:
+                score,
+            };
+
+      const finalInstanceStatus =
+        isManualAssignment
+          ? 'Graded'
+          : 'Submitted';
 
       const classId =
         assignment.class_id;
@@ -722,10 +816,9 @@ exports.handler =
                   Prefer:
                     'return=representation',
                 },
-                body: JSON.stringify({
-                  score_total:
-                    score,
-                }),
+                body: JSON.stringify(
+                  submissionScoreFields
+                ),
               }
             ),
             'Submission score update'
@@ -748,8 +841,7 @@ exports.handler =
                   instance_id:
                     instance.id,
                   answers: {},
-                  score_total:
-                    score,
+                  ...submissionScoreFields,
                   school_year:
                     schoolYear,
                 }),
@@ -773,7 +865,7 @@ exports.handler =
         );
       }
 
-      // 7. Preserve the legacy final instance state.
+      // 7. Preserve digital lifecycle; MANUAL entries finish Graded.
       const updatedInstances =
         await readRows(
           await rest(
@@ -787,7 +879,7 @@ exports.handler =
               },
               body: JSON.stringify({
                 status:
-                  'Submitted',
+                  finalInstanceStatus,
               }),
             }
           ),
@@ -797,7 +889,8 @@ exports.handler =
       const updatedInstance =
         updatedInstances[0] || {
           ...instance,
-          status: 'Submitted',
+          status:
+            finalInstanceStatus,
         };
 
       return jsonResponse(

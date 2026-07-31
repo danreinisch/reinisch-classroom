@@ -82,6 +82,74 @@
     return Math.round(score * totalPossible / 100);
   }
 
+  function resolveEarnedInfo(submission, score, draft) {
+    const hasScoreAuto =
+      submission.score_auto !== null &&
+      submission.score_auto !== undefined &&
+      Number.isFinite(Number(submission.score_auto));
+
+    const hasScoreManual =
+      submission.score_manual !== null &&
+      submission.score_manual !== undefined &&
+      Number.isFinite(Number(submission.score_manual));
+
+    const scoreAuto =
+      hasScoreAuto
+        ? Number(submission.score_auto)
+        : 0;
+
+    const scoreManual =
+      hasScoreManual
+        ? Number(submission.score_manual)
+        : 0;
+
+    const isManualAssignment =
+      draft &&
+      draft.meta &&
+      draft.meta.manual === true;
+
+    const manualTotalPossible =
+      isManualAssignment
+        ? Number(draft.meta.total_possible)
+        : null;
+
+    if (
+      isManualAssignment &&
+      hasScoreManual &&
+      Number.isFinite(manualTotalPossible) &&
+      manualTotalPossible > 0
+    ) {
+      return {
+        earned: scoreManual,
+        possible: manualTotalPossible,
+      };
+    }
+
+    if (
+      score === null ||
+      score === undefined ||
+      score <= 0 ||
+      (!hasScoreAuto && !hasScoreManual)
+    ) {
+      return null;
+    }
+
+    const earned =
+      scoreAuto + scoreManual;
+
+    const possible =
+      Math.round(
+        earned / (score / 100)
+      );
+
+    return possible > 0
+      ? {
+          earned,
+          possible,
+        }
+      : null;
+  }
+
   // Helper to determine score color class based on percentage
   function scoreColorClass(score) {
     if (score == null || isNaN(score)) return "";
@@ -578,20 +646,26 @@
 
       scoreMap.get(studentCode).set(draftId, score);
 
-      // Also populate earnedMap: infer total_possible from earned pts and score_total (pct)
-      // so that "X/Y (Z%)" display works even when draft.meta.total_possible is null.
-      // earned = score_auto + score_manual (manual grader adjustments count toward the total)
-      const scoreAuto = submission.score_auto != null ? Number(submission.score_auto) : null;
-      const scoreManual = submission.score_manual != null ? Number(submission.score_manual) : 0;
-      if (score != null && score > 0 && scoreAuto != null && !isNaN(scoreAuto)) {
-        const earned = scoreAuto + (isNaN(scoreManual) ? 0 : scoreManual);
-        const possible = Math.round(earned / (score / 100));
-        if (possible > 0) {
-          if (!earnedMap.has(studentCode)) earnedMap.set(studentCode, new Map());
-          if (!earnedMap.get(studentCode).has(draftId)) {
-            earnedMap.get(studentCode).set(draftId, { earned, possible });
-            scoredCount++;
-          }
+      const earnedInfo =
+        resolveEarnedInfo(
+          submission,
+          score,
+          draftsData.find(
+            (draft) => draft.id === draftId
+          )
+        );
+
+      if (earnedInfo) {
+        if (!earnedMap.has(studentCode)) {
+          earnedMap.set(studentCode, new Map());
+        }
+
+        if (!earnedMap.get(studentCode).has(draftId)) {
+          earnedMap
+            .get(studentCode)
+            .set(draftId, earnedInfo);
+
+          scoredCount++;
         }
       }
     }
@@ -649,7 +723,7 @@
   }
 
   // Save a score for a student and assignment
-  async function saveScore(studentCode, draftId, score) {
+  async function saveScore(studentCode, draftId, score, scoreEarned) {
     try {
       if (usingSupabase) {
         console.log('[gradebook] Saving score through signed teacher boundary:', {
@@ -661,7 +735,8 @@
         const saved = await db.saveGradebookScore({
           assignment_id: draftId,
           student_code: studentCode,
-          score
+          score,
+          score_earned: scoreEarned
         });
 
         if (saved.instance) {
@@ -747,8 +822,14 @@
   }
 
   // Make a score cell editable
-  function makeScoreEditable(td, studentCode, draftId, currentScore, totalPossible) {
-    const maxScore = totalPossible || 100;
+  function makeScoreEditable(
+    td,
+    studentCode,
+    draftId,
+    currentScore,
+    totalPossible,
+    currentEarned
+  ) {
     td.classList.add("editing");
     let _skipBlurCancel = false; // set to true when Tab or explicit save handles navigation
 
@@ -756,6 +837,37 @@
     const _editStudentName = (studentsData.find(s => s.code === studentCode) || {}).name || studentCode;
     const _editDraft = draftsData.find(d => d.id === draftId);
     const _editTitle = _editDraft ? (_editDraft.title || "(untitled)") : draftId;
+
+    const isManualAssignment =
+      _editDraft &&
+      _editDraft.meta &&
+      _editDraft.meta.manual === true;
+
+    const manualTotalPossible =
+      Number(totalPossible);
+
+    const maxScore =
+      isManualAssignment &&
+      Number.isFinite(manualTotalPossible)
+        ? manualTotalPossible
+        : (totalPossible || 100);
+
+    const hasCurrentEarned =
+      currentEarned !== null &&
+      currentEarned !== undefined &&
+      Number.isFinite(Number(currentEarned));
+
+    const editorCurrentValue =
+      isManualAssignment
+        ? (
+            hasCurrentEarned
+              ? Number(currentEarned)
+              : calculateEarnedPoints(
+                  currentScore,
+                  manualTotalPossible
+                )
+          )
+        : currentScore;
 
     // Update aria-label to reflect editing state
     td.setAttribute("aria-label", `Editing score for ${_editStudentName} on ${_editTitle}. Press Escape to cancel`);
@@ -769,7 +881,11 @@
     input.type = "number";
     input.min = "0";
     input.max = String(maxScore);
-    input.value = currentScore !== null ? currentScore : "";
+    input.step = isManualAssignment ? "any" : "1";
+    input.value =
+      editorCurrentValue !== null
+        ? editorCurrentValue
+        : "";
 
     // Create save button (✓)
     const btnSave = document.createElement("button");
@@ -803,12 +919,30 @@
         return;
       }
 
-      const score = parseInt(newValue, 10);
-      if (isNaN(score) || score < 0 || score > maxScore) {
+      const enteredScore =
+        isManualAssignment
+          ? Number(newValue)
+          : parseInt(newValue, 10);
+
+      if (
+        !Number.isFinite(enteredScore) ||
+        enteredScore < 0 ||
+        enteredScore > maxScore
+      ) {
         await rcAlert('Invalid Score', `Please enter a score between 0 and ${maxScore}.`);
         input.focus();
         return;
       }
+
+      const scorePercent =
+        isManualAssignment
+          ? Math.round(
+              (
+                enteredScore /
+                manualTotalPossible
+              ) * 100
+            )
+          : enteredScore;
 
       // Disable input while saving
       input.disabled = true;
@@ -816,8 +950,15 @@
       btnCancel.disabled = true;
       
       try {
-        // Save the score
-        await saveScore(studentCode, draftId, score);
+        // Save percentage plus exact earned points for MANUAL entries.
+        await saveScore(
+          studentCode,
+          draftId,
+          scorePercent,
+          isManualAssignment
+            ? enteredScore
+            : undefined
+        );
       } catch (err) {
         // Re-enable input on error
         input.disabled = false;
@@ -840,9 +981,18 @@
         td.appendChild(pctLine);
 
         if (totalPossible) {
+          const restoredEarned =
+            isManualAssignment &&
+            hasCurrentEarned
+              ? Number(currentEarned)
+              : calculateEarnedPoints(
+                  currentScore,
+                  totalPossible
+                );
+
           const ptsLine = document.createElement("div");
           ptsLine.className = "gb-score-pts-line";
-          ptsLine.textContent = `${calculateEarnedPoints(currentScore, totalPossible)}/${totalPossible}`;
+          ptsLine.textContent = `${restoredEarned}/${totalPossible}`;
           td.appendChild(ptsLine);
         }
 
@@ -1178,7 +1328,24 @@
 
     td.addEventListener("click", () => {
       const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
-      makeScoreEditable(td, studentCode, draft.id, currentScore, totalPossible);
+
+      const earnedInfo =
+        earnedMap.has(studentCode)
+          ? earnedMap
+              .get(studentCode)
+              .get(draft.id) || null
+          : null;
+
+      makeScoreEditable(
+        td,
+        studentCode,
+        draft.id,
+        currentScore,
+        totalPossible,
+        earnedInfo
+          ? earnedInfo.earned
+          : null
+      );
     });
 
     return td;
@@ -1310,7 +1477,24 @@
       const totalPossible = (editDraft && editDraft.meta && editDraft.meta.total_possible)
         ? editDraft.meta.total_possible
         : group.totalPossible;
-      makeScoreEditable(td, studentCode, editDraftId, currentScore, totalPossible);
+      const editEarnedInfo =
+        scoreDraftId &&
+        earnedMap.has(studentCode)
+          ? earnedMap
+              .get(studentCode)
+              .get(scoreDraftId) || null
+          : null;
+
+      makeScoreEditable(
+        td,
+        studentCode,
+        editDraftId,
+        currentScore,
+        totalPossible,
+        editEarnedInfo
+          ? editEarnedInfo.earned
+          : null
+      );
     });
 
     return td;
@@ -3692,19 +3876,24 @@
         nullScore++;
       }
 
-      // Also populate earnedMap: infer total_possible from earned pts and score_total (pct)
-      // so that "X/Y (Z%)" display works even when draft.meta.total_possible is null.
-      // earned = score_auto + score_manual (manual grader adjustments count toward the total)
-      const scoreAuto = submission.score_auto != null ? Number(submission.score_auto) : null;
-      const scoreManual = submission.score_manual != null ? Number(submission.score_manual) : 0;
-      if (score != null && score > 0 && scoreAuto != null && !isNaN(scoreAuto)) {
-        const earned = scoreAuto + (isNaN(scoreManual) ? 0 : scoreManual);
-        const possible = Math.round(earned / (score / 100));
-        if (possible > 0) {
-          if (!earnedMap.has(studentCode)) earnedMap.set(studentCode, new Map());
-          if (!earnedMap.get(studentCode).has(draftId)) {
-            earnedMap.get(studentCode).set(draftId, { earned, possible });
-          }
+      const earnedInfo =
+        resolveEarnedInfo(
+          submission,
+          score,
+          drafts.find(
+            (draft) => draft.id === draftId
+          )
+        );
+
+      if (earnedInfo) {
+        if (!earnedMap.has(studentCode)) {
+          earnedMap.set(studentCode, new Map());
+        }
+
+        if (!earnedMap.get(studentCode).has(draftId)) {
+          earnedMap
+            .get(studentCode)
+            .set(draftId, earnedInfo);
         }
       }
     }
@@ -4410,6 +4599,17 @@
    */
   function getAssignmentCategory(draft) {
     if (!draft || typeof draft !== 'object') return 'assignment';
+
+    const metaCategory =
+      draft.meta &&
+      typeof draft.meta.category === 'string'
+        ? draft.meta.category.trim()
+        : '';
+
+    if (metaCategory) {
+      return metaCategory.toLowerCase();
+    }
+
     const type = draft.type;
     if (typeof type !== 'string' || !type.trim()) return 'assignment';
     return type.toLowerCase();
@@ -5062,34 +5262,42 @@
       let savedCount = 0;
       const errors = [];
 
-      for (const studentCode of studentCodes) {
+      if (usingSupabase) {
+        if (!classLabel) {
+          errorEl.textContent = 'Class is required when saving a synced manual grade.';
+          errorEl.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✅ Save Grade';
+          return;
+        }
+
         try {
-          // Build a stable assignment ID for this manual entry (crypto.randomUUID when available)
-          const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
-            ? crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
-            : (Date.now().toString(36) + Math.random().toString(36).slice(2, 9)).toUpperCase();
-          const assignmentId = 'MANUAL_' + uid;
+          const saved = await db.saveManualGrade({
+            title,
+            class_name: classLabel,
+            student_codes: studentCodes,
+            total_possible: total,
+            score_earned: score,
+            date,
+            category,
+            notes
+          });
 
-          if (usingSupabase) {
-            // Supabase path
-            await db.upsertAssignmentInstance({
-              id: assignmentId + '-' + studentCode,
-              assignment_id: assignmentId,
-              student_code: studentCode,
-              assigned_at: date,
-              status: 'Submitted'
-            });
+          savedCount = Number(saved.saved_count) || 0;
+        } catch (err) {
+          console.error('[gradebook] Error saving synced manual grade:', err);
+          errors.push(err.message || 'Manual grade save failed');
+        }
+      } else {
+        // Preserve the established local/offline MANUAL_* workflow.
+        for (const studentCode of studentCodes) {
+          try {
+            const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+              ? crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
+              : (Date.now().toString(36) + Math.random().toString(36).slice(2, 9)).toUpperCase();
 
-            await db.addSubmission({
-              instance_id: assignmentId + '-' + studentCode,
-              score_manual: score,
-              score_total: total,
-              score_percent: percent,
-              notes: notes || undefined,
-              submitted_at: new Date(date).toISOString()
-            });
-          } else {
-            // localStorage path — create a draft record for the assignment
+            const assignmentId = 'MANUAL_' + uid;
+
             const drafts = storeGet('drafts', []);
             drafts.push({
               id: assignmentId,
@@ -5101,7 +5309,6 @@
             });
             storeSet('drafts', drafts);
 
-            // Create assignment instance
             let instances = storeGet('assignmentInstances', []);
             const instanceId = assignmentId + '-' + studentCode;
             instances.push({
@@ -5113,7 +5320,6 @@
             });
             storeSet('assignmentInstances', instances);
 
-            // Create submission
             let submissions = storeGet('submissions', []);
             submissions.push({
               id: generateSubmissionId(),
@@ -5126,11 +5332,12 @@
               submitted_at: new Date(date).toISOString()
             });
             storeSet('submissions', submissions);
+
+            savedCount++;
+          } catch (err) {
+            console.error('[gradebook] Error saving local manual grade for', studentCode, err);
+            errors.push(studentCode + ': ' + err.message);
           }
-          savedCount++;
-        } catch (err) {
-          console.error('[gradebook] Error saving manual grade for', studentCode, err);
-          errors.push(studentCode + ': ' + err.message);
         }
       }
 

@@ -54,6 +54,12 @@ const instanceWrongClass =
 const instanceNonInstructional =
   '66666666-6666-4666-8666-666666666666';
 
+const instanceManual =
+  '12121212-1212-4121-8121-121212121212';
+
+const submissionManual =
+  '13131313-1313-4131-8131-131313131313';
+
 const submissionA =
   '77777777-7777-4777-8777-777777777777';
 
@@ -461,6 +467,85 @@ async function run() {
 
   console.log(
     '✓ non-instructional instances excluded before submission read'
+  );
+
+  // 4B. Canonical MANUAL assignments never enter Review.
+  installMocks();
+
+  fixtures.assignments.push({
+    id: 103,
+    class_id: classA,
+    meta: {
+      manual: true,
+    },
+  });
+
+  fixtures.instances.push({
+    id: instanceManual,
+    assignment_id: 103,
+    student_id: studentA,
+    settings: {},
+    students: {
+      code: 'S001',
+      active: true,
+    },
+  });
+
+  fixtures.submissions.push({
+    id: submissionManual,
+    instance_id: instanceManual,
+    answers: {},
+    score_manual: 40,
+    score_total: 80,
+    submitted_at:
+      '2026-09-01T14:03:00.000Z',
+    review_status: 'reviewed',
+    school_year: 2026,
+  });
+
+  result =
+    await loadHandler()(
+      event()
+    );
+
+  payload =
+    body(result);
+
+  assert.strictEqual(
+    result.statusCode,
+    200
+  );
+
+  assert.deepStrictEqual(
+    payload.submissions.map(
+      (row) => row.id
+    ),
+    [submissionA],
+    'MANUAL grade must not be returned to Teacher Review'
+  );
+
+  const manualSubmissionCall =
+    restCalls.find(
+      (call) =>
+        call.url.startsWith(
+          '/rest/v1/submissions?'
+        )
+    );
+
+  assert.ok(
+    manualSubmissionCall,
+    'normal submission query should still run'
+  );
+
+  assert.ok(
+    !manualSubmissionCall.url.includes(
+      instanceManual
+    ),
+    'MANUAL instance must be excluded before submission read'
+  );
+
+  console.log(
+    '✓ canonical MANUAL assignments excluded before submission read'
   );
 
   // 5. snake_case student filter works.
