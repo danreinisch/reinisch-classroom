@@ -15,6 +15,41 @@ const endpointPath =
     '../netlify/functions/teacher-manual-grade-save.js'
   );
 
+// RC-SEC-01I-D1C3C-R1 durable operational-year contract
+const operationalYearEndpointSource =
+  require('node:fs').readFileSync(
+    endpointPath,
+    'utf8'
+  );
+
+assert.match(
+  operationalYearEndpointSource,
+  /\bgetOperationalSchoolYear\b/,
+  'MANUAL creation must select the operational school-year helper'
+);
+
+assert.doesNotMatch(
+  operationalYearEndpointSource,
+  /\bgetCurrentSchoolYear\b/,
+  'MANUAL creation must not select the historical July classifier'
+);
+
+const {
+  getOperationalSchoolYear:
+    realGetOperationalSchoolYear,
+} = require(
+  '../netlify/functions/_lib/school-year'
+);
+
+assert.equal(
+  realGetOperationalSchoolYear(
+    new Date('2026-07-30T12:00:00-05:00')
+  ),
+  2026,
+  'MANUAL creation must target school_year 2026 during July preparation'
+);
+
+
 const TEACHER_ID =
   '11111111-1111-4111-8111-111111111111';
 
@@ -315,7 +350,7 @@ Module._load =
         './_lib/school-year'
       ) {
         return {
-          getCurrentSchoolYear:
+          getOperationalSchoolYear:
             () => 2026,
         };
       }

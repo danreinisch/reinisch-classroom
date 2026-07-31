@@ -35,7 +35,7 @@ const {
 } = require('./_lib/supa');
 
 const {
-  getCurrentSchoolYear,
+  getOperationalSchoolYear,
 } = require('./_lib/school-year');
 
 const {
@@ -465,7 +465,7 @@ exports.handler =
     }
 
     const schoolYear =
-      getCurrentSchoolYear();
+      getOperationalSchoolYear();
 
     try {
       // 1. Resolve the exact canonical assignment.

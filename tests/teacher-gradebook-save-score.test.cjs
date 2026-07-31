@@ -10,6 +10,41 @@ const endpointPath =
     '../netlify/functions/teacher-gradebook-save-score.js'
   );
 
+// RC-SEC-01I-D1C3C-R1 durable operational-year contract
+const operationalYearEndpointSource =
+  require('node:fs').readFileSync(
+    endpointPath,
+    'utf8'
+  );
+
+assert.match(
+  operationalYearEndpointSource,
+  /\bgetOperationalSchoolYear\b/,
+  'Gradebook score editing must select the operational school-year helper'
+);
+
+assert.doesNotMatch(
+  operationalYearEndpointSource,
+  /\bgetCurrentSchoolYear\b/,
+  'Gradebook score editing must not select the historical July classifier'
+);
+
+const {
+  getOperationalSchoolYear:
+    realGetOperationalSchoolYear,
+} = require(
+  '../netlify/functions/_lib/school-year'
+);
+
+assert.equal(
+  realGetOperationalSchoolYear(
+    new Date('2026-07-30T12:00:00-05:00')
+  ),
+  2026,
+  'Gradebook score editing must target school_year 2026 during July preparation'
+);
+
+
 const TEACHER_ID =
   '11111111-1111-4111-8111-111111111111';
 
@@ -406,7 +441,7 @@ Module._load =
         request === './_lib/school-year'
       ) {
         return {
-          getCurrentSchoolYear:
+          getOperationalSchoolYear:
             () => 2025,
         };
       }

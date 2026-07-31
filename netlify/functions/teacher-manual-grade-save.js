@@ -34,7 +34,7 @@ const {
 } = require('./_lib/supa');
 
 const {
-  getCurrentSchoolYear,
+  getOperationalSchoolYear,
 } = require('./_lib/school-year');
 
 const {
@@ -476,7 +476,7 @@ exports.handler = async (event) => {
   }
 
   const schoolYear =
-    getCurrentSchoolYear();
+    getOperationalSchoolYear();
 
   const scorePercent =
     Math.round(
