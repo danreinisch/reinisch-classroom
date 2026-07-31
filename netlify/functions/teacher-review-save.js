@@ -131,7 +131,7 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
 
   const assignmentResult = await readAuthorizationRows(
     '/rest/v1/assignments' +
-      '?select=id,class_id,type' +
+      '?select=id,class_id,type,meta' +
       `&id=eq.${encodeURIComponent(assignmentId)}` +
       '&limit=1',
     'Assignment authorization query',
@@ -193,6 +193,24 @@ async function authorizeReviewMutation(body, teacherId, requestId) {
     };
   }
 
+
+  const assignmentMeta =
+    assignment.meta &&
+    typeof assignment.meta === 'object' &&
+    !Array.isArray(assignment.meta)
+      ? assignment.meta
+      : {};
+
+  // Canonical MANUAL grades are completed teacher-entered results.
+  // They remain visible in Gradebook/history but never re-enter the
+  // digital Teacher Review mutation or goal-evidence workflow.
+  if (assignmentMeta.manual === true) {
+    return {
+      ok: false,
+      statusCode: 409,
+      error: 'Manual grades are read-only in Teacher Review',
+    };
+  }
 
   // PAPER records are teacher-entered evidence. Once the full canonical
   // teacher/class/student authorization chain succeeds, keep them read-only

@@ -131,6 +131,18 @@ function normalizeNested(value) {
     : value;
 }
 
+function isManualGradeAssignment(row) {
+  const meta =
+    row &&
+    row.meta &&
+    typeof row.meta === 'object' &&
+    !Array.isArray(row.meta)
+      ? row.meta
+      : {};
+
+  return meta.manual === true;
+}
+
 function emptyResponse(event, requestId) {
   return jsonResponse(
     event,
@@ -364,7 +376,7 @@ exports.handler =
         await readRows(
           await rest(
             '/rest/v1/assignments' +
-            '?select=id,class_id' +
+            '?select=id,class_id,meta' +
             `&class_id=in.(${classIds.map(encodeURIComponent).join(',')})`
           ),
           'Teacher assignments query'
@@ -385,7 +397,8 @@ exports.handler =
         if (
           /^\d+$/.test(assignmentId) &&
           isUuid(classId) &&
-          classIdSet.has(classId)
+          classIdSet.has(classId) &&
+          !isManualGradeAssignment(row)
         ) {
           assignmentClassById.set(
             assignmentId,

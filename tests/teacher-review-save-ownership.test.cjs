@@ -126,6 +126,7 @@ function currentScenario(overrides = {}) {
     activeExactEnrollment: true,
     assignmentId: ASSIGNMENT_ID,
     assignmentType: 'html',
+    assignmentMeta: {},
     classId: CLASS_ID,
     instanceId: INSTANCE_ID,
     studentId: STUDENT_ID,
@@ -183,6 +184,7 @@ global.fetch = async (url, options = {}) => {
       id: Number(s.assignmentId),
       class_id: s.classId,
       type: s.assignmentType,
+      meta: s.assignmentMeta,
     }]);
   }
 
@@ -540,6 +542,49 @@ test(
         mutations().length,
         0,
         `${action} must not mutate PAPER evidence`
+      );
+    }
+  }
+);
+
+test(
+  'MANUAL grades reject every digital Review mutation before write',
+  async () => {
+    const actions = [
+      'save_score',
+      'save_grade',
+      'finalize',
+      'reopen',
+      'mark_reviewed',
+      'return_for_revision',
+      'set_in_progress',
+    ];
+
+    for (const action of actions) {
+      reset({
+        assignmentMeta: {
+          manual: true,
+        },
+      });
+
+      const result =
+        await handler(
+          event({
+            action,
+            submissionId: SUBMISSION_ID,
+          })
+        );
+
+      assert.strictEqual(
+        result.statusCode,
+        409,
+        `${action} should reject MANUAL grades`
+      );
+
+      assert.strictEqual(
+        mutations().length,
+        0,
+        `${action} must not mutate MANUAL grades`
       );
     }
   }
