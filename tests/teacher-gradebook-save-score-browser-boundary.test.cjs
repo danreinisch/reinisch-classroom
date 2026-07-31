@@ -157,6 +157,19 @@ assert.ok(
 
 assert.ok(
   gradebook.includes(
+    'const restoredEarned ='
+  ) &&
+  gradebook.includes(
+    'isManualAssignment &&\n            hasCurrentEarned'
+  ) &&
+  gradebook.includes(
+    'ptsLine.textContent = `${restoredEarned}/${totalPossible}`;'
+  ),
+  'cancelling a MANUAL edit must restore exact earned points rather than re-derive them from rounded percent'
+);
+
+assert.ok(
+  gradebook.includes(
     'draft.meta.category'
   ),
   'category weighting must prefer assignment metadata'

@@ -114,24 +114,26 @@ function reset() {
   calls = [];
 }
 
-function studentForUrl(url) {
-  if (url.includes('code=eq.S001')) {
-    return {
+function studentsForUrl(url) {
+  const students = [];
+
+  if (url.includes('S001')) {
+    students.push({
       id: STUDENT_1_ID,
       code: 'S001',
       active: true,
-    };
+    });
   }
 
-  if (url.includes('code=eq.S002')) {
-    return {
+  if (url.includes('S002')) {
+    students.push({
       id: STUDENT_2_ID,
       code: 'S002',
       active: true,
-    };
+    });
   }
 
-  return null;
+  return students;
 }
 
 async function restMock(
@@ -148,6 +150,8 @@ async function restMock(
     url,
     method,
     body,
+    headers:
+      options.headers || {},
   });
 
   if (
@@ -168,14 +172,9 @@ async function restMock(
     url.startsWith('/rest/v1/students?') &&
     method === 'GET'
   ) {
-    const student =
-      studentForUrl(url);
-
     return response(
       200,
-      student
-        ? [student]
-        : []
+      studentsForUrl(url)
     );
   }
 
@@ -183,33 +182,33 @@ async function restMock(
     url.startsWith('/rest/v1/class_enrollments?') &&
     method === 'GET'
   ) {
-    const isStudent1 =
-      url.includes(
-        `student_id=eq.${STUDENT_1_ID}`
-      );
+    const enrollments = [];
 
-    const code =
-      isStudent1
-        ? 'S001'
-        : 'S002';
+    if (
+      url.includes(STUDENT_1_ID) &&
+      failEnrollmentFor !== 'S001'
+    ) {
+      enrollments.push({
+        class_id: CLASS_ID,
+        student_id: STUDENT_1_ID,
+        active: true,
+      });
+    }
 
-    if (failEnrollmentFor === code) {
-      return response(
-        200,
-        []
-      );
+    if (
+      url.includes(STUDENT_2_ID) &&
+      failEnrollmentFor !== 'S002'
+    ) {
+      enrollments.push({
+        class_id: CLASS_ID,
+        student_id: STUDENT_2_ID,
+        active: true,
+      });
     }
 
     return response(
       200,
-      [{
-        class_id: CLASS_ID,
-        student_id:
-          isStudent1
-            ? STUDENT_1_ID
-            : STUDENT_2_ID,
-        active: true,
-      }]
+      enrollments
     );
   }
 
@@ -448,6 +447,53 @@ async function run() {
     80
   );
 
+  const studentReads =
+    calls.filter(
+      call =>
+        call.method === 'GET' &&
+        call.url.startsWith(
+          '/rest/v1/students?'
+        )
+    );
+
+  assert.equal(
+    studentReads.length,
+    1,
+    'all requested students must be authorized in one batched read'
+  );
+
+  assert.ok(
+    studentReads[0].url.includes(
+      'code=in.(S001,S002)'
+    ),
+    'batched student read must include every requested student code'
+  );
+
+  const enrollmentReads =
+    calls.filter(
+      call =>
+        call.method === 'GET' &&
+        call.url.startsWith(
+          '/rest/v1/class_enrollments?'
+        )
+    );
+
+  assert.equal(
+    enrollmentReads.length,
+    1,
+    'all class enrollments must be authorized in one batched read'
+  );
+
+  assert.ok(
+    enrollmentReads[0].url.includes(
+      STUDENT_1_ID
+    ) &&
+    enrollmentReads[0].url.includes(
+      STUDENT_2_ID
+    ),
+    'batched enrollment read must include every validated student'
+  );
+
   const assignmentWrites =
     calls.filter(
       call =>
@@ -460,6 +506,35 @@ async function run() {
     assignmentWrites.length,
     1,
     'one request must create exactly one canonical assignment'
+  );
+
+  const canonicalWrites =
+    calls.filter(
+      call =>
+        call.method === 'POST' &&
+        [
+          '/rest/v1/assignments',
+          '/rest/v1/assignment_instances',
+          '/rest/v1/submissions',
+        ].includes(call.url)
+    );
+
+  assert.equal(
+    canonicalWrites.length,
+    3,
+    'MANUAL creation must perform exactly three canonical batch writes'
+  );
+
+  assert.ok(
+    canonicalWrites.every(
+      call =>
+        call.headers[
+          'Content-Type'
+        ] === 'application/json' &&
+        call.headers.Prefer ===
+          'return=representation'
+    ),
+    'every PostgREST JSON insert must declare application/json'
   );
 
   assert.deepEqual(

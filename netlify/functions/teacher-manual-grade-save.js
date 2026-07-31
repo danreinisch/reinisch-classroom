@@ -517,25 +517,125 @@ exports.handler = async (event) => {
       ownedClasses[0].id;
 
     // 2. Validate EVERY requested student before performing any writes.
-    const validatedStudents = [];
+    const requestedCodeList =
+      studentCodes
+        .map(encodeURIComponent)
+        .join(',');
 
-    for (const studentCode of studentCodes) {
-      const students =
-        await readRows(
-          await rest(
-            '/rest/v1/students' +
-            '?select=id,code,active' +
-            `&code=eq.${encodeURIComponent(studentCode)}` +
-            '&active=eq.true' +
-            '&limit=2'
-          ),
-          'Student query'
-        );
+    const students =
+      await readRows(
+        await rest(
+          '/rest/v1/students' +
+          '?select=id,code,active' +
+          `&code=in.(${requestedCodeList})` +
+          '&active=eq.true'
+        ),
+        'Students query'
+      );
+
+    const studentByCode =
+      new Map();
+
+    for (const student of students) {
+      const code =
+        typeof student.code === 'string'
+          ? student.code
+              .trim()
+              .toUpperCase()
+          : '';
 
       if (
-        students.length !== 1 ||
-        !isUuid(
-          students[0].id
+        !studentCodes.includes(code) ||
+        !isUuid(student.id) ||
+        student.active !== true ||
+        studentByCode.has(code)
+      ) {
+        return fail(
+          event,
+          requestId,
+          404,
+          'Student not found'
+        );
+      }
+
+      studentByCode.set(
+        code,
+        student
+      );
+    }
+
+    if (
+      studentByCode.size !==
+      studentCodes.length
+    ) {
+      return fail(
+        event,
+        requestId,
+        404,
+        'Student not found'
+      );
+    }
+
+    const validatedStudents =
+      studentCodes.map(
+        code => ({
+          id:
+            studentByCode.get(code).id,
+          code,
+        })
+      );
+
+    const requestedStudentIds =
+      new Set(
+        validatedStudents.map(
+          student => student.id
+        )
+      );
+
+    const requestedStudentIdList =
+      validatedStudents
+        .map(
+          student =>
+            encodeURIComponent(
+              student.id
+            )
+        )
+        .join(',');
+
+    const enrollments =
+      await readRows(
+        await rest(
+          '/rest/v1/class_enrollments' +
+          '?select=class_id,student_id,active' +
+          `&class_id=eq.${encodeURIComponent(classId)}` +
+          `&student_id=in.(${requestedStudentIdList})` +
+          '&active=eq.true'
+        ),
+        'Class enrollments query'
+      );
+
+    const enrolledStudentIds =
+      new Set();
+
+    for (const enrollment of enrollments) {
+      const enrollmentClassId =
+        typeof enrollment.class_id === 'string'
+          ? enrollment.class_id
+          : '';
+
+      const enrollmentStudentId =
+        typeof enrollment.student_id === 'string'
+          ? enrollment.student_id
+          : '';
+
+      if (
+        enrollmentClassId !== classId ||
+        !requestedStudentIds.has(
+          enrollmentStudentId
+        ) ||
+        enrollment.active !== true ||
+        enrolledStudentIds.has(
+          enrollmentStudentId
         )
       ) {
         return fail(
@@ -546,35 +646,21 @@ exports.handler = async (event) => {
         );
       }
 
-      const student =
-        students[0];
+      enrolledStudentIds.add(
+        enrollmentStudentId
+      );
+    }
 
-      const enrollments =
-        await readRows(
-          await rest(
-            '/rest/v1/class_enrollments' +
-            '?select=class_id,student_id,active' +
-            `&class_id=eq.${encodeURIComponent(classId)}` +
-            `&student_id=eq.${encodeURIComponent(student.id)}` +
-            '&active=eq.true' +
-            '&limit=1'
-          ),
-          'Class enrollment query'
-        );
-
-      if (enrollments.length !== 1) {
-        return fail(
-          event,
-          requestId,
-          404,
-          'Student not found'
-        );
-      }
-
-      validatedStudents.push({
-        id: student.id,
-        code: studentCode,
-      });
+    if (
+      enrolledStudentIds.size !==
+      validatedStudents.length
+    ) {
+      return fail(
+        event,
+        requestId,
+        404,
+        'Student not found'
+      );
     }
 
     // 3. Create ONE canonical MANUAL assignment.
@@ -585,6 +671,8 @@ exports.handler = async (event) => {
           {
             method: 'POST',
             headers: {
+              'Content-Type':
+                'application/json',
               Prefer:
                 'return=representation',
             },
@@ -658,6 +746,8 @@ exports.handler = async (event) => {
           {
             method: 'POST',
             headers: {
+              'Content-Type':
+                'application/json',
               Prefer:
                 'return=representation',
             },
@@ -740,6 +830,8 @@ exports.handler = async (event) => {
           {
             method: 'POST',
             headers: {
+              'Content-Type':
+                'application/json',
               Prefer:
                 'return=representation',
             },

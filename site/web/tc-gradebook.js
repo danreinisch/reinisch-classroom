@@ -981,9 +981,18 @@
         td.appendChild(pctLine);
 
         if (totalPossible) {
+          const restoredEarned =
+            isManualAssignment &&
+            hasCurrentEarned
+              ? Number(currentEarned)
+              : calculateEarnedPoints(
+                  currentScore,
+                  totalPossible
+                );
+
           const ptsLine = document.createElement("div");
           ptsLine.className = "gb-score-pts-line";
-          ptsLine.textContent = `${calculateEarnedPoints(currentScore, totalPossible)}/${totalPossible}`;
+          ptsLine.textContent = `${restoredEarned}/${totalPossible}`;
           td.appendChild(ptsLine);
         }
 
