@@ -1584,32 +1584,6 @@ const remote = {
     return null;
   },
 
-  // Create a submission archive record for a paper upload
-  // Note: submission_id is optional for paper uploads; student_id will be looked up if student_code is available
-  async createSubmissionArchive(record) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const payload = {
-      student_code: record.student_code,
-      assignment_id: record.assignment_id,
-      title: record.title,
-      class_name: record.class_name || null,
-      feedback: record.feedback || null,
-      submitted_at: record.submitted_at || new Date().toISOString(),
-      archived_at: record.archived_at || new Date().toISOString(),
-      // paper_upload_url stored in the related assignment.meta field
-      answers: record.answers || null,
-      score_total: record.score_total || null,
-      school_year: record.school_year || getCurrentSchoolYear(),
-    };
-    // submission_id and student_id are nullable after the 20260312 migration (paper uploads)
-    if (record.submission_id) payload.submission_id = record.submission_id;
-    if (record.student_id) payload.student_id = record.student_id;
-    const { data, error } = await supabase.from('submission_archives').insert(payload).select().single();
-    if (error) throw error;
-    return data;
-  },
-
   async listAssignments() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
